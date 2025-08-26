@@ -1,0 +1,170 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Qivr.Services;
+
+namespace Qivr.Api.Controllers;
+
+[ApiController]
+[Route("api/v1/[controller]")]
+[Authorize]
+public class EvaluationsController : ControllerBase
+{
+    private readonly IEvaluationService _evaluationService;
+    private readonly ILogger<EvaluationsController> _logger;
+
+    public EvaluationsController(
+        IEvaluationService evaluationService,
+        ILogger<EvaluationsController> logger)
+    {
+        _evaluationService = evaluationService;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Create a new evaluation (patient intake)
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(CreateEvaluationResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateEvaluation(
+        [FromBody] CreateEvaluationRequest request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Creating evaluation for patient {PatientId}", request.PatientId);
+        
+        var dto = new CreateEvaluationDto(
+            request.PatientId,
+            request.ChiefComplaint,
+            request.Symptoms,
+            request.QuestionnaireResponses,
+            request.PainMaps.Select(p => new PainMapDto(
+                p.BodyRegion,
+                p.Coordinates.X,
+                p.Coordinates.Y,
+                p.Coordinates.Z,
+                p.Intensity,
+                p.Type,
+                p.Qualities
+            )).ToList()
+        );
+        
+        var evaluationId = await _evaluationService.CreateEvaluationAsync(dto, cancellationToken);
+        
+        return CreatedAtAction(
+            nameof(GetEvaluation),
+            new { id = evaluationId },
+            new CreateEvaluationResponse { Id = evaluationId });
+    }
+
+    /// <summary>
+    /// Get evaluation by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(EvaluationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetEvaluation(Guid id, CancellationToken cancellationToken)
+    {
+        var evaluation = await _evaluationService.GetEvaluationAsync(id, cancellationToken);
+        
+        if (evaluation == null)
+        {
+            return NotFound();
+        }
+        
+        return Ok(evaluation);
+    }
+
+    /// <summary>
+    /// Get all evaluations (with optional patient filter)
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(List<EvaluationDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetEvaluations(
+        [FromQuery] Guid? patientId,
+        CancellationToken cancellationToken)
+    {
+        var evaluations = await _evaluationService.GetEvaluationsAsync(patientId, cancellationToken);
+        return Ok(evaluations);
+    }
+
+    /// <summary>
+    /// Update evaluation status
+    /// </summary>
+    [HttpPatch("{id}/status")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateEvaluationStatus(
+        Guid id,
+        [FromBody] UpdateStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _evaluationService.UpdateEvaluationStatusAsync(id, request.Status, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Submit AI analysis for evaluation
+    /// </summary>
+    [HttpPost("{id}/analyze")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(typeof(AnalysisResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AnalyzeEvaluation(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        // TODO: Implement AI analysis
+        _logger.LogInformation("AI analysis requested for evaluation {Id}", id);
+        
+        return Ok(new AnalysisResponse
+        {
+            Summary = "Based on the evaluation, the patient presents with moderate lower back pain...",
+            RiskFlags = new[] { "chronic_pain_risk", "posture_related" },
+            RecommendedActions = new[] { "schedule_appointment", "prescribe_exercises" }
+        });
+    }
+}
+
+// Request/Response Models
+public class CreateEvaluationRequest
+{
+    public Guid PatientId { get; set; }
+    public string ChiefComplaint { get; set; } = string.Empty;
+    public List<string> Symptoms { get; set; } = new();
+    public Dictionary<string, object> QuestionnaireResponses { get; set; } = new();
+    public List<PainMapRequest> PainMaps { get; set; } = new();
+}
+
+public class PainMapRequest
+{
+    public string BodyRegion { get; set; } = string.Empty;
+    public CoordinatesRequest Coordinates { get; set; } = new();
+    public int Intensity { get; set; }
+    public string? Type { get; set; }
+    public List<string> Qualities { get; set; } = new();
+}
+
+public class CoordinatesRequest
+{
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Z { get; set; }
+}
+
+public class CreateEvaluationResponse
+{
+    public Guid Id { get; set; }
+}
+
+public class UpdateStatusRequest
+{
+    public string Status { get; set; } = string.Empty;
+}
+
+public class AnalysisResponse
+{
+    public string Summary { get; set; } = string.Empty;
+    public string[] RiskFlags { get; set; } = Array.Empty<string>();
+    public string[] RecommendedActions { get; set; } = Array.Empty<string>();
+}

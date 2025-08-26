@@ -1,0 +1,45 @@
+{
+  "name": "@qivr/patient-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Patient portal for Qivr health platform",
+  "scripts": {
+    "dev": "vite --port 3002",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "@aws-amplify/auth": "^6.15.0",
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@hookform/resolvers": "^5.2.1",
+    "@mui/icons-material": "^5.15.0",
+    "@mui/material": "^5.15.0",
+    "@mui/x-date-pickers": "^8.10.2",
+    "@mui/x-date-pickers-pro": "^8.10.2",
+    "@tanstack/react-query": "^5.17.0",
+    "@tanstack/react-query-devtools": "^5.85.5",
+    "amazon-cognito-identity-js": "^6.3.15",
+    "aws-amplify": "^6.15.5",
+    "axios": "^1.11.0",
+    "date-fns": "^4.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.62.0",
+    "react-i18next": "^14.0.0",
+    "react-router-dom": "^6.21.0",
+    "recharts": "^2.10.0",
+    "zod": "^3.25.76",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.0"
+  }
+}
