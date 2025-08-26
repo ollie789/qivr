@@ -1,130 +1,102 @@
-# Qivr Project Structure
+# Qivr Platform - Project Structure
 
-## Directory Organization
+## Directory Layout
 
 ```
 qivr/
-├── apps/                      # Frontend applications
-│   ├── clinic-dashboard/      # React app for clinic staff
-│   ├── patient-portal/        # React app for patients
-│   └── widget/               # Embeddable intake widget
+├── apps/                    # Frontend applications (Active)
+│   ├── clinic-dashboard/    # Provider interface (React/TypeScript)
+│   ├── patient-portal/      # Patient self-service portal (React/TypeScript)
+│   └── widget/              # Embeddable 3D evaluation widget (React/Three.js)
 │
-├── backend/                   # .NET 8 backend services
-│   ├── Qivr.Api/             # API layer with controllers
-│   ├── Qivr.Core/            # Domain entities and interfaces
-│   ├── Qivr.Infrastructure/  # Data access and external services
-│   └── Qivr.Services/        # Business logic and services
+├── backend/                 # .NET Core API
+│   ├── Qivr.Api/           # API controllers and endpoints
+│   ├── Qivr.Core/          # Domain models and interfaces
+│   ├── Qivr.Infrastructure/# Data access and external services
+│   └── Qivr.Services/      # Business logic and services
 │
-├── database/                  # Database scripts and schemas
-│   ├── migrations/           # Database migration files
-│   └── schemas/              # SQL schema definitions
+├── database/                # Database scripts
+│   ├── migrations/         # SQL migration files
+│   └── schemas/            # Schema definitions
 │
-├── infrastructure/            # Infrastructure configuration
-│   ├── docker/               # Docker compose files
-│   ├── localstack/           # LocalStack AWS emulation
-│   ├── otel/                 # OpenTelemetry configuration
-│   └── terraform/            # Terraform IaC scripts
+├── infrastructure/          # Deployment and infrastructure
+│   ├── terraform/          # Infrastructure as Code
+│   └── otel/               # Observability configuration
 │
-├── packages/                  # Shared packages (monorepo)
-│   ├── types/                # TypeScript type definitions
-│   ├── ui-components/        # Shared React components
-│   └── utils/                # Shared utilities
+├── logs/                   # Application logs (gitignored)
+├── .pids/                  # Process ID files (gitignored)
 │
-└── scripts/                   # Build and deployment scripts
+├── docker-compose.yml      # Local development services
+├── start-all.sh           # Start all services script
+├── stop-all.sh            # Stop all services script
+├── install.sh             # Initial setup script
+│
+└── Documentation
+    ├── README.md                      # Project overview and quick start
+    ├── SETUP.md                       # Detailed setup instructions
+    ├── CURRENT_STATUS_AND_ROADMAP.md # Development status and roadmap
+    └── TEST_CREDENTIALS.md           # Test account information
 ```
-
-## Service Locations
-
-### Frontend Applications
-- **Patient Portal**: `apps/patient-portal/` - http://localhost:3002
-- **Clinic Dashboard**: `apps/clinic-dashboard/` - http://localhost:3001
-- **Widget**: `apps/widget/` - Embeddable iframe
-
-### Backend Services
-- **API**: `backend/Qivr.Api/` - http://localhost:5000
-- **Swagger**: http://localhost:5000/swagger
-
-### Infrastructure Services
-- **PostgreSQL**: Docker - localhost:5432
-- **Redis**: Docker - localhost:6379
-- **MinIO (S3)**: Docker - localhost:9000/9001
-- **Mailhog**: Docker - localhost:8025
 
 ## Key Files
 
-### Configuration
-- `backend/Qivr.Api/appsettings.json` - Backend configuration
-- `infrastructure/docker/.env` - Docker environment variables
-- `apps/*/package.json` - Frontend dependencies
+### Root Level Scripts
+- `start-all.sh` - Starts all applications (Backend API, Clinic Dashboard, Patient Portal, Widget)
+- `stop-all.sh` - Cleanly stops all running applications
+- `install.sh` - Initial project setup and dependency installation
+- `docker-compose.yml` - Local services (PostgreSQL, MinIO, pgAdmin, MailHog)
 
-### Database
-- `database/schemas/schema.sql` - Database schema
-- `backend/Qivr.Infrastructure/Data/QivrDbContext.cs` - Entity Framework context
+### Application Ports
+- Backend API: `http://localhost:5000` (Swagger at `/swagger`)
+- Clinic Dashboard: `http://localhost:3001`
+- Patient Portal: `http://localhost:3002`
+- Widget: `http://localhost:3000`
+- pgAdmin: `http://localhost:8081`
+- MinIO Console: `http://localhost:9001`
+- MailHog: `http://localhost:8025`
 
-### Authentication
-- `backend/Qivr.Api/Services/CognitoAuthService.cs` - AWS Cognito integration
-- `apps/patient-portal/src/services/authService.ts` - Frontend auth service
+## Technology Stack
 
-## Development Commands
+### Backend
+- .NET 8.0
+- Entity Framework Core
+- PostgreSQL
+- MinIO (S3-compatible object storage)
+- JWT Authentication
 
-### Start All Services
-```bash
-# Start infrastructure
-cd infrastructure/docker
-docker-compose up -d
+### Frontend
+- React 18
+- TypeScript
+- Material-UI (MUI)
+- React Router
+- React Hook Form
+- Three.js (Widget only)
+- Vite (build tool)
 
-# Start backend
-cd backend/Qivr.Api
-dotnet run
+### Infrastructure
+- Docker & Docker Compose
+- Terraform
+- GitHub Actions (CI/CD ready)
 
-# Start patient portal
-cd apps/patient-portal
-npm run dev
+## Development Workflow
 
-# Start clinic dashboard
-cd apps/clinic-dashboard
-npm run dev
-```
+1. **Start Services**: Run `./start-all.sh` to start all applications
+2. **Stop Services**: Run `./stop-all.sh` to stop everything
+3. **View Logs**: Check the `logs/` directory for application logs
+4. **Database**: PostgreSQL runs in Docker, migrations in `database/migrations/`
+5. **API Documentation**: Visit `http://localhost:5000/swagger`
 
-### Database Operations
-```bash
-# Run migrations
-cd backend
-dotnet ef database update
+## Current Implementation Status
 
-# Create new migration
-dotnet ef migrations add MigrationName -p Qivr.Infrastructure -s Qivr.Api
-```
+- ✅ Authentication & Authorization
+- ✅ Patient Management
+- ✅ Appointment Scheduling
+- ✅ Patient Evaluations (3D body mapping)
+- ✅ PROM Submission Flow
+- ✅ Dashboard & Reporting (Basic)
+- ⏳ Analytics & Charts
+- ⏳ Real-time Updates
+- ⏳ SMS/Voice Notifications
+- ⏳ Payment Processing
 
-### Testing
-```bash
-# Backend tests
-cd backend
-dotnet test
-
-# Frontend tests
-cd apps/patient-portal
-npm test
-```
-
-## Architecture Notes
-
-- **Multi-tenant**: All data is isolated by `tenant_id`
-- **Authentication**: AWS Cognito with JWT tokens
-- **Data Residency**: AU regions (ap-southeast-2 primary)
-- **API Pattern**: RESTful with OpenAPI/Swagger
-- **Frontend Stack**: React 18, TypeScript, MUI v5
-- **Backend Stack**: .NET 8, EF Core, PostgreSQL
-
-## Environment Variables
-
-### Backend (.NET)
-- `ConnectionStrings__DefaultConnection`: PostgreSQL connection
-- `Cognito__UserPoolId`: AWS Cognito User Pool ID
-- `Cognito__UserPoolClientId`: Cognito Client ID
-- `MessageMedia__ApiKey`: SMS service API key
-
-### Frontend (React)
-- `VITE_API_URL`: Backend API URL
-- `VITE_COGNITO_DOMAIN`: Cognito hosted UI domain
-- `VITE_COGNITO_CLIENT_ID`: Cognito Client ID
+See `CURRENT_STATUS_AND_ROADMAP.md` for detailed progress and next steps.
