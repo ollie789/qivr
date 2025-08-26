@@ -191,9 +191,18 @@ if (app.Environment.IsDevelopment())
 // Security headers MUST be added early in the pipeline
 app.UseSecurityHeaders();
 
-app.UseHttpsRedirection();
-app.UseCors("AllowedOrigins");
+// Conditionally redirect HTTP->HTTPS based on configuration to avoid breaking container health checks
+if (builder.Configuration.GetValue<bool>("Security:RequireHttps"))
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseSerilogRequestLogging();
+
+// Routing must occur before authN/authZ when using endpoint routing
+app.UseRouting();
+
+app.UseCors("AllowedOrigins");
 
 // Add request ID tracking
 app.Use(async (ctx, next) =>
@@ -208,21 +217,15 @@ app.Use(async (ctx, next) =>
 app.UseMiddleware<TenantMiddleware>();
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
-// Authentication and Authorization (must be after error handling but before routing)
+// Authentication and Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
 // Rate limiting
 app.UseRateLimiter();
 
-// Endpoint routing
-app.UseRouting();
-
 // Map endpoints
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-});
+app.MapControllers();
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
