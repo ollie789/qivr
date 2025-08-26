@@ -11,8 +11,9 @@ echo "=============================="
 
 # Function to kill process by PID
 kill_pid() {
-    if [ -f "/Users/oliver/Projects/qivr/.pids/$1.pid" ]; then
-        PID=$(cat /Users/oliver/Projects/qivr/.pids/$1.pid)
+    PID_FILE="/workspace/.pids/$1.pid"
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
         if ps -p $PID > /dev/null 2>&1; then
             echo -e "${YELLOW}Stopping $1 (PID: $PID)...${NC}"
             kill -9 $PID 2>/dev/null
@@ -20,7 +21,7 @@ kill_pid() {
         else
             echo -e "${YELLOW}$1 was not running${NC}"
         fi
-        rm /Users/oliver/Projects/qivr/.pids/$1.pid
+        rm -f "$PID_FILE"
     fi
 }
 
@@ -44,5 +45,14 @@ kill_port 5000
 kill_port 3000
 kill_port 3001
 kill_port 3002
+kill_port 5173
+
+# Optionally stop docker compose services if running
+if command -v docker > /dev/null 2>&1; then
+    if docker compose ps > /dev/null 2>&1; then
+        echo -e "\n${YELLOW}Stopping Docker Compose services (if any)...${NC}"
+        ( cd /workspace && docker compose down ) > /dev/null 2>&1 || true
+    fi
+fi
 
 echo -e "\n${GREEN}All Qivr applications stopped!${NC}"

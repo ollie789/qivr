@@ -20,9 +20,9 @@
     "patient:dev": "npm run dev --workspace=@qivr/patient-portal",
     "clinic:dev": "npm run dev --workspace=@qivr/clinic-dashboard",
     "backend:dev": "cd backend && dotnet watch run --project Qivr.Api",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
