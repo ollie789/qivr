@@ -147,6 +147,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// Security headers MUST be added early in the pipeline
+app.UseSecurityHeaders();
+
 app.UseHttpsRedirection();
 app.UseCors("AllowedOrigins");
 app.UseSerilogRequestLogging();
