@@ -49,19 +49,38 @@ public class IntakeController : ControllerBase
             var evaluationId = Guid.NewGuid();
             var now = DateTime.UtcNow;
             
-            // Store the evaluation in the database
+            // Store the evaluation in the database - using minimal required fields
+            var intakeData = new Dictionary<string, object>
+            {
+                ["personalInfo"] = new { 
+                    request.PersonalInfo.FirstName, 
+                    request.PersonalInfo.LastName, 
+                    request.PersonalInfo.DateOfBirth, 
+                    request.PersonalInfo.Gender 
+                },
+                ["contactInfo"] = new { 
+                    request.ContactInfo.Email, 
+                    request.ContactInfo.Phone, 
+                    request.ContactInfo.Address,
+                    request.ContactInfo.City,
+                    request.ContactInfo.State,
+                    request.ContactInfo.Postcode
+                },
+                ["chiefComplaint"] = request.ChiefComplaint,
+                ["symptoms"] = request.Symptoms,
+                ["painLevel"] = request.PainLevel,
+                ["duration"] = request.Duration,
+                ["medicalHistory"] = request.MedicalHistory,
+                ["consent"] = request.Consent
+            };
+
             await _dbContext.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO evaluations (
-                    id, tenant_id, patient_name, patient_email, patient_phone,
-                    chief_complaint, symptoms, questionnaire_responses,
-                    status, created_at, updated_at
+                INSERT INTO qivr.evaluations (
+                    id, tenant_id, patient_id, status, responses, created_at, updated_at
                 ) VALUES (
-                    {evaluationId}, {tenantId}, 
-                    {request.PersonalInfo.FirstName + " " + request.PersonalInfo.LastName},
-                    {request.ContactInfo.Email}, {request.ContactInfo.Phone},
-                    {request.ChiefComplaint}, {JsonSerializer.Serialize(request.Symptoms)},
-                    {JsonSerializer.Serialize(request.QuestionnaireResponses)},
-                    'pending', {now}, {now}
+                    {evaluationId}, {tenantId}, {Guid.NewGuid()},
+                    'pending', {JsonSerializer.Serialize(intakeData)}::jsonb,
+                    {now}, {now}
                 )", cancellationToken);
             
             // Store pain map data if provided
@@ -71,9 +90,9 @@ public class IntakeController : ControllerBase
                 {
                     var painMapId = Guid.NewGuid();
                     await _dbContext.Database.ExecuteSqlInterpolatedAsync($@"
-                        INSERT INTO pain_maps (
+                        INSERT INTO qivr.pain_maps (
                             id, tenant_id, evaluation_id, body_part, intensity,
-                            pain_type, position_x, position_y, position_z,
+                            pain_type, coordinate_x, coordinate_y, coordinate_z,
                             created_at, updated_at
                         ) VALUES (
                             {painMapId}, {tenantId}, {evaluationId},
@@ -90,7 +109,7 @@ public class IntakeController : ControllerBase
             // Create intake submission record for tracking
             var intakeId = Guid.NewGuid();
             await _dbContext.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO intake_submissions (
+                INSERT INTO qivr.intake_submissions (
                     id, tenant_id, evaluation_id, patient_name, patient_email,
                     condition_type, pain_level, severity, status,
                     submitted_at, created_at, updated_at
@@ -144,7 +163,7 @@ public class IntakeController : ControllerBase
                            WHEN status = 'pending' THEN 'Your intake is in the queue'
                            ELSE 'Please contact the clinic for an update'
                        END as StatusMessage
-                FROM intake_submissions 
+                FROM qivr.intake_submissions 
                 WHERE id = {id}
             ")
             .FirstOrDefaultAsync(cancellationToken);
@@ -186,7 +205,7 @@ public class IntakeSubmissionRequest
     public string Duration { get; set; } = string.Empty;
     public List<PainPointDto> PainPoints { get; set; } = new();
     public Dictionary<string, object> QuestionnaireResponses { get; set; } = new();
-    public MedicalHistoryDto MedicalHistory { get; set; } = new();
+    public IntakeMedicalHistoryDto MedicalHistory { get; set; } = new();
     public ConsentDto Consent { get; set; } = new();
 }
 
@@ -223,7 +242,7 @@ public class PositionDto
     public float Z { get; set; }
 }
 
-public class MedicalHistoryDto
+public class IntakeMedicalHistoryDto
 {
     public string? Conditions { get; set; }
     public string? Medications { get; set; }

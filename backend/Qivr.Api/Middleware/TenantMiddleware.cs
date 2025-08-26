@@ -114,7 +114,8 @@ public class TenantMiddleware
             "/api/auth/signup",
             "/api/auth/forgot-password",
             "/api/auth/refresh",
-            "/webhooks"
+            "/webhooks",
+            "/api/v1/intake"  // Public intake submission endpoint
         };
         
         return !publicPaths.Any(p => path.StartsWithSegments(p));

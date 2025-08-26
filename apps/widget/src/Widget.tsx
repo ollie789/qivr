@@ -182,7 +182,7 @@ export const Widget: React.FC = () => {
       // Get clinic ID from parent window if embedded
       const clinicId = (window as any).clinicId || localStorage.getItem('clinicId');
 
-      // Submit to the new public intake endpoint
+      // Submit to the public intake endpoint
       const response = await fetch('http://localhost:5000/api/v1/intake/submit', {
         method: 'POST',
         headers: {

@@ -40,12 +40,12 @@ public class SecurityHeadersMiddleware
         var isApi = context.Request.Path.StartsWithSegments("/api");
 
         // Add security headers before processing the request
-        AddSecurityHeaders(context.Response, nonce, isWidget, isApi);
+        AddSecurityHeaders(context.Response, nonce, isWidget, isApi, context);
 
         await _next(context);
     }
 
-    private void AddSecurityHeaders(HttpResponse response, string nonce, bool isWidget, bool isApi)
+    private void AddSecurityHeaders(HttpResponse response, string nonce, bool isWidget, bool isApi, HttpContext context)
     {
         // Remove server header
         response.Headers.Remove("Server");
