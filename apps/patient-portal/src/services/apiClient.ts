@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+const API_URL = `${API_ROOT_URL.replace(/\/+$/, '')}/api`;
 
 class ApiClient {
   private client: AxiosInstance;

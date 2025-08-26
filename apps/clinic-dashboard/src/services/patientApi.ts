@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = `${API_ROOT_URL.replace(/\/+$/, '')}/api/v1`;
 
 export interface Patient {
   id: string;
@@ -65,7 +66,7 @@ export interface PatientSearchParams {
 
 class PatientApi {
   private api = axios.create({
-    baseURL: `${API_BASE_URL}/api/v1`,
+    baseURL: API_BASE_URL,
     headers: {
       'Content-Type': 'application/json',
     },
