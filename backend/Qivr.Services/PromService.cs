@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Qivr.Services;
 
@@ -58,30 +59,37 @@ public class PromService : IPromService
 
 	public async Task<PromTemplateDto?> GetTemplateAsync(Guid tenantId, string key, int? version, CancellationToken ct = default)
 	{
-		var whereVersion = version.HasValue ? $"AND version = {version.Value}" : "";
-
-		var sql = $@"
-			SELECT id, key, version, name, description, created_at
-			FROM qivr.prom_templates
-			WHERE tenant_id = @p0 AND key = @p1 {whereVersion}
-			ORDER BY version DESC
-			LIMIT 1";
-
-		var result = await _db.Database.SqlQuery<PromTemplateDto>(sql, [tenantId, key]).FirstOrDefaultAsync(ct);
-		return result;
+		if (version.HasValue)
+		{
+			var result = await _db.Database.SqlQuery<PromTemplateDto>($@"
+				SELECT id, key, version, name, description, created_at
+				FROM qivr.prom_templates
+				WHERE tenant_id = {tenantId} AND key = {key} AND version = {version.Value}
+				ORDER BY version DESC
+				LIMIT 1").FirstOrDefaultAsync(ct);
+			return result;
+		}
+		else
+		{
+			var result = await _db.Database.SqlQuery<PromTemplateDto>($@"
+				SELECT id, key, version, name, description, created_at
+				FROM qivr.prom_templates
+				WHERE tenant_id = {tenantId} AND key = {key}
+				ORDER BY version DESC
+				LIMIT 1").FirstOrDefaultAsync(ct);
+			return result;
+		}
 	}
 
 	public async Task<IReadOnlyList<PromTemplateSummaryDto>> ListTemplatesAsync(Guid tenantId, int page, int pageSize, CancellationToken ct = default)
 	{
 		var offset = Math.Max(0, (page - 1) * pageSize);
-		var sql = $@"
+		var list = await _db.Database.SqlQuery<PromTemplateSummaryDto>($@"
 			SELECT id, key, version, name, description, created_at
 			FROM qivr.prom_templates
-			WHERE tenant_id = @p0
+			WHERE tenant_id = {tenantId}
 			ORDER BY key, version DESC
-			LIMIT @p1 OFFSET @p2";
-
-		var list = await _db.Database.SqlQuery<PromTemplateSummaryDto>(sql, [tenantId, pageSize, offset]).ToListAsync(ct);
+			LIMIT {pageSize} OFFSET {offset}").ToListAsync(ct);
 		return list;
 	}
 
@@ -89,8 +97,7 @@ public class PromService : IPromService
 	{
 		// Resolve template id by key/version
 		var template = await _db.Database.SqlQuery<TemplateIdVersion>(
-			$"SELECT id, version FROM qivr.prom_templates WHERE tenant_id = @p0 AND key = @p1 ORDER BY version DESC LIMIT 1",
-			[tenantId, request.TemplateKey])
+			$"SELECT id, version FROM qivr.prom_templates WHERE tenant_id = {tenantId} AND key = {request.TemplateKey} ORDER BY version DESC LIMIT 1")
 			.FirstOrDefaultAsync(ct);
 
 		if (template == null)
@@ -99,8 +106,7 @@ public class PromService : IPromService
 		if (request.Version.HasValue && request.Version.Value != template.Version)
 		{
 			template = await _db.Database.SqlQuery<TemplateIdVersion>(
-				$"SELECT id, version FROM qivr.prom_templates WHERE tenant_id = @p0 AND key = @p1 AND version = @p2 LIMIT 1",
-				[tenantId, request.TemplateKey, request.Version.Value])
+				$"SELECT id, version FROM qivr.prom_templates WHERE tenant_id = {tenantId} AND key = {request.TemplateKey} AND version = {request.Version.Value} LIMIT 1")
 				.FirstOrDefaultAsync(ct) ?? throw new InvalidOperationException("Template version not found");
 		}
 
@@ -130,22 +136,22 @@ public class PromService : IPromService
 
 	public async Task<PromInstanceDto?> GetInstanceAsync(Guid tenantId, Guid id, CancellationToken ct = default)
 	{
-		var sql = @"SELECT 
+		var result = await _db.Database.SqlQuery<PromInstanceDto>($@"SELECT 
 			id, template_id as TemplateId, patient_id as PatientId, status, scheduled_for as ScheduledFor,
 			completed_at as CompletedAt, due_date as DueAt, responses as AnswersJson, score, created_at as CreatedAt
-			FROM qivr.prom_instances WHERE tenant_id = @p0 AND id = @p1";
-		return await _db.Database.SqlQuery<PromInstanceDto>(sql, [tenantId, id]).FirstOrDefaultAsync(ct);
+			FROM qivr.prom_instances WHERE tenant_id = {tenantId} AND id = {id}").FirstOrDefaultAsync(ct);
+		return result;
 	}
 
 	public async Task<SubmitAnswersResult> SubmitAnswersAsync(Guid tenantId, Guid instanceId, Dictionary<string, object> answers, CancellationToken ct = default)
 	{
 		// Load template scoring method
-		var tpl = await _db.Database.SqlQuery<TemplateScoreInfo>(@"
+		var tpl = await _db.Database.SqlQuery<TemplateScoreInfo>($@"
 			SELECT t.scoring_method as ScoringMethod, t.scoring_rules as ScoringRules
 			FROM qivr.prom_instances i
 			JOIN qivr.prom_templates t ON t.id = i.template_id
-			WHERE i.tenant_id = @p0 AND i.id = @p1",
-			[tenantId, instanceId]).FirstOrDefaultAsync(ct);
+			WHERE i.tenant_id = {tenantId} AND i.id = {instanceId}")
+			.FirstOrDefaultAsync(ct);
 
 		if (tpl == null) throw new InvalidOperationException("Instance not found");
 
@@ -155,7 +161,7 @@ public class PromService : IPromService
 		await _db.Database.ExecuteSqlInterpolatedAsync($@"
 			UPDATE qivr.prom_instances
 			SET responses = {System.Text.Json.JsonSerializer.Serialize(answers)}::jsonb,
-				score = {score}, status = {'completed'}, completed_at = {now}, updated_at = {now}
+				score = {score}, status = {"completed"}, completed_at = {now}, updated_at = {now}
 			WHERE tenant_id = {tenantId} AND id = {instanceId}", ct);
 
 		return new SubmitAnswersResult { Score = score, CompletedAt = now };
