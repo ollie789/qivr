@@ -115,7 +115,8 @@ public class TenantMiddleware
             "/api/auth/forgot-password",
             "/api/auth/refresh",
             "/webhooks",
-            "/api/v1/intake"  // Public intake submission endpoint
+            "/api/v1/intake",  // Public intake submission endpoint
+            "/api/v1/proms/instances" // Public PROM answers under /instances/{id}/answers
         };
         
         return !publicPaths.Any(p => path.StartsWithSegments(p));
