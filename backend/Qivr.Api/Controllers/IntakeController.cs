@@ -74,11 +74,24 @@ public class IntakeController : ControllerBase
                 ["consent"] = request.Consent
             };
 
-            await _dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+            // Use intake connection (restricted role) for DB write
+            await using var intakeContext = new QivrDbContext(
+                new DbContextOptionsBuilder<QivrDbContext>()
+                    .UseNpgsql(
+                        _configuration.GetConnectionString("IntakeConnection")
+                        ?? _configuration.GetConnectionString("DefaultConnection"),
+                        o => o.MigrationsAssembly("Qivr.Infrastructure"))
+                    .UseSnakeCaseNamingConvention()
+                    .Options);
+
+            // Use placeholder patient ID for intake submissions
+            var placeholderPatientId = Guid.Parse("00000000-0000-0000-0000-000000000002");
+            
+            await intakeContext.Database.ExecuteSqlInterpolatedAsync($@"
                 INSERT INTO qivr.evaluations (
                     id, tenant_id, patient_id, status, responses, created_at, updated_at
                 ) VALUES (
-                    {evaluationId}, {tenantId}, {Guid.NewGuid()},
+                    {evaluationId}, {tenantId}, {placeholderPatientId},
                     'pending', {JsonSerializer.Serialize(intakeData)}::jsonb,
                     {now}, {now}
                 )", cancellationToken);
@@ -89,7 +102,7 @@ public class IntakeController : ControllerBase
                 foreach (var painPoint in request.PainPoints)
                 {
                     var painMapId = Guid.NewGuid();
-                    await _dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                    await intakeContext.Database.ExecuteSqlInterpolatedAsync($@"
                         INSERT INTO qivr.pain_maps (
                             id, tenant_id, evaluation_id, body_part, intensity,
                             pain_type, coordinate_x, coordinate_y, coordinate_z,
@@ -108,7 +121,7 @@ public class IntakeController : ControllerBase
             
             // Create intake submission record for tracking
             var intakeId = Guid.NewGuid();
-            await _dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+            await intakeContext.Database.ExecuteSqlInterpolatedAsync($@"
                 INSERT INTO qivr.intake_submissions (
                     id, tenant_id, evaluation_id, patient_name, patient_email,
                     condition_type, pain_level, severity, status,

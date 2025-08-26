@@ -167,8 +167,8 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
     ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
 });
 
-// Apply migrations if in development
-if (app.Environment.IsDevelopment())
+// Apply migrations when flagged via configuration
+if (builder.Configuration.GetValue<bool>("ApplyMigrations"))
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();

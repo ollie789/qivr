@@ -1,0 +1,52 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    env:
+      QIVR_DB_PWD: ${{ secrets.QIVR_DB_PWD }}
+      INTAKE_DB_PWD: ${{ secrets.INTAKE_DB_PWD }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node (for front-end installs)
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Cache NPM deps
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            **/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install root dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build back-end
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+
+      - name: Run smoke tests
+        run: |
+          chmod +x ./apps/check-status.sh
+          ./apps/check-status.sh
+
+      # (Optional) Run unit tests if present
+      # - name: Run backend tests
+      #   run: dotnet test --configuration Release
