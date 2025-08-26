@@ -19,7 +19,7 @@ Qivr is a comprehensive platform that helps allied-health clinics (physiotherapy
 
 ### Tech Stack
 
-- **Frontend**: React 19, TypeScript, MUI v7, Three.js
+- **Frontend**: React 18, TypeScript, MUI v5, Three.js
 - **Backend**: .NET 8 (Modular Monolith), OpenAPI-first
 - **Database**: PostgreSQL 16 with Row-Level Security
 - **Auth**: Amazon Cognito (Social + SAML/OIDC)
@@ -89,12 +89,19 @@ docker-compose up -d
 
 5. Run database migrations:
 ```bash
-npm run db:migrate
+cd database && ./run-migrations.sh
 ```
 
 6. Start development servers:
 ```bash
 npm run dev
+```
+
+### Frontend API Base URL
+Set `VITE_API_URL` in the frontend apps to point to your API (defaults to `http://localhost:5000`). For example:
+```bash
+# .env.local in each app
+VITE_API_URL=http://localhost:5000
 ```
 
 ## 🔒 Security & Compliance
