@@ -24,7 +24,8 @@ import {
 } from '@mui/material';
 import { BodyMapping3D } from './components/BodyMapping3D';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+const API_URL = API_ROOT_URL.replace(/\/+$/, '');
 
 const theme = createTheme({
   palette: {
@@ -199,25 +200,20 @@ export const Widget: React.FC = () => {
         throw new Error(error || 'Failed to submit intake. Please try again.');
       }
 
-      // Success - show confirmation
-      const result = await response.json();
-      
-      // Store intake ID for status checking
-      if (result.intakeId) {
-        localStorage.setItem('lastIntakeId', result.intakeId);
-      }
-      
+      const data = await response.json();
+
       setActiveStep(steps.length);
-      
-      // Show success message
-      console.log('Intake submitted successfully:', result);
-      if (result.id) {
-        // Could redirect to patient portal or show confirmation with appointment booking
-        console.log('Evaluation created with ID:', result.id);
+
+      // Notify parent window of completion if embedded
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: 'SUBMISSION_COMPLETE',
+          intakeId: data.intakeId,
+          evaluationId: data.evaluationId,
+        }, '*');
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while submitting your evaluation');
-      console.error('Submission error:', err);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during submission. Please try again.');
     } finally {
       setLoading(false);
     }
