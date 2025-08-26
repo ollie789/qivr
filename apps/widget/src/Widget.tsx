@@ -24,6 +24,8 @@ import {
 } from '@mui/material';
 import { BodyMapping3D } from './components/BodyMapping3D';
 
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+
 const theme = createTheme({
   palette: {
     primary: {
@@ -183,7 +185,7 @@ export const Widget: React.FC = () => {
       const clinicId = (window as any).clinicId || localStorage.getItem('clinicId');
 
       // Submit to the public intake endpoint
-      const response = await fetch('http://localhost:5000/api/v1/intake/submit', {
+      const response = await fetch(`${API_URL}/api/v1/intake/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

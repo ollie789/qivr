@@ -262,7 +262,7 @@ docker-compose up -d
 ```
 
 ### Access services
-- **pgAdmin**: http://localhost:8080 (admin@qivr.local / admin)
+- **pgAdmin**: http://localhost:8081 (admin@qivr.local / admin)
 - **MinIO Console**: http://localhost:9001 (minioadmin / minioadmin)
 - **Mailhog**: http://localhost:8025
 - **Jaeger**: http://localhost:16686
