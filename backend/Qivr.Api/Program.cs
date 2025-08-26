@@ -16,6 +16,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Amazon.SQS;
+using Qivr.Api.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -139,6 +141,8 @@ builder.Services.AddHealthChecks()
 builder.Services.AddQivrServices(builder.Configuration);
 
 builder.Services.Configure<Qivr.Api.Options.IntakeDbOptions>(builder.Configuration.GetSection("Intake"));
+builder.Services.Configure<Qivr.Api.Options.SqsOptions>(builder.Configuration.GetSection("Sqs"));
+builder.Services.Configure<Qivr.Api.Options.FeaturesOptions>(builder.Configuration.GetSection("Features"));
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -153,6 +157,30 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Qivr.Api.Controllers.IntakeController>();
+
+// AWS SQS
+var sqsConfig = builder.Configuration.GetSection("Sqs");
+if (!string.IsNullOrEmpty(sqsConfig["QueueUrl"]))
+{
+    builder.Services.AddSingleton<IAmazonSQS>(sp =>
+    {
+        var config = new Amazon.SQSConfig
+        {
+            RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(sqsConfig["Region"] ?? "ap-southeast-2")
+        };
+        return new AmazonSQSClient(config);
+    });
+    
+    // Register the background worker
+    builder.Services.AddHostedService<IntakeProcessingWorker>();
+    
+    builder.Logging.AddFilter<IntakeProcessingWorker>(LogLevel.Information);
+}
+else
+{
+    builder.Logging.AddDebug().AddConsole();
+    builder.Services.AddSingleton<IAmazonSQS?>(sp => null);
+}
 
 var app = builder.Build();
 

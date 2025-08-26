@@ -3,6 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
 using System.Text.Json;
+using Amazon.SQS;
+using Amazon.SQS.Model;
+using Microsoft.Extensions.Options;
+using Qivr.Api.Options;
+using Qivr.Api.Workers;
 
 namespace Qivr.Api.Controllers;
 
@@ -14,17 +19,26 @@ public class IntakeController : ControllerBase
     private readonly ILogger<IntakeController> _logger;
     private readonly string _intakeConn;
     private readonly IConfiguration _configuration;
+    private readonly IAmazonSQS? _sqsClient;
+    private readonly SqsOptions _sqsOptions;
+    private readonly FeaturesOptions _featuresOptions;
 
     public IntakeController(
         QivrDbContext dbContext,
         ILogger<IntakeController> logger,
-        Microsoft.Extensions.Options.IOptions<Qivr.Api.Options.IntakeDbOptions> intakeOptions,
-        IConfiguration configuration)
+        IOptions<IntakeDbOptions> intakeOptions,
+        IOptions<SqsOptions> sqsOptions,
+        IOptions<FeaturesOptions> featuresOptions,
+        IConfiguration configuration,
+        IAmazonSQS? sqsClient = null)
     {
         _dbContext = dbContext;
         _logger = logger;
         _intakeConn = intakeOptions.Value.ConnectionString ?? throw new InvalidOperationException("Missing Intake:ConnectionString");
         _configuration = configuration;
+        _sqsClient = sqsClient;
+        _sqsOptions = sqsOptions.Value;
+        _featuresOptions = featuresOptions.Value;
     }
 
     /// <summary>
@@ -137,9 +151,18 @@ public class IntakeController : ControllerBase
             
             _logger.LogInformation("Intake submission created with ID {IntakeId}", intakeId);
             
-            // TODO: Send confirmation email
-            // TODO: Trigger AI analysis if configured
-            // TODO: Notify clinic staff
+            // Enqueue for async processing if enabled
+            if (_featuresOptions.EnableAsyncProcessing && _sqsClient != null && !string.IsNullOrEmpty(_sqsOptions.QueueUrl))
+            {
+                await EnqueueIntakeForProcessing(intakeId, evaluationId, tenantId, 
+                    request.ContactInfo.Email, 
+                    $"{request.PersonalInfo.FirstName} {request.PersonalInfo.LastName}",
+                    now, cancellationToken);
+            }
+            else
+            {
+                _logger.LogWarning("Async processing is disabled or SQS not configured. Skipping queue.");
+            }
             
             return CreatedAtAction(
                 nameof(GetIntakeStatus),
@@ -205,6 +228,55 @@ public class IntakeController : ControllerBase
             >= 4 => "medium",
             _ => "low"
         };
+    }
+    
+    private async Task EnqueueIntakeForProcessing(
+        Guid intakeId, 
+        Guid evaluationId, 
+        Guid tenantId,
+        string patientEmail,
+        string patientName,
+        DateTime submittedAt,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var message = new IntakeQueueMessage
+            {
+                IntakeId = intakeId,
+                EvaluationId = evaluationId,
+                TenantId = tenantId,
+                PatientEmail = patientEmail,
+                PatientName = patientName,
+                SubmittedAt = submittedAt,
+                Metadata = new Dictionary<string, object>
+                {
+                    ["Source"] = "Widget",
+                    ["Version"] = "1.0"
+                }
+            };
+
+            var sendRequest = new SendMessageRequest
+            {
+                QueueUrl = _sqsOptions.QueueUrl,
+                MessageBody = JsonSerializer.Serialize(message),
+                MessageAttributes = new Dictionary<string, MessageAttributeValue>
+                {
+                    ["IntakeId"] = new MessageAttributeValue { StringValue = intakeId.ToString(), DataType = "String" },
+                    ["TenantId"] = new MessageAttributeValue { StringValue = tenantId.ToString(), DataType = "String" },
+                    ["MessageType"] = new MessageAttributeValue { StringValue = "IntakeSubmission", DataType = "String" }
+                }
+            };
+
+            var response = await _sqsClient!.SendMessageAsync(sendRequest, cancellationToken);
+            _logger.LogInformation("Enqueued intake {IntakeId} to SQS with MessageId {MessageId}", 
+                intakeId, response.MessageId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to enqueue intake {IntakeId} to SQS", intakeId);
+            // Don't fail the intake submission if queue is down
+        }
     }
 }
 
