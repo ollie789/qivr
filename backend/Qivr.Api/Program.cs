@@ -164,7 +164,7 @@ if (!string.IsNullOrEmpty(sqsConfig["QueueUrl"]))
 {
     builder.Services.AddSingleton<IAmazonSQS>(sp =>
     {
-        var config = new Amazon.SQSConfig
+        var config = new AmazonSQSConfig
         {
             RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(sqsConfig["Region"] ?? "ap-southeast-2")
         };
@@ -173,13 +173,6 @@ if (!string.IsNullOrEmpty(sqsConfig["QueueUrl"]))
     
     // Register the background worker
     builder.Services.AddHostedService<IntakeProcessingWorker>();
-    
-    builder.Logging.AddFilter<IntakeProcessingWorker>(LogLevel.Information);
-}
-else
-{
-    builder.Logging.AddDebug().AddConsole();
-    builder.Services.AddSingleton<IAmazonSQS?>(sp => null);
 }
 
 var app = builder.Build();
@@ -202,13 +195,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowedOrigins");
 app.UseSerilogRequestLogging();
 
-// Custom middleware
-app.UseMiddleware<TenantMiddleware>();
-app.UseMiddleware<ErrorHandlingMiddleware>();
-
-// Use Cognito authentication
-app.UseCognitoAuthentication();
-
+// Add request ID tracking
 app.Use(async (ctx, next) =>
 {
     var rid = ctx.Request.Headers["X-Request-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString("N");
@@ -217,11 +204,25 @@ app.Use(async (ctx, next) =>
         await next();
 });
 
+// Custom middleware
+app.UseMiddleware<TenantMiddleware>();
+app.UseMiddleware<ErrorHandlingMiddleware>();
+
+// Authentication and Authorization (must be after error handling but before routing)
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Rate limiting
 app.UseRateLimiter();
 
-app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api/v1/intake"), b => b.UseRateLimiter());
+// Endpoint routing
+app.UseRouting();
 
-app.MapControllers();
+// Map endpoints
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+});
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse

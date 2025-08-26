@@ -120,12 +120,4 @@ public static class AuthenticationExtensions
         
         return services;
     }
-    
-    public static IApplicationBuilder UseCognitoAuthentication(this IApplicationBuilder app)
-    {
-        app.UseAuthentication();
-        app.UseAuthorization();
-        
-        return app;
-    }
 }
