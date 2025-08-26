@@ -174,12 +174,12 @@ public class PromService : IPromService
 		{
 			case "sum":
 				return answers.Values
-					.Where(v => decimal.TryParse(v?.ToString(), out _))
-					.Sum(v => decimal.Parse(v!.ToString()!));
+					.Where(v => decimal.TryParse(v?.ToString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out _))
+					.Sum(v => decimal.Parse(v!.ToString()!, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture));
 			case "average":
 				var numeric = answers.Values
-					.Where(v => decimal.TryParse(v?.ToString(), out _))
-					.Select(v => decimal.Parse(v!.ToString()!))
+					.Where(v => decimal.TryParse(v?.ToString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out _))
+					.Select(v => decimal.Parse(v!.ToString()!, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture))
 					.ToList();
 				return numeric.Count == 0 ? 0m : numeric.Average();
 			default:

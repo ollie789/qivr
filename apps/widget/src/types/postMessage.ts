@@ -49,12 +49,12 @@ export class MessageValidator {
   static isValidOrigin(origin: string): boolean {
     // In production, check against allowed origins
     if (process.env.NODE_ENV === 'production') {
+      const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       return this.allowedOrigins.some(allowed => {
-        if (allowed.includes('*')) {
-          const pattern = allowed.replace('*', '.*');
-          return new RegExp(`^${pattern}$`).test(origin);
-        }
-        return allowed === origin;
+        // Escape regex metacharacters, then expand '*' wildcard only
+        const escaped = escapeRegex(allowed).replace(/\\\*/g, '.*');
+        const pattern = new RegExp(`^${escaped}$`);
+        return pattern.test(origin);
       });
     }
     // In development, allow localhost
