@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using Qivr.Infrastructure.Data;
 
 namespace Qivr.Api.Middleware;
 
@@ -6,11 +8,13 @@ public class TenantMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<TenantMiddleware> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public TenantMiddleware(RequestDelegate next, ILogger<TenantMiddleware> logger)
+    public TenantMiddleware(RequestDelegate next, ILogger<TenantMiddleware> logger, IServiceScopeFactory scopeFactory)
     {
         _next = next;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -50,10 +54,70 @@ public class TenantMiddleware
         if (!string.IsNullOrEmpty(tenantId))
         {
             context.Items["TenantId"] = tenantId;
-            _logger.LogDebug("Tenant context set: {TenantId}", tenantId);
+            
+            // Set RLS context in database for this request
+            await SetDatabaseTenantContext(tenantId);
+            
+            _logger.LogDebug("Tenant context set: {TenantId} (RLS enabled)", tenantId);
+        }
+        else if (RequiresTenant(context.Request.Path))
+        {
+            // For protected endpoints, tenant is required
+            _logger.LogWarning("Request to protected endpoint without tenant context: {Path}", context.Request.Path);
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsync("{\"error\":\"Tenant context required\"}");
+            return;
         }
         
         await _next(context);
+    }
+    
+    private async Task SetDatabaseTenantContext(string tenantId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
+        
+        try
+        {
+            var connection = dbContext.Database.GetDbConnection();
+            
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync();
+            }
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT set_tenant_context(@tenant_id::uuid)";
+            
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@tenant_id";
+            parameter.Value = Guid.Parse(tenantId);
+            command.Parameters.Add(parameter);
+            
+            await command.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set RLS tenant context for {TenantId}", tenantId);
+            throw;
+        }
+    }
+    
+    private bool RequiresTenant(PathString path)
+    {
+        // Public endpoints that don't require tenant context
+        var publicPaths = new[]
+        {
+            "/health",
+            "/swagger",
+            "/api/auth/login",
+            "/api/auth/signup",
+            "/api/auth/forgot-password",
+            "/api/auth/refresh",
+            "/webhooks"
+        };
+        
+        return !publicPaths.Any(p => path.StartsWithSegments(p));
     }
 }
 
