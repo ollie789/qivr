@@ -123,81 +123,92 @@ export const Widget: React.FC = () => {
     setError(null);
     
     try {
-      // Prepare evaluation data in the format expected by the backend
-      const evaluationData = {
-        // Patient ID would come from authentication or be created on backend
-        patientId: '00000000-0000-0000-0000-000000000000', // Temporary - backend should handle this
+      // Validate required consent
+      if (!formData.consentToTreatment || !formData.consentToPrivacy) {
+        setError('Please accept the required consents to continue.');
+        setLoading(false);
+        return;
+      }
+
+      // Prepare intake data in the format expected by the backend
+      const intakeData = {
+        personalInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          dateOfBirth: formData.dateOfBirth,
+          gender: formData.gender,
+        },
+        contactInfo: {
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          postcode: formData.postcode,
+        },
         chiefComplaint: formData.primaryComplaint,
         symptoms: formData.symptoms,
+        painLevel: formData.painLevel,
+        duration: formData.duration,
+        painPoints: formData.painPoints.map((point: any) => ({
+          bodyPart: point.bodyPart,
+          intensity: point.intensity || formData.painLevel,
+          type: point.type || 'aching',
+          position: point.position ? {
+            x: point.position[0] || 0,
+            y: point.position[1] || 0,
+            z: point.position[2] || 0,
+          } : undefined,
+        })),
         questionnaireResponses: {
-          personalInfo: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            dateOfBirth: formData.dateOfBirth,
-            gender: formData.gender,
-          },
-          contactInfo: {
-            email: formData.email,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            postcode: formData.postcode,
-          },
           symptomDetails: {
             duration: formData.duration,
             painLevel: formData.painLevel,
           },
-          medicalHistory: {
-            conditions: formData.medicalConditions,
-            medications: formData.medications,
-            allergies: formData.allergies,
-            previousTreatments: formData.previousTreatments,
-          },
         },
-        // Convert pain points to the expected format
-        painMaps: formData.painPoints.map((point: any) => ({
-          bodyRegion: point.bodyPart || point.region,
-          coordinates: {
-            x: point.position?.x || 0,
-            y: point.position?.y || 0,
-            z: point.position?.z || 0,
-          },
-          intensity: point.intensity || formData.painLevel,
-          type: point.type || 'aching',
-          qualities: point.qualities || [],
-        })),
+        medicalHistory: {
+          conditions: formData.medicalConditions,
+          medications: formData.medications,
+          allergies: formData.allergies,
+          previousTreatments: formData.previousTreatments,
+        },
+        consent: {
+          consentToTreatment: formData.consentToTreatment,
+          consentToPrivacy: formData.consentToPrivacy,
+          consentToMarketing: formData.consentToMarketing,
+        },
       };
 
-      // For now, use test endpoint that doesn't require auth
-      const response = await fetch('http://localhost:5000/api/testdata/evaluations', {
+      // Get clinic ID from parent window if embedded
+      const clinicId = (window as any).clinicId || localStorage.getItem('clinicId');
+
+      // Submit to the new public intake endpoint
+      const response = await fetch('http://localhost:5000/api/v1/intake/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(clinicId && { 'X-Clinic-Id': clinicId }),
         },
-        body: JSON.stringify(evaluationData),
+        body: JSON.stringify(intakeData),
       });
 
       if (!response.ok) {
-        // Try the regular endpoint as fallback
-        const regularResponse = await fetch('http://localhost:5000/api/v1/evaluations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(evaluationData),
-        });
-        
-        if (!regularResponse.ok) {
-          throw new Error('Failed to submit evaluation. Please try again.');
-        }
+        const error = await response.text();
+        throw new Error(error || 'Failed to submit intake. Please try again.');
       }
 
       // Success - show confirmation
+      const result = await response.json();
+      
+      // Store intake ID for status checking
+      if (result.intakeId) {
+        localStorage.setItem('lastIntakeId', result.intakeId);
+      }
+      
       setActiveStep(steps.length);
       
-      // Store evaluation ID if returned
-      const result = await response.json().catch(() => ({}));
+      // Show success message
+      console.log('Intake submitted successfully:', result);
       if (result.id) {
         // Could redirect to patient portal or show confirmation with appointment booking
         console.log('Evaluation created with ID:', result.id);
