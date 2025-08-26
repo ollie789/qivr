@@ -30,6 +30,12 @@ import {
   Tabs,
   Badge,
   LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
+  Alert,
 } from '@mui/material';
 import {
   Visibility as ViewIcon,
@@ -46,11 +52,17 @@ import {
   Warning as WarningIcon,
   Info as InfoIcon,
   CheckCircle,
+  PersonAdd as PersonAddIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  CalendarMonth as CalendarIcon,
+  LocalHospital as MedicalIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useSnackbar } from 'notistack';
 import { intakeApi, type IntakeSubmission } from '../services/intakeApi';
+import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDialog';
 
 
 const IntakeQueue: React.FC = () => {
@@ -61,6 +73,8 @@ const IntakeQueue: React.FC = () => {
   const [selectedIntake, setSelectedIntake] = useState<IntakeSubmission | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [createPatientOpen, setCreatePatientOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterUrgency, setFilterUrgency] = useState<string>('all');
 
@@ -69,7 +83,9 @@ const IntakeQueue: React.FC = () => {
     queryKey: ['intakeQueue', selectedTab, filterUrgency, searchQuery],
     queryFn: async () => {
       const filters = {
-        status: selectedTab === 0 ? 'pending' : selectedTab === 1 ? 'reviewing' : selectedTab === 2 ? 'approved' : undefined,
+        status: selectedTab === 0 ? 'pending' : 
+                selectedTab === 1 ? 'reviewing' : 
+                selectedTab === 2 ? 'processed' : undefined,
         severity: filterUrgency !== 'all' ? filterUrgency : undefined,
         search: searchQuery || undefined,
       };
@@ -128,11 +144,39 @@ const IntakeQueue: React.FC = () => {
     }
   };
 
+  const handleSchedule = (intake: IntakeSubmission) => {
+    setSelectedIntake(intake);
+    setScheduleOpen(true);
+  };
+
+  const handleCreatePatient = (intake: IntakeSubmission) => {
+    setSelectedIntake(intake);
+    setCreatePatientOpen(true);
+  };
+
+  const handleSavePatient = () => {
+    enqueueSnackbar('Patient created successfully', { variant: 'success' });
+    setCreatePatientOpen(false);
+    // After creating patient, open scheduling dialog
+    setScheduleOpen(true);
+  };
+
   const filteredIntakes = intakes.filter(intake => {
     const matchesSearch = intake.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          intake.conditionType.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesUrgency = filterUrgency === 'all' || intake.severity === filterUrgency;
-    return matchesSearch && matchesUrgency;
+    
+    // Filter by tab
+    let matchesTab = true;
+    if (selectedTab === 0) {
+      matchesTab = intake.status === 'pending';
+    } else if (selectedTab === 1) {
+      matchesTab = intake.status === 'reviewing';
+    } else if (selectedTab === 2) {
+      matchesTab = ['approved', 'rejected', 'scheduled'].includes(intake.status);
+    }
+    
+    return matchesSearch && matchesUrgency && matchesTab;
   });
 
   return (
@@ -308,7 +352,13 @@ const IntakeQueue: React.FC = () => {
               </Badge>
             }
           />
-          <Tab label="Processed" />
+          <Tab 
+            label={
+              <Badge badgeContent={intakes.filter(i => ['approved', 'rejected', 'scheduled'].includes(i.status)).length} color="success">
+                Processed
+              </Badge>
+            }
+          />
         </Tabs>
 
         {/* Table */}
@@ -341,11 +391,11 @@ const IntakeQueue: React.FC = () => {
                   <TableCell>
                     <Box>
                       <Typography variant="body2">{intake.conditionType}</Typography>
-                      {intake.symptoms && (
+                      {intake.symptoms && intake.symptoms.length > 0 && (
                         <Box sx={{ mt: 0.5 }}>
-                          {intake.symptoms.slice(0, 2).map((symptom) => (
+                          {intake.symptoms.slice(0, 2).map((symptom, index) => (
                             <Chip
-                              key={symptom}
+                              key={`${intake.id}-symptom-${index}`}
                               label={symptom}
                               size="small"
                               sx={{ mr: 0.5 }}
@@ -421,11 +471,25 @@ const IntakeQueue: React.FC = () => {
                           <AssignIcon />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Schedule">
-                        <IconButton size="small">
+                      <Tooltip title="Schedule Appointment">
+                        <IconButton 
+                          size="small"
+                          onClick={() => handleSchedule(intake)}
+                        >
                           <ScheduleIcon />
                         </IconButton>
                       </Tooltip>
+                      {intake.status === 'pending' && !intake.patientId && (
+                        <Tooltip title="Create Patient">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleCreatePatient(intake)}
+                          >
+                            <PersonAddIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       {intake.status === 'pending' && (
                         <>
                           <Tooltip title="Approve">
@@ -459,20 +523,142 @@ const IntakeQueue: React.FC = () => {
 
       {/* Details Dialog */}
       <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Intake Details</DialogTitle>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            Intake Details
+            <Chip
+              label={selectedIntake?.status || ''}
+              color={getStatusColor(selectedIntake?.status || '') as any}
+              size="small"
+            />
+          </Box>
+        </DialogTitle>
         <DialogContent>
           {selectedIntake && (
             <Box>
-              {/* Add detailed intake view here */}
-              <Typography>Patient: {selectedIntake.patientName}</Typography>
-              <Typography>Condition: {selectedIntake.conditionType}</Typography>
-              {/* Add more details */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <List dense>
+                    <ListItem>
+                      <ListItemIcon><PersonIcon /></ListItemIcon>
+                      <ListItemText 
+                        primary="Patient Name"
+                        secondary={selectedIntake.patientName}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon><EmailIcon /></ListItemIcon>
+                      <ListItemText 
+                        primary="Email"
+                        secondary={selectedIntake.email}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon><PhoneIcon /></ListItemIcon>
+                      <ListItemText 
+                        primary="Phone"
+                        secondary={selectedIntake.phone || 'Not provided'}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon><CalendarIcon /></ListItemIcon>
+                      <ListItemText 
+                        primary="Submitted"
+                        secondary={format(new Date(selectedIntake.submittedAt), 'MMM d, yyyy h:mm a')}
+                      />
+                    </ListItem>
+                  </List>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <List dense>
+                    <ListItem>
+                      <ListItemIcon><MedicalIcon /></ListItemIcon>
+                      <ListItemText 
+                        primary="Chief Complaint"
+                        secondary={selectedIntake.conditionType}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon><WarningIcon /></ListItemIcon>
+                      <ListItemText 
+                        primary="Pain Level"
+                        secondary={`${selectedIntake.painLevel}/10`}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon><FlagIcon /></ListItemIcon>
+                      <ListItemText 
+                        primary="Urgency"
+                        secondary={selectedIntake.severity.toUpperCase()}
+                      />
+                    </ListItem>
+                    {selectedIntake.assignedTo && (
+                      <ListItem>
+                        <ListItemIcon><PersonIcon /></ListItemIcon>
+                        <ListItemText 
+                          primary="Assigned To"
+                          secondary={selectedIntake.assignedTo}
+                        />
+                      </ListItem>
+                    )}
+                  </List>
+                </Grid>
+                {selectedIntake.symptoms && selectedIntake.symptoms.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" gutterBottom>Symptoms</Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {selectedIntake.symptoms.map((symptom, index) => (
+                        <Chip key={`detail-symptom-${index}`} label={symptom} variant="outlined" />
+                      ))}
+                    </Box>
+                  </Grid>
+                )}
+                {selectedIntake.aiSummary && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" gutterBottom>AI Analysis</Typography>
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedIntake.aiSummary}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                )}
+                {selectedIntake.bodyMap && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" gutterBottom>Body Mapping Data</Typography>
+                    <Alert severity="info">
+                      3D body mapping data available - {selectedIntake.bodyMap.painPoints?.length || 0} pain points identified
+                    </Alert>
+                  </Grid>
+                )}
+              </Grid>
             </Box>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-          <Button variant="contained">Schedule Appointment</Button>
+          {selectedIntake && !selectedIntake.patientId && (
+            <Button 
+              variant="outlined" 
+              startIcon={<PersonAddIcon />}
+              onClick={() => {
+                setDetailsOpen(false);
+                handleCreatePatient(selectedIntake);
+              }}
+            >
+              Create Patient
+            </Button>
+          )}
+          <Button 
+            variant="contained" 
+            startIcon={<ScheduleIcon />}
+            onClick={() => {
+              setDetailsOpen(false);
+              handleSchedule(selectedIntake!);
+            }}
+          >
+            Schedule Appointment
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -493,6 +679,135 @@ const IntakeQueue: React.FC = () => {
           <Button onClick={() => setAssignOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={() => setAssignOpen(false)}>
             Assign
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Schedule Appointment Dialog */}
+      <ScheduleAppointmentDialog
+        open={scheduleOpen}
+        onClose={() => {
+          setScheduleOpen(false);
+          refetch(); // Refresh the intake list after scheduling
+        }}
+        patient={selectedIntake?.patientId ? {
+          id: selectedIntake.patientId,
+          firstName: selectedIntake.patientName.split(' ')[0],
+          lastName: selectedIntake.patientName.split(' ').slice(1).join(' '),
+          email: selectedIntake.email,
+          phone: selectedIntake.phone || '',
+        } : undefined}
+        intakeId={selectedIntake?.id}
+        prefilledData={{
+          chiefComplaint: selectedIntake?.conditionType,
+          urgency: selectedIntake?.severity,
+        }}
+      />
+
+      {/* Create Patient Dialog */}
+      <Dialog open={createPatientOpen} onClose={() => setCreatePatientOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Create New Patient</DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Creating patient record from intake submission
+          </Alert>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="First Name"
+                defaultValue={selectedIntake?.patientName.split(' ')[0]}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Last Name"
+                defaultValue={selectedIntake?.patientName.split(' ').slice(1).join(' ')}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                defaultValue={selectedIntake?.email}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Phone"
+                defaultValue={selectedIntake?.phone}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Date of Birth"
+                type="date"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Gender</InputLabel>
+                <Select label="Gender">
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                  <MenuItem value="Prefer not to say">Prefer not to say</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Street Address"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="City"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>State</InputLabel>
+                <Select label="State">
+                  <MenuItem value="NSW">NSW</MenuItem>
+                  <MenuItem value="VIC">VIC</MenuItem>
+                  <MenuItem value="QLD">QLD</MenuItem>
+                  <MenuItem value="WA">WA</MenuItem>
+                  <MenuItem value="SA">SA</MenuItem>
+                  <MenuItem value="TAS">TAS</MenuItem>
+                  <MenuItem value="ACT">ACT</MenuItem>
+                  <MenuItem value="NT">NT</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Postcode"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Initial Condition Notes"
+                multiline
+                rows={3}
+                defaultValue={selectedIntake?.conditionType}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreatePatientOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSavePatient}>
+            Create Patient & Continue to Scheduling
           </Button>
         </DialogActions>
       </Dialog>
