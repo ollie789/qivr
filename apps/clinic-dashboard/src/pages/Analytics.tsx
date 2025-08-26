@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -21,6 +21,9 @@ import {
   LinearProgress,
   Tab,
   Tabs,
+  Paper,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -63,6 +66,10 @@ interface StatCard {
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
   const [selectedTab, setSelectedTab] = useState(0);
+  const [loading, setLoading] = useState(false);
+  
+  // PROM Analytics Data
+  const [promAnalytics, setPromAnalytics] = useState<any>(null);
 
   // Mock data for charts
   const appointmentData = Array.from({ length: 30 }, (_, i) => ({
@@ -195,7 +202,22 @@ const Analytics: React.FC = () => {
         ))}
       </Grid>
 
+      {/* Tab Navigation for Different Analytics Views */}
+      <Card sx={{ mb: 3 }}>
+        <Tabs 
+          value={selectedTab} 
+          onChange={(e, v) => setSelectedTab(v)}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Overview" />
+          <Tab label="PROM Analytics" />
+          <Tab label="Patient Outcomes" />
+          <Tab label="Financial" />
+        </Tabs>
+      </Card>
+
       {/* Charts Section */}
+      {selectedTab === 0 && (
       <Grid container spacing={3} sx={{ mb: 3 }}>
         {/* Appointment Trends */}
         <Grid item xs={12} lg={8}>
@@ -293,6 +315,238 @@ const Analytics: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+      )}
+      
+      {/* PROM Analytics Tab */}
+      {selectedTab === 1 && (
+        <Grid container spacing={3}>
+          {/* PROM Completion Rates */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  PROM Completion Rates by Type
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={[
+                    { name: 'PHQ-9', completed: 85, pending: 15 },
+                    { name: 'Pain Assessment', completed: 78, pending: 22 },
+                    { name: 'Quality of Life', completed: 92, pending: 8 },
+                    { name: 'Functional Mobility', completed: 70, pending: 30 },
+                    { name: 'Treatment Satisfaction', completed: 88, pending: 12 },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `${value}%`} />
+                    <Legend />
+                    <Bar dataKey="completed" stackId="a" fill="#10b981" />
+                    <Bar dataKey="pending" stackId="a" fill="#f59e0b" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* PROM Score Trends */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Average PROM Scores Over Time
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={Array.from({ length: 12 }, (_, i) => ({
+                    month: format(new Date(2024, i), 'MMM'),
+                    'PHQ-9': Math.random() * 20 + 30,
+                    'Pain': Math.random() * 30 + 40,
+                    'QoL': Math.random() * 25 + 60,
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="PHQ-9" stroke="#8b5cf6" strokeWidth={2} />
+                    <Line type="monotone" dataKey="Pain" stroke="#ef4444" strokeWidth={2} />
+                    <Line type="monotone" dataKey="QoL" stroke="#10b981" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* PROM Response Distribution */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Patient Response Distribution by Category
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={Array.from({ length: 30 }, (_, i) => ({
+                    day: i + 1,
+                    'Mental Health': Math.floor(Math.random() * 15) + 10,
+                    'Pain Management': Math.floor(Math.random() * 20) + 15,
+                    'Functional': Math.floor(Math.random() * 10) + 5,
+                    'Quality of Life': Math.floor(Math.random() * 12) + 8,
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Area type="monotone" dataKey="Mental Health" stackId="1" stroke="#8b5cf6" fill="#8b5cf6" />
+                    <Area type="monotone" dataKey="Pain Management" stackId="1" stroke="#ef4444" fill="#ef4444" />
+                    <Area type="monotone" dataKey="Functional" stackId="1" stroke="#f59e0b" fill="#f59e0b" />
+                    <Area type="monotone" dataKey="Quality of Life" stackId="1" stroke="#10b981" fill="#10b981" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+      
+      {/* Patient Outcomes Tab */}
+      {selectedTab === 2 && (
+        <Grid container spacing={3}>
+          {/* Treatment Effectiveness */}
+          <Grid item xs={12} lg={8}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Treatment Effectiveness by Condition
+                </Typography>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={[
+                    { condition: 'Lower Back Pain', improved: 78, unchanged: 15, worsened: 7 },
+                    { condition: 'Neck Pain', improved: 82, unchanged: 12, worsened: 6 },
+                    { condition: 'Shoulder Issues', improved: 75, unchanged: 18, worsened: 7 },
+                    { condition: 'Knee Problems', improved: 70, unchanged: 20, worsened: 10 },
+                    { condition: 'Hip Pain', improved: 73, unchanged: 19, worsened: 8 },
+                  ]} layout="horizontal">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="condition" type="category" />
+                    <Tooltip formatter={(value) => `${value}%`} />
+                    <Legend />
+                    <Bar dataKey="improved" stackId="a" fill="#10b981" />
+                    <Bar dataKey="unchanged" stackId="a" fill="#f59e0b" />
+                    <Bar dataKey="worsened" stackId="a" fill="#ef4444" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Recovery Time Distribution */}
+          <Grid item xs={12} lg={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Average Recovery Time
+                </Typography>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h3" align="center" color="primary">
+                    6.2 weeks
+                  </Typography>
+                  <Typography variant="body2" align="center" color="text.secondary">
+                    Average across all conditions
+                  </Typography>
+                </Box>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: '< 4 weeks', value: 25, color: '#10b981' },
+                        { name: '4-8 weeks', value: 45, color: '#3b82f6' },
+                        { name: '8-12 weeks', value: 20, color: '#f59e0b' },
+                        { name: '> 12 weeks', value: 10, color: '#ef4444' },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {conditionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Patient Satisfaction Metrics */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Patient Satisfaction Metrics
+                </Typography>
+                <Grid container spacing={3}>
+                  {[
+                    { metric: 'Treatment Quality', score: 4.6, total: 5 },
+                    { metric: 'Communication', score: 4.8, total: 5 },
+                    { metric: 'Wait Times', score: 4.2, total: 5 },
+                    { metric: 'Facility', score: 4.5, total: 5 },
+                    { metric: 'Overall Experience', score: 4.7, total: 5 },
+                  ].map((item) => (
+                    <Grid item xs={12} md={6} lg={2.4} key={item.metric}>
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {item.metric}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1 }}>
+                          <Typography variant="h4">{item.score}</Typography>
+                          <Typography variant="body2" color="text.secondary">/{item.total}</Typography>
+                        </Box>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={(item.score / item.total) * 100}
+                          sx={{ height: 8, borderRadius: 4 }}
+                        />
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+      
+      {/* Financial Tab */}
+      {selectedTab === 3 && (
+        <Grid container spacing={3}>
+          {/* Revenue Analysis remains the same */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Revenue vs Expenses
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                    <Legend />
+                    <Bar dataKey="revenue" fill="#10b981" />
+                    <Bar dataKey="expenses" fill="#ef4444" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
 
       {/* Practitioner Performance Table */}
       <Card>
