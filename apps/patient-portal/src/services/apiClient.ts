@@ -15,12 +15,13 @@ class ApiClient {
 
     // Add auth token to requests
     this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem('authToken');
+      const idToken = localStorage.getItem('idToken');
+      const accessToken = localStorage.getItem('accessToken');
+      const token = idToken || accessToken;
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // For development: Intercept and return mock data
       if (import.meta.env.DEV) {
         return this.handleMockData(config);
       }

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -9,12 +10,12 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-	const authStorage = localStorage.getItem('clinic-auth-storage');
-	if (authStorage) {
-		const { state } = JSON.parse(authStorage);
-		if (state?.token) {
-			config.headers.Authorization = `Bearer ${state.token}`;
-		}
+	const { token, user } = useAuthStore.getState();
+	if (token) {
+		config.headers.Authorization = `Bearer ${token}`;
+	}
+	if (user?.clinicId) {
+		(config.headers as any)['X-Clinic-Id'] = user.clinicId;
 	}
 	return config;
 });

@@ -22,13 +22,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // If API fails, return mock data for development
+    if (!import.meta.env.DEV) {
+      return Promise.reject(error);
+    }
+
     if (error.config && !error.config._retry) {
       error.config._retry = true;
-      
-      // Mock data based on the endpoint
       const url = error.config.url;
-      
+
       if (url?.includes('/dashboard/stats')) {
         return {
           data: {
@@ -37,7 +38,7 @@ api.interceptors.response.use(
             completedEvaluations: 5,
             lastVisit: '2025-08-20T10:00:00Z',
           }
-        };
+        } as any;
       }
       
       if (url?.includes('/appointments/upcoming')) {
@@ -47,7 +48,7 @@ api.interceptors.response.use(
               id: '1',
               providerName: 'Dr. Sarah Smith',
               appointmentType: 'Follow-up',
-              scheduledStart: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+              scheduledStart: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
               location: 'Room 101',
               status: 'confirmed',
             },
@@ -55,12 +56,12 @@ api.interceptors.response.use(
               id: '2',
               providerName: 'Dr. John Brown',
               appointmentType: 'Assessment',
-              scheduledStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days
+              scheduledStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
               location: 'Room 203',
               status: 'scheduled',
             },
           ]
-        };
+        } as any;
       }
       
       if (url?.includes('/proms/pending')) {
@@ -85,7 +86,7 @@ api.interceptors.response.use(
               daysOverdue: 0,
             },
           ]
-        };
+        } as any;
       }
     }
     

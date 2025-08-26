@@ -9,8 +9,10 @@ public interface IPromService
 	Task<PromTemplateDto> CreateOrVersionTemplateAsync(Guid tenantId, CreatePromTemplateDto request, CancellationToken ct = default);
 	Task<PromTemplateDto?> GetTemplateAsync(Guid tenantId, string key, int? version, CancellationToken ct = default);
 	Task<IReadOnlyList<PromTemplateSummaryDto>> ListTemplatesAsync(Guid tenantId, int page, int pageSize, CancellationToken ct = default);
+	Task<PromTemplateDto?> GetTemplateByIdAsync(Guid tenantId, Guid templateId, CancellationToken ct = default);
 	Task<PromInstanceDto> ScheduleInstanceAsync(Guid tenantId, SchedulePromRequest request, CancellationToken ct = default);
 	Task<PromInstanceDto?> GetInstanceAsync(Guid tenantId, Guid id, CancellationToken ct = default);
+	Task<IReadOnlyList<PromInstanceDto>> ListInstancesForPatientAsync(Guid tenantId, Guid patientId, string? status, CancellationToken ct = default);
 	Task<SubmitAnswersResult> SubmitAnswersAsync(Guid tenantId, Guid instanceId, Dictionary<string, object> answers, CancellationToken ct = default);
 }
 
@@ -93,6 +95,13 @@ public class PromService : IPromService
 		return list;
 	}
 
+	public async Task<PromTemplateDto?> GetTemplateByIdAsync(Guid tenantId, Guid templateId, CancellationToken ct = default)
+	{
+		var result = await _db.Database.SqlQuery<PromTemplateDto>($@"SELECT id, key, version, name, description, created_at
+			FROM qivr.prom_templates WHERE tenant_id = {tenantId} AND id = {templateId} LIMIT 1").FirstOrDefaultAsync(ct);
+		return result;
+	}
+
 	public async Task<PromInstanceDto> ScheduleInstanceAsync(Guid tenantId, SchedulePromRequest request, CancellationToken ct = default)
 	{
 		// Resolve template id by key/version
@@ -141,6 +150,19 @@ public class PromService : IPromService
 			completed_at as CompletedAt, due_date as DueAt, responses as AnswersJson, score, created_at as CreatedAt
 			FROM qivr.prom_instances WHERE tenant_id = {tenantId} AND id = {id}").FirstOrDefaultAsync(ct);
 		return result;
+	}
+
+	public async Task<IReadOnlyList<PromInstanceDto>> ListInstancesForPatientAsync(Guid tenantId, Guid patientId, string? status, CancellationToken ct = default)
+	{
+		var whereStatus = string.IsNullOrWhiteSpace(status)
+			? ""
+			: $" AND status = '{status!.Replace("'", "''")}'";
+		var list = await _db.Database.SqlQuery<PromInstanceDto>($@"SELECT 
+			id, template_id as TemplateId, patient_id as PatientId, status, scheduled_for as ScheduledFor,
+			completed_at as CompletedAt, due_date as DueAt, responses as AnswersJson, score, created_at as CreatedAt
+			FROM qivr.prom_instances WHERE tenant_id = {tenantId} AND patient_id = {patientId}{whereStatus}
+			ORDER BY scheduled_for DESC").ToListAsync(ct);
+		return list;
 	}
 
 	public async Task<SubmitAnswersResult> SubmitAnswersAsync(Guid tenantId, Guid instanceId, Dictionary<string, object> answers, CancellationToken ct = default)

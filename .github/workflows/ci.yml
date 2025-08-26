@@ -19,7 +19,7 @@ jobs:
       - name: Set up Node (for front-end installs)
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Set up .NET 8 SDK
         uses: actions/setup-dotnet@v3
