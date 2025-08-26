@@ -58,29 +58,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, isToday, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, parseISO, isSameMonth } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-// Create axios instance
-const apiClient = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-apiClient.interceptors.request.use((config) => {
-  const authStorage = localStorage.getItem('clinic-auth-storage');
-  if (authStorage) {
-    const { state } = JSON.parse(authStorage);
-    if (state?.token) {
-      config.headers.Authorization = `Bearer ${state.token}`;
-    }
-  }
-  return config;
-});
+import apiClient from '../services/sharedApiClient';
 
 interface Appointment {
   id: string;
@@ -164,39 +142,7 @@ const Appointments: React.FC = () => {
         return response.data;
       } catch (error) {
         console.error('Error fetching appointments:', error);
-        // Return mock data for development
-        return [
-          {
-            id: '1',
-            patientId: '1',
-            patientName: 'John Doe',
-            patientEmail: 'john.doe@email.com',
-            patientPhone: '+61 400 123 456',
-            providerId: '1',
-            providerName: 'Dr. Sarah Smith',
-            scheduledStart: new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 9, 0).toISOString(),
-            scheduledEnd: new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 10, 0).toISOString(),
-            appointmentType: 'initial-consultation',
-            status: 'confirmed',
-            notes: 'First visit for lower back pain',
-            location: 'Room 1',
-          },
-          {
-            id: '2',
-            patientId: '2',
-            patientName: 'Jane Smith',
-            patientEmail: 'jane.smith@email.com',
-            patientPhone: '+61 400 234 567',
-            providerId: '1',
-            providerName: 'Dr. Sarah Smith',
-            scheduledStart: new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 10, 30).toISOString(),
-            scheduledEnd: new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 11, 0).toISOString(),
-            appointmentType: 'follow-up',
-            status: 'scheduled',
-            notes: 'Follow-up for neck pain treatment',
-            location: 'Room 1',
-          },
-        ];
+        return [] as Appointment[];
       }
     },
   });

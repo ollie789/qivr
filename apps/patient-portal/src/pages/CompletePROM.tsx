@@ -22,7 +22,6 @@ import {
   LinearProgress,
   Stack,
   Divider,
-  Paper,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -89,12 +88,12 @@ export const CompletePROM = () => {
       setLoading(true);
       
       // Fetch the PROM instance
-      const instanceResponse = await apiClient.get<PromInstance>(`/proms/instances/${id}`);
+      const instanceResponse = await apiClient.get<PromInstance>(`/v1/proms/instances/${id}`);
       setPromInstance(instanceResponse.data);
       
-      // Fetch the template details
+      // Fetch the template details by ID
       const templateResponse = await apiClient.get<PromTemplate>(
-        `/proms/templates/${instanceResponse.data.templateId}`
+        `/v1/proms/templates/by-id/${instanceResponse.data.templateId}`
       );
       setTemplate(templateResponse.data);
       
@@ -156,9 +155,7 @@ export const CompletePROM = () => {
     try {
       setSubmitting(true);
       
-      await apiClient.put(`/proms/instances/${id}/submit`, {
-        responses,
-      });
+      await apiClient.post(`/v1/proms/instances/${id}/answers`, responses );
       
       setSuccess(true);
       

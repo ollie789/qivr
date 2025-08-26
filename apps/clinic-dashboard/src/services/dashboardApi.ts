@@ -54,7 +54,7 @@ export const dashboardApi = {
   // Get dashboard statistics
   async getStats(): Promise<DashboardStats> {
     try {
-      const response = await apiClient.get('/api/dashboard/stats');
+      const response = await apiClient.get('/api/TestData/dashboard/stats');
       return response.data;
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -109,37 +109,28 @@ export const dashboardApi = {
   // Get today's appointments
   async getTodayAppointments(): Promise<AppointmentSummary[]> {
     try {
-      const response = await apiClient.get('/api/appointments/today');
-      return response.data;
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      const response = await apiClient.get('/api/appointments', {
+        params: {
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        },
+      });
+      const appts = Array.isArray(response.data) ? response.data : [];
+      return appts.map((a: any) => ({
+        id: a.id,
+        patientName: a.patientName || '',
+        time: new Date(a.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: a.appointmentType,
+        provider: a.providerName || '',
+        status: (typeof a.status === 'string' ? a.status : (a.status?.toString?.() || 'scheduled')).toLowerCase(),
+      }));
     } catch (error) {
       console.error('Error fetching today appointments:', error);
-      // Return mock data for development
-      return [
-        {
-          id: '1',
-          patientName: 'Alice Brown',
-          time: '09:00 AM',
-          type: 'Initial Consultation',
-          provider: 'Dr. Smith',
-          status: 'completed',
-        },
-        {
-          id: '2',
-          patientName: 'Charlie Wilson',
-          time: '10:30 AM',
-          type: 'Follow-up',
-          provider: 'Dr. Smith',
-          status: 'in-progress',
-        },
-        {
-          id: '3',
-          patientName: 'Diana Prince',
-          time: '02:00 PM',
-          type: 'Assessment',
-          provider: 'Dr. Smith',
-          status: 'scheduled',
-        },
-      ];
+      return [];
     }
   },
 

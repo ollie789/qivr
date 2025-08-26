@@ -38,6 +38,17 @@ public class PromsController : ControllerBase
 		return Ok(result);
 	}
 
+	// GET /api/v1/proms/templates/by-id/{templateId}
+	[HttpGet("templates/by-id/{templateId}")]
+	[Authorize]
+	public async Task<ActionResult<PromTemplateDto>> GetTemplateById([FromRoute] Guid templateId, CancellationToken ct)
+	{
+		var tenantId = GetTenantId();
+		var result = await _promService.GetTemplateByIdAsync(tenantId, templateId, ct);
+		if (result == null) return NotFound();
+		return Ok(result);
+	}
+
 	// GET /api/v1/proms/templates?page=&pageSize=
 	[HttpGet("templates")]
 	[Authorize]
@@ -69,6 +80,17 @@ public class PromsController : ControllerBase
 		return Ok(result);
 	}
 
+	// GET /api/v1/proms/instances (current patient)
+	[HttpGet("instances")]
+	[Authorize]
+	public async Task<ActionResult<IReadOnlyList<PromInstanceDto>>> ListMyInstances([FromQuery] string? status, CancellationToken ct)
+	{
+		var tenantId = GetTenantId();
+		var userId = GetUserId();
+		var list = await _promService.ListInstancesForPatientAsync(tenantId, userId, status, ct);
+		return Ok(list);
+	}
+
 	// POST /api/v1/proms/instances/{id}/answers
 	[HttpPost("instances/{id}/answers")]
 	[AllowAnonymous] // public submission supported via access token + RLS default tenant insert if configured
@@ -95,5 +117,13 @@ public class PromsController : ControllerBase
 		// fallback default public tenant
 		return Guid.Parse(HttpContext.RequestServices.GetRequiredService<IConfiguration>()
 			["DefaultTenantId"] ?? "00000000-0000-0000-0000-000000000001");
+	}
+
+	private Guid GetUserId()
+	{
+		var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+			?? User.FindFirst("sub")?.Value;
+		if (Guid.TryParse(userIdClaim, out var uid)) return uid;
+		throw new UnauthorizedAccessException("User ID not found");
 	}
 }

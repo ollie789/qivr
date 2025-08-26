@@ -69,7 +69,7 @@ export const PROMs = () => {
   const fetchProms = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<PromInstance[]>('/proms/instances');
+      const response = await apiClient.get<PromInstance[]>('/v1/proms/instances');
       setProms(response.data);
     } catch (err) {
       console.error('Error fetching PROMs:', err);
