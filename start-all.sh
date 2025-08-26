@@ -24,6 +24,10 @@ kill_port() {
     fi
 }
 
+# Ensure directories exist
+mkdir -p /workspace/logs
+mkdir -p /workspace/.pids
+
 # Kill any existing processes on our ports
 echo -e "${YELLOW}Checking for existing processes...${NC}"
 kill_port 5000
@@ -34,8 +38,8 @@ kill_port 5173  # Also kill Widget if running on default Vite port
 
 # Start Backend API
 echo -e "\n${GREEN}1. Starting Backend API (port 5000)...${NC}"
-cd /Users/oliver/Projects/qivr/backend
-ASPNETCORE_ENVIRONMENT=Development dotnet run --project Qivr.Api > ../logs/backend.log 2>&1 &
+cd /workspace/backend
+ASPNETCORE_ENVIRONMENT=Development dotnet watch run --project Qivr.Api > /workspace/logs/backend.log 2>&1 &
 BACKEND_PID=$!
 echo "   Backend PID: $BACKEND_PID"
 
@@ -52,22 +56,22 @@ fi
 
 # Start Clinic Dashboard
 echo -e "\n${GREEN}2. Starting Clinic Dashboard (port 3001)...${NC}"
-cd /Users/oliver/Projects/qivr/apps/clinic-dashboard
-npm run dev > ../../logs/clinic-dashboard.log 2>&1 &
+cd /workspace
+npm run clinic:dev -- --port 3001 > /workspace/logs/clinic-dashboard.log 2>&1 &
 CLINIC_PID=$!
 echo "   Clinic Dashboard PID: $CLINIC_PID"
 
 # Start Patient Portal
 echo -e "\n${GREEN}3. Starting Patient Portal (port 3002)...${NC}"
-cd /Users/oliver/Projects/qivr/apps/patient-portal
-npm run dev > ../../logs/patient-portal.log 2>&1 &
+cd /workspace
+npm run patient:dev > /workspace/logs/patient-portal.log 2>&1 &
 PATIENT_PID=$!
 echo "   Patient Portal PID: $PATIENT_PID"
 
 # Start Widget
 echo -e "\n${GREEN}4. Starting Widget (port 3000)...${NC}"
-cd /Users/oliver/Projects/qivr/apps/widget
-npm run dev > ../../logs/widget.log 2>&1 &
+cd /workspace
+npm run widget:dev -- --port 3000 > /workspace/logs/widget.log 2>&1 &
 WIDGET_PID=$!
 echo "   Widget PID: $WIDGET_PID"
 
@@ -112,9 +116,9 @@ echo -e "\n${YELLOW}Logs are available in the 'logs' directory${NC}"
 echo -e "${YELLOW}To stop all services, run: ./stop-all.sh${NC}"
 
 # Save PIDs to file for stop script
-echo "$BACKEND_PID" > /Users/oliver/Projects/qivr/.pids/backend.pid
-echo "$CLINIC_PID" > /Users/oliver/Projects/qivr/.pids/clinic.pid
-echo "$PATIENT_PID" > /Users/oliver/Projects/qivr/.pids/patient.pid
-echo "$WIDGET_PID" > /Users/oliver/Projects/qivr/.pids/widget.pid
+echo "$BACKEND_PID" > /workspace/.pids/backend.pid
+echo "$CLINIC_PID" > /workspace/.pids/clinic.pid
+echo "$PATIENT_PID" > /workspace/.pids/patient.pid
+echo "$WIDGET_PID" > /workspace/.pids/widget.pid
 
 echo -e "\n${GREEN}All applications started successfully!${NC}"

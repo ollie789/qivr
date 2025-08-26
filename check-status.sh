@@ -58,7 +58,7 @@ else
 fi
 
 if docker ps | grep -q qivr-pgadmin; then
-    echo "✅ pgAdmin:             Running (http://localhost:5050)"
+    echo "✅ pgAdmin:             Running (http://localhost:8081)"
 else
     echo "❌ pgAdmin:             Not running"
 fi
