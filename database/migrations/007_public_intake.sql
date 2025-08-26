@@ -9,11 +9,22 @@
 
 -- === 1. Create dedicated intake role ===
 DO $$
+DECLARE
+    intake_pwd TEXT := current_setting('qivr.intake_password', true);
 BEGIN
     IF NOT EXISTS (
         SELECT FROM pg_catalog.pg_roles WHERE rolname = 'qivr_intake'
     ) THEN
-        CREATE ROLE qivr_intake LOGIN PASSWORD 'REPLACE_ME_STRONG_PWD';
+        IF intake_pwd IS NULL OR intake_pwd = '' THEN
+            -- Create a locked-down role without login by default to avoid insecure defaults
+            CREATE ROLE qivr_intake NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+        ELSE
+            -- Create a login role using a password provided via `SET qivr.intake_password='...';`
+            EXECUTE format(
+                'CREATE ROLE qivr_intake LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT',
+                intake_pwd
+            );
+        END IF;
     END IF;
 END
 $$;
