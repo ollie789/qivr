@@ -24,7 +24,7 @@ const amplifyConfig = {
       },
       signUpVerificationMethod: 'code' as const,
       mfa: {
-        status: 'required' as const, // MFA required for clinic staff
+        status: 'on' as const, // MFA required for clinic staff
         totpEnabled: true,
         smsEnabled: true,
       },

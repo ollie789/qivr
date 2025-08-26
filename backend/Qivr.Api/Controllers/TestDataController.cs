@@ -212,7 +212,7 @@ public class TestDataController : ControllerBase
         try
         {
             // Log the evaluation for debugging
-            _logger.LogInformation("Test evaluation received: {Data}", evaluationData?.ToString() ?? "null");
+            _logger.LogInformation("Test evaluation received: {Data}", evaluationData?.ToString() as string ?? "null");
 
             // Generate a mock response
             var evaluationId = Guid.NewGuid();

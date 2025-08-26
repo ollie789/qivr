@@ -308,7 +308,7 @@ public class PromsController : ControllerBase
 
     [HttpGet("analytics")]
     [Authorize(Roles = "Admin,Clinician")]
-    public async Task<ActionResult<PromAnalyticsDto>> GetAnalytics(
+    public async Task<ActionResult<PromAnalyticsResult>> GetAnalytics(
         [FromQuery] Guid? patientId,
         [FromQuery] DateTime fromDate,
         [FromQuery] DateTime toDate)
@@ -328,14 +328,14 @@ public class PromsController : ControllerBase
             .Include(i => i.Template)
             .ToListAsync();
 
-        var analytics = new PromAnalyticsDto
+        var analytics = new PromAnalyticsResult
         {
             TotalCompleted = instances.Count,
             AverageScore = instances.Any() ? instances.Average(i => i.Score ?? 0) : 0,
             CompletionRate = await CalculateCompletionRate(tenantId, patientId, fromDate, toDate),
             ScoresByCategory = instances
                 .GroupBy(i => i.Template?.Category ?? "Unknown")
-                .Select(g => new CategoryScore
+                .Select(g => new PromCategoryScore
                 {
                     Category = g.Key,
                     AverageScore = g.Average(i => i.Score ?? 0),
@@ -344,7 +344,7 @@ public class PromsController : ControllerBase
                 .ToList(),
             TrendData = instances
                 .GroupBy(i => i.CompletedAt!.Value.Date)
-                .Select(g => new TrendPoint
+                .Select(g => new PromTrendPoint
                 {
                     Date = g.Key,
                     AverageScore = g.Average(i => i.Score ?? 0),
@@ -480,23 +480,24 @@ public class SubmitPromResponsesRequest
     public Dictionary<string, object> Responses { get; set; } = new();
 }
 
-public class PromAnalyticsDto
+// Renamed to avoid conflicts with AnalyticsController
+public class PromAnalyticsResult
 {
     public int TotalCompleted { get; set; }
     public decimal AverageScore { get; set; }
     public decimal CompletionRate { get; set; }
-    public List<CategoryScore> ScoresByCategory { get; set; } = new();
-    public List<TrendPoint> TrendData { get; set; } = new();
+    public List<PromCategoryScore> ScoresByCategory { get; set; } = new();
+    public List<PromTrendPoint> TrendData { get; set; } = new();
 }
 
-public class CategoryScore
+public class PromCategoryScore
 {
     public string Category { get; set; } = string.Empty;
     public decimal AverageScore { get; set; }
     public int Count { get; set; }
 }
 
-public class TrendPoint
+public class PromTrendPoint
 {
     public DateTime Date { get; set; }
     public decimal AverageScore { get; set; }

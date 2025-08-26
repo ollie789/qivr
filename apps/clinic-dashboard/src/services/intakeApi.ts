@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -39,16 +39,26 @@ export interface IntakeSubmission {
   id: string;
   patientName: string;
   email: string;
-  phone: string;
+  phone?: string;
   submittedAt: string;
   conditionType: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  status: 'pending' | 'reviewing' | 'approved' | 'rejected';
+  status: 'pending' | 'reviewing' | 'approved' | 'rejected' | 'scheduled';
   painLevel: number;
-  symptoms: string[];
+  symptoms?: string[];
   aiSummary?: string;
   assignedTo?: string;
   notes?: string;
+  patientId?: string; // Link to existing patient
+  bodyMap?: {
+    painPoints?: Array<{
+      x: number;
+      y: number;
+      z: number;
+      intensity: number;
+      bodyPart: string;
+    }>;
+  };
 }
 
 export interface IntakeDetails {
@@ -113,7 +123,7 @@ export const intakeApi = {
   async getIntakes(filters?: IntakeFilters): Promise<{ data: IntakeSubmission[]; total: number }> {
     try {
       // Using test endpoint for development
-      const response = await apiClient.get('/api/testdata/evaluations', { params: filters });
+      const response = await apiClient.get('/api/TestData/evaluations', { params: filters });
       return response.data;
     } catch (error) {
       console.error('Error fetching intakes:', error);
