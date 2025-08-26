@@ -5,7 +5,7 @@ if ! curl -sf http://localhost:5000/health > /dev/null; then
 # Intake smoke test (does not persist due to transaction rollback)
 TMP=$(mktemp)
 cat > $TMP <<EOF
-{"personalInfo":{"firstName":"Smoke","lastName":"Test"},"contactInfo":{"email":"smoke@test.dev"},"chiefComplaint":"pain","symptoms":[],"painLevel":3,"duration":"1d","painPoints":[],"medicalHistory":{},"consent":{"consentToTreatment":true,"consentToPrivacy":true,"consentToMarketing":false}}
+{"personalInfo":{"firstName":"Smoke","lastName":"Test"},"contactInfo":{"email":"smoke@test.dev"},"chiefComplaint":"knee pain","symptoms":[],"painLevel":3,"duration":"1d","painPoints":[],"medicalHistory":{},"consent":{"consentToTreatment":true,"consentToPrivacy":true,"consentToMarketing":false}}
 EOF
 curl -sf -X POST http://localhost:5000/api/v1/intake/submit \
   -H "Content-Type: application/json" \

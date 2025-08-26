@@ -12,6 +12,10 @@ using Qivr.Infrastructure.Data;
 using Qivr.Services;
 using Serilog;
 using Serilog.Events;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -134,6 +138,22 @@ builder.Services.AddHealthChecks()
 // Register application services
 builder.Services.AddQivrServices(builder.Configuration);
 
+builder.Services.Configure<Qivr.Api.Options.IntakeDbOptions>(builder.Configuration.GetSection("Intake"));
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("intake", opt =>
+    {
+        opt.PermitLimit = 30;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+        opt.AutoReplenishment = true;
+    });
+});
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Qivr.Api.Controllers.IntakeController>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -160,6 +180,18 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 
 // Use Cognito authentication
 app.UseCognitoAuthentication();
+
+app.Use(async (ctx, next) =>
+{
+    var rid = ctx.Request.Headers["X-Request-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString("N");
+    ctx.Response.Headers["X-Request-ID"] = rid;
+    using (app.Logger.BeginScope(new Dictionary<string, object?> { ["requestId"] = rid }))
+        await next();
+});
+
+app.UseRateLimiter();
+
+app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api/v1/intake"), b => b.UseRateLimiter());
 
 app.MapControllers();
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

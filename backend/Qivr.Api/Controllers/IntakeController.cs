@@ -12,15 +12,18 @@ public class IntakeController : ControllerBase
 {
     private readonly QivrDbContext _dbContext;
     private readonly ILogger<IntakeController> _logger;
+    private readonly string _intakeConn;
     private readonly IConfiguration _configuration;
 
     public IntakeController(
         QivrDbContext dbContext,
         ILogger<IntakeController> logger,
+        Microsoft.Extensions.Options.IOptions<Qivr.Api.Options.IntakeDbOptions> intakeOptions,
         IConfiguration configuration)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _intakeConn = intakeOptions.Value.ConnectionString ?? throw new InvalidOperationException("Missing Intake:ConnectionString");
         _configuration = configuration;
     }
 
@@ -77,9 +80,7 @@ public class IntakeController : ControllerBase
             // Use intake connection (restricted role) for DB write
             await using var intakeContext = new QivrDbContext(
                 new DbContextOptionsBuilder<QivrDbContext>()
-                    .UseNpgsql(
-                        _configuration.GetConnectionString("IntakeConnection")
-                        ?? _configuration.GetConnectionString("DefaultConnection"),
+                    .UseNpgsql(_intakeConn,
                         o => o.MigrationsAssembly("Qivr.Infrastructure"))
                     .UseSnakeCaseNamingConvention()
                     .Options);
@@ -175,7 +176,7 @@ public class IntakeController : ControllerBase
                            WHEN status = 'reviewing' THEN 'A clinician is reviewing your intake'
                            WHEN status = 'pending' THEN 'Your intake is in the queue'
                            ELSE 'Please contact the clinic for an update'
-                       END as StatusMessage
+                       END as statusmessage
                 FROM qivr.intake_submissions 
                 WHERE id = {id}
             ")
@@ -290,6 +291,7 @@ internal class IntakeStatusDto
 {
     public Guid Id { get; set; }
     public string Status { get; set; } = string.Empty;
+    [System.Text.Json.Serialization.JsonPropertyName("statusmessage")]
     public string StatusMessage { get; set; } = string.Empty;
     public DateTime SubmittedAt { get; set; }
 }
