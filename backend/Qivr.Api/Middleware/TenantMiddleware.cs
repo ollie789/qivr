@@ -91,7 +91,11 @@ public class TenantMiddleware
             
             var parameter = command.CreateParameter();
             parameter.ParameterName = "@tenant_id";
-            parameter.Value = Guid.Parse(tenantId);
+            if (!Guid.TryParse(tenantId, out var tenantGuid))
+            {
+                throw new InvalidOperationException("Invalid tenant id format");
+            }
+            parameter.Value = tenantGuid;
             command.Parameters.Add(parameter);
             
             await command.ExecuteNonQueryAsync();
@@ -116,9 +120,10 @@ public class TenantMiddleware
             "/api/auth/refresh",
             "/webhooks",
             "/api/v1/intake",  // Public intake submission endpoint
-            "/api/v1/proms/instances" // Public PROM answers under /instances/{id}/answers
+            "/api/v1/proms/instances" // Base path for public PROM instances endpoints
         };
         
+        // Allow all subpaths under the public endpoints
         return !publicPaths.Any(p => path.StartsWithSegments(p));
     }
 }
