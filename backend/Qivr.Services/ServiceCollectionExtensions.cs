@@ -34,6 +34,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISmsService, SmsService>();
         services.AddScoped<IStorageService, S3StorageService>();
         
+        // Register PROM service
+        services.AddScoped<IPromService, PromService>();
+        
         // Add HttpClient for external APIs
         services.AddHttpClient("MessageMedia", client =>
         {

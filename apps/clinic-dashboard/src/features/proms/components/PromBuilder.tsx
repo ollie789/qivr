@@ -76,6 +76,7 @@ import {
   ContentCopy,
   ExpandMore,
 } from '@mui/icons-material';
+import { promsApi } from '../../../services/proms';
 
 // Types
 interface PromQuestion {
@@ -286,9 +287,29 @@ export const PromBuilder: React.FC = () => {
     }));
   };
 
-  const handleSaveTemplate = () => {
-    // TODO: Save to backend
-    console.log('Saving template:', template);
+  const handleSaveTemplate = async () => {
+    try {
+      const payload = {
+        key: template.name.toLowerCase().replace(/\s+/g, '-'),
+        name: template.name,
+        description: template.description,
+        schemaJson: JSON.stringify({
+          questions: template.questions,
+          scoring: template.scoring,
+          schedule: template.schedule,
+          version: template.version,
+        }),
+        scoringMethod: template.scoring.method,
+        scoringRules: JSON.stringify(template.scoring),
+        isActive: template.isActive,
+      };
+      const res = await promsApi.createTemplate(payload);
+      console.log('Template saved', res);
+      alert('Template saved');
+    } catch (e) {
+      console.error('Failed to save template', e);
+      alert('Failed to save template');
+    }
   };
 
   return (
