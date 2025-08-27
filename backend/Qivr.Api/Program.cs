@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -20,6 +21,7 @@ using Amazon.SQS;
 using Qivr.Api.Workers;
 using Qivr.Api.Services;
 using Qivr.Api.Config;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +44,23 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 
+// Resolve connection strings securely (supports DATABASE_URL/INTAKE_DATABASE_URL and ${ENV_VAR} placeholders)
+var defaultConnectionRaw = builder.Configuration.GetConnectionString("DefaultConnection");
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+var defaultConnection = !string.IsNullOrWhiteSpace(databaseUrl)
+    ? BuildPgConnectionStringFromUrl(databaseUrl, builder.Environment.IsDevelopment())
+    : ExpandEnvPlaceholders(defaultConnectionRaw);
+
+var intakeConnectionRaw = builder.Configuration["Intake:ConnectionString"];
+var intakeDatabaseUrl = Environment.GetEnvironmentVariable("INTAKE_DATABASE_URL");
+var resolvedIntakeConnection = !string.IsNullOrWhiteSpace(intakeDatabaseUrl)
+    ? BuildPgConnectionStringFromUrl(intakeDatabaseUrl, builder.Environment.IsDevelopment())
+    : ExpandEnvPlaceholders(intakeConnectionRaw);
+if (string.IsNullOrWhiteSpace(resolvedIntakeConnection))
+{
+    resolvedIntakeConnection = defaultConnection;
+}
+
 // Configure CORS
 builder.Services.AddCors(options =>
 {
@@ -57,7 +76,7 @@ builder.Services.AddCors(options =>
 // Configure Database
 builder.Services.AddDbContext<QivrDbContext>(options =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+    options.UseNpgsql(defaultConnection,
         npgsqlOptions =>
         {
             npgsqlOptions.MigrationsAssembly("Qivr.Infrastructure");
@@ -174,7 +193,7 @@ builder.Services.AddOpenTelemetry()
 
 // Add Health Checks
 builder.Services.AddHealthChecks()
-    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!)
+    .AddNpgSql(defaultConnection!)
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
 
 // Register application services
@@ -183,6 +202,20 @@ builder.Services.AddQivrServices(builder.Configuration);
 builder.Services.Configure<Qivr.Api.Options.IntakeDbOptions>(builder.Configuration.GetSection("Intake"));
 builder.Services.Configure<Qivr.Api.Options.SqsOptions>(builder.Configuration.GetSection("Sqs"));
 builder.Services.Configure<Qivr.Api.Options.FeaturesOptions>(builder.Configuration.GetSection("Features"));
+
+// Ensure Intake connection string is always resolved securely
+builder.Services.PostConfigure<Qivr.Api.Options.IntakeDbOptions>(options =>
+{
+    options.ConnectionString = resolvedIntakeConnection;
+});
+
+// Respect proxy headers for correct scheme/origin when behind reverse proxies
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -227,6 +260,9 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty; // Serve Swagger UI at root
     });
 }
+
+// Respect X-Forwarded-* headers before security/redirects when running behind a proxy
+app.UseForwardedHeaders();
 
 // Security headers MUST be added early in the pipeline
 app.UseSecurityHeaders();
@@ -282,3 +318,49 @@ if (builder.Configuration.GetValue<bool>("ApplyMigrations"))
 Log.Information("Qivr API starting on {Environment} environment", app.Environment.EnvironmentName);
 
 app.Run();
+
+// ===== Local helper functions =====
+static string ExpandEnvPlaceholders(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+    return Regex.Replace(value, @"\$\{([^}]+)\}", match =>
+    {
+        var key = match.Groups[1].Value;
+        return Environment.GetEnvironmentVariable(key) ?? string.Empty;
+    });
+}
+
+static string BuildPgConnectionStringFromUrl(string url, bool isDevelopment)
+{
+    // Supports postgres://user:pass@host:port/dbname?sslmode=require
+    var uri = new Uri(url);
+    var userInfo = uri.UserInfo.Split(':', 2, StringSplitOptions.None);
+    var username = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(0) ?? string.Empty);
+    var password = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(1) ?? string.Empty);
+    var database = uri.AbsolutePath.TrimStart('/');
+
+    // Extract sslmode if provided
+    var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+    var sslMode = query.Get("sslmode");
+
+    // Default SSL behavior: require in non-development if not specified
+    if (string.IsNullOrWhiteSpace(sslMode))
+    {
+        sslMode = isDevelopment ? "Disable" : "Require";
+    }
+
+    var host = uri.Host;
+    var port = uri.Port > 0 ? uri.Port.ToString() : "5432";
+
+    // Build Npgsql connection string
+    var sb = new StringBuilder();
+    sb.Append($"Host={host};Port={port};Database={database};Username={username};Password={password};SslMode={sslMode}");
+
+    // In development, allow trusting server certs if SSL is enabled
+    if (sslMode is not null && !sslMode.Equals("Disable", StringComparison.OrdinalIgnoreCase) && isDevelopment)
+    {
+        sb.Append(";Trust Server Certificate=true");
+    }
+
+    return sb.ToString();
+}
