@@ -12,7 +12,7 @@ const getApiUrl = () => {
     return cleanUrl.includes('/api') ? cleanUrl : `${cleanUrl}/api`;
   }
   
-  return isDevelopment ? 'http://localhost:5001/api' : 'https://api.qivr.com/api';
+  return isDevelopment ? 'http://localhost:5000/api' : 'https://api.qivr.com/api';
 };
 
 // Custom token manager for clinic dashboard

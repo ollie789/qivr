@@ -341,9 +341,22 @@ static string BuildPgConnectionStringFromUrl(string url, bool isDevelopment)
     var password = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(1) ?? string.Empty);
     var database = uri.AbsolutePath.TrimStart('/');
 
-    // Extract sslmode if provided
-    var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-    var sslMode = query.Get("sslmode");
+    // Extract sslmode if provided without relying on System.Web
+    // uri.Query may start with '?', so trim it first
+    var rawQuery = uri.Query.StartsWith("?") ? uri.Query.Substring(1) : uri.Query;
+    string? sslMode = null;
+    if (!string.IsNullOrEmpty(rawQuery))
+    {
+        foreach (var pair in rawQuery.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = pair.Split('=', 2, StringSplitOptions.None);
+            if (kv.Length == 2 && string.Equals(kv[0], "sslmode", StringComparison.OrdinalIgnoreCase))
+            {
+                sslMode = Uri.UnescapeDataString(kv[1]);
+                break;
+            }
+        }
+    }
 
     // Default SSL behavior: require in non-development if not specified
     if (string.IsNullOrWhiteSpace(sslMode))
