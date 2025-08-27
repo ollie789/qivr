@@ -123,6 +123,20 @@ public class NotificationService : INotificationService
     {
         try
         {
+            // Quiet hours: 9 PM - 9 AM Australia/Sydney (simple default)
+            if (IsInQuietHours("Australia/Sydney"))
+            {
+                _logger.LogInformation("Quiet hours in effect; SMS queued/skipped for {Phone}", to);
+                await LogNotificationAsync(
+                    NotificationType.Sms,
+                    to,
+                    "SMS",
+                    message,
+                    NotificationStatus.Pending,
+                    ct);
+                return;
+            }
+
             if (string.IsNullOrEmpty(_twilioAccountSid))
             {
                 _logger.LogWarning("Twilio not configured, skipping SMS to {Phone}", to);
@@ -156,6 +170,22 @@ public class NotificationService : INotificationService
                 NotificationStatus.Failed,
                 ct);
             throw;
+        }
+    }
+
+    private bool IsInQuietHours(string timeZone)
+    {
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+            var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            return local.Hour >= 21 || local.Hour < 9;
+        }
+        catch
+        {
+            // Fallback to UTC check (unlikely to be used)
+            var h = DateTime.UtcNow.Hour;
+            return h >= 21 || h < 9;
         }
     }
 

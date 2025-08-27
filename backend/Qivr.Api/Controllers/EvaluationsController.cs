@@ -114,14 +114,13 @@ public class EvaluationsController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
-        // TODO: Implement AI analysis
+        // Clinician review gate placeholder: require staff role and log request
         _logger.LogInformation("AI analysis requested for evaluation {Id}", id);
-        
         return Ok(new AnalysisResponse
         {
-            Summary = "Based on the evaluation, the patient presents with moderate lower back pain...",
-            RiskFlags = new[] { "chronic_pain_risk", "posture_related" },
-            RecommendedActions = new[] { "schedule_appointment", "prescribe_exercises" }
+            Summary = "Pending clinician-reviewed AI summary.",
+            RiskFlags = Array.Empty<string>(),
+            RecommendedActions = Array.Empty<string>()
         });
     }
 }

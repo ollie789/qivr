@@ -182,7 +182,15 @@ public class AppointmentsController : ControllerBase
         };
 
         _context.Appointments.Add(appointment);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("uq_appointments_provider_time") == true || ex.InnerException?.Message.Contains("no_double_booking") == true)
+        {
+            _logger.LogWarning(ex, "Unique index prevented double booking for provider {ProviderId}", request.ProviderId);
+            return Conflict(new { message = "Time slot is not available (double booking)" });
+        }
 
         _logger.LogInformation("Appointment created: {AppointmentId}", appointment.Id);
 
