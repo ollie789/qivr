@@ -30,7 +30,7 @@ cp .env.example .env
 
 3. **Start local infrastructure:**
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 This starts:
@@ -39,7 +39,7 @@ This starts:
 - LocalStack (AWS services mock, port 4566)
 - MinIO (S3-compatible storage, ports 9000/9001)
 - Mailhog (email testing, port 8025 for UI)
-- pgAdmin (database UI, port 8080)
+- pgAdmin (database UI, port 8081)
 - OpenTelemetry Collector (port 4317)
 - Jaeger (tracing UI, port 16686)
 
@@ -178,7 +178,7 @@ npm test
 ### Integration Tests
 ```bash
 # Run with test database
-docker-compose -f docker-compose.test.yml up
+docker compose -f docker-compose.test.yml up
 npm run test:integration
 ```
 
@@ -257,8 +257,8 @@ cd backend && dotnet outdated
 
 ### Clear local data
 ```bash
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
 
 ### Access services
@@ -272,8 +272,8 @@ docker-compose up -d
 ### Database connection issues
 ```bash
 # Check PostgreSQL is running
-docker-compose ps postgres
-docker-compose logs postgres
+docker compose ps postgres
+docker compose logs postgres
 
 # Test connection
 psql -h localhost -U qivr_user -d qivr
@@ -289,11 +289,11 @@ lsof -i :5000  # API
 
 ### Reset everything
 ```bash
-docker-compose down -v
+docker compose down -v
 rm -rf node_modules backend/bin backend/obj
 npm install
 cd backend && dotnet restore
-docker-compose up -d
+docker compose up -d
 ```
 
 ## 📞 Support

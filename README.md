@@ -57,7 +57,7 @@ qivr/
 ### Prerequisites
 
 - Node.js 20+
-- .NET 8 SDK
+- .NET 8 SDK (required to run the backend locally)
 - PostgreSQL 16
 - Docker & Docker Compose
 - AWS CLI configured
@@ -84,7 +84,7 @@ cp .env.example .env
 
 4. Start local services:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 5. Run database migrations:
@@ -98,10 +98,10 @@ npm run dev
 ```
 
 ### Frontend API Base URL
-Set `VITE_API_URL` in the frontend apps to point to your API (defaults to `http://localhost:5000`). For example:
+Set `VITE_API_URL` in the frontend apps to point to your API (defaults to `http://localhost:5000/api`). For example:
 ```bash
 # .env.local in each app
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
 ```
 
 ## 🔒 Security & Compliance
