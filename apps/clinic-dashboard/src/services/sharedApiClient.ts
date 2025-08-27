@@ -15,9 +15,10 @@ apiClient.interceptors.request.use((config) => {
 	if (token) {
 		config.headers.Authorization = `Bearer ${token}`;
 	}
-	if (user?.clinicId) {
-		(config.headers as any)['X-Clinic-Id'] = user.clinicId;
-	}
+	// Add tenant ID header - use default if not available
+	const tenantId = user?.clinicId || '11111111-1111-1111-1111-111111111111';
+	(config.headers as any)['X-Tenant-Id'] = tenantId;
+	(config.headers as any)['X-Clinic-Id'] = tenantId; // Keep for backward compatibility
 	return config;
 });
 

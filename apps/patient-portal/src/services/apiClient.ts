@@ -22,6 +22,10 @@ class ApiClient {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      
+      // Add tenant ID header - use default for demo
+      const tenantId = localStorage.getItem('tenantId') || '11111111-1111-1111-1111-111111111111';
+      config.headers['X-Tenant-Id'] = tenantId;
 
       if (import.meta.env.DEV) {
         return this.handleMockData(config);

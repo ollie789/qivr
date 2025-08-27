@@ -31,27 +31,17 @@ interface AuthState {
   refreshToken: () => Promise<void>;
 }
 
-// Development mode - set to true to bypass authentication
-const DEV_MODE = true;
-const DEV_USER = DEV_MODE ? {
-  id: 'dev-user-123',
-  name: 'Dr. John Smith',
-  email: 'john.smith@clinic.com',
-  clinicId: 'clinic-123',
-  clinicName: 'Qivr Health Clinic',
-  role: 'practitioner' as const,
-  employeeId: 'EMP001',
-  licenseNumber: 'LIC12345',
-  specialization: 'Physiotherapy',
-} : null;
+// Development mode - set to false to use real authentication
+const DEV_MODE = false;
+const DEV_USER = null;
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      user: DEV_USER,
-      token: DEV_MODE ? 'dev-token' : null,
-      isAuthenticated: DEV_MODE,
-      isLoading: false, // Changed from true to false
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
       mfaRequired: false,
       mfaSetupRequired: false,
 

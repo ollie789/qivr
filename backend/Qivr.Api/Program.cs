@@ -18,6 +18,8 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Amazon.SQS;
 using Qivr.Api.Workers;
+using Qivr.Api.Services;
+using Qivr.Api.Config;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,8 +66,46 @@ builder.Services.AddDbContext<QivrDbContext>(options =>
     options.UseSnakeCaseNamingConvention();
 });
 
-// Configure Cognito Authentication
-builder.Services.AddCognitoAuthentication(builder.Configuration);
+// Configure Email Services
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+builder.Services.AddScoped<Qivr.Api.Services.IEmailService, Qivr.Api.Services.EmailService>();
+builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+
+// Configure Authentication
+if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("UseJwtAuth", true))
+{
+    // Use JWT authentication for development
+    builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+    builder.Services.AddScoped<ICognitoAuthService, JwtAuthService>();
+    
+    // Add JWT authentication
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "your-super-secret-jwt-key-change-in-production-minimum-32-chars")),
+                ValidateIssuer = true,
+                ValidIssuer = jwtSettings?.Issuer ?? "qivr.health",
+                ValidateAudience = true,
+                ValidAudience = jwtSettings?.Audience ?? "qivr-api",
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+}
+else if (builder.Configuration.GetValue<bool>("UseMockAuth", false))
+{
+    // Use mock authentication for testing
+    builder.Services.AddSingleton<ICognitoAuthService, MockAuthService>();
+}
+else
+{
+    // Use Cognito authentication for production
+    builder.Services.AddCognitoAuthentication(builder.Configuration);
+}
 
 // Configure Swagger/OpenAPI
 builder.Services.AddSwaggerGen(c =>
