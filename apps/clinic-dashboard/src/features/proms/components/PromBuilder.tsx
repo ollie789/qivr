@@ -289,26 +289,66 @@ export const PromBuilder: React.FC = () => {
 
   const handleSaveTemplate = async () => {
     try {
+      // Validate template
+      if (!template.name) {
+        alert('Please enter a template name');
+        return;
+      }
+      if (template.questions.length === 0) {
+        alert('Please add at least one question');
+        return;
+      }
+
       const payload = {
-        key: template.name.toLowerCase().replace(/\s+/g, '-'),
+        key: template.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         name: template.name,
-        description: template.description,
+        description: template.description || '',
         schemaJson: JSON.stringify({
           questions: template.questions,
           scoring: template.scoring,
           schedule: template.schedule,
-          version: template.version,
+          category: template.category,
         }),
-        scoringMethod: template.scoring.method,
+        scoringMethod: template.scoring.method || 'sum',
         scoringRules: JSON.stringify(template.scoring),
         isActive: template.isActive,
+        version: template.version,
       };
+      
+      console.log('Saving template:', payload);
       const res = await promsApi.createTemplate(payload);
-      console.log('Template saved', res);
-      alert('Template saved');
-    } catch (e) {
-      console.error('Failed to save template', e);
-      alert('Failed to save template');
+      console.log('Template saved successfully:', res);
+      alert(`Template "${template.name}" saved successfully!`);
+      
+      // Reset form after successful save
+      setTemplate({
+        id: '',
+        name: '',
+        description: '',
+        category: 'general',
+        questions: [],
+        scoring: {
+          method: 'sum',
+          ranges: [
+            { min: 0, max: 30, label: 'Low', color: '#4caf50' },
+            { min: 31, max: 70, label: 'Medium', color: '#ff9800' },
+            { min: 71, max: 100, label: 'High', color: '#f44336' },
+          ],
+        },
+        schedule: {
+          triggers: ['post-appointment'],
+          intervals: [1, 7, 30],
+          reminderDays: [2],
+        },
+        version: 1,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error('Failed to save template:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save template';
+      alert(`Error: ${errorMessage}`);
     }
   };
 

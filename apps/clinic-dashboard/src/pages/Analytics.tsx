@@ -24,6 +24,7 @@ import {
   Paper,
   Alert,
   CircularProgress,
+  Skeleton,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -54,6 +55,15 @@ import {
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
+import analyticsApi, { 
+  DashboardStats, 
+  ProviderPerformance,
+  AppointmentTrend,
+  ConditionDistribution,
+  PromCompletionData,
+  ClinicAnalytics 
+} from '../services/analyticsApi';
+import { authStore } from '../stores/authStore';
 
 interface StatCard {
   title: string;
@@ -66,70 +76,117 @@ interface StatCard {
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
   const [selectedTab, setSelectedTab] = useState(0);
-  const [loading, setLoading] = useState(false);
-  
-  // PROM Analytics Data
-  const [promAnalytics, setPromAnalytics] = useState<any>(null);
+  const user = authStore((state) => state.user);
+  const clinicId = user?.clinicId || 'default';
 
-  // Mock data for charts
-  const appointmentData = Array.from({ length: 30 }, (_, i) => ({
-    date: format(subDays(new Date(), 29 - i), 'MMM d'),
-    appointments: Math.floor(Math.random() * 20) + 10,
-    newPatients: Math.floor(Math.random() * 5) + 2,
-    cancellations: Math.floor(Math.random() * 3),
+  // Calculate date range based on selection
+  const getDateRange = () => {
+    const to = new Date();
+    const from = new Date();
+    const days = parseInt(dateRange);
+    from.setDate(from.getDate() - days);
+    return { from, to };
+  };
+
+  // Fetch dashboard stats
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery<DashboardStats>({
+    queryKey: ['dashboardStats'],
+    queryFn: analyticsApi.getDashboardStats,
+    refetchInterval: 60000, // Refresh every minute
+  });
+
+  // Fetch appointment trends
+  const { data: appointmentData = [], isLoading: appointmentLoading } = useQuery<AppointmentTrend[]>({
+    queryKey: ['appointmentTrends', dateRange],
+    queryFn: () => analyticsApi.getAppointmentTrends(parseInt(dateRange)),
+  });
+
+  // Fetch condition distribution
+  const { data: conditionData = [], isLoading: conditionLoading } = useQuery<ConditionDistribution[]>({
+    queryKey: ['conditionDistribution'],
+    queryFn: analyticsApi.getConditionDistribution,
+  });
+
+  // Fetch provider performance
+  const { data: practitionerPerformance = [], isLoading: performanceLoading } = useQuery<ProviderPerformance[]>({
+    queryKey: ['providerPerformance'],
+    queryFn: analyticsApi.getProviderPerformance,
+  });
+
+  // Fetch revenue data
+  const { data: revenueData = [], isLoading: revenueLoading } = useQuery({
+    queryKey: ['revenueData'],
+    queryFn: analyticsApi.getRevenueData,
+  });
+
+  // Fetch PROM completion rates
+  const { data: promCompletionData = [], isLoading: promLoading } = useQuery<PromCompletionData[]>({
+    queryKey: ['promCompletionRates'],
+    queryFn: analyticsApi.getPromCompletionRates,
+  });
+
+  // Fetch clinic analytics
+  const { data: clinicAnalytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery<ClinicAnalytics>({
+    queryKey: ['clinicAnalytics', clinicId, dateRange],
+    queryFn: () => {
+      const { from, to } = getDateRange();
+      return analyticsApi.getClinicAnalytics(clinicId, from, to);
+    },
+    enabled: !!clinicId && clinicId !== 'default',
+  });
+
+  // Generate colors for condition data
+  const conditionDataWithColors = conditionData.map((item, index) => ({
+    ...item,
+    color: ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#6b7280'][index % 5],
   }));
 
-  const revenueData = Array.from({ length: 12 }, (_, i) => ({
-    month: format(new Date(2024, i), 'MMM'),
-    revenue: Math.floor(Math.random() * 50000) + 30000,
-    expenses: Math.floor(Math.random() * 20000) + 15000,
-  }));
-
-  const conditionData = [
-    { name: 'Lower Back Pain', value: 35, color: '#2563eb' },
-    { name: 'Neck Pain', value: 25, color: '#7c3aed' },
-    { name: 'Shoulder Issues', value: 20, color: '#10b981' },
-    { name: 'Knee Problems', value: 15, color: '#f59e0b' },
-    { name: 'Other', value: 5, color: '#6b7280' },
-  ];
-
-  const practitionerPerformance = [
-    { name: 'Dr. Emily Chen', patients: 145, satisfaction: 4.8, revenue: 42500 },
-    { name: 'Dr. James Williams', patients: 132, satisfaction: 4.7, revenue: 38900 },
-    { name: 'Dr. Priya Patel', patients: 128, satisfaction: 4.9, revenue: 37200 },
-    { name: 'Dr. Michael Brown', patients: 115, satisfaction: 4.6, revenue: 33500 },
-  ];
-
+  // Calculate stat cards from real data
   const statCards: StatCard[] = [
     {
       title: 'Total Patients',
-      value: '1,234',
-      change: 12.5,
+      value: clinicAnalytics?.patientMetrics?.newPatients && clinicAnalytics?.patientMetrics?.returningPatients
+        ? (clinicAnalytics.patientMetrics.newPatients + clinicAnalytics.patientMetrics.returningPatients).toLocaleString()
+        : dashboardStats?.activePatients?.toLocaleString() || '0',
+      change: 12.5, // Would need historical data for real change calculation
       icon: <PeopleIcon />,
       color: 'primary.main',
     },
     {
       title: 'Appointments This Month',
-      value: '342',
+      value: clinicAnalytics?.appointmentMetrics?.totalScheduled?.toLocaleString() || 
+             dashboardStats?.todayAppointments?.toLocaleString() || '0',
       change: 8.3,
       icon: <CalendarIcon />,
       color: 'secondary.main',
     },
     {
       title: 'Revenue This Month',
-      value: '$125,430',
+      value: clinicAnalytics?.revenueMetrics?.totalCollected 
+        ? `$${clinicAnalytics.revenueMetrics.totalCollected.toLocaleString()}`
+        : '$0',
       change: 15.2,
       icon: <MoneyIcon />,
       color: 'success.main',
     },
     {
       title: 'Avg. Patient Satisfaction',
-      value: '4.7/5',
+      value: clinicAnalytics?.patientMetrics?.patientSatisfactionScore
+        ? `${clinicAnalytics.patientMetrics.patientSatisfactionScore}/5`
+        : dashboardStats?.patientSatisfaction
+        ? `${dashboardStats.patientSatisfaction}/5`
+        : '0/5',
       change: 2.1,
       icon: <AssessmentIcon />,
       color: 'warning.main',
     },
   ];
+
+  const handleRefresh = () => {
+    refetchAnalytics();
+  };
+
+  const isLoading = statsLoading || appointmentLoading || analyticsLoading;
 
   return (
     <Box>
@@ -157,7 +214,7 @@ const Analytics: React.FC = () => {
               <MenuItem value="365">Last year</MenuItem>
             </Select>
           </FormControl>
-          <Button variant="outlined" startIcon={<RefreshIcon />}>
+          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={handleRefresh}>
             Refresh
           </Button>
           <Button variant="contained" startIcon={<DownloadIcon />}>
@@ -273,16 +330,16 @@ const Analytics: React.FC = () => {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={conditionData}
+                    data={conditionDataWithColors}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percentage }) => `${name} ${percentage ? percentage.toFixed(0) : 0}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {conditionData.map((entry, index) => (
+                    {conditionDataWithColors.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -328,7 +385,7 @@ const Analytics: React.FC = () => {
                   PROM Completion Rates by Type
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={[
+                  <BarChart data={promCompletionData.length > 0 ? promCompletionData : [
                     { name: 'PHQ-9', completed: 85, pending: 15 },
                     { name: 'Pain Assessment', completed: 78, pending: 22 },
                     { name: 'Quality of Life', completed: 92, pending: 8 },
@@ -471,7 +528,7 @@ const Analytics: React.FC = () => {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {conditionData.map((entry, index) => (
+                      {conditionDataWithColors.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -567,13 +624,13 @@ const Analytics: React.FC = () => {
               </TableHead>
               <TableBody>
                 {practitionerPerformance.map((practitioner) => (
-                  <TableRow key={practitioner.name}>
+                  <TableRow key={practitioner.providerName || practitioner.name}>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar sx={{ width: 32, height: 32 }}>
-                          {practitioner.name.split(' ').map(n => n[0]).join('')}
+                          {(practitioner.providerName || practitioner.name).split(' ').map(n => n[0]).join('')}
                         </Avatar>
-                        <Typography variant="body2">{practitioner.name}</Typography>
+                        <Typography variant="body2">{practitioner.providerName || practitioner.name}</Typography>
                       </Box>
                     </TableCell>
                     <TableCell align="center">

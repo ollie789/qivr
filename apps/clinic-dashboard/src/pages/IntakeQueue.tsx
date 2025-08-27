@@ -63,6 +63,9 @@ import { format } from 'date-fns';
 import { useSnackbar } from 'notistack';
 import { intakeApi, type IntakeSubmission } from '../services/intakeApi';
 import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDialog';
+import { patientApi } from '../services/patientApi';
+import { downloadCSV, downloadExcel, prepareIntakeExportData, intakeQueueColumns } from '../utils/exportUtils';
+import { Menu } from '@mui/material';
 
 
 const IntakeQueue: React.FC = () => {
@@ -77,23 +80,33 @@ const IntakeQueue: React.FC = () => {
   const [createPatientOpen, setCreatePatientOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterUrgency, setFilterUrgency] = useState<string>('all');
+  const [patientFormData, setPatientFormData] = useState<any>({});
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
 
   // Fetch intake submissions from API
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['intakeQueue', selectedTab, filterUrgency, searchQuery],
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['intakeQueue'],
     queryFn: async () => {
-      const filters = {
-        status: selectedTab === 0 ? 'pending' : 
-                selectedTab === 1 ? 'reviewing' : 
-                selectedTab === 2 ? 'processed' : undefined,
-        severity: filterUrgency !== 'all' ? filterUrgency : undefined,
-        search: searchQuery || undefined,
-      };
-      return intakeApi.getIntakes(filters);
+      try {
+        const result = await intakeApi.getIntakes();
+        console.log('Fetched intakes:', result);
+        return result;
+      } catch (err) {
+        console.error('Error fetching intakes:', err);
+        throw err;
+      }
     },
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
   
   const intakes = data?.data || [];
+  
+  // Show error alert if fetch failed
+  React.useEffect(() => {
+    if (error) {
+      enqueueSnackbar('Failed to load intake queue', { variant: 'error' });
+    }
+  }, [error, enqueueSnackbar]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -126,21 +139,23 @@ const IntakeQueue: React.FC = () => {
 
   const handleApprove = async (intakeId: string) => {
     try {
-      await intakeApi.updateIntakeStatus(intakeId, 'approved');
+      await intakeApi.updateIntakeStatus(intakeId, 'Triaged');
       enqueueSnackbar('Intake approved successfully', { variant: 'success' });
-      refetch();
-    } catch (error) {
-      enqueueSnackbar('Failed to approve intake', { variant: 'error' });
+      await refetch();
+    } catch (error: any) {
+      console.error('Failed to approve intake:', error);
+      enqueueSnackbar(error?.message || 'Failed to approve intake', { variant: 'error' });
     }
   };
 
   const handleReject = async (intakeId: string) => {
     try {
-      await intakeApi.updateIntakeStatus(intakeId, 'rejected');
+      await intakeApi.updateIntakeStatus(intakeId, 'Archived');
       enqueueSnackbar('Intake rejected', { variant: 'info' });
-      refetch();
-    } catch (error) {
-      enqueueSnackbar('Failed to reject intake', { variant: 'error' });
+      await refetch();
+    } catch (error: any) {
+      console.error('Failed to reject intake:', error);
+      enqueueSnackbar(error?.message || 'Failed to reject intake', { variant: 'error' });
     }
   };
 
@@ -154,30 +169,91 @@ const IntakeQueue: React.FC = () => {
     setCreatePatientOpen(true);
   };
 
-  const handleSavePatient = () => {
-    enqueueSnackbar('Patient created successfully', { variant: 'success' });
-    setCreatePatientOpen(false);
-    // After creating patient, open scheduling dialog
-    setScheduleOpen(true);
+  const handleExportCSV = () => {
+    const exportData = prepareIntakeExportData(filteredIntakes);
+    downloadCSV(exportData, 'intake_queue', intakeQueueColumns);
+    enqueueSnackbar('Intake queue exported as CSV', { variant: 'success' });
+    setExportMenuAnchor(null);
   };
 
-  const filteredIntakes = intakes.filter(intake => {
-    const matchesSearch = intake.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         intake.conditionType.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesUrgency = filterUrgency === 'all' || intake.severity === filterUrgency;
+  const handleExportExcel = () => {
+    const exportData = prepareIntakeExportData(filteredIntakes);
+    downloadExcel(exportData, 'intake_queue', intakeQueueColumns);
+    enqueueSnackbar('Intake queue exported as Excel', { variant: 'success' });
+    setExportMenuAnchor(null);
+  };
+
+  const handleSavePatient = async () => {
+    if (!selectedIntake) return;
     
-    // Filter by tab
-    let matchesTab = true;
-    if (selectedTab === 0) {
-      matchesTab = intake.status === 'pending';
-    } else if (selectedTab === 1) {
-      matchesTab = intake.status === 'reviewing';
-    } else if (selectedTab === 2) {
-      matchesTab = ['approved', 'rejected', 'scheduled'].includes(intake.status);
+    try {
+      // Extract name parts
+      const nameParts = selectedIntake.patientName.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      // Create patient data
+      const patientData = {
+        firstName: patientFormData.firstName || firstName,
+        lastName: patientFormData.lastName || lastName,
+        email: patientFormData.email || selectedIntake.email,
+        phone: patientFormData.phone || selectedIntake.phone || '',
+        dateOfBirth: patientFormData.dateOfBirth || '',
+        gender: patientFormData.gender || 'Not specified',
+        address: {
+          street: patientFormData.street || '',
+          city: patientFormData.city || '',
+          state: patientFormData.state || 'NSW',
+          postcode: patientFormData.postcode || '',
+        },
+        insuranceProvider: patientFormData.insuranceProvider || '',
+        medicareNumber: patientFormData.medicareNumber || '',
+        initialConditions: [selectedIntake.conditionType],
+        intakeId: selectedIntake.id,
+      };
+      
+      // Create patient from intake
+      const newPatient = await patientApi.createPatientFromIntake(selectedIntake.id, patientData);
+      
+      enqueueSnackbar('Patient created successfully', { variant: 'success' });
+      setCreatePatientOpen(false);
+      
+      // Update the intake to mark it as having a patient
+      await refetch();
+      
+      // After creating patient, open scheduling dialog with the new patient ID
+      setSelectedIntake({ ...selectedIntake, patientId: newPatient.id });
+      setScheduleOpen(true);
+    } catch (error: any) {
+      console.error('Failed to create patient:', error);
+      enqueueSnackbar(error?.message || 'Failed to create patient', { variant: 'error' });
     }
-    
-    return matchesSearch && matchesUrgency && matchesTab;
-  });
+  };
+
+  const filteredIntakes = React.useMemo(() => {
+    return intakes.filter(intake => {
+      // Search filter
+      const matchesSearch = !searchQuery || 
+        intake.patientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        intake.conditionType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        intake.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Urgency filter
+      const matchesUrgency = filterUrgency === 'all' || intake.severity === filterUrgency;
+      
+      // Tab filter
+      let matchesTab = true;
+      if (selectedTab === 0) {
+        matchesTab = intake.status === 'pending';
+      } else if (selectedTab === 1) {
+        matchesTab = intake.status === 'reviewing';
+      } else if (selectedTab === 2) {
+        matchesTab = ['approved', 'rejected', 'scheduled'].includes(intake.status);
+      }
+      
+      return matchesSearch && matchesUrgency && matchesTab;
+    });
+  }, [intakes, searchQuery, filterUrgency, selectedTab]);
 
   return (
     <Box>
@@ -202,9 +278,28 @@ const IntakeQueue: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<DownloadIcon />}
+            onClick={(e) => setExportMenuAnchor(e.currentTarget)}
           >
             Export
           </Button>
+          <Menu
+            anchorEl={exportMenuAnchor}
+            open={Boolean(exportMenuAnchor)}
+            onClose={() => setExportMenuAnchor(null)}
+          >
+            <MenuItem onClick={handleExportCSV}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <DownloadIcon fontSize="small" />
+                Export as CSV
+              </Box>
+            </MenuItem>
+            <MenuItem onClick={handleExportExcel}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <DownloadIcon fontSize="small" />
+                Export as Excel
+              </Box>
+            </MenuItem>
+          </Menu>
         </Grid>
       </Grid>
 
@@ -378,20 +473,41 @@ const IntakeQueue: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredIntakes.map((intake) => (
+              {filteredIntakes.length === 0 && !isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                    <Box>
+                      <InfoIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        No intakes found
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {searchQuery || filterUrgency !== 'all' 
+                          ? 'Try adjusting your filters' 
+                          : selectedTab === 0 
+                            ? 'No pending intakes at the moment'
+                            : selectedTab === 1
+                              ? 'No intakes currently in review'
+                              : 'No processed intakes yet'}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+              filteredIntakes.map((intake) => (
                 <TableRow key={intake.id} hover>
                   <TableCell>
                     <Box>
-                      <Typography variant="body1">{intake.patientName}</Typography>
+                      <Typography variant="body1">{intake.patientName || 'Unknown Patient'}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {intake.email}
+                        {intake.email || 'No email provided'}
                       </Typography>
                     </Box>
                   </TableCell>
                   <TableCell>
                     <Box>
-                      <Typography variant="body2">{intake.conditionType}</Typography>
-                      {intake.symptoms && intake.symptoms.length > 0 && (
+                      <Typography variant="body2">{intake.conditionType || 'Not specified'}</Typography>
+                      {intake.symptoms && Array.isArray(intake.symptoms) && intake.symptoms.length > 0 && (
                         <Box sx={{ mt: 0.5 }}>
                           {intake.symptoms.slice(0, 2).map((symptom, index) => (
                             <Chip
@@ -401,6 +517,14 @@ const IntakeQueue: React.FC = () => {
                               sx={{ mr: 0.5 }}
                             />
                           ))}
+                          {intake.symptoms.length > 2 && (
+                            <Chip
+                              label={`+${intake.symptoms.length - 2} more`}
+                              size="small"
+                              sx={{ mr: 0.5 }}
+                              variant="outlined"
+                            />
+                          )}
                         </Box>
                       )}
                     </Box>
@@ -515,7 +639,8 @@ const IntakeQueue: React.FC = () => {
                     </Box>
                   </TableCell>
                 </TableRow>
-              ))}
+              ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -717,6 +842,7 @@ const IntakeQueue: React.FC = () => {
                 fullWidth
                 label="First Name"
                 defaultValue={selectedIntake?.patientName.split(' ')[0]}
+                onChange={(e) => setPatientFormData({ ...patientFormData, firstName: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -724,6 +850,7 @@ const IntakeQueue: React.FC = () => {
                 fullWidth
                 label="Last Name"
                 defaultValue={selectedIntake?.patientName.split(' ').slice(1).join(' ')}
+                onChange={(e) => setPatientFormData({ ...patientFormData, lastName: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -732,6 +859,7 @@ const IntakeQueue: React.FC = () => {
                 label="Email"
                 type="email"
                 defaultValue={selectedIntake?.email}
+                onChange={(e) => setPatientFormData({ ...patientFormData, email: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -739,6 +867,7 @@ const IntakeQueue: React.FC = () => {
                 fullWidth
                 label="Phone"
                 defaultValue={selectedIntake?.phone}
+                onChange={(e) => setPatientFormData({ ...patientFormData, phone: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -747,12 +876,17 @@ const IntakeQueue: React.FC = () => {
                 label="Date of Birth"
                 type="date"
                 InputLabelProps={{ shrink: true }}
+                onChange={(e) => setPatientFormData({ ...patientFormData, dateOfBirth: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Gender</InputLabel>
-                <Select label="Gender">
+                <Select 
+                  label="Gender"
+                  value={patientFormData.gender || ''}
+                  onChange={(e) => setPatientFormData({ ...patientFormData, gender: e.target.value })}
+                >
                   <MenuItem value="Male">Male</MenuItem>
                   <MenuItem value="Female">Female</MenuItem>
                   <MenuItem value="Other">Other</MenuItem>
