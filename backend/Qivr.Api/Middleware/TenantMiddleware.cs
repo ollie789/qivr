@@ -86,18 +86,19 @@ public class TenantMiddleware
                 await connection.OpenAsync();
             }
 
+            // Prefer built-in session GUC to avoid dependency on custom SQL function
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT set_tenant_context(@tenant_id::uuid)";
-            
+            command.CommandText = "SELECT set_config('app.tenant_id', @tenant_id::text, true)";
+
             var parameter = command.CreateParameter();
             parameter.ParameterName = "@tenant_id";
             if (!Guid.TryParse(tenantId, out var tenantGuid))
             {
                 throw new InvalidOperationException("Invalid tenant id format");
             }
-            parameter.Value = tenantGuid;
+            parameter.Value = tenantGuid.ToString();
             command.Parameters.Add(parameter);
-            
+
             await command.ExecuteNonQueryAsync();
         }
         catch (Exception ex)

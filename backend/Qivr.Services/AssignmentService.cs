@@ -72,14 +72,14 @@ public class AssignmentService : IAssignmentService
                 id, tenant_id, intake_id, provider_id, assigned_at, status, notes, created_at, updated_at
             ) VALUES (
                 {assignmentId}, {tenantId}, {intakeId}, {providerId}, {now}, 
-                {'active'}, {notes}, {now}, {now}
+                {"active"}, {notes}, {now}, {now}
             )", ct);
 
         // Update evaluation with assigned provider
         await _db.Database.ExecuteSqlInterpolatedAsync(
             $@"UPDATE qivr.evaluations 
                SET assigned_to = {providerId}, 
-                   status = 'Reviewing',
+                   status = {"reviewed"},
                    updated_at = {now}
                WHERE tenant_id = {tenantId} AND id = {intakeId}", ct);
 
