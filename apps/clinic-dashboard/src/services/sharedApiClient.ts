@@ -1,4 +1,4 @@
-import { createAxiosInstance, TokenManager, handleApiError, isApiError, ApiErrorType } from '../../shared/axiosConfig';
+import { createAxiosInstance, TokenManager, handleApiError, isApiError, ApiErrorType } from '../utils/axiosConfig';
 import { useAuthStore } from '../stores/authStore';
 
 // Determine the correct API URL based on environment

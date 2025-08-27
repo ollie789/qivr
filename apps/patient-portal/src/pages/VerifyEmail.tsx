@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import { apiClient } from '../utils/apiClient';
+import apiClient from '../services/apiClient';
 
 const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();

@@ -23,9 +23,8 @@ import {
   Checkbox,
   FormControlLabel,
   Switch,
-  DatePicker,
-  TimePicker,
 } from '@mui/material';
+import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
@@ -285,8 +284,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
                   <DatePicker
                     label="Scheduled Date"
                     value={scheduledDate}
-                    onChange={(newValue) => setScheduledDate(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    onChange={(newValue: Date | null) => setScheduledDate(newValue)}
                   />
                 </LocalizationProvider>
               </Grid>
@@ -295,8 +293,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
                   <TimePicker
                     label="Scheduled Time"
                     value={scheduledDate}
-                    onChange={(newValue) => setScheduledDate(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    onChange={(newValue: Date | null) => setScheduledDate(newValue)}
                   />
                 </LocalizationProvider>
               </Grid>
@@ -308,14 +305,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
               <DatePicker
                 label="Due Date"
                 value={dueDate}
-                onChange={(newValue) => setDueDate(newValue)}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    helperText="When should the patient complete this PROM by?"
-                  />
-                )}
+                onChange={(newValue: Date | null) => setDueDate(newValue)}
               />
             </LocalizationProvider>
           </Grid>

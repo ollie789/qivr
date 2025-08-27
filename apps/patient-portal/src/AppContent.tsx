@@ -16,7 +16,7 @@ import { CompletePROM } from './pages/CompletePROM';
 import { Profile } from './pages/Profile';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
-import { VerifyEmail } from './pages/VerifyEmail';
+import VerifyEmail from './pages/VerifyEmail';
 
 // Auth
 import { useAuth } from './contexts/AuthContext';
