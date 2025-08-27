@@ -41,12 +41,13 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = result.ErrorMessage });
         }
 
-        return Ok(new LoginResponse
+        return Ok(new 
         {
-            AccessToken = result.AccessToken!,
-            RefreshToken = result.RefreshToken!,
-            IdToken = result.IdToken!,
-            ExpiresIn = result.ExpiresIn!.Value
+            accessToken = result.AccessToken!,
+            refreshToken = result.RefreshToken!,
+            idToken = result.IdToken!,
+            expiresIn = result.ExpiresIn!.Value,
+            userInfo = result.UserInfo
         });
     }
 

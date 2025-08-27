@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import cognitoAuthService, { type ClinicUserAttributes } from '../services/cognitoAuthService';
+import jwtAuthService, { type ClinicUserAttributes } from '../services/jwtAuthService';
 
 interface User {
   id: string;
@@ -48,11 +48,11 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          const result = await cognitoAuthService.signIn(email, password);
+          const result = await jwtAuthService.signIn(email, password);
           
           if (result.isSignedIn) {
-            const userAttributes = await cognitoAuthService.getCurrentUser();
-            const session = await cognitoAuthService.getSession();
+            const userAttributes = await jwtAuthService.getCurrentUser();
+            const session = await jwtAuthService.getSession();
             
             if (userAttributes && session) {
               const user: User = {
@@ -91,10 +91,10 @@ export const useAuthStore = create<AuthState>()(
       confirmMFA: async (code: string) => {
         set({ isLoading: true });
         try {
-          await cognitoAuthService.confirmMFACode(code);
+          await jwtAuthService.confirmMFACode(code);
           
-          const userAttributes = await cognitoAuthService.getCurrentUser();
-          const session = await cognitoAuthService.getSession();
+          const userAttributes = await jwtAuthService.getCurrentUser();
+          const session = await jwtAuthService.getSession();
           
           if (userAttributes && session) {
             const user: User = {
@@ -121,14 +121,14 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setupMFA: async () => {
-        const result = await cognitoAuthService.setupMFA();
+        const result = await jwtAuthService.setupMFA();
         return result;
       },
 
       verifyMFASetup: async (code: string) => {
         set({ isLoading: true });
         try {
-          await cognitoAuthService.verifyMFASetup(code);
+          await jwtAuthService.verifyMFASetup(code);
           set({ mfaSetupRequired: false });
           
           // Complete sign-in after MFA setup
@@ -141,7 +141,7 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         set({ isLoading: true });
         try {
-          await cognitoAuthService.signOut();
+          await jwtAuthService.signOut();
         } finally {
           set({
             user: null,
@@ -161,11 +161,11 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         set({ isLoading: true });
         try {
-          const isAuth = await cognitoAuthService.isAuthenticated();
+          const isAuth = await jwtAuthService.isAuthenticated();
           
           if (isAuth) {
-            const userAttributes = await cognitoAuthService.getCurrentUser();
-            const session = await cognitoAuthService.getSession();
+            const userAttributes = await jwtAuthService.getCurrentUser();
+            const session = await jwtAuthService.getSession();
             
             if (userAttributes && session) {
               const user: User = {
@@ -206,7 +206,7 @@ export const useAuthStore = create<AuthState>()(
 
       refreshToken: async () => {
         try {
-          const session = await cognitoAuthService.getSession();
+          const session = await jwtAuthService.getSession();
           if (session) {
             set({ token: session.accessToken });
           }

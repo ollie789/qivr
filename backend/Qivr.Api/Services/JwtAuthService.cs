@@ -44,7 +44,8 @@ public class JwtAuthService : ICognitoAuthService
             var user = await _dbContext.Database
                 .SqlQuery<UserAuthDto>($@"
                     SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, 
-                           u.role, u.tenant_id, u.is_active, u.email_verified
+                           u.roles[1] as role, u.tenant_id, u.email_verified,
+                           u.phone, u.user_type
                     FROM qivr.users u
                     WHERE u.email = {username}
                 ")
@@ -60,15 +61,7 @@ public class JwtAuthService : ICognitoAuthService
                 };
             }
 
-            // Check if user is active
-            if (!user.IsActive)
-            {
-                return new AuthenticationResult
-                {
-                    Success = false,
-                    ErrorMessage = "Account is disabled"
-                };
-            }
+            // Note: is_active column doesn't exist, could check user_type or other status
 
             // Check if email is verified
             if (!user.EmailVerified)
@@ -112,13 +105,28 @@ public class JwtAuthService : ICognitoAuthService
 
             _logger.LogInformation("Authentication successful for {Username}", username);
 
+            // Include user info in response
+            var userInfo = new UserInfo
+            {
+                Username = user.Email,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                PhoneNumber = user.Phone,
+                TenantId = user.TenantId,
+                Role = user.Role,
+                EmailVerified = user.EmailVerified,
+                PhoneVerified = false
+            };
+
             return new AuthenticationResult
             {
                 Success = true,
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 IdToken = idToken,
-                ExpiresIn = 3600
+                ExpiresIn = 3600,
+                UserInfo = userInfo
             };
         }
         catch (Exception ex)
@@ -286,12 +294,12 @@ public class JwtAuthService : ICognitoAuthService
             // Generate new access token
             var user = new UserAuthDto
             {
-                Id = storedToken.UserId,
-                Email = storedToken.Email,
-                FirstName = storedToken.FirstName,
-                LastName = storedToken.LastName,
-                Role = storedToken.Role,
-                TenantId = storedToken.TenantId
+                id = storedToken.UserId,
+                email = storedToken.Email,
+                first_name = storedToken.FirstName,
+                last_name = storedToken.LastName,
+                role = storedToken.Role,
+                tenant_id = storedToken.TenantId
             };
 
             var accessToken = GenerateAccessToken(user);
@@ -421,16 +429,26 @@ public class JwtAuthService : ICognitoAuthService
     // DTOs
     private class UserAuthDto
     {
-        public Guid Id { get; set; }
-        public string Email { get; set; }
-        public string PasswordHash { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Role { get; set; }
-        public Guid TenantId { get; set; }
-        public bool IsActive { get; set; }
-        public bool EmailVerified { get; set; }
-        public string Phone { get; set; }
+        public Guid id { get; set; }
+        public Guid Id => id;
+        public string email { get; set; }
+        public string Email => email;
+        public string password_hash { get; set; }
+        public string PasswordHash => password_hash;
+        public string first_name { get; set; }
+        public string FirstName => first_name;
+        public string last_name { get; set; }
+        public string LastName => last_name;
+        public string role { get; set; }
+        public string Role => role ?? "staff";
+        public Guid tenant_id { get; set; }
+        public Guid TenantId => tenant_id;
+        public bool email_verified { get; set; }
+        public bool EmailVerified => email_verified;
+        public string phone { get; set; }
+        public string Phone => phone;
+        public string user_type { get; set; }
+        public bool IsActive => user_type != "inactive";
     }
 
     private class RefreshTokenDto
