@@ -66,6 +66,7 @@ import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDial
 import { patientApi } from '../services/patientApi';
 import { downloadCSV, downloadExcel, prepareIntakeExportData, intakeQueueColumns } from '../utils/exportUtils';
 import { Menu } from '@mui/material';
+import { handleApiError, isApiError } from '../services/sharedApiClient';
 
 
 const IntakeQueue: React.FC = () => {
@@ -144,7 +145,8 @@ const IntakeQueue: React.FC = () => {
       await refetch();
     } catch (error: any) {
       console.error('Failed to approve intake:', error);
-      enqueueSnackbar(error?.message || 'Failed to approve intake', { variant: 'error' });
+      const errorMessage = handleApiError(error, 'Failed to approve intake');
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     }
   };
 
@@ -155,7 +157,8 @@ const IntakeQueue: React.FC = () => {
       await refetch();
     } catch (error: any) {
       console.error('Failed to reject intake:', error);
-      enqueueSnackbar(error?.message || 'Failed to reject intake', { variant: 'error' });
+      const errorMessage = handleApiError(error, 'Failed to reject intake');
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     }
   };
 
@@ -226,7 +229,8 @@ const IntakeQueue: React.FC = () => {
       setScheduleOpen(true);
     } catch (error: any) {
       console.error('Failed to create patient:', error);
-      enqueueSnackbar(error?.message || 'Failed to create patient', { variant: 'error' });
+      const errorMessage = handleApiError(error, 'Failed to create patient');
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     }
   };
 

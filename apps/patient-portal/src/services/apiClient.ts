@@ -1,51 +1,87 @@
-import axios, { AxiosInstance } from 'axios';
+import { AxiosInstance } from 'axios';
+import { createAxiosInstance, TokenManager, handleApiError, isApiError } from '../../shared/axiosConfig';
 
-const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
-const API_URL = `${API_ROOT_URL.replace(/\/+$/, '')}/api`;
+// Determine the correct API URL
+const getApiUrl = () => {
+  const viteApiUrl = import.meta.env?.VITE_API_URL;
+  const isDevelopment = import.meta.env?.MODE === 'development';
+  
+  if (viteApiUrl) {
+    const cleanUrl = viteApiUrl.replace(/\/+$/, '');
+    return cleanUrl.includes('/api') ? cleanUrl : `${cleanUrl}/api`;
+  }
+  
+  return isDevelopment ? 'http://localhost:5001/api' : 'https://api.qivr.com/api';
+};
+
+// Custom token manager for patient portal
+const patientTokenManager: TokenManager = {
+  getAccessToken: () => {
+    // Try multiple sources for token
+    const idToken = localStorage.getItem('idToken');
+    const accessToken = localStorage.getItem('accessToken');
+    const authToken = localStorage.getItem('authToken');
+    
+    return idToken || accessToken || authToken;
+  },
+  getRefreshToken: () => {
+    return localStorage.getItem('refreshToken');
+  },
+  setTokens: (accessToken: string, refreshToken?: string) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('idToken', accessToken); // Store as both for compatibility
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+  },
+  clearTokens: () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('idToken');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userAttributes');
+  }
+};
 
 class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
-    this.client = axios.create({
-      baseURL: API_URL,
-      headers: {
-        'Content-Type': 'application/json',
+    this.client = createAxiosInstance(
+      patientTokenManager,
+      {
+        maxRetries: 3,
+        retryDelay: 1000,
+        retryCondition: (error) => {
+          // Don't retry on client errors
+          if (error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+            return false;
+          }
+          return true;
+        }
       },
-    });
-
-    // Add auth token to requests
-    this.client.interceptors.request.use((config) => {
-      const idToken = localStorage.getItem('idToken');
-      const accessToken = localStorage.getItem('accessToken');
-      const token = idToken || accessToken;
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      {
+        baseURL: getApiUrl(),
+        timeout: 30000,
       }
-      
-      // Add tenant ID header - use default for demo
-      const tenantId = localStorage.getItem('tenantId') || '11111111-1111-1111-1111-111111111111';
-      config.headers['X-Tenant-Id'] = tenantId;
+    );
 
-      if (import.meta.env.DEV) {
+    // Add custom interceptor for tenant ID and mock data
+    this.client.interceptors.request.use((config) => {
+      // Add tenant ID header
+      const tenantId = localStorage.getItem('tenantId') || 
+                      localStorage.getItem('clinicId') ||
+                      '11111111-1111-1111-1111-111111111111';
+      config.headers['X-Tenant-Id'] = tenantId;
+      config.headers['X-Clinic-Id'] = tenantId;
+
+      // Handle mock data in development
+      if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true') {
         return this.handleMockData(config);
       }
       
       return config;
     });
-
-    // Add response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.response?.status === 401) {
-          // Handle unauthorized - redirect to login
-          localStorage.removeItem('authToken');
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
   }
 
   private handleMockData(config: any) {
@@ -281,4 +317,7 @@ class ApiClient {
 }
 
 const apiClient = new ApiClient();
+
+// Export error handling utilities
+export { handleApiError, isApiError };
 export default apiClient;
