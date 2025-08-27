@@ -1,5 +1,5 @@
 import { AxiosInstance } from 'axios';
-import { createAxiosInstance, TokenManager, handleApiError, isApiError } from '../../shared/axiosConfig';
+import { createAxiosInstance, TokenManager, handleApiError, isApiError } from '../utils/axiosConfig';
 
 // Determine the correct API URL
 const getApiUrl = () => {

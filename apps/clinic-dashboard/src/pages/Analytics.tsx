@@ -63,7 +63,7 @@ import analyticsApi, {
   PromCompletionData,
   ClinicAnalytics 
 } from '../services/analyticsApi';
-import { authStore } from '../stores/authStore';
+import { useAuthStore } from '../stores/authStore';
 
 interface StatCard {
   title: string;
@@ -76,7 +76,7 @@ interface StatCard {
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
   const [selectedTab, setSelectedTab] = useState(0);
-  const user = authStore((state) => state.user);
+  const user = useAuthStore((state) => state.user);
   const clinicId = user?.clinicId || 'default';
 
   // Calculate date range based on selection

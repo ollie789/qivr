@@ -41,12 +41,12 @@ import {
   Legend,
   ResponsiveContainer,
   RadarChart,
-  RadarGrid,
+  PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
 } from 'recharts';
-import { format, subDays, subMonths } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 interface HealthMetric {
   label: string;
