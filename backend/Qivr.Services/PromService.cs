@@ -137,8 +137,8 @@ public class PromService : IPromService
 			TemplateId = template.Id,
 			PatientId = request.PatientId,
 			Status = status,
-			ScheduledFor = request.ScheduledFor,
-			DueAt = due,
+			ScheduledAt = request.ScheduledFor,
+			DueDate = due,
 			CreatedAt = now
 		};
 	}
@@ -146,8 +146,8 @@ public class PromService : IPromService
 	public async Task<PromInstanceDto?> GetInstanceAsync(Guid tenantId, Guid id, CancellationToken ct = default)
 	{
 		var result = await _db.Database.SqlQuery<PromInstanceDto>($@"SELECT 
-			id, template_id as TemplateId, patient_id as PatientId, status, scheduled_for as ScheduledFor,
-			completed_at as CompletedAt, due_date as DueAt, responses as AnswersJson, score, created_at as CreatedAt
+			id, template_id as TemplateId, patient_id as PatientId, status, scheduled_for as ScheduledAt,
+			completed_at as CompletedAt, due_date as DueDate, responses as AnswersJson, score as TotalScore, created_at as CreatedAt
 			FROM qivr.prom_instances WHERE tenant_id = {tenantId} AND id = {id}").FirstOrDefaultAsync(ct);
 		return result;
 	}
@@ -158,8 +158,8 @@ public class PromService : IPromService
 			? ""
 			: $" AND status = '{status!.Replace("'", "''")}'";
 		var list = await _db.Database.SqlQuery<PromInstanceDto>($@"SELECT 
-			id, template_id as TemplateId, patient_id as PatientId, status, scheduled_for as ScheduledFor,
-			completed_at as CompletedAt, due_date as DueAt, responses as AnswersJson, score, created_at as CreatedAt
+			id, template_id as TemplateId, patient_id as PatientId, status, scheduled_for as ScheduledAt,
+			completed_at as CompletedAt, due_date as DueDate, responses as AnswersJson, score as TotalScore, created_at as CreatedAt
 			FROM qivr.prom_instances WHERE tenant_id = {tenantId} AND patient_id = {patientId}{whereStatus}
 			ORDER BY scheduled_for DESC").ToListAsync(ct);
 		return list;
@@ -255,20 +255,7 @@ public sealed class SchedulePromRequest
 	public DateTime? DueAt { get; set; }
 }
 
-public sealed class PromInstanceDto
-{
-	public Guid Id { get; set; }
-	public Guid TemplateId { get; set; }
-	public Guid PatientId { get; set; }
-	public string Status { get; set; } = string.Empty;
-	public DateTime ScheduledFor { get; set; }
-	public DateTime? CompletedAt { get; set; }
-	public DateTime? DueAt { get; set; }
-	public string? AnswersJson { get; set; }
-	public decimal? Score { get; set; }
-	public DateTime CreatedAt { get; set; }
-}
-
+// PromInstanceDto is defined in PromInstanceService.cs
 public sealed class SubmitAnswersResult
 {
 	public decimal Score { get; set; }

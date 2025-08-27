@@ -57,10 +57,10 @@ public class IntakeController : ControllerBase
         {
             _logger.LogInformation("Intake submission received from {Email}", request.ContactInfo.Email);
             
-            // If no clinic ID provided, use default
+            // If no clinic ID provided, use default from Security settings
             var tenantId = Guid.TryParse(clinicId, out var tid) 
                 ? tid 
-                : Guid.Parse(_configuration["DefaultTenantId"] ?? "00000000-0000-0000-0000-000000000001");
+                : Guid.Parse(_configuration["Security:DefaultTenantId"] ?? "00000000-0000-0000-0000-000000000001");
             
             // Create evaluation record
             var evaluationId = Guid.NewGuid();
@@ -99,15 +99,69 @@ public class IntakeController : ControllerBase
                     .UseSnakeCaseNamingConvention()
                     .Options);
 
-            // Use placeholder patient ID for intake submissions
-            var placeholderPatientId = Guid.Parse("00000000-0000-0000-0000-000000000002");
-            
+            // Ensure RLS tenant context is set for this connection (public/anonymous flow)
+            await intakeContext.Database.ExecuteSqlInterpolatedAsync($"SELECT set_config('app.tenant_id', {tenantId.ToString()}, true)", cancellationToken);
+
+            // Ensure a patient user exists (or create one) to satisfy NOT NULL FK
+            Guid patientId;
+            await using (var conn = intakeContext.Database.GetDbConnection())
+            {
+                if (conn.State != System.Data.ConnectionState.Open)
+                {
+                    await conn.OpenAsync(cancellationToken);
+                }
+
+                await using (var findCmd = conn.CreateCommand())
+                {
+                    findCmd.CommandText = "SELECT id FROM qivr.users WHERE tenant_id = @tenant AND email = @mail LIMIT 1";
+                    var pTenant = findCmd.CreateParameter();
+                    pTenant.ParameterName = "@tenant";
+                    pTenant.Value = tenantId;
+                    findCmd.Parameters.Add(pTenant);
+                    var pMail = findCmd.CreateParameter();
+                    pMail.ParameterName = "@mail";
+                    pMail.Value = request.ContactInfo.Email;
+                    findCmd.Parameters.Add(pMail);
+
+                    var existing = await findCmd.ExecuteScalarAsync(cancellationToken);
+                    if (existing != null && existing != DBNull.Value)
+                    {
+                        patientId = (Guid)existing;
+                    }
+                    else
+                    {
+                        patientId = Guid.NewGuid();
+                        await using var insertCmd = conn.CreateCommand();
+                        insertCmd.CommandText = @"INSERT INTO qivr.users (
+                                id, tenant_id, email, first_name, last_name, phone, user_type, created_at, updated_at
+                            ) VALUES (
+                                @id, @tenant, @email, @first, @last, @phone, 'patient', NOW(), NOW()
+                            ) RETURNING id";
+                        var pId = insertCmd.CreateParameter(); pId.ParameterName = "@id"; pId.Value = patientId; insertCmd.Parameters.Add(pId);
+                        var pT = insertCmd.CreateParameter(); pT.ParameterName = "@tenant"; pT.Value = tenantId; insertCmd.Parameters.Add(pT);
+                        var pE = insertCmd.CreateParameter(); pE.ParameterName = "@email"; pE.Value = request.ContactInfo.Email; insertCmd.Parameters.Add(pE);
+                        var pF = insertCmd.CreateParameter(); pF.ParameterName = "@first"; pF.Value = request.PersonalInfo.FirstName; insertCmd.Parameters.Add(pF);
+                        var pL = insertCmd.CreateParameter(); pL.ParameterName = "@last"; pL.Value = request.PersonalInfo.LastName; insertCmd.Parameters.Add(pL);
+                        var pPh = insertCmd.CreateParameter(); pPh.ParameterName = "@phone"; pPh.Value = request.ContactInfo.Phone; insertCmd.Parameters.Add(pPh);
+                        var newId = await insertCmd.ExecuteScalarAsync(cancellationToken);
+                        if (newId == null || newId == DBNull.Value)
+                        {
+                            throw new InvalidOperationException("Failed to create patient user");
+                        }
+                    }
+                }
+            }
+
+            // Generate evaluation number
+            var evaluationNumber = $"E-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8]}";
+
+            // Insert evaluation aligned to schema
             await intakeContext.Database.ExecuteSqlInterpolatedAsync($@"
                 INSERT INTO qivr.evaluations (
-                    id, tenant_id, patient_id, status, responses, created_at, updated_at
+                    id, tenant_id, patient_id, evaluation_number, status, questionnaire_responses, created_at, updated_at
                 ) VALUES (
-                    {evaluationId}, {tenantId}, {placeholderPatientId},
-                    'pending', {JsonSerializer.Serialize(intakeData)}::jsonb,
+                    {evaluationId}, {tenantId}, {patientId},
+                    {evaluationNumber}, 'pending', {JsonSerializer.Serialize(intakeData)}::jsonb,
                     {now}, {now}
                 )", cancellationToken);
             
@@ -117,18 +171,15 @@ public class IntakeController : ControllerBase
                 foreach (var painPoint in request.PainPoints)
                 {
                     var painMapId = Guid.NewGuid();
+                    var coordsJson = JsonSerializer.Serialize(new { x = painPoint.Position?.X ?? 0, y = painPoint.Position?.Y ?? 0, z = painPoint.Position?.Z ?? 0 });
                     await intakeContext.Database.ExecuteSqlInterpolatedAsync($@"
                         INSERT INTO qivr.pain_maps (
-                            id, tenant_id, evaluation_id, body_part, intensity,
-                            pain_type, coordinate_x, coordinate_y, coordinate_z,
-                            created_at, updated_at
+                            id, tenant_id, evaluation_id, body_region, anatomical_code, coordinates,
+                            pain_intensity, pain_type, created_at, updated_at
                         ) VALUES (
                             {painMapId}, {tenantId}, {evaluationId},
-                            {painPoint.BodyPart}, {painPoint.Intensity},
-                            {painPoint.Type ?? "aching"}, 
-                            {painPoint.Position?.X ?? 0}, 
-                            {painPoint.Position?.Y ?? 0}, 
-                            {painPoint.Position?.Z ?? 0},
+                            {painPoint.BodyPart}, NULL, {coordsJson}::jsonb,
+                            {painPoint.Intensity}, {painPoint.Type ?? "aching"},
                             {now}, {now}
                         )", cancellationToken);
                 }
