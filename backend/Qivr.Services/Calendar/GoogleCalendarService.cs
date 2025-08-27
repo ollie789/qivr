@@ -259,6 +259,20 @@ public class GoogleCalendarService : ICalendarService
         }
     }
 
+    // Persist nextSyncToken after a full sync (skeleton example)
+    private async Task StoreNextSyncTokenAsync(string userId, string token)
+    {
+        try
+        {
+            // In a real implementation, inject DbContext and store in qivr.calendar_sync_states
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to store nextSyncToken for {UserId}", userId);
+        }
+    }
+
     public Task RemoveWebhookAsync(string userId, string channelId)
     {
         var calendarService = GetCalendarService(userId);

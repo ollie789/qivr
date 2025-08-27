@@ -292,6 +292,8 @@ app.Use(async (ctx, next) =>
 // Custom middleware
 app.UseMiddleware<TenantMiddleware>();
 app.UseMiddleware<ErrorHandlingMiddleware>();
+// Idempotency for mutating requests
+app.UseMiddleware<IdempotencyMiddleware>();
 
 // Authentication and Authorization
 app.UseAuthentication();
