@@ -93,6 +93,11 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 builder.Services.AddScoped<Qivr.Api.Services.IEmailService, Qivr.Api.Services.EmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 
+// Configure Notification Services
+builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
+builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
+builder.Services.AddScoped<INotificationGate, NotificationGate>();
+
 // Configure Authentication
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("UseJwtAuth", true))
 {
@@ -206,6 +211,7 @@ builder.Services.Configure<Qivr.Api.Options.IntakeDbOptions>(builder.Configurati
 builder.Services.Configure<Qivr.Api.Options.SqsOptions>(builder.Configuration.GetSection("Sqs"));
 builder.Services.Configure<Qivr.Api.Options.FeaturesOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.Configure<Qivr.Api.Options.BrandingOptions>(builder.Configuration.GetSection("Branding"));
+builder.Services.Configure<Qivr.Api.Options.NotificationsOptions>(builder.Configuration.GetSection("Notifications"));
 
 // Ensure Intake connection string is always resolved securely
 builder.Services.PostConfigure<Qivr.Api.Options.IntakeDbOptions>(options =>

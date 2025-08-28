@@ -441,6 +441,7 @@ public class AuthenticationResult
     public bool RequiresMfa { get; set; }
     public string? Session { get; set; }
     public string? ErrorMessage { get; set; }
+    public UserInfo? UserInfo { get; set; }  // Added UserInfo property
 }
 
 public class SignUpRequest
