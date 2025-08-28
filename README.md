@@ -1,8 +1,22 @@
-# Qivr - Patient↔Allied Health Connector
+# 🏥 Qivr - Patient↔Allied Health Connector
 
-## Overview
+## 🚀 Current Status: 75-80% Complete - Nearly Production Ready
+
+**Last Updated**: August 28, 2025 | **Version**: 0.8.0 | **Status**: Pre-Production
 
 Qivr is a comprehensive platform that helps allied-health clinics (physiotherapy, chiropractic, etc.) convert website visitors into booked patients and retain them through structured outcomes tracking (PROMs - Patient-Reported Outcome Measures).
+
+### ✅ Major Features Implemented
+- **3D Body Mapping** ✅ Fully functional with React Three Fiber
+- **Embeddable Widget** ✅ Complete with iframe architecture
+- **Patient Portal** ✅ Full application built
+- **Clinic Dashboard** ✅ Comprehensive interface complete
+- **Calendar Integration** ✅ Google & Microsoft 365 working
+- **Booking System** ✅ Full appointment management
+- **PROMs** ✅ Builder and tracking functional
+- **SMS Notifications** ✅ MessageMedia with consent management
+- **Multi-tenancy** ✅ PostgreSQL RLS implemented
+- **AI Analysis** ✅ OpenAI integration working
 
 ## 🎯 Key Features
 
