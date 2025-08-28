@@ -471,6 +471,119 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
+    [HttpGet("history")]
+    public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetAppointmentHistory(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var tenantId = GetTenantId();
+        var userId = GetUserId();
+
+        var query = _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Provider)
+            .Where(a => a.TenantId == tenantId
+                && (a.ScheduledStart <= DateTime.UtcNow || a.Status == AppointmentStatus.Completed || a.Status == AppointmentStatus.Cancelled));
+
+        // Filter by user role
+        if (User.IsInRole("Patient"))
+        {
+            query = query.Where(a => a.PatientId == userId);
+        }
+        else if (User.IsInRole("Clinician"))
+        {
+            query = query.Where(a => a.ProviderId == userId);
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var appointments = await query
+            .OrderByDescending(a => a.ScheduledStart)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(a => new AppointmentDto
+            {
+                Id = a.Id,
+                PatientId = a.PatientId,
+                PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : null,
+                ProviderId = a.ProviderId,
+                ProviderName = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : null,
+                AppointmentType = a.AppointmentType,
+                Status = a.Status,
+                ScheduledStart = a.ScheduledStart,
+                ScheduledEnd = a.ScheduledEnd,
+                ActualStart = a.ActualStart,
+                ActualEnd = a.ActualEnd,
+                LocationType = a.LocationType,
+                LocationDetails = a.LocationDetails,
+                Notes = a.Notes,
+                CancellationReason = a.CancellationReason,
+                CancelledAt = a.CancelledAt
+            })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            items = appointments,
+            page,
+            pageSize,
+            totalCount,
+            totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+        });
+    }
+
+    [HttpPost("{id}/reschedule")]
+    public async Task<IActionResult> RescheduleAppointment(Guid id, [FromBody] RescheduleAppointmentRequest request)
+    {
+        var tenantId = GetTenantId();
+        var userId = GetUserId();
+
+        var appointment = await _context.Appointments
+            .Where(a => a.TenantId == tenantId && a.Id == id)
+            .FirstOrDefaultAsync();
+
+        if (appointment == null)
+            return NotFound();
+
+        // Check permissions
+        if (User.IsInRole("Patient") && appointment.PatientId != userId)
+            return Forbid();
+
+        // Check for conflicts with the new time
+        var hasConflict = await _context.Appointments
+            .Where(a => a.TenantId == tenantId 
+                && a.Id != id
+                && a.ProviderId == appointment.ProviderId
+                && a.Status != AppointmentStatus.Cancelled
+                && a.ScheduledStart < request.NewEndTime
+                && a.ScheduledEnd > request.NewStartTime)
+            .AnyAsync();
+
+        if (hasConflict)
+            return BadRequest(new { message = "The new time slot is not available" });
+
+        // Update the appointment
+        appointment.ScheduledStart = request.NewStartTime;
+        appointment.ScheduledEnd = request.NewEndTime;
+        appointment.Status = AppointmentStatus.Scheduled; // Reset to scheduled status
+        appointment.UpdatedAt = DateTime.UtcNow;
+        
+        // Add rescheduling note
+        var reschedulingNote = $"\n[Rescheduled on {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC]";
+        if (!string.IsNullOrEmpty(request.Reason))
+            reschedulingNote += $" Reason: {request.Reason}";
+        
+        appointment.Notes = (appointment.Notes ?? "") + reschedulingNote;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Appointment rescheduled: {AppointmentId} to {NewTime}", appointment.Id, request.NewStartTime);
+
+        // TODO: Send notifications to patient and provider about the rescheduling
+
+        return NoContent();
+    }
+
     private Guid GetTenantId()
     {
         var tenantClaim = User.FindFirst("tenant_id")?.Value;
@@ -547,6 +660,13 @@ public class CompleteAppointmentRequest
     public DateTime? ActualStart { get; set; }
     public DateTime? ActualEnd { get; set; }
     public string? Notes { get; set; }
+}
+
+public class RescheduleAppointmentRequest
+{
+    public DateTime NewStartTime { get; set; }
+    public DateTime NewEndTime { get; set; }
+    public string? Reason { get; set; }
 }
 
 public class AvailableSlotDto
