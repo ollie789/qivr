@@ -1,7 +1,10 @@
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using Qivr.Api.Options;
+using Qivr.Infrastructure.Data;
 using System.Text.Json;
 
 namespace Qivr.Api.Workers;
@@ -87,20 +90,76 @@ public class IntakeProcessingWorker : BackgroundService
     {
         try
         {
-            _logger.LogInformation("Processing message {MessageId}", message.MessageId);
-
-            var intakeData = JsonSerializer.Deserialize<IntakeQueueMessage>(message.Body);
-            if (intakeData == null)
+            // Extract correlation ID from message attributes for logging scope
+            string? requestId = null;
+            if (message.MessageAttributes != null && 
+                message.MessageAttributes.TryGetValue("x-request-id", out var attr))
             {
-                _logger.LogWarning("Failed to deserialize message: {MessageId}", message.MessageId);
-                await DeleteMessage(message, cancellationToken);
-                return;
+                requestId = attr.StringValue;
             }
-
-            await ProcessIntake(intakeData, cancellationToken);
-            await DeleteMessage(message, cancellationToken);
             
-            _logger.LogInformation("Successfully processed intake {IntakeId}", intakeData.IntakeId);
+            using (_logger.BeginScope(new Dictionary<string, object?> { ["requestId"] = requestId }))
+            {
+                _logger.LogInformation("Processing message {MessageId}", message.MessageId);
+
+                var intakeData = JsonSerializer.Deserialize<IntakeQueueMessage>(message.Body);
+                if (intakeData == null)
+                {
+                    _logger.LogWarning("Failed to deserialize message: {MessageId}", message.MessageId);
+                    await DeleteMessage(message, cancellationToken);
+                    return;
+                }
+
+                // Check idempotency and set tenant context
+                using var scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
+                
+                await using var connection = dbContext.Database.GetDbConnection() as NpgsqlConnection;
+                if (connection == null)
+                {
+                    throw new InvalidOperationException("Expected NpgsqlConnection");
+                }
+                
+                await connection.OpenAsync(cancellationToken);
+                
+                // Start a transaction for tenant context and idempotency
+                await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+                
+                // Set tenant context for RLS
+                await using (var tenantCmd = new NpgsqlCommand(
+                    "SELECT set_config('app.tenant_id', @tid, true);", connection, transaction))
+                {
+                    tenantCmd.Parameters.AddWithValue("tid", intakeData.TenantId.ToString());
+                    await tenantCmd.ExecuteNonQueryAsync(cancellationToken);
+                }
+                
+                // Check idempotency - try to insert message ID
+                await using (var dedupeCmd = new NpgsqlCommand(
+                    @"INSERT INTO qivr.intake_dedupe(message_id) 
+                      VALUES(@id) 
+                      ON CONFLICT DO NOTHING 
+                      RETURNING 1;", connection, transaction))
+                {
+                    dedupeCmd.Parameters.AddWithValue("id", message.MessageId);
+                    var inserted = await dedupeCmd.ExecuteScalarAsync(cancellationToken);
+                    
+                    if (inserted == null)
+                    {
+                        _logger.LogInformation("Duplicate SQS message {MessageId}, skipping", message.MessageId);
+                        await DeleteMessage(message, cancellationToken);
+                        return;
+                    }
+                }
+                
+                await transaction.CommitAsync(cancellationToken);
+                
+                // Process the intake with tenant context established
+                await ProcessIntake(intakeData, scope, cancellationToken);
+                await DeleteMessage(message, cancellationToken);
+                
+                _logger.LogInformation("Successfully processed intake {IntakeId} for tenant {TenantId}", 
+                    intakeData.IntakeId, intakeData.TenantId);
+            }
         }
         catch (Exception ex)
         {
@@ -109,9 +168,9 @@ public class IntakeProcessingWorker : BackgroundService
         }
     }
 
-    private async Task ProcessIntake(IntakeQueueMessage intakeData, CancellationToken cancellationToken)
+    private async Task ProcessIntake(IntakeQueueMessage intakeData, IServiceScope scope, CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateScope();
+        // Tenant context is already established by the caller
         
         // TODO: Implement actual intake processing logic
         // This could include:
@@ -121,8 +180,8 @@ public class IntakeProcessingWorker : BackgroundService
         // 4. Creating appointments
         // 5. Updating patient records
 
-        _logger.LogInformation("Processing intake {IntakeId} for evaluation {EvaluationId}", 
-            intakeData.IntakeId, intakeData.EvaluationId);
+        _logger.LogInformation("Processing intake {IntakeId} for evaluation {EvaluationId} (Tenant: {TenantId})", 
+            intakeData.IntakeId, intakeData.EvaluationId, intakeData.TenantId);
 
         // Simulate processing
         await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
@@ -174,5 +233,6 @@ public class IntakeQueueMessage
     public string PatientEmail { get; set; } = string.Empty;
     public string PatientName { get; set; } = string.Empty;
     public DateTime SubmittedAt { get; set; }
+    public string? RequestId { get; set; }
     public Dictionary<string, object>? Metadata { get; set; }
 }

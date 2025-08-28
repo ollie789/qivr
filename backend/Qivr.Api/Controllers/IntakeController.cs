@@ -294,6 +294,9 @@ public class IntakeController : ControllerBase
     {
         try
         {
+            // Get correlation ID from current request context
+            var requestId = HttpContext.Request.Headers["X-Request-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString("N");
+            
             var message = new IntakeQueueMessage
             {
                 IntakeId = intakeId,
@@ -302,10 +305,12 @@ public class IntakeController : ControllerBase
                 PatientEmail = patientEmail,
                 PatientName = patientName,
                 SubmittedAt = submittedAt,
+                RequestId = requestId,
                 Metadata = new Dictionary<string, object>
                 {
                     ["Source"] = "Widget",
-                    ["Version"] = "1.0"
+                    ["Version"] = "1.0",
+                    ["RequestId"] = requestId
                 }
             };
 
@@ -317,7 +322,8 @@ public class IntakeController : ControllerBase
                 {
                     ["IntakeId"] = new MessageAttributeValue { StringValue = intakeId.ToString(), DataType = "String" },
                     ["TenantId"] = new MessageAttributeValue { StringValue = tenantId.ToString(), DataType = "String" },
-                    ["MessageType"] = new MessageAttributeValue { StringValue = "IntakeSubmission", DataType = "String" }
+                    ["MessageType"] = new MessageAttributeValue { StringValue = "IntakeSubmission", DataType = "String" },
+                    ["x-request-id"] = new MessageAttributeValue { StringValue = requestId, DataType = "String" }
                 }
             };
 

@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Options;
+using Qivr.Api.Options;
 
 namespace Qivr.Api.Middleware;
 
@@ -13,17 +15,20 @@ public class SecurityHeadersMiddleware
     private readonly ILogger<SecurityHeadersMiddleware> _logger;
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
+    private readonly BrandingOptions _brandingOptions;
 
     public SecurityHeadersMiddleware(
         RequestDelegate next,
         ILogger<SecurityHeadersMiddleware> logger,
         IConfiguration configuration,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IOptions<BrandingOptions> brandingOptions)
     {
         _next = next;
         _logger = logger;
         _configuration = configuration;
         _environment = environment;
+        _brandingOptions = brandingOptions.Value;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -61,10 +66,13 @@ public class SecurityHeadersMiddleware
         if (isWidget)
         {
             // Widget CSP - Allow embedding in clinic domains only
-            var allowedClinicDomains = _configuration.GetSection("Security:AllowedClinicDomains")
-                .Get<string[]>() ?? new[] { "*.clinic.local", "*.qivr.health" };
+            // Use BrandingOptions for per-clinic frame-ancestors allowlist
+            var allowedOrigins = _brandingOptions.AllowedEmbedOrigins;
             
-            var frameAncestors = string.Join(" ", allowedClinicDomains.Select(d => $"https://{d}"));
+            // Build frame-ancestors CSP directive
+            var frameAncestors = allowedOrigins != null && allowedOrigins.Length > 0
+                ? "frame-ancestors " + string.Join(" ", allowedOrigins)
+                : "frame-ancestors 'none'";
             
             var widgetCsp = new[]
             {
@@ -74,7 +82,7 @@ public class SecurityHeadersMiddleware
                 "img-src 'self' data: blob:", // blob for 3D textures
                 "font-src 'self' data:",
                 "connect-src 'self' https://api.qivr.health wss://api.qivr.health",
-                $"frame-ancestors {frameAncestors}",
+                frameAncestors,
                 "base-uri 'self'",
                 "form-action 'self'",
                 "worker-src 'self' blob:", // For Three.js workers

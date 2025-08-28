@@ -25,6 +25,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure ProblemDetails for consistent error responses
+builder.Services.AddProblemDetails();
+
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -202,6 +205,7 @@ builder.Services.AddQivrServices(builder.Configuration);
 builder.Services.Configure<Qivr.Api.Options.IntakeDbOptions>(builder.Configuration.GetSection("Intake"));
 builder.Services.Configure<Qivr.Api.Options.SqsOptions>(builder.Configuration.GetSection("Sqs"));
 builder.Services.Configure<Qivr.Api.Options.FeaturesOptions>(builder.Configuration.GetSection("Features"));
+builder.Services.Configure<Qivr.Api.Options.BrandingOptions>(builder.Configuration.GetSection("Branding"));
 
 // Ensure Intake connection string is always resolved securely
 builder.Services.PostConfigure<Qivr.Api.Options.IntakeDbOptions>(options =>
@@ -249,6 +253,10 @@ if (!string.IsNullOrEmpty(sqsConfig["QueueUrl"]))
 }
 
 var app = builder.Build();
+
+// Configure consistent error handling
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
