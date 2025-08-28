@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
 using System.Text.Json;
@@ -44,6 +45,7 @@ public class IntakeController : ControllerBase
     /// <summary>
     /// Public endpoint for widget intake submissions
     /// </summary>
+    [EnableRateLimiting("intake")]
     [HttpPost("submit")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IntakeSubmissionResponse), StatusCodes.Status201Created)]

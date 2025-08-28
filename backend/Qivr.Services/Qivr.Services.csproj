@@ -28,8 +28,5 @@
     <ProjectReference Include="..\Qivr.Infrastructure\Qivr.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="Deidentification/DeidentificationService.cs" />
-  </ItemGroup>
 
 </Project>

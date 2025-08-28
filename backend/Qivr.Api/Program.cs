@@ -229,7 +229,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<Qivr.Api.Controllers.IntakeController>();
+builder.Services.AddValidatorsFromAssemblyContaining<Qivr.Api.Validators.IntakeSubmissionRequestValidator>();
 
 // AWS SQS
 var sqsConfig = builder.Configuration.GetSection("Sqs");

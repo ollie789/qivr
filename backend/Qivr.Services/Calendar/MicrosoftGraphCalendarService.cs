@@ -18,15 +18,10 @@ public class MicrosoftGraphCalendarService : ICalendarService
 
     private GraphServiceClient GetClient()
     {
-        // Skeleton: use app-only token provider in real implementation
-        var tokenProvider = new DelegateAuthenticationProvider(async (requestMessage) =>
-        {
-            // TODO: acquire token
-            var token = _configuration["MicrosoftGraph:AccessToken"] ?? string.Empty;
-            requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            await Task.CompletedTask;
-        });
-        return new GraphServiceClient(tokenProvider);
+        // TODO: Implement proper authentication provider for Microsoft Graph SDK v5
+        // The DelegateAuthenticationProvider has been removed in v5
+        // Need to use TokenCredential or custom authentication provider
+        throw new NotImplementedException("Microsoft Graph authentication needs to be updated for SDK v5");
     }
 
     public Task<string> ConnectAccountAsync(string userId, string authorizationCode)
@@ -74,17 +69,9 @@ public class MicrosoftGraphCalendarService : ICalendarService
     {
         try
         {
-            var client = GetClient();
-            var subscription = new Subscription
-            {
-                ChangeType = "created,updated,deleted",
-                NotificationUrl = webhookUrl,
-                Resource = "/me/events",
-                ExpirationDateTime = DateTimeOffset.UtcNow.AddHours(1),
-                ClientState = userId
-            };
-            var result = await client.Subscriptions.PostAsync(subscription);
-            return result?.Id ?? string.Empty;
+            // TODO: Update subscription creation for Microsoft Graph SDK v5
+            // The Subscription model has changed in v5
+            throw new NotImplementedException("Microsoft Graph webhook setup needs to be updated for SDK v5");
         }
         catch (Exception ex)
         {

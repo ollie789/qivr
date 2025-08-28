@@ -39,7 +39,7 @@ public class RlsTestController : ControllerBase
             var id = Guid.NewGuid();
             await _db.Database.ExecuteSqlInterpolatedAsync($@"
                 INSERT INTO qivr.evaluations (id, tenant_id, patient_id, evaluation_number, status, questionnaire_responses, created_at, updated_at)
-                VALUES ({id}, {Guid.NewGuid()}, {Guid.NewGuid()}, {'E-TEST'}, {'pending'}, '{}'::jsonb, NOW(), NOW())
+                VALUES ({id}, {Guid.NewGuid()}, {Guid.NewGuid()}, {"E-TEST"}, {"pending"}, '{{}}'::jsonb, NOW(), NOW())
             ");
             return StatusCode(StatusCodes.Status500InternalServerError, new { message = "RLS WRITE SHOULD HAVE FAILED" });
         }
