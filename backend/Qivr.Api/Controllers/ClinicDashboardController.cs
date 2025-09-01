@@ -1,0 +1,415 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Qivr.Api.Services;
+using Qivr.Core.Entities;
+using Qivr.Infrastructure.Data;
+
+namespace Qivr.Api.Controllers;
+
+[ApiController]
+[Route("api/clinic-dashboard")]
+[Authorize]
+public class ClinicDashboardController : ControllerBase
+{
+    private readonly QivrDbContext _context;
+    private readonly IResourceAuthorizationService _authorizationService;
+    private readonly ILogger<ClinicDashboardController> _logger;
+
+    public ClinicDashboardController(
+        QivrDbContext context,
+        IResourceAuthorizationService authorizationService,
+        ILogger<ClinicDashboardController> logger)
+    {
+        _context = context;
+        _authorizationService = authorizationService;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Get clinic dashboard overview
+    /// </summary>
+    [HttpGet("overview")]
+    [ProducesResponseType(typeof(ClinicDashboardDto), 200)]
+    public async Task<IActionResult> GetDashboardOverview([FromQuery] DateTime? date = null)
+    {
+        var providerId = _authorizationService.GetCurrentUserId(User);
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        
+        if (providerId == Guid.Empty || tenantId == Guid.Empty)
+        {
+            return Unauthorized("Provider not authenticated");
+        }
+
+        try
+        {
+            var targetDate = date ?? DateTime.UtcNow.Date;
+            var endDate = targetDate.AddDays(1);
+
+            // Get today's appointments for this provider
+            var todaysAppointments = await _context.Appointments
+                .Include(a => a.Patient)
+                .Where(a => a.ProviderId == providerId
+                    && a.ScheduledStart >= targetDate
+                    && a.ScheduledStart < endDate
+                    && a.Status != AppointmentStatus.Cancelled)
+                .OrderBy(a => a.ScheduledStart)
+                .Select(a => new ClinicAppointmentDto
+                {
+                    Id = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                    ScheduledStart = a.ScheduledStart,
+                    ScheduledEnd = a.ScheduledEnd,
+                    AppointmentType = a.AppointmentType,
+                    Status = a.Status.ToString(),
+                    Location = a.Location ?? "Main Clinic",
+                    Notes = a.Notes
+                })
+                .ToListAsync();
+
+            // Get patient queue (checked-in patients)
+            var patientQueue = await _context.Appointments
+                .Include(a => a.Patient)
+                .Where(a => a.ProviderId == providerId
+                    && a.ScheduledStart.Date == targetDate
+                    && a.Status == AppointmentStatus.CheckedIn)
+                .OrderBy(a => a.ScheduledStart)
+                .Select(a => new PatientQueueItemDto
+                {
+                    AppointmentId = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                    CheckInTime = a.UpdatedAt,
+                    AppointmentTime = a.ScheduledStart,
+                    AppointmentType = a.AppointmentType,
+                    WaitTime = (int)(DateTime.UtcNow - a.UpdatedAt).TotalMinutes
+                })
+                .ToListAsync();
+
+            // Get clinic statistics
+            var stats = new ClinicStatisticsDto
+            {
+                TotalAppointmentsToday = todaysAppointments.Count,
+                CompletedAppointments = await _context.Appointments
+                    .CountAsync(a => a.ProviderId == providerId
+                        && a.ScheduledStart >= targetDate
+                        && a.ScheduledStart < endDate
+                        && a.Status == AppointmentStatus.Completed),
+                PendingAppointments = await _context.Appointments
+                    .CountAsync(a => a.ProviderId == providerId
+                        && a.ScheduledStart >= targetDate
+                        && a.ScheduledStart < endDate
+                        && (a.Status == AppointmentStatus.Scheduled || a.Status == AppointmentStatus.Confirmed)),
+                AverageWaitTime = patientQueue.Any() ? (int)patientQueue.Average(p => p.WaitTime) : 0,
+                TotalPatientsThisWeek = await _context.Appointments
+                    .Where(a => a.ProviderId == providerId
+                        && a.ScheduledStart >= targetDate.AddDays(-7)
+                        && a.ScheduledStart < endDate)
+                    .Select(a => a.PatientId)
+                    .Distinct()
+                    .CountAsync(),
+                NoShowRate = await CalculateNoShowRate(providerId, targetDate.AddDays(-30), targetDate)
+            };
+
+            // Get recent PROM submissions for provider's patients
+            var recentPromSubmissions = await _context.PromResponses
+                .Include(r => r.PromInstance)
+                .ThenInclude(i => i.Patient)
+                .Include(r => r.PromInstance.PromTemplate)
+                .Where(r => _context.Appointments
+                    .Any(a => a.PatientId == r.PromInstance.PatientId 
+                        && a.ProviderId == providerId))
+                .OrderByDescending(r => r.CreatedAt)
+                .Take(10)
+                .Select(r => new PromSubmissionDto
+                {
+                    Id = r.Id,
+                    PatientName = $"{r.PromInstance.Patient.FirstName} {r.PromInstance.Patient.LastName}",
+                    TemplateName = r.PromInstance.PromTemplate.Name,
+                    SubmittedAt = r.CreatedAt,
+                    Score = r.Score,
+                    RequiresReview = r.Score > 70 // High scores may need review
+                })
+                .ToListAsync();
+
+            var dashboard = new ClinicDashboardDto
+            {
+                ProviderId = providerId,
+                Date = targetDate,
+                TodaysAppointments = todaysAppointments,
+                PatientQueue = patientQueue,
+                Statistics = stats,
+                RecentPromSubmissions = recentPromSubmissions,
+                NextAppointment = todaysAppointments
+                    .FirstOrDefault(a => a.ScheduledStart > DateTime.UtcNow)
+            };
+
+            return Ok(dashboard);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting clinic dashboard for provider {ProviderId}", providerId);
+            return StatusCode(500, "An error occurred while loading the dashboard");
+        }
+    }
+
+    /// <summary>
+    /// Get provider's weekly schedule
+    /// </summary>
+    [HttpGet("schedule/weekly")]
+    [ProducesResponseType(typeof(IEnumerable<ProviderScheduleDto>), 200)]
+    public async Task<IActionResult> GetWeeklySchedule([FromQuery] DateTime? startDate = null)
+    {
+        var providerId = _authorizationService.GetCurrentUserId(User);
+        if (providerId == Guid.Empty)
+        {
+            return Unauthorized();
+        }
+
+        var start = startDate ?? DateTime.UtcNow.Date;
+        var end = start.AddDays(7);
+
+        var appointments = await _context.Appointments
+            .Include(a => a.Patient)
+            .Where(a => a.ProviderId == providerId
+                && a.ScheduledStart >= start
+                && a.ScheduledStart < end
+                && a.Status != AppointmentStatus.Cancelled)
+            .OrderBy(a => a.ScheduledStart)
+            .Select(a => new ProviderScheduleDto
+            {
+                Date = a.ScheduledStart.Date,
+                Appointments = new List<ClinicAppointmentDto>()
+            })
+            .ToListAsync();
+
+        // Group appointments by date
+        var schedule = await _context.Appointments
+            .Include(a => a.Patient)
+            .Where(a => a.ProviderId == providerId
+                && a.ScheduledStart >= start
+                && a.ScheduledStart < end
+                && a.Status != AppointmentStatus.Cancelled)
+            .GroupBy(a => a.ScheduledStart.Date)
+            .Select(g => new ProviderScheduleDto
+            {
+                Date = g.Key,
+                Appointments = g.Select(a => new ClinicAppointmentDto
+                {
+                    Id = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                    ScheduledStart = a.ScheduledStart,
+                    ScheduledEnd = a.ScheduledEnd,
+                    AppointmentType = a.AppointmentType,
+                    Status = a.Status.ToString(),
+                    Location = a.Location ?? "Main Clinic"
+                }).ToList()
+            })
+            .ToListAsync();
+
+        return Ok(schedule);
+    }
+
+    /// <summary>
+    /// Get clinic performance metrics
+    /// </summary>
+    [HttpGet("metrics")]
+    [ProducesResponseType(typeof(ClinicMetricsDto), 200)]
+    public async Task<IActionResult> GetClinicMetrics([FromQuery] int days = 30)
+    {
+        var providerId = _authorizationService.GetCurrentUserId(User);
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        
+        if (providerId == Guid.Empty || tenantId == Guid.Empty)
+        {
+            return Unauthorized();
+        }
+
+        var startDate = DateTime.UtcNow.AddDays(-days);
+        var endDate = DateTime.UtcNow;
+
+        var metrics = new ClinicMetricsDto
+        {
+            TotalPatientsSeen = await _context.Appointments
+                .Where(a => a.ProviderId == providerId
+                    && a.ScheduledStart >= startDate
+                    && a.Status == AppointmentStatus.Completed)
+                .Select(a => a.PatientId)
+                .Distinct()
+                .CountAsync(),
+                
+            TotalAppointments = await _context.Appointments
+                .CountAsync(a => a.ProviderId == providerId
+                    && a.ScheduledStart >= startDate),
+                    
+            AverageAppointmentsPerDay = await _context.Appointments
+                .Where(a => a.ProviderId == providerId
+                    && a.ScheduledStart >= startDate)
+                .GroupBy(a => a.ScheduledStart.Date)
+                .Select(g => g.Count())
+                .AverageAsync(),
+                
+            PromCompletionRate = await CalculatePromCompletionRate(providerId, startDate, endDate),
+            
+            PatientSatisfactionScore = await CalculatePatientSatisfactionScore(providerId, startDate, endDate),
+            
+            NoShowRate = await CalculateNoShowRate(providerId, startDate, endDate),
+            
+            AppointmentTypeBreakdown = await _context.Appointments
+                .Where(a => a.ProviderId == providerId
+                    && a.ScheduledStart >= startDate)
+                .GroupBy(a => a.AppointmentType)
+                .Select(g => new AppointmentTypeMetricDto
+                {
+                    Type = g.Key,
+                    Count = g.Count(),
+                    Percentage = (decimal)g.Count() * 100 / _context.Appointments
+                        .Count(a => a.ProviderId == providerId && a.ScheduledStart >= startDate)
+                })
+                .ToListAsync()
+        };
+
+        return Ok(metrics);
+    }
+
+    private async Task<decimal> CalculateNoShowRate(Guid providerId, DateTime start, DateTime end)
+    {
+        var total = await _context.Appointments
+            .CountAsync(a => a.ProviderId == providerId
+                && a.ScheduledStart >= start
+                && a.ScheduledStart < end
+                && a.ScheduledStart < DateTime.UtcNow);
+                
+        if (total == 0) return 0;
+        
+        var noShows = await _context.Appointments
+            .CountAsync(a => a.ProviderId == providerId
+                && a.ScheduledStart >= start
+                && a.ScheduledStart < end
+                && a.Status == AppointmentStatus.NoShow);
+                
+        return (decimal)noShows * 100 / total;
+    }
+
+    private async Task<decimal> CalculatePromCompletionRate(Guid providerId, DateTime start, DateTime end)
+    {
+        var patientIds = await _context.Appointments
+            .Where(a => a.ProviderId == providerId
+                && a.ScheduledStart >= start
+                && a.ScheduledStart < end)
+            .Select(a => a.PatientId)
+            .Distinct()
+            .ToListAsync();
+
+        var totalInstances = await _context.PromInstances
+            .CountAsync(i => patientIds.Contains(i.PatientId)
+                && i.CreatedAt >= start);
+                
+        if (totalInstances == 0) return 0;
+        
+        var completedInstances = await _context.PromInstances
+            .CountAsync(i => patientIds.Contains(i.PatientId)
+                && i.CreatedAt >= start
+                && i.Status == "Completed");
+                
+        return (decimal)completedInstances * 100 / totalInstances;
+    }
+
+    private async Task<decimal> CalculatePatientSatisfactionScore(Guid providerId, DateTime start, DateTime end)
+    {
+        // Simplified - in real implementation, this would use specific satisfaction surveys
+        var scores = await _context.PromResponses
+            .Include(r => r.PromInstance)
+            .Where(r => _context.Appointments
+                .Any(a => a.PatientId == r.PromInstance.PatientId 
+                    && a.ProviderId == providerId
+                    && a.ScheduledStart >= start
+                    && a.ScheduledStart < end))
+            .Select(r => r.Score)
+            .ToListAsync();
+            
+        return scores.Any() ? scores.Average() : 0;
+    }
+}
+
+// DTOs
+public class ClinicDashboardDto
+{
+    public Guid ProviderId { get; set; }
+    public DateTime Date { get; set; }
+    public List<ClinicAppointmentDto> TodaysAppointments { get; set; } = new();
+    public List<PatientQueueItemDto> PatientQueue { get; set; } = new();
+    public ClinicStatisticsDto Statistics { get; set; } = new();
+    public List<PromSubmissionDto> RecentPromSubmissions { get; set; } = new();
+    public ClinicAppointmentDto? NextAppointment { get; set; }
+}
+
+public class ClinicAppointmentDto
+{
+    public Guid Id { get; set; }
+    public Guid PatientId { get; set; }
+    public string PatientName { get; set; } = string.Empty;
+    public DateTime ScheduledStart { get; set; }
+    public DateTime ScheduledEnd { get; set; }
+    public string AppointmentType { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+}
+
+public class PatientQueueItemDto
+{
+    public Guid AppointmentId { get; set; }
+    public Guid PatientId { get; set; }
+    public string PatientName { get; set; } = string.Empty;
+    public DateTime CheckInTime { get; set; }
+    public DateTime AppointmentTime { get; set; }
+    public string AppointmentType { get; set; } = string.Empty;
+    public int WaitTime { get; set; }
+}
+
+public class ClinicStatisticsDto
+{
+    public int TotalAppointmentsToday { get; set; }
+    public int CompletedAppointments { get; set; }
+    public int PendingAppointments { get; set; }
+    public int AverageWaitTime { get; set; }
+    public int TotalPatientsThisWeek { get; set; }
+    public decimal NoShowRate { get; set; }
+}
+
+public class PromSubmissionDto
+{
+    public Guid Id { get; set; }
+    public string PatientName { get; set; } = string.Empty;
+    public string TemplateName { get; set; } = string.Empty;
+    public DateTime SubmittedAt { get; set; }
+    public decimal Score { get; set; }
+    public bool RequiresReview { get; set; }
+}
+
+public class ProviderScheduleDto
+{
+    public DateTime Date { get; set; }
+    public List<ClinicAppointmentDto> Appointments { get; set; } = new();
+}
+
+public class ClinicMetricsDto
+{
+    public int TotalPatientsSeen { get; set; }
+    public int TotalAppointments { get; set; }
+    public double AverageAppointmentsPerDay { get; set; }
+    public decimal PromCompletionRate { get; set; }
+    public decimal PatientSatisfactionScore { get; set; }
+    public decimal NoShowRate { get; set; }
+    public List<AppointmentTypeMetricDto> AppointmentTypeBreakdown { get; set; } = new();
+}
+
+public class AppointmentTypeMetricDto
+{
+    public string Type { get; set; } = string.Empty;
+    public int Count { get; set; }
+    public decimal Percentage { get; set; }
+}

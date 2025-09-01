@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAppointmentService, AppointmentService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ITenantService, TenantService>();
+        services.AddScoped<IProviderAvailabilityService, ProviderAvailabilityService>();
         
         // Add infrastructure services
         services.AddScoped<IEmailService, EmailService>();

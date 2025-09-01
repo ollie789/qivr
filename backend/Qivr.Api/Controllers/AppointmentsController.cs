@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using Qivr.Services;
 using System.Security.Claims;
 using Qivr.Api.Services;
 
@@ -16,15 +17,18 @@ public class AppointmentsController : ControllerBase
     private readonly QivrDbContext _context;
     private readonly ILogger<AppointmentsController> _logger;
     private readonly IResourceAuthorizationService _authorizationService;
+    private readonly IProviderAvailabilityService _availabilityService;
 
     public AppointmentsController(
         QivrDbContext context,
         ILogger<AppointmentsController> logger,
-        IResourceAuthorizationService authorizationService)
+        IResourceAuthorizationService authorizationService,
+        IProviderAvailabilityService availabilityService)
     {
         _context = context;
         _logger = logger;
         _authorizationService = authorizationService;
+        _availabilityService = availabilityService;
     }
 
     [HttpGet]
@@ -382,51 +386,83 @@ public class AppointmentsController : ControllerBase
         [FromQuery] DateTime date,
         [FromQuery] int durationMinutes = 30)
     {
-        var tenantId = GetTenantId();
-
-        // Get provider's working hours (simplified - normally from provider settings)
-        var workingHours = new
+        // Use the availability service to get available slots
+        var slots = await _availabilityService.GetAvailableSlots(providerId, date, durationMinutes);
+        
+        var availableSlots = slots.Select(s => new AvailableSlotDto
         {
-            Start = new TimeSpan(9, 0, 0),  // 9 AM
-            End = new TimeSpan(17, 0, 0)    // 5 PM
-        };
-
-        // Get existing appointments for the provider on that date
-        var existingAppointments = await _context.Appointments
-            .Where(a => a.TenantId == tenantId
-                && a.ProviderId == providerId
-                && a.ScheduledStart.Date == date.Date
-                && a.Status != AppointmentStatus.Cancelled)
-            .OrderBy(a => a.ScheduledStart)
-            .ToListAsync();
-
-        var availableSlots = new List<AvailableSlotDto>();
-        var currentTime = date.Date.Add(workingHours.Start);
-        var endTime = date.Date.Add(workingHours.End);
-
-        while (currentTime.AddMinutes(durationMinutes) <= endTime)
-        {
-            var slotEnd = currentTime.AddMinutes(durationMinutes);
-            
-            // Check if slot conflicts with existing appointments
-            bool isAvailable = !existingAppointments.Any(a => 
-                a.ScheduledStart < slotEnd && a.ScheduledEnd > currentTime);
-
-            if (isAvailable)
-            {
-                availableSlots.Add(new AvailableSlotDto
-                {
-                    StartTime = currentTime,
-                    EndTime = slotEnd,
-                    Available = true,
-                    ProviderId = providerId
-                });
-            }
-
-            currentTime = currentTime.AddMinutes(30); // Move to next slot
-        }
+            StartTime = s.Start,
+            EndTime = s.End,
+            Available = s.IsAvailable,
+            ProviderId = providerId
+        }).ToList();
 
         return Ok(availableSlots);
+    }
+    
+    /// <summary>
+    /// Get available providers for a given date
+    /// </summary>
+    [HttpGet("providers/available")]
+    public async Task<ActionResult<IEnumerable<object>>> GetAvailableProviders(
+        [FromQuery] DateTime date,
+        [FromQuery] string? specialization = null)
+    {
+        var providers = await _availabilityService.GetAvailableProviders(date, specialization);
+        return Ok(providers);
+    }
+    
+    /// <summary>
+    /// Book an appointment using the availability service
+    /// </summary>
+    [HttpPost("book")]
+    public async Task<ActionResult<AppointmentDto>> BookAppointment([FromBody] BookAppointmentRequest request)
+    {
+        var userId = _authorizationService.GetCurrentUserId(User);
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        // Book the appointment using the service
+        var success = await _availabilityService.BookAppointment(
+            patientId, 
+            request.ProviderId, 
+            request.StartTime, 
+            request.DurationMinutes, 
+            request.AppointmentType);
+        
+        if (!success)
+        {
+            return BadRequest(new { message = "Unable to book appointment. The slot may no longer be available." });
+        }
+        
+        // Get the created appointment
+        var appointment = await _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Provider)
+            .Where(a => a.PatientId == patientId 
+                && a.ProviderId == request.ProviderId 
+                && a.ScheduledStart == request.StartTime)
+            .OrderByDescending(a => a.CreatedAt)
+            .FirstOrDefaultAsync();
+        
+        if (appointment == null)
+        {
+            return StatusCode(500, "Appointment was created but could not be retrieved");
+        }
+        
+        return Ok(new AppointmentDto
+        {
+            Id = appointment.Id,
+            PatientId = appointment.PatientId,
+            PatientName = appointment.Patient != null ? $"{appointment.Patient.FirstName} {appointment.Patient.LastName}" : null,
+            ProviderId = appointment.ProviderId,
+            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" : null,
+            AppointmentType = appointment.AppointmentType,
+            Status = appointment.Status,
+            ScheduledStart = appointment.ScheduledStart,
+            ScheduledEnd = appointment.ScheduledEnd,
+            CreatedAt = appointment.CreatedAt,
+            UpdatedAt = appointment.UpdatedAt
+        });
     }
 
     [HttpGet("upcoming")]
@@ -679,4 +715,13 @@ public class AvailableSlotDto
     public DateTime EndTime { get; set; }
     public bool Available { get; set; }
     public Guid ProviderId { get; set; }
+}
+
+public class BookAppointmentRequest
+{
+    public Guid PatientId { get; set; }
+    public Guid ProviderId { get; set; }
+    public DateTime StartTime { get; set; }
+    public int DurationMinutes { get; set; } = 30;
+    public string AppointmentType { get; set; } = "consultation";
 }
