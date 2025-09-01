@@ -90,11 +90,26 @@ builder.Services.AddCors(options =>
     }
     else
     {
-        // Production - use configured origins
+        // Production - use configured origins from environment
         options.AddDefaultPolicy(policy =>
         {
-            var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? 
-                new[] { "https://app.qivr.health", "https://clinic.qivr.health" };
+            // Get allowed origins from environment variable or configuration
+            var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+            string[] origins;
+            
+            if (!string.IsNullOrEmpty(corsOrigins))
+            {
+                // Parse comma-separated origins from environment variable
+                origins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(o => o.Trim())
+                    .ToArray();
+            }
+            else
+            {
+                // Fall back to configuration
+                origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? 
+                    new[] { "https://app.qivr.com", "https://clinic.qivr.com" };
+            }
             
             policy.WithOrigins(origins)
                 .AllowAnyMethod()
@@ -150,8 +165,12 @@ if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>(
             var jwtSettings = builder.Configuration.GetSection("Jwt").Get<Qivr.Api.Services.JwtSettings>();
             // Read JWT secret key from environment variable or config
             var secretKey = ExpandEnvPlaceholders(jwtSettings?.SecretKey) ?? 
-                           Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? 
-                           "your-super-secret-jwt-key-change-in-production-minimum-32-chars";
+                           Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+            
+            if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
+            {
+                throw new InvalidOperationException("JWT_SECRET_KEY must be set and at least 32 characters long");
+            }
             
             options.TokenValidationParameters = new TokenValidationParameters
             {
