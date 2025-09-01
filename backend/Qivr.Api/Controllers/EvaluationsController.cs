@@ -83,8 +83,36 @@ public class EvaluationsController : ControllerBase
         [FromQuery] Guid? patientId,
         CancellationToken cancellationToken)
     {
+        // If user is a patient, only return their evaluations
+        if (User.IsInRole("Patient"))
+        {
+            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(userIdClaim, out var userId))
+            {
+                patientId = userId;
+            }
+        }
+        
         var evaluations = await _evaluationService.GetEvaluationsAsync(patientId, cancellationToken);
-        return Ok(evaluations);
+        
+        // Transform to match frontend expectations
+        var response = evaluations.Select(e => new
+        {
+            id = e.Id.ToString(),
+            evaluationNumber = $"EVL-{e.CreatedAt:yyyy}-{e.Id.ToString().Substring(0, 4).ToUpper()}",
+            date = e.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
+            chiefComplaint = e.ChiefComplaint,
+            symptoms = e.Symptoms ?? new List<string>(),
+            status = e.Status?.ToLower() ?? "pending",
+            urgency = e.Urgency ?? "medium",
+            provider = e.ProviderName ?? "Unassigned",
+            followUpDate = e.FollowUpDate?.ToString("yyyy-MM-ddTHH:mm:ss"),
+            score = e.Score,
+            trend = e.Trend,
+            lastUpdated = e.UpdatedAt?.ToString("yyyy-MM-ddTHH:mm:ss") ?? e.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")
+        }).ToList();
+        
+        return Ok(response);
     }
 
     /// <summary>

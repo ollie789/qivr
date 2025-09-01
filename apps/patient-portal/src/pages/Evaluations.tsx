@@ -118,7 +118,7 @@ export const Evaluations = () => {
   const fetchEvaluations = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/evaluations', {
+      const response = await fetch('/api/v1/evaluations', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'

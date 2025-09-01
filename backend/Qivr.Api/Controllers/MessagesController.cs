@@ -28,6 +28,38 @@ public class MessagesController : ControllerBase
     }
 
     /// <summary>
+    /// Get all messages for the current user (Patient Portal format)
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<MessagePortalDto>), 200)]
+    public async Task<IActionResult> GetMessages(
+        [FromQuery] string? category = null,
+        [FromQuery] bool? unreadOnly = null)
+    {
+        var userId = _authorizationService.GetCurrentUserId(User);
+        if (userId == Guid.Empty)
+        {
+            return Unauthorized();
+        }
+
+        // For now, return mock data formatted for the patient portal
+        var messages = GetMockMessagesForPortal(userId);
+        
+        // Apply filters
+        if (!string.IsNullOrEmpty(category) && category != "all")
+        {
+            messages = messages.Where(m => m.Category == category).ToList();
+        }
+        
+        if (unreadOnly == true)
+        {
+            messages = messages.Where(m => !m.Read).ToList();
+        }
+        
+        return Ok(messages);
+    }
+    
+    /// <summary>
     /// Get all conversations for the current user
     /// </summary>
     [HttpGet("conversations")]
@@ -354,7 +386,7 @@ public class MessagesController : ControllerBase
     /// Get unread message count
     /// </summary>
     [HttpGet("unread-count")]
-    [ProducesResponseType(typeof(UnreadCountDto), 200)]
+    [ProducesResponseType(typeof(MessageUnreadCountDto), 200)]
     public async Task<IActionResult> GetUnreadCount()
     {
         var userId = _authorizationService.GetCurrentUserId(User);
@@ -362,7 +394,7 @@ public class MessagesController : ControllerBase
         var count = await _context.Messages
             .CountAsync(m => m.RecipientId == userId && !m.IsRead && !m.DeletedByRecipient);
 
-        return Ok(new UnreadCountDto { Count = count });
+        return Ok(new MessageUnreadCountDto { Count = count });
     }
 
     private async Task MarkMessagesAsRead(IEnumerable<Guid> messageIds)
@@ -380,6 +412,130 @@ public class MessagesController : ControllerBase
         }
 
         await _context.SaveChangesAsync();
+    }
+    
+    private List<MessagePortalDto> GetMockMessagesForPortal(Guid userId)
+    {
+        return new List<MessagePortalDto>
+        {
+            new MessagePortalDto
+            {
+                Id = "1",
+                Subject = "Appointment Confirmation - January 25",
+                Sender = new SenderDto
+                {
+                    Name = "Dr. Sarah Johnson",
+                    Role = "Primary Care Physician",
+                    Avatar = "SJ"
+                },
+                Recipient = "You",
+                Content = @"Dear Patient,
+
+This is to confirm your appointment scheduled for January 25, 2024 at 10:00 AM.
+
+Please remember to:
+- Bring your insurance card
+- Arrive 15 minutes early
+- Complete the pre-visit questionnaire online
+
+If you need to reschedule, please contact us at least 24 hours in advance.
+
+Best regards,
+Dr. Sarah Johnson",
+                Preview = "This is to confirm your appointment scheduled for January 25...",
+                Date = "2024-01-22T14:30:00",
+                Read = false,
+                Starred = true,
+                Important = true,
+                Category = "inbox",
+                Labels = new[] { "Appointments", "Important" }
+            },
+            new MessagePortalDto
+            {
+                Id = "2",
+                Subject = "Lab Results Available",
+                Sender = new SenderDto
+                {
+                    Name = "Central Medical Lab",
+                    Role = "Laboratory Services",
+                    Avatar = "CL"
+                },
+                Recipient = "You",
+                Content = "Your recent lab results are now available. Please log in to view them.",
+                Preview = "Your recent lab results are now available...",
+                Date = "2024-01-20T09:15:00",
+                Read = true,
+                Starred = false,
+                Important = false,
+                Category = "inbox",
+                Labels = new[] { "Lab Results" },
+                Attachments = new[]
+                {
+                    new AttachmentDto { Name = "CBC_Results.pdf", Size = "245 KB" },
+                    new AttachmentDto { Name = "Lipid_Panel.pdf", Size = "198 KB" }
+                }
+            },
+            new MessagePortalDto
+            {
+                Id = "3",
+                Subject = "Prescription Refill Ready",
+                Sender = new SenderDto
+                {
+                    Name = "PharmaCare Pharmacy",
+                    Role = "Pharmacy",
+                    Avatar = "PC"
+                },
+                Recipient = "You",
+                Content = "Your prescription refill is ready for pickup at PharmaCare Pharmacy.",
+                Preview = "Your prescription refill is ready for pickup...",
+                Date = "2024-01-19T16:45:00",
+                Read = true,
+                Starred = false,
+                Important = false,
+                Category = "inbox",
+                Labels = new[] { "Prescriptions" }
+            },
+            new MessagePortalDto
+            {
+                Id = "4",
+                Subject = "Question about medication side effects",
+                Sender = new SenderDto
+                {
+                    Name = "You",
+                    Role = "Patient",
+                    Avatar = "ME"
+                },
+                Recipient = "Dr. Michael Chen",
+                Content = "Dr. Chen, I have been experiencing some mild side effects from the new medication...",
+                Preview = "I have been experiencing some mild side effects...",
+                Date = "2024-01-18T11:00:00",
+                Read = true,
+                Starred = false,
+                Important = false,
+                Category = "sent",
+                Labels = new[] { "Questions" }
+            },
+            new MessagePortalDto
+            {
+                Id = "5",
+                Subject = "Health Tips: Managing Stress",
+                Sender = new SenderDto
+                {
+                    Name = "Health Portal Team",
+                    Role = "System",
+                    Avatar = "HP"
+                },
+                Recipient = "You",
+                Content = "Learn effective strategies for managing stress and improving your mental health...",
+                Preview = "Learn effective strategies for managing stress...",
+                Date = "2024-01-17T08:00:00",
+                Read = false,
+                Starred = false,
+                Important = false,
+                Category = "inbox",
+                Labels = new[] { "Newsletter", "Health Tips" }
+            }
+        };
     }
 }
 
@@ -430,9 +586,39 @@ public class SendMessageRequest
     public Guid? ParentMessageId { get; set; }
 }
 
-public class UnreadCountDto
+public class MessageUnreadCountDto
 {
     public int Count { get; set; }
+}
+
+public class MessagePortalDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Subject { get; set; } = string.Empty;
+    public SenderDto Sender { get; set; } = new();
+    public string Recipient { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string Preview { get; set; } = string.Empty;
+    public string Date { get; set; } = string.Empty;
+    public bool Read { get; set; }
+    public bool Starred { get; set; }
+    public bool Important { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public string[] Labels { get; set; } = Array.Empty<string>();
+    public AttachmentDto[]? Attachments { get; set; }
+}
+
+public class SenderDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public string? Avatar { get; set; }
+}
+
+public class AttachmentDto  
+{
+    public string Name { get; set; } = string.Empty;
+    public string Size { get; set; } = string.Empty;
 }
 
 // Enums (if not already defined elsewhere)
