@@ -11,7 +11,7 @@
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
     <PackageReference Include="AWSSDK.Bedrock" Version="3.7.300.0" />
     <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.300.0" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.300.0" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.310" />
     <PackageReference Include="FluentValidation" Version="11.9.0" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageReference Include="Google.Apis.Calendar.v3" Version="1.64.0.3171" />

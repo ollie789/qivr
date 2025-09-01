@@ -184,36 +184,38 @@ public class PatientRecordsController : ControllerBase
 		return Ok(vitalSigns);
 	}
 	
-	// POST: api/patient-records/{patientId}/documents
+	// NOTE: Document upload/download functionality has been moved to DocumentsController
+	// which provides full integration with S3/Local storage and proper security.
+	// Use the following endpoints instead:
+	// - POST /api/documents/patient/{patientId} - Upload document for patient
+	// - GET /api/documents/{documentId} - Get document details
+	// - GET /api/documents/{documentId}/download - Download document
+	// - GET /api/documents/patient/{patientId} - List patient documents
+	
+	// This endpoint is kept for backward compatibility but redirects to the new controller
 	[HttpPost("{patientId}/documents")]
 	[ProducesResponseType(typeof(DocumentDto), 201)]
-	public async Task<IActionResult> UploadDocument(Guid patientId, [FromForm] IFormFile file, [FromForm] string type)
+	[Obsolete("Use POST /api/documents/patient/{patientId} instead")]
+	public IActionResult UploadDocument(Guid patientId, [FromForm] IFormFile file, [FromForm] string type)
 	{
-		// TODO: Implement document upload logic
-		// TODO: Add file validation (size, type, etc.)
-		
-		var document = new DocumentDto
-		{
-			Id = Guid.NewGuid(),
-			Name = file.FileName,
-			Type = type,
-			UploadedAt = DateTime.UtcNow,
-			Size = $"{file.Length / 1024} KB"
-		};
-		
-		return CreatedAtAction(nameof(GetDocument), new { patientId, documentId = document.Id }, document);
+		// Redirect to new endpoint
+		return StatusCode(308, new { 
+			message = "This endpoint has been moved. Please use POST /api/documents/patient/{patientId} instead.",
+			newEndpoint = $"/api/documents/patient/{patientId}"
+		});
 	}
 	
-	// GET: api/patient-records/{patientId}/documents/{documentId}
+	// This endpoint is kept for backward compatibility but redirects to the new controller
 	[HttpGet("{patientId}/documents/{documentId}")]
 	[ProducesResponseType(typeof(FileContentResult), 200)]
-	public async Task<IActionResult> GetDocument(Guid patientId, Guid documentId)
+	[Obsolete("Use GET /api/documents/{documentId}/download instead")]
+	public IActionResult GetDocument(Guid patientId, Guid documentId)
 	{
-		// TODO: Implement document retrieval logic
-		// TODO: Return actual file content
-		
-		var content = new byte[] { }; // Placeholder
-		return File(content, "application/pdf", "document.pdf");
+		// Redirect to new endpoint
+		return StatusCode(308, new { 
+			message = "This endpoint has been moved. Please use GET /api/documents/{documentId}/download instead.",
+			newEndpoint = $"/api/documents/{documentId}/download"
+		});
 	}
 	
 	// GET: api/patient-records/{patientId}/timeline

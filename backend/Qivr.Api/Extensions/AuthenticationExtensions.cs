@@ -16,15 +16,8 @@ public static class AuthenticationExtensions
         // Add Cognito settings
         services.Configure<CognitoSettings>(configuration.GetSection("Cognito"));
         
-        // Add auth service - use mock for development
-        if (configuration["Environment"] == "Development")
-        {
-            services.AddScoped<ICognitoAuthService, MockAuthService>();
-        }
-        else
-        {
-            services.AddScoped<ICognitoAuthService, CognitoAuthService>();
-        }
+        // Add auth service - always use Cognito now
+        services.AddScoped<ICognitoAuthService, CognitoAuthService>();
         
         // Get Cognito settings for JWT configuration
         var cognitoSettings = configuration.GetSection("Cognito").Get<CognitoSettings>() 

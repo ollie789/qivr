@@ -27,6 +27,10 @@ public class QivrDbContext : DbContext
     public DbSet<PainMap> PainMaps => Set<PainMap>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<BrandTheme> BrandThemes => Set<BrandTheme>();
+    public DbSet<Document> Documents => Set<Document>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -171,6 +175,84 @@ public class QivrDbContext : DbContext
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.BrandThemes)
                 .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // Document configuration
+        modelBuilder.Entity<Document>(entity =>
+        {
+            entity.ToTable("documents");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId });
+            
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // Conversation configuration
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.ToTable("conversations");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId });
+            entity.Property(e => e.Type).HasConversion<string>();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.Priority).HasConversion<string>();
+            
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Provider)
+                .WithMany()
+                .HasForeignKey(e => e.ProviderId)
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // Message configuration
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.ToTable("messages");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ConversationId, e.SentAt });
+            
+            entity.HasOne(e => e.Conversation)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(e => e.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Attachment)
+                .WithMany()
+                .HasForeignKey(e => e.AttachmentId)
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasOne(e => e.ParentMessage)
+                .WithMany(m => m.Replies)
+                .HasForeignKey(e => e.ParentMessageId)
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // ConversationParticipant configuration
+        modelBuilder.Entity<ConversationParticipant>(entity =>
+        {
+            entity.ToTable("conversation_participants");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ConversationId, e.UserId }).IsUnique();
+            
+            entity.HasOne(e => e.Conversation)
+                .WithMany(c => c.Participants)
+                .HasForeignKey(e => e.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
             entity.HasQueryFilter(e => e.TenantId == _tenantId);

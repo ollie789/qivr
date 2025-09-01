@@ -154,6 +154,9 @@ builder.Services.AddScoped<Qivr.Api.Services.IResourceAuthorizationService, Qivr
 // Configure Security Event Monitoring
 builder.Services.AddScoped<Qivr.Api.Services.ISecurityEventService, Qivr.Api.Services.SecurityEventService>();
 
+// Configure Storage Services (S3 or Local based on configuration)
+builder.Services.AddStorageServices(builder.Configuration);
+
 // Configure CSRF Protection
 builder.Services.AddCsrfProtection();
 

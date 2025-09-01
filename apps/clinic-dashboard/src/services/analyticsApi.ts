@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { useAuthStore } from '../stores/authStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -13,9 +12,12 @@ const apiClient = axios.create({
 
 // Add auth token to requests
 apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const authStorage = localStorage.getItem('clinic-auth-storage');
+  if (authStorage) {
+    const { state } = JSON.parse(authStorage);
+    if (state?.token) {
+      config.headers.Authorization = `Bearer ${state.token}`;
+    }
   }
   return config;
 });
@@ -146,21 +148,8 @@ const analyticsApi = {
 
   // Get dashboard statistics
   getDashboardStats: async (): Promise<DashboardStats> => {
-    try {
-      const response = await apiClient.get('/api/TestData/dashboard/stats');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      // Return default values if error
-      return {
-        todayAppointments: 0,
-        pendingIntakes: 0,
-        activePatients: 0,
-        completedToday: 0,
-        averageWaitTime: 0,
-        patientSatisfaction: 0,
-      };
-    }
+    const response = await apiClient.get('/api/dashboard/stats');
+    return response.data;
   },
 
   // Get appointment trends for the last N days
@@ -171,7 +160,8 @@ const analyticsApi = {
       const from = new Date();
       from.setDate(from.getDate() - days);
       
-      const clinicId = authStore.getState().user?.clinicId || 'default';
+      const authStorage = localStorage.getItem('clinic-auth-storage');
+      const clinicId = authStorage ? JSON.parse(authStorage).state?.user?.clinicId || 'default' : 'default';
       const analytics = await analyticsApi.getClinicAnalytics(clinicId, from, to);
       
       // Transform analytics data to trend format
@@ -204,7 +194,8 @@ const analyticsApi = {
       const from = new Date();
       from.setMonth(from.getMonth() - 1);
       
-      const clinicId = authStore.getState().user?.clinicId || 'default';
+      const authStorage = localStorage.getItem('clinic-auth-storage');
+      const clinicId = authStorage ? JSON.parse(authStorage).state?.user?.clinicId || 'default' : 'default';
       const analytics = await analyticsApi.getClinicAnalytics(clinicId, from, to);
       
       const total = analytics.topDiagnoses.reduce((sum, d) => sum + d.count, 0);
@@ -280,7 +271,8 @@ const analyticsApi = {
       const from = new Date();
       from.setMonth(from.getMonth() - 1);
       
-      const clinicId = authStore.getState().user?.clinicId || 'default';
+      const authStorage = localStorage.getItem('clinic-auth-storage');
+      const clinicId = authStorage ? JSON.parse(authStorage).state?.user?.clinicId || 'default' : 'default';
       const analytics = await analyticsApi.getClinicAnalytics(clinicId, from, to);
       
       // Transform PROM metrics to completion rates
@@ -311,7 +303,8 @@ const analyticsApi = {
         const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
         const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
         
-        const clinicId = authStore.getState().user?.clinicId || 'default';
+        const authStorage = localStorage.getItem('clinic-auth-storage');
+        const clinicId = authStorage ? JSON.parse(authStorage).state?.user?.clinicId || 'default' : 'default';
         const analytics = await analyticsApi.getClinicAnalytics(clinicId, date, nextMonth);
         
         data.push({

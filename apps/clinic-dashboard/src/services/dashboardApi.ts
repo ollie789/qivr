@@ -54,57 +54,14 @@ export interface AppointmentSummary {
 export const dashboardApi = {
   // Get dashboard statistics
   async getStats(): Promise<DashboardStats> {
-    try {
-      const response = await apiClient.get('/api/TestData/dashboard/stats');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      // Return mock data for development
-      return {
-        todayAppointments: 12,
-        pendingIntakes: 5,
-        activePatients: 247,
-        completedToday: 8,
-        averageWaitTime: 15,
-        patientSatisfaction: 4.8,
-      };
-    }
+    const response = await apiClient.get('/api/dashboard/stats');
+    return response.data;
   },
 
   // Get recent activity
   async getRecentActivity(): Promise<RecentActivity[]> {
-    try {
-      const response = await apiClient.get('/api/dashboard/activity');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching recent activity:', error);
-      // Return mock data for development
-      return [
-        {
-          id: '1',
-          type: 'intake',
-          patientName: 'John Doe',
-          description: 'New intake form submitted',
-          timestamp: new Date().toISOString(),
-          status: 'pending',
-        },
-        {
-          id: '2',
-          type: 'appointment',
-          patientName: 'Jane Smith',
-          description: 'Appointment scheduled for tomorrow',
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          status: 'scheduled',
-        },
-        {
-          id: '3',
-          type: 'prom',
-          patientName: 'Bob Johnson',
-          description: 'Completed pain assessment',
-          timestamp: new Date(Date.now() - 7200000).toISOString(),
-        },
-      ];
-    }
+    const response = await apiClient.get('/api/dashboard/activity');
+    return response.data;
   },
 
   // Get today's appointments
@@ -137,13 +94,8 @@ export const dashboardApi = {
 
   // Get intake queue count
   async getIntakeQueueCount(): Promise<number> {
-    try {
-      const response = await apiClient.get('/api/intakes/count');
-      return response.data.count;
-    } catch (error) {
-      console.error('Error fetching intake count:', error);
-      return 5; // Mock data
-    }
+    const response = await apiClient.get('/api/intakes/count');
+    return response.data.count || response.data;
   },
 };
 

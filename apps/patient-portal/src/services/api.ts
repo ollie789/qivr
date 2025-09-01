@@ -19,104 +19,90 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Add response interceptor to handle errors and provide mock data
+// Add response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (!import.meta.env.DEV) {
-      return Promise.reject(error);
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401) {
+      localStorage.removeItem('authToken');
+      window.location.href = '/login';
     }
-
-    if (error.config && !error.config._retry) {
-      error.config._retry = true;
-      const url = error.config.url;
-
-      if (url?.includes('/dashboard/stats')) {
-        return {
-          data: {
-            upcomingAppointments: 2,
-            pendingPROMs: 3,
-            completedEvaluations: 5,
-            lastVisit: '2025-08-20T10:00:00Z',
-          }
-        } as any;
-      }
-      
-      if (url?.includes('/appointments/upcoming')) {
-        return {
-          data: [
-            {
-              id: '1',
-              providerName: 'Dr. Sarah Smith',
-              appointmentType: 'Follow-up',
-              scheduledStart: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-              location: 'Room 101',
-              status: 'confirmed',
-            },
-            {
-              id: '2',
-              providerName: 'Dr. John Brown',
-              appointmentType: 'Assessment',
-              scheduledStart: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-              location: 'Room 203',
-              status: 'scheduled',
-            },
-          ]
-        } as any;
-      }
-      
-      if (url?.includes('/proms/pending')) {
-        return {
-          data: [
-            {
-              id: '1',
-              templateName: 'Daily Pain Assessment',
-              scheduledFor: new Date().toISOString(),
-              daysOverdue: 0,
-            },
-            {
-              id: '2',
-              templateName: 'Weekly Progress Review',
-              scheduledFor: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-              daysOverdue: 2,
-            },
-            {
-              id: '3',
-              templateName: 'Treatment Satisfaction Survey',
-              scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-              daysOverdue: 0,
-            },
-          ]
-        } as any;
-      }
-    }
-    
     return Promise.reject(error);
   }
 );
 
+// Real API calls to backend
 export const fetchDashboardStats = async () => {
-  // Mock data for now
-  return {
-    totalEvaluations: 12,
-    upcomingAppointments: 3,
-    pendingPROMs: 2,
-    lastVisit: '2024-03-15',
-  };
+  const response = await api.get('/api/dashboard/stats');
+  return response.data;
 };
 
 export const fetchUpcomingAppointments = async () => {
-  // Mock data
-  return [
-    { id: 1, date: '2024-03-20', time: '10:00 AM', practitioner: 'Dr. Smith', type: 'Follow-up' },
-    { id: 2, date: '2024-03-25', time: '2:30 PM', practitioner: 'Dr. Johnson', type: 'Assessment' },
-  ];
+  const response = await api.get('/api/appointments/upcoming');
+  return response.data;
 };
 
 export const fetchPendingPROMs = async () => {
-  // Mock data
-  return [
-    { id: 1, title: 'Weekly Pain Assessment', dueDate: '2024-03-18' },
-    { id: 2, title: 'Functional Mobility Survey', dueDate: '2024-03-19' },
-  ];
+  const response = await api.get('/api/proms/pending');
+  return response.data;
+};
+
+export const fetchNotifications = async () => {
+  const response = await api.get('/api/notifications');
+  return response.data;
+};
+
+export const markNotificationRead = async (id: string) => {
+  const response = await api.put(`/api/notifications/${id}/mark-read`);
+  return response.data;
+};
+
+export const fetchProviders = async () => {
+  const response = await api.get('/api/providers');
+  return response.data;
+};
+
+export const fetchProviderAvailability = async (providerId: string, date: string) => {
+  const response = await api.get(`/api/appointments/availability?providerId=${providerId}&date=${date}`);
+  return response.data;
+};
+
+export const bookAppointment = async (data: any) => {
+  const response = await api.post('/api/appointments', data);
+  return response.data;
+};
+
+export const cancelAppointment = async (id: string) => {
+  const response = await api.post(`/api/appointments/${id}/cancel`);
+  return response.data;
+};
+
+export const rescheduleAppointment = async (id: string, data: any) => {
+  const response = await api.post(`/api/appointments/${id}/reschedule`, data);
+  return response.data;
+};
+
+export const uploadDocument = async (file: File, metadata: any) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('metadata', JSON.stringify(metadata));
+  
+  const response = await api.post('/api/documents', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const fetchTreatmentPlan = async () => {
+  const response = await api.get('/api/treatment-plan');
+  return response.data;
+};
+
+export const fetchProgressData = async (dateRange?: { start: string; end: string }) => {
+  const params = dateRange ? `?start=${dateRange.start}&end=${dateRange.end}` : '';
+  const response = await api.get(`/api/progress${params}`);
+  return response.data;
 };

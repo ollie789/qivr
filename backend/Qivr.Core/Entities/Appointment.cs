@@ -22,6 +22,14 @@ public class Appointment : TenantEntity
     public Guid? CancelledBy { get; set; }
     public DateTime? ReminderSentAt { get; set; }
     
+    // Payment tracking
+    public bool IsPaid { get; set; } = false;
+    public DateTime? PaidAt { get; set; }
+    public string? PaymentMethod { get; set; } // Cash, Card, Insurance, etc.
+    public string? PaymentReference { get; set; } // Receipt number or reference
+    public decimal? PaymentAmount { get; set; }
+    public string? PaymentNotes { get; set; }
+    
     // Navigation properties
     public virtual User? Patient { get; set; }
     public virtual User? Provider { get; set; }
