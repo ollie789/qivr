@@ -1,0 +1,325 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY_API: qivr-api
+  ECR_REPOSITORY_FRONTEND: qivr-frontend
+
+jobs:
+  # Set deployment environment
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      image-tag: ${{ steps.set-tag.outputs.tag }}
+    steps:
+      - id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          fi
+      
+      - id: set-tag
+        run: echo "tag=${{ github.sha }}-$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
+  # Build and push backend Docker image
+  build-backend:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push backend image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ needs.setup.outputs.image-tag }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_API:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_API:latest
+
+  # Build and push frontend Docker image
+  build-frontend:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push frontend image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ needs.setup.outputs.image-tag }}
+          VITE_API_URL: ${{ vars.API_URL }}
+          VITE_COGNITO_USER_POOL_ID: ${{ vars.COGNITO_USER_POOL_ID }}
+          VITE_COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
+        run: |
+          cd frontend
+          docker build \
+            --build-arg VITE_API_URL=$VITE_API_URL \
+            --build-arg VITE_COGNITO_USER_POOL_ID=$VITE_COGNITO_USER_POOL_ID \
+            --build-arg VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest
+
+  # Run database migrations
+  migrate-database:
+    needs: [setup, build-backend]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get database connection string
+        id: get-db-connection
+        run: |
+          CONNECTION_STRING=$(aws secretsmanager get-secret-value \
+            --secret-id qivr-${{ needs.setup.outputs.environment }}-db-connection \
+            --query SecretString \
+            --output text)
+          echo "::add-mask::$CONNECTION_STRING"
+          echo "CONNECTION_STRING=$CONNECTION_STRING" >> $GITHUB_ENV
+
+      - name: Run migrations
+        run: |
+          cd database/migrations
+          for migration in $(ls *.sql | sort); do
+            echo "Running migration: $migration"
+            psql "$CONNECTION_STRING" -f $migration
+          done
+
+  # Deploy to ECS
+  deploy-ecs:
+    needs: [setup, build-backend, build-frontend, migrate-database]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Update API task definition
+        id: task-def-api
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: infrastructure/ecs/task-definition-api.json
+          container-name: api
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_API }}:${{ needs.setup.outputs.image-tag }}
+          environment-variables: |
+            ASPNETCORE_ENVIRONMENT=${{ needs.setup.outputs.environment }}
+            OTEL_SERVICE_NAME=qivr-api
+            OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_ENDPOINT }}
+
+      - name: Deploy API to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-api.outputs.task-definition }}
+          service: qivr-${{ needs.setup.outputs.environment }}-api
+          cluster: qivr-${{ needs.setup.outputs.environment }}-cluster
+          wait-for-service-stability: true
+
+      - name: Update Frontend task definition
+        id: task-def-frontend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: infrastructure/ecs/task-definition-frontend.json
+          container-name: frontend
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ needs.setup.outputs.image-tag }}
+
+      - name: Deploy Frontend to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-frontend.outputs.task-definition }}
+          service: qivr-${{ needs.setup.outputs.environment }}-frontend
+          cluster: qivr-${{ needs.setup.outputs.environment }}-cluster
+          wait-for-service-stability: true
+
+  # Invalidate CloudFront cache
+  invalidate-cdn:
+    needs: [setup, deploy-ecs]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Invalidate CloudFront distribution
+        run: |
+          DISTRIBUTION_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?Comment=='qivr-${{ needs.setup.outputs.environment }} CloudFront Distribution'].Id" \
+            --output text)
+          
+          if [ -n "$DISTRIBUTION_ID" ]; then
+            aws cloudfront create-invalidation \
+              --distribution-id $DISTRIBUTION_ID \
+              --paths "/*"
+            echo "CloudFront cache invalidated for distribution: $DISTRIBUTION_ID"
+          else
+            echo "No CloudFront distribution found"
+          fi
+
+  # Health check
+  health-check:
+    needs: [setup, deploy-ecs]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+      - name: Wait for services to stabilize
+        run: sleep 60
+
+      - name: Check API health
+        run: |
+          API_URL="${{ vars.API_URL }}/health"
+          for i in {1..10}; do
+            if curl -f -s "$API_URL"; then
+              echo "API is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, waiting..."
+            sleep 10
+          done
+          echo "API health check failed"
+          exit 1
+
+      - name: Check Frontend health
+        run: |
+          FRONTEND_URL="${{ vars.FRONTEND_URL }}/health"
+          for i in {1..10}; do
+            if curl -f -s "$FRONTEND_URL"; then
+              echo "Frontend is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, waiting..."
+            sleep 10
+          done
+          echo "Frontend health check failed"
+          exit 1
+
+      - name: Send deployment notification
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: 'Deployment to ${{ needs.setup.outputs.environment }} completed successfully!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Send failure notification
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: 'Deployment to ${{ needs.setup.outputs.environment }} failed!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # Rollback on failure
+  rollback:
+    needs: [setup, health-check]
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Rollback ECS services
+        run: |
+          # Get previous task definition revision
+          PREV_API_REVISION=$(aws ecs describe-services \
+            --cluster qivr-${{ needs.setup.outputs.environment }}-cluster \
+            --services qivr-${{ needs.setup.outputs.environment }}-api \
+            --query 'services[0].taskDefinition' \
+            --output text | awk -F: '{print $NF-1}')
+          
+          PREV_FRONTEND_REVISION=$(aws ecs describe-services \
+            --cluster qivr-${{ needs.setup.outputs.environment }}-cluster \
+            --services qivr-${{ needs.setup.outputs.environment }}-frontend \
+            --query 'services[0].taskDefinition' \
+            --output text | awk -F: '{print $NF-1}')
+          
+          # Update services with previous revision
+          aws ecs update-service \
+            --cluster qivr-${{ needs.setup.outputs.environment }}-cluster \
+            --service qivr-${{ needs.setup.outputs.environment }}-api \
+            --task-definition qivr-${{ needs.setup.outputs.environment }}-api:$PREV_API_REVISION
+          
+          aws ecs update-service \
+            --cluster qivr-${{ needs.setup.outputs.environment }}-cluster \
+            --service qivr-${{ needs.setup.outputs.environment }}-frontend \
+            --task-definition qivr-${{ needs.setup.outputs.environment }}-frontend:$PREV_FRONTEND_REVISION
+          
+          echo "Rolled back to previous versions"
