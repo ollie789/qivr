@@ -81,6 +81,42 @@ coverage/
 !.yarn/sdks
 !.yarn/versions
 
+# Production files
+**/dist/
+**/build/
+dist.zip
+build.zip
+*.tfvars
+*.tfstate*
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate.backup
+tfplan
+
+# Secrets and keys
+*.pem
+*.key
+*.pfx
+*.p12
+*.cer
+*.crt
+*.csr
+*.jks
+*.keystore
+secrets.json
+*secret*
+*credentials*
+
+# Test artifacts
+test-results/
+**/test-results/
+*report.html
+*report.json
+*report.xml
+.coverage
+coverage-report/
+test-output/
+
 # Database
 *.db
 *.sqlite

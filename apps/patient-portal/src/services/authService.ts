@@ -148,6 +148,23 @@ class AuthService {
     }
   }
 
+  async register(
+    email: string,
+    password: string,
+    firstName?: string,
+    lastName?: string,
+    phoneNumber?: string
+  ): Promise<any> {
+    return this.signUp({
+      username: email,
+      password,
+      email,
+      firstName: firstName || '',
+      lastName: lastName || '',
+      phoneNumber: phoneNumber || '',
+    });
+  }
+
   async confirmSignUp(username: string, confirmationCode: string): Promise<void> {
     try {
       await axios.post(`${API_BASE_URL}/auth/confirm-signup`, {

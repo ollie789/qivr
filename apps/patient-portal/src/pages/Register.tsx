@@ -21,7 +21,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 export const Register = () => {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { register: signUp } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(0);

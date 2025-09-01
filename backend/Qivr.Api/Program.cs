@@ -25,6 +25,12 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load secrets from AWS Secrets Manager in production
+if (Environment.GetEnvironmentVariable("ENVIRONMENT") == "production")
+{
+    await builder.Configuration.AddSecretsManagerConfiguration();
+}
+
 // Configure ProblemDetails for consistent error responses
 builder.Services.AddProblemDetails();
 
@@ -151,64 +157,11 @@ builder.Services.AddScoped<Qivr.Api.Services.ISecurityEventService, Qivr.Api.Ser
 // Configure CSRF Protection
 builder.Services.AddCsrfProtection();
 
-// Configure Authentication
-if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("UseJwtAuth", true))
-{
-    // Use JWT authentication for development
-    builder.Services.Configure<Qivr.Api.Services.JwtSettings>(builder.Configuration.GetSection("Jwt"));
-    builder.Services.AddScoped<ICognitoAuthService, JwtAuthService>();
-    
-    // Add JWT authentication
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
-        {
-            var jwtSettings = builder.Configuration.GetSection("Jwt").Get<Qivr.Api.Services.JwtSettings>();
-            // Read JWT secret key from environment variable or config
-            var secretKey = ExpandEnvPlaceholders(jwtSettings?.SecretKey) ?? 
-                           Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
-            
-            if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
-            {
-                throw new InvalidOperationException("JWT_SECRET_KEY must be set and at least 32 characters long");
-            }
-            
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-                ValidateIssuer = true,
-                ValidIssuer = jwtSettings?.Issuer ?? "qivr.health",
-                ValidateAudience = true,
-                ValidAudience = jwtSettings?.Audience ?? "qivr-api",
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            };
-            
-            // Support extracting JWT from cookies as well as headers
-            options.Events = new JwtBearerEvents
-            {
-                OnMessageReceived = context =>
-                {
-                    // Try to get token from cookie if not in Authorization header
-                    if (string.IsNullOrEmpty(context.Token))
-                    {
-                        context.Token = context.Request.Cookies["accessToken"];
-                    }
-                    return Task.CompletedTask;
-                }
-            };
-        });
-}
-else if (builder.Configuration.GetValue<bool>("UseMockAuth", false))
-{
-    // Use mock authentication for testing
-    builder.Services.AddSingleton<ICognitoAuthService, MockAuthService>();
-}
-else
-{
-    // Use Cognito authentication for production
-    builder.Services.AddCognitoAuthentication(builder.Configuration);
-}
+// Add Secrets Manager service
+builder.Services.AddSecretsManager();
+
+// Configure Authentication - Always use Cognito for production
+builder.Services.AddCognitoAuthentication(builder.Configuration);
 
 // Configure Swagger/OpenAPI
 builder.Services.AddSwaggerGen(c =>
@@ -421,12 +374,6 @@ app.Use(async (ctx, next) =>
         await next();
 });
 
-// Development auth helper - must come before authentication
-if (app.Environment.IsDevelopment())
-{
-    // This will auto-generate tokens for requests missing auth in dev
-    app.UseMiddleware<DevAuthMiddleware>();
-}
 
 // Serve static files (including admin.html)
 app.UseStaticFiles();

@@ -23,6 +23,7 @@ interface AuthContextType {
   signInWithFacebook: () => Promise<void>;
   signOut: () => Promise<void>;
   loading: boolean;
+  register: (email: string, password: string, emailAddr: string, phoneNumber?: string, firstName?: string, lastName?: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -96,6 +97,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const register = async (email: string, password: string, emailAddr: string, phoneNumber?: string, firstName?: string, lastName?: string) => {
+    try {
+      const result = await authService.register(email, password, firstName, lastName, phoneNumber);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider 
       value={{ 
@@ -107,7 +117,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signInWithGoogle,
         signInWithFacebook,
         signOut,
-        loading
+        loading,
+        register
       }}
     >
       {children}

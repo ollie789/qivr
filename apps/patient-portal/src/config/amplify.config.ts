@@ -16,7 +16,7 @@ const amplifyConfig = {
           redirectSignOut: [
             import.meta.env.VITE_COGNITO_REDIRECT_SIGNOUT || 'http://localhost:3002/',
           ],
-          responseType: 'code',
+      responseType: 'code' as 'code',
         },
         email: true,
         phone: false,
@@ -24,7 +24,7 @@ const amplifyConfig = {
       },
       signUpVerificationMethod: 'code' as const,
       mfa: {
-        status: 'optional',
+        status: 'optional' as 'optional',
         totpEnabled: true,
         smsEnabled: true,
       },

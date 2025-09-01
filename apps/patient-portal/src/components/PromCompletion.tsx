@@ -406,7 +406,6 @@ export const PromCompletion: React.FC<PromCompletionProps> = ({
                     value={bookingData.preferredDate}
                     onChange={(date) => date && setBookingData({ ...bookingData, preferredDate: date })}
                     minDate={addDays(new Date(), 1)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
                   />
                 </LocalizationProvider>
               </Grid>
@@ -418,7 +417,6 @@ export const PromCompletion: React.FC<PromCompletionProps> = ({
                     value={bookingData.alternativeDate}
                     onChange={(date) => setBookingData({ ...bookingData, alternativeDate: date })}
                     minDate={addDays(new Date(), 1)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
                   />
                 </LocalizationProvider>
               </Grid>

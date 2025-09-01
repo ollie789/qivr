@@ -152,8 +152,6 @@ public class TenantMiddleware
             "/api/auth/signup",
             "/api/auth/forgot-password",
             "/api/auth/refresh",
-            "/api/auth/dev-login",    // Allow dev auth in development
-            "/api/auth/dev-token",    // Allow dev token retrieval in development
             "/webhooks",
             "/api/v1/intake",  // Public intake submission endpoint
             "/api/v1/proms/instances" // Base path for public PROM instances endpoints
