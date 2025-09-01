@@ -3,14 +3,14 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } f
 // Configuration for different environments
 const API_CONFIGS = {
   development: {
-    baseURL: 'http://localhost:5000/api',
+    baseURL: 'http://localhost:5001/api',
     timeout: 30000,
-    withCredentials: false,
+    withCredentials: true, // Enable cookies in development
   },
   production: {
-    baseURL: process.env.VITE_API_URL || 'https://api.qivr.com/api',
+    baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'https://api.qivr.com/api',
     timeout: 60000,
-    withCredentials: true,
+    withCredentials: true, // Enable cookies in production
   },
 };
 
@@ -114,28 +114,28 @@ export interface TokenManager {
   onTokenRefresh?: (newToken: string) => void;
 }
 
-// Default token manager using localStorage
+// Cookie-based token manager (tokens are now httpOnly cookies)
 export const defaultTokenManager: TokenManager = {
   getAccessToken: () => {
-    return localStorage.getItem('accessToken') || 
-           localStorage.getItem('idToken') || 
-           JSON.parse(localStorage.getItem('authTokens') || '{}')?.accessToken;
+    // Tokens are now in httpOnly cookies, not accessible via JavaScript
+    // The backend will automatically read them from cookies
+    return null;
   },
   getRefreshToken: () => {
-    return localStorage.getItem('refreshToken') || 
-           JSON.parse(localStorage.getItem('authTokens') || '{}')?.refreshToken;
+    // Refresh token is also in httpOnly cookie
+    return null;
   },
   setTokens: (accessToken: string, refreshToken?: string) => {
-    localStorage.setItem('accessToken', accessToken);
-    if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken);
-    }
+    // Tokens are set by the backend as httpOnly cookies
+    // Nothing to do here
   },
   clearTokens: () => {
+    // Clear any legacy localStorage tokens
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('authTokens');
     localStorage.removeItem('idToken');
+    // Cookies are cleared by calling the logout endpoint
   }
 };
 
@@ -178,11 +178,8 @@ export const createAxiosInstance = (
   // Request interceptor for auth and tenant headers
   instance.interceptors.request.use(
     (config) => {
-      // Add auth token
-      const token = tokenManager.getAccessToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      // Auth token is now in httpOnly cookie, no need to add Authorization header
+      // The cookie will be automatically sent with credentials: true
 
       // Add tenant ID header
       const tenantId = localStorage.getItem('tenantId') || 
@@ -253,37 +250,25 @@ export const createAxiosInstance = (
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
-        // Try to refresh token if available
-        const refreshToken = tokenManager.getRefreshToken?.();
-        if (refreshToken && tokenManager.onTokenRefresh) {
-          try {
-            const refreshResponse = await axios.post(`${config.baseURL}/auth/refresh`, {
-              refreshToken,
-            });
-            
-            const newAccessToken = refreshResponse.data.accessToken;
-            tokenManager.setTokens?.(newAccessToken, refreshResponse.data.refreshToken);
-            tokenManager.onTokenRefresh(newAccessToken);
-            
-            // Retry original request with new token
-            originalRequest.headers!.Authorization = `Bearer ${newAccessToken}`;
-            return instance(originalRequest);
-          } catch (refreshError) {
-            // Refresh failed, clear tokens and redirect to login
-            tokenManager.clearTokens?.();
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login';
-            }
-            return Promise.reject(error);
+        // Try to refresh token using the refresh endpoint (cookie-based)
+        try {
+          const refreshResponse = await axios.post(
+            `${config.baseURL}/auth/refresh-token`,
+            {},
+            { withCredentials: true }
+          );
+          
+          // Cookies are automatically updated by the backend
+          // Retry original request
+          return instance(originalRequest);
+        } catch (refreshError) {
+          // Refresh failed, clear any legacy tokens and redirect to login
+          tokenManager.clearTokens?.();
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('login')) {
+            window.location.href = '/login';
           }
+          return Promise.reject(error);
         }
-
-        // No refresh token available, clear tokens and redirect to login
-        tokenManager.clearTokens?.();
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('login')) {
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
       }
 
       // Retry logic for network errors and timeouts

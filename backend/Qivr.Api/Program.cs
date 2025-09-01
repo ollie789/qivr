@@ -64,16 +64,45 @@ if (string.IsNullOrWhiteSpace(resolvedIntakeConnection))
     resolvedIntakeConnection = defaultConnection;
 }
 
-// Configure CORS
+// Configure CORS - SIMPLIFIED FOR DEVELOPMENT
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowedOrigins", policy =>
+    if (builder.Environment.IsDevelopment())
     {
-        policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:3000"])
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
-    });
+        // Super permissive CORS for development - allows everything
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.SetIsOriginAllowed(_ => true) // Allow ANY origin
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()
+                .WithExposedHeaders("X-Request-ID", "X-Tenant-Id", "X-Total-Count");
+        });
+        
+        options.AddPolicy("Development", policy =>
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()
+                .WithExposedHeaders("X-Request-ID", "X-Tenant-Id", "X-Total-Count");
+        });
+    }
+    else
+    {
+        // Production - use configured origins
+        options.AddDefaultPolicy(policy =>
+        {
+            var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? 
+                new[] { "https://app.qivr.health", "https://clinic.qivr.health" };
+            
+            policy.WithOrigins(origins)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()
+                .WithExposedHeaders("X-Request-ID", "X-Tenant-Id", "X-Total-Count");
+        });
+    }
 });
 
 // Configure Database
@@ -98,28 +127,56 @@ builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
 builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
 builder.Services.AddScoped<INotificationGate, NotificationGate>();
 
+// Configure Authorization Service for IDOR protection
+builder.Services.AddScoped<Qivr.Api.Services.IResourceAuthorizationService, Qivr.Api.Services.ResourceAuthorizationService>();
+
+// Configure Security Event Monitoring
+builder.Services.AddScoped<Qivr.Api.Services.ISecurityEventService, Qivr.Api.Services.SecurityEventService>();
+
+// Configure CSRF Protection
+builder.Services.AddCsrfProtection();
+
 // Configure Authentication
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("UseJwtAuth", true))
 {
     // Use JWT authentication for development
-    builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+    builder.Services.Configure<Qivr.Api.Services.JwtSettings>(builder.Configuration.GetSection("Jwt"));
     builder.Services.AddScoped<ICognitoAuthService, JwtAuthService>();
     
     // Add JWT authentication
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-            var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+            var jwtSettings = builder.Configuration.GetSection("Jwt").Get<Qivr.Api.Services.JwtSettings>();
+            // Read JWT secret key from environment variable or config
+            var secretKey = ExpandEnvPlaceholders(jwtSettings?.SecretKey) ?? 
+                           Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? 
+                           "your-super-secret-jwt-key-change-in-production-minimum-32-chars";
+            
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "your-super-secret-jwt-key-change-in-production-minimum-32-chars")),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                 ValidateIssuer = true,
                 ValidIssuer = jwtSettings?.Issuer ?? "qivr.health",
                 ValidateAudience = true,
                 ValidAudience = jwtSettings?.Audience ?? "qivr-api",
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
+            };
+            
+            // Support extracting JWT from cookies as well as headers
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    // Try to get token from cookie if not in Authorization header
+                    if (string.IsNullOrEmpty(context.Token))
+                    {
+                        context.Token = context.Request.Cookies["accessToken"];
+                    }
+                    return Task.CompletedTask;
+                }
             };
         });
 }
@@ -229,6 +286,25 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.Services.AddRateLimiter(options =>
 {
+    // Strict rate limiting for authentication endpoints
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit = 5; // Only 5 attempts per minute
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+        opt.AutoReplenishment = true;
+    });
+    
+    // Very strict for password reset
+    options.AddFixedWindowLimiter("password-reset", opt =>
+    {
+        opt.PermitLimit = 3; // Only 3 attempts per 5 minutes
+        opt.Window = TimeSpan.FromMinutes(5);
+        opt.QueueLimit = 0;
+        opt.AutoReplenishment = true;
+    });
+    
+    // Moderate limiting for intake submissions
     options.AddFixedWindowLimiter("intake", opt =>
     {
         opt.PermitLimit = 30;
@@ -236,6 +312,28 @@ builder.Services.AddRateLimiter(options =>
         opt.QueueLimit = 0;
         opt.AutoReplenishment = true;
     });
+    
+    // General API rate limit
+    options.AddFixedWindowLimiter("api", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 10;
+        opt.AutoReplenishment = true;
+    });
+    
+    // Global limiter as fallback
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 200,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 50
+            }));
 });
 
 builder.Services.AddFluentValidationAutoValidation();
@@ -292,7 +390,8 @@ app.UseSerilogRequestLogging();
 // Routing must occur before authN/authZ when using endpoint routing
 app.UseRouting();
 
-app.UseCors("AllowedOrigins");
+// Apply CORS - use default policy which is already configured appropriately
+app.UseCors();
 
 // Add request ID tracking
 app.Use(async (ctx, next) =>
@@ -303,6 +402,16 @@ app.Use(async (ctx, next) =>
         await next();
 });
 
+// Development auth helper - must come before authentication
+if (app.Environment.IsDevelopment())
+{
+    // This will auto-generate tokens for requests missing auth in dev
+    app.UseMiddleware<DevAuthMiddleware>();
+}
+
+// Serve static files (including admin.html)
+app.UseStaticFiles();
+
 // Custom middleware
 app.UseMiddleware<TenantMiddleware>();
 app.UseMiddleware<ErrorHandlingMiddleware>();
@@ -312,6 +421,12 @@ app.UseMiddleware<IdempotencyMiddleware>();
 // Authentication and Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// CSRF Protection (must come after authentication)
+if (!app.Environment.IsDevelopment())
+{
+    app.UseCsrfProtection();
+}
 
 // Rate limiting
 app.UseRateLimiter();

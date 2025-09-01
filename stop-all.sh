@@ -6,12 +6,14 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
+PROJECT_ROOT="$(pwd)"
+
 echo -e "${YELLOW}Stopping Qivr Platform...${NC}"
 echo "=============================="
 
 # Function to kill process by PID
 kill_pid() {
-    PID_FILE="/workspace/.pids/$1.pid"
+    PID_FILE="$PROJECT_ROOT/.pids/$1.pid"
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
         if ps -p $PID > /dev/null 2>&1; then
@@ -41,7 +43,8 @@ kill_pid "widget"
 
 # Also kill by port in case PIDs are stale
 echo -e "\n${YELLOW}Cleaning up any remaining processes...${NC}"
-kill_port 5000
+kill_port 5000 "Killing process on port 5000..."
+kill_port 5001 "Killing process on port 5001..."
 kill_port 3000
 kill_port 3001
 kill_port 3002

@@ -1,7 +1,14 @@
 import axios from 'axios';
 
-const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
-const API_BASE_URL = `${API_ROOT_URL.replace(/\/+$/, '')}/api`;
+// Resolve API base URL once, ensuring a single /api suffix
+const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
+const API_BASE_URL = (() => {
+  if (rawApiUrl) {
+    const clean = rawApiUrl.replace(/\/+$/, '');
+    return clean.includes('/api') ? clean : `${clean}/api`;
+  }
+  return 'http://localhost:5001/api';
+})();
 
 interface LoginRequest {
   username: string;
@@ -45,6 +52,39 @@ class AuthService {
 
   constructor() {
     this.loadTokensFromStorage();
+    // Auto-login in development if no token exists
+    if (import.meta.env.DEV && !this.accessToken) {
+      this.devAutoLogin();
+    }
+  }
+
+  private async devAutoLogin() {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/dev-login`,
+        {
+          email: 'test@qivr.health',
+          name: 'Test Patient',
+          role: 'Patient',
+          tenantId: '11111111-1111-1111-1111-111111111111'
+        }
+      );
+      
+      if (response.data.token) {
+        // Save the dev token
+        const tokens = {
+          accessToken: response.data.token,
+          refreshToken: response.data.token,
+          idToken: response.data.token,
+          expiresIn: response.data.expiresIn || 3600
+        };
+        this.saveTokensToStorage(tokens);
+        localStorage.setItem('authToken', response.data.token);
+        console.log('Dev auto-login successful');
+      }
+    } catch (error) {
+      console.log('Dev auto-login not available, continuing without auth');
+    }
   }
 
   private loadTokensFromStorage() {

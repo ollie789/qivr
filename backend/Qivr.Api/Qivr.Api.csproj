@@ -16,20 +16,18 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageReference Include="MediatR" Version="12.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.11" />
     <PackageReference Include="NSwag.AspNetCore" Version="14.0.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.9.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.OpenTelemetry" Version="1.2.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-    <ProjectReference Include="..\Qivr.Core\Qivr.Core.csproj" />
-    <ProjectReference Include="..\Qivr.Infrastructure\Qivr.Infrastructure.csproj" />
-    <ProjectReference Include="..\Qivr.Services\Qivr.Services.csproj" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
   <ItemGroup>

@@ -237,6 +237,13 @@ public class MockAuthService : ICognitoAuthService
         var identity = new ClaimsIdentity(claims, "Mock");
         return new ClaimsPrincipal(identity);
     }
+    
+    public Task<bool> InvalidateRefreshTokenAsync(string refreshToken)
+    {
+        // Mock implementation - always succeeds
+        _logger.LogInformation("Mock refresh token invalidation");
+        return Task.FromResult(true);
+    }
 
     private string GenerateMockToken(MockUser user)
     {

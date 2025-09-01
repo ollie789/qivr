@@ -21,20 +21,41 @@ public class TenantMiddleware
     {
         // Extract tenant from various sources
         string? tenantId = null;
+        string? userTenantId = null;
         
-        // 1. Try from JWT claim
+        // 1. Try from JWT claim (most authoritative)
         if (context.User.Identity?.IsAuthenticated == true)
         {
-            tenantId = context.User.FindFirst("tenant_id")?.Value;
+            userTenantId = context.User.FindFirst("tenant_id")?.Value 
+                        ?? context.User.FindFirst("custom:tenant_id")?.Value;
+            tenantId = userTenantId;
         }
         
         // 2. Try from header (for widget/API calls)
-        if (string.IsNullOrEmpty(tenantId))
+        var headerTenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(headerTenantId))
         {
-            tenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+            // CRITICAL SECURITY CHECK: Validate header tenant matches user's tenant
+            if (!string.IsNullOrEmpty(userTenantId) && headerTenantId != userTenantId)
+            {
+                _logger.LogWarning(
+                    "SECURITY: Tenant mismatch detected! User tenant: {UserTenant}, Header tenant: {HeaderTenant}, Path: {Path}, IP: {IP}",
+                    userTenantId, headerTenantId, context.Request.Path, context.Connection.RemoteIpAddress);
+                
+                context.Response.StatusCode = 403;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"error\":\"Forbidden: Tenant access violation\"}");
+                return;
+            }
+            
+            // Only use header tenant if user is not authenticated or it matches
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                tenantId = headerTenantId;
+            }
         }
         
-        // 3. Try from subdomain
+        // 3. Try from subdomain (lowest priority)
         if (string.IsNullOrEmpty(tenantId))
         {
             var host = context.Request.Host.Host;
@@ -43,17 +64,28 @@ public class TenantMiddleware
                 var subdomain = host.Split('.').FirstOrDefault();
                 if (!string.IsNullOrEmpty(subdomain) && subdomain != "www")
                 {
-                    // Here you would look up the tenant by subdomain
-                    // For now, we'll just log it
+                    // TODO: Implement subdomain to tenant lookup
+                    // var tenant = await _tenantService.GetBySubdomainAsync(subdomain);
+                    // if (tenant != null) tenantId = tenant.Id.ToString();
                     _logger.LogDebug("Subdomain detected: {Subdomain}", subdomain);
                 }
             }
         }
         
-        // Add tenant to HttpContext items for downstream use
+        // Validate tenant ID format
         if (!string.IsNullOrEmpty(tenantId))
         {
+            if (!Guid.TryParse(tenantId, out var tenantGuid))
+            {
+                _logger.LogWarning("Invalid tenant ID format: {TenantId}", tenantId);
+                context.Response.StatusCode = 400;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"error\":\"Invalid tenant ID format\"}");
+                return;
+            }
+            
             context.Items["TenantId"] = tenantId;
+            context.Items["ValidatedTenant"] = true;
             
             // Set RLS context in database for this request
             await SetDatabaseTenantContext(tenantId);
@@ -65,6 +97,7 @@ public class TenantMiddleware
             // For protected endpoints, tenant is required
             _logger.LogWarning("Request to protected endpoint without tenant context: {Path}", context.Request.Path);
             context.Response.StatusCode = 401;
+            context.Response.ContentType = "application/json";
             await context.Response.WriteAsync("{\"error\":\"Tenant context required\"}");
             return;
         }
@@ -119,6 +152,8 @@ public class TenantMiddleware
             "/api/auth/signup",
             "/api/auth/forgot-password",
             "/api/auth/refresh",
+            "/api/auth/dev-login",    // Allow dev auth in development
+            "/api/auth/dev-token",    // Allow dev token retrieval in development
             "/webhooks",
             "/api/v1/intake",  // Public intake submission endpoint
             "/api/v1/proms/instances" // Base path for public PROM instances endpoints

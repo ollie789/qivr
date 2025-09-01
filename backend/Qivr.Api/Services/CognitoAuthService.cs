@@ -26,6 +26,7 @@ public interface ICognitoAuthService
     Task<bool> UpdateUserAttributesAsync(string accessToken, Dictionary<string, string> attributes);
     Task<List<string>> GetUserGroupsAsync(string username);
     ClaimsPrincipal ValidateToken(string token);
+    Task<bool> InvalidateRefreshTokenAsync(string refreshToken);
 }
 
 public class CognitoAuthService : ICognitoAuthService
@@ -414,6 +415,32 @@ public class CognitoAuthService : ICognitoAuthService
         
         var identity = new ClaimsIdentity(claims, "Cognito");
         return new ClaimsPrincipal(identity);
+    }
+
+    public async Task<bool> InvalidateRefreshTokenAsync(string refreshToken)
+    {
+        try
+        {
+            // In Cognito, we can't directly invalidate a specific refresh token
+            // But we can revoke all tokens for a user if we have their access token
+            // For now, we'll log the invalidation attempt
+            // In production, you might want to maintain a blacklist in a cache/database
+            
+            _logger.LogInformation("Refresh token invalidation requested for token ending with: {TokenSuffix}", 
+                refreshToken.Length > 10 ? refreshToken.Substring(refreshToken.Length - 10) : "[short token]");
+            
+            // In a production system, you would:
+            // 1. Store invalidated tokens in Redis/cache with expiry matching token lifetime
+            // 2. Check this blacklist during token refresh
+            // 3. Or use AWS Cognito's RevokeToken API if available
+            
+            return await Task.FromResult(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to invalidate refresh token");
+            return false;
+        }
     }
 
     private string CalculateSecretHash(string username)

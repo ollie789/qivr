@@ -20,8 +20,8 @@ else
 fi
 
 # Check Backend API
-if curl -s -f http://localhost:5000/health | grep -q "Healthy" 2>/dev/null; then
-    echo "✅ Backend API:         http://localhost:5000"
+if curl -s -f http://localhost:5001/health | grep -q "Healthy" 2>/dev/null; then
+    echo "✅ Backend API:         http://localhost:5001"
 else
     echo "❌ Backend API:         Not responding"
 fi

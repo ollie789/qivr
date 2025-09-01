@@ -30,7 +30,8 @@ mkdir -p .pids
 
 # Kill any existing processes on our ports
 echo -e "${YELLOW}Checking for existing processes...${NC}"
-kill_port 5000
+kill_port 5000  # Kill if still running on old port
+kill_port 5001  # Kill if running on new port
 kill_port 3000
 kill_port 3001
 kill_port 3002
@@ -40,7 +41,7 @@ kill_port 5173  # Also kill Widget if running on default Vite port
 PROJECT_ROOT="$(pwd)"
 
 # Start Backend API
-echo -e "\n${GREEN}1. Starting Backend API (port 5000)...${NC}"
+echo -e "\n${GREEN}1. Starting Backend API (port 5001)...${NC}"
 cd "$PROJECT_ROOT/backend"
 ASPNETCORE_ENVIRONMENT=Development dotnet watch run --project Qivr.Api > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
 BACKEND_PID=$!
@@ -51,8 +52,8 @@ echo "   Waiting for backend to start..."
 sleep 5
 
 # Check if backend is running
-if check_port 5000; then
-    echo -e "   ${GREEN}✓ Backend API is running on http://localhost:5000${NC}"
+if check_port 5001; then
+    echo -e "   ${GREEN}✓ Backend API is running on http://localhost:5001${NC}"
 else
     echo -e "   ${RED}✗ Backend API failed to start. Check logs/backend.log${NC}"
 fi
@@ -85,8 +86,8 @@ sleep 12  # Give Widget more time to start with new config
 # Check status of all apps
 echo -e "\n${GREEN}====== Application Status ======${NC}"
 
-if check_port 5000; then
-    echo -e "✓ Backend API:      ${GREEN}http://localhost:5000${NC}"
+if check_port 5001; then
+    echo -e "✓ Backend API:      ${GREEN}http://localhost:5001${NC}"
 else
     echo -e "✗ Backend API:      ${RED}Not running${NC}"
 fi
@@ -110,7 +111,7 @@ else
 fi
 
 echo -e "\n${GREEN}====== Additional Services ======${NC}"
-echo -e "Swagger UI:         ${GREEN}http://localhost:5000/swagger${NC}"
+echo -e "Swagger UI:         ${GREEN}http://localhost:5001/swagger${NC}"
 echo -e "pgAdmin:            ${GREEN}http://localhost:8081${NC}"
 echo -e "MinIO Console:      ${GREEN}http://localhost:9001${NC}"
 echo -e "Mailhog:            ${GREEN}http://localhost:8025${NC}"

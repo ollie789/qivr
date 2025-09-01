@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Qivr.Api.Services;
 
 namespace Qivr.Api.Controllers;
@@ -20,6 +21,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         if (!ModelState.IsValid)
@@ -41,17 +43,19 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = result.ErrorMessage });
         }
 
+        // Set tokens as httpOnly cookies
+        SetAuthCookies(result.AccessToken!, result.RefreshToken!, result.ExpiresIn!.Value);
+
+        // Return user info without tokens
         return Ok(new 
         {
-            accessToken = result.AccessToken!,
-            refreshToken = result.RefreshToken!,
-            idToken = result.IdToken!,
             expiresIn = result.ExpiresIn!.Value,
             userInfo = result.UserInfo
         });
     }
 
     [HttpPost("signup")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
     {
         if (!ModelState.IsValid)
@@ -82,22 +86,54 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh-token")]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+    public async Task<IActionResult> RefreshToken()
     {
-        var result = await _authService.RefreshTokenAsync(request.RefreshToken);
+        // Get refresh token from cookie
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+            return Unauthorized(new { message = "No refresh token provided" });
+
+        var result = await _authService.RefreshTokenAsync(refreshToken);
         
         if (!result.Success)
+        {
+            // Clear invalid cookies
+            ClearAuthCookies();
             return Unauthorized(new { message = result.ErrorMessage });
+        }
+
+        // REFRESH TOKEN ROTATION: Always issue a new refresh token
+        // This prevents token replay attacks
+        var newRefreshToken = result.RefreshToken ?? GenerateNewRefreshToken();
+        
+        // Update cookies with new tokens (including rotated refresh token)
+        SetAuthCookies(result.AccessToken!, newRefreshToken, result.ExpiresIn!.Value);
+        
+        // Invalidate the old refresh token in the backend
+        await _authService.InvalidateRefreshTokenAsync(refreshToken);
 
         return Ok(new
         {
-            accessToken = result.AccessToken,
-            idToken = result.IdToken,
             expiresIn = result.ExpiresIn
         });
     }
+    
+    private string GenerateNewRefreshToken()
+    {
+        // Generate a cryptographically secure refresh token
+        var randomBytes = new byte[64];
+        using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+        return Convert.ToBase64String(randomBytes)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .Replace("=", "");
+    }
 
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("password-reset")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
     {
         var success = await _authService.InitiateForgotPasswordAsync(request.Username);
@@ -109,6 +145,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("confirm-forgot-password")]
+    [EnableRateLimiting("password-reset")]
     public async Task<IActionResult> ConfirmForgotPassword([FromBody] ConfirmForgotPasswordRequest request)
     {
         var success = await _authService.ConfirmForgotPasswordAsync(
@@ -126,7 +163,10 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
-        var accessToken = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+        // Try to get token from cookie first, fallback to header
+        var accessToken = Request.Cookies["accessToken"] ?? 
+                         Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+        
         var success = await _authService.ChangePasswordAsync(
             accessToken, 
             request.OldPassword, 
@@ -142,11 +182,17 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Logout()
     {
-        var accessToken = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+        // Try to get token from cookie first, fallback to header
+        var accessToken = Request.Cookies["accessToken"] ?? 
+                         Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+        
         var success = await _authService.SignOutAsync(accessToken);
         
+        // Clear cookies regardless of backend sign-out success
+        ClearAuthCookies();
+        
         if (!success)
-            return BadRequest(new { message = "Failed to sign out" });
+            _logger.LogWarning("Backend sign-out failed but cookies cleared");
 
         return Ok(new { message = "Signed out successfully" });
     }
@@ -206,13 +252,54 @@ public class AuthController : ControllerBase
         if (!result.Success)
             return Unauthorized(new { message = result.ErrorMessage });
 
-        return Ok(new LoginResponse
+        // Set cookies for social login too
+        SetAuthCookies(result.AccessToken!, result.RefreshToken!, result.ExpiresIn!.Value);
+
+        return Ok(new
         {
-            AccessToken = result.AccessToken!,
-            RefreshToken = result.RefreshToken!,
-            IdToken = result.IdToken!,
-            ExpiresIn = result.ExpiresIn!.Value
+            expiresIn = result.ExpiresIn!.Value
         });
+    }
+    
+    // Helper methods for cookie management
+    private void SetAuthCookies(string accessToken, string refreshToken, int expiresInSeconds)
+    {
+        // Access token cookie
+        var accessTokenOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !HttpContext.Request.Host.Host.Contains("localhost"), // Allow non-secure for localhost
+            SameSite = SameSiteMode.Lax, // Lax to support OAuth redirects
+            Path = "/",
+            Expires = DateTimeOffset.UtcNow.AddSeconds(expiresInSeconds)
+        };
+        Response.Cookies.Append("accessToken", accessToken, accessTokenOptions);
+
+        // Refresh token cookie (longer expiry)
+        var refreshTokenOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !HttpContext.Request.Host.Host.Contains("localhost"),
+            SameSite = SameSiteMode.Lax,
+            Path = "/",
+            Expires = DateTimeOffset.UtcNow.AddDays(30) // 30 days
+        };
+        Response.Cookies.Append("refreshToken", refreshToken, refreshTokenOptions);
+    }
+
+    private void ClearAuthCookies()
+    {
+        var clearOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !HttpContext.Request.Host.Host.Contains("localhost"),
+            SameSite = SameSiteMode.Lax,
+            Path = "/",
+            Expires = DateTimeOffset.UtcNow.AddDays(-1)
+        };
+        
+        Response.Cookies.Delete("accessToken", clearOptions);
+        Response.Cookies.Delete("refreshToken", clearOptions);
     }
 }
 

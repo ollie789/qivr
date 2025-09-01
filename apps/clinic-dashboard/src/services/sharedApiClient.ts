@@ -1,4 +1,4 @@
-import { createAxiosInstance, TokenManager, handleApiError, isApiError, ApiErrorType } from '../utils/axiosConfig';
+import { createAxiosInstance, TokenManager, handleApiError, isApiError, ApiErrorType } from '../../../shared/axiosConfig';
 import { useAuthStore } from '../stores/authStore';
 
 // Determine the correct API URL based on environment
@@ -12,7 +12,7 @@ const getApiUrl = () => {
     return cleanUrl.includes('/api') ? cleanUrl : `${cleanUrl}/api`;
   }
   
-  return isDevelopment ? 'http://localhost:5000/api' : 'https://api.qivr.com/api';
+  return isDevelopment ? 'http://localhost:5001/api' : 'https://api.qivr.com/api';
 };
 
 // Custom token manager for clinic dashboard

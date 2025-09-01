@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using System.Security.Claims;
+using Qivr.Api.Services;
 
 namespace Qivr.Api.Controllers;
 
@@ -14,13 +15,16 @@ public class AppointmentsController : ControllerBase
 {
     private readonly QivrDbContext _context;
     private readonly ILogger<AppointmentsController> _logger;
+    private readonly IResourceAuthorizationService _authorizationService;
 
     public AppointmentsController(
         QivrDbContext context,
-        ILogger<AppointmentsController> logger)
+        ILogger<AppointmentsController> logger,
+        IResourceAuthorizationService authorizationService)
     {
         _context = context;
         _logger = logger;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -92,7 +96,14 @@ public class AppointmentsController : ControllerBase
     public async Task<ActionResult<AppointmentDto>> GetAppointment(Guid id)
     {
         var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var userId = _authorizationService.GetCurrentUserId(User);
+
+        // IDOR Protection: Check if user can access this appointment
+        if (!await _authorizationService.UserCanAccessAppointmentAsync(userId, id))
+        {
+            _logger.LogWarning("User {UserId} attempted to access unauthorized appointment {AppointmentId}", userId, id);
+            return NotFound(); // Return 404 instead of 403 to avoid information leakage
+        }
 
         var appointment = await _context.Appointments
             .Include(a => a.Patient)
@@ -103,13 +114,6 @@ public class AppointmentsController : ControllerBase
 
         if (appointment == null)
             return NotFound();
-
-        // Check access permissions
-        if (User.IsInRole("Patient") && appointment.PatientId != userId)
-            return Forbid();
-
-        if (User.IsInRole("Clinician") && appointment.ProviderId != userId)
-            return Forbid();
 
         return Ok(new AppointmentDto
         {

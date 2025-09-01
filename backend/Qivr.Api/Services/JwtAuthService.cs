@@ -425,6 +425,31 @@ public class JwtAuthService : ICognitoAuthService
     public Task<bool> VerifyMfaAsync(string session, string mfaCode) => Task.FromResult(false);
     public Task<bool> UpdateUserAttributesAsync(string accessToken, Dictionary<string, string> attributes) => Task.FromResult(true);
     public Task<List<string>> GetUserGroupsAsync(string username) => Task.FromResult(new List<string>());
+    
+    public async Task<bool> InvalidateRefreshTokenAsync(string refreshToken)
+    {
+        try
+        {
+            var tokenHash = HashToken(refreshToken);
+            
+            // Mark the refresh token as revoked in the database
+            await _dbContext.Database.ExecuteSqlAsync($@"
+                UPDATE qivr.auth_tokens 
+                SET revoked_at = CURRENT_TIMESTAMP
+                WHERE token_hash = {tokenHash} 
+                  AND token_type = 'refresh'
+                  AND revoked_at IS NULL
+            ");
+            
+            _logger.LogInformation("Refresh token invalidated successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to invalidate refresh token");
+            return false;
+        }
+    }
 
     // DTOs
     private class UserAuthDto
