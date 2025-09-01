@@ -90,7 +90,7 @@ public class CsrfProtectionMiddleware
         await _next(context);
     }
 
-    private async Task GenerateAndSetCsrfToken(HttpContext context)
+    private Task GenerateAndSetCsrfToken(HttpContext context)
     {
         var tokens = _antiforgery.GetAndStoreTokens(context);
         
@@ -105,6 +105,8 @@ public class CsrfProtectionMiddleware
         
         // Also send in response header for SPA frameworks
         context.Response.Headers["X-CSRF-Token"] = tokens.RequestToken!;
+        
+        return Task.CompletedTask;
     }
 
     private bool IsExemptPath(PathString path)

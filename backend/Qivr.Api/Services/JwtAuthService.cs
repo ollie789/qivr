@@ -27,7 +27,7 @@ public class JwtAuthService : ICognitoAuthService
         QivrDbContext dbContext,
         IOptions<JwtSettings> jwtSettings,
         IHttpContextAccessor httpContextAccessor,
-        IEmailVerificationService emailVerificationService = null)
+        IEmailVerificationService? emailVerificationService = null)
     {
         _logger = logger;
         _dbContext = dbContext;
@@ -229,7 +229,7 @@ public class JwtAuthService : ICognitoAuthService
             var principal = ValidateToken(accessToken);
             if (principal == null)
             {
-                return null;
+                return null!;
             }
 
             var userId = Guid.Parse(principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "");
@@ -243,7 +243,7 @@ public class JwtAuthService : ICognitoAuthService
                 ")
                 .FirstOrDefaultAsync();
 
-            if (user == null) return null;
+            if (user == null) return null!;
 
             return new UserInfo
             {
@@ -261,7 +261,7 @@ public class JwtAuthService : ICognitoAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting user info");
-            return null;
+            return null!;
         }
     }
 
@@ -347,7 +347,7 @@ public class JwtAuthService : ICognitoAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Token validation failed");
-            return null;
+            return null!;
         }
     }
 
@@ -456,33 +456,33 @@ public class JwtAuthService : ICognitoAuthService
     {
         public Guid id { get; set; }
         public Guid Id => id;
-        public string email { get; set; }
+        public string email { get; set; } = string.Empty;
         public string Email => email;
-        public string password_hash { get; set; }
-        public string PasswordHash => password_hash;
-        public string first_name { get; set; }
+        public string? password_hash { get; set; }
+        public string? PasswordHash => password_hash;
+        public string first_name { get; set; } = string.Empty;
         public string FirstName => first_name;
-        public string last_name { get; set; }
+        public string last_name { get; set; } = string.Empty;
         public string LastName => last_name;
-        public string role { get; set; }
+        public string? role { get; set; }
         public string Role => role ?? "staff";
         public Guid tenant_id { get; set; }
         public Guid TenantId => tenant_id;
         public bool email_verified { get; set; }
         public bool EmailVerified => email_verified;
-        public string phone { get; set; }
-        public string Phone => phone;
-        public string user_type { get; set; }
+        public string? phone { get; set; }
+        public string? Phone => phone;
+        public string? user_type { get; set; }
         public bool IsActive => user_type != "inactive";
     }
 
     private class RefreshTokenDto
     {
         public Guid UserId { get; set; }
-        public string Email { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Role { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
         public Guid TenantId { get; set; }
     }
 }

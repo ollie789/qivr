@@ -14,9 +14,9 @@ namespace Qivr.Services.Calendar;
 /// </summary>
 public interface IIcsGeneratorService
 {
-    Task<string> GenerateAppointmentIcs(Appointment appointment);
-    Task<byte[]> GenerateAppointmentIcsFile(Appointment appointment);
-    Task<string> GenerateBulkAppointmentsIcs(List<Appointment> appointments);
+    Task<string> GenerateAppointmentIcs(AppointmentDto appointment);
+    Task<byte[]> GenerateAppointmentIcsFile(AppointmentDto appointment);
+    Task<string> GenerateBulkAppointmentsIcs(List<AppointmentDto> appointments);
     Task<byte[]> GenerateProviderScheduleIcs(Guid providerId, DateTime startDate, DateTime endDate);
 }
 
@@ -31,7 +31,7 @@ public class IcsGeneratorService : IIcsGeneratorService
         _logger = logger;
     }
 
-    public async Task<string> GenerateAppointmentIcs(Appointment appointment)
+    public async Task<string> GenerateAppointmentIcs(AppointmentDto appointment)
     {
         await Task.CompletedTask;
         
@@ -164,13 +164,13 @@ public class IcsGeneratorService : IIcsGeneratorService
         return icsBuilder.ToString();
     }
 
-    public async Task<byte[]> GenerateAppointmentIcsFile(Appointment appointment)
+    public async Task<byte[]> GenerateAppointmentIcsFile(AppointmentDto appointment)
     {
         var icsContent = await GenerateAppointmentIcs(appointment);
         return Encoding.UTF8.GetBytes(icsContent);
     }
 
-    public async Task<string> GenerateBulkAppointmentsIcs(List<Appointment> appointments)
+    public async Task<string> GenerateBulkAppointmentsIcs(List<AppointmentDto> appointments)
     {
         var icsBuilder = new StringBuilder();
         
@@ -225,7 +225,7 @@ public class IcsGeneratorService : IIcsGeneratorService
         return Encoding.UTF8.GetBytes(icsBuilder.ToString());
     }
 
-    private string GenerateAppointmentDescription(Appointment appointment)
+    private string GenerateAppointmentDescription(AppointmentDto appointment)
     {
         var description = new StringBuilder();
         
@@ -267,7 +267,7 @@ public class IcsGeneratorService : IIcsGeneratorService
         return description.ToString();
     }
 
-    private string FormatLocation(Clinic clinic)
+    private string FormatLocation(ClinicInfo clinic)
     {
         var parts = new List<string>();
         
@@ -292,7 +292,7 @@ public class IcsGeneratorService : IIcsGeneratorService
         return string.Join(", ", parts);
     }
 
-    private void AddReminders(StringBuilder icsBuilder, Appointment appointment)
+    private void AddReminders(StringBuilder icsBuilder, AppointmentDto appointment)
     {
         // Add 24-hour reminder
         icsBuilder.AppendLine("BEGIN:VALARM");
@@ -321,7 +321,7 @@ public class IcsGeneratorService : IIcsGeneratorService
         }
     }
 
-    private async Task AddEventToCalendar(StringBuilder icsBuilder, Appointment appointment)
+    private async Task AddEventToCalendar(StringBuilder icsBuilder, AppointmentDto appointment)
     {
         await Task.CompletedTask;
         
@@ -433,10 +433,57 @@ public class IcsGeneratorService : IIcsGeneratorService
     }
 }
 
+// DTOs for ICS Generation
+public class AppointmentDto
+{
+    public Guid Id { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public string? AppointmentType { get; set; }
+    public string? Status { get; set; }
+    public string? TimeZone { get; set; }
+    public int? Version { get; set; }
+    public string? Notes { get; set; }
+    public Guid PatientId { get; set; }
+    public Guid ProviderId { get; set; }
+    public Guid? ClinicId { get; set; }
+    public PatientInfo? Patient { get; set; }
+    public ProviderInfo? Provider { get; set; }
+    public ClinicInfo? Clinic { get; set; }
+}
+
+public class PatientInfo
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+}
+
+public class ProviderInfo
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Specialty { get; set; }
+    public string? Email { get; set; }
+}
+
+public class ClinicInfo
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Address { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? PostalCode { get; set; }
+    public string? Country { get; set; }
+    public string? Phone { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+}
+
 // Extension for easy file download in controllers
 public static class IcsGeneratorExtensions
 {
-    public static string GetIcsFileName(this Appointment appointment)
+    public static string GetIcsFileName(this AppointmentDto appointment)
     {
         var sanitizedProvider = appointment.Provider?.Name?.Replace(" ", "_") ?? "appointment";
         var date = appointment.StartTime.ToString("yyyyMMdd");

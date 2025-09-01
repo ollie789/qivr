@@ -275,7 +275,7 @@ public class CognitoAuthService : ICognitoAuthService
         }
     }
 
-    public async Task<AuthenticationResult> SocialSignInAsync(string provider, string authorizationCode)
+    public Task<AuthenticationResult> SocialSignInAsync(string provider, string authorizationCode)
     {
         // This would integrate with Cognito's hosted UI or custom flow
         // Implementation depends on specific social provider setup

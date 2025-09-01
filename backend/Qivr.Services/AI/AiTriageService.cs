@@ -114,7 +114,7 @@ public class AiTriageService : IAiTriageService
                 RecommendedTimeframe = urgency.RecommendedTimeframe,
                 PossibleConditions = aiSummary.PossibleConditions,
                 RequiresClinicianReview = riskFlags.Any(r => r.Severity == RiskSeverity.Critical) || 
-                                        urgency.Level == UrgencyLevel.Emergency,
+                                        urgency.Level == UrgencyLevel.Urgent,
                 GeneratedAt = DateTime.UtcNow,
                 DeIdentificationMappingId = deidentifiedSymptoms.MappingId,
                 Confidence = aiSummary.Confidence
@@ -266,10 +266,10 @@ public class AiTriageService : IAiTriageService
             // Default to cautious assessment
             return new UrgencyAssessment
             {
-                Level = UrgencyLevel.SemiUrgent,
+                Level = UrgencyLevel.High,
                 Score = 6,
                 RecommendedTimeframe = "within 4 hours",
-                Rationale = "Unable to complete full assessment - defaulting to semi-urgent",
+                Rationale = "Unable to complete full assessment - defaulting to high priority",
                 AssessedAt = DateTime.UtcNow
             };
         }
@@ -620,9 +620,9 @@ public class AiTriageService : IAiTriageService
     {
         if (summary.RiskFlags.Any(r => r.Severity == RiskSeverity.Critical))
             return ReviewPriority.Stat;
-        if (summary.UrgencyLevel == UrgencyLevel.Emergency)
-            return ReviewPriority.Urgent;
         if (summary.UrgencyLevel == UrgencyLevel.Urgent)
+            return ReviewPriority.Urgent;
+        if (summary.UrgencyLevel == UrgencyLevel.High)
             return ReviewPriority.High;
         return ReviewPriority.Normal;
     }
@@ -631,9 +631,10 @@ public class AiTriageService : IAiTriageService
     {
         return summary.UrgencyLevel switch
         {
-            UrgencyLevel.Emergency => DateTime.UtcNow.AddMinutes(5),
-            UrgencyLevel.Urgent => DateTime.UtcNow.AddMinutes(30),
-            UrgencyLevel.SemiUrgent => DateTime.UtcNow.AddHours(2),
+            UrgencyLevel.Urgent => DateTime.UtcNow.AddMinutes(15),
+            UrgencyLevel.High => DateTime.UtcNow.AddHours(1),
+            UrgencyLevel.Medium => DateTime.UtcNow.AddHours(4),
+            UrgencyLevel.Low => DateTime.UtcNow.AddHours(24),
             _ => DateTime.UtcNow.AddHours(24)
         };
     }
@@ -661,11 +662,14 @@ public class AiTriageService : IAiTriageService
     {
         return level?.ToLower() switch
         {
-            "emergency" => UrgencyLevel.Emergency,
+            "emergency" => UrgencyLevel.Urgent,
             "urgent" => UrgencyLevel.Urgent,
-            "semiurgent" => UrgencyLevel.SemiUrgent,
-            "nonurgent" => UrgencyLevel.NonUrgent,
-            _ => UrgencyLevel.SemiUrgent
+            "semiurgent" => UrgencyLevel.High,
+            "nonurgent" => UrgencyLevel.Medium,
+            "high" => UrgencyLevel.High,
+            "medium" => UrgencyLevel.Medium,
+            "low" => UrgencyLevel.Low,
+            _ => UrgencyLevel.Medium
         };
     }
 

@@ -59,11 +59,13 @@ public class McidTrackingService : IMcidTrackingService
         // Get all completed PROM instances for this patient and template
         var instances = await _dbContext.Set<PromInstance>()
             .Where(pi => pi.PatientId == patientId && 
-                        pi.Status == "completed" &&
-                        pi.PromTemplate.Key == promTemplateKey)
+                        pi.Status == PromStatus.Completed)
+            .Include(pi => pi.Template)
             .OrderBy(pi => pi.CompletedAt)
-            .Include(pi => pi.Responses)
             .ToListAsync();
+
+        // Filter by template key
+        instances = instances.Where(pi => pi.Template?.Name == promTemplateKey).ToList();
 
         if (instances.Count < 2)
         {
@@ -78,8 +80,8 @@ public class McidTrackingService : IMcidTrackingService
         var baseline = instances.First();
         var current = instances.Last();
         
-        analysis.BaselineScore = CalculateTotalScore(baseline.Responses);
-        analysis.CurrentScore = CalculateTotalScore(current.Responses);
+        analysis.BaselineScore = baseline.Score ?? CalculateTotalScoreFromDictionary(baseline.Responses);
+        analysis.CurrentScore = current.Score ?? CalculateTotalScoreFromDictionary(current.Responses);
         analysis.BaselineDate = baseline.CompletedAt ?? baseline.CreatedAt;
         analysis.CurrentDate = current.CompletedAt ?? current.CreatedAt;
         analysis.ScoreChange = analysis.CurrentScore - analysis.BaselineScore;
@@ -124,7 +126,7 @@ public class McidTrackingService : IMcidTrackingService
         // Calculate trajectory
         if (instances.Count >= 3)
         {
-            var scores = instances.Select(i => CalculateTotalScore(i.Responses)).ToList();
+            var scores = instances.Select(i => i.Score ?? CalculateTotalScoreFromDictionary(i.Responses)).ToList();
             analysis.Trajectory = CalculateTrajectory(scores);
             
             // Predict time to MCID if not yet achieved
@@ -285,12 +287,20 @@ public class McidTrackingService : IMcidTrackingService
         return report;
     }
 
-    private decimal CalculateTotalScore(ICollection<PromResponse> responses)
+    private decimal CalculateTotalScoreFromDictionary(Dictionary<string, object>? responses)
     {
-        // Calculate total score based on numeric responses
-        return responses
-            .Where(r => decimal.TryParse(r.ResponseValue?.ToString(), out _))
-            .Sum(r => decimal.Parse(r.ResponseValue!.ToString()!));
+        if (responses == null) return 0;
+        
+        // Calculate total score based on numeric responses in the dictionary
+        decimal total = 0;
+        foreach (var kvp in responses)
+        {
+            if (decimal.TryParse(kvp.Value?.ToString(), out var value))
+            {
+                total += value;
+            }
+        }
+        return total;
     }
 
     private Trajectory CalculateTrajectory(List<decimal> scores)

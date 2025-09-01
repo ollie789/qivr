@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Qivr.Core.Common;
 
 namespace Qivr.Core.Entities;
 
@@ -67,7 +68,7 @@ public class TriageSummary
     public double Confidence { get; set; }
     
     // Navigation properties
-    public virtual Patient? Patient { get; set; }
+    public virtual User? Patient { get; set; }
     public virtual ClinicianReview? ClinicianReview { get; set; }
     public virtual NextStepGuidance? NextStepGuidance { get; set; }
 }
@@ -111,13 +112,8 @@ public class UrgencyAssessment
     public DateTime AssessedAt { get; set; }
 }
 
-public enum UrgencyLevel
-{
-    Emergency,    // Immediate attention required
-    Urgent,       // Within 1 hour
-    SemiUrgent,   // Within 4 hours
-    NonUrgent     // Within 24-72 hours
-}
+// UrgencyLevel enum is already defined in Evaluation.cs
+// Using the existing definition from that file
 
 // Possible Conditions
 public class PossibleCondition
@@ -170,8 +166,8 @@ public class ClinicianReview
     
     // Navigation properties
     public virtual TriageSummary? TriageSummary { get; set; }
-    public virtual Patient? Patient { get; set; }
-    public virtual Provider? ReviewingClinician { get; set; }
+    public virtual User? Patient { get; set; }
+    public virtual User? ReviewingClinician { get; set; }
 }
 
 public enum ReviewStatus

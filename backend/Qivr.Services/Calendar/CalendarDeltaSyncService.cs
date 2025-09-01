@@ -65,11 +65,18 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
             // Get delta changes from Google
             var deltaRequest = new GoogleDeltaRequest
             {
-                CalendarId = connection.CalendarId,
+                CalendarId = connection.CalendarId ?? "primary",
                 SyncToken = syncToken ?? connection.LastSyncToken,
                 ShowDeleted = true,
                 MaxResults = 100
             };
+
+            if (string.IsNullOrEmpty(connection.AccessToken))
+            {
+                result.Success = false;
+                result.ErrorMessage = "No access token available";
+                return result;
+            }
 
             var deltaResponse = await _googleService.GetCalendarDelta(deltaRequest, connection.AccessToken);
             
@@ -138,6 +145,13 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
                 requestUrl = await InitializeMicrosoftDeltaQuery(connection);
             }
 
+            if (string.IsNullOrEmpty(connection.AccessToken))
+            {
+                result.Success = false;
+                result.ErrorMessage = "No access token available";
+                return result;
+            }
+
             var deltaResponse = await _microsoftService.GetCalendarDelta(requestUrl, connection.AccessToken);
             
             // Process changes
@@ -187,7 +201,12 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         }
 
         // Perform initial full sync
-        var initialSync = await _googleService.GetInitialSync(connection.CalendarId, connection.AccessToken);
+        var calendarId = connection.CalendarId ?? "primary";
+        if (string.IsNullOrEmpty(connection.AccessToken))
+        {
+            throw new InvalidOperationException("No access token available for Google calendar");
+        }
+        var initialSync = await _googleService.GetInitialSync(calendarId, connection.AccessToken);
         
         // Process all events
         var result = new DeltaSyncResult
@@ -214,7 +233,7 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         
         await SaveSyncHistory(result);
         
-        return initialSync.NextSyncToken;
+        return initialSync.NextSyncToken ?? string.Empty;
     }
 
     public async Task<string> InitializeMicrosoftCalendarSync(Guid providerId)
@@ -229,6 +248,10 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         var deltaLink = await InitializeMicrosoftDeltaQuery(connection);
         
         // Perform initial sync
+        if (string.IsNullOrEmpty(connection.AccessToken))
+        {
+            throw new InvalidOperationException("No access token available for Microsoft calendar");
+        }
         var initialSync = await _microsoftService.GetCalendarDelta(deltaLink, connection.AccessToken);
         
         // Process all events
@@ -256,7 +279,7 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         
         await SaveSyncHistory(result);
         
-        return initialSync.DeltaLink;
+        return initialSync.DeltaLink ?? string.Empty;
     }
 
     public async Task ProcessCalendarWebhook(string provider, string resourceId, string changeType)
@@ -277,11 +300,11 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         // Trigger delta sync based on provider
         if (provider.Equals("Google", StringComparison.OrdinalIgnoreCase))
         {
-            await SyncGoogleCalendarDelta(connection.ProviderId, connection.LastSyncToken);
+            await SyncGoogleCalendarDelta(connection.ProviderId, connection.LastSyncToken ?? string.Empty);
         }
         else if (provider.Equals("Microsoft", StringComparison.OrdinalIgnoreCase))
         {
-            await SyncMicrosoftCalendarDelta(connection.ProviderId, connection.DeltaLink);
+            await SyncMicrosoftCalendarDelta(connection.ProviderId, connection.DeltaLink ?? string.Empty);
         }
     }
 
@@ -348,32 +371,88 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         if (existingAppointment != null)
         {
             // Update existing appointment
-            existingAppointment.StartTime = item.Start.DateTime ?? DateTime.Parse(item.Start.Date);
-            existingAppointment.EndTime = item.End.DateTime ?? DateTime.Parse(item.End.Date);
-            existingAppointment.AppointmentType = item.Summary;
+            // Google can send either DateTime or Date string
+            DateTime scheduledStart, scheduledEnd;
+            if (item.Start?.DateTime.HasValue == true)
+            {
+                scheduledStart = item.Start.DateTime.Value;
+            }
+            else if (!string.IsNullOrEmpty(item.Start?.Date))
+            {
+                scheduledStart = DateTime.Parse(item.Start.Date);
+            }
+            else
+            {
+                scheduledStart = DateTime.UtcNow;
+            }
+            
+            if (item.End?.DateTime.HasValue == true)
+            {
+                scheduledEnd = item.End.DateTime.Value;
+            }
+            else if (!string.IsNullOrEmpty(item.End?.Date))
+            {
+                scheduledEnd = DateTime.Parse(item.End.Date);
+            }
+            else
+            {
+                scheduledEnd = scheduledStart.AddHours(1);
+            }
+            
+            existingAppointment.ScheduledStart = scheduledStart;
+            existingAppointment.ScheduledEnd = scheduledEnd;
+            existingAppointment.AppointmentType = item.Summary ?? string.Empty;
             existingAppointment.Notes = item.Description;
-            existingAppointment.Status = MapGoogleStatus(item.Status);
-            existingAppointment.LastModified = DateTime.UtcNow;
-            existingAppointment.ExternalLastModified = item.Updated;
+            existingAppointment.Status = MapGoogleStatusToEnum(item.Status);
+            existingAppointment.UpdatedAt = DateTime.UtcNow;
+            // Store external update time in LocationDetails
+            if (item.Updated.HasValue)
+                existingAppointment.LocationDetails["ExternalLastModified"] = item.Updated.Value;
             
             result.ItemsUpdated++;
         }
         else
         {
             // Create new appointment
+            // Google can send either DateTime or Date string
+            DateTime scheduledStart, scheduledEnd;
+            if (item.Start?.DateTime.HasValue == true)
+            {
+                scheduledStart = item.Start.DateTime.Value;
+            }
+            else if (!string.IsNullOrEmpty(item.Start?.Date))
+            {
+                scheduledStart = DateTime.Parse(item.Start.Date);
+            }
+            else
+            {
+                scheduledStart = DateTime.UtcNow;
+            }
+            
+            if (item.End?.DateTime.HasValue == true)
+            {
+                scheduledEnd = item.End.DateTime.Value;
+            }
+            else if (!string.IsNullOrEmpty(item.End?.Date))
+            {
+                scheduledEnd = DateTime.Parse(item.End.Date);
+            }
+            else
+            {
+                scheduledEnd = scheduledStart.AddHours(1);
+            }
+            
             var newAppointment = new Appointment
             {
                 Id = Guid.NewGuid(),
                 ProviderId = providerId,
                 ExternalCalendarId = item.Id,
-                ExternalCalendarProvider = "Google",
-                StartTime = item.Start.DateTime ?? DateTime.Parse(item.Start.Date),
-                EndTime = item.End.DateTime ?? DateTime.Parse(item.End.Date),
-                AppointmentType = item.Summary,
+                ScheduledStart = scheduledStart,
+                ScheduledEnd = scheduledEnd,
+                AppointmentType = item.Summary ?? string.Empty,
                 Notes = item.Description,
-                Status = MapGoogleStatus(item.Status),
-                CreatedAt = DateTime.UtcNow,
-                ExternalLastModified = item.Updated
+                Status = MapGoogleStatusToEnum(item.Status),
+                CreatedAt = DateTime.UtcNow
             };
 
             // Try to match with patient if possible
@@ -403,13 +482,15 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         if (existingAppointment != null)
         {
             // Update existing appointment
-            existingAppointment.StartTime = item.Start.DateTime;
-            existingAppointment.EndTime = item.End.DateTime;
-            existingAppointment.AppointmentType = item.Subject;
+            existingAppointment.ScheduledStart = item.Start.DateTime;
+            existingAppointment.ScheduledEnd = item.End.DateTime;
+            existingAppointment.AppointmentType = item.Subject ?? string.Empty;
             existingAppointment.Notes = item.BodyPreview;
-            existingAppointment.Status = MapMicrosoftStatus(item);
-            existingAppointment.LastModified = DateTime.UtcNow;
-            existingAppointment.ExternalLastModified = item.LastModifiedDateTime;
+            existingAppointment.Status = MapMicrosoftStatusToEnum(item);
+            existingAppointment.UpdatedAt = DateTime.UtcNow;
+            // Store external update time in LocationDetails
+            if (item.LastModifiedDateTime.HasValue)
+                existingAppointment.LocationDetails["ExternalLastModified"] = item.LastModifiedDateTime.Value;
             
             result.ItemsUpdated++;
         }
@@ -421,14 +502,12 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
                 Id = Guid.NewGuid(),
                 ProviderId = providerId,
                 ExternalCalendarId = item.Id,
-                ExternalCalendarProvider = "Microsoft",
-                StartTime = item.Start.DateTime,
-                EndTime = item.End.DateTime,
-                AppointmentType = item.Subject,
+                ScheduledStart = item.Start.DateTime,
+                ScheduledEnd = item.End.DateTime,
+                AppointmentType = item.Subject ?? string.Empty,
                 Notes = item.BodyPreview,
-                Status = MapMicrosoftStatus(item),
-                CreatedAt = DateTime.UtcNow,
-                ExternalLastModified = item.LastModifiedDateTime
+                Status = MapMicrosoftStatusToEnum(item),
+                CreatedAt = DateTime.UtcNow
             };
 
             // Try to match with patient if possible
@@ -449,7 +528,7 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
                                      c.IsActive);
     }
 
-    private async Task<string> InitializeMicrosoftDeltaQuery(CalendarConnection connection)
+    private Task<string> InitializeMicrosoftDeltaQuery(CalendarConnection connection)
     {
         // Build delta query URL
         var baseUrl = "https://graph.microsoft.com/v1.0";
@@ -457,21 +536,20 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         var startDateTime = DateTime.UtcNow.AddMonths(-1).ToString("yyyy-MM-ddTHH:mm:ssZ");
         var endDateTime = DateTime.UtcNow.AddMonths(3).ToString("yyyy-MM-ddTHH:mm:ssZ");
         
-        return $"{baseUrl}/me/calendars/{calendarId}/calendarView/delta" +
-               $"?startDateTime={startDateTime}&endDateTime={endDateTime}";
+        return Task.FromResult($"{baseUrl}/me/calendars/{calendarId}/calendarView/delta" +
+               $"?startDateTime={startDateTime}&endDateTime={endDateTime}");
     }
 
     private async Task DeleteAppointmentByExternalId(Guid providerId, string externalId, string provider)
     {
         var appointment = await _dbContext.Set<Appointment>()
             .FirstOrDefaultAsync(a => a.ExternalCalendarId == externalId && 
-                                     a.ProviderId == providerId &&
-                                     a.ExternalCalendarProvider == provider);
+                                     a.ProviderId == providerId);
 
         if (appointment != null)
         {
-            appointment.Status = "cancelled";
-            appointment.LastModified = DateTime.UtcNow;
+            appointment.Status = AppointmentStatus.Cancelled;
+            appointment.CancelledAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync();
         }
     }
@@ -483,8 +561,8 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         {
             foreach (var attendee in calendarEvent.Attendees)
             {
-                var patient = await _dbContext.Set<Patient>()
-                    .FirstOrDefaultAsync(p => p.Email == attendee.Email);
+                var patient = await _dbContext.Set<User>()
+                    .FirstOrDefaultAsync(p => p.Email == attendee.Email && p.UserType == UserType.Patient);
                 
                 if (patient != null)
                 {
@@ -504,8 +582,8 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
             {
                 if (attendee.EmailAddress != null)
                 {
-                    var patient = await _dbContext.Set<Patient>()
-                        .FirstOrDefaultAsync(p => p.Email == attendee.EmailAddress.Address);
+                    var patient = await _dbContext.Set<User>()
+                        .FirstOrDefaultAsync(p => p.Email == attendee.EmailAddress.Address && p.UserType == UserType.Patient);
                     
                     if (patient != null)
                     {
@@ -517,28 +595,28 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         }
     }
 
-    private string MapGoogleStatus(string? googleStatus)
+    private AppointmentStatus MapGoogleStatusToEnum(string? googleStatus)
     {
         return googleStatus?.ToLower() switch
         {
-            "confirmed" => "confirmed",
-            "tentative" => "pending",
-            "cancelled" => "cancelled",
-            _ => "pending"
+            "confirmed" => AppointmentStatus.Confirmed,
+            "tentative" => AppointmentStatus.Scheduled,
+            "cancelled" => AppointmentStatus.Cancelled,
+            _ => AppointmentStatus.Scheduled
         };
     }
 
-    private string MapMicrosoftStatus(MicrosoftCalendarEvent item)
+    private AppointmentStatus MapMicrosoftStatusToEnum(MicrosoftCalendarEvent item)
     {
         if (item.IsCancelled)
-            return "cancelled";
+            return AppointmentStatus.Cancelled;
         
         return item.ResponseStatus?.Response?.ToLower() switch
         {
-            "accepted" => "confirmed",
-            "tentativelyaccepted" => "pending",
-            "declined" => "cancelled",
-            _ => "pending"
+            "accepted" => AppointmentStatus.Confirmed,
+            "tentativelyaccepted" => AppointmentStatus.Scheduled,
+            "declined" => AppointmentStatus.Cancelled,
+            _ => AppointmentStatus.Scheduled
         };
     }
 

@@ -7,10 +7,10 @@ namespace Qivr.Api.Services;
 
 public class EmailContent
 {
-    public string To { get; set; }
-    public string Subject { get; set; }
-    public string HtmlBody { get; set; }
-    public string PlainBody { get; set; }
+    public required string To { get; set; }
+    public required string Subject { get; set; }
+    public required string HtmlBody { get; set; }
+    public required string PlainBody { get; set; }
     public List<string> Cc { get; set; } = new();
     public List<string> Bcc { get; set; } = new();
 }
@@ -26,8 +26,8 @@ public class EmailSettings
     public string Provider { get; set; } = "smtp";
     public string SmtpHost { get; set; } = "localhost";
     public int SmtpPort { get; set; } = 1025;
-    public string SmtpUsername { get; set; }
-    public string SmtpPassword { get; set; }
+    public string SmtpUsername { get; set; } = string.Empty;
+    public string SmtpPassword { get; set; } = string.Empty;
     public bool SmtpUseSsl { get; set; } = false;
     public string FromEmail { get; set; } = "noreply@qivr.health";
     public string FromName { get; set; } = "Qivr Health";

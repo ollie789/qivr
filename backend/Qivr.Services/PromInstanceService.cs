@@ -24,8 +24,8 @@ public class PromInstanceService : IPromInstanceService
 {
     private readonly ILogger<PromInstanceService> _logger;
     private readonly INotificationService _notificationService;
-    private readonly List<PromInstance> _promInstances = new();
-    private readonly List<PromTemplate> _promTemplates = new();
+    private readonly List<PromInstanceInternal> _promInstances = new();
+    private readonly List<PromTemplateInternal> _promTemplates = new();
 
     public PromInstanceService(
         ILogger<PromInstanceService> logger,
@@ -46,7 +46,7 @@ public class PromInstanceService : IPromInstanceService
             throw new ArgumentException($"Template {request.TemplateId} not found");
         }
 
-        var instance = new PromInstance
+        var instance = new PromInstanceInternal
         {
             Id = Guid.NewGuid(),
             TemplateId = request.TemplateId,
@@ -348,7 +348,7 @@ public class PromInstanceService : IPromInstanceService
         return bookingRequest;
     }
 
-    private string DetermineUrgency(PromInstance instance)
+    private string DetermineUrgency(PromInstanceInternal instance)
     {
         // Determine urgency based on PROM score
         if (!instance.TotalScore.HasValue) return "medium";
@@ -392,7 +392,7 @@ public class PromInstanceService : IPromInstanceService
             booking.Id, booking.Urgency);
     }
 
-    private async Task SendPromNotificationAsync(PromInstance instance, CancellationToken ct)
+    private async Task SendPromNotificationAsync(PromInstanceInternal instance, CancellationToken ct)
     {
         var portalUrl = $"https://portal.qivr.com/prom/{instance.Id}";
         var subject = $"New Health Assessment: {instance.TemplateName}";
@@ -444,7 +444,7 @@ public class PromInstanceService : IPromInstanceService
         return $"Patient {patientId.ToString().Substring(0, 8)}";
     }
 
-    private double? CalculateTotalScore(PromInstance instance)
+    private double? CalculateTotalScore(PromInstanceInternal instance)
     {
         var numericAnswers = instance.Questions
             .Where(q => q.Answer != null && double.TryParse(q.Answer.ToString(), out _))
@@ -454,7 +454,7 @@ public class PromInstanceService : IPromInstanceService
         return numericAnswers.Any() ? numericAnswers.Sum() : null;
     }
 
-    private PromInstanceDto MapToDto(PromInstance instance)
+    private PromInstanceDto MapToDto(PromInstanceInternal instance)
     {
         return new PromInstanceDto
         {
@@ -487,7 +487,7 @@ public class PromInstanceService : IPromInstanceService
         // Add some mock templates
         _promTemplates.AddRange(new[]
         {
-            new PromTemplate
+            new PromTemplateInternal
             {
                 Id = Guid.NewGuid(),
                 Name = "PHQ-9 Depression Scale",
@@ -495,7 +495,7 @@ public class PromInstanceService : IPromInstanceService
                 DefaultDueDays = 7,
                 Questions = GeneratePHQ9Questions()
             },
-            new PromTemplate
+            new PromTemplateInternal
             {
                 Id = Guid.NewGuid(),
                 Name = "GAD-7 Anxiety Scale",
@@ -503,7 +503,7 @@ public class PromInstanceService : IPromInstanceService
                 DefaultDueDays = 7,
                 Questions = GenerateGAD7Questions()
             },
-            new PromTemplate
+            new PromTemplateInternal
             {
                 Id = Guid.NewGuid(),
                 Name = "Pain Assessment",
@@ -724,7 +724,7 @@ public class PromInstanceStats
 }
 
 // Internal models
-internal class PromInstance
+internal class PromInstanceInternal
 {
     public Guid Id { get; set; }
     public Guid TemplateId { get; set; }
@@ -770,7 +770,7 @@ internal class PromInstanceMetadata
     public string? Notes { get; set; }
 }
 
-internal class PromTemplate
+internal class PromTemplateInternal
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

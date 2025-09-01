@@ -254,13 +254,13 @@ public class EmailVerificationService : IEmailVerificationService
     {
         public Guid UserId { get; set; }
         public DateTime ExpiresAt { get; set; }
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
     }
 
     private class UserInfo
     {
         public Guid Id { get; set; }
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
         public bool EmailVerified { get; set; }
     }
 }

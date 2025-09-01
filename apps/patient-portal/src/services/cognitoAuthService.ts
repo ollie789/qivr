@@ -11,10 +11,9 @@ import {
   updateUserAttributes,
   confirmUserAttribute,
   setUpTOTP,
-  verifyTOTPToken,
+  verifyTOTPSetup,
   updateMFAPreference,
   resendSignUpCode,
-  autoSignIn,
   type SignInInput,
   type SignUpInput,
   type ConfirmSignUpInput,
@@ -159,7 +158,7 @@ class CognitoAuthService {
       } as ConfirmSignUpInput);
 
       // Auto sign-in might happen after confirmation
-      if (result.nextStep?.signInStep === 'DONE') {
+      if (result.nextStep?.signUpStep === 'DONE') {
         // User is signed in automatically
         return { isSignedIn: true };
       }
@@ -296,7 +295,7 @@ class CognitoAuthService {
 
   async verifyMFAToken(token: string): Promise<void> {
     try {
-      await verifyTOTPToken({ code: token });
+      await verifyTOTPSetup({ code: token });
       await updateMFAPreference({ totp: 'PREFERRED' });
     } catch (error: any) {
       console.error('Verify MFA token error:', error);

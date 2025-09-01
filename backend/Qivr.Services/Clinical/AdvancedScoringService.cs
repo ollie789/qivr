@@ -82,7 +82,7 @@ public class AdvancedScoringService : IAdvancedScoringService
         };
 
         // Use provided config or get default
-        config ??= GetDefaultScoringConfig(instance.PromTemplate?.Key ?? "default");
+        config ??= GetDefaultScoringConfig(instance.Template?.Name ?? "default");
         
         // Calculate raw score
         result.RawScore = CalculateRawScore(responses, config);
@@ -158,15 +158,16 @@ public class AdvancedScoringService : IAdvancedScoringService
         
         foreach (var instance in instances)
         {
-            var responses = instance.Responses.ToList();
-            var scoringConfig = GetDefaultScoringConfig(instance.PromTemplate?.Key ?? "default");
+            // Convert Dictionary responses to PromResponse list
+            var responses = ConvertDictionaryToPromResponses(instance.Responses);
+            var scoringConfig = GetDefaultScoringConfig(instance.Template?.Name ?? "default");
             var score = await CalculateScores(instance, responses, scoringConfig);
             
-            var weight = config.ComponentWeights?.GetValueOrDefault(instance.PromTemplate?.Key ?? "", 1.0m) ?? 1.0m;
+            var weight = config.ComponentWeights?.GetValueOrDefault(instance.Template?.Name ?? "", 1.0m) ?? 1.0m;
             
             composite.ComponentScores.Add(new ComponentScore
             {
-                PromTemplateKey = instance.PromTemplate?.Key ?? "",
+                PromTemplateKey = instance.Template?.Name ?? "",
                 Score = score.NormalizedScore,
                 Weight = weight,
                 PromInstanceId = instance.Id
@@ -421,6 +422,23 @@ public class AdvancedScoringService : IAdvancedScoringService
     {
         return score >= config.MaxPossibleScore - (config.MaxPossibleScore - config.MinPossibleScore) * 0.1m;
     }
+
+    private List<PromResponse> ConvertDictionaryToPromResponses(Dictionary<string, object>? responses)
+    {
+        var promResponses = new List<PromResponse>();
+        if (responses == null) return promResponses;
+        
+        foreach (var kvp in responses)
+        {
+            promResponses.Add(new PromResponse
+            {
+                QuestionId = kvp.Key,
+                ResponseValue = kvp.Value
+            });
+        }
+        
+        return promResponses;
+    }
 }
 
 // Scoring Models
@@ -533,4 +551,11 @@ public enum AggregationMethod
     GeometricMean,
     Maximum,
     Minimum
+}
+
+// PromResponse DTO for service use
+public class PromResponse
+{
+    public string QuestionId { get; set; } = string.Empty;
+    public object? ResponseValue { get; set; }
 }

@@ -76,8 +76,8 @@ public class GoogleCalendarService : ICalendarService
         try
         {
             var request = calendarService.Events.List("primary");
-            request.TimeMin = startDate;
-            request.TimeMax = endDate;
+            request.TimeMinDateTimeOffset = new DateTimeOffset(startDate, TimeSpan.Zero);
+            request.TimeMaxDateTimeOffset = new DateTimeOffset(endDate, TimeSpan.Zero);
             request.ShowDeleted = false;
             request.SingleEvents = true;
             request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
@@ -86,13 +86,18 @@ public class GoogleCalendarService : ICalendarService
             
             foreach (var googleEvent in response.Items)
             {
-                if (googleEvent.Start?.DateTime == null || googleEvent.End?.DateTime == null)
+                var startDateTime = googleEvent.Start?.DateTimeDateTimeOffset?.DateTime ?? 
+                    (googleEvent.Start?.Date != null ? DateTime.Parse(googleEvent.Start.Date) : (DateTime?)null);
+                var endDateTime = googleEvent.End?.DateTimeDateTimeOffset?.DateTime ?? 
+                    (googleEvent.End?.Date != null ? DateTime.Parse(googleEvent.End.Date) : (DateTime?)null);
+                    
+                if (startDateTime == null || endDateTime == null)
                     continue;
 
                 events.Add(new TimeSlot
                 {
-                    Start = googleEvent.Start.DateTime.Value,
-                    End = googleEvent.End.DateTime.Value,
+                    Start = startDateTime.Value,
+                    End = endDateTime.Value,
                     IsAvailable = false // These are existing events, so they are not available time slots
                 });
             }
@@ -117,12 +122,12 @@ public class GoogleCalendarService : ICalendarService
                 Description = calendarEvent.Description,
                 Start = new EventDateTime
                 {
-                    DateTime = calendarEvent.StartTime,
+                    DateTimeDateTimeOffset = new DateTimeOffset(calendarEvent.StartTime, TimeSpan.Zero),
                     TimeZone = "UTC"
                 },
                 End = new EventDateTime
                 {
-                    DateTime = calendarEvent.EndTime,
+                    DateTimeDateTimeOffset = new DateTimeOffset(calendarEvent.EndTime, TimeSpan.Zero),
                     TimeZone = "UTC"
                 },
                 Location = calendarEvent.Location,
@@ -168,12 +173,12 @@ public class GoogleCalendarService : ICalendarService
             googleEvent.Description = calendarEvent.Description;
             googleEvent.Start = new EventDateTime
             {
-                DateTime = calendarEvent.StartTime,
+                DateTimeDateTimeOffset = new DateTimeOffset(calendarEvent.StartTime, TimeSpan.Zero),
                 TimeZone = "UTC"
             };
             googleEvent.End = new EventDateTime
             {
-                DateTime = calendarEvent.EndTime,
+                DateTimeDateTimeOffset = new DateTimeOffset(calendarEvent.EndTime, TimeSpan.Zero),
                 TimeZone = "UTC"
             };
             googleEvent.Location = calendarEvent.Location;
@@ -223,8 +228,10 @@ public class GoogleCalendarService : ICalendarService
             Id = googleEvent.Id,
             Title = googleEvent.Summary,
             Description = googleEvent.Description,
-            StartTime = googleEvent.Start.DateTime.GetValueOrDefault(),
-            EndTime = googleEvent.End.DateTime.GetValueOrDefault(),
+            StartTime = googleEvent.Start?.DateTimeDateTimeOffset?.DateTime ?? 
+                (googleEvent.Start?.Date != null ? DateTime.Parse(googleEvent.Start.Date) : DateTime.Now),
+            EndTime = googleEvent.End?.DateTimeDateTimeOffset?.DateTime ?? 
+                (googleEvent.End?.Date != null ? DateTime.Parse(googleEvent.End.Date) : DateTime.Now),
             Location = googleEvent.Location,
             Attendees = googleEvent.Attendees?.Select(a => a.Email).ToList() ?? new List<string>(),
             MeetingLink = googleEvent.HangoutLink

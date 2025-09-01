@@ -59,7 +59,7 @@ public class SecurityHeadersMiddleware
         // Add strict transport security (HSTS) - enforce HTTPS
         if (!_environment.IsDevelopment())
         {
-            response.Headers.Add("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+            response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
         }
 
         // Content Security Policy - Different policies for different contexts
@@ -91,10 +91,10 @@ public class SecurityHeadersMiddleware
                 "upgrade-insecure-requests"
             };
             
-            response.Headers.Add("Content-Security-Policy", string.Join("; ", widgetCsp));
+            response.Headers["Content-Security-Policy"] = string.Join("; ", widgetCsp);
             
             // Allow embedding in clinic sites only
-            response.Headers.Add("X-Frame-Options", "SAMEORIGIN");
+            response.Headers["X-Frame-Options"] = "SAMEORIGIN";
         }
         else if (isApi)
         {
@@ -107,8 +107,8 @@ public class SecurityHeadersMiddleware
                 "form-action 'none'"
             };
             
-            response.Headers.Add("Content-Security-Policy", string.Join("; ", apiCsp));
-            response.Headers.Add("X-Frame-Options", "DENY");
+            response.Headers["Content-Security-Policy"] = string.Join("; ", apiCsp);
+            response.Headers["X-Frame-Options"] = "DENY";
         }
         else
         {
@@ -129,18 +129,18 @@ public class SecurityHeadersMiddleware
                 "upgrade-insecure-requests"
             };
             
-            response.Headers.Add("Content-Security-Policy", string.Join("; ", portalCsp));
-            response.Headers.Add("X-Frame-Options", "DENY");
+            response.Headers["Content-Security-Policy"] = string.Join("; ", portalCsp);
+            response.Headers["X-Frame-Options"] = "DENY";
         }
 
         // Prevent MIME type sniffing
-        response.Headers.Add("X-Content-Type-Options", "nosniff");
+        response.Headers["X-Content-Type-Options"] = "nosniff";
 
         // XSS Protection (legacy but still useful)
-        response.Headers.Add("X-XSS-Protection", "1; mode=block");
+        response.Headers["X-XSS-Protection"] = "1; mode=block";
 
         // Referrer Policy - Don't leak URLs with sensitive data
-        response.Headers.Add("Referrer-Policy", "strict-origin-when-cross-origin");
+        response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
 
         // Permissions Policy (formerly Feature Policy)
         var permissions = new[]
@@ -154,24 +154,24 @@ public class SecurityHeadersMiddleware
             "payment=()",
             "usb=()"
         };
-        response.Headers.Add("Permissions-Policy", string.Join(", ", permissions));
+        response.Headers["Permissions-Policy"] = string.Join(", ", permissions);
 
         // Cross-Origin headers for API
         if (isApi)
         {
             // These are handled by CORS middleware but we can add additional restrictions
-            response.Headers.Add("Cross-Origin-Resource-Policy", "same-origin");
-            response.Headers.Add("Cross-Origin-Embedder-Policy", "require-corp");
-            response.Headers.Add("Cross-Origin-Opener-Policy", "same-origin");
+            response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
+            response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+            response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
         }
 
         // Cache control for sensitive data
         if (context.Request.Path.Value?.Contains("/api/") == true &&
             !context.Request.Path.Value.Contains("/api/public/"))
         {
-            response.Headers.Add("Cache-Control", "no-store, no-cache, must-revalidate, private");
-            response.Headers.Add("Pragma", "no-cache");
-            response.Headers.Add("Expires", "0");
+            response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private";
+            response.Headers["Pragma"] = "no-cache";
+            response.Headers["Expires"] = "0";
         }
 
         _logger.LogDebug("Security headers applied for path: {Path}, IsWidget: {IsWidget}, IsApi: {IsApi}", 

@@ -162,18 +162,18 @@ public class SmsNotificationService : ISmsNotificationService
         }
     }
 
-    public async Task<bool> UpdateDeliveryStatusAsync(string messageId, string status)
+    public Task<bool> UpdateDeliveryStatusAsync(string messageId, string status)
     {
         try
         {
             _logger.LogInformation("SMS {MessageId} status updated to: {Status}", messageId, status);
             // Store in database for tracking
-            return true;
+            return Task.FromResult(true);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update delivery status for {MessageId}", messageId);
-            return false;
+            return Task.FromResult(false);
         }
     }
 

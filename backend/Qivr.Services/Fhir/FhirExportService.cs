@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Qivr.Core.Entities;
 
 namespace Qivr.Services.Fhir;
 
 public interface IFhirExportService
 {
-    string ExportPromTemplateToFhir(PromTemplate template);
-    string ExportPromResponseToFhir(PromInstance instance, List<PromResponse> responses);
+    string ExportPromTemplateToFhir(FhirPromTemplate template);
+    string ExportPromResponseToFhir(FhirPromInstance instance, List<FhirPromResponse> responses);
     FhirQuestionnaire ImportFhirQuestionnaire(string fhirJson);
 }
 
@@ -23,7 +24,7 @@ public class FhirExportService : IFhirExportService
         _logger = logger;
     }
 
-    public string ExportPromTemplateToFhir(PromTemplate template)
+    public string ExportPromTemplateToFhir(FhirPromTemplate template)
     {
         var questionnaire = new FhirQuestionnaire
         {
@@ -49,7 +50,7 @@ public class FhirExportService : IFhirExportService
         return JsonSerializer.Serialize(questionnaire, options);
     }
 
-    public string ExportPromResponseToFhir(PromInstance instance, List<PromResponse> responses)
+    public string ExportPromResponseToFhir(FhirPromInstance instance, List<FhirPromResponse> responses)
     {
         var questionnaireResponse = new FhirQuestionnaireResponse
         {
@@ -159,7 +160,7 @@ public class FhirExportService : IFhirExportService
         return items;
     }
 
-    private List<FhirQuestionnaireResponseItem> ConvertResponsesToFhirItems(List<PromResponse> responses)
+    private List<FhirQuestionnaireResponseItem> ConvertResponsesToFhirItems(List<FhirPromResponse> responses)
     {
         return responses.Select(r => new FhirQuestionnaireResponseItem
         {
@@ -297,4 +298,33 @@ public class FhirReference
 {
     public string? Reference { get; set; }
     public string? Display { get; set; }
+}
+
+// FHIR-specific DTOs for PROM export
+public class FhirPromTemplate
+{
+    public Guid Id { get; set; }
+    public string Key { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public int Version { get; set; } = 1;
+    public DateTime CreatedAt { get; set; }
+    public JsonDocument Schema { get; set; } = JsonDocument.Parse("{}");
+}
+
+public class FhirPromInstance
+{
+    public Guid Id { get; set; }
+    public Guid PromTemplateId { get; set; }
+    public Guid PatientId { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+}
+
+public class FhirPromResponse
+{
+    public string QuestionId { get; set; } = string.Empty;
+    public string QuestionText { get; set; } = string.Empty;
+    public object? ResponseValue { get; set; }
 }

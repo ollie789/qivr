@@ -96,16 +96,16 @@ public class EmailVerificationController : ControllerBase
 
     public class VerifyEmailRequest
     {
-        public string Token { get; set; }
+        public required string Token { get; set; }
     }
 
     public class ResendVerificationRequest
     {
-        public string Email { get; set; }
+        public required string Email { get; set; }
     }
 
     public class TestEmailRequest
     {
-        public string Email { get; set; }
+        public string Email { get; set; } = "test@example.com";
     }
 }

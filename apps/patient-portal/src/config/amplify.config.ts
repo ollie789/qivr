@@ -22,7 +22,7 @@ const amplifyConfig = {
         phone: false,
         username: false,
       },
-      signUpVerificationMethod: 'code',
+      signUpVerificationMethod: 'code' as const,
       mfa: {
         status: 'optional',
         totpEnabled: true,

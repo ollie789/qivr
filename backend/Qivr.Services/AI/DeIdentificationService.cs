@@ -136,7 +136,7 @@ public class DeIdentificationService : IDeIdentificationService
                 {
                     // De-identify string values
                     var deidentified = await DeIdentifyAsync(stringValue, options);
-                    deidentifiedData[kvp.Key] = deidentified.DeIdentifiedText;
+                    deidentifiedData[kvp.Key] = deidentified.DeIdentifiedText ?? string.Empty;
                     
                     if (deidentified.ReplacementMap != null)
                     {
@@ -150,12 +150,12 @@ public class DeIdentificationService : IDeIdentificationService
                 {
                     // Recursively de-identify nested objects
                     var nestedResult = await DeIdentifyJsonAsync(nestedDict, options);
-                    deidentifiedData[kvp.Key] = nestedResult.DeIdentifiedData;
+                    deidentifiedData[kvp.Key] = nestedResult.DeIdentifiedContent ?? new Dictionary<string, object>();
                 }
                 else
                 {
                     // Keep non-string values as is
-                    deidentifiedData[kvp.Key] = kvp.Value;
+                    deidentifiedData[kvp.Key] = kvp.Value ?? string.Empty;
                 }
             }
 
@@ -165,7 +165,7 @@ public class DeIdentificationService : IDeIdentificationService
                 _reidentificationMappings[result.MappingId] = replacements;
             }
 
-            result.DeIdentifiedData = deidentifiedData;
+            result.DeIdentifiedContent = deidentifiedData;
             result.ItemsRemoved = replacements.Count;
             result.Success = true;
             result.ReplacementMap = options.IncludeReplacementMap ? replacements : null;
@@ -420,7 +420,7 @@ public class DeIdentifiedData
 {
     public Guid MappingId { get; set; }
     public string? DeIdentifiedText { get; set; }
-    public Dictionary<string, object>? DeIdentifiedData { get; set; }
+    public Dictionary<string, object>? DeIdentifiedContent { get; set; }
     public int OriginalLength { get; set; }
     public int DeIdentifiedLength { get; set; }
     public int ItemsRemoved { get; set; }

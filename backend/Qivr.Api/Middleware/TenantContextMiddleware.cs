@@ -63,7 +63,7 @@ namespace Qivr.Api.Middleware
                 // Add tenant_id to response headers for debugging (only in development)
                 if (context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment())
                 {
-                    context.Response.Headers.Add("X-Tenant-Id", tenantId);
+                    context.Response.Headers["X-Tenant-Id"] = tenantId;
                 }
                 
                 await _next(context);
