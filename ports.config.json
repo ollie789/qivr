@@ -1,0 +1,41 @@
+{
+  "description": "Central port configuration for all QIVR services",
+  "services": {
+    "backend_api": {
+      "port": 5000,
+      "url": "http://localhost:5000",
+      "api_url": "http://localhost:5000/api",
+      "description": "Main backend API (.NET Core)"
+    },
+    "patient_portal": {
+      "port": 3000,
+      "url": "http://localhost:3000",
+      "description": "Patient Portal (React/Vite)"
+    },
+    "clinic_dashboard": {
+      "port": 3001,
+      "url": "http://localhost:3001",
+      "description": "Clinic Dashboard (React/Vite)"
+    },
+    "postgres": {
+      "port": 5432,
+      "description": "PostgreSQL Database"
+    },
+    "redis": {
+      "port": 6379,
+      "description": "Redis Cache (if used)"
+    }
+  },
+  "environments": {
+    "development": {
+      "api_base": "http://localhost:5000/api",
+      "patient_portal": "http://localhost:3000",
+      "clinic_dashboard": "http://localhost:3001"
+    },
+    "production": {
+      "api_base": "https://api.qivr.com",
+      "patient_portal": "https://portal.qivr.com",
+      "clinic_dashboard": "https://clinic.qivr.com"
+    }
+  }
+}

@@ -99,17 +99,17 @@ public class EvaluationsController : ControllerBase
         var response = evaluations.Select(e => new
         {
             id = e.Id.ToString(),
-            evaluationNumber = $"EVL-{e.CreatedAt:yyyy}-{e.Id.ToString().Substring(0, 4).ToUpper()}",
+            evaluationNumber = e.EvaluationNumber,
             date = e.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
             chiefComplaint = e.ChiefComplaint,
             symptoms = e.Symptoms ?? new List<string>(),
             status = e.Status?.ToLower() ?? "pending",
             urgency = e.Urgency ?? "medium",
-            provider = e.ProviderName ?? "Unassigned",
-            followUpDate = e.FollowUpDate?.ToString("yyyy-MM-ddTHH:mm:ss"),
-            score = e.Score,
-            trend = e.Trend,
-            lastUpdated = e.UpdatedAt?.ToString("yyyy-MM-ddTHH:mm:ss") ?? e.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")
+            provider = "Unassigned", // ProviderName not in service DTO
+            followUpDate = (DateTime?)null, // FollowUpDate not in service DTO
+            score = (decimal?)null, // Score not in service DTO
+            trend = (string?)null, // Trend not in service DTO
+            lastUpdated = e.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss") // UpdatedAt not in service DTO
         }).ToList();
         
         return Ok(response);

@@ -1,6 +1,25 @@
 import axios from 'axios';
+import { Amplify } from 'aws-amplify';
+import { signIn, signUp, confirmSignUp, signOut, getCurrentUser, fetchAuthSession, resetPassword, confirmResetPassword } from 'aws-amplify/auth';
 
-// Resolve API base URL once, ensuring a single /api suffix
+// Configure Amplify with Cognito settings
+const amplifyConfig = {
+  Auth: {
+    Cognito: {
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || 'ap-southeast-2_ZMcriKNGJ',
+      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || '4kugfmvk56o3otd0grc4gddi8r',
+      signUpVerificationMethod: 'code' as const,
+      loginWith: {
+        email: true,
+      },
+    },
+  },
+};
+
+// Initialize Amplify
+Amplify.configure(amplifyConfig);
+
+// Keep API_BASE_URL for other API calls
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 const API_BASE_URL = (() => {
   if (rawApiUrl) {
@@ -52,38 +71,21 @@ class AuthService {
 
   constructor() {
     this.loadTokensFromStorage();
-    // Auto-login in development if no token exists
-    if (import.meta.env.DEV && !this.accessToken) {
-      this.devAutoLogin();
-    }
+    // Clear any existing Amplify session on initialization
+    this.clearExistingSession();
   }
 
-  private async devAutoLogin() {
+  private async clearExistingSession() {
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/auth/dev-login`,
-        {
-          email: 'test@qivr.health',
-          name: 'Test Patient',
-          role: 'Patient',
-          tenantId: '11111111-1111-1111-1111-111111111111'
-        }
-      );
-      
-      if (response.data.token) {
-        // Save the dev token
-        const tokens = {
-          accessToken: response.data.token,
-          refreshToken: response.data.token,
-          idToken: response.data.token,
-          expiresIn: response.data.expiresIn || 3600
-        };
-        this.saveTokensToStorage(tokens);
-        localStorage.setItem('authToken', response.data.token);
-        console.log('Dev auto-login successful');
+      // Check if there's an existing session and clear it
+      const user = await getCurrentUser();
+      if (user) {
+        console.log('Found existing session, clearing...');
+        await signOut();
       }
     } catch (error) {
-      console.log('Dev auto-login not available, continuing without auth');
+      // No user signed in, which is fine
+      console.log('No existing Amplify session');
     }
   }
 
@@ -121,30 +123,84 @@ class AuthService {
 
   async login(username: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await axios.post<LoginResponse>(
-        `${API_BASE_URL}/auth/login`,
-        { username, password }
-      );
+      // First, sign out any existing user
+      try {
+        const existingUser = await getCurrentUser();
+        if (existingUser) {
+          console.log('Signing out existing user before new login');
+          await signOut();
+        }
+      } catch {
+        // No existing user, continue
+      }
+
+      // Use AWS Cognito for authentication
+      const { isSignedIn, nextStep } = await signIn({ username, password });
       
-      this.saveTokensToStorage(response.data);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.data?.requiresMfa) {
+      if (isSignedIn) {
+        // Get the session tokens
+        const session = await fetchAuthSession();
+        
+        if (session.tokens) {
+          const tokens: LoginResponse = {
+            accessToken: session.tokens.accessToken?.toString() || '',
+            idToken: session.tokens.idToken?.toString() || '',
+            refreshToken: session.tokens.refreshToken?.toString() || '',
+            expiresIn: 3600, // Default to 1 hour
+          };
+          
+          this.saveTokensToStorage(tokens);
+          return tokens;
+        }
+      }
+      
+      // Handle MFA if required
+      if (nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_TOTP_CODE') {
         throw new Error('MFA_REQUIRED');
       }
-      throw new Error(error.response?.data?.message || 'Login failed');
+      
+      throw new Error('Login failed');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      if (error.name === 'NotAuthorizedException') {
+        throw new Error('Invalid email or password');
+      } else if (error.name === 'UserNotFoundException') {
+        throw new Error('User not found');
+      } else if (error.name === 'UserNotConfirmedException') {
+        throw new Error('Please verify your email first');
+      } else if (error.message === 'MFA_REQUIRED') {
+        throw error;
+      }
+      
+      throw new Error(error.message || 'Login failed');
     }
   }
 
   async signUp(request: SignUpRequest): Promise<any> {
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/auth/signup`,
-        request
-      );
-      return response.data;
+      const { userId, isSignUpComplete, nextStep } = await signUp({
+        username: request.email,
+        password: request.password,
+        options: {
+          userAttributes: {
+            email: request.email,
+            given_name: request.firstName,
+            family_name: request.lastName,
+            ...(request.phoneNumber && { phone_number: request.phoneNumber }),
+          },
+        },
+      });
+      
+      return {
+        userId,
+        isSignUpComplete,
+        nextStep,
+        userConfirmed: isSignUpComplete,
+      };
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Sign up failed');
+      console.error('Sign up error:', error);
+      throw new Error(error.message || 'Sign up failed');
     }
   }
 
@@ -167,20 +223,27 @@ class AuthService {
 
   async confirmSignUp(username: string, confirmationCode: string): Promise<void> {
     try {
-      await axios.post(`${API_BASE_URL}/auth/confirm-signup`, {
+      const { isSignUpComplete } = await confirmSignUp({
         username,
-        confirmationCode
+        confirmationCode,
       });
+      
+      if (!isSignUpComplete) {
+        throw new Error('Sign up confirmation incomplete');
+      }
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Confirmation failed');
+      console.error('Confirmation error:', error);
+      throw new Error(error.message || 'Confirmation failed');
     }
   }
 
   async forgotPassword(username: string): Promise<void> {
     try {
-      await axios.post(`${API_BASE_URL}/auth/forgot-password`, { username });
+      const output = await resetPassword({ username });
+      console.log('Password reset initiated:', output);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Password reset failed');
+      console.error('Password reset error:', error);
+      throw new Error(error.message || 'Password reset failed');
     }
   }
 
@@ -190,13 +253,14 @@ class AuthService {
     newPassword: string
   ): Promise<void> {
     try {
-      await axios.post(`${API_BASE_URL}/auth/confirm-forgot-password`, {
+      await confirmResetPassword({
         username,
         confirmationCode,
-        newPassword
+        newPassword,
       });
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Password reset failed');
+      console.error('Password reset confirmation error:', error);
+      throw new Error(error.message || 'Password reset failed');
     }
   }
 
@@ -270,24 +334,17 @@ class AuthService {
   }
 
   async logout(): Promise<void> {
-    const token = await this.getAccessToken();
-    if (token) {
-      try {
-        await axios.post(
-          `${API_BASE_URL}/auth/logout`,
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
-      } catch {
-        // Ignore logout errors
-      }
+    try {
+      // Sign out from Cognito
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Continue with local cleanup even if Cognito signOut fails
     }
     
+    // Clear local storage
     this.clearTokensFromStorage();
+    localStorage.removeItem('authToken');
   }
 
   isAuthenticated(): boolean {

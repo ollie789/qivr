@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Qivr.Api.DTOs;
 using Qivr.Api.Services;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
@@ -51,7 +52,7 @@ public class PatientDashboardController : ControllerBase
                     && a.Status != AppointmentStatus.Cancelled)
                 .OrderBy(a => a.ScheduledStart)
                 .Take(5)
-                .Select(a => new AppointmentSummaryDto
+                .Select(a => new PatientAppointmentSummaryDto
                 {
                     Id = a.Id,
                     ProviderId = a.ProviderId,
@@ -66,18 +67,18 @@ public class PatientDashboardController : ControllerBase
 
             // Get recent PROM responses
             var recentResponses = await _context.PromResponses
-                .Include(r => r.PromInstance)
-                .ThenInclude(i => i.PromTemplate)
+            .Include(r => r.PromInstance)
+                .ThenInclude(i => i.Template)
                 .Where(r => r.PromInstance.PatientId == userId)
                 .OrderByDescending(r => r.CreatedAt)
                 .Take(5)
                 .Select(r => new PromResponseSummaryDto
                 {
                     Id = r.Id,
-                    TemplateName = r.PromInstance.PromTemplate.Name,
+                    TemplateName = r.PromInstance.Template.Name,
                     CompletedAt = r.CreatedAt,
                     Score = r.Score,
-                    Status = r.PromInstance.Status
+                    Status = r.PromInstance.Status.ToString()
                 })
                 .ToListAsync();
 
@@ -100,9 +101,9 @@ public class PatientDashboardController : ControllerBase
             // Get health metrics (from recent PROM scores)
             var healthMetrics = await _context.PromResponses
                 .Include(r => r.PromInstance)
-                .ThenInclude(i => i.PromTemplate)
+                .ThenInclude(i => i.Template)
                 .Where(r => r.PromInstance.PatientId == userId)
-                .GroupBy(r => r.PromInstance.PromTemplate.Name)
+                .GroupBy(r => r.PromInstance.Template.Name)
                 .Select(g => new HealthMetricDto
                 {
                     MetricName = g.Key,
@@ -146,7 +147,7 @@ public class PatientDashboardController : ControllerBase
     /// Get patient's appointment history
     /// </summary>
     [HttpGet("appointments/history")]
-    [ProducesResponseType(typeof(IEnumerable<AppointmentSummaryDto>), 200)]
+    [ProducesResponseType(typeof(IEnumerable<PatientAppointmentSummaryDto>), 200)]
     public async Task<IActionResult> GetAppointmentHistory(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
@@ -167,7 +168,7 @@ public class PatientDashboardController : ControllerBase
         var appointments = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(a => new AppointmentSummaryDto
+            .Select(a => new PatientAppointmentSummaryDto
             {
                 Id = a.Id,
                 ProviderId = a.ProviderId,
@@ -213,7 +214,7 @@ public class PatientDashboardController : ControllerBase
         // Get recent vitals from PROM responses
         var recentVitals = await _context.PromResponses
             .Include(r => r.PromInstance)
-            .ThenInclude(i => i.PromTemplate)
+            .ThenInclude(i => i.Template)
             .Where(r => r.PromInstance.PatientId == userId)
             .OrderByDescending(r => r.CreatedAt)
             .Take(10)
@@ -232,7 +233,7 @@ public class PatientDashboardController : ControllerBase
                 && a.AppointmentType == "Medication Review"
                 && a.Status == AppointmentStatus.Completed
                 && a.Notes != null)
-            .Select(a => new MedicationDto
+            .Select(a => new PatientMedicationDto
             {
                 Name = a.Notes,
                 StartDate = a.ScheduledStart,
@@ -250,9 +251,9 @@ public class PatientDashboardController : ControllerBase
                 .MaxAsync(a => (DateTime?)a.ScheduledEnd),
             ActiveConditions = conditions,
             ActiveMedications = medications,
-            RecentVitals = recentVitals.Select(r => new VitalSignDto
+            RecentVitals = recentVitals.Select(r => new PatientVitalSignDto
             {
-                Type = r.PromInstance.PromTemplate.Name,
+                Type = r.PromInstance.Template.Name,
                 Value = r.Score.ToString(),
                 Unit = "points",
                 RecordedAt = r.CreatedAt
@@ -268,15 +269,16 @@ public class PatientDashboardDto
 {
     public Guid PatientId { get; set; }
     public DateTime LastUpdated { get; set; }
-    public List<AppointmentSummaryDto> UpcomingAppointments { get; set; } = new();
+    public List<PatientAppointmentSummaryDto> UpcomingAppointments { get; set; } = new();
     public List<PromResponseSummaryDto> RecentPromResponses { get; set; } = new();
     public List<MedicationReminderDto> MedicationReminders { get; set; } = new();
     public List<HealthMetricDto> HealthMetrics { get; set; } = new();
     public int UnreadMessagesCount { get; set; }
-    public AppointmentSummaryDto? NextAppointment { get; set; }
+    public PatientAppointmentSummaryDto? NextAppointment { get; set; }
 }
 
-public class AppointmentSummaryDto
+// AppointmentSummaryDto moved to a separate DTO due to differences with SharedDtos version
+public class PatientAppointmentSummaryDto  
 {
     public Guid Id { get; set; }
     public Guid ProviderId { get; set; }
@@ -322,18 +324,19 @@ public class HealthSummaryDto
     public DateTime? DateOfBirth { get; set; }
     public DateTime? LastVisit { get; set; }
     public List<string> ActiveConditions { get; set; } = new();
-    public List<MedicationDto> ActiveMedications { get; set; } = new();
-    public List<VitalSignDto> RecentVitals { get; set; } = new();
+    public List<PatientMedicationDto> ActiveMedications { get; set; } = new();
+    public List<PatientVitalSignDto> RecentVitals { get; set; } = new();
 }
 
-public class MedicationDto
+// Using custom DTOs for this controller due to differences with SharedDtos
+public class PatientMedicationDto
 {
     public string Name { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public string Status { get; set; } = string.Empty;
 }
 
-public class VitalSignDto
+public class PatientVitalSignDto
 {
     public string Type { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;

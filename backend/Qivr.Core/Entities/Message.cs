@@ -36,18 +36,25 @@ public class Conversation : TenantEntity
 
 public class Message : TenantEntity
 {
-    
-    [Required]
-    public Guid ConversationId { get; set; }
-    public virtual Conversation Conversation { get; set; }
+    // Support both conversation model and direct messaging
+    public Guid? ConversationId { get; set; }
+    public virtual Conversation? Conversation { get; set; }
     
     [Required]
     public Guid SenderId { get; set; } // User ID
+    public virtual User? Sender { get; set; }
     
-    [Required]
-    public string SenderName { get; set; }
+    // For direct messaging (when not using conversation model)
+    public Guid DirectRecipientId { get; set; }
+    public virtual User? Recipient { get; set; }
     
-    public string SenderRole { get; set; } // Patient, Provider, Admin
+    public string? SenderName { get; set; }
+    public string? SenderRole { get; set; } // Patient, Provider, Admin
+    
+    // Direct message properties
+    public string? DirectSubject { get; set; }
+    public string? DirectMessageType { get; set; }
+    public string? DirectPriority { get; set; }
     
     [Required]
     public string Content { get; set; }
@@ -64,16 +71,47 @@ public class Message : TenantEntity
     
     // For attachments
     public Guid? AttachmentId { get; set; }
-    public virtual Document Attachment { get; set; }
+    public virtual Document? Attachment { get; set; }
     
     // For system messages
     public bool IsSystemMessage { get; set; } = false;
     
     // Parent message for threading
     public Guid? ParentMessageId { get; set; }
-    public virtual Message ParentMessage { get; set; }
+    public virtual Message? ParentMessage { get; set; }
+    
+    // For appointments
+    public Guid? RelatedAppointmentId { get; set; }
     
     public virtual ICollection<Message> Replies { get; set; } = new List<Message>();
+    
+    // Helper properties for compatibility - prioritize direct properties over conversation
+    public Guid RecipientId 
+    { 
+        get => DirectRecipientId != Guid.Empty ? DirectRecipientId : (Conversation?.ProviderId ?? Conversation?.PatientId ?? Guid.Empty);
+        set => DirectRecipientId = value;
+    }
+    
+    public string? Subject 
+    { 
+        get => DirectSubject ?? Conversation?.Subject;
+        set => DirectSubject = value;
+    }
+    
+    public string MessageType 
+    { 
+        get => DirectMessageType ?? Conversation?.Type.ToString() ?? "General";
+        set => DirectMessageType = value;
+    }
+    
+    public string Priority 
+    { 
+        get => DirectPriority ?? Conversation?.Priority.ToString() ?? "Normal";
+        set => DirectPriority = value;
+    }
+    
+    public bool DeletedByRecipient { get; set; } = false;
+    public bool DeletedBySender { get; set; } = false;
 }
 
 public class ConversationParticipant : TenantEntity

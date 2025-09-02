@@ -1,21 +1,39 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
+import { Box, CircularProgress } from '@mui/material';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
 }
 
-// Simplified for development - always allow access
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const DEV_MODE = true; // Same as in authStore
+  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
   
-  if (DEV_MODE) {
-    // In dev mode, always render children (allow access)
-    return <>{children}</>;
+  useEffect(() => {
+    // Check if user is authenticated on mount
+    checkAuth();
+  }, []);
+  
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
   
-  // In production, would check authentication
-  // For now, just allow access
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
   return <>{children}</>;
 };
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qivr.Core.Entities;
+using Qivr.Api.DTOs;
 
 namespace Qivr.Api.Controllers;
 
@@ -406,25 +407,9 @@ public class ClinicDetailDto : ClinicDto
     public ClinicStatisticsDto Statistics { get; set; } = new();
 }
 
-public class OperatingHoursDto
-{
-    public string Day { get; set; } = string.Empty;
-    public string Open { get; set; } = string.Empty;
-    public string Close { get; set; } = string.Empty;
-}
+// OperatingHoursDto is now in SharedDtos
 
-public class ClinicStatisticsDto
-{
-    public int TotalPatients { get; set; }
-    public int ActivePatients { get; set; }
-    public int TotalProviders { get; set; }
-    public int TotalStaff { get; set; }
-    public int AppointmentsThisMonth { get; set; }
-    public int AppointmentsLastMonth { get; set; }
-    public decimal AveragePatientSatisfaction { get; set; }
-    public int CompletedPromsThisMonth { get; set; }
-    public int PendingProms { get; set; }
-}
+// ClinicStatisticsDto is now in SharedDtos
 
 public class CreateClinicDto
 {
@@ -484,12 +469,7 @@ public class CreateProviderDto
     public string LicenseNumber { get; set; } = string.Empty;
 }
 
-public class ProviderScheduleDto
-{
-    public int DefaultAppointmentDuration { get; set; }
-    public int BufferTime { get; set; }
-    public OperatingHoursDto[] WorkingHours { get; set; } = Array.Empty<OperatingHoursDto>();
-}
+// ProviderScheduleDto is now in SharedDtos
 
 public class ProviderStatisticsDto
 {

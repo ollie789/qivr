@@ -31,6 +31,9 @@ public class QivrDbContext : DbContext
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
+    public DbSet<PromResponse> PromResponses => Set<PromResponse>();
+    public DbSet<PromInstance> PromInstances => Set<PromInstance>();
+    public DbSet<PromTemplate> PromTemplates => Set<PromTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -224,11 +227,25 @@ public class QivrDbContext : DbContext
             entity.ToTable("messages");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.ConversationId, e.SentAt });
+            entity.HasIndex(e => new { e.SenderId, e.DirectRecipientId });
             
+            // Support both conversation-based and direct messaging
             entity.HasOne(e => e.Conversation)
                 .WithMany(c => c.Messages)
                 .HasForeignKey(e => e.ConversationId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Sender)
+                .WithMany()
+                .HasForeignKey(e => e.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.Recipient)
+                .WithMany()
+                .HasForeignKey(e => e.DirectRecipientId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
                 
             entity.HasOne(e => e.Attachment)
                 .WithMany()
@@ -239,6 +256,12 @@ public class QivrDbContext : DbContext
                 .WithMany(m => m.Replies)
                 .HasForeignKey(e => e.ParentMessageId)
                 .OnDelete(DeleteBehavior.SetNull);
+                
+            // Ignore computed properties
+            entity.Ignore(e => e.RecipientId);
+            entity.Ignore(e => e.Subject);
+            entity.Ignore(e => e.MessageType);
+            entity.Ignore(e => e.Priority);
                 
             entity.HasQueryFilter(e => e.TenantId == _tenantId);
         });
@@ -254,6 +277,73 @@ public class QivrDbContext : DbContext
                 .WithMany(c => c.Participants)
                 .HasForeignKey(e => e.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // PromTemplate configuration
+        modelBuilder.Entity<PromTemplate>(entity =>
+        {
+            entity.ToTable("prom_templates");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+            
+            // Configure the Questions property with a custom converter
+            var questionsConverter = new ValueConverter<List<Dictionary<string, object>>, string>(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<Dictionary<string, object>>>(v, (JsonSerializerOptions?)null) ?? new List<Dictionary<string, object>>()
+            );
+            
+            entity.Property(e => e.Questions).HasConversion(questionsConverter);
+            entity.Property(e => e.ScoringMethod).HasConversion(jsonConverter);
+            
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // PromInstance configuration
+        modelBuilder.Entity<PromInstance>(entity =>
+        {
+            entity.ToTable("prom_instances");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId });
+            entity.Property(e => e.Responses).HasConversion(jsonConverter);
+            entity.Property(e => e.Status).HasConversion<string>();
+            
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Template)
+                .WithMany(i => i.Instances)
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // PromResponse configuration
+        modelBuilder.Entity<PromResponse>(entity =>
+        {
+            entity.ToTable("prom_responses");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.CompletedAt });
+            entity.Property(e => e.Answers).HasConversion(jsonConverter);
+            
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.PromInstance)
+                .WithMany()
+                .HasForeignKey(e => e.PromInstanceId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Appointment)
+                .WithMany()
+                .HasForeignKey(e => e.AppointmentId)
+                .OnDelete(DeleteBehavior.SetNull);
                 
             entity.HasQueryFilter(e => e.TenantId == _tenantId);
         });

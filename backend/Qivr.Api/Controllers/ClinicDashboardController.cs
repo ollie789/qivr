@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Qivr.Api.DTOs;
 using Qivr.Api.Services;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
@@ -116,7 +117,7 @@ public class ClinicDashboardController : ControllerBase
             var recentPromSubmissions = await _context.PromResponses
                 .Include(r => r.PromInstance)
                 .ThenInclude(i => i.Patient)
-                .Include(r => r.PromInstance.PromTemplate)
+                .Include(r => r.PromInstance.Template)
                 .Where(r => _context.Appointments
                     .Any(a => a.PatientId == r.PromInstance.PatientId 
                         && a.ProviderId == providerId))
@@ -126,7 +127,7 @@ public class ClinicDashboardController : ControllerBase
                 {
                     Id = r.Id,
                     PatientName = $"{r.PromInstance.Patient.FirstName} {r.PromInstance.Patient.LastName}",
-                    TemplateName = r.PromInstance.PromTemplate.Name,
+                    TemplateName = r.PromInstance.Template.Name,
                     SubmittedAt = r.CreatedAt,
                     Score = r.Score,
                     RequiresReview = r.Score > 70 // High scores may need review
@@ -312,7 +313,7 @@ public class ClinicDashboardController : ControllerBase
         var completedInstances = await _context.PromInstances
             .CountAsync(i => patientIds.Contains(i.PatientId)
                 && i.CreatedAt >= start
-                && i.Status == "Completed");
+                && i.Status == PromStatus.Completed);
                 
         return (decimal)completedInstances * 100 / totalInstances;
     }
@@ -346,18 +347,7 @@ public class ClinicDashboardDto
     public ClinicAppointmentDto? NextAppointment { get; set; }
 }
 
-public class ClinicAppointmentDto
-{
-    public Guid Id { get; set; }
-    public Guid PatientId { get; set; }
-    public string PatientName { get; set; } = string.Empty;
-    public DateTime ScheduledStart { get; set; }
-    public DateTime ScheduledEnd { get; set; }
-    public string AppointmentType { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
-    public string Location { get; set; } = string.Empty;
-    public string? Notes { get; set; }
-}
+// ClinicAppointmentDto is now in SharedDtos
 
 public class PatientQueueItemDto
 {
@@ -370,15 +360,7 @@ public class PatientQueueItemDto
     public int WaitTime { get; set; }
 }
 
-public class ClinicStatisticsDto
-{
-    public int TotalAppointmentsToday { get; set; }
-    public int CompletedAppointments { get; set; }
-    public int PendingAppointments { get; set; }
-    public int AverageWaitTime { get; set; }
-    public int TotalPatientsThisWeek { get; set; }
-    public decimal NoShowRate { get; set; }
-}
+// ClinicStatisticsDto is now in SharedDtos
 
 public class PromSubmissionDto
 {
@@ -390,11 +372,7 @@ public class PromSubmissionDto
     public bool RequiresReview { get; set; }
 }
 
-public class ProviderScheduleDto
-{
-    public DateTime Date { get; set; }
-    public List<ClinicAppointmentDto> Appointments { get; set; } = new();
-}
+// ProviderScheduleDto is now in SharedDtos
 
 public class ClinicMetricsDto
 {

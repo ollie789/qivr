@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qivr.Core.Entities;
+using Qivr.Api.DTOs;
 
 namespace Qivr.Api.Controllers;
 
@@ -317,14 +318,7 @@ public class DemographicsDto
 	public AddressDto Address { get; set; } = new();
 }
 
-public class AddressDto
-{
-	public string Street { get; set; } = string.Empty;
-	public string City { get; set; } = string.Empty;
-	public string State { get; set; } = string.Empty;
-	public string PostalCode { get; set; } = string.Empty;
-	public string Country { get; set; } = string.Empty;
-}
+// AddressDto is now in SharedDtos
 
 public class MedicalHistoryDto
 {
@@ -344,35 +338,11 @@ public class MedicalHistoryUpdateDto
 	public string[]? FamilyHistory { get; set; }
 }
 
-public class MedicationDto
-{
-	public string Name { get; set; } = string.Empty;
-	public string Dosage { get; set; } = string.Empty;
-	public string Frequency { get; set; } = string.Empty;
-}
+// MedicationDto is now in SharedDtos
 
-public class VitalSignDto
-{
-	public Guid? Id { get; set; }
-	public DateTime RecordedAt { get; set; }
-	public string? BloodPressure { get; set; }
-	public int? HeartRate { get; set; }
-	public decimal? Temperature { get; set; }
-	public decimal? Weight { get; set; }
-	public decimal? Height { get; set; }
-	public decimal? Bmi { get; set; }
-	public int? OxygenSaturation { get; set; }
-}
+// VitalSignDto is now in SharedDtos
 
-public class AppointmentSummaryDto
-{
-	public Guid Id { get; set; }
-	public DateTime Date { get; set; }
-	public string Provider { get; set; } = string.Empty;
-	public string Type { get; set; } = string.Empty;
-	public string Status { get; set; } = string.Empty;
-	public string Notes { get; set; } = string.Empty;
-}
+// AppointmentSummaryDto is now in SharedDtos
 
 public class PromResultSummaryDto
 {

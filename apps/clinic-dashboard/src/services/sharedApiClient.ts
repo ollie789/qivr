@@ -1,4 +1,4 @@
-import { createAxiosInstance, TokenManager, handleApiError, isApiError, ApiErrorType } from '../../../shared/axiosConfig';
+import { createAxiosInstance, TokenManager, handleApiError, isApiError, ApiErrorType } from '@shared/axiosConfig';
 import { useAuthStore } from '../stores/authStore';
 
 // Determine the correct API URL based on environment
@@ -7,12 +7,18 @@ const getApiUrl = () => {
   const isDevelopment = import.meta.env?.MODE === 'development';
   
   if (viteApiUrl) {
-    // Clean up the URL and ensure it ends with /api
+    // Use the API URL as-is if it already contains /api
+    // Otherwise append /api to the base URL
     const cleanUrl = viteApiUrl.replace(/\/+$/, '');
-    return cleanUrl.includes('/api') ? cleanUrl : `${cleanUrl}/api`;
+    if (cleanUrl.includes('/api')) {
+      return cleanUrl;
+    }
+    // Don't add /api twice
+    return `${cleanUrl}/api`;
   }
   
-  return isDevelopment ? 'http://localhost:5001/api' : 'https://api.qivr.com/api';
+  // Default to port 5000 for development (where the API is actually running)
+  return isDevelopment ? 'http://localhost:5000/api' : 'https://api.qivr.com/api';
 };
 
 // Custom token manager for clinic dashboard

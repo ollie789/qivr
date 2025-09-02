@@ -7,6 +7,7 @@ interface User {
   name: string;
   email: string;
   clinicId?: string;
+  tenantId?: string;
   clinicName?: string;
   role: 'admin' | 'practitioner' | 'receptionist' | 'manager';
   employeeId?: string;
@@ -27,13 +28,24 @@ interface AuthState {
   verifyMFASetup: (code: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User) => void;
+  setToken: (token: string | null) => void;
   checkAuth: () => Promise<void>;
   refreshToken: () => Promise<void>;
 }
 
 // Development mode - set to false to use real authentication
 const DEV_MODE = false;
-const DEV_USER = null;
+const DEV_USER: User = {
+  id: 'dev-user-123',
+  name: 'Dr. Sarah Johnson',
+  email: 'sarah.johnson@clinic.com',
+  clinicId: '11111111-1111-1111-1111-111111111111',
+  clinicName: 'Springfield Medical Center',
+  role: 'admin',
+  employeeId: 'EMP001',
+  licenseNumber: 'LIC123456',
+  specialization: 'General Practice',
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -48,6 +60,23 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
+          // Use mock authentication in development
+          if (DEV_MODE) {
+            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+            const mockToken = 'mock-jwt-token-' + Date.now();
+            set({
+              user: DEV_USER,
+              token: mockToken,
+              isAuthenticated: true,
+              mfaRequired: false,
+              mfaSetupRequired: false,
+            });
+            localStorage.setItem('mockToken', mockToken);
+            localStorage.setItem('mockUser', JSON.stringify(DEV_USER));
+            set({ isLoading: false });
+            return;
+          }
+          
           const result = await jwtAuthService.signIn(email, password);
           
           if (result.isSignedIn) {
@@ -60,6 +89,7 @@ export const useAuthStore = create<AuthState>()(
                 name: `${userAttributes.given_name} ${userAttributes.family_name}`,
                 email: userAttributes.email || '',
                 clinicId: userAttributes['custom:clinic_id'],
+                tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'],
                 role: userAttributes['custom:role'] || 'practitioner',
                 employeeId: userAttributes['custom:employee_id'],
                 licenseNumber: userAttributes['custom:license_number'],
@@ -102,6 +132,7 @@ export const useAuthStore = create<AuthState>()(
               name: `${userAttributes.given_name} ${userAttributes.family_name}`,
               email: userAttributes.email || '',
               clinicId: userAttributes['custom:clinic_id'],
+              tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'],
               role: userAttributes['custom:role'] || 'practitioner',
               employeeId: userAttributes['custom:employee_id'],
               licenseNumber: userAttributes['custom:license_number'],
@@ -141,7 +172,12 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         set({ isLoading: true });
         try {
-          await jwtAuthService.signOut();
+          if (DEV_MODE) {
+            localStorage.removeItem('mockToken');
+            localStorage.removeItem('mockUser');
+          } else {
+            await jwtAuthService.signOut();
+          }
         } finally {
           set({
             user: null,
@@ -158,9 +194,34 @@ export const useAuthStore = create<AuthState>()(
         set({ user });
       },
 
+      setToken: (token: string | null) => {
+        set({ token });
+      },
+
       checkAuth: async () => {
         set({ isLoading: true });
         try {
+          // Use mock authentication in development
+          if (DEV_MODE) {
+            const mockToken = localStorage.getItem('mockToken');
+            const mockUser = localStorage.getItem('mockUser');
+            if (mockToken && mockUser) {
+              set({
+                user: JSON.parse(mockUser),
+                token: mockToken,
+                isAuthenticated: true,
+              });
+            } else {
+              set({
+                user: null,
+                token: null,
+                isAuthenticated: false,
+              });
+            }
+            set({ isLoading: false });
+            return;
+          }
+          
           const isAuth = await jwtAuthService.isAuthenticated();
           
           if (isAuth) {
@@ -173,6 +234,7 @@ export const useAuthStore = create<AuthState>()(
                 name: `${userAttributes.given_name} ${userAttributes.family_name}`,
                 email: userAttributes.email || '',
                 clinicId: userAttributes['custom:clinic_id'],
+                tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'],
                 role: userAttributes['custom:role'] || 'practitioner',
                 employeeId: userAttributes['custom:employee_id'],
                 licenseNumber: userAttributes['custom:license_number'],

@@ -314,16 +314,16 @@ public class IntakeController : ControllerBase
                 }
             };
 
-            var sendRequest = new SendMessageRequest
+            var sendRequest = new Amazon.SQS.Model.SendMessageRequest
             {
                 QueueUrl = _sqsOptions.QueueUrl,
                 MessageBody = JsonSerializer.Serialize(message),
-                MessageAttributes = new Dictionary<string, MessageAttributeValue>
+                MessageAttributes = new Dictionary<string, Amazon.SQS.Model.MessageAttributeValue>
                 {
-                    ["IntakeId"] = new MessageAttributeValue { StringValue = intakeId.ToString(), DataType = "String" },
-                    ["TenantId"] = new MessageAttributeValue { StringValue = tenantId.ToString(), DataType = "String" },
-                    ["MessageType"] = new MessageAttributeValue { StringValue = "IntakeSubmission", DataType = "String" },
-                    ["x-request-id"] = new MessageAttributeValue { StringValue = requestId, DataType = "String" }
+                    ["IntakeId"] = new Amazon.SQS.Model.MessageAttributeValue { StringValue = intakeId.ToString(), DataType = "String" },
+                    ["TenantId"] = new Amazon.SQS.Model.MessageAttributeValue { StringValue = tenantId.ToString(), DataType = "String" },
+                    ["MessageType"] = new Amazon.SQS.Model.MessageAttributeValue { StringValue = "IntakeSubmission", DataType = "String" },
+                    ["x-request-id"] = new Amazon.SQS.Model.MessageAttributeValue { StringValue = requestId, DataType = "String" }
                 }
             };
 

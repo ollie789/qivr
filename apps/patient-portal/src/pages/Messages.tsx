@@ -241,11 +241,13 @@ export const Messages = () => {
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/messages', {
+      const response = await fetch('http://localhost:5001/api/messages', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'X-Tenant-Id': localStorage.getItem('tenantId') || '11111111-1111-1111-1111-111111111111'
+        },
+        credentials: 'include'
       });
       
       if (!response.ok) {

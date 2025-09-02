@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# QIVR Services Startup Script - STANDARDIZED PORTS
+# ================================================
+# Backend API:      5000 (DO NOT CHANGE)
+# Patient Portal:   3000 (DO NOT CHANGE)  
+# Clinic Dashboard: 3001 (DO NOT CHANGE)
+# ================================================
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -28,22 +35,23 @@ kill_port() {
 mkdir -p logs
 mkdir -p .pids
 
-# Kill any existing processes on our ports
+# Kill any existing processes on our STANDARDIZED ports
 echo -e "${YELLOW}Checking for existing processes...${NC}"
-kill_port 5000  # Kill if still running on old port
-kill_port 5001  # Kill if running on new port
-kill_port 3000
-kill_port 3001
-kill_port 3002
-kill_port 5173  # Also kill Widget if running on default Vite port
+kill_port 5000  # Backend API
+kill_port 3000  # Patient Portal
+kill_port 3001  # Clinic Dashboard
+# Also kill any common dev ports that might be in use
+kill_port 5001  # Old backend port
+kill_port 3002  # Old patient portal port
+kill_port 5173  # Default Vite port
 
 # Get the project root directory
 PROJECT_ROOT="$(pwd)"
 
 # Start Backend API
-echo -e "\n${GREEN}1. Starting Backend API (port 5001)...${NC}"
+echo -e "\n${GREEN}1. Starting Backend API (port 5000)...${NC}"
 cd "$PROJECT_ROOT/backend"
-ASPNETCORE_ENVIRONMENT=Development dotnet watch run --project Qivr.Api > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
+ASPNETCORE_ENVIRONMENT=Development dotnet watch run --project Qivr.Api --urls "http://localhost:5000" > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
 BACKEND_PID=$!
 echo "   Backend PID: $BACKEND_PID"
 
@@ -52,8 +60,8 @@ echo "   Waiting for backend to start..."
 sleep 5
 
 # Check if backend is running
-if check_port 5001; then
-    echo -e "   ${GREEN}✓ Backend API is running on http://localhost:5001${NC}"
+if check_port 5000; then
+    echo -e "   ${GREEN}✓ Backend API is running on http://localhost:5000${NC}"
 else
     echo -e "   ${RED}✗ Backend API failed to start. Check logs/backend.log${NC}"
 fi
@@ -66,18 +74,20 @@ CLINIC_PID=$!
 echo "   Clinic Dashboard PID: $CLINIC_PID"
 
 # Start Patient Portal
-echo -e "\n${GREEN}3. Starting Patient Portal (port 3002)...${NC}"
+echo -e "\n${GREEN}3. Starting Patient Portal (port 3000)...${NC}"
 cd "$PROJECT_ROOT/apps/patient-portal"
-npm run dev > "$PROJECT_ROOT/logs/patient-portal.log" 2>&1 &
+PORT=3000 npm run dev > "$PROJECT_ROOT/logs/patient-portal.log" 2>&1 &
 PATIENT_PID=$!
 echo "   Patient Portal PID: $PATIENT_PID"
 
-# Start Widget
-echo -e "\n${GREEN}4. Starting Widget (port 3000)...${NC}"
-cd "$PROJECT_ROOT/apps/widget"
-npm run dev > "$PROJECT_ROOT/logs/widget.log" 2>&1 &
-WIDGET_PID=$!
-echo "   Widget PID: $WIDGET_PID"
+# Start Widget (if exists)
+if [ -d "$PROJECT_ROOT/apps/widget" ]; then
+    echo -e "\n${GREEN}4. Starting Widget (port 3003)...${NC}"
+    cd "$PROJECT_ROOT/apps/widget"
+    PORT=3003 npm run dev > "$PROJECT_ROOT/logs/widget.log" 2>&1 &
+    WIDGET_PID=$!
+    echo "   Widget PID: $WIDGET_PID"
+fi
 
 # Wait for frontends to start
 echo -e "\n${YELLOW}Waiting for frontend apps to start...${NC}"
@@ -86,8 +96,8 @@ sleep 12  # Give Widget more time to start with new config
 # Check status of all apps
 echo -e "\n${GREEN}====== Application Status ======${NC}"
 
-if check_port 5001; then
-    echo -e "✓ Backend API:      ${GREEN}http://localhost:5001${NC}"
+if check_port 5000; then
+    echo -e "✓ Backend API:      ${GREEN}http://localhost:5000${NC}"
 else
     echo -e "✗ Backend API:      ${RED}Not running${NC}"
 fi
@@ -98,20 +108,18 @@ else
     echo -e "✗ Clinic Dashboard: ${RED}Not running${NC}"
 fi
 
-if check_port 3002; then
-    echo -e "✓ Patient Portal:   ${GREEN}http://localhost:3002${NC}"
+if check_port 3000; then
+    echo -e "✓ Patient Portal:   ${GREEN}http://localhost:3000${NC}"
 else
     echo -e "✗ Patient Portal:   ${RED}Not running${NC}"
 fi
 
-if check_port 3000; then
-    echo -e "✓ Widget:           ${GREEN}http://localhost:3000${NC}"
-else
-    echo -e "✗ Widget:           ${RED}Not running${NC}"
+if [ -d "$PROJECT_ROOT/apps/widget" ] && check_port 3003; then
+    echo -e "✓ Widget:           ${GREEN}http://localhost:3003${NC}"
 fi
 
 echo -e "\n${GREEN}====== Additional Services ======${NC}"
-echo -e "Swagger UI:         ${GREEN}http://localhost:5001/swagger${NC}"
+echo -e "Swagger UI:         ${GREEN}http://localhost:5000/swagger${NC}"
 echo -e "pgAdmin:            ${GREEN}http://localhost:8081${NC}"
 echo -e "MinIO Console:      ${GREEN}http://localhost:9001${NC}"
 echo -e "Mailhog:            ${GREEN}http://localhost:8025${NC}"

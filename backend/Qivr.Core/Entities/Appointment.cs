@@ -38,6 +38,11 @@ public class Appointment : TenantEntity
     
     public TimeSpan Duration => ScheduledEnd - ScheduledStart;
     public bool IsUpcoming => ScheduledStart > DateTime.UtcNow && Status == AppointmentStatus.Scheduled;
+    
+    // Helper property for Location string
+    public string? Location => LocationType == LocationType.InPerson 
+        ? LocationDetails?.GetValueOrDefault("address")?.ToString() 
+        : "Telehealth";
 }
 
 public enum AppointmentStatus
@@ -45,6 +50,7 @@ public enum AppointmentStatus
     Requested,
     Scheduled,
     Confirmed,
+    CheckedIn,
     Completed,
     Cancelled,
     NoShow
