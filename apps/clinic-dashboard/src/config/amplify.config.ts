@@ -40,7 +40,7 @@ const amplifyConfig = {
   API: {
     REST: {
       QivrAPI: {
-        endpoint: import.meta.env.VITE_API_URL || 'http://localhost:5001',
+        endpoint: import.meta.env.VITE_API_URL || 'http://localhost:5050/api',
         region: 'ap-southeast-2',
       },
     },

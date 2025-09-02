@@ -17,8 +17,8 @@ const getApiUrl = () => {
     return `${cleanUrl}/api`;
   }
   
-  // Default to port 5000 for development (where the API is actually running)
-  return isDevelopment ? 'http://localhost:5000/api' : 'https://api.qivr.com/api';
+  // Default to port 5050 for development (avoids macOS AirPlay conflict)
+  return isDevelopment ? 'http://localhost:5050/api' : 'https://api.qivr.com/api';
 };
 
 // Custom token manager for clinic dashboard

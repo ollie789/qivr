@@ -49,16 +49,23 @@ public class CognitoAuthService : ICognitoAuthService
     {
         try
         {
+            var authParams = new Dictionary<string, string>
+            {
+                {"USERNAME", username},
+                {"PASSWORD", password}
+            };
+            
+            // Only add SECRET_HASH if client secret is configured
+            if (!string.IsNullOrEmpty(_settings.UserPoolClientSecret))
+            {
+                authParams["SECRET_HASH"] = CalculateSecretHash(username);
+            }
+            
             var request = new InitiateAuthRequest
             {
                 AuthFlow = AuthFlowType.USER_PASSWORD_AUTH,
                 ClientId = _settings.UserPoolClientId,
-                AuthParameters = new Dictionary<string, string>
-                {
-                    {"USERNAME", username},
-                    {"PASSWORD", password},
-                    {"SECRET_HASH", CalculateSecretHash(username)}
-                }
+                AuthParameters = authParams
             };
 
             var response = await _cognitoClient.InitiateAuthAsync(request);
@@ -103,15 +110,22 @@ public class CognitoAuthService : ICognitoAuthService
     {
         try
         {
+            var authParams = new Dictionary<string, string>
+            {
+                {"REFRESH_TOKEN", refreshToken}
+            };
+            
+            // Only add SECRET_HASH if client secret is configured
+            if (!string.IsNullOrEmpty(_settings.UserPoolClientSecret))
+            {
+                authParams["SECRET_HASH"] = CalculateSecretHash(_settings.UserPoolClientId);
+            }
+            
             var request = new InitiateAuthRequest
             {
                 AuthFlow = AuthFlowType.REFRESH_TOKEN_AUTH,
                 ClientId = _settings.UserPoolClientId,
-                AuthParameters = new Dictionary<string, string>
-                {
-                    {"REFRESH_TOKEN", refreshToken},
-                    {"SECRET_HASH", CalculateSecretHash(_settings.UserPoolClientId)}
-                }
+                AuthParameters = authParams
             };
 
             var response = await _cognitoClient.InitiateAuthAsync(request);
@@ -140,7 +154,6 @@ public class CognitoAuthService : ICognitoAuthService
                 ClientId = _settings.UserPoolClientId,
                 Username = request.Username,
                 Password = request.Password,
-                SecretHash = CalculateSecretHash(request.Username),
                 UserAttributes = new List<AttributeType>
                 {
                     new() { Name = "email", Value = request.Email },
@@ -151,6 +164,12 @@ public class CognitoAuthService : ICognitoAuthService
                     new() { Name = "custom:role", Value = request.Role }
                 }
             };
+            
+            // Only add SECRET_HASH if client secret is configured
+            if (!string.IsNullOrEmpty(_settings.UserPoolClientSecret))
+            {
+                signUpRequest.SecretHash = CalculateSecretHash(request.Username);
+            }
 
             var response = await _cognitoClient.SignUpAsync(signUpRequest);
             
@@ -177,9 +196,14 @@ public class CognitoAuthService : ICognitoAuthService
             {
                 ClientId = _settings.UserPoolClientId,
                 Username = username,
-                ConfirmationCode = confirmationCode,
-                SecretHash = CalculateSecretHash(username)
+                ConfirmationCode = confirmationCode
             };
+            
+            // Only add SECRET_HASH if client secret is configured
+            if (!string.IsNullOrEmpty(_settings.UserPoolClientSecret))
+            {
+                request.SecretHash = CalculateSecretHash(username);
+            }
 
             await _cognitoClient.ConfirmSignUpAsync(request);
             return true;
@@ -198,9 +222,14 @@ public class CognitoAuthService : ICognitoAuthService
             var request = new ForgotPasswordRequest
             {
                 ClientId = _settings.UserPoolClientId,
-                Username = username,
-                SecretHash = CalculateSecretHash(username)
+                Username = username
             };
+            
+            // Only add SECRET_HASH if client secret is configured
+            if (!string.IsNullOrEmpty(_settings.UserPoolClientSecret))
+            {
+                request.SecretHash = CalculateSecretHash(username);
+            }
 
             await _cognitoClient.ForgotPasswordAsync(request);
             return true;
@@ -221,9 +250,14 @@ public class CognitoAuthService : ICognitoAuthService
                 ClientId = _settings.UserPoolClientId,
                 Username = username,
                 ConfirmationCode = confirmationCode,
-                Password = newPassword,
-                SecretHash = CalculateSecretHash(username)
+                Password = newPassword
             };
+            
+            // Only add SECRET_HASH if client secret is configured
+            if (!string.IsNullOrEmpty(_settings.UserPoolClientSecret))
+            {
+                request.SecretHash = CalculateSecretHash(username);
+            }
 
             await _cognitoClient.ConfirmForgotPasswordAsync(request);
             return true;
@@ -305,16 +339,23 @@ public class CognitoAuthService : ICognitoAuthService
     {
         try
         {
+            var challengeResponses = new Dictionary<string, string>
+            {
+                {"SMS_MFA_CODE", mfaCode}
+            };
+            
+            // Only add SECRET_HASH if client secret is configured
+            if (!string.IsNullOrEmpty(_settings.UserPoolClientSecret))
+            {
+                challengeResponses["SECRET_HASH"] = CalculateSecretHash(_settings.UserPoolClientId);
+            }
+            
             var request = new RespondToAuthChallengeRequest
             {
                 ClientId = _settings.UserPoolClientId,
                 ChallengeName = ChallengeNameType.SMS_MFA,
                 Session = session,
-                ChallengeResponses = new Dictionary<string, string>
-                {
-                    {"SMS_MFA_CODE", mfaCode},
-                    {"SECRET_HASH", CalculateSecretHash(_settings.UserPoolClientId)}
-                }
+                ChallengeResponses = challengeResponses
             };
 
             var response = await _cognitoClient.RespondToAuthChallengeAsync(request);

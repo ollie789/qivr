@@ -182,20 +182,6 @@ export default function Login() {
               </Link>
             </Box>
 
-            {/* Test Credentials for Development */}
-            {process.env.NODE_ENV === 'development' && (
-              <Box sx={{ mt: 4, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-                <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                  <strong>Test Credentials (Dev Only):</strong>
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Email: clinic@qivr.health
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Password: Clinic123!
-                </Typography>
-              </Box>
-            )}
           </Box>
         </Paper>
       </Box>

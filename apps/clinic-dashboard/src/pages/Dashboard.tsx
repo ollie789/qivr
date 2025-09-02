@@ -17,6 +17,10 @@ import {
   ListItemText,
   Skeleton,
   Alert,
+  Paper,
+  FormControl,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -29,12 +33,36 @@ import {
   CheckCircle as CheckCircleIcon,
   Star as StarIcon,
 } from '@mui/icons-material';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  RadarChart,
+  RadarDataPoint,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from 'recharts';
 import { useAuthStore } from '../stores/authStore';
 import dashboardApi from '../services/dashboardApi';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const [chartPeriod, setChartPeriod] = React.useState('7d');
 
   // Fetch dashboard stats
   const { data: statsData, isLoading: statsLoading } = useQuery({
@@ -246,29 +274,194 @@ const Dashboard: React.FC = () => {
           </Card>
         </Grid>
 
-        {/* Performance Chart */}
+        {/* Analytics Charts */}
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  Patient Appointments Trend
+                </Typography>
+                <FormControl size="small">
+                  <Select
+                    value={chartPeriod}
+                    onChange={(e) => setChartPeriod(e.target.value)}
+                  >
+                    <MenuItem value="7d">Last 7 days</MenuItem>
+                    <MenuItem value="30d">Last 30 days</MenuItem>
+                    <MenuItem value="90d">Last 90 days</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart
+                  data={[
+                    { name: 'Mon', appointments: 12, completed: 10, cancelled: 2 },
+                    { name: 'Tue', appointments: 15, completed: 14, cancelled: 1 },
+                    { name: 'Wed', appointments: 18, completed: 15, cancelled: 3 },
+                    { name: 'Thu', appointments: 14, completed: 12, cancelled: 2 },
+                    { name: 'Fri', appointments: 20, completed: 18, cancelled: 2 },
+                    { name: 'Sat', appointments: 8, completed: 7, cancelled: 1 },
+                    { name: 'Sun', appointments: 5, completed: 5, cancelled: 0 },
+                  ]}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorAppointments" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="appointments" stroke="#2563eb" fillOpacity={1} fill="url(#colorAppointments)" />
+                  <Area type="monotone" dataKey="completed" stroke="#10b981" fillOpacity={1} fill="url(#colorCompleted)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* PROM Response Rate */}
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                PROM Response Rate
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Completed', value: 68, color: '#10b981' },
+                      { name: 'In Progress', value: 15, color: '#f59e0b' },
+                      { name: 'Not Started', value: 17, color: '#ef4444' },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(entry) => `${entry.name}: ${entry.value}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {[
+                      { name: 'Completed', value: 68, color: '#10b981' },
+                      { name: 'In Progress', value: 15, color: '#f59e0b' },
+                      { name: 'Not Started', value: 17, color: '#ef4444' },
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Overall response rate: <strong>68%</strong>
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Average completion time: <strong>8.5 min</strong>
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Patient Conditions Distribution */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Patient Conditions Distribution
+              </Typography>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart
+                  data={[
+                    { condition: 'Hypertension', count: 45 },
+                    { condition: 'Diabetes', count: 38 },
+                    { condition: 'Asthma', count: 28 },
+                    { condition: 'Arthritis', count: 22 },
+                    { condition: 'Depression', count: 18 },
+                    { condition: 'Anxiety', count: 15 },
+                  ]}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="condition" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#7c3aed" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Clinic Performance Metrics */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Clinic Performance Metrics
+              </Typography>
+              <ResponsiveContainer width="100%" height={250}>
+                <RadarChart data={[
+                  { metric: 'Patient Satisfaction', value: 85 },
+                  { metric: 'Wait Time', value: 75 },
+                  { metric: 'PROM Completion', value: 68 },
+                  { metric: 'Appointment Adherence', value: 90 },
+                  { metric: 'Treatment Efficacy', value: 82 },
+                  { metric: 'Staff Efficiency', value: 78 },
+                ]}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="metric" />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                  <Radar name="Performance" dataKey="value" stroke="#2563eb" fill="#2563eb" fillOpacity={0.6} />
+                  <Tooltip />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Weekly Activity Heatmap */}
         <Grid item xs={12}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Weekly Performance
+                Weekly Activity Overview
               </Typography>
-              <Box sx={{ mt: 3 }}>
-                <Grid container spacing={2}>
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day, index) => (
-                    <Grid item key={day} xs>
-                      <Typography variant="caption" display="block" textAlign="center" gutterBottom>
-                        {day}
-                      </Typography>
-                      <LinearProgress
-                        variant="determinate"
-                        value={60 + Math.random() * 30}
-                        sx={{ height: 100, borderRadius: 1 }}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart
+                  data={[
+                    { time: '8AM', Mon: 4, Tue: 3, Wed: 5, Thu: 4, Fri: 6, Sat: 2, Sun: 1 },
+                    { time: '10AM', Mon: 12, Tue: 15, Wed: 14, Thu: 13, Fri: 16, Sat: 8, Sun: 4 },
+                    { time: '12PM', Mon: 8, Tue: 10, Wed: 9, Thu: 11, Fri: 12, Sat: 5, Sun: 3 },
+                    { time: '2PM', Mon: 15, Tue: 14, Wed: 16, Thu: 15, Fri: 14, Sat: 6, Sun: 2 },
+                    { time: '4PM', Mon: 10, Tue: 12, Wed: 11, Thu: 10, Fri: 8, Sat: 3, Sun: 1 },
+                    { time: '6PM', Mon: 5, Tue: 6, Wed: 5, Thu: 4, Fri: 3, Sat: 1, Sun: 0 },
+                  ]}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="Mon" stroke="#8884d8" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Tue" stroke="#82ca9d" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Wed" stroke="#ffc658" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Thu" stroke="#ff7c7c" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Fri" stroke="#8dd1e1" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </Grid>

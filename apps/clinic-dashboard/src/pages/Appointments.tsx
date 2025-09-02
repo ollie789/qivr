@@ -29,6 +29,8 @@ import {
   Divider,
   Stack,
   Alert,
+  Tab,
+  Tabs,
 } from '@mui/material';
 import {
   CalendarMonth as CalendarIcon,
@@ -49,6 +51,8 @@ import {
   Cancel,
   Pending,
   Circle,
+  ViewList as ListIcon,
+  ViewModule as GridIcon,
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -59,6 +63,11 @@ import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSa
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import apiClient from '../services/sharedApiClient';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import listPlugin from '@fullcalendar/list';
 
 interface Appointment {
   id: string;
@@ -100,6 +109,8 @@ const Appointments: React.FC = () => {
   const [selectedProvider, setSelectedProvider] = useState<string>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [viewTab, setViewTab] = useState(0); // 0 = calendar, 1 = list
+  const calendarRef = React.useRef<any>(null);
 
   // Form state for new appointment
   const [newAppointment, setNewAppointment] = useState({
@@ -541,18 +552,204 @@ const Appointments: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* View Tabs */}
+        <Card sx={{ mb: 3 }}>
+          <Tabs value={viewTab} onChange={(e, v) => setViewTab(v)}>
+            <Tab icon={<CalendarIcon />} label="Calendar View" />
+            <Tab icon={<GridIcon />} label="Grid View" />
+            <Tab icon={<ListIcon />} label="List View" />
+          </Tabs>
+        </Card>
+
         {/* Main Content */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={9}>
+          <Grid item xs={12} md={viewTab === 0 ? 12 : 9}>
             {isLoading ? (
               <Paper sx={{ p: 3, textAlign: 'center' }}>
                 <Typography>Loading appointments...</Typography>
               </Paper>
             ) : (
               <>
-                {viewMode === 'day' && renderDayView()}
-                {viewMode === 'week' && renderWeekView()}
-                {viewMode === 'month' && renderMonthView()}
+                {viewTab === 0 ? (
+                  // FullCalendar View
+                  <Card>
+                    <CardContent sx={{ height: 700 }}>
+                      <FullCalendar
+                        ref={calendarRef}
+                        plugins={[
+                          dayGridPlugin,
+                          timeGridPlugin,
+                          interactionPlugin,
+                          listPlugin
+                        ]}
+                        initialView={viewMode === 'day' ? 'timeGridDay' : viewMode === 'week' ? 'timeGridWeek' : 'dayGridMonth'}
+                        headerToolbar={{
+                          left: 'prev,next today',
+                          center: 'title',
+                          right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                        }}
+                        events={appointments.map((apt: Appointment) => ({
+                          id: apt.id,
+                          title: apt.patientName,
+                          start: apt.scheduledStart,
+                          end: apt.scheduledEnd,
+                          backgroundColor: getAppointmentColor(apt.appointmentType),
+                          borderColor: getAppointmentColor(apt.appointmentType),
+                          extendedProps: {
+                            ...apt
+                          }
+                        }))}
+                        eventClick={(info) => {
+                          setSelectedAppointment(info.event.extendedProps as Appointment);
+                        }}
+                        dateClick={(info) => {
+                          const clickedDate = info.date;
+                          setNewAppointment({
+                            ...newAppointment,
+                            date: clickedDate,
+                            startTime: clickedDate,
+                            endTime: new Date(clickedDate.getTime() + 30 * 60000),
+                          });
+                          setCreateDialogOpen(true);
+                        }}
+                        slotMinTime="08:00:00"
+                        slotMaxTime="20:00:00"
+                        slotDuration="00:30:00"
+                        height="100%"
+                        businessHours={{
+                          daysOfWeek: [1, 2, 3, 4, 5, 6],
+                          startTime: '08:00',
+                          endTime: '18:00',
+                        }}
+                        eventTimeFormat={{
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          meridiem: 'short'
+                        }}
+                        dayMaxEvents={true}
+                        weekends={true}
+                        editable={true}
+                        selectable={true}
+                        selectMirror={true}
+                        select={(info) => {
+                          setNewAppointment({
+                            ...newAppointment,
+                            date: info.start,
+                            startTime: info.start,
+                            endTime: info.end,
+                          });
+                          setCreateDialogOpen(true);
+                        }}
+                        eventDrop={async (info) => {
+                          try {
+                            // Update appointment time via API
+                            await apiClient.put(`/api/appointments/${info.event.id}`, {
+                              scheduledStart: info.event.start?.toISOString(),
+                              scheduledEnd: info.event.end?.toISOString(),
+                            });
+                            enqueueSnackbar('Appointment rescheduled', { variant: 'success' });
+                          } catch (error) {
+                            info.revert();
+                            enqueueSnackbar('Failed to reschedule appointment', { variant: 'error' });
+                          }
+                        }}
+                        eventResize={async (info) => {
+                          try {
+                            await apiClient.put(`/api/appointments/${info.event.id}`, {
+                              scheduledEnd: info.event.end?.toISOString(),
+                            });
+                            enqueueSnackbar('Appointment duration updated', { variant: 'success' });
+                          } catch (error) {
+                            info.revert();
+                            enqueueSnackbar('Failed to update appointment', { variant: 'error' });
+                          }
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                ) : viewTab === 1 ? (
+                  // Grid View
+                  <>
+                    {viewMode === 'day' && renderDayView()}
+                    {viewMode === 'week' && renderWeekView()}
+                    {viewMode === 'month' && renderMonthView()}
+                  </>
+                ) : (
+                  // List View
+                  <Card>
+                    <CardContent>
+                      <List>
+                        {appointments
+                          .sort((a: Appointment, b: Appointment) => 
+                            new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime()
+                          )
+                          .map((apt: Appointment) => (
+                            <React.Fragment key={apt.id}>
+                              <ListItem
+                                onClick={() => setSelectedAppointment(apt)}
+                                sx={{ 
+                                  cursor: 'pointer',
+                                  '&:hover': { bgcolor: 'action.hover' }
+                                }}
+                              >
+                                <ListItemAvatar>
+                                  <Avatar sx={{ bgcolor: getAppointmentColor(apt.appointmentType) }}>
+                                    {apt.patientName.charAt(0)}
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Typography>{apt.patientName}</Typography>
+                                      <Chip 
+                                        label={apt.status} 
+                                        size="small" 
+                                        color={getStatusColor(apt.status) as any}
+                                      />
+                                    </Box>
+                                  }
+                                  secondary={
+                                    <Box>
+                                      <Typography variant="body2">
+                                        {format(parseISO(apt.scheduledStart), 'MMM d, yyyy • h:mm a')} - 
+                                        {format(parseISO(apt.scheduledEnd), 'h:mm a')}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {appointmentTypes.find(t => t.value === apt.appointmentType)?.label} • 
+                                        {apt.providerName}
+                                      </Typography>
+                                      {apt.notes && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          {apt.notes}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  }
+                                />
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  {apt.videoLink && (
+                                    <Tooltip title="Video Call">
+                                      <IconButton size="small">
+                                        <VideoIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                  {apt.location && (
+                                    <Tooltip title={apt.location}>
+                                      <IconButton size="small">
+                                        <LocationIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                </Box>
+                              </ListItem>
+                              <Divider variant="inset" component="li" />
+                            </React.Fragment>
+                          ))}
+                      </List>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </Grid>

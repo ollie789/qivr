@@ -31,6 +31,8 @@ const PromsBuilder = lazy(() => import('./pages/PromsBuilder'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Login = lazy(() => import('./pages/Login'));
+const Messages = lazy(() => import('./pages/Messages'));
+const Documents = lazy(() => import('./pages/Documents'));
 
 // Create theme
 const theme = createTheme({
@@ -191,6 +193,8 @@ function App() {
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="patients" element={<Patients />} />
                     <Route path="patients/:id" element={<PatientDetail />} />
+                    <Route path="messages" element={<Messages />} />
+                    <Route path="documents" element={<Documents />} />
                     <Route path="proms-builder" element={<PromsBuilder />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="settings" element={<Settings />} />

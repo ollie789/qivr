@@ -43,12 +43,13 @@ kill_pid "widget"
 
 # Also kill by port in case PIDs are stale
 echo -e "\n${YELLOW}Cleaning up any remaining processes...${NC}"
-kill_port 5000 "Killing process on port 5000..."
-kill_port 5001 "Killing process on port 5001..."
-kill_port 3000
-kill_port 3001
-kill_port 3002
-kill_port 5173
+kill_port 5050  # New backend port
+kill_port 5000  # Old backend port (macOS AirPlay)
+kill_port 5001  # Old backend port
+kill_port 3000  # Patient Portal
+kill_port 3001  # Clinic Dashboard
+kill_port 3002  # Old patient portal port
+kill_port 5173  # Default Vite port
 
 # Optionally stop docker compose services if running
 if command -v docker > /dev/null 2>&1; then

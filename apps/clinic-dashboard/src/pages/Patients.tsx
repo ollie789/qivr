@@ -54,11 +54,16 @@ import {
   MedicalServices as MedicalIcon,
   Download as DownloadIcon,
   FilterList as FilterIcon,
+  Message as MessageIcon,
+  UploadFile as UploadFileIcon,
+  Send as SendIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { patientApi, type Patient as PatientType } from '../services/patientApi';
+import MessageComposer from '../components/MessageComposer';
+import FileUpload from '../components/FileUpload';
 
 // Using Patient type from patientApi
 
@@ -75,6 +80,8 @@ const Patients: React.FC = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailsTab, setDetailsTab] = useState(0);
+  const [messageOpen, setMessageOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   // Fetch patients from API
   const { data: patientsData, isLoading, refetch } = useQuery({
@@ -109,6 +116,16 @@ const Patients: React.FC = () => {
   const handleScheduleAppointment = (patient: PatientType) => {
     // Navigate to appointment booking with patient pre-selected
     enqueueSnackbar(`Scheduling appointment for ${patient.firstName} ${patient.lastName}`, { variant: 'info' });
+  };
+
+  const handleSendMessage = (patient: PatientType) => {
+    setSelectedPatient(patient);
+    setMessageOpen(true);
+  };
+
+  const handleUploadFile = (patient: PatientType) => {
+    setSelectedPatient(patient);
+    setUploadOpen(true);
   };
 
   const handleCreatePatient = () => {
@@ -402,6 +419,23 @@ const Patients: React.FC = () => {
                           <ViewIcon />
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title="Send Message">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleSendMessage(patient)}
+                        >
+                          <MessageIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Upload Document">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleUploadFile(patient)}
+                        >
+                          <UploadFileIcon />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Edit">
                         <IconButton
                           size="small"
@@ -461,6 +495,7 @@ const Patients: React.FC = () => {
                 <Tab label="Medical History" />
                 <Tab label="Appointments" />
                 <Tab label="Documents" />
+                <Tab label="Messages" />
               </Tabs>
               
               {detailsTab === 0 && (
@@ -551,13 +586,52 @@ const Patients: React.FC = () => {
               )}
 
               {detailsTab === 3 && (
-                <Typography>Documents will be displayed here</Typography>
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="h6">Documents</Typography>
+                    <Button
+                      variant="outlined"
+                      startIcon={<UploadFileIcon />}
+                      onClick={() => handleUploadFile(selectedPatient!)}
+                    >
+                      Upload Document
+                    </Button>
+                  </Box>
+                  <Typography color="text.secondary">
+                    Patient documents and files will be displayed here
+                  </Typography>
+                </Box>
+              )}
+
+              {detailsTab === 4 && (
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="h6">Message History</Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<SendIcon />}
+                      onClick={() => handleSendMessage(selectedPatient!)}
+                    >
+                      Send Message
+                    </Button>
+                  </Box>
+                  <Typography color="text.secondary">
+                    Message history with this patient will be displayed here
+                  </Typography>
+                </Box>
               )}
             </Box>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+          <Button 
+            variant="outlined" 
+            startIcon={<MessageIcon />}
+            onClick={() => handleSendMessage(selectedPatient!)}
+          >
+            Send Message
+          </Button>
           <Button variant="contained" onClick={() => handleScheduleAppointment(selectedPatient!)}>
             Schedule Appointment
           </Button>
@@ -574,6 +648,46 @@ const Patients: React.FC = () => {
         patient={editOpen ? selectedPatient : null}
         onSave={handleSavePatient}
       />
+
+      {/* Message Composer Dialog */}
+      <Dialog open={messageOpen} onClose={() => setMessageOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Send Message to {selectedPatient?.firstName} {selectedPatient?.lastName}
+        </DialogTitle>
+        <DialogContent>
+          <MessageComposer
+            recipientType="patient"
+            recipientId={selectedPatient?.id}
+            recipientEmail={selectedPatient?.email}
+            recipientPhone={selectedPatient?.phone}
+            onSend={() => {
+              enqueueSnackbar('Message sent successfully', { variant: 'success' });
+              setMessageOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* File Upload Dialog */}
+      <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Upload Document for {selectedPatient?.firstName} {selectedPatient?.lastName}
+        </DialogTitle>
+        <DialogContent>
+          <FileUpload
+            onUpload={(files) => {
+              console.log('Files uploaded:', files);
+              enqueueSnackbar(`${files.length} file(s) uploaded successfully`, { variant: 'success' });
+              setUploadOpen(false);
+            }}
+            category="patient-document"
+            patientId={selectedPatient?.id}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUploadOpen(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

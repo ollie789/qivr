@@ -2,7 +2,7 @@
 
 # QIVR Services Startup Script - STANDARDIZED PORTS
 # ================================================
-# Backend API:      5000 (DO NOT CHANGE)
+# Backend API:      5050 (Avoids macOS AirPlay on 5000)
 # Patient Portal:   3000 (DO NOT CHANGE)  
 # Clinic Dashboard: 3001 (DO NOT CHANGE)
 # ================================================
@@ -37,10 +37,11 @@ mkdir -p .pids
 
 # Kill any existing processes on our STANDARDIZED ports
 echo -e "${YELLOW}Checking for existing processes...${NC}"
-kill_port 5000  # Backend API
+kill_port 5050  # Backend API (new port)
 kill_port 3000  # Patient Portal
 kill_port 3001  # Clinic Dashboard
-# Also kill any common dev ports that might be in use
+# Also kill any old ports that might be in use
+kill_port 5000  # Old backend port (macOS AirPlay)
 kill_port 5001  # Old backend port
 kill_port 3002  # Old patient portal port
 kill_port 5173  # Default Vite port
@@ -49,9 +50,9 @@ kill_port 5173  # Default Vite port
 PROJECT_ROOT="$(pwd)"
 
 # Start Backend API
-echo -e "\n${GREEN}1. Starting Backend API (port 5000)...${NC}"
+echo -e "\n${GREEN}1. Starting Backend API (port 5050)...${NC}"
 cd "$PROJECT_ROOT/backend"
-ASPNETCORE_ENVIRONMENT=Development dotnet watch run --project Qivr.Api --urls "http://localhost:5000" > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
+ASPNETCORE_ENVIRONMENT=Development dotnet watch run --project Qivr.Api --urls "http://localhost:5050" > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
 BACKEND_PID=$!
 echo "   Backend PID: $BACKEND_PID"
 
@@ -60,8 +61,8 @@ echo "   Waiting for backend to start..."
 sleep 5
 
 # Check if backend is running
-if check_port 5000; then
-    echo -e "   ${GREEN}✓ Backend API is running on http://localhost:5000${NC}"
+if check_port 5050; then
+    echo -e "   ${GREEN}✓ Backend API is running on http://localhost:5050${NC}"
 else
     echo -e "   ${RED}✗ Backend API failed to start. Check logs/backend.log${NC}"
 fi
@@ -96,8 +97,8 @@ sleep 12  # Give Widget more time to start with new config
 # Check status of all apps
 echo -e "\n${GREEN}====== Application Status ======${NC}"
 
-if check_port 5000; then
-    echo -e "✓ Backend API:      ${GREEN}http://localhost:5000${NC}"
+if check_port 5050; then
+    echo -e "✓ Backend API:      ${GREEN}http://localhost:5050${NC}"
 else
     echo -e "✗ Backend API:      ${RED}Not running${NC}"
 fi
@@ -119,7 +120,7 @@ if [ -d "$PROJECT_ROOT/apps/widget" ] && check_port 3003; then
 fi
 
 echo -e "\n${GREEN}====== Additional Services ======${NC}"
-echo -e "Swagger UI:         ${GREEN}http://localhost:5000/swagger${NC}"
+echo -e "Swagger UI:         ${GREEN}http://localhost:5050/swagger${NC}"
 echo -e "pgAdmin:            ${GREEN}http://localhost:8081${NC}"
 echo -e "MinIO Console:      ${GREEN}http://localhost:9001${NC}"
 echo -e "Mailhog:            ${GREEN}http://localhost:8025${NC}"

@@ -2,9 +2,9 @@
   "description": "Central port configuration for all QIVR services",
   "services": {
     "backend_api": {
-      "port": 5000,
-      "url": "http://localhost:5000",
-      "api_url": "http://localhost:5000/api",
+      "port": 5050,
+      "url": "http://localhost:5050",
+      "api_url": "http://localhost:5050/api",
       "description": "Main backend API (.NET Core)"
     },
     "patient_portal": {
@@ -28,7 +28,7 @@
   },
   "environments": {
     "development": {
-      "api_base": "http://localhost:5000/api",
+      "api_base": "http://localhost:5050/api",
       "patient_portal": "http://localhost:3000",
       "clinic_dashboard": "http://localhost:3001"
     },

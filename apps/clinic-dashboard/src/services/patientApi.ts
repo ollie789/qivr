@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5001';
+const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5050/api';
 const API_BASE_URL = `${API_ROOT_URL.replace(/\/+$/, '')}/api/v1`;
 
 export interface Patient {

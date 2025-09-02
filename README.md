@@ -14,7 +14,7 @@ npm install
 
 | Service | Port | URL |
 |---------|------|-----|
-| **Backend API** | 5000 | http://localhost:5000/api |
+| **Backend API** | 5050 | http://localhost:5050/api |
 | **Patient Portal** | 3000 | http://localhost:3000 |
 | **Clinic Dashboard** | 3001 | http://localhost:3001 |
 

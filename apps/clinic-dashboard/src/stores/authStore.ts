@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import jwtAuthService, { type ClinicUserAttributes } from '../services/jwtAuthService';
+import cognitoAuthService, { type ClinicUserAttributes } from '../services/cognitoAuthService';
 
 interface User {
   id: string;
@@ -77,23 +77,23 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
           
-          const result = await jwtAuthService.signIn(email, password);
+          const result = await cognitoAuthService.signIn(email, password);
           
           if (result.isSignedIn) {
-            const userAttributes = await jwtAuthService.getCurrentUser();
-            const session = await jwtAuthService.getSession();
+            const userAttributes = await cognitoAuthService.getCurrentUser();
+            const session = await cognitoAuthService.getSession();
             
             if (userAttributes && session) {
               const user: User = {
                 id: userAttributes.sub || '',
                 name: `${userAttributes.given_name} ${userAttributes.family_name}`,
                 email: userAttributes.email || '',
-                clinicId: userAttributes['custom:clinic_id'],
-                tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'],
-                role: userAttributes['custom:role'] || 'practitioner',
-                employeeId: userAttributes['custom:employee_id'],
-                licenseNumber: userAttributes['custom:license_number'],
-                specialization: userAttributes['custom:specialization'],
+                clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
+                tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
+                role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
+                employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
+                licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
+                specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
               };
               
               set({
@@ -121,22 +121,22 @@ export const useAuthStore = create<AuthState>()(
       confirmMFA: async (code: string) => {
         set({ isLoading: true });
         try {
-          await jwtAuthService.confirmMFACode(code);
+          await cognitoAuthService.confirmMFACode(code);
           
-          const userAttributes = await jwtAuthService.getCurrentUser();
-          const session = await jwtAuthService.getSession();
+          const userAttributes = await cognitoAuthService.getCurrentUser();
+          const session = await cognitoAuthService.getSession();
           
           if (userAttributes && session) {
             const user: User = {
               id: userAttributes.sub || '',
               name: `${userAttributes.given_name} ${userAttributes.family_name}`,
               email: userAttributes.email || '',
-              clinicId: userAttributes['custom:clinic_id'],
-              tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'],
-              role: userAttributes['custom:role'] || 'practitioner',
-              employeeId: userAttributes['custom:employee_id'],
-              licenseNumber: userAttributes['custom:license_number'],
-              specialization: userAttributes['custom:specialization'],
+              clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
+              tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
+              role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
+              employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
+              licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
+              specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
             };
             
             set({
@@ -152,14 +152,14 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setupMFA: async () => {
-        const result = await jwtAuthService.setupMFA();
+        const result = await cognitoAuthService.setupMFA();
         return result;
       },
 
       verifyMFASetup: async (code: string) => {
         set({ isLoading: true });
         try {
-          await jwtAuthService.verifyMFASetup(code);
+          await cognitoAuthService.verifyMFASetup(code);
           set({ mfaSetupRequired: false });
           
           // Complete sign-in after MFA setup
@@ -176,7 +176,7 @@ export const useAuthStore = create<AuthState>()(
             localStorage.removeItem('mockToken');
             localStorage.removeItem('mockUser');
           } else {
-            await jwtAuthService.signOut();
+            await cognitoAuthService.signOut();
           }
         } finally {
           set({
@@ -222,23 +222,23 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
           
-          const isAuth = await jwtAuthService.isAuthenticated();
+          const isAuth = await cognitoAuthService.isAuthenticated();
           
           if (isAuth) {
-            const userAttributes = await jwtAuthService.getCurrentUser();
-            const session = await jwtAuthService.getSession();
+            const userAttributes = await cognitoAuthService.getCurrentUser();
+            const session = await cognitoAuthService.getSession();
             
             if (userAttributes && session) {
               const user: User = {
                 id: userAttributes.sub || '',
                 name: `${userAttributes.given_name} ${userAttributes.family_name}`,
                 email: userAttributes.email || '',
-                clinicId: userAttributes['custom:clinic_id'],
-                tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'],
-                role: userAttributes['custom:role'] || 'practitioner',
-                employeeId: userAttributes['custom:employee_id'],
-                licenseNumber: userAttributes['custom:license_number'],
-                specialization: userAttributes['custom:specialization'],
+                clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
+                tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
+                role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
+                employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
+                licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
+                specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
               };
               
               set({
@@ -268,7 +268,7 @@ export const useAuthStore = create<AuthState>()(
 
       refreshToken: async () => {
         try {
-          const session = await jwtAuthService.getSession();
+          const session = await cognitoAuthService.getSession();
           if (session) {
             set({ token: session.accessToken });
           }

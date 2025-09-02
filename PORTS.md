@@ -4,13 +4,14 @@
 
 | Service | Port | URL |
 |---------|------|-----|
-| **Backend API** | `5000` | http://localhost:5000/api |
+| **Backend API** | `5050` | http://localhost:5050/api |
 | **Patient Portal** | `3000` | http://localhost:3000 |
 | **Clinic Dashboard** | `3001` | http://localhost:3001 |
 | **PostgreSQL** | `5432` | - |
 | **Widget** (if used) | `3003` | http://localhost:3003 |
 
 ## 🛑 DO NOT USE THESE PORTS
+- ❌ 5000 (macOS AirPlay Receiver uses this)
 - ❌ 5001 (old backend port)
 - ❌ 3002 (old patient portal port)  
 - ❌ 5173 (default Vite port)
@@ -24,8 +25,8 @@
 
 ### Start Individual Services
 ```bash
-# Backend (port 5000)
-cd backend && dotnet run --urls "http://localhost:5000"
+# Backend (port 5050)
+cd backend && dotnet run --urls "http://localhost:5050"
 
 # Patient Portal (port 3000)
 cd apps/patient-portal && PORT=3000 npm run dev
@@ -36,14 +37,14 @@ cd apps/clinic-dashboard && PORT=3001 npm run dev
 
 ### Check What's Running
 ```bash
-lsof -i :5000  # Check backend
+lsof -i :5050  # Check backend
 lsof -i :3000  # Check patient portal
 lsof -i :3001  # Check clinic dashboard
 ```
 
 ### Kill Services on Ports
 ```bash
-lsof -ti:5000 | xargs kill -9  # Kill backend
+lsof -ti:5050 | xargs kill -9  # Kill backend
 lsof -ti:3000 | xargs kill -9  # Kill patient portal  
 lsof -ti:3001 | xargs kill -9  # Kill clinic dashboard
 ```
@@ -52,7 +53,7 @@ lsof -ti:3001 | xargs kill -9  # Kill clinic dashboard
 
 All `.env` files should use:
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:5050/api
 ```
 
 ## 🔴 IMPORTANT

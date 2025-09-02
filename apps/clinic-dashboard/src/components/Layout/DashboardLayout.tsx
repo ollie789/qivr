@@ -34,8 +34,11 @@ import {
   AccountCircle as AccountIcon,
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
+  Message as MessageIcon,
+  FolderOpen as DocumentsIcon,
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
+import NotificationBell from '../NotificationBell';
 
 const drawerWidth = 280;
 const drawerWidthCollapsed = 64;
@@ -52,6 +55,8 @@ const menuItems: MenuItem[] = [
   { text: 'Intake Queue', icon: <QueueIcon />, path: '/intake-queue', badge: 5 },
   { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
   { text: 'Patients', icon: <PeopleIcon />, path: '/patients' },
+  { text: 'Messages', icon: <MessageIcon />, path: '/messages' },
+  { text: 'Documents', icon: <DocumentsIcon />, path: '/documents' },
   { text: 'PROMs Builder', icon: <AssignmentIcon />, path: '/proms-builder' },
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
@@ -235,11 +240,7 @@ const DashboardLayout: React.FC = () => {
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
 
-          <IconButton color="inherit" onClick={handleNotificationOpen}>
-            <Badge badgeContent={3} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
+          <NotificationBell />
 
           <IconButton
             edge="end"

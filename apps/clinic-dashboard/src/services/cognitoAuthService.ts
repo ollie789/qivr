@@ -132,7 +132,7 @@ class ClinicCognitoAuthService {
 
       // Check if user has required role for clinic access
       const attributes = await this.getCurrentUser();
-      const role = attributes?.['custom:role'];
+      const role = attributes?.['custom:custom:role'] || attributes?.['custom:role'];
       if (!role || !['admin', 'practitioner', 'receptionist', 'manager'].includes(role)) {
         await this.signOut();
         throw new Error('UNAUTHORIZED_ROLE');
@@ -268,7 +268,7 @@ class ClinicCognitoAuthService {
 
       // Check role authorization
       const attributes = await this.getCurrentUser();
-      const role = attributes?.['custom:role'];
+      const role = attributes?.['custom:custom:role'] || attributes?.['custom:role'];
       return !!role && ['admin', 'practitioner', 'receptionist', 'manager'].includes(role);
     } catch {
       return false;

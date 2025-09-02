@@ -16,6 +16,7 @@ public class SecurityHeadersMiddleware
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
     private readonly BrandingOptions _brandingOptions;
+    private readonly bool _isDevelopment;
 
     public SecurityHeadersMiddleware(
         RequestDelegate next,
@@ -29,6 +30,7 @@ public class SecurityHeadersMiddleware
         _configuration = configuration;
         _environment = environment;
         _brandingOptions = brandingOptions.Value;
+        _isDevelopment = environment.IsDevelopment();
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -156,8 +158,8 @@ public class SecurityHeadersMiddleware
         };
         response.Headers["Permissions-Policy"] = string.Join(", ", permissions);
 
-        // Cross-Origin headers for API
-        if (isApi)
+        // Cross-Origin headers for API - only in production to avoid blocking CORS
+        if (isApi && !_isDevelopment)
         {
             // These are handled by CORS middleware but we can add additional restrictions
             response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
