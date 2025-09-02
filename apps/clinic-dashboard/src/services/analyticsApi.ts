@@ -328,4 +328,5 @@ const analyticsApi = {
   },
 };
 
+export { analyticsApi };
 export default analyticsApi;

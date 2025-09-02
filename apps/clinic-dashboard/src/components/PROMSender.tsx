@@ -375,7 +375,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                     label="Send Date & Time"
                     value={scheduledDate}
                     onChange={(newValue) => setScheduledDate(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    slotProps={{ textField: { fullWidth: true } }}
                   />
                 </LocalizationProvider>
               </Box>
@@ -427,12 +427,12 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                   {recurringConfig.endType === 'date' && (
                     <Grid item xs={12}>
                       <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <DateTimePicker
-                          label="End Date"
-                          value={recurringConfig.endDate}
-                          onChange={(newValue) => setRecurringConfig({ ...recurringConfig, endDate: newValue })}
-                          renderInput={(params) => <TextField {...params} fullWidth />}
-                        />
+                      <DateTimePicker
+                        label="End Date"
+                        value={recurringConfig.endDate}
+                        onChange={(newValue) => setRecurringConfig({ ...recurringConfig, endDate: newValue })}
+                        slotProps={{ textField: { fullWidth: true } }}
+                      />
                       </LocalizationProvider>
                     </Grid>
                   )}

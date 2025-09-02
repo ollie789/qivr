@@ -6,11 +6,6 @@ import {
   DialogActions,
   Button,
   TextField,
-  FormControl,
-  FormLabel,
-  RadioGroup,
-  FormControllerRadio,
-  Radio,
   Box,
   Chip,
   Avatar,
@@ -100,7 +95,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [scheduleTime, setScheduleTime] = useState<Date | null>(null);
+  const [scheduleTime] = useState<Date | null>(null);
 
   const handleTemplateSelect = (template: Template | null) => {
     setSelectedTemplate(template);
@@ -195,7 +190,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
           <ToggleButtonGroup
             value={messageType}
             exclusive
-            onChange={(e, value) => value && setMessageType(value)}
+            onChange={(_, value) => value && setMessageType(value)}
             size="small"
           >
             <ToggleButton value="sms">
