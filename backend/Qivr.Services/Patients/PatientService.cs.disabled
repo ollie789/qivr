@@ -1,0 +1,423 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Qivr.Core.Entities;
+using Qivr.Core.DTOs;
+using Qivr.Infrastructure.Data;
+
+namespace Qivr.Services.Patients
+{
+    public interface IPatientService
+    {
+        Task<Patient?> GetPatientByIdAsync(Guid tenantId, Guid patientId);
+        Task<Patient?> GetPatientByUserIdAsync(Guid tenantId, Guid userId);
+        Task<Patient> CreatePatientAsync(Guid tenantId, Patient patient);
+        Task<Patient> UpdateDemographicsAsync(Guid tenantId, Guid patientId, DemographicsDto demographics);
+        Task<MedicalHistoryDto> UpdateMedicalHistoryAsync(Guid tenantId, Guid patientId, MedicalHistoryUpdateDto update);
+        Task<Medication> AddMedicationAsync(Guid tenantId, Guid patientId, Medication medication);
+        Task<bool> UpdateMedicationAsync(Guid tenantId, Guid medicationId, Medication medication);
+        Task<bool> DeactivateMedicationAsync(Guid tenantId, Guid medicationId);
+        Task<VitalSign> RecordVitalSignsAsync(Guid tenantId, Guid patientId, VitalSign vitalSign, Guid? recordedById);
+        Task<List<VitalSign>> GetVitalSignsAsync(Guid tenantId, Guid patientId, DateTime? from, DateTime? to);
+        Task<List<TimelineEventDto>> GetPatientTimelineAsync(Guid tenantId, Guid patientId, int page, int pageSize);
+        Task<PatientSummaryDto> GetPatientSummaryAsync(Guid tenantId, Guid patientId);
+        Task<string> GenerateMedicalRecordNumber(Guid tenantId);
+    }
+
+    public class PatientService : IPatientService
+    {
+        private readonly QivrDbContext _context;
+        private readonly ILogger<PatientService> _logger;
+
+        public PatientService(QivrDbContext context, ILogger<PatientService> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        public async Task<Patient?> GetPatientByIdAsync(Guid tenantId, Guid patientId)
+        {
+            return await _context.Patients
+                .Include(p => p.User)
+                .Include(p => p.CurrentMedications.Where(m => m.IsActive))
+                .Include(p => p.VitalSigns.OrderByDescending(v => v.RecordedAt).Take(10))
+                .Include(p => p.Appointments.OrderByDescending(a => a.ScheduledStart).Take(10))
+                .Include(p => p.Documents.Where(d => !d.IsArchived))
+                .Include(p => p.PromInstances.OrderByDescending(pi => pi.CreatedAt).Take(10))
+                .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Id == patientId && !p.IsDeleted);
+        }
+
+        public async Task<Patient?> GetPatientByUserIdAsync(Guid tenantId, Guid userId)
+        {
+            return await _context.Patients
+                .Include(p => p.User)
+                .Include(p => p.CurrentMedications.Where(m => m.IsActive))
+                .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.UserId == userId && !p.IsDeleted);
+        }
+
+        public async Task<Patient> CreatePatientAsync(Guid tenantId, Patient patient)
+        {
+            patient.TenantId = tenantId;
+            patient.MedicalRecordNumber = await GenerateMedicalRecordNumber(tenantId);
+            patient.CreatedAt = DateTime.UtcNow;
+            patient.UpdatedAt = DateTime.UtcNow;
+
+            _context.Patients.Add(patient);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Created new patient {PatientId} for tenant {TenantId}", patient.Id, tenantId);
+            return patient;
+        }
+
+        public async Task<Patient> UpdateDemographicsAsync(Guid tenantId, Guid patientId, DemographicsDto demographics)
+        {
+            var patient = await GetPatientByIdAsync(tenantId, patientId);
+            if (patient == null)
+            {
+                throw new KeyNotFoundException($"Patient {patientId} not found");
+            }
+
+            // Update demographics
+            patient.FirstName = demographics.FirstName;
+            patient.LastName = demographics.LastName;
+            patient.DateOfBirth = demographics.DateOfBirth;
+            patient.Gender = demographics.Gender;
+            patient.Email = demographics.Email;
+            patient.Phone = demographics.Phone;
+            
+            // Update address
+            if (demographics.Address != null)
+            {
+                patient.Street = demographics.Address.Street;
+                patient.City = demographics.Address.City;
+                patient.State = demographics.Address.State;
+                patient.PostalCode = demographics.Address.PostalCode;
+                patient.Country = demographics.Address.Country ?? "Australia";
+            }
+
+            patient.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Updated demographics for patient {PatientId}", patientId);
+            return patient;
+        }
+
+        public async Task<MedicalHistoryDto> UpdateMedicalHistoryAsync(Guid tenantId, Guid patientId, MedicalHistoryUpdateDto update)
+        {
+            var patient = await GetPatientByIdAsync(tenantId, patientId);
+            if (patient == null)
+            {
+                throw new KeyNotFoundException($"Patient {patientId} not found");
+            }
+
+            // Update medical history fields if provided
+            if (update.ChronicConditions != null)
+                patient.ChronicConditions = update.ChronicConditions.ToList();
+            
+            if (update.PastSurgeries != null)
+                patient.PastSurgeries = update.PastSurgeries.ToList();
+            
+            if (update.Allergies != null)
+                patient.Allergies = update.Allergies.ToList();
+            
+            if (update.FamilyHistory != null)
+                patient.FamilyHistory = update.FamilyHistory.ToList();
+
+            // Handle medications update
+            if (update.CurrentMedications != null)
+            {
+                // Deactivate existing medications not in the update
+                var existingMeds = patient.CurrentMedications.Where(m => m.IsActive).ToList();
+                foreach (var existingMed in existingMeds)
+                {
+                    existingMed.IsActive = false;
+                    existingMed.EndDate = DateTime.UtcNow;
+                }
+
+                // Add new medications
+                foreach (var medDto in update.CurrentMedications)
+                {
+                    var medication = new Medication
+                    {
+                        PatientId = patientId,
+                        TenantId = tenantId,
+                        Name = medDto.Name,
+                        Dosage = medDto.Dosage,
+                        Frequency = medDto.Frequency,
+                        Route = medDto.Route ?? "oral",
+                        StartDate = DateTime.UtcNow,
+                        PrescribedBy = medDto.PrescribedBy ?? "Unknown",
+                        Notes = medDto.Notes ?? string.Empty,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.Medications.Add(medication);
+                }
+            }
+
+            patient.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Updated medical history for patient {PatientId}", patientId);
+
+            return new MedicalHistoryDto
+            {
+                ChronicConditions = patient.ChronicConditions.ToArray(),
+                PastSurgeries = patient.PastSurgeries.ToArray(),
+                Allergies = patient.Allergies.ToArray(),
+                FamilyHistory = patient.FamilyHistory.ToArray(),
+                CurrentMedications = patient.CurrentMedications
+                    .Where(m => m.IsActive)
+                    .Select(m => new MedicationDto
+                    {
+                        Name = m.Name,
+                        Dosage = m.Dosage,
+                        Frequency = m.Frequency,
+                        Route = m.Route,
+                        PrescribedBy = m.PrescribedBy,
+                        Notes = m.Notes
+                    }).ToArray()
+            };
+        }
+
+        public async Task<Medication> AddMedicationAsync(Guid tenantId, Guid patientId, Medication medication)
+        {
+            medication.PatientId = patientId;
+            medication.TenantId = tenantId;
+            medication.StartDate = DateTime.UtcNow;
+            medication.IsActive = true;
+            medication.CreatedAt = DateTime.UtcNow;
+            medication.UpdatedAt = DateTime.UtcNow;
+
+            _context.Medications.Add(medication);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Added medication {MedicationName} for patient {PatientId}", medication.Name, patientId);
+            return medication;
+        }
+
+        public async Task<bool> UpdateMedicationAsync(Guid tenantId, Guid medicationId, Medication medication)
+        {
+            var existing = await _context.Medications
+                .FirstOrDefaultAsync(m => m.Id == medicationId && m.TenantId == tenantId);
+
+            if (existing == null)
+                return false;
+
+            existing.Name = medication.Name;
+            existing.Dosage = medication.Dosage;
+            existing.Frequency = medication.Frequency;
+            existing.Route = medication.Route;
+            existing.Notes = medication.Notes;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeactivateMedicationAsync(Guid tenantId, Guid medicationId)
+        {
+            var medication = await _context.Medications
+                .FirstOrDefaultAsync(m => m.Id == medicationId && m.TenantId == tenantId);
+
+            if (medication == null)
+                return false;
+
+            medication.IsActive = false;
+            medication.EndDate = DateTime.UtcNow;
+            medication.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<VitalSign> RecordVitalSignsAsync(Guid tenantId, Guid patientId, VitalSign vitalSign, Guid? recordedById)
+        {
+            vitalSign.PatientId = patientId;
+            vitalSign.TenantId = tenantId;
+            vitalSign.RecordedById = recordedById;
+            vitalSign.RecordedAt = DateTime.UtcNow;
+            vitalSign.CreatedAt = DateTime.UtcNow;
+            vitalSign.UpdatedAt = DateTime.UtcNow;
+
+            _context.VitalSigns.Add(vitalSign);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Recorded vital signs for patient {PatientId}", patientId);
+            return vitalSign;
+        }
+
+        public async Task<List<VitalSign>> GetVitalSignsAsync(Guid tenantId, Guid patientId, DateTime? from, DateTime? to)
+        {
+            var query = _context.VitalSigns
+                .Where(v => v.TenantId == tenantId && v.PatientId == patientId);
+
+            if (from.HasValue)
+                query = query.Where(v => v.RecordedAt >= from.Value);
+
+            if (to.HasValue)
+                query = query.Where(v => v.RecordedAt <= to.Value);
+
+            return await query
+                .OrderByDescending(v => v.RecordedAt)
+                .Take(100) // Limit to last 100 records
+                .ToListAsync();
+        }
+
+        public async Task<List<TimelineEventDto>> GetPatientTimelineAsync(Guid tenantId, Guid patientId, int page, int pageSize)
+        {
+            var events = new List<TimelineEventDto>();
+
+            // Get appointments
+            var appointments = await _context.Appointments
+                .Where(a => a.TenantId == tenantId && a.PatientId == patientId && !a.IsDeleted)
+                .OrderByDescending(a => a.ScheduledStart)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize / 3) // Allocate 1/3 of page size to appointments
+                .Select(a => new TimelineEventDto
+                {
+                    Id = a.Id,
+                    Type = "appointment",
+                    Title = $"Appointment with {a.Provider.FirstName} {a.Provider.LastName}",
+                    Description = $"{a.AppointmentType} - {a.Status}",
+                    OccurredAt = a.ScheduledStart,
+                    Icon = "calendar"
+                })
+                .ToListAsync();
+            events.AddRange(appointments);
+
+            // Get PROM completions
+            var proms = await _context.PromInstances
+                .Where(pi => pi.TenantId == tenantId && pi.PatientId == patientId && pi.Status == "completed")
+                .OrderByDescending(pi => pi.CompletedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize / 3) // Allocate 1/3 of page size to PROMs
+                .Select(pi => new TimelineEventDto
+                {
+                    Id = pi.Id,
+                    Type = "prom",
+                    Title = $"{pi.Template.Name} Completed",
+                    Description = pi.Interpretation ?? "Assessment completed",
+                    OccurredAt = pi.CompletedAt ?? pi.CreatedAt,
+                    Icon = "clipboard"
+                })
+                .ToListAsync();
+            events.AddRange(proms);
+
+            // Get vital signs
+            var vitalSigns = await _context.VitalSigns
+                .Where(v => v.TenantId == tenantId && v.PatientId == patientId)
+                .OrderByDescending(v => v.RecordedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize / 3) // Allocate 1/3 of page size to vital signs
+                .Select(v => new TimelineEventDto
+                {
+                    Id = v.Id,
+                    Type = "vital_signs",
+                    Title = "Vital Signs Recorded",
+                    Description = $"BP: {v.BloodPressureSystolic}/{v.BloodPressureDiastolic}, HR: {v.HeartRate}",
+                    OccurredAt = v.RecordedAt,
+                    Icon = "heart"
+                })
+                .ToListAsync();
+            events.AddRange(vitalSigns);
+
+            // Sort all events by date
+            return events.OrderByDescending(e => e.OccurredAt).ToList();
+        }
+
+        public async Task<PatientSummaryDto> GetPatientSummaryAsync(Guid tenantId, Guid patientId)
+        {
+            var patient = await GetPatientByIdAsync(tenantId, patientId);
+            if (patient == null)
+            {
+                throw new KeyNotFoundException($"Patient {patientId} not found");
+            }
+
+            var lastAppointment = patient.Appointments
+                .Where(a => a.Status == "completed")
+                .OrderByDescending(a => a.ScheduledStart)
+                .FirstOrDefault();
+
+            var nextAppointment = patient.Appointments
+                .Where(a => a.Status == "scheduled" || a.Status == "confirmed")
+                .Where(a => a.ScheduledStart > DateTime.UtcNow)
+                .OrderBy(a => a.ScheduledStart)
+                .FirstOrDefault();
+
+            var recentProm = patient.PromInstances
+                .Where(pi => pi.Status == "completed" && pi.Scores != null)
+                .OrderByDescending(pi => pi.CompletedAt)
+                .FirstOrDefault();
+
+            // Calculate compliance rate (percentage of completed appointments)
+            var totalAppointments = patient.Appointments.Count(a => a.ScheduledStart < DateTime.UtcNow);
+            var completedAppointments = patient.Appointments.Count(a => a.Status == "completed");
+            var complianceRate = totalAppointments > 0 
+                ? (decimal)completedAppointments / totalAppointments * 100 
+                : 100m;
+
+            // Determine risk level based on conditions and vital signs
+            var riskLevel = DetermineRiskLevel(patient);
+
+            return new PatientSummaryDto
+            {
+                PatientId = patient.Id,
+                Name = patient.FullName,
+                Age = patient.Age,
+                MedicalRecordNumber = patient.MedicalRecordNumber,
+                LastVisit = lastAppointment?.ScheduledStart,
+                NextAppointment = nextAppointment?.ScheduledStart,
+                ActiveConditions = patient.ChronicConditions.Count,
+                ActiveMedications = patient.CurrentMedications.Count(m => m.IsActive),
+                RecentPromScore = recentProm?.Scores?.RootElement.GetProperty("total").GetDecimal(),
+                RiskLevel = riskLevel,
+                ComplianceRate = Math.Round(complianceRate, 1)
+            };
+        }
+
+        public async Task<string> GenerateMedicalRecordNumber(Guid tenantId)
+        {
+            var year = DateTime.UtcNow.Year;
+            var count = await _context.Patients
+                .CountAsync(p => p.TenantId == tenantId && p.CreatedAt.Year == year);
+            
+            return $"MRN-{year}-{(count + 1):D5}";
+        }
+
+        private string DetermineRiskLevel(Patient patient)
+        {
+            var riskFactors = 0;
+
+            // Check chronic conditions
+            if (patient.ChronicConditions.Count > 3) riskFactors += 2;
+            else if (patient.ChronicConditions.Count > 1) riskFactors++;
+
+            // Check recent vital signs
+            var recentVital = patient.VitalSigns.OrderByDescending(v => v.RecordedAt).FirstOrDefault();
+            if (recentVital != null)
+            {
+                // Check blood pressure
+                if (int.TryParse(recentVital.BloodPressureSystolic, out var systolic) && systolic > 140)
+                    riskFactors++;
+                
+                // Check BMI
+                if (recentVital.Bmi > 30) riskFactors++;
+            }
+
+            // Check age
+            if (patient.Age > 65) riskFactors++;
+
+            return riskFactors switch
+            {
+                >= 4 => "High",
+                >= 2 => "Medium",
+                _ => "Low"
+            };
+        }
+    }
+}

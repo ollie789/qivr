@@ -133,9 +133,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
     setSending(true);
 
     try {
-      const endpoint = messageType === 'sms' 
-        ? '/api/v1/notifications/sms'
-        : '/api/v1/notifications/email';
+      const endpoint = '/api/Messages';
 
       const payload = {
         recipients: recipients.map(r => ({

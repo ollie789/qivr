@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import apiClient from '../services/apiClient';
+import api from '../lib/api-client';
 
 const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -29,7 +29,7 @@ const VerifyEmail: React.FC = () => {
       }
 
       try {
-        const response = await apiClient.post('/api/EmailVerification/verify', {
+        const response = await api.post('/api/EmailVerification/verify', {
           token,
         });
 
@@ -63,7 +63,7 @@ const VerifyEmail: React.FC = () => {
     const email = localStorage.getItem('pendingVerificationEmail');
     if (email) {
       try {
-        await apiClient.post('/api/EmailVerification/resend', { email });
+        await api.post('/api/EmailVerification/resend', { email });
         setMessage('A new verification email has been sent. Please check your inbox.');
       } catch (error) {
         setMessage('Failed to resend verification email. Please try again later.');

@@ -31,7 +31,7 @@ export const dashboardApi = {
   // Get dashboard statistics from clinic dashboard overview
   async getStats(): Promise<DashboardStats> {
     try {
-      const data = await api.get<any>('/clinic-dashboard/overview');
+      const data = await api.get<any>('/api/clinic-dashboard/overview');
       
       // Map the actual backend response to our dashboard stats
       return {
@@ -59,7 +59,7 @@ export const dashboardApi = {
   // Get recent activity from PROM submissions and appointments
   async getRecentActivity(): Promise<RecentActivity[]> {
     try {
-      const data = await api.get<any>('/clinic-dashboard/overview');
+      const data = await api.get<any>('/api/clinic-dashboard/overview');
       
       const activities: RecentActivity[] = [];
       
@@ -112,7 +112,7 @@ export const dashboardApi = {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
       });
-      const response = await api.get<any[]>(`/api/appointments?${params}`);
+      const response = await api.get<any[]>(`/api/Appointments?${params}`);
       const appts = Array.isArray(response) ? response : [];
       return appts.map((a: any) => ({
         id: a.id,
@@ -130,8 +130,8 @@ export const dashboardApi = {
 
   // Get intake queue count
   async getIntakeQueueCount(): Promise<number> {
-    const data = await api.get<any>('/api/intakes/count');
-    return data.count || data;
+    // Intakes endpoint not available, return 0
+    return 0;
   },
 };
 

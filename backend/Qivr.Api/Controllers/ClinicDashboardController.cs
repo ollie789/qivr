@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Qivr.Api.DTOs;
+using Qivr.Core.DTOs;
 using Qivr.Api.Services;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;

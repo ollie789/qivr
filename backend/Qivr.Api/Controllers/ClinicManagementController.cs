@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qivr.Core.Entities;
-using Qivr.Api.DTOs;
+using Qivr.Core.DTOs;
 
 namespace Qivr.Api.Controllers;
 
@@ -278,21 +278,21 @@ public class ClinicManagementController : ControllerBase
                     ProviderName = "Dr. Jane Smith",
                     Appointments = new[]
                     {
-                        new ScheduleSlotDto
+                        new Qivr.Core.DTOs.ScheduleSlotDto
                         {
                             StartTime = date.Date.AddHours(9),
                             EndTime = date.Date.AddHours(9).AddMinutes(30),
                             PatientName = "John Doe",
                             AppointmentType = "Follow-up",
-                            Status = "Confirmed"
+                            IsAvailable = false
                         },
-                        new ScheduleSlotDto
+                        new Qivr.Core.DTOs.ScheduleSlotDto
                         {
                             StartTime = date.Date.AddHours(10),
                             EndTime = date.Date.AddHours(10).AddMinutes(30),
                             PatientName = "Jane Smith",
                             AppointmentType = "New Patient",
-                            Status = "Confirmed"
+                            IsAvailable = false
                         }
                     },
                     AvailableSlots = new[]
@@ -494,18 +494,11 @@ public class ProviderScheduleSlotDto
 {
     public Guid ProviderId { get; set; }
     public string ProviderName { get; set; } = string.Empty;
-    public ScheduleSlotDto[] Appointments { get; set; } = Array.Empty<ScheduleSlotDto>();
+    public Qivr.Core.DTOs.ScheduleSlotDto[] Appointments { get; set; } = Array.Empty<Qivr.Core.DTOs.ScheduleSlotDto>();
     public DateTime[] AvailableSlots { get; set; } = Array.Empty<DateTime>();
 }
 
-public class ScheduleSlotDto
-{
-    public DateTime StartTime { get; set; }
-    public DateTime EndTime { get; set; }
-    public string PatientName { get; set; } = string.Empty;
-    public string AppointmentType { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
-}
+// ScheduleSlotDto moved to Qivr.Core.DTOs to avoid conflicts
 
 public class ClinicAnalyticsDto
 {

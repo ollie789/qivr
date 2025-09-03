@@ -262,7 +262,7 @@ class JwtAuthService {
 
   async confirmResetPassword(email: string, code: string, newPassword: string): Promise<any> {
     try {
-      await postJson('/api/Auth/reset-password', {
+      await postJson('/api/Auth/confirm-forgot-password', {
         email,
         code,
         newPassword,
@@ -282,7 +282,7 @@ class JwtAuthService {
 
     try {
       const { getWithAuth } = await import('@qivr/http');
-      const userInfo = await getWithAuth<any>('/api/Auth/userinfo');
+      const userInfo = await getWithAuth<any>('/api/Auth/user-info');
       
       const user: ClinicUserAttributes = {
         sub: userInfo.id || userInfo.username,
@@ -343,7 +343,7 @@ class JwtAuthService {
     }
 
     try {
-      const response = await postJson<any>('/api/Auth/refresh', {
+      const response = await postJson<any>('/api/Auth/refresh-token', {
         refreshToken: this.tokens.refreshToken,
       });
 

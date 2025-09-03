@@ -53,32 +53,32 @@ class AppointmentsApi {
     page?: number;
     limit?: number;
   }) {
-    const response = await apiClient.get('/api/appointments', { params });
+    const response = await apiClient.get('/api/Appointments', { params });
     return response.data;
   }
 
   async getAppointment(id: string) {
-    const response = await apiClient.get(`/api/appointments/${id}`);
+    const response = await apiClient.get(`/api/Appointments/${id}`);
     return response.data;
   }
 
   async createAppointment(data: CreateAppointmentRequest) {
-    const response = await apiClient.post('/api/appointments', data);
+    const response = await apiClient.post('/api/Appointments/book', data);
     return response.data;
   }
 
   async updateAppointment(id: string, data: Partial<CreateAppointmentRequest>) {
-    const response = await apiClient.put(`/api/appointments/${id}`, data);
+    const response = await apiClient.put(`/api/Appointments/${id}`, data);
     return response.data;
   }
 
   async cancelAppointment(id: string, reason?: string) {
-    const response = await apiClient.post(`/api/appointments/${id}/cancel`, { reason });
+    const response = await apiClient.post(`/api/Appointments/${id}/cancel`, { reason });
     return response.data;
   }
 
   async confirmAppointment(id: string) {
-    const response = await apiClient.post(`/api/appointments/${id}/confirm`);
+    const response = await apiClient.post(`/api/Appointments/${id}/confirm`);
     return response.data;
   }
 
@@ -87,12 +87,12 @@ class AppointmentsApi {
     scheduledEnd: string;
     reason?: string;
   }) {
-    const response = await apiClient.post(`/api/appointments/${id}/reschedule`, data);
+    const response = await apiClient.post(`/api/Appointments/${id}/reschedule`, data);
     return response.data;
   }
 
   async markAsNoShow(id: string) {
-    const response = await apiClient.post(`/api/appointments/${id}/no-show`);
+    const response = await apiClient.post(`/api/Appointments/${id}/no-show`);
     return response.data;
   }
 
@@ -101,7 +101,7 @@ class AppointmentsApi {
     followUpRequired?: boolean;
     followUpDate?: string;
   }) {
-    const response = await apiClient.post(`/api/appointments/${id}/complete`, data);
+    const response = await apiClient.post(`/api/Appointments/${id}/complete`, data);
     return response.data;
   }
 
@@ -110,24 +110,24 @@ class AppointmentsApi {
     date: string;
     duration: number;
   }) {
-    const response = await apiClient.get('/api/appointments/available-slots', { params });
+    const response = await apiClient.get('/api/Appointments/availability', { params });
     return response.data;
   }
 
   async sendReminder(id: string) {
-    const response = await apiClient.post(`/api/appointments/${id}/send-reminder`);
+    const response = await apiClient.post(`/api/Appointments/${id}/send-reminder`);
     return response.data;
   }
 
   async getUpcoming(days: number = 7) {
-    const response = await apiClient.get('/api/appointments/upcoming', { 
+    const response = await apiClient.get('/api/Appointments/upcoming', { 
       params: { days } 
     });
     return response.data;
   }
 
   async getWaitlist() {
-    const response = await apiClient.get('/api/appointments/waitlist');
+    const response = await apiClient.get('/api/Appointments/waitlist');
     return response.data;
   }
 
@@ -138,7 +138,7 @@ class AppointmentsApi {
     appointmentType: string;
     notes?: string;
   }) {
-    const response = await apiClient.post('/api/appointments/waitlist', data);
+    const response = await apiClient.post('/api/Appointments/waitlist', data);
     return response.data;
   }
 }

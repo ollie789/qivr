@@ -66,33 +66,23 @@ class PatientApi {
 
   // Get all patients with optional filters
   async getPatients(params?: PatientSearchParams) {
-    try {
-      const queryParams = new URLSearchParams();
-      if (params) {
-        Object.entries(params).forEach(([key, value]) => {
-          if (value !== undefined) queryParams.append(key, String(value));
-        });
-      }
-      const url = queryParams.toString() 
-        ? `${this.basePath}/patients?${queryParams}` 
-        : `${this.basePath}/patients`;
-      return await api.get<any>(url);
-    } catch (error) {
-      console.error('Error fetching patients:', error);
-      // Return mock data for development
-      return {
-        data: this.getMockPatients(),
-        total: 2,
-        page: 1,
-        pageSize: 10,
-      };
-    }
+    // NOTE: Backend doesn't have a generic patients list endpoint
+    // Return mock data for now
+    console.log('Note: Backend does not have /api/v1/patients endpoint - using mock data');
+    return {
+      data: this.getMockPatients(),
+      total: 2,
+      page: 1,
+      pageSize: 10,
+    };
   }
 
   // Get a single patient by ID
   async getPatient(id: string) {
     try {
-      return await api.get<Patient>(`${this.basePath}/patients/${id}`);
+      // Use patient-records endpoint
+      const data = await api.get<any>(`/api/patient-records/${id}`);
+      return this.mapPatientRecord(data);
     } catch (error) {
       console.error('Error fetching patient:', error);
       // Return mock data for development
@@ -232,6 +222,36 @@ class PatientApi {
       console.error('Error exporting patients:', error);
       throw error;
     }
+  }
+
+  // Helper to map patient record from backend to Patient interface
+  private mapPatientRecord(record: any): Patient {
+    return {
+      id: record.id || record.patientId,
+      firstName: record.firstName || '',
+      lastName: record.lastName || '',
+      email: record.email || '',
+      phone: record.phone || '',
+      dateOfBirth: record.dateOfBirth || '',
+      gender: record.gender || '',
+      address: record.address || {
+        street: '',
+        city: '',
+        state: '',
+        postcode: '',
+      },
+      medicalRecordNumber: record.medicalRecordNumber || record.mrn || '',
+      status: record.status || 'active',
+      lastVisit: record.lastVisit,
+      nextAppointment: record.nextAppointment,
+      conditions: record.conditions || [],
+      provider: record.provider,
+      insuranceProvider: record.insuranceProvider,
+      registeredDate: record.registeredDate || record.createdAt,
+      tags: record.tags || [],
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    };
   }
 
   // Mock data for development

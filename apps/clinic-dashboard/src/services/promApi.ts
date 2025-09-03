@@ -48,27 +48,27 @@ class PromApi {
     page?: number;
     limit?: number;
   }) {
-    const response = await apiClient.get('/api/proms/templates', { params });
+    const response = await apiClient.get('/api/v1/proms/templates', { params });
     return response.data;
   }
 
   async getTemplate(id: string) {
-    const response = await apiClient.get(`/api/proms/templates/${id}`);
+    const response = await apiClient.get(`/api/v1/proms/templates/by-id/${id}`);
     return response.data;
   }
 
   async createTemplate(data: Omit<PromTemplate, 'id' | 'createdAt' | 'updatedAt'>) {
-    const response = await apiClient.post('/api/proms/templates', data);
+    const response = await apiClient.post('/api/v1/proms/templates', data);
     return response.data;
   }
 
   async updateTemplate(id: string, data: Partial<PromTemplate>) {
-    const response = await apiClient.put(`/api/proms/templates/${id}`, data);
+    const response = await apiClient.put(`/api/v1/proms/templates/by-id/${id}`, data);
     return response.data;
   }
 
   async deleteTemplate(id: string) {
-    const response = await apiClient.delete(`/api/proms/templates/${id}`);
+    const response = await apiClient.delete(`/api/v1/proms/templates/by-id/${id}`);
     return response.data;
   }
 
@@ -79,7 +79,7 @@ class PromApi {
     expiresAt?: string;
     reminderSettings?: any;
   }) {
-    const response = await apiClient.post('/api/proms/send', data);
+    const response = await apiClient.post('/api/v1/proms/schedule', data);
     return response.data;
   }
 
@@ -92,17 +92,17 @@ class PromApi {
     page?: number;
     limit?: number;
   }) {
-    const response = await apiClient.get('/api/proms/responses', { params });
+    const response = await apiClient.get('/api/v1/proms/instances', { params });
     return response.data;
   }
 
   async getResponse(id: string) {
-    const response = await apiClient.get(`/api/proms/responses/${id}`);
+    const response = await apiClient.get(`/api/v1/proms/instances/${id}`);
     return response.data;
   }
 
   async submitResponse(id: string, responses: Record<string, any>) {
-    const response = await apiClient.post(`/api/proms/responses/${id}/submit`, { responses });
+    const response = await apiClient.post(`/api/v1/proms/instances/${id}/answers`, { responses });
     return response.data;
   }
 
@@ -110,7 +110,7 @@ class PromApi {
     startDate?: string;
     endDate?: string;
   }) {
-    const response = await apiClient.get(`/api/proms/templates/${templateId}/analytics`, { params });
+    const response = await apiClient.get(`/api/v1/proms/templates/by-id/${templateId}`, { params });
     return response.data;
   }
 }

@@ -81,7 +81,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         )
       );
 
-      const response = await apiClient.post('/api/v1/documents/upload', formData, {
+      const response = await apiClient.post('/api/Documents/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

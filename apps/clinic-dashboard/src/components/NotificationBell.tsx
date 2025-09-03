@@ -47,7 +47,7 @@ const NotificationBell: React.FC = () => {
   const { data: notifications = [], isLoading, refetch } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const response = await api.get('/api/v1/notifications');
+      const response = await api.get('/api/Notifications');
       return response.data.map((n: any) => ({
         ...n,
         createdAt: new Date(n.createdAt),
@@ -59,7 +59,7 @@ const NotificationBell: React.FC = () => {
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      await api.put(`/api/v1/notifications/${notificationId}/read`);
+      await api.put(`/api/Notifications/${notificationId}/mark-read`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -69,7 +69,7 @@ const NotificationBell: React.FC = () => {
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      await api.put('/api/v1/notifications/read-all');
+      await api.put('/api/Notifications/mark-all-read');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

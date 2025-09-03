@@ -126,14 +126,23 @@ const analyticsApi = {
 
   // Get dashboard statistics
   getDashboardStats: async (): Promise<DashboardStats> => {
-    return await api.get<DashboardStats>('/api/dashboard/stats');
+    // Use clinic-dashboard/overview for stats
+    const data = await api.get<any>('/api/clinic-dashboard/overview');
+    return {
+      todayAppointments: data.statistics?.totalAppointmentsToday || 0,
+      pendingIntakes: data.statistics?.pendingAppointments || 0,
+      activePatients: data.statistics?.totalPatientsThisWeek || 0,
+      completedToday: data.statistics?.completedAppointments || 0,
+      averageWaitTime: data.statistics?.averageWaitTime || 0,
+      patientSatisfaction: 0,
+    };
   },
 
   // Get appointment trends for the last N days
   getAppointmentTrends: async (days: number = 30): Promise<AppointmentTrend[]> => {
     try {
       const params = new URLSearchParams({ days: days.toString() });
-      const response = await api.get<any>(`/clinic-dashboard/metrics?${params}`);
+      const response = await api.get<any>(`/api/clinic-dashboard/metrics?${params}`);
       
       if (response && response.appointmentTrends) {
         return response.appointmentTrends;
@@ -175,7 +184,7 @@ const analyticsApi = {
   getProviderPerformance: async (): Promise<ProviderPerformance[]> => {
     try {
       const params = new URLSearchParams({ days: '30' });
-      const response = await api.get<any>(`/clinic-dashboard/metrics?${params}`);
+      const response = await api.get<any>(`/api/clinic-dashboard/metrics?${params}`);
       
       if (response && response.providerPerformance) {
         return response.providerPerformance;

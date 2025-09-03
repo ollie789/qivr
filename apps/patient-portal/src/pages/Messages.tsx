@@ -241,7 +241,7 @@ export const Messages = () => {
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5001/api/messages', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/messages`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',

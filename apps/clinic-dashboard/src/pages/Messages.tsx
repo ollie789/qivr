@@ -66,7 +66,7 @@ const Messages: React.FC = () => {
     queryKey: ['messages', selectedTab],
     queryFn: async () => {
       const type = selectedTab === 1 ? 'sms' : selectedTab === 2 ? 'email' : 'all';
-      const response = await apiClient.get('/api/v1/messages', {
+      const response = await apiClient.get('/api/Messages', {
         params: { type, limit: 100 }
       });
       return response.data.map((m: any) => ({

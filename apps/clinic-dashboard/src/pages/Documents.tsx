@@ -74,7 +74,7 @@ const Documents: React.FC = () => {
   const { data: documents = [], isLoading, error } = useQuery({
     queryKey: ['documents', selectedCategory],
     queryFn: async () => {
-      const response = await apiClient.get('/api/v1/documents', {
+      const response = await apiClient.get('/api/Documents', {
         params: {
           category: selectedCategory === 'all' ? undefined : selectedCategory,
           limit: 100,
@@ -90,7 +90,7 @@ const Documents: React.FC = () => {
   // Delete document mutation
   const deleteMutation = useMutation({
     mutationFn: async (documentId: string) => {
-      await apiClient.delete(`/api/v1/documents/${documentId}`);
+      await apiClient.delete(`/api/Documents/${documentId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });

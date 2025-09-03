@@ -11,10 +11,10 @@ const amplifyConfig = {
           domain: import.meta.env.VITE_COGNITO_DOMAIN || 'qivr-auth.auth.ap-southeast-2.amazoncognito.com',
           scopes: ['openid', 'profile', 'email', 'phone'],
           redirectSignIn: [
-            import.meta.env.VITE_COGNITO_REDIRECT_SIGNIN || 'http://localhost:3002/auth/callback',
+            import.meta.env.VITE_COGNITO_REDIRECT_SIGNIN || 'http://localhost:3000/auth/callback',
           ],
           redirectSignOut: [
-            import.meta.env.VITE_COGNITO_REDIRECT_SIGNOUT || 'http://localhost:3002/',
+            import.meta.env.VITE_COGNITO_REDIRECT_SIGNOUT || 'http://localhost:3000/',
           ],
       responseType: 'code' as 'code',
         },
@@ -51,7 +51,7 @@ const amplifyConfig = {
 if (typeof window !== 'undefined') {
   try {
     Amplify.configure(amplifyConfig);
-    console.log('Amplify configured successfully for patient portal');
+    console.log('Amplify configured successfully for patient portal on port 3000');
   } catch (error) {
     console.error('Failed to configure Amplify:', error);
   }

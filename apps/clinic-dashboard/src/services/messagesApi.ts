@@ -35,32 +35,32 @@ class MessagesApi {
     page?: number;
     limit?: number;
   }) {
-    const response = await apiClient.get('/api/messages', { params });
+    const response = await apiClient.get('/api/Messages', { params });
     return response.data;
   }
 
   async getMessage(id: string) {
-    const response = await apiClient.get(`/api/messages/${id}`);
+    const response = await apiClient.get(`/api/Messages/${id}`);
     return response.data;
   }
 
   async sendMessage(data: SendMessageRequest) {
-    const response = await apiClient.post('/api/messages/send', data);
+    const response = await apiClient.post('/api/Messages', data);
     return response.data;
   }
 
   async markAsRead(id: string) {
-    const response = await apiClient.put(`/api/messages/${id}/read`);
+    const response = await apiClient.put(`/api/Messages/${id}/read`);
     return response.data;
   }
 
   async deleteMessage(id: string) {
-    const response = await apiClient.delete(`/api/messages/${id}`);
+    const response = await apiClient.delete(`/api/Messages/${id}`);
     return response.data;
   }
 
   async getTemplates() {
-    const response = await apiClient.get('/api/messages/templates');
+    const response = await apiClient.get('/api/Messages/templates');
     return response.data;
   }
 
@@ -71,22 +71,22 @@ class MessagesApi {
     type: 'sms' | 'email';
     variables?: string[];
   }) {
-    const response = await apiClient.post('/api/messages/templates', data);
+    const response = await apiClient.post('/api/Messages/templates', data);
     return response.data;
   }
 
   async updateTemplate(id: string, data: any) {
-    const response = await apiClient.put(`/api/messages/templates/${id}`, data);
+    const response = await apiClient.put(`/api/Messages/templates/${id}`, data);
     return response.data;
   }
 
   async deleteTemplate(id: string) {
-    const response = await apiClient.delete(`/api/messages/templates/${id}`);
+    const response = await apiClient.delete(`/api/Messages/templates/${id}`);
     return response.data;
   }
 
   async getConversation(patientId: string) {
-    const response = await apiClient.get(`/api/messages/conversation/${patientId}`);
+    const response = await apiClient.get(`/api/Messages/conversation/${patientId}`);
     return response.data;
   }
 }

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Patient portal for Qivr health platform",
   "scripts": {
-    "dev": "vite --port 3002",
+    "dev": "vite --port 3000",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
@@ -21,7 +21,7 @@
     "@mui/x-date-pickers-pro": "^8.10.2",
     "@tanstack/react-query": "^5.17.0",
     "@tanstack/react-query-devtools": "^5.85.5",
-    "@qivr/http": "workspace:*",
+    "@qivr/http": "file:../../packages/http",
     "amazon-cognito-identity-js": "^6.3.15",
     "aws-amplify": "^6.15.5",
     "date-fns": "^4.1.0",

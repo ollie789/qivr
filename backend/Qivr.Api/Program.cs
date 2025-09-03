@@ -31,6 +31,51 @@ if (Environment.GetEnvironmentVariable("ENVIRONMENT") == "production")
     await builder.Configuration.AddSecretsManagerConfiguration();
 }
 
+// Ensure environment variables override JSON and include post-secrets values
+builder.Configuration.AddEnvironmentVariables();
+
+// Back-compat: map legacy env var names to Cognito config keys
+var cognitoAliasMap = new Dictionary<string, string>();
+void MapIfSet(string key, string? value)
+{
+    if (!string.IsNullOrWhiteSpace(value))
+    {
+        cognitoAliasMap[key] = value!;
+    }
+}
+
+MapIfSet("Cognito:Region", Environment.GetEnvironmentVariable("COGNITO_REGION") ?? Environment.GetEnvironmentVariable("AWS_REGION"));
+MapIfSet("Cognito:UserPoolId", Environment.GetEnvironmentVariable("COGNITO_USER_POOL_ID"));
+MapIfSet("Cognito:UserPoolClientId", Environment.GetEnvironmentVariable("COGNITO_CLIENT_ID"));
+MapIfSet("Cognito:UserPoolClientSecret", Environment.GetEnvironmentVariable("COGNITO_CLIENT_SECRET"));
+MapIfSet("Cognito:UserPoolDomain", Environment.GetEnvironmentVariable("COGNITO_DOMAIN"));
+MapIfSet("Cognito:IdentityPoolId", Environment.GetEnvironmentVariable("COGNITO_IDENTITY_POOL_ID"));
+
+if (cognitoAliasMap.Count > 0)
+{
+    builder.Configuration.AddInMemoryCollection(cognitoAliasMap);
+}
+
+// Expand ${VAR} placeholders from JSON for Cognito section if present
+var cognitoSectionRaw = builder.Configuration.GetSection("Cognito");
+var expandedCognito = new Dictionary<string, string>();
+foreach (var child in cognitoSectionRaw.GetChildren())
+{
+    var rawVal = child.Value;
+    if (!string.IsNullOrWhiteSpace(rawVal))
+    {
+        var expanded = ExpandEnvPlaceholders(rawVal);
+        if (!string.Equals(expanded, rawVal, StringComparison.Ordinal))
+        {
+            expandedCognito[$"Cognito:{child.Key}"] = expanded;
+        }
+    }
+}
+if (expandedCognito.Count > 0)
+{
+    builder.Configuration.AddInMemoryCollection(expandedCognito);
+}
+
 // Configure ProblemDetails for consistent error responses
 builder.Services.AddProblemDetails();
 

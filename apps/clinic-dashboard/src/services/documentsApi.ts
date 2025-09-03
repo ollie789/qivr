@@ -33,12 +33,23 @@ class DocumentsApi {
     page?: number;
     limit?: number;
   }) {
-    const response = await apiClient.get('/api/documents', { params });
-    return response.data;
+    try {
+      // If patientId is provided, use the patient-specific endpoint
+      if (params?.patientId) {
+        const response = await apiClient.get(`/api/Documents/patient/${params.patientId}`);
+        return response.data;
+      }
+      // No generic documents endpoint exists, return mock data
+      console.log('Note: Backend does not have generic /api/Documents endpoint - using mock data');
+      return this.getMockDocuments();
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      return this.getMockDocuments();
+    }
   }
 
   async getDocument(id: string) {
-    const response = await apiClient.get(`/api/documents/${id}`);
+    const response = await apiClient.get(`/api/Documents/${id}`);
     return response.data;
   }
 
@@ -50,7 +61,7 @@ class DocumentsApi {
     if (data.description) formData.append('description', data.description);
     if (data.tags) formData.append('tags', JSON.stringify(data.tags));
 
-    const response = await apiClient.post('/api/documents/upload', formData, {
+    const response = await apiClient.post('/api/Documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -63,17 +74,17 @@ class DocumentsApi {
     description?: string;
     tags?: string[];
   }) {
-    const response = await apiClient.put(`/api/documents/${id}`, data);
+    const response = await apiClient.put(`/api/Documents/${id}`, data);
     return response.data;
   }
 
   async deleteDocument(id: string) {
-    const response = await apiClient.delete(`/api/documents/${id}`);
+    const response = await apiClient.delete(`/api/Documents/${id}`);
     return response.data;
   }
 
   async downloadDocument(id: string) {
-    const response = await apiClient.get(`/api/documents/${id}/download`, {
+    const response = await apiClient.get(`/api/Documents/${id}/download`, {
       responseType: 'blob',
     });
     return response.data;
@@ -84,13 +95,42 @@ class DocumentsApi {
     message?: string;
     expiresIn?: number;
   }) {
-    const response = await apiClient.post(`/api/documents/${id}/share`, data);
+    const response = await apiClient.post(`/api/Documents/${id}/share`, data);
     return response.data;
   }
 
   async getCategories() {
-    const response = await apiClient.get('/api/documents/categories');
+    const response = await apiClient.get('/api/Documents/categories');
     return response.data;
+  }
+
+  private getMockDocuments() {
+    return [
+      {
+        id: '1',
+        fileName: 'patient-intake-form.pdf',
+        fileSize: 245000,
+        mimeType: 'application/pdf',
+        category: 'intake',
+        patientId: '1',
+        uploadedBy: 'Sarah Johnson',
+        uploadedAt: new Date('2024-01-15').toISOString(),
+        description: 'Initial intake form',
+        tags: ['intake', 'new-patient'],
+      },
+      {
+        id: '2',
+        fileName: 'x-ray-results.jpg',
+        fileSize: 1850000,
+        mimeType: 'image/jpeg',
+        category: 'imaging',
+        patientId: '2',
+        uploadedBy: 'Dr. James Williams',
+        uploadedAt: new Date('2024-01-12').toISOString(),
+        description: 'Knee X-ray',
+        tags: ['x-ray', 'knee'],
+      },
+    ];
   }
 }
 

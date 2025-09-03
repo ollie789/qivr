@@ -143,7 +143,7 @@ const Appointments: React.FC = () => {
           endDate = format(endOfMonth(selectedDate), 'yyyy-MM-dd');
         }
 
-        const response = await apiClient.get('/api/appointments', {
+        const response = await apiClient.get('/api/Appointments', {
           params: {
             startDate,
             endDate,
@@ -161,7 +161,7 @@ const Appointments: React.FC = () => {
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiClient.post('/api/appointments', data);
+      const response = await apiClient.post('/api/Appointments/book', data);
       return response.data;
     },
     onSuccess: () => {
