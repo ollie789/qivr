@@ -1,5 +1,4 @@
-import axios from 'axios';
-import apiClient from './sharedApiClient';
+import { postJson, getJson, ApiError } from '@qivr/http';
 
 export interface ClinicUserAttributes {
   sub?: string;
@@ -57,8 +56,7 @@ class JwtAuthService {
     
     if (storedTokens) {
       this.tokens = JSON.parse(storedTokens);
-      // Set the authorization header
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${this.tokens?.accessToken}`;
+      // Token will be automatically used by @qivr/http helpers
     }
     
     if (storedUser) {
@@ -73,8 +71,8 @@ class JwtAuthService {
     localStorage.setItem('authTokens', JSON.stringify(tokens));
     localStorage.setItem('currentUser', JSON.stringify(user));
     
-    // Set the authorization header
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${tokens.accessToken}`;
+    // Store token for @qivr/http to use
+    localStorage.setItem('authToken', tokens.accessToken);
   }
 
   private clearAuth() {
@@ -83,9 +81,7 @@ class JwtAuthService {
     
     localStorage.removeItem('authTokens');
     localStorage.removeItem('currentUser');
-    
-    // Clear the authorization header
-    delete apiClient.defaults.headers.common['Authorization'];
+    localStorage.removeItem('authToken');
   }
 
   private notifyAuthStateChange(isAuthenticated: boolean) {
@@ -101,12 +97,12 @@ class JwtAuthService {
 
   async signIn(email: string, password: string): Promise<any> {
     try {
-      const response = await apiClient.post('/api/Auth/login', {
+      const response = await postJson<any>('/api/Auth/login', {
         username: email,
         password: password,
       });
 
-      const { accessToken, idToken, refreshToken, expiresIn, userInfo } = response.data;
+      const { accessToken, idToken, refreshToken, expiresIn, userInfo } = response;
 
       // Map user info to our format
       const user: ClinicUserAttributes = {
@@ -140,8 +136,8 @@ class JwtAuthService {
     } catch (error: any) {
       console.error('Sign in error:', error);
       
-      if (error.response?.data?.error) {
-        const errorMessage = error.response.data.error;
+      if (error instanceof ApiError && error.problem?.detail) {
+        const errorMessage = error.problem.detail;
         
         if (errorMessage.includes('Email verification required')) {
           throw new Error('Email not verified. Please check your inbox for the verification link.');
@@ -177,7 +173,7 @@ class JwtAuthService {
 
   async signUp(data: ClinicSignUpData): Promise<any> {
     try {
-      const response = await apiClient.post('/api/Auth/signup', {
+      const response = await postJson<any>('/api/Auth/signup', {
         email: data.email,
         password: data.password,
         firstName: data.firstName,
@@ -189,7 +185,7 @@ class JwtAuthService {
 
       return {
         isSignUpComplete: false,
-        userId: response.data.userSub,
+        userId: response.userSub,
         nextStep: { 
           signUpStep: 'CONFIRM_SIGN_UP',
           codeDeliveryDetails: {
@@ -201,8 +197,8 @@ class JwtAuthService {
     } catch (error: any) {
       console.error('Sign up error:', error);
       
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
+      if (error instanceof ApiError && error.problem?.detail) {
+        throw new Error(error.problem.detail);
       }
       
       throw new Error('Unable to create account. Please try again.');
@@ -211,7 +207,7 @@ class JwtAuthService {
 
   async confirmSignUp(email: string, code: string): Promise<any> {
     try {
-      const response = await apiClient.post('/api/EmailVerification/verify', {
+      await postJson('/api/EmailVerification/verify', {
         token: code,
       });
 
@@ -222,8 +218,8 @@ class JwtAuthService {
     } catch (error: any) {
       console.error('Confirm sign up error:', error);
       
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
+      if (error instanceof ApiError && error.problem?.detail) {
+        throw new Error(error.problem.detail);
       }
       
       throw new Error('Unable to verify email. Please try again.');
@@ -233,7 +229,7 @@ class JwtAuthService {
   async signOut(): Promise<void> {
     try {
       // Call backend logout if needed
-      await apiClient.post('/api/Auth/logout').catch(() => {
+      await postJson('/api/Auth/logout', {}).catch(() => {
         // Ignore logout errors
       });
     } finally {
@@ -244,7 +240,7 @@ class JwtAuthService {
 
   async forgotPassword(email: string): Promise<any> {
     try {
-      const response = await apiClient.post('/api/Auth/forgot-password', {
+      await postJson('/api/Auth/forgot-password', {
         email,
       });
 
@@ -266,7 +262,7 @@ class JwtAuthService {
 
   async confirmResetPassword(email: string, code: string, newPassword: string): Promise<any> {
     try {
-      const response = await apiClient.post('/api/Auth/reset-password', {
+      await postJson('/api/Auth/reset-password', {
         email,
         code,
         newPassword,
@@ -285,9 +281,8 @@ class JwtAuthService {
     }
 
     try {
-      const response = await apiClient.get('/api/Auth/userinfo');
-      
-      const userInfo = response.data;
+      const { getWithAuth } = await import('@qivr/http');
+      const userInfo = await getWithAuth<any>('/api/Auth/userinfo');
       
       const user: ClinicUserAttributes = {
         sub: userInfo.id || userInfo.username,
@@ -348,11 +343,11 @@ class JwtAuthService {
     }
 
     try {
-      const response = await apiClient.post('/api/Auth/refresh', {
+      const response = await postJson<any>('/api/Auth/refresh', {
         refreshToken: this.tokens.refreshToken,
       });
 
-      const { accessToken, idToken } = response.data;
+      const { accessToken, idToken } = response;
 
       const newTokens: AuthTokens = {
         ...this.tokens,
@@ -362,9 +357,7 @@ class JwtAuthService {
 
       this.tokens = newTokens;
       localStorage.setItem('authTokens', JSON.stringify(newTokens));
-      
-      // Update the authorization header
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      localStorage.setItem('authToken', accessToken);
 
       return newTokens;
     } catch (error) {

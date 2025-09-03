@@ -50,7 +50,6 @@ import {
   Legend,
   ResponsiveContainer,
   RadarChart,
-  RadarDataPoint,
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
@@ -58,6 +57,7 @@ import {
 } from 'recharts';
 import { useAuthStore } from '../stores/authStore';
 import dashboardApi from '../services/dashboardApi';
+import { analyticsApi } from '../services/analyticsApi';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -83,6 +83,39 @@ const Dashboard: React.FC = () => {
     queryKey: ['today-appointments'],
     queryFn: dashboardApi.getTodayAppointments,
     refetchInterval: 60000,
+  });
+
+  // Fetch appointment trends
+  const { data: appointmentTrends = [] } = useQuery({
+    queryKey: ['appointment-trends', chartPeriod],
+    queryFn: () => {
+      const days = chartPeriod === '7d' ? 7 : chartPeriod === '30d' ? 30 : 90;
+      return analyticsApi.getAppointmentTrends(days);
+    },
+  });
+
+  // Fetch PROM completion data
+  const { data: promCompletionData = [] } = useQuery({
+    queryKey: ['prom-completion'],
+    queryFn: analyticsApi.getPromCompletionRates,
+  });
+
+  // Fetch condition distribution
+  const { data: conditionData = [] } = useQuery({
+    queryKey: ['condition-distribution'],
+    queryFn: analyticsApi.getConditionDistribution,
+  });
+
+  // Fetch provider performance
+  const { data: providerPerformance = [] } = useQuery({
+    queryKey: ['provider-performance'],
+    queryFn: analyticsApi.getProviderPerformance,
+  });
+
+  // Fetch weekly activity
+  const { data: weeklyActivity = [] } = useQuery({
+    queryKey: ['weekly-activity'],
+    queryFn: analyticsApi.getWeeklyActivity,
   });
 
   // Create stats array with real data
@@ -295,15 +328,7 @@ const Dashboard: React.FC = () => {
               </Box>
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart
-                  data={[
-                    { name: 'Mon', appointments: 12, completed: 10, cancelled: 2 },
-                    { name: 'Tue', appointments: 15, completed: 14, cancelled: 1 },
-                    { name: 'Wed', appointments: 18, completed: 15, cancelled: 3 },
-                    { name: 'Thu', appointments: 14, completed: 12, cancelled: 2 },
-                    { name: 'Fri', appointments: 20, completed: 18, cancelled: 2 },
-                    { name: 'Sat', appointments: 8, completed: 7, cancelled: 1 },
-                    { name: 'Sun', appointments: 5, completed: 5, cancelled: 0 },
-                  ]}
+                  data={appointmentTrends || []}
                   margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                 >
                   <defs>
@@ -338,24 +363,24 @@ const Dashboard: React.FC = () => {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={[
-                      { name: 'Completed', value: 68, color: '#10b981' },
-                      { name: 'In Progress', value: 15, color: '#f59e0b' },
-                      { name: 'Not Started', value: 17, color: '#ef4444' },
-                    ]}
+                    data={promCompletionData.length > 0 ? promCompletionData.map(p => ({
+                      name: p.name,
+                      value: p.completed,
+                      color: p.completed > 80 ? '#10b981' : p.completed > 50 ? '#f59e0b' : '#ef4444'
+                    })) : [{ name: 'No Data', value: 100, color: '#e5e7eb' }]}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => `${entry.name}: ${entry.value}%`}
+                    label={(entry) => entry.name !== 'No Data' ? `${entry.name}: ${entry.value}%` : ''}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {[
-                      { name: 'Completed', value: 68, color: '#10b981' },
-                      { name: 'In Progress', value: 15, color: '#f59e0b' },
-                      { name: 'Not Started', value: 17, color: '#ef4444' },
-                    ].map((entry, index) => (
+                    {(promCompletionData.length > 0 ? promCompletionData.map(p => ({
+                      name: p.name,
+                      value: p.completed,
+                      color: p.completed > 80 ? '#10b981' : p.completed > 50 ? '#f59e0b' : '#ef4444'
+                    })) : [{ name: 'No Data', value: 100, color: '#e5e7eb' }]).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -364,10 +389,9 @@ const Dashboard: React.FC = () => {
               </ResponsiveContainer>
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Overall response rate: <strong>68%</strong>
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Average completion time: <strong>8.5 min</strong>
+                  {promCompletionData.length > 0 
+                    ? `Overall response rate: ${Math.round(promCompletionData.reduce((sum, p) => sum + p.completed, 0) / promCompletionData.length)}%`
+                    : 'No PROM data available'}
                 </Typography>
               </Box>
             </CardContent>
@@ -383,13 +407,11 @@ const Dashboard: React.FC = () => {
               </Typography>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart
-                  data={[
-                    { condition: 'Hypertension', count: 45 },
-                    { condition: 'Diabetes', count: 38 },
-                    { condition: 'Asthma', count: 28 },
-                    { condition: 'Arthritis', count: 22 },
-                    { condition: 'Depression', count: 18 },
-                    { condition: 'Anxiety', count: 15 },
+                  data={conditionData.length > 0 ? conditionData.map(c => ({
+                    condition: c.name,
+                    count: c.value
+                  })) : [
+                    { condition: 'No Data', count: 0 }
                   ]}
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
@@ -412,13 +434,8 @@ const Dashboard: React.FC = () => {
                 Clinic Performance Metrics
               </Typography>
               <ResponsiveContainer width="100%" height={250}>
-                <RadarChart data={[
-                  { metric: 'Patient Satisfaction', value: 85 },
-                  { metric: 'Wait Time', value: 75 },
-                  { metric: 'PROM Completion', value: 68 },
-                  { metric: 'Appointment Adherence', value: 90 },
-                  { metric: 'Treatment Efficacy', value: 82 },
-                  { metric: 'Staff Efficiency', value: 78 },
+                <RadarChart data={providerPerformance.length > 0 ? providerPerformance : [
+                  { metric: 'No Data', value: 0 }
                 ]}>
                   <PolarGrid />
                   <PolarAngleAxis dataKey="metric" />
@@ -440,13 +457,8 @@ const Dashboard: React.FC = () => {
               </Typography>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart
-                  data={[
-                    { time: '8AM', Mon: 4, Tue: 3, Wed: 5, Thu: 4, Fri: 6, Sat: 2, Sun: 1 },
-                    { time: '10AM', Mon: 12, Tue: 15, Wed: 14, Thu: 13, Fri: 16, Sat: 8, Sun: 4 },
-                    { time: '12PM', Mon: 8, Tue: 10, Wed: 9, Thu: 11, Fri: 12, Sat: 5, Sun: 3 },
-                    { time: '2PM', Mon: 15, Tue: 14, Wed: 16, Thu: 15, Fri: 14, Sat: 6, Sun: 2 },
-                    { time: '4PM', Mon: 10, Tue: 12, Wed: 11, Thu: 10, Fri: 8, Sat: 3, Sun: 1 },
-                    { time: '6PM', Mon: 5, Tue: 6, Wed: 5, Thu: 4, Fri: 3, Sat: 1, Sun: 0 },
+                  data={weeklyActivity.length > 0 ? weeklyActivity : [
+                    { time: 'No Data', Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }
                   ]}
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >

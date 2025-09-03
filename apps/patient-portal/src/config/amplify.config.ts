@@ -3,8 +3,8 @@ import { Amplify } from 'aws-amplify';
 const amplifyConfig = {
   Auth: {
     Cognito: {
-      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || 'ap-southeast-2_XXXXXXXXX',
-      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || 'XXXXXXXXXXXXXXXXXXXXXXXXXX',
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || 'ap-southeast-2_ZMcriKNGJ',
+      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || '4kugfmvk56o3otd0grc4gddi8r',
       identityPoolId: import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID,
       loginWith: {
         oauth: {
@@ -40,14 +40,21 @@ const amplifyConfig = {
   API: {
     REST: {
       QivrAPI: {
-        endpoint: import.meta.env.VITE_API_URL || 'http://localhost:5001',
+        endpoint: import.meta.env.VITE_API_URL || 'http://localhost:5050/api',
         region: 'ap-southeast-2',
       },
     },
   },
 };
 
-// Initialize Amplify
-Amplify.configure(amplifyConfig);
+// Initialize Amplify only in browser
+if (typeof window !== 'undefined') {
+  try {
+    Amplify.configure(amplifyConfig);
+    console.log('Amplify configured successfully for patient portal');
+  } catch (error) {
+    console.error('Failed to configure Amplify:', error);
+  }
+}
 
 export default amplifyConfig;

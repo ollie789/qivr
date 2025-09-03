@@ -1,26 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
-
-// Create axios instance with auth interceptor
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-apiClient.interceptors.request.use((config) => {
-  const authStorage = localStorage.getItem('clinic-auth-storage');
-  if (authStorage) {
-    const { state } = JSON.parse(authStorage);
-    if (state?.token) {
-      config.headers.Authorization = `Bearer ${state.token}`;
-    }
-  }
-  return config;
-});
+import api from '../lib/api-client';
 
 // Analytics interfaces
 interface PeriodDto {
@@ -133,13 +111,13 @@ const analyticsApi = {
   // Get clinic analytics for a specific period
   getClinicAnalytics: async (clinicId: string, from: Date, to: Date): Promise<ClinicAnalytics> => {
     try {
-      const response = await apiClient.get(`/api/clinic-management/clinics/${clinicId}/analytics`, {
-        params: {
-          from: from.toISOString(),
-          to: to.toISOString(),
-        },
+      const params = new URLSearchParams({
+        from: from.toISOString(),
+        to: to.toISOString(),
       });
-      return response.data;
+      return await api.get<ClinicAnalytics>(
+        `/api/clinic-management/clinics/${clinicId}/analytics?${params}`
+      );
     } catch (error) {
       console.error('Error fetching clinic analytics:', error);
       throw error;
@@ -148,39 +126,21 @@ const analyticsApi = {
 
   // Get dashboard statistics
   getDashboardStats: async (): Promise<DashboardStats> => {
-    const response = await apiClient.get('/api/dashboard/stats');
-    return response.data;
+    return await api.get<DashboardStats>('/api/dashboard/stats');
   },
 
   // Get appointment trends for the last N days
   getAppointmentTrends: async (days: number = 30): Promise<AppointmentTrend[]> => {
     try {
-      // For now, we'll generate this from clinic analytics
-      const to = new Date();
-      const from = new Date();
-      from.setDate(from.getDate() - days);
+      const params = new URLSearchParams({ days: days.toString() });
+      const response = await api.get<any>(`/clinic-dashboard/metrics?${params}`);
       
-      const authStorage = localStorage.getItem('clinic-auth-storage');
-      const clinicId = authStorage ? JSON.parse(authStorage).state?.user?.clinicId || 'default' : 'default';
-      const analytics = await analyticsApi.getClinicAnalytics(clinicId, from, to);
-      
-      // Transform analytics data to trend format
-      // This is a simplified transformation - real implementation would need day-by-day data
-      const trends: AppointmentTrend[] = [];
-      for (let i = 0; i < days; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() - (days - i - 1));
-        
-        trends.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          appointments: Math.floor(analytics.appointmentMetrics.totalScheduled / days + Math.random() * 10),
-          newPatients: Math.floor(analytics.patientMetrics.newPatients / days + Math.random() * 3),
-          cancellations: Math.floor(analytics.appointmentMetrics.cancelled / days + Math.random() * 2),
-          noShows: Math.floor(analytics.appointmentMetrics.noShows / days),
-        });
+      if (response && response.appointmentTrends) {
+        return response.appointmentTrends;
       }
       
-      return trends;
+      // Return empty array if no data
+      return [];
     } catch (error) {
       console.error('Error fetching appointment trends:', error);
       return [];
@@ -214,50 +174,15 @@ const analyticsApi = {
   // Get provider performance data
   getProviderPerformance: async (): Promise<ProviderPerformance[]> => {
     try {
-      // This would need a specific endpoint in the backend
-      // For now, returning mock data
-      return [
-        {
-          providerId: '1',
-          providerName: 'Dr. Emily Chen',
-          patients: 145,
-          satisfaction: 4.8,
-          revenue: 42500,
-          appointmentsCompleted: 280,
-          averageWaitTime: 12,
-          noShowRate: 3.2,
-        },
-        {
-          providerId: '2',
-          providerName: 'Dr. James Williams',
-          patients: 132,
-          satisfaction: 4.7,
-          revenue: 38900,
-          appointmentsCompleted: 265,
-          averageWaitTime: 14,
-          noShowRate: 4.1,
-        },
-        {
-          providerId: '3',
-          providerName: 'Dr. Priya Patel',
-          patients: 128,
-          satisfaction: 4.9,
-          revenue: 37200,
-          appointmentsCompleted: 255,
-          averageWaitTime: 10,
-          noShowRate: 2.8,
-        },
-        {
-          providerId: '4',
-          providerName: 'Dr. Michael Brown',
-          patients: 115,
-          satisfaction: 4.6,
-          revenue: 33500,
-          appointmentsCompleted: 230,
-          averageWaitTime: 16,
-          noShowRate: 5.2,
-        },
-      ];
+      const params = new URLSearchParams({ days: '30' });
+      const response = await api.get<any>(`/clinic-dashboard/metrics?${params}`);
+      
+      if (response && response.providerPerformance) {
+        return response.providerPerformance;
+      }
+      
+      // Return empty array instead of mock data
+      return [];
     } catch (error) {
       console.error('Error fetching provider performance:', error);
       return [];
@@ -296,34 +221,22 @@ const analyticsApi = {
   // Get revenue data for the last 12 months
   getRevenueData: async (): Promise<{ month: string; revenue: number; expenses: number }[]> => {
     try {
-      const data = [];
-      const currentDate = new Date();
-      
-      for (let i = 11; i >= 0; i--) {
-        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-        const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
-        
-        const authStorage = localStorage.getItem('clinic-auth-storage');
-        const clinicId = authStorage ? JSON.parse(authStorage).state?.user?.clinicId || 'default' : 'default';
-        const analytics = await analyticsApi.getClinicAnalytics(clinicId, date, nextMonth);
-        
-        data.push({
-          month: date.toLocaleDateString('en-US', { month: 'short' }),
-          revenue: analytics.revenueMetrics.totalCollected,
-          expenses: analytics.revenueMetrics.totalBilled - analytics.revenueMetrics.totalCollected,
-        });
-      }
-      
-      return data;
+      // Revenue data not available in current API
+      // Return empty array instead of mock data
+      return [];
     } catch (error) {
       console.error('Error fetching revenue data:', error);
-      // Return mock data as fallback
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return months.map(month => ({
-        month,
-        revenue: Math.floor(Math.random() * 50000) + 30000,
-        expenses: Math.floor(Math.random() * 20000) + 15000,
-      }));
+      return [];
+    }
+  },
+
+  // Get weekly activity data
+  getWeeklyActivity: async (): Promise<any[]> => {
+    try {
+      return await api.get<any[]>('/clinic-dashboard/weekly-activity');
+    } catch (error) {
+      console.error('Error fetching weekly activity:', error);
+      return [];
     }
   },
 };

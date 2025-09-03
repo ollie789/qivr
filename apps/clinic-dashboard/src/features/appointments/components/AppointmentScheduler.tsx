@@ -40,7 +40,7 @@ import {
   NavigateBefore as BackIcon,
 } from '@mui/icons-material';
 import { format, addDays } from 'date-fns';
-import axios from 'axios';
+import { getWithAuth, postWithAuth } from '@qivr/http';
 
 interface AppointmentSchedulerProps {
   open: boolean;
@@ -149,14 +149,13 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     try {
       setLoading(true);
       // TODO: Replace with actual API call
-      const response = await axios.get('/api/calendar/availability', {
-        params: {
-          providerId: selectedProvider?.id,
-          startDate: format(selectedDate!, 'yyyy-MM-dd'),
-          endDate: format(selectedDate!, 'yyyy-MM-dd'),
-          duration: appointmentTypes.find(t => t.value === appointmentType)?.duration,
-        },
+      const params = new URLSearchParams({
+        providerId: selectedProvider?.id || '',
+        startDate: format(selectedDate!, 'yyyy-MM-dd'),
+        endDate: format(selectedDate!, 'yyyy-MM-dd'),
+        duration: String(appointmentTypes.find(t => t.value === appointmentType)?.duration || 30),
       });
+      const response = await getWithAuth<any>(`/api/calendar/availability?${params}`);
       
       // Generate time slots for the day
       const slots: TimeSlot[] = [];
@@ -186,7 +185,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     try {
       setLoading(true);
       // TODO: Replace with actual API call
-      const response = await axios.post('/api/calendar/appointments/propose', {
+      const response = await postWithAuth<any>('/api/calendar/appointments/propose', {
         providerId: selectedProvider?.id,
         duration: appointmentTypes.find(t => t.value === appointmentType)?.duration,
         preferredDates: [
@@ -196,7 +195,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         ],
       });
       
-      setProposedSlots(response.data.proposedSlots);
+      setProposedSlots(response.proposedSlots);
     } catch (err) {
       setError('Failed to find alternative times');
     } finally {
@@ -238,9 +237,9 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       };
       
       // TODO: Replace with actual API call
-      const response = await axios.post('/api/calendar/appointments', appointmentData);
+      const response = await postWithAuth<any>('/api/calendar/appointments', appointmentData);
       
-      onScheduled?.(response.data.appointment);
+      onScheduled?.(response.appointment || response);
       onClose();
     } catch (err) {
       setError('Failed to schedule appointment');

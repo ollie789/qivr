@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5050/api';
-const API_BASE_URL = `${API_ROOT_URL.replace(/\/+$/, '')}/api/v1`;
+import api from '../lib/api-client';
 
 export interface Patient {
   id: string;
@@ -65,29 +62,21 @@ export interface PatientSearchParams {
 }
 
 class PatientApi {
-  private api = axios.create({
-    baseURL: API_BASE_URL,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  constructor() {
-    // Add auth token to requests
-    this.api.interceptors.request.use((config) => {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
-  }
+  private basePath = '/api/v1';
 
   // Get all patients with optional filters
   async getPatients(params?: PatientSearchParams) {
     try {
-      const response = await this.api.get('/patients', { params });
-      return response.data;
+      const queryParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined) queryParams.append(key, String(value));
+        });
+      }
+      const url = queryParams.toString() 
+        ? `${this.basePath}/patients?${queryParams}` 
+        : `${this.basePath}/patients`;
+      return await api.get<any>(url);
     } catch (error) {
       console.error('Error fetching patients:', error);
       // Return mock data for development
@@ -103,8 +92,7 @@ class PatientApi {
   // Get a single patient by ID
   async getPatient(id: string) {
     try {
-      const response = await this.api.get(`/patients/${id}`);
-      return response.data;
+      return await api.get<Patient>(`${this.basePath}/patients/${id}`);
     } catch (error) {
       console.error('Error fetching patient:', error);
       // Return mock data for development
@@ -115,8 +103,7 @@ class PatientApi {
   // Create a new patient
   async createPatient(patient: CreatePatientDto) {
     try {
-      const response = await this.api.post('/patients', patient);
-      return response.data;
+      return await api.post<Patient>(`${this.basePath}/patients`, patient);
     } catch (error) {
       console.error('Error creating patient:', error);
       // Return mock response for development
@@ -136,8 +123,7 @@ class PatientApi {
   // Update an existing patient
   async updatePatient(id: string, updates: UpdatePatientDto) {
     try {
-      const response = await this.api.patch(`/patients/${id}`, updates);
-      return response.data;
+      return await api.patch<Patient>(`${this.basePath}/patients/${id}`, updates);
     } catch (error) {
       console.error('Error updating patient:', error);
       // Return mock response for development
@@ -149,8 +135,7 @@ class PatientApi {
   // Delete a patient (soft delete)
   async deletePatient(id: string) {
     try {
-      const response = await this.api.delete(`/patients/${id}`);
-      return response.data;
+      return await api.delete<any>(`${this.basePath}/patients/${id}`);
     } catch (error) {
       console.error('Error deleting patient:', error);
       return { success: true };
@@ -160,8 +145,7 @@ class PatientApi {
   // Get patient's medical history
   async getPatientHistory(id: string) {
     try {
-      const response = await this.api.get(`/patients/${id}/history`);
-      return response.data;
+      return await api.get<any>(`${this.basePath}/patients/${id}/history`);
     } catch (error) {
       console.error('Error fetching patient history:', error);
       return {
@@ -176,8 +160,7 @@ class PatientApi {
   // Get patient's appointments
   async getPatientAppointments(id: string) {
     try {
-      const response = await this.api.get(`/patients/${id}/appointments`);
-      return response.data;
+      return await api.get<any[]>(`${this.basePath}/patients/${id}/appointments`);
     } catch (error) {
       console.error('Error fetching patient appointments:', error);
       return [];
@@ -187,8 +170,7 @@ class PatientApi {
   // Get patient's evaluations
   async getPatientEvaluations(id: string) {
     try {
-      const response = await this.api.get(`/patients/${id}/evaluations`);
-      return response.data;
+      return await api.get<any[]>(`${this.basePath}/patients/${id}/evaluations`);
     } catch (error) {
       console.error('Error fetching patient evaluations:', error);
       return [];
@@ -198,10 +180,7 @@ class PatientApi {
   // Link patient to intake submission
   async linkPatientToIntake(patientId: string, intakeId: string) {
     try {
-      const response = await this.api.post(`/patients/${patientId}/link-intake`, {
-        intakeId,
-      });
-      return response.data;
+      return await api.post<any>(`${this.basePath}/patients/${patientId}/link-intake`, { intakeId });
     } catch (error) {
       console.error('Error linking patient to intake:', error);
       return { success: true };
@@ -211,11 +190,10 @@ class PatientApi {
   // Create patient from intake submission
   async createPatientFromIntake(intakeId: string, patientData: CreatePatientDto) {
     try {
-      const response = await this.api.post('/patients/from-intake', {
+      return await api.post<Patient>(`${this.basePath}/patients/from-intake`, {
         intakeId,
         ...patientData,
       });
-      return response.data;
     } catch (error) {
       console.error('Error creating patient from intake:', error);
       // Return mock response for development
@@ -226,13 +204,22 @@ class PatientApi {
   // Export patients data
   async exportPatients(format: 'csv' | 'pdf' | 'excel' = 'csv', filters?: PatientSearchParams) {
     try {
-      const response = await this.api.get('/patients/export', {
-        params: { format, ...filters },
-        responseType: 'blob',
+      const queryParams = new URLSearchParams({ format });
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) queryParams.append(key, String(value));
+        });
+      }
+      // Note: For blob responses, we need to use native fetch with auth
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/patients/export?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+        },
       });
+      const blob = await response.blob();
       
       // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `patients_${Date.now()}.${format}`);

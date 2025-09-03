@@ -1,0 +1,57 @@
+name: No Axios Guard
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - '**/package.json'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
+      - '**/*.jsx'
+
+jobs:
+  check-no-axios:
+    name: Ensure no axios imports
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Check for axios in package.json files
+        run: |
+          echo "Checking for axios in package.json files..."
+          if find . -name "package.json" -type f | xargs grep -l '"axios"' | grep -v node_modules; then
+            echo "❌ Error: axios found in package.json files above"
+            echo "Please use @qivr/http instead of axios"
+            exit 1
+          else
+            echo "✅ No axios found in package.json files"
+          fi
+          
+      - name: Check for axios imports in source files
+        run: |
+          echo "Checking for axios imports in source files..."
+          AXIOS_IMPORTS=$(find ./apps ./packages -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) 2>/dev/null | xargs grep -l "from 'axios'\|from \"axios\"\|require('axios')\|require(\"axios\")" | grep -v node_modules || true)
+          
+          if [ ! -z "$AXIOS_IMPORTS" ]; then
+            echo "❌ Error: axios imports found in the following files:"
+            echo "$AXIOS_IMPORTS"
+            echo ""
+            echo "Please migrate to @qivr/http using these patterns:"
+            echo "  - import { getJson, postJson } from '@qivr/http';"
+            echo "  - import { getWithAuth, postWithAuth } from '@qivr/http';"
+            exit 1
+          else
+            echo "✅ No axios imports found in source files"
+          fi
+          
+      - name: Verify @qivr/http is available
+        run: |
+          echo "Verifying @qivr/http package exists..."
+          if [ -f "./packages/http/package.json" ]; then
+            echo "✅ @qivr/http package is available"
+          else
+            echo "⚠️ Warning: @qivr/http package not found at packages/http/"
+            echo "Make sure the fetch wrapper package is properly set up"
+          fi

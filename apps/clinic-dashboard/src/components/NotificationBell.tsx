@@ -26,7 +26,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
-import apiClient from '../services/sharedApiClient';
+import api from "../lib/api-client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Notification {
@@ -47,7 +47,7 @@ const NotificationBell: React.FC = () => {
   const { data: notifications = [], isLoading, refetch } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/v1/notifications');
+      const response = await api.get('/api/v1/notifications');
       return response.data.map((n: any) => ({
         ...n,
         createdAt: new Date(n.createdAt),
@@ -59,7 +59,7 @@ const NotificationBell: React.FC = () => {
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      await apiClient.put(`/api/v1/notifications/${notificationId}/read`);
+      await api.put(`/api/v1/notifications/${notificationId}/read`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -69,7 +69,7 @@ const NotificationBell: React.FC = () => {
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.put('/api/v1/notifications/read-all');
+      await api.put('/api/v1/notifications/read-all');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

@@ -1,7 +1,4 @@
-import axios from 'axios';
-import authService from './authService';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
+import api from '../lib/api-client';
 
 // Types
 export interface SendPromRequest {
@@ -118,81 +115,63 @@ export enum NotificationMethod {
   InApp = 4
 }
 
-// Helper to get headers with auth
-const getHeaders = () => {
-  const token = authService.getToken();
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  };
-};
+// Base path for API
+const BASE_PATH = '';
 
 export const promInstanceApi = {
   // Send PROM to a single patient
   sendToPatient: async (request: SendPromRequest): Promise<PromInstanceDto> => {
-    const response = await axios.post(
-      `${API_URL}/prominstance/send`,
-      request,
-      { headers: getHeaders() }
+    return await api.post<PromInstanceDto>(
+      '/prominstance/send',
+      request
     );
-    return response.data;
   },
 
   // Send PROM to multiple patients
   sendBulk: async (request: SendBulkPromRequest): Promise<PromInstanceDto[]> => {
-    const response = await axios.post(
-      `${API_URL}/prominstance/send/bulk`,
-      request,
-      { headers: getHeaders() }
+    return await api.post<PromInstanceDto[]>(
+      '/prominstance/send/bulk',
+      request
     );
-    return response.data;
   },
 
   // Get a specific PROM instance
   getInstance: async (instanceId: string): Promise<PromInstanceDto> => {
-    const response = await axios.get(
-      `${API_URL}/prominstance/${instanceId}`,
-      { headers: getHeaders() }
+    return await api.get<PromInstanceDto>(
+      `/prominstance/${instanceId}`
     );
-    return response.data;
   },
 
   // Get all PROM instances for a patient
   getPatientInstances: async (patientId: string): Promise<PromInstanceDto[]> => {
-    const response = await axios.get(
-      `${API_URL}/prominstance/patient/${patientId}`,
-      { headers: getHeaders() }
+    return await api.get<PromInstanceDto[]>(
+      `/prominstance/patient/${patientId}`
     );
-    return response.data;
   },
 
   // Submit PROM response (for patient portal)
   submitResponse: async (instanceId: string, response: PromResponse): Promise<PromInstanceDto> => {
-    const apiResponse = await axios.post(
-      `${API_URL}/prominstance/${instanceId}/submit`,
-      response,
-      { headers: { 'Content-Type': 'application/json' } } // No auth for patient submission
+    // Use regular API post for patient submission
+    return await api.post<PromInstanceDto>(
+      `/prominstance/${instanceId}/submit`,
+      response
     );
-    return apiResponse.data;
   },
 
   // Send reminder for a PROM
   sendReminder: async (instanceId: string): Promise<void> => {
-    await axios.post(
-      `${API_URL}/prominstance/${instanceId}/reminder`,
-      {},
-      { headers: getHeaders() }
+    await api.post<void>(
+      `/prominstance/${instanceId}/reminder`,
+      {}
     );
   },
 
   // Get pending PROMs
   getPending: async (dueBefore?: string): Promise<PromInstanceDto[]> => {
     const params = dueBefore ? `?dueBefore=${dueBefore}` : '';
-    const response = await axios.get(
-      `${API_URL}/prominstance/pending${params}`,
-      { headers: getHeaders() }
+    return await api.get<PromInstanceDto[]>(
+      `/prominstance/pending${params}`
     );
-    return response.data;
   },
 
   // Get PROM statistics
@@ -207,38 +186,33 @@ export const promInstanceApi = {
     if (params?.endDate) queryParams.append('endDate', params.endDate);
     
     const queryString = queryParams.toString();
-    const url = `${API_URL}/prominstance/stats${queryString ? `?${queryString}` : ''}`;
+    const url = `/prominstance/stats${queryString ? `?${queryString}` : ''}`;
     
-    const response = await axios.get(url, { headers: getHeaders() });
-    return response.data;
+    return await api.get<PromInstanceStats>(url);
   },
 
   // Cancel a PROM instance
   cancel: async (instanceId: string, reason?: string): Promise<void> => {
-    await axios.post(
-      `${API_URL}/prominstance/${instanceId}/cancel`,
-      { reason },
-      { headers: getHeaders() }
+    await api.post<void>(
+      `/prominstance/${instanceId}/cancel`,
+      { reason }
     );
   },
 
   // Preview a PROM template
   previewTemplate: async (templateId: string): Promise<PromPreviewDto> => {
-    const response = await axios.get(
-      `${API_URL}/prominstance/preview/${templateId}`,
-      { headers: getHeaders() }
+    return await api.get<PromPreviewDto>(
+      `/prominstance/preview/${templateId}`
     );
-    return response.data;
   },
 
   // Request a booking from a PROM instance
   requestBooking: async (instanceId: string, request: BookingRequest): Promise<BookingRequestDto> => {
-    const response = await axios.post(
-      `${API_URL}/prominstance/${instanceId}/booking`,
-      request,
-      { headers: { 'Content-Type': 'application/json' } } // No auth for patient booking
+    // Use regular API post for patient booking
+    return await api.post<BookingRequestDto>(
+      `/prominstance/${instanceId}/booking`,
+      request
     );
-    return response.data;
   }
 };
 

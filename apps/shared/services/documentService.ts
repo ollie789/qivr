@@ -1,12 +1,11 @@
-import { defaultAxiosInstance } from '../axiosConfig';
-import type { AxiosProgressEvent } from 'axios';
+import { uploadWithProgress, getWithAuth, delWithAuth } from '@qivr/http';
 
 export interface DocumentUploadOptions {
   patientId?: string;
   appointmentId?: string;
   documentType: string;
   description?: string;
-  onUploadProgress?: (progressEvent: AxiosProgressEvent) => void;
+  onUploadProgress?: (percent: number, loaded: number, total: number) => void;
 }
 
 export interface DocumentResponse {
@@ -27,8 +26,6 @@ export interface DocumentListOptions {
 }
 
 class DocumentService {
-  private apiInstance = defaultAxiosInstance;
-
   /**
    * Upload a document for a patient
    */
@@ -44,18 +41,13 @@ class DocumentService {
       formData.append('description', options.description);
     }
 
-    const response = await this.apiInstance.post<DocumentResponse>(
+    return await uploadWithProgress(
       `/documents/patient/${patientId}`,
       formData,
       {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
         onUploadProgress: options.onUploadProgress,
       }
     );
-
-    return response.data;
   }
 
   /**
@@ -73,43 +65,53 @@ class DocumentService {
       formData.append('description', options.description);
     }
 
-    const response = await this.apiInstance.post<DocumentResponse>(
+    return await uploadWithProgress(
       `/documents/appointment/${appointmentId}`,
       formData,
       {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
         onUploadProgress: options.onUploadProgress,
       }
     );
-
-    return response.data;
   }
 
   /**
    * Get a specific document
    */
   async getDocument(documentId: string): Promise<DocumentResponse> {
-    const response = await this.apiInstance.get<DocumentResponse>(
-      `/documents/${documentId}`
-    );
-    return response.data;
+    return await getWithAuth<DocumentResponse>(`/documents/${documentId}`);
   }
 
   /**
    * Download a document
    */
   async downloadDocument(documentId: string, fileName?: string): Promise<void> {
-    const response = await this.apiInstance.get(
-      `/documents/${documentId}/download`,
+    // For blob downloads, we need to use native fetch with auth
+    const authToken = localStorage.getItem('authToken') || localStorage.getItem('clinic-auth-storage');
+    let token = authToken;
+    if (authToken && authToken.includes('state')) {
+      try {
+        const parsed = JSON.parse(authToken);
+        token = parsed.state?.token;
+      } catch {}
+    }
+    
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || ''}/documents/${documentId}/download`,
       {
-        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       }
     );
 
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+
     // Create a download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', fileName || `document-${documentId}`);
@@ -137,15 +139,35 @@ class DocumentService {
       params.append('pageSize', options.pageSize.toString());
     }
 
-    const response = await this.apiInstance.get<DocumentResponse[]>(
-      `/documents/patient/${patientId}`,
-      { params }
-    );
+    const queryString = params.toString();
+    const url = `/documents/patient/${patientId}${queryString ? `?${queryString}` : ''}`;
+    
+    // For getting headers, we need to use native fetch
+    const authToken = localStorage.getItem('authToken') || localStorage.getItem('clinic-auth-storage');
+    let token = authToken;
+    if (authToken && authToken.includes('state')) {
+      try {
+        const parsed = JSON.parse(authToken);
+        token = parsed.state?.token;
+      } catch {}
+    }
+    
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+    });
 
-    const totalCount = parseInt(response.headers['x-total-count'] || '0', 10);
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    }
+
+    const documents = await response.json();
+    const totalCount = parseInt(response.headers.get('x-total-count') || '0', 10);
 
     return {
-      documents: response.data,
+      documents,
       totalCount,
     };
   }
@@ -154,7 +176,7 @@ class DocumentService {
    * Delete a document
    */
   async deleteDocument(documentId: string): Promise<void> {
-    await this.apiInstance.delete(`/documents/${documentId}`);
+    await delWithAuth(`/documents/${documentId}`);
   }
 
   /**
