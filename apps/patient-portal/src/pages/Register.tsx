@@ -17,9 +17,7 @@ import {
   CardContent,
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
-import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 
 export const Register = () => {

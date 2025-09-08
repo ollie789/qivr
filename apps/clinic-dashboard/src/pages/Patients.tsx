@@ -151,7 +151,7 @@ const Patients: React.FC = () => {
     }
   };
 
-  const filteredPatients = patients.filter(patient => {
+  const filteredPatients = patients.filter((patient: any) => {
     const matchesSearch = 
       patient.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -223,7 +223,7 @@ const Patients: React.FC = () => {
                     Active Patients
                   </Typography>
                   <Typography variant="h4">
-                    {patients.filter(p => p.status === 'active').length}
+                    {patients.filter((p: any) => p.status === 'active').length}
                   </Typography>
                 </Box>
               </Box>
@@ -334,7 +334,7 @@ const Patients: React.FC = () => {
             <TableBody>
               {filteredPatients
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((patient) => (
+                .map((patient: any) => (
                 <TableRow key={patient.id} hover>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -382,7 +382,7 @@ const Patients: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {patient.conditions.slice(0, 2).map((condition) => (
+                      {patient.conditions.slice(0, 2).map((condition: any) => (
                         <Chip
                           key={condition}
                           label={condition}
@@ -650,23 +650,25 @@ const Patients: React.FC = () => {
       />
 
       {/* Message Composer Dialog */}
-      <Dialog open={messageOpen} onClose={() => setMessageOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Send Message to {selectedPatient?.firstName} {selectedPatient?.lastName}
-        </DialogTitle>
-        <DialogContent>
-          <MessageComposer
-            recipientType="patient"
-            recipientId={selectedPatient?.id}
-            recipientEmail={selectedPatient?.email}
-            recipientPhone={selectedPatient?.phone}
-            onSend={() => {
-              enqueueSnackbar('Message sent successfully', { variant: 'success' });
-              setMessageOpen(false);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      {selectedPatient && (
+        <MessageComposer
+          open={messageOpen}
+          onClose={() => setMessageOpen(false)}
+          recipients={[
+            {
+              id: selectedPatient.id,
+              name: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
+              email: selectedPatient.email,
+              phone: selectedPatient.phone,
+              type: 'patient'
+            }
+          ]}
+          onSent={() => {
+            enqueueSnackbar('Message sent successfully', { variant: 'success' });
+            setMessageOpen(false);
+          }}
+        />
+      )}
 
       {/* File Upload Dialog */}
       <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)} maxWidth="sm" fullWidth>

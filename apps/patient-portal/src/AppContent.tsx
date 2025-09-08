@@ -1,22 +1,24 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Layouts
 import { MainLayout } from './layouts/MainLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 
-// Pages
-import { Dashboard } from './pages/Dashboard';
-import { Evaluations } from './pages/Evaluations';
-import { EvaluationDetail } from './pages/EvaluationDetail';
-import { Appointments } from './pages/Appointments';
-import { BookAppointment } from './pages/BookAppointment';
-import { PROMs } from './pages/PROMs';
-import { CompletePROM } from './pages/CompletePROM';
-import { Profile } from './pages/Profile';
+// Eagerly load critical pages
 import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-import VerifyEmail from './pages/VerifyEmail';
+import { Dashboard } from './pages/Dashboard';
+
+// Lazy load non-critical pages
+const Register = lazy(() => import('./pages/Register').then(m => ({ default: m.Register })));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const Evaluations = lazy(() => import('./pages/Evaluations').then(m => ({ default: m.Evaluations })));
+const EvaluationDetail = lazy(() => import('./pages/EvaluationDetail').then(m => ({ default: m.EvaluationDetail })));
+const Appointments = lazy(() => import('./pages/Appointments').then(m => ({ default: m.Appointments })));
+const BookAppointment = lazy(() => import('./pages/BookAppointment').then(m => ({ default: m.BookAppointment })));
+const PROMs = lazy(() => import('./pages/PROMs').then(m => ({ default: m.PROMs })));
+const CompletePROM = lazy(() => import('./pages/CompletePROM').then(m => ({ default: m.CompletePROM })));
+const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
 
 // Auth
 import { useAuth } from './contexts/AuthContext';
@@ -32,7 +34,8 @@ export const AppContent: React.FC = () => {
 
   return (
     <Router>
-      <Routes>
+      <Suspense fallback={<LoadingScreen />}>
+        <Routes>
         {/* Auth Routes */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
@@ -61,7 +64,8 @@ export const AppContent: React.FC = () => {
           {/* Profile */}
           <Route path="/profile" element={<Profile />} />
         </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </Router>
   );
 };

@@ -1,0 +1,56 @@
+# CloudFlare Workers configuration for Qivr
+name = "qivr-edge-optimizer"
+main = "src/worker.js"
+compatibility_date = "2024-01-01"
+
+# Production environment
+[env.production]
+name = "qivr-production"
+route = { pattern = "*.qivr.health/*", zone_name = "qivr.health" }
+
+# KV namespaces for edge caching
+kv_namespaces = [
+  { binding = "CACHE", id = "your-kv-namespace-id" },
+  { binding = "IMAGES", id = "your-images-namespace-id" }
+]
+
+# Durable Objects for session management
+[[durable_objects.bindings]]
+name = "SESSIONS"
+class_name = "SessionManager"
+script_name = "qivr-edge-optimizer"
+
+# Environment variables
+[vars]
+API_ENDPOINT = "https://api.qivr.health"
+IMAGE_CDN = "https://images.qivr.health"
+ENABLE_CACHE = "true"
+CACHE_TTL = "3600"
+
+# Build configuration
+[build]
+command = "npm run build"
+[build.upload]
+format = "service-worker"
+
+# Performance settings
+[limits]
+cpu_ms = 50
+max_request_size = 10485760  # 10MB
+
+# Routes configuration
+[[routes]]
+pattern = "patient.qivr.health/*"
+zone_name = "qivr.health"
+
+[[routes]]
+pattern = "clinic.qivr.health/*"
+zone_name = "qivr.health"
+
+[[routes]]
+pattern = "widget.qivr.health/*"
+zone_name = "qivr.health"
+
+[[routes]]
+pattern = "api.qivr.health/*"
+zone_name = "qivr.health"

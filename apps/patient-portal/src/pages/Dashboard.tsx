@@ -31,7 +31,7 @@ import {
   Healing as HealingIcon,
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
-import { format, addDays, isPast, isToday, isTomorrow } from 'date-fns';
+import { format, isToday, isTomorrow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';

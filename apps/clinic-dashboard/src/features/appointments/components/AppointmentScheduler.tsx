@@ -26,8 +26,7 @@ import {
   IconButton,
   ToggleButton,
   ToggleButtonGroup,
-  Paper,
-} from '@mui/material';
+  Paper} from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -37,8 +36,7 @@ import {
   CheckCircle as CheckIcon,
   Close as CloseIcon,
   NavigateNext as NextIcon,
-  NavigateBefore as BackIcon,
-} from '@mui/icons-material';
+  NavigateBefore as BackIcon} from '@mui/icons-material';
 import { format, addDays } from 'date-fns';
 import { getWithAuth, postWithAuth } from '@qivr/http';
 
@@ -81,8 +79,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   patientId,
   patientName,
   evaluationId,
-  onScheduled,
-}) => {
+  onScheduled}) => {
   const [activeStep, setActiveStep] = useState(0);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
@@ -120,22 +117,19 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
           name: 'Dr. Emily Chen',
           speciality: 'Physiotherapist',
           avatar: 'EC',
-          nextAvailable: '2024-01-15',
-        },
+          nextAvailable: '2024-01-15'},
         {
           id: '2',
           name: 'Dr. James Williams',
           speciality: 'Chiropractor',
           avatar: 'JW',
-          nextAvailable: '2024-01-16',
-        },
+          nextAvailable: '2024-01-16'},
         {
           id: '3',
           name: 'Dr. Priya Patel',
           speciality: 'Occupational Therapist',
           avatar: 'PP',
-          nextAvailable: '2024-01-15',
-        },
+          nextAvailable: '2024-01-15'},
       ];
       setProviders(mockProviders);
     } catch (err) {
@@ -153,9 +147,9 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         providerId: selectedProvider?.id || '',
         startDate: format(selectedDate!, 'yyyy-MM-dd'),
         endDate: format(selectedDate!, 'yyyy-MM-dd'),
-        duration: String(appointmentTypes.find(t => t.value === appointmentType)?.duration || 30),
-      });
-      const response = await getWithAuth<any>(`/api/calendar/availability?${params}`);
+        duration: String(appointmentTypes.find(t => t.value === appointmentType)?.duration || 30)});
+      // const response = await getWithAuth<any>(`/api/calendar/availability?${params}`);
+      await getWithAuth<any>(`/api/calendar/availability?${params}`);
       
       // Generate time slots for the day
       const slots: TimeSlot[] = [];
@@ -192,8 +186,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
           format(selectedDate!, 'yyyy-MM-dd'),
           format(addDays(selectedDate!, 1), 'yyyy-MM-dd'),
           format(addDays(selectedDate!, 2), 'yyyy-MM-dd'),
-        ],
-      });
+        ]});
       
       setProposedSlots(response.proposedSlots);
     } catch (err) {
@@ -233,8 +226,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         type: appointmentType,
         notes,
         includeVideoCall: includeVideo,
-        evaluationId,
-      };
+        evaluationId};
       
       // TODO: Replace with actual API call
       const response = await postWithAuth<any>('/api/calendar/appointments', appointmentData);
@@ -259,8 +251,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             <Card
               sx={{
                 border: selectedProvider?.id === provider.id ? 2 : 0,
-                borderColor: 'primary.main',
-              }}
+                borderColor: 'primary.main'}}
             >
               <CardActionArea onClick={() => setSelectedProvider(provider)}>
                 <CardContent>

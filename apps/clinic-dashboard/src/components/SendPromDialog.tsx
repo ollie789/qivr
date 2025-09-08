@@ -16,25 +16,19 @@ import {
   MenuItem,
   Chip,
   Alert,
-  List,
-  ListItem,
   ListItemText,
   ListItemIcon,
   Checkbox,
   FormControlLabel,
-  Switch,
-} from '@mui/material';
+  Switch} from '@mui/material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
   Send as SendIcon,
-  Schedule as ScheduleIcon,
   Person as PersonIcon,
   Email as EmailIcon,
-  Phone as PhoneIcon,
-  Event as EventIcon,
-} from '@mui/icons-material';
+  Phone as PhoneIcon} from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { promsApi } from '../services/proms';
 import { patientApi } from '../services/patientApi';
@@ -44,7 +38,6 @@ interface SendPromDialogProps {
   open: boolean;
   onClose: () => void;
   templateId?: string;
-  templateName?: string;
   preselectedPatients?: string[];
 }
 
@@ -61,9 +54,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
   open,
   onClose,
   templateId,
-  templateName,
-  preselectedPatients = [],
-}) => {
+  preselectedPatients = []}) => {
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -93,7 +84,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
 
   const loadPatients = async () => {
     try {
-      const response = await patientApi.getPatients({ page: 1, limit: 100 });
+      const response = await patientApi.getPatients({ page: 1 });
       setPatients(response.data);
     } catch (error) {
       console.error('Failed to load patients:', error);
@@ -144,8 +135,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
           dueDate: due.toISOString(),
           notificationMethod,
           tags,
-          notes: message || undefined,
-        });
+          notes: message || undefined});
       } else {
         // Multiple patients
         await promInstanceApi.sendBulk({
@@ -155,8 +145,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
           dueDate: due.toISOString(),
           notificationMethod,
           tags,
-          notes: message || undefined,
-        });
+          notes: message || undefined});
       }
 
       enqueueSnackbar(

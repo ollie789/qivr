@@ -18,9 +18,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  Rating,
-  Tooltip,
-} from '@mui/material';
+  Rating} from '@mui/material';
 import {
   AccessTime,
   Person,
@@ -33,11 +31,7 @@ import {
   Save,
   Cancel,
   Flag,
-  Notes,
-  Psychology,
-  Timeline,
-  LocalHospital,
-} from '@mui/icons-material';
+  LocalHospital} from '@mui/icons-material';
 
 interface PainPoint {
   id: string;
@@ -70,8 +64,6 @@ interface EvaluationData {
     recommendedActions: string[];
     status: 'pending' | 'reviewed' | 'approved';
   };
-  triageNotes?: string;
-  internalNotes?: string;
 }
 
 interface EvaluationViewerProps {
@@ -85,24 +77,10 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
   evaluation,
   onUpdate,
   onSchedule,
-  onClose,
-}) => {
+  onClose}) => {
   const [activeTab, setActiveTab] = useState(0);
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [triageNotes, setTriageNotes] = useState(evaluation.triageNotes || '');
-  const [internalNotes, setInternalNotes] = useState(evaluation.internalNotes || '');
   const [urgency, setUrgency] = useState(evaluation.urgency);
-
-  const handleSaveNotes = () => {
-    const updated = {
-      ...evaluation,
-      triageNotes,
-      internalNotes,
-      urgency,
-    };
-    onUpdate?.(updated);
-    setIsEditingNotes(false);
-  };
+  const [editingNotes, setEditingNotes] = useState(false);
 
   const getUrgencyColor = (level: string) => {
     switch (level) {
@@ -184,7 +162,7 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
         <Tab label="Pain Assessment" />
         <Tab label="Medical History" />
         <Tab label="AI Analysis" />
-        <Tab label="Triage Notes" />
+        <Tab label="Clinical Notes" />
       </Tabs>
 
       {/* Tab Content */}
@@ -407,23 +385,23 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Clinical Notes</Typography>
-                {!isEditingNotes ? (
-                  <IconButton onClick={() => setIsEditingNotes(true)}>
+                {!editingNotes ? (
+                  <IconButton onClick={() => setEditingNotes(true)}>
                     <Edit />
                   </IconButton>
                 ) : (
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton color="success" onClick={handleSaveNotes}>
+                    <IconButton onClick={() => setEditingNotes(false)}>
                       <Save />
                     </IconButton>
-                    <IconButton color="error" onClick={() => setIsEditingNotes(false)}>
+                    <IconButton onClick={() => setEditingNotes(false)}>
                       <Cancel />
                     </IconButton>
                   </Box>
                 )}
               </Box>
 
-              {isEditingNotes ? (
+              {editingNotes ? (
                 <>
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="subtitle2" gutterBottom>Urgency Level</Typography>
@@ -444,9 +422,6 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                     fullWidth
                     multiline
                     rows={4}
-                    label="Triage Notes"
-                    value={triageNotes}
-                    onChange={(e) => setTriageNotes(e.target.value)}
                     sx={{ mb: 2 }}
                     helperText="Clinical observations and triage decisions"
                   />
@@ -455,9 +430,6 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                     fullWidth
                     multiline
                     rows={4}
-                    label="Internal Notes"
-                    value={internalNotes}
-                    onChange={(e) => setInternalNotes(e.target.value)}
                     helperText="Internal staff notes (not visible to patient)"
                   />
                 </>
@@ -472,17 +444,13 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                   </Box>
 
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>Triage Notes</Typography>
-                    <Typography variant="body2" color={triageNotes ? 'text.primary' : 'text.secondary'}>
-                      {triageNotes || 'No triage notes added yet'}
-                    </Typography>
+                    <Typography variant="subtitle2" gutterBottom>Clinical Notes</Typography>
+                    <Typography variant="body2">No clinical notes added yet</Typography>
                   </Box>
 
                   <Box>
-                    <Typography variant="subtitle2" gutterBottom>Internal Notes</Typography>
-                    <Typography variant="body2" color={internalNotes ? 'text.primary' : 'text.secondary'}>
-                      {internalNotes || 'No internal notes added yet'}
-                    </Typography>
+                    <Typography variant="subtitle2" gutterBottom>Staff Notes</Typography>
+                    <Typography variant="body2">No staff notes added yet</Typography>
                   </Box>
                 </>
               )}

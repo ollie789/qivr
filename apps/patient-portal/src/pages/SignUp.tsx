@@ -67,22 +67,26 @@ export const SignUp: React.FC = () => {
 
     try {
       const response = await authService.signUp({
-        username: data.email, // Use email as username
-        password: data.password,
         email: data.email,
+        password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
-        phoneNumber: data.phoneNumber,
+        phone: data.phoneNumber,
       });
 
       setUsername(data.email);
       
-      if (!response.userConfirmed) {
-        setConfirmationRequired(true);
+      if (response.success) {
+        // Check if user needs to confirm their email
+        if (response.data && !response.data.isSignUpComplete) {
+          setConfirmationRequired(true);
+        } else {
+          navigate('/login', { 
+            state: { message: 'Account created successfully. Please sign in.' }
+          });
+        }
       } else {
-        navigate('/login', { 
-          state: { message: 'Account created successfully. Please sign in.' }
-        });
+        throw new Error(response.error || 'Failed to create account');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
@@ -96,9 +100,12 @@ export const SignUp: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await authService.socialLogin(provider);
+      // Social login is not yet implemented in authService
+      // For now, show an error message
+      setError(`Social sign up with ${provider} is not yet available`);
     } catch (err: any) {
       setError(err.message || `Failed to sign up with ${provider}`);
+    } finally {
       setIsLoading(false);
     }
   };

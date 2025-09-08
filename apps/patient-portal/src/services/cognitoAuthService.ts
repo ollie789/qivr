@@ -233,7 +233,7 @@ class CognitoAuthService {
       return {
         accessToken: session.tokens.accessToken?.toString() || '',
         idToken: session.tokens.idToken?.toString() || '',
-        refreshToken: session.tokens.refreshToken?.toString(),
+        // Note: refreshToken is not available in fetchAuthSession
       };
     } catch (error) {
       console.error('Get session error:', error);

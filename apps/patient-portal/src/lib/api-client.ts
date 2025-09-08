@@ -1,5 +1,5 @@
 import { fetchAuthSession } from '@aws-amplify/auth';
-import { createHttpClient, HttpError, type HttpRequestOptions } from '@qivr/http';
+import { createHttpClient, type HttpRequestOptions } from '@qivr/http';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 const DEFAULT_TENANT_ID = import.meta.env.VITE_DEFAULT_TENANT_ID || '11111111-1111-1111-1111-111111111111';

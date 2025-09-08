@@ -1,5 +1,5 @@
 import { fetchAuthSession } from '@aws-amplify/auth';
-import { createHttpClient, HttpError, type HttpRequestOptions } from '@qivr/http';
+import { createHttpClient, type HttpRequestOptions } from '@qivr/http';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 const DEFAULT_TENANT_ID = import.meta.env.VITE_DEFAULT_TENANT_ID || '11111111-1111-1111-1111-111111111111';
@@ -7,8 +7,7 @@ const DEFAULT_CLINIC_ID = import.meta.env.VITE_DEFAULT_CLINIC_ID || '22222222-22
 
 const baseClient = createHttpClient({
   baseURL: API_BASE_URL,
-  timeout: 30000,
-});
+  timeout: 30000});
 
 export async function apiRequest<T = any>(options: HttpRequestOptions): Promise<T> {
   try {
@@ -25,8 +24,7 @@ export async function apiRequest<T = any>(options: HttpRequestOptions): Promise<
       'Content-Type': 'application/json',
       'X-Tenant-Id': DEFAULT_TENANT_ID,
       'X-Clinic-Id': DEFAULT_CLINIC_ID,
-      ...options.headers,
-    };
+      ...options.headers};
 
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
@@ -34,8 +32,7 @@ export async function apiRequest<T = any>(options: HttpRequestOptions): Promise<
 
     return await baseClient.request<T>({
       ...options,
-      headers,
-    });
+      headers});
   } catch (error) {
     console.error('API request error:', error);
     throw error;
@@ -52,7 +49,6 @@ export const api = {
   patch: <T = any>(url: string, data?: any, params?: Record<string, any>) => 
     apiRequest<T>({ url, method: 'PATCH', data, params }),
   delete: <T = any>(url: string, params?: Record<string, any>) => 
-    apiRequest<T>({ url, method: 'DELETE', params }),
-};
+    apiRequest<T>({ url, method: 'DELETE', params })};
 
 export default api;

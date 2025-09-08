@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import apiClient from '../services/apiClient';
+import apiClient from '../lib/api-client';
 
 interface PromTemplate {
   id: string;
@@ -89,13 +89,13 @@ export const CompletePROM = () => {
       
       // Fetch the PROM instance
       const instanceResponse = await apiClient.get<PromInstance>(`/v1/proms/instances/${id}`);
-      setPromInstance(instanceResponse.data);
+      setPromInstance(instanceResponse);
       
       // Fetch the template details by ID
       const templateResponse = await apiClient.get<PromTemplate>(
-        `/v1/proms/templates/by-id/${instanceResponse.data.templateId}`
+        `/v1/proms/templates/by-id/${instanceResponse.templateId}`
       );
-      setTemplate(templateResponse.data);
+      setTemplate(templateResponse);
       
     } catch (err) {
       console.error('Error fetching PROM:', err);

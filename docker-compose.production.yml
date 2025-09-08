@@ -1,0 +1,224 @@
+version: '3.8'
+
+services:
+  # Optimized Nginx with HTTP/2, Brotli, and Caching
+  nginx:
+    build: 
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: qivr-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Static files
+      - ./apps/patient-portal/dist:/var/www/patient-portal:ro
+      - ./apps/clinic-dashboard/dist:/var/www/clinic-dashboard:ro
+      - ./apps/widget/dist:/var/www/widget:ro
+      # SSL certificates
+      - ./ssl:/etc/nginx/ssl:ro
+      # Logs
+      - nginx-logs:/var/log/nginx
+      # Cache
+      - nginx-cache:/var/cache/nginx
+    depends_on:
+      - backend
+    networks:
+      - qivr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: qivr-backend
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+      - REDIS_URL=redis://redis:6379
+      - S3_BUCKET=${S3_BUCKET}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - qivr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: qivr-postgres
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_MAX_CONNECTIONS=200
+      - POSTGRES_SHARED_BUFFERS=256MB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=1GB
+      - POSTGRES_MAINTENANCE_WORK_MEM=64MB
+      - POSTGRES_CHECKPOINT_COMPLETION_TARGET=0.9
+      - POSTGRES_WAL_BUFFERS=16MB
+      - POSTGRES_DEFAULT_STATISTICS_TARGET=100
+      - POSTGRES_RANDOM_PAGE_COST=1.1
+      - POSTGRES_EFFECTIVE_IO_CONCURRENCY=200
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - qivr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: qivr-redis
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --appendonly yes
+      --appendonly-rewrite-incremental-fsync yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - qivr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: qivr-minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_DOMAIN=minio.qivr.health
+      - MINIO_BROWSER=on
+      - MINIO_COMPRESSION_ENABLE=on
+      - MINIO_COMPRESSION_EXTENSIONS=".txt,.log,.csv,.json,.tar,.xml,.bin"
+      - MINIO_COMPRESSION_MIME_TYPES="text/*,application/json,application/xml"
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - qivr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: qivr-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - qivr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: qivr-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_SERVER_ROOT_URL=https://metrics.qivr.health
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - qivr-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  nginx-logs:
+  nginx-cache:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  qivr-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

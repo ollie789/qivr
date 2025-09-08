@@ -132,7 +132,7 @@ class ClinicCognitoAuthService {
 
       // Check if user has required role for clinic access
       const attributes = await this.getCurrentUser();
-      const role = attributes?.['custom:custom:role'] || attributes?.['custom:role'];
+      const role = attributes?.['custom:role'];
       if (!role || !['admin', 'practitioner', 'receptionist', 'manager'].includes(role)) {
         await this.signOut();
         throw new Error('UNAUTHORIZED_ROLE');
@@ -251,7 +251,7 @@ class ClinicCognitoAuthService {
       return {
         accessToken: session.tokens.accessToken?.toString() || '',
         idToken: session.tokens.idToken?.toString() || '',
-        refreshToken: session.tokens.refreshToken?.toString(),
+        refreshToken: (session.tokens as any).refreshToken?.toString(),
       };
     } catch (error) {
       console.error('Get session error:', error);
@@ -268,7 +268,7 @@ class ClinicCognitoAuthService {
 
       // Check role authorization
       const attributes = await this.getCurrentUser();
-      const role = attributes?.['custom:custom:role'] || attributes?.['custom:role'];
+      const role = attributes?.['custom:role'];
       return !!role && ['admin', 'practitioner', 'receptionist', 'manager'].includes(role);
     } catch {
       return false;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -6,17 +6,14 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
+  DragEndEvent} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+  verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {
-  useSortable,
-} from '@dnd-kit/sortable';
+  useSortable} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Box,
@@ -39,43 +36,28 @@ import {
   DialogActions,
   List,
   ListItem,
-  ListItemIcon,
   ListItemText,
   Switch,
   FormControlLabel,
-  Slider,
   Alert,
   Tabs,
   Tab,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Radio,
-  RadioGroup,
   Checkbox,
   FormGroup,
-  Divider,
-} from '@mui/material';
+  Divider} from '@mui/material';
 import {
   Add,
   Delete,
   Edit,
-  Save,
-  Cancel,
   DragIndicator,
-  TextFields,
-  RadioButtonChecked,
-  CheckBox,
-  LinearScale,
-  CalendarToday,
-  Schedule,
   Functions,
-  AccountTree,
   Preview,
   Publish,
   ContentCopy,
-  ExpandMore,
-} from '@mui/icons-material';
+  ExpandMore} from '@mui/icons-material';
 import { promsApi } from '../../../services/proms';
 
 // Types
@@ -142,8 +124,7 @@ const QUESTION_LIBRARY = {
     { question: 'How satisfied are you with your treatment?', type: 'scale' as const, min: 0, max: 10 },
     { question: 'Would you recommend our clinic?', type: 'radio' as const, options: ['Definitely', 'Probably', 'Not sure', 'Probably not', 'Definitely not'] },
     { question: 'Additional comments', type: 'text' as const },
-  ],
-};
+  ]};
 
 // Sortable Question Item
 const SortableQuestionItem: React.FC<{
@@ -157,14 +138,12 @@ const SortableQuestionItem: React.FC<{
     setNodeRef,
     transform,
     transition,
-    isDragging,
-  } = useSortable({ id: question.id });
+    isDragging} = useSortable({ id: question.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+    opacity: isDragging ? 0.5 : 1};
 
   return (
     <Card
@@ -218,18 +197,15 @@ export const PromBuilder: React.FC = () => {
         { min: 0, max: 30, label: 'Low', color: '#4caf50' },
         { min: 31, max: 70, label: 'Medium', color: '#ff9800' },
         { min: 71, max: 100, label: 'High', color: '#f44336' },
-      ],
-    },
+      ]},
     schedule: {
       triggers: ['post-appointment'],
       intervals: [1, 7, 30],
-      reminderDays: [2],
-    },
+      reminderDays: [2]},
     version: 1,
     isActive: true,
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
+    updatedAt: new Date().toISOString()});
 
   const [editingQuestion, setEditingQuestion] = useState<PromQuestion | null>(null);
   const [questionDialog, setQuestionDialog] = useState(false);
@@ -238,8 +214,7 @@ export const PromBuilder: React.FC = () => {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+      coordinateGetter: sortableKeyboardCoordinates})
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -251,8 +226,7 @@ export const PromBuilder: React.FC = () => {
         const newIndex = prev.questions.findIndex((q) => q.id === over?.id);
         return {
           ...prev,
-          questions: arrayMove(prev.questions, oldIndex, newIndex),
-        };
+          questions: arrayMove(prev.questions, oldIndex, newIndex)};
       });
     }
   };
@@ -263,12 +237,10 @@ export const PromBuilder: React.FC = () => {
       type: questionData.type || 'text',
       question: questionData.question || '',
       required: false,
-      ...questionData,
-    };
+      ...questionData};
     setTemplate((prev) => ({
       ...prev,
-      questions: [...prev.questions, newQuestion],
-    }));
+      questions: [...prev.questions, newQuestion]}));
   };
 
   const updateQuestion = (questionId: string, updates: Partial<PromQuestion>) => {
@@ -276,18 +248,16 @@ export const PromBuilder: React.FC = () => {
       ...prev,
       questions: prev.questions.map((q) =>
         q.id === questionId ? { ...q, ...updates } : q
-      ),
-    }));
+      )}));
   };
 
   const deleteQuestion = (questionId: string) => {
     setTemplate((prev) => ({
       ...prev,
-      questions: prev.questions.filter((q) => q.id !== questionId),
-    }));
+      questions: prev.questions.filter((q) => q.id !== questionId)}));
   };
 
-  const handleSaveTemplate = async () => {
+  const saveTemplate = async () => {
     try {
       // Validate template
       if (!template.name) {
@@ -307,13 +277,11 @@ export const PromBuilder: React.FC = () => {
           questions: template.questions,
           scoring: template.scoring,
           schedule: template.schedule,
-          category: template.category,
-        }),
+          category: template.category}),
         scoringMethod: template.scoring.method || 'sum',
         scoringRules: JSON.stringify(template.scoring),
         isActive: template.isActive,
-        version: template.version,
-      };
+        version: template.version};
       
       console.log('Saving template:', payload);
       const res = await promsApi.createTemplate(payload);
@@ -333,18 +301,15 @@ export const PromBuilder: React.FC = () => {
             { min: 0, max: 30, label: 'Low', color: '#4caf50' },
             { min: 31, max: 70, label: 'Medium', color: '#ff9800' },
             { min: 71, max: 100, label: 'High', color: '#f44336' },
-          ],
-        },
+          ]},
         schedule: {
           triggers: ['post-appointment'],
           intervals: [1, 7, 30],
-          reminderDays: [2],
-        },
+          reminderDays: [2]},
         version: 1,
         isActive: true,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+        updatedAt: new Date().toISOString()});
     } catch (error: any) {
       console.error('Failed to save template:', error);
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save template';
@@ -373,7 +338,7 @@ export const PromBuilder: React.FC = () => {
             <Button
               variant="contained"
               startIcon={<Publish />}
-              onClick={handleSaveTemplate}
+              onClick={saveTemplate}
             >
               Publish Template
             </Button>
@@ -388,7 +353,6 @@ export const PromBuilder: React.FC = () => {
               <Tab label="Template Info" />
               <Tab label="Questions" />
               <Tab label="Scoring" />
-              <Tab label="Schedule" />
             </Tabs>
 
             {activeTab === 0 && (
@@ -446,8 +410,7 @@ export const PromBuilder: React.FC = () => {
                         id: `q_${Date.now()}`,
                         type: 'text',
                         question: '',
-                        required: false,
-                      });
+                        required: false});
                       setQuestionDialog(true);
                     }}
                   >
@@ -502,8 +465,7 @@ export const PromBuilder: React.FC = () => {
                     onChange={(e) =>
                       setTemplate({
                         ...template,
-                        scoring: { ...template.scoring, method: e.target.value as any },
-                      })
+                        scoring: { ...template.scoring, method: e.target.value as any }})
                     }
                     label="Scoring Method"
                   >
@@ -554,8 +516,7 @@ export const PromBuilder: React.FC = () => {
                               height: 36,
                               bgcolor: range.color,
                               borderRadius: 1,
-                              cursor: 'pointer',
-                            }}
+                              cursor: 'pointer'}}
                           />
                         </Grid>
                       </Grid>
@@ -774,8 +735,7 @@ export const PromBuilder: React.FC = () => {
                     onClick={() =>
                       setEditingQuestion({
                         ...editingQuestion,
-                        options: [...(editingQuestion.options || []), ''],
-                      })
+                        options: [...(editingQuestion.options || []), '']})
                     }
                   >
                     Add Option
@@ -794,8 +754,7 @@ export const PromBuilder: React.FC = () => {
                       onChange={(e) =>
                         setEditingQuestion({
                           ...editingQuestion,
-                          min: parseInt(e.target.value),
-                        })
+                          min: parseInt(e.target.value)})
                       }
                     />
                   </Grid>
@@ -808,8 +767,7 @@ export const PromBuilder: React.FC = () => {
                       onChange={(e) =>
                         setEditingQuestion({
                           ...editingQuestion,
-                          max: parseInt(e.target.value),
-                        })
+                          max: parseInt(e.target.value)})
                       }
                     />
                   </Grid>
@@ -822,8 +780,7 @@ export const PromBuilder: React.FC = () => {
                       onChange={(e) =>
                         setEditingQuestion({
                           ...editingQuestion,
-                          step: parseInt(e.target.value),
-                        })
+                          step: parseInt(e.target.value)})
                       }
                     />
                   </Grid>
@@ -845,7 +802,6 @@ export const PromBuilder: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setQuestionDialog(false)}>Cancel</Button>
           <Button
             variant="contained"
             onClick={() => {
@@ -909,3 +865,5 @@ export const PromBuilder: React.FC = () => {
     </Box>
   );
 };
+
+export default PromBuilder;

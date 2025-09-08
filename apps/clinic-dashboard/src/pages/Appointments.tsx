@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -30,8 +30,7 @@ import {
   Stack,
   Alert,
   Tab,
-  Tabs,
-} from '@mui/material';
+  Tabs} from '@mui/material';
 import {
   CalendarMonth as CalendarIcon,
   ViewWeek as WeekIcon,
@@ -52,8 +51,7 @@ import {
   Pending,
   Circle,
   ViewList as ListIcon,
-  ViewModule as GridIcon,
-} from '@mui/icons-material';
+  ViewModule as GridIcon} from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
@@ -122,8 +120,7 @@ const Appointments: React.FC = () => {
     startTime: new Date(),
     endTime: new Date(),
     appointmentType: 'initial-consultation',
-    notes: '',
-  });
+    notes: ''});
 
   // Fetch appointments
   const { data: appointments = [], isLoading } = useQuery({
@@ -147,16 +144,13 @@ const Appointments: React.FC = () => {
           params: {
             startDate,
             endDate,
-            providerId: selectedProvider !== 'all' ? selectedProvider : undefined,
-          },
-        });
+            providerId: selectedProvider !== 'all' ? selectedProvider : undefined}});
         return response.data;
       } catch (error) {
         console.error('Error fetching appointments:', error);
         return [] as Appointment[];
       }
-    },
-  });
+    }});
 
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
@@ -171,8 +165,7 @@ const Appointments: React.FC = () => {
     },
     onError: () => {
       enqueueSnackbar('Failed to create appointment', { variant: 'error' });
-    },
-  });
+    }});
 
   const handleCreateAppointment = useCallback(() => {
     const startDateTime = new Date(newAppointment.date);
@@ -192,8 +185,7 @@ const Appointments: React.FC = () => {
       scheduledEnd: endDateTime.toISOString(),
       appointmentType: newAppointment.appointmentType,
       notes: newAppointment.notes,
-      status: 'scheduled',
-    });
+      status: 'scheduled'});
   }, [newAppointment, createAppointmentMutation]);
 
   const getStatusColor = (status: string) => {
@@ -297,8 +289,7 @@ const Appointments: React.FC = () => {
                         ...newAppointment,
                         date: selectedDate,
                         startTime: newDate,
-                        endTime: setMinutes(setHours(newDate, hour), 30),
-                      });
+                        endTime: setMinutes(setHours(newDate, hour), 30)});
                       setCreateDialogOpen(true);
                     }}
                   >
@@ -343,8 +334,7 @@ const Appointments: React.FC = () => {
                   alignItems: 'center',
                   bgcolor: isToday(day) ? 'primary.light' : 'transparent',
                   borderRadius: 1,
-                  p: 0.5,
-                }}
+                  p: 0.5}}
               >
                 <Typography variant="caption">{format(day, 'EEE')}</Typography>
                 <Typography variant="subtitle2">{format(day, 'd')}</Typography>
@@ -373,8 +363,7 @@ const Appointments: React.FC = () => {
                         ...newAppointment,
                         date: day,
                         startTime: newDate,
-                        endTime: setMinutes(setHours(newDate, hour), 30),
-                      });
+                        endTime: setMinutes(setHours(newDate, hour), 30)});
                       setCreateDialogOpen(true);
                     }}
                   >
@@ -390,8 +379,7 @@ const Appointments: React.FC = () => {
                           fontSize: '10px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
+                          whiteSpace: 'nowrap'}}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedAppointment(apt);
@@ -436,8 +424,7 @@ const Appointments: React.FC = () => {
                     justifyContent: 'center',
                     cursor: 'pointer',
                     bgcolor: isSelected ? 'primary.light' : 'transparent',
-                    '&:hover': { bgcolor: 'action.hover' },
-                  }}
+                    '&:hover': { bgcolor: 'action.hover' }}}
                   onClick={() => {
                     setSelectedDate(props.day);
                     setViewMode('day');
@@ -446,7 +433,7 @@ const Appointments: React.FC = () => {
                   <Typography>{format(props.day, 'd')}</Typography>
                   {dayAppointments.length > 0 && (
                     <Box sx={{ display: 'flex', gap: 0.25, mt: 0.5 }}>
-                      {dayAppointments.slice(0, 3).map((apt, idx) => (
+                      {dayAppointments.slice(0, 3).map((apt: any, idx: number) => (
                         <Circle
                           key={idx}
                           sx={{ 
@@ -459,8 +446,7 @@ const Appointments: React.FC = () => {
                   )}
                 </Box>
               );
-            },
-          }}
+            }}}
         />
       </Paper>
     );
@@ -608,8 +594,7 @@ const Appointments: React.FC = () => {
                             ...newAppointment,
                             date: clickedDate,
                             startTime: clickedDate,
-                            endTime: new Date(clickedDate.getTime() + 30 * 60000),
-                          });
+                            endTime: new Date(clickedDate.getTime() + 30 * 60000)});
                           setCreateDialogOpen(true);
                         }}
                         slotMinTime="08:00:00"
@@ -619,8 +604,7 @@ const Appointments: React.FC = () => {
                         businessHours={{
                           daysOfWeek: [1, 2, 3, 4, 5, 6],
                           startTime: '08:00',
-                          endTime: '18:00',
-                        }}
+                          endTime: '18:00'}}
                         eventTimeFormat={{
                           hour: '2-digit',
                           minute: '2-digit',
@@ -636,8 +620,7 @@ const Appointments: React.FC = () => {
                             ...newAppointment,
                             date: info.start,
                             startTime: info.start,
-                            endTime: info.end,
-                          });
+                            endTime: info.end});
                           setCreateDialogOpen(true);
                         }}
                         eventDrop={async (info) => {
@@ -645,8 +628,7 @@ const Appointments: React.FC = () => {
                             // Update appointment time via API
                             await apiClient.put(`/api/appointments/${info.event.id}`, {
                               scheduledStart: info.event.start?.toISOString(),
-                              scheduledEnd: info.event.end?.toISOString(),
-                            });
+                              scheduledEnd: info.event.end?.toISOString()});
                             enqueueSnackbar('Appointment rescheduled', { variant: 'success' });
                           } catch (error) {
                             info.revert();
@@ -656,8 +638,7 @@ const Appointments: React.FC = () => {
                         eventResize={async (info) => {
                           try {
                             await apiClient.put(`/api/appointments/${info.event.id}`, {
-                              scheduledEnd: info.event.end?.toISOString(),
-                            });
+                              scheduledEnd: info.event.end?.toISOString()});
                             enqueueSnackbar('Appointment duration updated', { variant: 'success' });
                           } catch (error) {
                             info.revert();

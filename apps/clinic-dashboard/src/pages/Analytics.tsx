@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -20,12 +20,7 @@ import {
   TableRow,
   LinearProgress,
   Tab,
-  Tabs,
-  Paper,
-  Alert,
-  CircularProgress,
-  Skeleton,
-} from '@mui/material';
+  Tabs} from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
@@ -34,8 +29,7 @@ import {
   AttachMoney as MoneyIcon,
   Assessment as AssessmentIcon,
   Download as DownloadIcon,
-  Refresh as RefreshIcon,
-} from '@mui/icons-material';
+  Refresh as RefreshIcon} from '@mui/icons-material';
 import {
   LineChart,
   Line,
@@ -51,8 +45,7 @@ import {
   Legend,
   ResponsiveContainer,
   AreaChart,
-  Area,
-} from 'recharts';
+  Area} from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import analyticsApi, { 
@@ -89,57 +82,50 @@ const Analytics: React.FC = () => {
   };
 
   // Fetch dashboard stats
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery<DashboardStats>({
+  const { data: dashboardStats } = useQuery<DashboardStats>({
     queryKey: ['dashboardStats'],
     queryFn: analyticsApi.getDashboardStats,
     refetchInterval: 60000, // Refresh every minute
   });
 
   // Fetch appointment trends
-  const { data: appointmentData = [], isLoading: appointmentLoading } = useQuery<AppointmentTrend[]>({
+  const { data: appointmentData = [] } = useQuery<AppointmentTrend[]>({
     queryKey: ['appointmentTrends', dateRange],
-    queryFn: () => analyticsApi.getAppointmentTrends(parseInt(dateRange)),
-  });
+    queryFn: () => analyticsApi.getAppointmentTrends(parseInt(dateRange))});
 
   // Fetch condition distribution
-  const { data: conditionData = [], isLoading: conditionLoading } = useQuery<ConditionDistribution[]>({
+  const { data: conditionData = [] } = useQuery<ConditionDistribution[]>({
     queryKey: ['conditionDistribution'],
-    queryFn: analyticsApi.getConditionDistribution,
-  });
+    queryFn: analyticsApi.getConditionDistribution});
 
   // Fetch provider performance
-  const { data: practitionerPerformance = [], isLoading: performanceLoading } = useQuery<ProviderPerformance[]>({
+  const { data: practitionerPerformance = [] } = useQuery<ProviderPerformance[]>({
     queryKey: ['providerPerformance'],
-    queryFn: analyticsApi.getProviderPerformance,
-  });
+    queryFn: analyticsApi.getProviderPerformance});
 
   // Fetch revenue data
-  const { data: revenueData = [], isLoading: revenueLoading } = useQuery({
+  const { data: revenueData = [] } = useQuery({
     queryKey: ['revenueData'],
-    queryFn: analyticsApi.getRevenueData,
-  });
+    queryFn: analyticsApi.getRevenueData});
 
   // Fetch PROM completion rates
-  const { data: promCompletionData = [], isLoading: promLoading } = useQuery<PromCompletionData[]>({
+  const { data: promCompletionData = [] } = useQuery<PromCompletionData[]>({
     queryKey: ['promCompletionRates'],
-    queryFn: analyticsApi.getPromCompletionRates,
-  });
+    queryFn: analyticsApi.getPromCompletionRates});
 
   // Fetch clinic analytics
-  const { data: clinicAnalytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery<ClinicAnalytics>({
+  const { data: clinicAnalytics, refetch: refetchAnalytics } = useQuery<ClinicAnalytics>({
     queryKey: ['clinicAnalytics', clinicId, dateRange],
     queryFn: () => {
       const { from, to } = getDateRange();
       return analyticsApi.getClinicAnalytics(clinicId, from, to);
     },
-    enabled: !!clinicId && clinicId !== 'default',
-  });
+    enabled: !!clinicId && clinicId !== 'default'});
 
   // Generate colors for condition data
   const conditionDataWithColors = conditionData.map((item, index) => ({
     ...item,
-    color: ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#6b7280'][index % 5],
-  }));
+    color: ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#6b7280'][index % 5]}));
 
   // Calculate stat cards from real data
   const statCards: StatCard[] = [
@@ -150,16 +136,14 @@ const Analytics: React.FC = () => {
         : dashboardStats?.activePatients?.toLocaleString() || '0',
       change: 12.5, // Would need historical data for real change calculation
       icon: <PeopleIcon />,
-      color: 'primary.main',
-    },
+      color: 'primary.main'},
     {
       title: 'Appointments This Month',
       value: clinicAnalytics?.appointmentMetrics?.totalScheduled?.toLocaleString() || 
              dashboardStats?.todayAppointments?.toLocaleString() || '0',
       change: 8.3,
       icon: <CalendarIcon />,
-      color: 'secondary.main',
-    },
+      color: 'secondary.main'},
     {
       title: 'Revenue This Month',
       value: clinicAnalytics?.revenueMetrics?.totalCollected 
@@ -167,8 +151,7 @@ const Analytics: React.FC = () => {
         : '$0',
       change: 15.2,
       icon: <MoneyIcon />,
-      color: 'success.main',
-    },
+      color: 'success.main'},
     {
       title: 'Avg. Patient Satisfaction',
       value: clinicAnalytics?.patientMetrics?.patientSatisfactionScore
@@ -178,15 +161,13 @@ const Analytics: React.FC = () => {
         : '0/5',
       change: 2.1,
       icon: <AssessmentIcon />,
-      color: 'warning.main',
-    },
+      color: 'warning.main'},
   ];
 
   const handleRefresh = () => {
     refetchAnalytics();
   };
 
-  const isLoading = statsLoading || appointmentLoading || analyticsLoading;
 
   return (
     <Box>
@@ -263,7 +244,7 @@ const Analytics: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <Tabs 
           value={selectedTab} 
-          onChange={(e, v) => setSelectedTab(v)}
+          onChange={(_, v) => setSelectedTab(v)}
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="Overview" />
@@ -417,8 +398,7 @@ const Analytics: React.FC = () => {
                     month: format(new Date(2024, i), 'MMM'),
                     'PHQ-9': Math.random() * 20 + 30,
                     'Pain': Math.random() * 30 + 40,
-                    'QoL': Math.random() * 25 + 60,
-                  }))}>
+                    'QoL': Math.random() * 25 + 60}))}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -446,8 +426,7 @@ const Analytics: React.FC = () => {
                     'Mental Health': Math.floor(Math.random() * 15) + 10,
                     'Pain Management': Math.floor(Math.random() * 20) + 15,
                     'Functional': Math.floor(Math.random() * 10) + 5,
-                    'Quality of Life': Math.floor(Math.random() * 12) + 8,
-                  }))}>
+                    'Quality of Life': Math.floor(Math.random() * 12) + 8}))}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
@@ -624,13 +603,13 @@ const Analytics: React.FC = () => {
               </TableHead>
               <TableBody>
                 {practitionerPerformance.map((practitioner) => (
-                  <TableRow key={practitioner.providerName || practitioner.name}>
+                  <TableRow key={practitioner.providerName}>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar sx={{ width: 32, height: 32 }}>
-                          {(practitioner.providerName || practitioner.name).split(' ').map(n => n[0]).join('')}
+                          {practitioner.providerName.split(' ').map((n: string) => n[0]).join('')}
                         </Avatar>
-                        <Typography variant="body2">{practitioner.providerName || practitioner.name}</Typography>
+                        <Typography variant="body2">{practitioner.providerName}</Typography>
                       </Box>
                     </TableCell>
                     <TableCell align="center">

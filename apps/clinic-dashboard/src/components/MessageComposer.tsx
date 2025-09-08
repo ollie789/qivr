@@ -14,15 +14,13 @@ import {
   CircularProgress,
   Autocomplete,
   ToggleButtonGroup,
-  ToggleButton,
-} from '@mui/material';
+  ToggleButton} from '@mui/material';
 import {
   Email as EmailIcon,
   Sms as SmsIcon,
   Send as SendIcon,
   Close as CloseIcon,
-  Schedule as ScheduleIcon,
-} from '@mui/icons-material';
+  Schedule as ScheduleIcon} from '@mui/icons-material';
 import apiClient from '../services/sharedApiClient';
 
 interface MessageComposerProps {
@@ -55,29 +53,25 @@ const MESSAGE_TEMPLATES: Template[] = [
     name: 'Appointment Reminder',
     content: 'Hi {{name}}, this is a reminder for your appointment on {{date}} at {{time}}. Reply CONFIRM to confirm or CANCEL to cancel.',
     variables: ['name', 'date', 'time'],
-    type: 'both',
-  },
+    type: 'both'},
   {
     id: '2',
     name: 'PROM Request',
     content: 'Hi {{name}}, please complete your health questionnaire: {{link}}',
     variables: ['name', 'link'],
-    type: 'both',
-  },
+    type: 'both'},
   {
     id: '3',
     name: 'Test Results Ready',
     content: 'Hi {{name}}, your test results are ready. Please log in to your patient portal to view them.',
     variables: ['name'],
-    type: 'both',
-  },
+    type: 'both'},
   {
     id: '4',
     name: 'Welcome Message',
     content: 'Welcome to our clinic, {{name}}! We look forward to providing you with excellent care.',
     variables: ['name'],
-    type: 'both',
-  },
+    type: 'both'},
 ];
 
 const MessageComposer: React.FC<MessageComposerProps> = ({
@@ -85,8 +79,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   onClose,
   recipients = [],
   defaultType = 'sms',
-  onSent,
-}) => {
+  onSent}) => {
   const [messageType, setMessageType] = useState<'sms' | 'email'>(defaultType);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -139,14 +132,12 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
         recipients: recipients.map(r => ({
           id: r.id,
           name: r.name,
-          contact: messageType === 'sms' ? r.phone : r.email,
-        })),
+          contact: messageType === 'sms' ? r.phone : r.email})),
         message,
         subject: messageType === 'email' ? subject : undefined,
         templateId: selectedTemplate?.id,
         variables: templateVariables,
-        scheduleTime: scheduleTime?.toISOString(),
-      };
+        scheduleTime: scheduleTime?.toISOString()};
 
       const response = await apiClient.post(endpoint, payload);
       
@@ -229,7 +220,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
           )}
           getOptionLabel={(option) => option.name}
           value={selectedTemplate}
-          onChange={(e, value) => handleTemplateSelect(value)}
+          onChange={(_e, value) => handleTemplateSelect(value)}
           renderInput={(params) => (
             <TextField
               {...params}

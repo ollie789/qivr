@@ -45,7 +45,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { format, addDays, setHours, setMinutes, isSameDay, isAfter } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { api } from '../services/api';
 
 interface Provider {

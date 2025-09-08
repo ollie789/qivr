@@ -13,7 +13,6 @@ import {
   RadioGroup,
   FormControlLabel,
   FormControl,
-  FormLabel,
   TextField,
   Checkbox,
   FormGroup,
@@ -24,17 +23,14 @@ import {
   LinearProgress,
   Alert,
   Chip,
-  IconButton,
-  Divider,
-} from '@mui/material';
+  IconButton} from '@mui/material';
 import {
   Preview as PreviewIcon,
   NavigateNext as NextIcon,
   NavigateBefore as BackIcon,
   Close as CloseIcon,
   Timer as TimerIcon,
-  CheckCircle as CheckCircleIcon,
-} from '@mui/icons-material';
+  CheckCircle as CheckCircleIcon} from '@mui/icons-material';
 import { promInstanceApi, PromPreviewDto, PromQuestionDto } from '../services/promInstanceApi';
 import { useSnackbar } from 'notistack';
 
@@ -49,8 +45,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
   open,
   onClose,
   templateId,
-  templateData,
-}) => {
+  templateData}) => {
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<PromPreviewDto | null>(null);
@@ -74,9 +69,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
           text: q.text,
           type: q.type,
           required: q.required !== false,
-          options: q.options,
-        })) || [],
-      });
+          options: q.options})) || []});
     }
   }, [open, templateId, templateData]);
 

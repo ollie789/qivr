@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -59,7 +59,6 @@ interface HealthMetric {
 
 export const Analytics = () => {
   const [timeRange, setTimeRange] = useState('3months');
-  const [selectedMetric, setSelectedMetric] = useState('all');
 
   // Mock data for personal health trends
   const painTrendData = Array.from({ length: 30 }, (_, i) => ({

@@ -37,11 +37,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Check for existing session on mount
     const checkAuth = async () => {
       try {
-        // Skip auth check for now - just check if token exists
-        const hasToken = authService.isAuthenticated();
+        // Check if user is authenticated
+        const hasToken = await authService.isAuthenticated();
         if (hasToken) {
-          // Don't make API call during initial load
-          setIsAuthenticated(true);
+          const userInfo = await authService.getCurrentUser();
+          if (userInfo) {
+            setUser({
+              username: userInfo.email,
+              email: userInfo.email,
+              firstName: userInfo.firstName,
+              lastName: userInfo.lastName,
+              emailVerified: userInfo.emailVerified,
+              phoneVerified: false,
+              phoneNumber: undefined,
+              tenantId: undefined,
+              role: undefined
+            });
+            setIsAuthenticated(true);
+          }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -55,11 +68,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await authService.login(email, password);
-      const userInfo = await authService.getUserInfo();
-      if (userInfo) {
-        setUser(userInfo);
-        setIsAuthenticated(true);
+      const response = await authService.signIn(email, password);
+      if (response.success) {
+        const userInfo = await authService.getCurrentUser();
+        if (userInfo) {
+          setUser({
+            username: userInfo.email,
+            email: userInfo.email,
+            firstName: userInfo.firstName,
+            lastName: userInfo.lastName,
+            emailVerified: userInfo.emailVerified,
+            phoneVerified: false,
+            phoneNumber: undefined,
+            tenantId: undefined,
+            role: undefined
+          });
+          setIsAuthenticated(true);
+        }
+      } else {
+        throw new Error(response.error || 'Login failed');
       }
     } catch (error) {
       throw error;
@@ -70,7 +97,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      await authService.logout();
+      await authService.signOut();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -83,7 +110,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async () => {
     try {
-      await authService.socialLogin('google');
+      // Social login not yet implemented in authService
+      throw new Error('Google sign-in not yet implemented');
     } catch (error) {
       throw error;
     }
@@ -91,15 +119,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithFacebook = async () => {
     try {
-      await authService.socialLogin('facebook');
+      // Social login not yet implemented in authService
+      throw new Error('Facebook sign-in not yet implemented');
     } catch (error) {
       throw error;
     }
   };
 
-  const register = async (email: string, password: string, emailAddr: string, phoneNumber?: string, firstName?: string, lastName?: string) => {
+  const register = async (email: string, password: string, _emailAddr: string, phoneNumber?: string, firstName?: string, lastName?: string) => {
     try {
-      const result = await authService.register(email, password, firstName, lastName, phoneNumber);
+      const result = await authService.signUp({ 
+        email, 
+        password, 
+        firstName, 
+        lastName, 
+        phone: phoneNumber 
+      });
       return result;
     } catch (error) {
       throw error;

@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
-import apiClient from '../services/apiClient';
+import apiClient from '../lib/api-client';
 
 interface PromInstance {
   id: string;
@@ -70,7 +70,7 @@ export const PROMs = () => {
     try {
       setLoading(true);
       const response = await apiClient.get<PromInstance[]>('/v1/proms/instances');
-      setProms(response.data);
+      setProms(response);
     } catch (err) {
       console.error('Error fetching PROMs:', err);
       setError('Failed to load PROMs. Please try again.');

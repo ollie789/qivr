@@ -66,8 +66,18 @@ import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDial
 import { patientApi } from '../services/patientApi';
 import { downloadCSV, downloadExcel, prepareIntakeExportData, intakeQueueColumns } from '../utils/exportUtils';
 import { Menu } from '@mui/material';
-import { handleApiError, isApiError } from '../services/sharedApiClient';
+// import { handleApiError, isApiError } from '../services/sharedApiClient';
 
+// Helper function to handle API errors
+const handleApiError = (error: any, defaultMessage: string): string => {
+  if (error?.response?.data?.message) {
+    return error.response.data.message;
+  }
+  if (error?.message) {
+    return error.message;
+  }
+  return defaultMessage;
+};
 
 const IntakeQueue: React.FC = () => {
   const queryClient = useQueryClient();

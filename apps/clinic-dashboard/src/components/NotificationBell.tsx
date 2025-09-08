@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   IconButton,
   Badge,
   Menu,
-  MenuItem,
   List,
   ListItem,
   ListItemText,
@@ -13,18 +12,14 @@ import {
   Divider,
   Button,
   CircularProgress,
-  Avatar,
-} from '@mui/material';
+  Avatar} from '@mui/material';
 import {
   Notifications as NotificationIcon,
   Email as EmailIcon,
   Sms as SmsIcon,
   Assignment as AssignmentIcon,
   Event as EventIcon,
-  CheckCircle as CheckIcon,
-  MoreVert as MoreIcon,
-  Refresh as RefreshIcon,
-} from '@mui/icons-material';
+  Refresh as RefreshIcon} from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import api from "../lib/api-client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -50,8 +45,7 @@ const NotificationBell: React.FC = () => {
       const response = await api.get('/api/Notifications');
       return response.data.map((n: any) => ({
         ...n,
-        createdAt: new Date(n.createdAt),
-      }));
+        createdAt: new Date(n.createdAt)}));
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
@@ -63,8 +57,7 @@ const NotificationBell: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
+    }});
 
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
@@ -73,8 +66,7 @@ const NotificationBell: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
+    }});
 
   const unreadCount = notifications.filter((n: Notification) => !n.read).length;
 
@@ -178,17 +170,14 @@ const NotificationBell: React.FC = () => {
                 sx={{
                   backgroundColor: notification.read ? 'transparent' : 'action.hover',
                   '&:hover': {
-                    backgroundColor: 'action.selected',
-                  },
-                }}
+                    backgroundColor: 'action.selected'}}}
               >
                 <ListItemIcon>
                   <Avatar
                     sx={{
                       width: 32,
                       height: 32,
-                      bgcolor: notification.read ? 'grey.300' : 'primary.main',
-                    }}
+                      bgcolor: notification.read ? 'grey.300' : 'primary.main'}}
                   >
                     {getNotificationIcon(notification.type)}
                   </Avatar>
@@ -198,8 +187,7 @@ const NotificationBell: React.FC = () => {
                     <Typography
                       variant="body2"
                       sx={{
-                        fontWeight: notification.read ? 400 : 600,
-                      }}
+                        fontWeight: notification.read ? 400 : 600}}
                     >
                       {notification.title}
                     </Typography>
