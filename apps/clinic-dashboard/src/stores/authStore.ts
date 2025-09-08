@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import cognitoAuthService, { type ClinicUserAttributes } from '../services/cognitoAuthService';
+import cognitoAuthService from '../services/cognitoAuthService';
 
 interface User {
   id: string;
@@ -88,12 +88,12 @@ export const useAuthStore = create<AuthState>()(
                 id: userAttributes.sub || '',
                 name: `${userAttributes.given_name} ${userAttributes.family_name}`,
                 email: userAttributes.email || '',
-                clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-                tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-                role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
-                employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
-                licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
-                specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
+                clinicId: userAttributes['custom:clinic_id'] || '',
+                tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'] || '',
+                role: userAttributes['custom:role'] || 'practitioner',
+                employeeId: userAttributes['custom:employee_id'] || '',
+                licenseNumber: userAttributes['custom:license_number'] || '',
+                specialization: userAttributes['custom:specialization'] || '',
               };
               
               set({
@@ -131,12 +131,12 @@ export const useAuthStore = create<AuthState>()(
               id: userAttributes.sub || '',
               name: `${userAttributes.given_name} ${userAttributes.family_name}`,
               email: userAttributes.email || '',
-              clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-              tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-              role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
-              employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
-              licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
-              specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
+              clinicId: userAttributes['custom:clinic_id'] || '',
+              tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'] || '',
+              role: userAttributes['custom:role'] || 'practitioner',
+              employeeId: userAttributes['custom:employee_id'] || '',
+              licenseNumber: userAttributes['custom:license_number'] || '',
+              specialization: userAttributes['custom:specialization'] || '',
             };
             
             set({
@@ -233,12 +233,12 @@ export const useAuthStore = create<AuthState>()(
                 id: userAttributes.sub || '',
                 name: `${userAttributes.given_name} ${userAttributes.family_name}`,
                 email: userAttributes.email || '',
-                clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-                tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-                role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
-                employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
-                licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
-                specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
+                clinicId: userAttributes['custom:clinic_id'] || '',
+                tenantId: userAttributes['custom:tenant_id'] || userAttributes['custom:clinic_id'] || '',
+                role: userAttributes['custom:role'] || 'practitioner',
+                employeeId: userAttributes['custom:employee_id'] || '',
+                licenseNumber: userAttributes['custom:license_number'] || '',
+                specialization: userAttributes['custom:specialization'] || '',
               };
               
               set({

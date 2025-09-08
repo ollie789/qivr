@@ -26,18 +26,11 @@ import {
   ListItemAvatar,
   ListItemText,
   ListItemSecondaryAction,
-  IconButton,
   Paper,
   Alert,
   Divider,
   Switch,
   InputAdornment,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -51,14 +44,7 @@ import {
   Preview as PreviewIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
-  Check as CheckIcon,
-  Close as CloseIcon,
-  Add as AddIcon,
-  Delete as DeleteIcon,
   Search as SearchIcon,
-  CalendarMonth as CalendarIcon,
-  AccessTime as TimeIcon,
-  Repeat as RepeatIcon,
   Email as EmailIcon,
   Sms as SmsIcon,
   Notifications as NotificationIcon,
@@ -66,7 +52,7 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, addDays, addWeeks, addMonths } from 'date-fns';
+import { format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { promApi } from '../services/promApi';
 import { patientApi } from '../services/patientApi';
@@ -74,7 +60,6 @@ import { patientApi } from '../services/patientApi';
 interface PROMSenderProps {
   onComplete?: () => void;
   preSelectedPatientId?: string;
-  preSelectedTemplateId?: string;
 }
 
 const steps = ['Select Template', 'Choose Recipients', 'Configure Schedule', 'Set Notifications', 'Review & Send'];
@@ -82,7 +67,6 @@ const steps = ['Select Template', 'Choose Recipients', 'Configure Schedule', 'Se
 const PROMSender: React.FC<PROMSenderProps> = ({
   onComplete,
   preSelectedPatientId,
-  preSelectedTemplateId,
 }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
@@ -133,21 +117,6 @@ const PROMSender: React.FC<PROMSenderProps> = ({
 
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
-  };
-
-  const handleReset = () => {
-    setActiveStep(0);
-    setSelectedTemplate(null);
-    setSelectedPatients([]);
-    setScheduleType('immediate');
-    setNotificationSettings({
-      sendEmail: true,
-      sendSMS: false,
-      sendPushNotification: true,
-      reminderEnabled: true,
-      reminderDays: [1, 3, 7],
-      customMessage: '',
-    });
   };
 
   const handleSend = async () => {
@@ -270,7 +239,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                     fullWidth
                     variant="outlined"
                     sx={{ height: '56px' }}
-                    onClick={() => setSelectedPatients(patients.map(p => p.id))}
+                    onClick={() => setSelectedPatients(patients.map((p: any) => p.id))}
                   >
                     Select All ({patients.length})
                   </Button>
@@ -596,7 +565,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                   <Typography variant="h6">{selectedPatients.length} patients</Typography>
                   <Typography variant="body2" color="text.secondary">
                     {selectedPatients.slice(0, 3).map(id => {
-                      const patient = patients.find(p => p.id === id);
+                      const patient = patients.find((p: any) => p.id === id);
                       return patient ? `${patient.firstName} ${patient.lastName}` : '';
                     }).join(', ')}
                     {selectedPatients.length > 3 && ` and ${selectedPatients.length - 3} more`}
