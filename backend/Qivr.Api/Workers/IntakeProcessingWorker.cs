@@ -171,37 +171,212 @@ public class IntakeProcessingWorker : BackgroundService
     private async Task ProcessIntake(IntakeQueueMessage intakeData, IServiceScope scope, CancellationToken cancellationToken)
     {
         // Tenant context is already established by the caller
+        var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
         
-        // TODO: Implement actual intake processing logic
-        // This could include:
-        // 1. Triggering AI analysis
-        // 2. Sending confirmation emails
-        // 3. Notifying clinic staff
-        // 4. Creating appointments
-        // 5. Updating patient records
-
         _logger.LogInformation("Processing intake {IntakeId} for evaluation {EvaluationId} (Tenant: {TenantId})", 
             intakeData.IntakeId, intakeData.EvaluationId, intakeData.TenantId);
 
-        // Simulate processing
-        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-
-        // Example: Update intake status
-        // var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
-        // await dbContext.Database.ExecuteSqlInterpolatedAsync(
-        //     $"UPDATE qivr.intake_submissions SET status = 'processed' WHERE id = {intakeData.IntakeId}",
-        //     cancellationToken);
-
-        if (_featuresOptions.EnableAiAnalysis)
+        try
         {
-            _logger.LogInformation("Triggering AI analysis for intake {IntakeId}", intakeData.IntakeId);
-            // TODO: Call AI service
+            // 1. Retrieve the evaluation data
+            var evaluation = await dbContext.Database
+                .SqlQuery<EvaluationData>($@"
+                    SELECT id, questionnaire_responses, created_at
+                    FROM qivr.evaluations 
+                    WHERE id = {intakeData.EvaluationId}
+                    AND tenant_id = {intakeData.TenantId}")
+                .FirstOrDefaultAsync(cancellationToken);
+                
+            if (evaluation == null)
+            {
+                _logger.LogWarning("Evaluation {EvaluationId} not found", intakeData.EvaluationId);
+                return;
+            }
+
+            // 2. Process with AI if enabled
+            if (_featuresOptions.EnableAiAnalysis)
+            {
+                _logger.LogInformation("Triggering AI analysis for intake {IntakeId}", intakeData.IntakeId);
+                
+                try
+                {
+                    var aiService = scope.ServiceProvider.GetService<IAiTriageService>();
+                    if (aiService != null)
+                    {
+                        // Parse evaluation data
+                        var evaluationJson = JsonSerializer.Deserialize<Dictionary<string, object>>(evaluation.QuestionnaireResponses);
+                        var symptoms = evaluationJson?.GetValueOrDefault("symptoms")?.ToString() ?? "";
+                        var chiefComplaint = evaluationJson?.GetValueOrDefault("chiefComplaint")?.ToString() ?? "";
+                        var painLevel = Convert.ToInt32(evaluationJson?.GetValueOrDefault("painLevel") ?? 5);
+                        
+                        // Create triage request
+                        var triageRequest = new TriageRequest
+                        {
+                            Id = Guid.NewGuid(),
+                            Symptoms = $"{chiefComplaint}. {symptoms}",
+                            Severity = painLevel > 7 ? "High" : painLevel > 4 ? "Medium" : "Low",
+                            Duration = evaluationJson?.GetValueOrDefault("duration")?.ToString(),
+                            MedicalHistory = evaluationJson?.GetValueOrDefault("medicalHistory")?.ToString()
+                        };
+                        
+                        // Generate AI triage summary
+                        var triageSummary = await aiService.GenerateTriageSummaryAsync(
+                            intakeData.EvaluationId, 
+                            triageRequest
+                        );
+                        
+                        // Store AI summary in evaluation
+                        await dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                            UPDATE qivr.evaluations 
+                            SET 
+                                ai_summary = {JsonSerializer.Serialize(triageSummary)}::jsonb,
+                                triage_priority = {triageSummary.UrgencyLevel.ToString()},
+                                updated_at = NOW()
+                            WHERE id = {intakeData.EvaluationId}
+                            AND tenant_id = {intakeData.TenantId}",
+                            cancellationToken);
+                            
+                        _logger.LogInformation("AI analysis completed for intake {IntakeId}. Urgency: {Urgency}", 
+                            intakeData.IntakeId, triageSummary.UrgencyLevel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "AI analysis failed for intake {IntakeId}, continuing processing", intakeData.IntakeId);
+                }
+            }
+
+            // 3. Create or update patient record
+            await CreateOrUpdatePatientRecord(intakeData, dbContext, cancellationToken);
+
+            // 4. Send confirmation email
+            if (_featuresOptions.SendEmailNotifications)
+            {
+                _logger.LogInformation("Sending confirmation email for intake {IntakeId}", intakeData.IntakeId);
+                
+                var emailService = scope.ServiceProvider.GetService<IEmailService>();
+                if (emailService != null)
+                {
+                    await emailService.SendIntakeConfirmationAsync(
+                        intakeData.PatientEmail,
+                        intakeData.PatientName,
+                        intakeData.IntakeId.ToString()
+                    );
+                }
+            }
+
+            // 5. Notify clinic staff
+            await NotifyClinicStaff(intakeData, scope, cancellationToken);
+
+            // 6. Update intake status to processed
+            await dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE qivr.intake_submissions 
+                SET 
+                    status = 'processed',
+                    processed_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = {intakeData.IntakeId}
+                AND tenant_id = {intakeData.TenantId}",
+                cancellationToken);
+                
+            _logger.LogInformation("Successfully processed intake {IntakeId}", intakeData.IntakeId);
         }
-
-        if (_featuresOptions.SendEmailNotifications)
+        catch (Exception ex)
         {
-            _logger.LogInformation("Sending confirmation email for intake {IntakeId}", intakeData.IntakeId);
-            // TODO: Send email
+            _logger.LogError(ex, "Error processing intake {IntakeId}", intakeData.IntakeId);
+            
+            // Update intake status to failed
+            await dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE qivr.intake_submissions 
+                SET 
+                    status = 'failed',
+                    error_message = {ex.Message},
+                    updated_at = NOW()
+                WHERE id = {intakeData.IntakeId}
+                AND tenant_id = {intakeData.TenantId}",
+                cancellationToken);
+                
+            throw;
+        }
+    }
+    
+    private async Task CreateOrUpdatePatientRecord(
+        IntakeQueueMessage intakeData, 
+        QivrDbContext dbContext, 
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Check if patient record exists
+            var existingPatient = await dbContext.Database
+                .SqlQuery<Guid?>($@"
+                    SELECT id FROM qivr.patients 
+                    WHERE email = {intakeData.PatientEmail} 
+                    AND tenant_id = {intakeData.TenantId}
+                    LIMIT 1")
+                .FirstOrDefaultAsync(cancellationToken);
+                
+            if (existingPatient == null)
+            {
+                // Create new patient record
+                var patientId = Guid.NewGuid();
+                await dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                    INSERT INTO qivr.patients (
+                        id, tenant_id, user_id, first_name, last_name, 
+                        email, medical_record_number, created_at, updated_at
+                    ) VALUES (
+                        {patientId}, {intakeData.TenantId}, {intakeData.EvaluationId},
+                        {intakeData.PatientName.Split(' ')[0]}, 
+                        {string.Join(" ", intakeData.PatientName.Split(' ').Skip(1))},
+                        {intakeData.PatientEmail}, 
+                        {$"MRN-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8]}"},
+                        NOW(), NOW()
+                    )",
+                    cancellationToken);
+                    
+                _logger.LogInformation("Created new patient record {PatientId} for intake {IntakeId}", 
+                    patientId, intakeData.IntakeId);
+            }
+            else
+            {
+                // Link intake to existing patient
+                await dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                    UPDATE qivr.intake_submissions 
+                    SET patient_id = {existingPatient.Value}
+                    WHERE id = {intakeData.IntakeId}",
+                    cancellationToken);
+                    
+                _logger.LogInformation("Linked intake {IntakeId} to existing patient {PatientId}", 
+                    intakeData.IntakeId, existingPatient.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create/update patient record for intake {IntakeId}", intakeData.IntakeId);
+        }
+    }
+    
+    private async Task NotifyClinicStaff(
+        IntakeQueueMessage intakeData, 
+        IServiceScope scope, 
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var notificationService = scope.ServiceProvider.GetService<INotificationService>();
+            if (notificationService != null)
+            {
+                await notificationService.NotifyNewIntakeAsync(
+                    intakeData.TenantId,
+                    intakeData.IntakeId,
+                    intakeData.PatientName,
+                    "New intake submission requires review"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to notify clinic staff for intake {IntakeId}", intakeData.IntakeId);
         }
     }
 

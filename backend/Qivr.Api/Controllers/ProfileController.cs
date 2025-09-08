@@ -1,6 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using Qivr.Infrastructure.Data;
+using Qivr.Core.Interfaces;
+using Amazon.CognitoIdentityProvider;
+using Amazon.CognitoIdentityProvider.Model;
+using System.Text.Json;
 
 namespace Qivr.Api.Controllers;
 
@@ -10,10 +16,23 @@ namespace Qivr.Api.Controllers;
 public class ProfileController : ControllerBase
 {
     private readonly ILogger<ProfileController> _logger;
+    private readonly QivrDbContext _dbContext;
+    private readonly IStorageService _storageService;
+    private readonly IAmazonCognitoIdentityProvider _cognitoClient;
+    private readonly IConfiguration _configuration;
     
-    public ProfileController(ILogger<ProfileController> logger)
+    public ProfileController(
+        ILogger<ProfileController> logger,
+        QivrDbContext dbContext,
+        IStorageService storageService,
+        IAmazonCognitoIdentityProvider cognitoClient,
+        IConfiguration configuration)
     {
         _logger = logger;
+        _dbContext = dbContext;
+        _storageService = storageService;
+        _cognitoClient = cognitoClient;
+        _configuration = configuration;
     }
     
     // GET: api/profile
@@ -28,47 +47,80 @@ public class ProfileController : ControllerBase
             return Unauthorized();
         }
         
-        // TODO: Fetch actual user profile from database
-        // For now, return mock data
-        var profile = new UserProfileDto
+        try
         {
-            Id = userId,
-            Email = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@example.com",
-            FirstName = "John",
-            LastName = "Doe",
-            Phone = "+1-555-0123",
-            DateOfBirth = "1985-03-15",
-            Gender = "male",
-            Address = "123 Main St",
-            City = "Springfield",
-            State = "IL",
-            Postcode = "62701",
-            EmergencyContact = new EmergencyContactDto
+            // Get tenant ID from claims
+            var tenantId = User.FindFirst("custom:tenant_id")?.Value ?? 
+                          User.FindFirst("tenant_id")?.Value;
+            
+            // Fetch user profile from database
+            var userGuid = Guid.Parse(userId);
+            var user = await _dbContext.Database
+                .SqlQuery<UserData>($@"
+                    SELECT id, email, first_name, last_name, phone, 
+                           date_of_birth, gender, address, city, state, postcode,
+                           photo_url, email_verified, phone_verified,
+                           profile_data, preferences
+                    FROM qivr.users 
+                    WHERE id = {userGuid}
+                    LIMIT 1")
+                .FirstOrDefaultAsync();
+                
+            if (user == null)
             {
-                Name = "Jane Doe",
-                Relationship = "Spouse",
-                Phone = "+1-555-0124"
-            },
-            MedicalInfo = new MedicalInfoDto
+                return NotFound(new { message = "User profile not found" });
+            }
+            
+            // Parse JSON fields
+            var profileData = user.ProfileData != null 
+                ? JsonSerializer.Deserialize<Dictionary<string, object>>(user.ProfileData) 
+                : new Dictionary<string, object>();
+                
+            var preferences = user.Preferences != null
+                ? JsonSerializer.Deserialize<PreferencesDto>(user.Preferences)
+                : new PreferencesDto();
+            
+            // Build response
+            var profile = new UserProfileDto
             {
-                BloodType = "O+",
-                Allergies = new[] { "Penicillin", "Peanuts" },
-                Medications = new[] { "Metformin 500mg", "Lisinopril 10mg" },
-                Conditions = new[] { "Diabetes Type 2", "Hypertension" }
-            },
-            Preferences = new PreferencesDto
+                Id = user.Id.ToString(),
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Phone = user.Phone,
+                DateOfBirth = user.DateOfBirth?.ToString("yyyy-MM-dd"),
+                Gender = user.Gender,
+                Address = user.Address,
+                City = user.City,
+                State = user.State,
+                Postcode = user.Postcode,
+                PhotoUrl = user.PhotoUrl,
+                EmailVerified = user.EmailVerified,
+                PhoneVerified = user.PhoneVerified,
+                Preferences = preferences
+            };
+            
+            // Extract emergency contact if exists
+            if (profileData.ContainsKey("emergencyContact"))
             {
-                EmailNotifications = true,
-                SmsNotifications = true,
-                AppointmentReminders = true,
-                MarketingEmails = false
-            },
-            PhotoUrl = null,
-            EmailVerified = true,
-            PhoneVerified = false
-        };
-        
-        return Ok(profile);
+                profile.EmergencyContact = JsonSerializer.Deserialize<EmergencyContactDto>(
+                    profileData["emergencyContact"].ToString()!);
+            }
+            
+            // Extract medical info if exists
+            if (profileData.ContainsKey("medicalInfo"))
+            {
+                profile.MedicalInfo = JsonSerializer.Deserialize<MedicalInfoDto>(
+                    profileData["medicalInfo"].ToString()!);
+            }
+            
+            return Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching profile for user {UserId}", userId);
+            return StatusCode(500, new { message = "An error occurred while fetching your profile" });
+        }
     }
     
     // PUT: api/profile
@@ -92,11 +144,43 @@ public class ProfileController : ControllerBase
         
         try
         {
-            // TODO: Update user profile in database
-            _logger.LogInformation("Updating profile for user {UserId}", userId);
+            var userGuid = Guid.Parse(userId);
             
-            // Simulate processing
-            await Task.Delay(100);
+            // Build profile data JSON
+            var profileData = new Dictionary<string, object>();
+            if (updateDto.EmergencyContact != null)
+            {
+                profileData["emergencyContact"] = updateDto.EmergencyContact;
+            }
+            if (updateDto.MedicalInfo != null)
+            {
+                profileData["medicalInfo"] = updateDto.MedicalInfo;
+            }
+            
+            var profileJson = JsonSerializer.Serialize(profileData);
+            var preferencesJson = updateDto.Preferences != null 
+                ? JsonSerializer.Serialize(updateDto.Preferences) 
+                : null;
+            
+            // Update user profile in database
+            await _dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE qivr.users 
+                SET 
+                    first_name = COALESCE({updateDto.FirstName}, first_name),
+                    last_name = COALESCE({updateDto.LastName}, last_name),
+                    phone = COALESCE({updateDto.Phone}, phone),
+                    date_of_birth = COALESCE({updateDto.DateOfBirth != null ? DateTime.Parse(updateDto.DateOfBirth) : (DateTime?)null}, date_of_birth),
+                    gender = COALESCE({updateDto.Gender}, gender),
+                    address = COALESCE({updateDto.Address}, address),
+                    city = COALESCE({updateDto.City}, city),
+                    state = COALESCE({updateDto.State}, state),
+                    postcode = COALESCE({updateDto.Postcode}, postcode),
+                    profile_data = CASE WHEN {profileJson}::jsonb != '{}'::jsonb THEN {profileJson}::jsonb ELSE profile_data END,
+                    preferences = COALESCE({preferencesJson}::jsonb, preferences),
+                    updated_at = NOW()
+                WHERE id = {userGuid}");
+            
+            _logger.LogInformation("Profile updated for user {UserId}", userId);
             
             return NoContent();
         }
@@ -140,12 +224,34 @@ public class ProfileController : ControllerBase
         
         try
         {
-            // TODO: Save photo to storage (e.g., S3, Azure Blob, etc.)
-            // TODO: Update user profile with photo URL
+            var userGuid = Guid.Parse(userId);
             
-            var photoUrl = $"https://storage.example.com/profiles/{userId}/{Guid.NewGuid()}.jpg";
+            // Generate unique filename
+            var fileExtension = Path.GetExtension(photo.FileName);
+            var fileName = $"profile-photos/{userId}/{Guid.NewGuid()}{fileExtension}";
             
-            _logger.LogInformation("Photo uploaded for user {UserId}", userId);
+            // Upload to S3/MinIO
+            using var stream = photo.OpenReadStream();
+            var photoUrl = await _storageService.UploadFileAsync(
+                stream, 
+                fileName, 
+                photo.ContentType,
+                new Dictionary<string, string>
+                {
+                    ["user-id"] = userId,
+                    ["upload-date"] = DateTime.UtcNow.ToString("O")
+                }
+            );
+            
+            // Update user profile with photo URL
+            await _dbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE qivr.users 
+                SET 
+                    photo_url = {photoUrl},
+                    updated_at = NOW()
+                WHERE id = {userGuid}");
+            
+            _logger.LogInformation("Photo uploaded for user {UserId}, URL: {PhotoUrl}", userId, photoUrl);
             
             return Ok(new PhotoUploadResponseDto
             {
@@ -167,8 +273,9 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
     {
         var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var accessToken = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
         
-        if (string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(accessToken))
         {
             return Unauthorized();
         }
@@ -180,15 +287,37 @@ public class ProfileController : ControllerBase
         
         try
         {
-            // TODO: Verify current password
-            // TODO: Update password in authentication provider (Cognito, Auth0, etc.)
+            // Change password in Cognito
+            var changePasswordRequest = new ChangePasswordRequest
+            {
+                AccessToken = accessToken,
+                PreviousPassword = changePasswordDto.CurrentPassword,
+                ProposedPassword = changePasswordDto.NewPassword
+            };
             
-            _logger.LogInformation("Password changed for user {UserId}", userId);
+            var response = await _cognitoClient.ChangePasswordAsync(changePasswordRequest);
             
-            // Simulate processing
-            await Task.Delay(100);
-            
-            return NoContent();
+            if (response.HttpStatusCode == System.Net.HttpStatusCode.OK)
+            {
+                _logger.LogInformation("Password changed successfully for user {UserId}", userId);
+                return NoContent();
+            }
+            else
+            {
+                _logger.LogWarning("Password change failed for user {UserId}, Status: {Status}", 
+                    userId, response.HttpStatusCode);
+                return BadRequest(new { message = "Failed to change password" });
+            }
+        }
+        catch (NotAuthorizedException ex)
+        {
+            _logger.LogWarning(ex, "Invalid current password for user {UserId}", userId);
+            return BadRequest(new { message = "Current password is incorrect" });
+        }
+        catch (InvalidPasswordException ex)
+        {
+            _logger.LogWarning(ex, "Invalid new password for user {UserId}", userId);
+            return BadRequest(new { message = "New password does not meet requirements" });
         }
         catch (Exception ex)
         {
@@ -416,4 +545,25 @@ public class DeleteAccountDto
 {
     public bool ConfirmDeletion { get; set; }
     public string? Reason { get; set; }
+}
+
+// Internal data model for database query
+internal class UserData
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public string? Gender { get; set; }
+    public string? Address { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? Postcode { get; set; }
+    public string? PhotoUrl { get; set; }
+    public bool EmailVerified { get; set; }
+    public bool PhoneVerified { get; set; }
+    public string? ProfileData { get; set; }
+    public string? Preferences { get; set; }
 }

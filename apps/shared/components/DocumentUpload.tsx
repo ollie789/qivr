@@ -105,7 +105,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         response = await documentService.uploadPatientDocument(file, patientId, {
           documentType,
           description: description || undefined,
-          onUploadProgress: (progressEvent) => {
+          onUploadProgress: (progressEvent: any) => {
             const progress = progressEvent.total
               ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
               : 0;
@@ -124,7 +124,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         response = await documentService.uploadAppointmentDocument(file, appointmentId, {
           documentType,
           description: description || undefined,
-          onUploadProgress: (progressEvent) => {
+          onUploadProgress: (progressEvent: any) => {
             const progress = progressEvent.total
               ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
               : 0;

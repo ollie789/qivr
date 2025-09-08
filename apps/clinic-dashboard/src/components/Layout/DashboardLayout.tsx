@@ -30,7 +30,6 @@ import {
   Assignment as AssignmentIcon,
   Analytics as AnalyticsIcon,
   Settings as SettingsIcon,
-  Notifications as NotificationsIcon,
   AccountCircle as AccountIcon,
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -96,10 +95,6 @@ const DashboardLayout: React.FC = () => {
 
   const handleProfileMenuClose = () => {
     setAnchorEl(null);
-  };
-
-  const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchor(event.currentTarget);
   };
 
   const handleNotificationClose = () => {

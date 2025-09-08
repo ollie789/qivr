@@ -63,7 +63,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
   maxSize = 10 * 1024 * 1024, // 10MB
 }) => {
   const [files, setFiles] = useState<FileWithProgress[]>([]);
-  const [uploading, setUploading] = useState(false);
 
   const uploadFile = async (file: FileWithProgress) => {
     const formData = new FormData();
@@ -85,7 +84,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        onUploadProgress: (progressEvent) => {
+        onUploadProgress: (progressEvent: any) => {
           const progress = progressEvent.total
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 0;
@@ -141,7 +140,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }));
 
     setFiles(prev => [...prev, ...newFiles]);
-    setUploading(true);
 
     const uploadedFiles: UploadedFile[] = [];
     const errors: string[] = [];
@@ -154,8 +152,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         errors.push(`${file.name}: ${error.message}`);
       }
     }
-
-    setUploading(false);
 
     if (uploadedFiles.length > 0 && onUpload) {
       onUpload(uploadedFiles);
