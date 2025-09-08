@@ -124,4 +124,58 @@ namespace Qivr.Core.DTOs
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
+
+    // DTOs for Patient CRUD operations
+    public class PatientDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string DateOfBirth { get; set; } = string.Empty;
+        public string Gender { get; set; } = string.Empty;
+        public AddressDto Address { get; set; } = new();
+        public string MedicalRecordNumber { get; set; } = string.Empty;
+        public string Status { get; set; } = "active";
+        public string RegisteredDate { get; set; } = string.Empty;
+        public string? InsuranceProvider { get; set; }
+        public string? MedicareNumber { get; set; }
+        public string? CreatedAt { get; set; }
+        public string? UpdatedAt { get; set; }
+    }
+
+    public class PatientListResponseDto
+    {
+        public List<PatientDto> Data { get; set; } = new();
+        public int Total { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+    }
+
+    public class CreatePatientDto
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string DateOfBirth { get; set; } = string.Empty;
+        public string Gender { get; set; } = string.Empty;
+        public AddressDto Address { get; set; } = new();
+        public string? InsuranceProvider { get; set; }
+        public string? MedicareNumber { get; set; }
+    }
+
+    public class UpdatePatientDto
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Phone { get; set; }
+        public string? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
+        public AddressDto? Address { get; set; }
+        public string? Status { get; set; }
+        public string? InsuranceProvider { get; set; }
+        public string? MedicareNumber { get; set; }
+    }
 }

@@ -373,7 +373,8 @@ if (!string.IsNullOrEmpty(sqsConfig["QueueUrl"]))
     });
     
     // Register the background worker
-    builder.Services.AddHostedService<IntakeProcessingWorker>();
+    // Disabled for development - enable when SQS is configured
+    // builder.Services.AddHostedService<IntakeProcessingWorker>();
 }
 
 var app = builder.Build();

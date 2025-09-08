@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -13,18 +13,23 @@ import {
   Stepper,
   Step,
   StepLabel,
+  Card,
+  CardContent,
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 
 export const Register = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register: signUp } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(0);
+  const [intakeData, setIntakeData] = useState<any>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -35,6 +40,44 @@ export const Register = () => {
   });
 
   const steps = ['Create Account', 'Verify Email', 'Complete'];
+
+  useEffect(() => {
+    // Check for intake data from widget submission
+    const intakeId = searchParams.get('intakeId');
+    const email = searchParams.get('email');
+    
+    // Also check localStorage for pending intake
+    const storedIntake = localStorage.getItem('pendingIntake');
+    
+    if (intakeId && email) {
+      // Prefill from URL params
+      setFormData(prev => ({ ...prev, email }));
+      setIntakeData({ intakeId, email });
+    } else if (storedIntake) {
+      try {
+        const parsed = JSON.parse(storedIntake);
+        // Check if intake is less than 24 hours old
+        const intakeTime = new Date(parsed.timestamp);
+        const now = new Date();
+        const hoursDiff = (now.getTime() - intakeTime.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 24) {
+          setFormData(prev => ({
+            ...prev,
+            email: parsed.email || prev.email,
+            firstName: parsed.name?.split(' ')[0] || prev.firstName,
+            lastName: parsed.name?.split(' ').slice(1).join(' ') || prev.lastName,
+          }));
+          setIntakeData(parsed);
+        } else {
+          // Clear old intake data
+          localStorage.removeItem('pendingIntake');
+        }
+      } catch (err) {
+        console.error('Failed to parse intake data:', err);
+      }
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -89,8 +132,20 @@ export const Register = () => {
         formData.lastName
       );
 
+      // Link intake to new account if we have intake data
+      if (intakeData?.intakeId && result.userId) {
+        try {
+          await linkIntakeToAccount(intakeData.intakeId, result.userId);
+        } catch (linkError) {
+          console.error('Failed to link intake to account:', linkError);
+          // Don't fail the registration if linking fails
+        }
+      }
+
       if (result.userConfirmed) {
         // User is already confirmed (shouldn't happen with email verification)
+        // Clear intake data
+        localStorage.removeItem('pendingIntake');
         navigate('/login');
       } else {
         // Store email for resend functionality
@@ -104,6 +159,23 @@ export const Register = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const linkIntakeToAccount = async (intakeId: string, userId: string) => {
+    // Call backend to associate intake with user account
+    const response = await fetch('/api/v1/intake/link-to-account', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ intakeId, userId }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to link intake to account');
+    }
+
+    return response.json();
   };
 
   const handleResendVerification = async () => {
@@ -144,6 +216,27 @@ export const Register = () => {
 
           {step === 0 && (
             <Box component="form" onSubmit={handleSubmit}>
+              {intakeData && (
+                <Card sx={{ mb: 3, backgroundColor: 'primary.50', border: '2px solid', borderColor: 'primary.main' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <HealthAndSafetyIcon color="primary" />
+                      <Typography variant="h6" color="primary">
+                        Welcome back!
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2">
+                      We found your evaluation submission. Create an account to track your progress and book appointments.
+                    </Typography>
+                    {intakeData.evaluationId && (
+                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                        Reference: {intakeData.evaluationId.slice(0, 8).toUpperCase()}
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
               {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   {error}

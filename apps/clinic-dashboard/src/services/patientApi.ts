@@ -66,15 +66,25 @@ class PatientApi {
 
   // Get all patients with optional filters
   async getPatients(params?: PatientSearchParams) {
-    // NOTE: Backend doesn't have a generic patients list endpoint
-    // Return mock data for now
-    console.log('Note: Backend does not have /api/v1/patients endpoint - using mock data');
-    return {
-      data: this.getMockPatients(),
-      total: 2,
-      page: 1,
-      pageSize: 10,
-    };
+    try {
+      const queryParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined) queryParams.append(key, String(value));
+        });
+      }
+      const response = await api.get<any>(`${this.basePath}/patients${queryParams.toString() ? `?${queryParams}` : ''}`);
+      return response;
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      // Fallback to mock data if backend fails
+      return {
+        data: this.getMockPatients(),
+        total: 3,
+        page: params?.page || 1,
+        pageSize: params?.pageSize || 10,
+      };
+    }
   }
 
   // Get a single patient by ID
@@ -92,44 +102,17 @@ class PatientApi {
 
   // Create a new patient
   async createPatient(patient: CreatePatientDto) {
-    try {
-      return await api.post<Patient>(`${this.basePath}/patients`, patient);
-    } catch (error) {
-      console.error('Error creating patient:', error);
-      // Return mock response for development
-      return {
-        id: `patient-${Date.now()}`,
-        ...patient,
-        medicalRecordNumber: `MRN${Date.now()}`,
-        status: 'active' as const,
-        registeredDate: new Date().toISOString(),
-        conditions: patient.initialConditions || [],
-        tags: [],
-        createdAt: new Date().toISOString(),
-      };
-    }
+    return await api.post<Patient>(`${this.basePath}/patients`, patient);
   }
 
   // Update an existing patient
   async updatePatient(id: string, updates: UpdatePatientDto) {
-    try {
-      return await api.patch<Patient>(`${this.basePath}/patients/${id}`, updates);
-    } catch (error) {
-      console.error('Error updating patient:', error);
-      // Return mock response for development
-      const existing = this.getMockPatients().find(p => p.id === id);
-      return { ...existing, ...updates, updatedAt: new Date().toISOString() };
-    }
+    return await api.patch<Patient>(`${this.basePath}/patients/${id}`, updates);
   }
 
   // Delete a patient (soft delete)
   async deletePatient(id: string) {
-    try {
-      return await api.delete<any>(`${this.basePath}/patients/${id}`);
-    } catch (error) {
-      console.error('Error deleting patient:', error);
-      return { success: true };
-    }
+    return await api.delete<any>(`${this.basePath}/patients/${id}`);
   }
 
   // Get patient's medical history

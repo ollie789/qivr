@@ -2,16 +2,317 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qivr.Core.Entities;
 using Qivr.Core.DTOs;
+using System.Linq;
 
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/patient-records")]
+[Route("api")]
 [Authorize]
 public class PatientRecordsController : ControllerBase
 {
+	// Mock patient data storage (in production, this would come from database)
+	private static readonly List<PatientDto> _mockPatients = new()
+	{
+		new PatientDto
+		{
+			Id = "1",
+			FirstName = "Sarah",
+			LastName = "Johnson",
+			Email = "sarah.johnson@email.com",
+			Phone = "+61 432 123 456",
+			DateOfBirth = "1985-03-15",
+			Gender = "Female",
+			Address = new AddressDto
+			{
+				Street = "123 Collins St",
+				City = "Melbourne",
+				State = "VIC",
+				PostalCode = "3000"
+			},
+			MedicalRecordNumber = "MRN001234",
+			Status = "active",
+			RegisteredDate = "2023-06-15",
+			InsuranceProvider = "Medibank Private",
+			CreatedAt = "2023-06-15T10:00:00Z"
+		},
+		new PatientDto
+		{
+			Id = "2",
+			FirstName = "Michael",
+			LastName = "Thompson",
+			Email = "michael.t@email.com",
+			Phone = "+61 412 987 654",
+			DateOfBirth = "1972-11-22",
+			Gender = "Male",
+			Address = new AddressDto
+			{
+				Street = "456 George St",
+				City = "Sydney",
+				State = "NSW",
+				PostalCode = "2000"
+			},
+			MedicalRecordNumber = "MRN001235",
+			Status = "active",
+			RegisteredDate = "2023-09-20",
+			InsuranceProvider = "BUPA",
+			CreatedAt = "2023-09-20T10:00:00Z"
+		},
+		new PatientDto
+		{
+			Id = "3",
+			FirstName = "Lisa",
+			LastName = "Chen",
+			Email = "lisa.chen@email.com",
+			Phone = "+61 423 456 789",
+			DateOfBirth = "1990-07-08",
+			Gender = "Female",
+			Address = new AddressDto
+			{
+				Street = "789 Queen St",
+				City = "Brisbane",
+				State = "QLD",
+				PostalCode = "4000"
+			},
+			MedicalRecordNumber = "MRN001236",
+			Status = "active",
+			RegisteredDate = "2023-11-10",
+			InsuranceProvider = "HCF",
+			CreatedAt = "2023-11-10T10:00:00Z"
+		}
+	};
+	
+	// GET: api/v1/patients - List all patients with filters
+	[HttpGet("v1/patients")]
+	[ProducesResponseType(typeof(PatientListResponseDto), 200)]
+	public IActionResult GetPatients(
+		[FromQuery] string? search,
+		[FromQuery] string? status,
+		[FromQuery] string? provider,
+		[FromQuery] string? condition,
+		[FromQuery] int page = 1,
+		[FromQuery] int pageSize = 10)
+	{
+		// Only allow clinicians and admins to list all patients
+		if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		var query = _mockPatients.AsQueryable();
+
+		// Apply search filter
+		if (!string.IsNullOrEmpty(search))
+		{
+			var searchLower = search.ToLower();
+			query = query.Where(p => 
+				p.FirstName.ToLower().Contains(searchLower) ||
+				p.LastName.ToLower().Contains(searchLower) ||
+				p.Email.ToLower().Contains(searchLower));
+		}
+
+		// Apply status filter
+		if (!string.IsNullOrEmpty(status))
+		{
+			query = query.Where(p => p.Status == status);
+		}
+
+		var total = query.Count();
+		var patients = query
+			.Skip((page - 1) * pageSize)
+			.Take(pageSize)
+			.ToList();
+
+		return Ok(new PatientListResponseDto
+		{
+			Data = patients,
+			Total = total,
+			Page = page,
+			PageSize = pageSize
+		});
+	}
+
+	// GET: api/v1/patients/{id} - Get specific patient
+	[HttpGet("v1/patients/{id}")]
+	[ProducesResponseType(typeof(PatientDto), 200)]
+	public IActionResult GetPatientById(string id)
+	{
+		var patient = _mockPatients.FirstOrDefault(p => p.Id == id);
+		if (patient == null)
+		{
+			return NotFound(new { error = "Patient not found" });
+		}
+
+		// Check authorization
+		var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+		if (User.IsInRole("Patient"))
+		{
+			// Patients can only access their own record
+			if (id != userIdClaim)
+			{
+				return Forbid();
+			}
+		}
+		else if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		return Ok(patient);
+	}
+
+	// POST: api/v1/patients - Create new patient
+	[HttpPost("v1/patients")]
+	[ProducesResponseType(typeof(PatientDto), 201)]
+	public IActionResult CreatePatient([FromBody] CreatePatientDto dto)
+	{
+		// Only allow clinicians and admins to create patients
+		if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		// Check if email already exists
+		if (_mockPatients.Any(p => p.Email == dto.Email))
+		{
+			return BadRequest(new { error = "A patient with this email already exists" });
+		}
+
+		var patient = new PatientDto
+		{
+			Id = Guid.NewGuid().ToString(),
+			FirstName = dto.FirstName,
+			LastName = dto.LastName,
+			Email = dto.Email,
+			Phone = dto.Phone,
+			DateOfBirth = dto.DateOfBirth,
+			Gender = dto.Gender,
+			Address = dto.Address,
+			MedicalRecordNumber = $"MRN{DateTime.Now.Ticks}",
+			Status = "active",
+			RegisteredDate = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+			InsuranceProvider = dto.InsuranceProvider,
+			MedicareNumber = dto.MedicareNumber,
+			CreatedAt = DateTime.UtcNow.ToString("o")
+		};
+
+		_mockPatients.Add(patient);
+
+		return CreatedAtAction(nameof(GetPatientById), new { id = patient.Id }, patient);
+	}
+
+	// PUT: api/v1/patients/{id} - Update patient
+	[HttpPut("v1/patients/{id}")]
+	[HttpPatch("v1/patients/{id}")]
+	[ProducesResponseType(typeof(PatientDto), 200)]
+	public IActionResult UpdatePatient(string id, [FromBody] UpdatePatientDto dto)
+	{
+		// Only allow clinicians and admins to update patients
+		if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		var patient = _mockPatients.FirstOrDefault(p => p.Id == id);
+		if (patient == null)
+		{
+			return NotFound(new { error = "Patient not found" });
+		}
+
+		// Update fields if provided
+		if (!string.IsNullOrEmpty(dto.FirstName))
+			patient.FirstName = dto.FirstName;
+		if (!string.IsNullOrEmpty(dto.LastName))
+			patient.LastName = dto.LastName;
+		if (!string.IsNullOrEmpty(dto.Phone))
+			patient.Phone = dto.Phone;
+		if (!string.IsNullOrEmpty(dto.DateOfBirth))
+			patient.DateOfBirth = dto.DateOfBirth;
+		if (!string.IsNullOrEmpty(dto.Gender))
+			patient.Gender = dto.Gender;
+		if (dto.Address != null)
+			patient.Address = dto.Address;
+		if (!string.IsNullOrEmpty(dto.Status))
+			patient.Status = dto.Status;
+		if (!string.IsNullOrEmpty(dto.InsuranceProvider))
+			patient.InsuranceProvider = dto.InsuranceProvider;
+
+		patient.UpdatedAt = DateTime.UtcNow.ToString("o");
+
+		return Ok(patient);
+	}
+
+	// DELETE: api/v1/patients/{id} - Delete patient (soft delete)
+	[HttpDelete("v1/patients/{id}")]
+	[ProducesResponseType(204)]
+	public IActionResult DeletePatient(string id)
+	{
+		// Only allow admins to delete patients
+		if (!User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		var patient = _mockPatients.FirstOrDefault(p => p.Id == id);
+		if (patient == null)
+		{
+			return NotFound(new { error = "Patient not found" });
+		}
+
+		// Soft delete - mark as inactive
+		patient.Status = "inactive";
+		patient.UpdatedAt = DateTime.UtcNow.ToString("o");
+
+		return Ok(new { success = true, message = "Patient deleted successfully" });
+	}
+
+	// GET: api/v1/patients/export - Export patients data
+	[HttpGet("v1/patients/export")]
+	public IActionResult ExportPatients(
+		[FromQuery] string format = "csv",
+		[FromQuery] string? search = null,
+		[FromQuery] string? status = null)
+	{
+		// Only allow clinicians and admins
+		if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		var query = _mockPatients.AsQueryable();
+
+		if (!string.IsNullOrEmpty(search))
+		{
+			var searchLower = search.ToLower();
+			query = query.Where(p => 
+				p.FirstName.ToLower().Contains(searchLower) ||
+				p.LastName.ToLower().Contains(searchLower) ||
+				p.Email.ToLower().Contains(searchLower));
+		}
+
+		if (!string.IsNullOrEmpty(status))
+		{
+			query = query.Where(p => p.Status == status);
+		}
+
+		var patients = query.ToList();
+
+		if (format.ToLower() == "csv")
+		{
+			var csv = "ID,First Name,Last Name,Email,Phone,Date of Birth,Gender,Status,Registered Date\n";
+			foreach (var patient in patients)
+			{
+				csv += $"{patient.Id},\"{patient.FirstName}\",\"{patient.LastName}\",\"{patient.Email}\",\"{patient.Phone}\",";
+				csv += $"\"{patient.DateOfBirth}\",\"{patient.Gender}\",{patient.Status},{patient.RegisteredDate}\n";
+			}
+
+			return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", $"patients_{DateTime.Now:yyyyMMdd}.csv");
+		}
+
+		return BadRequest(new { error = "Unsupported export format" });
+	}
 	// GET: api/patient-records/{patientId}
-	[HttpGet("{patientId}")]
+	[HttpGet("patient-records/{patientId}")]
 	[ProducesResponseType(typeof(PatientRecordDto), 200)]
 	public async Task<IActionResult> GetPatientRecord(Guid patientId)
 	{
@@ -117,7 +418,7 @@ public class PatientRecordsController : ControllerBase
 	}
 	
 	// PUT: api/patient-records/{patientId}/demographics
-	[HttpPut("{patientId}/demographics")]
+	[HttpPut("patient-records/{patientId}/demographics")]
 	[ProducesResponseType(204)]
 	public async Task<IActionResult> UpdateDemographics(Guid patientId, [FromBody] DemographicsDto demographics)
 	{
@@ -128,7 +429,7 @@ public class PatientRecordsController : ControllerBase
 	}
 	
 	// POST: api/patient-records/{patientId}/medical-history
-	[HttpPost("{patientId}/medical-history")]
+	[HttpPost("patient-records/{patientId}/medical-history")]
 	[ProducesResponseType(typeof(MedicalHistoryDto), 201)]
 	public async Task<IActionResult> AddMedicalHistory(Guid patientId, [FromBody] MedicalHistoryUpdateDto update)
 	{
@@ -147,7 +448,7 @@ public class PatientRecordsController : ControllerBase
 	}
 	
 	// POST: api/patient-records/{patientId}/vital-signs
-	[HttpPost("{patientId}/vital-signs")]
+	[HttpPost("patient-records/{patientId}/vital-signs")]
 	[ProducesResponseType(typeof(VitalSignDto), 201)]
 	public async Task<IActionResult> RecordVitalSigns(Guid patientId, [FromBody] VitalSignDto vitalSign)
 	{
@@ -160,7 +461,7 @@ public class PatientRecordsController : ControllerBase
 	}
 	
 	// GET: api/patient-records/{patientId}/vital-signs
-	[HttpGet("{patientId}/vital-signs")]
+	[HttpGet("patient-records/{patientId}/vital-signs")]
 	[ProducesResponseType(typeof(IEnumerable<VitalSignDto>), 200)]
 	public async Task<IActionResult> GetVitalSigns(Guid patientId, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
 	{
@@ -194,7 +495,7 @@ public class PatientRecordsController : ControllerBase
 	// - GET /api/documents/patient/{patientId} - List patient documents
 	
 	// This endpoint is kept for backward compatibility but redirects to the new controller
-	[HttpPost("{patientId}/documents")]
+	[HttpPost("patient-records/{patientId}/documents")]
 	[ProducesResponseType(typeof(DocumentDto), 201)]
 	[Obsolete("Use POST /api/documents/patient/{patientId} instead")]
 	public IActionResult UploadDocument(Guid patientId, [FromForm] IFormFile file, [FromForm] string type)
@@ -207,7 +508,7 @@ public class PatientRecordsController : ControllerBase
 	}
 	
 	// This endpoint is kept for backward compatibility but redirects to the new controller
-	[HttpGet("{patientId}/documents/{documentId}")]
+	[HttpGet("patient-records/{patientId}/documents/{documentId}")]
 	[ProducesResponseType(typeof(FileContentResult), 200)]
 	[Obsolete("Use GET /api/documents/{documentId}/download instead")]
 	public IActionResult GetDocument(Guid patientId, Guid documentId)
@@ -220,7 +521,7 @@ public class PatientRecordsController : ControllerBase
 	}
 	
 	// GET: api/patient-records/{patientId}/timeline
-	[HttpGet("{patientId}/timeline")]
+	[HttpGet("patient-records/{patientId}/timeline")]
 	[ProducesResponseType(typeof(IEnumerable<TimelineEventDto>), 200)]
 	public async Task<IActionResult> GetPatientTimeline(Guid patientId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
 	{
@@ -268,7 +569,7 @@ public class PatientRecordsController : ControllerBase
 	}
 	
 	// GET: api/patient-records/{patientId}/summary
-	[HttpGet("{patientId}/summary")]
+	[HttpGet("patient-records/{patientId}/summary")]
 	[ProducesResponseType(typeof(PatientSummaryDto), 200)]
 	public async Task<IActionResult> GetPatientSummary(Guid patientId)
 	{
