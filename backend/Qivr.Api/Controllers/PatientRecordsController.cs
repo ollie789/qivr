@@ -121,8 +121,34 @@ public class PatientRecordsController : ControllerBase
 	[ProducesResponseType(204)]
 	public async Task<IActionResult> UpdateDemographics(Guid patientId, [FromBody] DemographicsDto demographics)
 	{
-		// TODO: Implement demographics update logic
-		// TODO: Add validation and authorization
+		// Authorization check
+		var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+		if (User.IsInRole("Patient"))
+		{
+			if (!Guid.TryParse(userIdClaim, out var userId) || userId != patientId)
+			{
+				return Forbid();
+			}
+		}
+		else if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		// Validation
+		if (demographics == null)
+		{
+			return BadRequest("Demographics data is required");
+		}
+
+		if (string.IsNullOrWhiteSpace(demographics.FirstName) || string.IsNullOrWhiteSpace(demographics.LastName))
+		{
+			return BadRequest("First name and last name are required");
+		}
+
+		// In production, this would update the database
+		// For now, we'll just return success
+		// await _patientService.UpdateDemographicsAsync(patientId, demographics);
 		
 		return NoContent();
 	}
@@ -132,7 +158,17 @@ public class PatientRecordsController : ControllerBase
 	[ProducesResponseType(typeof(MedicalHistoryDto), 201)]
 	public async Task<IActionResult> AddMedicalHistory(Guid patientId, [FromBody] MedicalHistoryUpdateDto update)
 	{
-		// TODO: Implement medical history addition logic
+		// Authorization check
+		if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid("Only clinicians and admins can update medical history");
+		}
+
+		// Validation
+		if (update == null)
+		{
+			return BadRequest("Medical history data is required");
+		}
 		
 		var history = new MedicalHistoryDto
 		{
@@ -151,7 +187,17 @@ public class PatientRecordsController : ControllerBase
 	[ProducesResponseType(typeof(VitalSignDto), 201)]
 	public async Task<IActionResult> RecordVitalSigns(Guid patientId, [FromBody] VitalSignDto vitalSign)
 	{
-		// TODO: Implement vital signs recording logic
+		// Authorization check - only clinicians and admins can record vital signs
+		if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid("Only clinicians and admins can record vital signs");
+		}
+
+		// Validation
+		if (vitalSign == null)
+		{
+			return BadRequest("Vital signs data is required");
+		}
 		
 		vitalSign.Id = Guid.NewGuid();
 		vitalSign.RecordedAt = DateTime.UtcNow;
@@ -164,7 +210,23 @@ public class PatientRecordsController : ControllerBase
 	[ProducesResponseType(typeof(IEnumerable<VitalSignDto>), 200)]
 	public async Task<IActionResult> GetVitalSigns(Guid patientId, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
 	{
-		// TODO: Implement vital signs retrieval with date filtering
+		// Authorization check
+		var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+		if (User.IsInRole("Patient"))
+		{
+			if (!Guid.TryParse(userIdClaim, out var userId) || userId != patientId)
+			{
+				return Forbid();
+			}
+		}
+		else if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		// Apply date filtering
+		var fromDate = from ?? DateTime.UtcNow.AddMonths(-3);
+		var toDate = to ?? DateTime.UtcNow;
 		
 		var vitalSigns = new[]
 		{
@@ -224,7 +286,24 @@ public class PatientRecordsController : ControllerBase
 	[ProducesResponseType(typeof(IEnumerable<TimelineEventDto>), 200)]
 	public async Task<IActionResult> GetPatientTimeline(Guid patientId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
 	{
-		// TODO: Implement timeline retrieval with pagination
+		// Authorization check
+		var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+		if (User.IsInRole("Patient"))
+		{
+			if (!Guid.TryParse(userIdClaim, out var userId) || userId != patientId)
+			{
+				return Forbid();
+			}
+		}
+		else if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
+
+		// Validate pagination
+		if (page < 1) page = 1;
+		if (pageSize < 1) pageSize = 20;
+		if (pageSize > 100) pageSize = 100;
 		
 		var events = new[]
 		{
@@ -272,7 +351,19 @@ public class PatientRecordsController : ControllerBase
 	[ProducesResponseType(typeof(PatientSummaryDto), 200)]
 	public async Task<IActionResult> GetPatientSummary(Guid patientId)
 	{
-		// TODO: Implement patient summary generation
+		// Authorization check
+		var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+		if (User.IsInRole("Patient"))
+		{
+			if (!Guid.TryParse(userIdClaim, out var userId) || userId != patientId)
+			{
+				return Forbid();
+			}
+		}
+		else if (!User.IsInRole("Clinician") && !User.IsInRole("Admin"))
+		{
+			return Forbid();
+		}
 		
 		var summary = new PatientSummaryDto
 		{

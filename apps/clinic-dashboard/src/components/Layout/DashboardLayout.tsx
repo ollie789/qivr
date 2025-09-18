@@ -36,6 +36,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   Message as MessageIcon,
   FolderOpen as DocumentsIcon,
+  LocalHospital as MedicalIcon,
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
 import NotificationBell from '../NotificationBell';
@@ -55,9 +56,11 @@ const menuItems: MenuItem[] = [
   { text: 'Intake Queue', icon: <QueueIcon />, path: '/intake-queue', badge: 5 },
   { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
   { text: 'Patients', icon: <PeopleIcon />, path: '/patients' },
+  { text: 'Medical Records', icon: <MedicalIcon />, path: '/medical-records' },
   { text: 'Messages', icon: <MessageIcon />, path: '/messages' },
   { text: 'Documents', icon: <DocumentsIcon />, path: '/documents' },
-  { text: 'PROMs Builder', icon: <AssignmentIcon />, path: '/proms-builder' },
+  { text: 'PROM', icon: <AssignmentIcon />, path: '/prom' },
+  { text: 'Intake Processing', icon: <QueueIcon />, path: '/intake-processing' },
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];

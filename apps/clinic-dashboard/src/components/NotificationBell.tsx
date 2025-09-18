@@ -96,7 +96,7 @@ const NotificationBell: React.FC = () => {
         window.location.href = '/appointments';
         break;
       case 'prom':
-        window.location.href = '/proms-builder';
+        window.location.href = '/prom';
         break;
       default:
         break;

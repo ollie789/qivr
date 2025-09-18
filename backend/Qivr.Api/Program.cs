@@ -25,6 +25,17 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Helper function to expand environment variable placeholders
+static string ExpandEnvPlaceholders(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+    return Regex.Replace(value, @"\$\{([^}]+)\}", match =>
+    {
+        var key = match.Groups[1].Value;
+        return Environment.GetEnvironmentVariable(key) ?? string.Empty;
+    });
+}
+
 // Load secrets from AWS Secrets Manager in production
 if (Environment.GetEnvironmentVariable("ENVIRONMENT") == "production")
 {
@@ -296,6 +307,19 @@ builder.Services.PostConfigure<Qivr.Api.Options.IntakeDbOptions>(options =>
     options.ConnectionString = resolvedIntakeConnection;
 });
 
+// Ensure SQS Queue URL is always resolved securely from environment variables
+builder.Services.PostConfigure<Qivr.Api.Options.SqsOptions>(options =>
+{
+    if (!string.IsNullOrWhiteSpace(options.QueueUrl))
+    {
+        options.QueueUrl = ExpandEnvPlaceholders(options.QueueUrl);
+    }
+    if (!string.IsNullOrWhiteSpace(options.Region))
+    {
+        options.Region = ExpandEnvPlaceholders(options.Region);
+    }
+});
+
 // Respect proxy headers for correct scheme/origin when behind reverse proxies
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -361,13 +385,15 @@ builder.Services.AddValidatorsFromAssemblyContaining<Qivr.Api.Validators.IntakeS
 
 // AWS SQS
 var sqsConfig = builder.Configuration.GetSection("Sqs");
-if (!string.IsNullOrEmpty(sqsConfig["QueueUrl"]))
+var expandedQueueUrl = ExpandEnvPlaceholders(sqsConfig["QueueUrl"]);
+if (!string.IsNullOrEmpty(expandedQueueUrl))
 {
     builder.Services.AddSingleton<IAmazonSQS>(sp =>
     {
+        var region = ExpandEnvPlaceholders(sqsConfig["Region"]) ?? "ap-southeast-2";
         var config = new AmazonSQSConfig
         {
-            RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(sqsConfig["Region"] ?? "ap-southeast-2")
+            RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
         };
         return new AmazonSQSClient(config);
     });
@@ -463,17 +489,6 @@ if (builder.Configuration.GetValue<bool>("ApplyMigrations"))
 Log.Information("Qivr API starting on {Environment} environment", app.Environment.EnvironmentName);
 
 app.Run();
-
-// ===== Local helper functions =====
-static string ExpandEnvPlaceholders(string? value)
-{
-    if (string.IsNullOrWhiteSpace(value)) return string.Empty;
-    return Regex.Replace(value, @"\$\{([^}]+)\}", match =>
-    {
-        var key = match.Groups[1].Value;
-        return Environment.GetEnvironmentVariable(key) ?? string.Empty;
-    });
-}
 
 static string BuildPgConnectionStringFromUrl(string url, bool isDevelopment)
 {

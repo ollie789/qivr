@@ -12,6 +12,7 @@ import {
   IconButton,
   List,
   ListItem,
+  ListItemIcon,
   ListItemAvatar,
   ListItemText,
   ListItemSecondaryAction,

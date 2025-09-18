@@ -1,15 +1,17 @@
 // Re-export all API services for easy importing
-export * from './analyticsApi';
+// Note: Skipping analytics and dashboardApi due to duplicate DashboardStats export
+// export * from './analyticsApi';
 export * from './appointmentsApi';
-export * from './dashboardApi';
+// export * from './dashboardApi';
 export * from './documentsApi';
 export * from './intakeApi';
 export * from './medicalRecordsApi';
 export * from './messagesApi';
 export * from './notificationsApi';
 export * from './patientApi';
-export * from './promApi';
-export * from './promInstanceApi';
+// Note: Skipping promApi and promInstanceApi due to duplicate PromResponse export
+// export * from './promApi';
+// export * from './promInstanceApi';
 export * from './proms';
 
 // Export default instances

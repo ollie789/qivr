@@ -1,4 +1,3 @@
-import React from 'react';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 // Temporarily disabled due to version conflict - will fix later
 // import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -8,7 +7,8 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // import { enAU } from 'date-fns/locale/en-AU';
 
 // Initialize Amplify
-import './config/amplify.config';
+import { configureAmplify } from './config/amplify';
+configureAmplify();
 
 // Theme
 import { theme } from './theme';

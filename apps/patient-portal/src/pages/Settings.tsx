@@ -14,7 +14,6 @@ import {
   ListItemIcon,
   ListItemText,
   ListItemSecondaryAction,
-  Avatar,
   Paper,
   Divider,
   CircularProgress,
@@ -23,10 +22,8 @@ import {
   DialogContent,
   DialogActions,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent,
   Tabs,
   Tab,
   Alert,
@@ -47,12 +44,10 @@ import {
   Person as PersonIcon,
   Security as SecurityIcon,
   Notifications as NotificationsIcon,
-  Language as LanguageIcon,
   Accessibility as AccessibilityIcon,
   PrivacyTip as PrivacyTipIcon,
   Payment as PaymentIcon,
   DevicesOther as DevicesIcon,
-  Help as HelpIcon,
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
@@ -60,12 +55,9 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
   Sms as SmsIcon,
-  VolumeUp as VolumeUpIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
   CreditCard as CreditCardIcon,
@@ -74,8 +66,7 @@ import {
   Smartphone as SmartphoneIcon,
   Computer as ComputerIcon,
   Tablet as TabletIcon,
-  Download as DownloadIcon,
-  Upload as UploadIcon
+  Download as DownloadIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 
@@ -277,7 +268,7 @@ export const Settings = () => {
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -792,7 +783,7 @@ export const Settings = () => {
                 </Typography>
                 <Slider
                   value={settings.security.sessionTimeout}
-                  onChange={(e, value) => setSettings({
+                        onChange={(_e, value) => setSettings({
                     ...settings,
                     security: {
                       ...settings.security,
@@ -907,7 +898,7 @@ export const Settings = () => {
                       </Typography>
                       <Slider
                         value={settings.accessibility.fontSize}
-                        onChange={(e, value) => handleAccessibilityChange('fontSize', value)}
+                        onChange={(_e, value) => handleAccessibilityChange('fontSize', value)}
                         min={12}
                         max={24}
                         marks

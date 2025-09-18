@@ -15,9 +15,7 @@ import {
   StepLabel,
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
-import PersonIcon from '@mui/icons-material/Person';
-import EmailIcon from '@mui/icons-material/Email';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Email as EmailIcon } from '@mui/icons-material';
 
 export const Register = () => {
   const navigate = useNavigate();

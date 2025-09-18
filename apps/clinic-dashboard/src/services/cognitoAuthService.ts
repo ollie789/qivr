@@ -233,7 +233,7 @@ class ClinicCognitoAuthService {
     try {
       const user = await getCurrentUser();
       const attributes = await fetchUserAttributes();
-      return attributes as ClinicUserAttributes;
+      return attributes as unknown as ClinicUserAttributes;
     } catch (error) {
       console.error('Get current user error:', error);
       return null;
@@ -251,7 +251,7 @@ class ClinicCognitoAuthService {
       return {
         accessToken: session.tokens.accessToken?.toString() || '',
         idToken: session.tokens.idToken?.toString() || '',
-        refreshToken: session.tokens.refreshToken?.toString(),
+        // refreshToken: session.tokens.refreshToken?.toString(),
       };
     } catch (error) {
       console.error('Get session error:', error);

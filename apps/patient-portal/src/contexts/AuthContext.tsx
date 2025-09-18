@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import authService from '../services/authService';
+import authService from '../services/cognitoAuthService';
 
 interface User {
   username: string;
@@ -15,10 +15,10 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{success: boolean; data?: any; error?: any}>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{success: boolean; data?: any; error?: any}>;
   signInWithGoogle: () => Promise<void>;
   signInWithFacebook: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const checkAuth = async () => {
       try {
         // Skip auth check for now - just check if token exists
-        const hasToken = authService.isAuthenticated();
+        const hasToken = await authService.isAuthenticated();
         if (hasToken) {
           // Don't make API call during initial load
           setIsAuthenticated(true);
@@ -55,14 +55,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await authService.login(email, password);
-      const userInfo = await authService.getUserInfo();
+      const response = await authService.signIn(email, password);
+      const userInfo = await authService.getCurrentUser();
+      setIsAuthenticated(true);
       if (userInfo) {
-        setUser(userInfo);
-        setIsAuthenticated(true);
+        setUser({
+          username: userInfo.email || '',
+          email: userInfo.email,
+          firstName: userInfo.given_name,
+          lastName: userInfo.family_name,
+          phoneNumber: userInfo.phone_number,
+          tenantId: userInfo['custom:tenant_id'],
+          role: userInfo['custom:role'],
+          emailVerified: userInfo.email_verified || false,
+          phoneVerified: userInfo.phone_number_verified || false
+        });
       }
+      return { success: true, data: response };
     } catch (error) {
-      throw error;
+      return { success: false, error };
     }
   };
 
@@ -70,36 +81,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      await authService.logout();
+      await authService.signOut();
+      setIsAuthenticated(false);
+      setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      setUser(null);
-      setIsAuthenticated(false);
     }
   };
 
   const signOut = logout; // Alias for compatibility
 
   const signInWithGoogle = async () => {
-    try {
-      await authService.socialLogin('google');
-    } catch (error) {
-      throw error;
-    }
+    // Social login not implemented yet
+    throw new Error('Google sign-in not available');
   };
 
   const signInWithFacebook = async () => {
-    try {
-      await authService.socialLogin('facebook');
-    } catch (error) {
-      throw error;
-    }
+    // Social login not implemented yet  
+    throw new Error('Facebook sign-in not available');
   };
 
   const register = async (email: string, password: string, emailAddr: string, phoneNumber?: string, firstName?: string, lastName?: string) => {
     try {
-      const result = await authService.register(email, password, firstName, lastName, phoneNumber);
+      const result = await authService.signUp({
+        email,
+        password,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        phoneNumber
+      });
       return result;
     } catch (error) {
       throw error;

@@ -24,7 +24,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import authService from '../services/authService';
+import authService from '../services/cognitoAuthService';
 
 const signUpSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -67,17 +67,16 @@ export const SignUp: React.FC = () => {
 
     try {
       const response = await authService.signUp({
-        username: data.email, // Use email as username
-        password: data.password,
         email: data.email,
+        password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
-        phoneNumber: data.phoneNumber,
+        phoneNumber: data.phoneNumber
       });
 
       setUsername(data.email);
       
-      if (!response.userConfirmed) {
+      if (response.data && response.data.nextStep?.signUpStep !== 'DONE') {
         setConfirmationRequired(true);
       } else {
         navigate('/login', { 
@@ -96,9 +95,11 @@ export const SignUp: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await authService.socialLogin(provider);
+      // Social login not implemented in cognitoAuthService yet
+      setError('Social sign-up is not available yet');
     } catch (err: any) {
       setError(err.message || `Failed to sign up with ${provider}`);
+    } finally {
       setIsLoading(false);
     }
   };

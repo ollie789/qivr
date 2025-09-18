@@ -12,6 +12,7 @@
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="8.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="8.0.0" />
     <PackageReference Include="AWSSDK.CognitoIdentityProvider" Version="3.7.403.20" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.7" />
     <PackageReference Include="AWSSDK.SecretsManager" Version="3.7.403.20" />
     <PackageReference Include="AWSSDK.SQS" Version="3.7.400.45" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />

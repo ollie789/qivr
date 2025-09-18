@@ -38,7 +38,6 @@ export interface UserAttributes {
 export interface AuthTokens {
   accessToken: string;
   idToken: string;
-  refreshToken?: string;
 }
 
 export interface SignUpData {
@@ -213,9 +212,9 @@ class CognitoAuthService {
 
   async getCurrentUser(): Promise<UserAttributes | null> {
     try {
-      const user = await getCurrentUser();
+      await getCurrentUser();
       const attributes = await fetchUserAttributes();
-      return attributes as UserAttributes;
+      return attributes as unknown as UserAttributes;
     } catch (error) {
       console.error('Get current user error:', error);
       return null;
@@ -232,8 +231,7 @@ class CognitoAuthService {
 
       return {
         accessToken: session.tokens.accessToken?.toString() || '',
-        idToken: session.tokens.idToken?.toString() || '',
-        refreshToken: session.tokens.refreshToken?.toString(),
+        idToken: session.tokens.idToken?.toString() || ''
       };
     } catch (error) {
       console.error('Get session error:', error);

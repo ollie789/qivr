@@ -15,7 +15,8 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { Box, CircularProgress } from '@mui/material';
 
 // Initialize Amplify
-import './config/amplify.config';
+import { configureAmplify } from './config/amplify';
+configureAmplify();
 
 // Layout components
 import DashboardLayout from './components/Layout/DashboardLayout';
@@ -27,12 +28,14 @@ const IntakeQueue = lazy(() => import('./pages/IntakeQueue'));
 const Appointments = lazy(() => import('./pages/Appointments'));
 const Patients = lazy(() => import('./pages/Patients'));
 const PatientDetail = lazy(() => import('./pages/PatientDetail'));
-const PromsBuilder = lazy(() => import('./pages/PromsBuilder'));
+const PROM = lazy(() => import('./pages/PROM'));
+const IntakeProcessing = lazy(() => import('./pages/IntakeProcessing'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Login = lazy(() => import('./pages/Login'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Documents = lazy(() => import('./pages/Documents'));
+const MedicalRecords = lazy(() => import('./pages/MedicalRecords'));
 
 // Create theme
 const theme = createTheme({
@@ -195,7 +198,9 @@ function App() {
                     <Route path="patients/:id" element={<PatientDetail />} />
                     <Route path="messages" element={<Messages />} />
                     <Route path="documents" element={<Documents />} />
-                    <Route path="proms-builder" element={<PromsBuilder />} />
+                    <Route path="medical-records" element={<MedicalRecords />} />
+                    <Route path="prom" element={<PROM />} />
+                    <Route path="intake-processing" element={<IntakeProcessing />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="settings" element={<Settings />} />
                   </Route>

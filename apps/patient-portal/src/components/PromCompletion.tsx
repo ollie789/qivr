@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -14,9 +14,6 @@ import {
   Checkbox,
   FormGroup,
   Slider,
-  Stepper,
-  Step,
-  StepLabel,
   Alert,
   Dialog,
   DialogTitle,
@@ -25,7 +22,6 @@ import {
   Grid,
   Chip,
   Paper,
-  Divider,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -36,7 +32,6 @@ import {
   NavigateBefore as BackIcon,
   Timer as TimerIcon,
   Event as CalendarIcon,
-  LocalHospital as HealthIcon,
 } from '@mui/icons-material';
 import { addDays, format } from 'date-fns';
 
@@ -58,11 +53,9 @@ interface PromCompletionProps {
 }
 
 export const PromCompletion: React.FC<PromCompletionProps> = ({
-  instanceId,
   templateName,
   description,
   questions,
-  patientName = 'Patient',
   onSubmit,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
