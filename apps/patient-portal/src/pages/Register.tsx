@@ -91,10 +91,13 @@ export const Register = () => {
         // User is already confirmed (shouldn't happen with email verification)
         navigate('/login');
       } else {
-        // Store email for resend functionality
-        localStorage.setItem('pendingVerificationEmail', formData.email);
-        // Move to verification step
-        setStep(1);
+        // Redirect to confirmation page with email
+        navigate('/confirm-email', { 
+          state: { 
+            email: formData.email,
+            message: 'Registration successful! Please check your email for the verification code.'
+          } 
+        });
       }
     } catch (err: any) {
       console.error('Registration error:', err);

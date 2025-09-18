@@ -323,10 +323,10 @@ export const Dashboard: React.FC = () => {
                   fullWidth
                   variant="outlined"
                   startIcon={<HealingIcon />}
-                  onClick={() => window.open('https://widget.qivr.health', '_blank')}
+                  onClick={() => navigate('/medical-records')}
                   sx={{ py: 2 }}
                 >
-                  New Evaluation
+                  Medical Records
                 </Button>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
@@ -345,10 +345,34 @@ export const Dashboard: React.FC = () => {
                   fullWidth
                   variant="outlined"
                   startIcon={<TrendingIcon />}
-                  onClick={() => navigate('/proms')}
+                  onClick={() => navigate('/analytics')}
                   sx={{ py: 2 }}
                 >
-                  View Progress
+                  Health Analytics
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<ScheduleIcon />}
+                  onClick={() => navigate('/documents')}
+                  sx={{ py: 2 }}
+                >
+                  Documents
+                </Button>
+              </Grid>
+            </Grid>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<HealingIcon />}
+                  onClick={() => window.open('https://widget.qivr.health', '_blank')}
+                  sx={{ py: 2 }}
+                >
+                  New Evaluation
                 </Button>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
@@ -360,6 +384,28 @@ export const Dashboard: React.FC = () => {
                   sx={{ py: 2 }}
                 >
                   Past Evaluations
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<TrendingIcon />}
+                  onClick={() => navigate('/proms')}
+                  sx={{ py: 2 }}
+                >
+                  Assessments
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<ScheduleIcon />}
+                  onClick={() => navigate('/profile')}
+                  sx={{ py: 2 }}
+                >
+                  Profile
                 </Button>
               </Grid>
             </Grid>

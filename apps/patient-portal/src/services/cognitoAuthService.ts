@@ -100,6 +100,8 @@ class CognitoAuthService {
         password,
       } as SignInInput);
 
+      console.log('Cognito signIn result:', result);
+
       // Handle different sign-in states
       if (result.nextStep?.signInStep === 'CONFIRM_SIGN_UP') {
         throw new Error('CONFIRM_SIGNUP_REQUIRED');
@@ -117,7 +119,13 @@ class CognitoAuthService {
         throw new Error('NEW_PASSWORD_REQUIRED');
       }
 
-      return result;
+      // Check if sign-in is complete
+      const isSignedIn = result.nextStep?.signInStep === 'DONE' || result.isSignedIn === true;
+      
+      return {
+        ...result,
+        isSignedIn
+      };
     } catch (error: any) {
       console.error('Sign in error:', error);
       throw this.handleAuthError(error);

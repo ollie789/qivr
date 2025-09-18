@@ -7,8 +7,10 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // import { enAU } from 'date-fns/locale/en-AU';
 
 // Initialize Amplify
-import { configureAmplify } from './config/amplify';
-configureAmplify();
+import './config/amplify.config';
+
+// Temporary auth testing - remove after debugging
+import './test-auth';
 
 // Theme
 import { theme } from './theme';

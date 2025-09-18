@@ -55,25 +55,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login for:', email);
       const response = await authService.signIn(email, password);
-      const userInfo = await authService.getCurrentUser();
-      setIsAuthenticated(true);
-      if (userInfo) {
-        setUser({
-          username: userInfo.email || '',
-          email: userInfo.email,
-          firstName: userInfo.given_name,
-          lastName: userInfo.family_name,
-          phoneNumber: userInfo.phone_number,
-          tenantId: userInfo['custom:tenant_id'],
-          role: userInfo['custom:role'],
-          emailVerified: userInfo.email_verified || false,
-          phoneVerified: userInfo.phone_number_verified || false
-        });
+      console.log('Sign in response:', response);
+      
+      if (response.isSignedIn) {
+        const userInfo = await authService.getCurrentUser();
+        console.log('User info:', userInfo);
+        
+        setIsAuthenticated(true);
+        if (userInfo) {
+          setUser({
+            username: userInfo.email || '',
+            email: userInfo.email,
+            firstName: userInfo.given_name,
+            lastName: userInfo.family_name,
+            phoneNumber: userInfo.phone_number,
+            tenantId: userInfo['custom:tenant_id'],
+            role: userInfo['custom:role'],
+            emailVerified: userInfo.email_verified || false,
+            phoneVerified: userInfo.phone_number_verified || false
+          });
+        }
+        return { success: true, data: response };
+      } else {
+        console.error('Sign in not completed:', response);
+        return { success: false, error: 'Sign in not completed' };
       }
-      return { success: true, data: response };
-    } catch (error) {
-      return { success: false, error };
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error.message || error.toString();
+      
+      // Handle specific error cases
+      if (errorMessage.includes('CONFIRM_SIGNUP_REQUIRED')) {
+        return { success: false, error: 'Please verify your email address before signing in' };
+      }
+      if (errorMessage.includes('UserNotFoundException') || errorMessage.includes('NotAuthorizedException')) {
+        return { success: false, error: 'Invalid email or password' };
+      }
+      
+      return { success: false, error: errorMessage };
     }
   };
 

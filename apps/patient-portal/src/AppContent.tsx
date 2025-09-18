@@ -11,12 +11,16 @@ import { Evaluations } from './pages/Evaluations';
 import { EvaluationDetail } from './pages/EvaluationDetail';
 import { Appointments } from './pages/Appointments';
 import { BookAppointment } from './pages/BookAppointment';
-import { PROMs } from './pages/PROMs';
+import PROMEnhanced from './pages/PROMEnhanced';
 import { CompletePROM } from './pages/CompletePROM';
 import { Profile } from './pages/Profile';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
+import { ConfirmEmail } from './pages/ConfirmEmail';
+import MedicalRecordsEnhanced from './pages/MedicalRecordsEnhanced';
+import DocumentsEnhanced from './pages/DocumentsEnhanced';
+import AnalyticsEnhanced from './pages/AnalyticsEnhanced';
 
 // Auth
 import { useAuth } from './contexts/AuthContext';
@@ -38,12 +42,22 @@ export const AppContent: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/confirm-email" element={<ConfirmEmail />} />
         </Route>
 
         {/* Protected Routes */}
         <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* Medical Records */}
+          <Route path="/medical-records" element={<MedicalRecordsEnhanced />} />
+          
+          {/* Documents */}
+          <Route path="/documents" element={<DocumentsEnhanced />} />
+          
+          {/* Analytics */}
+          <Route path="/analytics" element={<AnalyticsEnhanced />} />
           
           {/* Evaluations */}
           <Route path="/evaluations" element={<Evaluations />} />
@@ -55,7 +69,7 @@ export const AppContent: React.FC = () => {
           <Route path="/appointments/book" element={<BookAppointment />} />
           
           {/* PROMs */}
-          <Route path="/proms" element={<PROMs />} />
+          <Route path="/proms" element={<PROMEnhanced />} />
           <Route path="/proms/:id/complete" element={<CompletePROM />} />
           
           {/* Profile */}

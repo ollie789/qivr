@@ -46,6 +46,7 @@ export const Login: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
@@ -55,9 +56,14 @@ export const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await signIn(data.email, data.password);
-      navigate(from, { replace: true });
+      const result = await signIn(data.email, data.password);
+      if (result.success) {
+        navigate(from, { replace: true });
+      } else {
+        setError(result.error || 'Invalid email or password');
+      }
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || 'Invalid email or password');
     } finally {
       setIsLoading(false);
@@ -105,6 +111,16 @@ export const Login: React.FC = () => {
           {error && (
             <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
               {error}
+              {error.includes('verify your email') && (
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    onClick={() => navigate('/confirm-email', { state: { email: getValues('email') } })}
+                  >
+                    Go to Email Verification
+                  </Button>
+                </Box>
+              )}
             </Alert>
           )}
 
