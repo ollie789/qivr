@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using Qivr.Api.Services;
+using Qivr.Api.Models;
 
 namespace Qivr.Api.Controllers;
 
@@ -14,15 +15,18 @@ public class PatientsController : ControllerBase
 {
     private readonly QivrDbContext _context;
     private readonly IResourceAuthorizationService _authorizationService;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<PatientsController> _logger;
 
     public PatientsController(
         QivrDbContext context,
         IResourceAuthorizationService authorizationService,
+        ICacheService cacheService,
         ILogger<PatientsController> logger)
     {
         _context = context;
         _authorizationService = authorizationService;
+        _cacheService = cacheService;
         _logger = logger;
     }
 
@@ -47,6 +51,15 @@ public class PatientsController : ControllerBase
         try
         {
             var searchLower = query.ToLower();
+            
+            // Try to get from cache first
+            var cacheKey = CacheService.CacheKeys.PatientSearch(tenantId, searchLower);
+            var cachedResults = await _cacheService.GetAsync<List<PatientSearchResultDto>>(cacheKey);
+            if (cachedResults != null)
+            {
+                _logger.LogDebug("Returning cached patient search results for query: {Query}", query);
+                return Ok(cachedResults);
+            }
             
             var patients = await _context.Users
                 .Where(u => u.TenantId == tenantId && u.Roles.Contains("Patient"))
@@ -78,6 +91,9 @@ public class PatientsController : ControllerBase
                 .ToListAsync();
 
             _logger.LogInformation("Search completed for query '{Query}', found {Count} patients", query, patients.Count);
+            
+            // Cache the search results for 30 seconds (searches are frequent and results can change)
+            await _cacheService.SetAsync(cacheKey, patients, CacheService.CacheDuration.VeryShort);
 
             return Ok(patients);
         }
@@ -89,11 +105,110 @@ public class PatientsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all patients for the current clinic
+    /// Get all patients with cursor-based pagination
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(PaginatedResultDto<PatientListItemDto>), 200)]
+    [ProducesResponseType(typeof(CursorPaginationResponse<PatientListItemDto>), 200)]
     public async Task<IActionResult> GetPatients(
+        [FromQuery] string? cursor = null,
+        [FromQuery] int limit = 20,
+        [FromQuery] string? sortBy = "name",
+        [FromQuery] bool activeOnly = true,
+        [FromQuery] bool sortDescending = false)
+    {
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized("Tenant not identified");
+        }
+
+        try
+        {
+            var query = _context.Users
+                .Where(u => u.TenantId == tenantId && u.Roles.Contains("Patient"));
+
+            if (activeOnly)
+            {
+                query = query.Where(u => u.EmailVerified);
+            }
+
+            // Use cursor pagination
+            var paginationRequest = new CursorPaginationRequest
+            {
+                Cursor = cursor,
+                Limit = limit,
+                SortBy = sortBy?.ToLower() switch
+                {
+                    "email" => "Email",
+                    "recent" => "CreatedAt",
+                    _ => "LastName"
+                },
+                SortDescending = sortBy?.ToLower() == "recent" || sortDescending
+            };
+
+            CursorPaginationResponse<User> paginatedResult;
+            
+            if (sortBy?.ToLower() == "email")
+            {
+                paginatedResult = await query.ToCursorPageAsync(
+                    u => u.Email,
+                    u => u.Id,
+                    paginationRequest);
+            }
+            else if (sortBy?.ToLower() == "recent")
+            {
+                paginatedResult = await query.ToCursorPageAsync(
+                    u => u.CreatedAt,
+                    u => u.Id,
+                    paginationRequest);
+            }
+            else
+            {
+                // Default: sort by name
+                paginatedResult = await query.ToCursorPageAsync(
+                    u => u.LastName,
+                    u => u.Id,
+                    paginationRequest);
+            }
+
+            // Convert to DTOs
+            var response = new CursorPaginationResponse<PatientListItemDto>
+            {
+                Items = paginatedResult.Items.Select(u => new PatientListItemDto
+                {
+                    Id = u.Id,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    Email = u.Email,
+                    PhoneNumber = u.Phone ?? "",
+                    DateOfBirth = u.DateOfBirth,
+                    MedicalRecordNumber = null, // MRN field doesn't exist in User entity
+                    IsActive = u.EmailVerified,
+                    CreatedAt = u.CreatedAt,
+                    LastUpdated = u.UpdatedAt
+                }).ToList(),
+                NextCursor = paginatedResult.NextCursor,
+                PreviousCursor = paginatedResult.PreviousCursor,
+                HasNext = paginatedResult.HasNext,
+                HasPrevious = paginatedResult.HasPrevious,
+                Count = paginatedResult.Count
+            };
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting patients list");
+            return StatusCode(500, "An error occurred while retrieving patients");
+        }
+    }
+
+    /// <summary>
+    /// Get all patients with traditional pagination (legacy endpoint)
+    /// </summary>
+    [HttpGet("page")]
+    [ProducesResponseType(typeof(PaginatedResultDto<PatientListItemDto>), 200)]
+    public async Task<IActionResult> GetPatientsPaged(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? sortBy = "name",
@@ -176,6 +291,14 @@ public class PatientsController : ControllerBase
 
         try
         {
+            // Try to get from cache first
+            var cacheKey = CacheService.CacheKeys.PatientDetails(patientId);
+            var cachedPatient = await _cacheService.GetAsync<PatientDetailsDto>(cacheKey);
+            if (cachedPatient != null)
+            {
+                _logger.LogDebug("Returning cached patient details for patient {PatientId}", patientId);
+                return Ok(cachedPatient);
+            }
             var patient = await _context.Users
                 .Where(u => u.Id == patientId && u.TenantId == tenantId && u.Roles.Contains("Patient"))
                 .Select(u => new PatientDetailsDto
@@ -206,10 +329,13 @@ public class PatientsController : ControllerBase
 
             if (patient == null)
             {
-                return NotFound("Patient not found");
+                return NotFound($"Patient with ID {patientId} not found");
             }
+            
+            // Cache the patient details for 5 minutes
+            await _cacheService.SetAsync(cacheKey, patient, CacheService.CacheDuration.Medium);
 
-            // Get recent appointments
+            return Ok(patient);
             patient.RecentAppointments = await _context.Appointments
                 .Where(a => a.PatientId == patientId)
                 .OrderByDescending(a => a.ScheduledStart)

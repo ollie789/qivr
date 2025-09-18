@@ -7,6 +7,7 @@ using Qivr.Infrastructure.Data;
 using Qivr.Services;
 using System.ComponentModel.DataAnnotations;
 using Qivr.Api.Exceptions;
+using Qivr.Api.Models;
 
 namespace Qivr.Api.Controllers;
 
@@ -15,26 +16,104 @@ public class MessagesController : BaseApiController
     private readonly QivrDbContext _context;
     private readonly IResourceAuthorizationService _authorizationService;
     private readonly IMessagingService _messagingService;
+    private readonly IRealTimeNotificationService _notificationService;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<MessagesController> _logger;
 
     public MessagesController(
         QivrDbContext context,
         IResourceAuthorizationService authorizationService,
         IMessagingService messagingService,
+        IRealTimeNotificationService notificationService,
+        ICacheService cacheService,
         ILogger<MessagesController> logger)
     {
         _context = context;
         _authorizationService = authorizationService;
         _messagingService = messagingService;
+        _notificationService = notificationService;
+        _cacheService = cacheService;
         _logger = logger;
     }
 
     /// <summary>
-    /// Get all messages for the current user (Patient Portal format)
+    /// Get all messages for the current user with cursor pagination
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<MessagePortalDto>), 200)]
+    [ProducesResponseType(typeof(CursorPaginationResponse<MessagePortalDto>), 200)]
     public async Task<IActionResult> GetMessages(
+        [FromQuery] string? cursor = null,
+        [FromQuery] int limit = 20,
+        [FromQuery] string? category = null,
+        [FromQuery] bool? unreadOnly = null,
+        [FromQuery] bool sortDescending = true)
+    {
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
+        
+        var query = _context.Messages
+            .Include(m => m.Sender)
+            .Include(m => m.Recipient)
+            .Where(m => m.TenantId == tenantId && 
+                       (m.SenderId == userId || m.RecipientId == userId));
+        
+        if (!string.IsNullOrEmpty(category))
+            query = query.Where(m => m.MessageType == category);
+        
+        if (unreadOnly == true)
+            query = query.Where(m => m.RecipientId == userId && !m.IsRead);
+        
+        // Use cursor pagination
+        var paginationRequest = new CursorPaginationRequest
+        {
+            Cursor = cursor,
+            Limit = limit,
+            SortBy = "CreatedAt",
+            SortDescending = sortDescending
+        };
+        
+        var paginatedResult = await query.ToCursorPageAsync(
+            m => m.CreatedAt,
+            m => m.Id,
+            paginationRequest);
+        
+        // Convert to portal DTOs
+        var response = new CursorPaginationResponse<MessagePortalDto>
+        {
+            Items = paginatedResult.Items.Select(m => new MessagePortalDto
+            {
+                Id = m.Id.ToString(),
+                Subject = m.Subject ?? "No Subject",
+                Content = m.Content,
+                From = m.SenderId == userId 
+                    ? "You" 
+                    : $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
+                To = m.RecipientId == userId 
+                    ? "You" 
+                    : $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                Date = m.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                Category = m.MessageType,
+                Read = m.RecipientId == userId ? m.IsRead : true,
+                Urgent = m.Priority == "High" || m.Priority == "Urgent",
+                HasAttachments = m.HasAttachments,
+                ParentMessageId = m.ParentMessageId?.ToString()
+            }).ToList(),
+            NextCursor = paginatedResult.NextCursor,
+            PreviousCursor = paginatedResult.PreviousCursor,
+            HasNext = paginatedResult.HasNext,
+            HasPrevious = paginatedResult.HasPrevious,
+            Count = paginatedResult.Count
+        };
+        
+        return Success(response);
+    }
+    
+    /// <summary>
+    /// Get all messages for the current user (Legacy endpoint with traditional pagination)
+    /// </summary>
+    [HttpGet("page")]
+    [ProducesResponseType(typeof(IEnumerable<MessagePortalDto>), 200)]
+    public async Task<IActionResult> GetMessagesPaged(
         [FromQuery] string? category = null,
         [FromQuery] bool? unreadOnly = null)
     {
@@ -76,35 +155,114 @@ public class MessagesController : BaseApiController
     {
         var userId = CurrentUserId;
         var tenantId = RequireTenantId();
+        
+        // Try to get from cache first
+        var cacheKey = CacheService.CacheKeys.UserConversations(userId);
+        var cachedConversations = await _cacheService.GetAsync<List<ConversationDto>>(cacheKey);
+        if (cachedConversations != null)
+        {
+            _logger.LogDebug("Returning cached conversations for user {UserId}", userId);
+            return Success(cachedConversations);
+        }
             
-            // Get conversations from service
-            var conversations = await _messagingService.GetConversationsAsync(tenantId, userId);
-            
-            // Convert to DTOs
-            var conversationDtos = conversations.Select(c => new ConversationDto
-            {
-                ParticipantId = c.ParticipantId,
-                ParticipantName = c.ParticipantName,
-                ParticipantAvatar = c.ParticipantAvatar,
-                ParticipantRole = c.ParticipantRole,
-                LastMessage = c.LastMessage,
-                LastMessageTime = c.LastMessageTime,
-                LastMessageSender = c.LastMessageSender,
-                UnreadCount = c.UnreadCount,
-                TotalMessages = c.TotalMessages,
-                HasAttachments = c.HasAttachments,
-                IsUrgent = c.IsUrgent
-            }).ToList();
+        // Get conversations from service
+        var conversations = await _messagingService.GetConversationsAsync(tenantId, userId);
+        
+        // Convert to DTOs
+        var conversationDtos = conversations.Select(c => new ConversationDto
+        {
+            ParticipantId = c.ParticipantId,
+            ParticipantName = c.ParticipantName,
+            ParticipantAvatar = c.ParticipantAvatar,
+            ParticipantRole = c.ParticipantRole,
+            LastMessage = c.LastMessage,
+            LastMessageTime = c.LastMessageTime,
+            LastMessageSender = c.LastMessageSender,
+            UnreadCount = c.UnreadCount,
+            TotalMessages = c.TotalMessages,
+            HasAttachments = c.HasAttachments,
+            IsUrgent = c.IsUrgent
+        }).ToList();
+        
+        // Cache for 1 minute (conversations change frequently)
+        await _cacheService.SetAsync(cacheKey, conversationDtos, CacheService.CacheDuration.Short);
 
         return Success(conversationDtos);
     }
 
     /// <summary>
-    /// Get messages in a conversation with a specific user
+    /// Get messages in a conversation with a specific user (with cursor pagination)
     /// </summary>
     [HttpGet("conversation/{otherUserId}")]
-    [ProducesResponseType(typeof(IEnumerable<MessageDto>), 200)]
+    [ProducesResponseType(typeof(CursorPaginationResponse<MessageDto>), 200)]
     public async Task<IActionResult> GetConversation(
+        Guid otherUserId,
+        [FromQuery] string? cursor = null,
+        [FromQuery] int limit = 50,
+        [FromQuery] bool sortDescending = true)
+    {
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
+        
+        var query = _context.Messages
+            .Include(m => m.Sender)
+            .Include(m => m.Recipient)
+            .Where(m => m.TenantId == tenantId &&
+                       ((m.SenderId == userId && m.RecipientId == otherUserId) ||
+                        (m.SenderId == otherUserId && m.RecipientId == userId)));
+        
+        // Use cursor pagination
+        var paginationRequest = new CursorPaginationRequest
+        {
+            Cursor = cursor,
+            Limit = limit,
+            SortBy = "CreatedAt",
+            SortDescending = sortDescending
+        };
+        
+        var paginatedResult = await query.ToCursorPageAsync(
+            m => m.CreatedAt,
+            m => m.Id,
+            paginationRequest);
+        
+        // Convert to DTOs
+        var response = new CursorPaginationResponse<MessageDto>
+        {
+            Items = paginatedResult.Items.Select(m => new MessageDto
+            {
+                Id = m.Id,
+                SenderId = m.SenderId,
+                SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
+                RecipientId = m.RecipientId,
+                RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                Subject = m.Subject ?? string.Empty,
+                Content = m.Content,
+                IsRead = m.IsRead,
+                ReadAt = m.ReadAt,
+                Priority = Enum.TryParse<MessagePriority>(m.Priority, out var p1) ? p1 : MessagePriority.Normal,
+                MessageType = Enum.TryParse<MessageType>(m.MessageType, out var t1) ? t1 : MessageType.General,
+                RelatedAppointmentId = m.RelatedAppointmentId,
+                ParentMessageId = m.ParentMessageId,
+                CreatedAt = m.CreatedAt,
+                IsFromCurrentUser = m.SenderId == userId,
+                HasAttachments = m.HasAttachments
+            }).ToList(),
+            NextCursor = paginatedResult.NextCursor,
+            PreviousCursor = paginatedResult.PreviousCursor,
+            HasNext = paginatedResult.HasNext,
+            HasPrevious = paginatedResult.HasPrevious,
+            Count = paginatedResult.Count
+        };
+        
+        return Success(response);
+    }
+    
+    /// <summary>
+    /// Get messages in a conversation with a specific user (Legacy with traditional pagination)
+    /// </summary>
+    [HttpGet("conversation/{otherUserId}/page")]
+    [ProducesResponseType(typeof(IEnumerable<MessageDto>), 200)]
+    public async Task<IActionResult> GetConversationPaged(
         Guid otherUserId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
@@ -188,6 +346,28 @@ public class MessagesController : BaseApiController
 
             // Send message via service
             var message = await _messagingService.SendMessageAsync(tenantId, senderId, messageDto);
+            
+            // Invalidate relevant caches
+            await _cacheService.RemoveAsync(CacheService.CacheKeys.UserConversations(senderId));
+            await _cacheService.RemoveAsync(CacheService.CacheKeys.UserConversations(request.RecipientId));
+            await _cacheService.RemoveAsync(CacheService.CacheKeys.ConversationThread(senderId, request.RecipientId));
+            await _cacheService.RemoveAsync(CacheService.CacheKeys.UserMessages(senderId));
+            await _cacheService.RemoveAsync(CacheService.CacheKeys.UserMessages(request.RecipientId));
+
+            // Send real-time notification to recipient
+            var senderName = CurrentUserEmail ?? "Someone";
+            await _notificationService.SendMessageNotificationAsync(
+                request.RecipientId,
+                new MessageNotificationDto
+                {
+                    MessageId = message.Id,
+                    SenderId = senderId,
+                    SenderName = senderName,
+                    Preview = request.Content.Length > 100 
+                        ? request.Content.Substring(0, 100) + "..."
+                        : request.Content,
+                    IsUrgent = request.Priority == MessagePriority.High || request.Priority == MessagePriority.Urgent
+                });
 
             // Convert to DTO for response
             var responseDto = new MessageDto

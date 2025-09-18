@@ -5,6 +5,7 @@ using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
 using System.Text.Json;
+using Qivr.Api.Models;
 
 namespace Qivr.Api.Controllers;
 
@@ -25,14 +26,110 @@ public class MedicalRecordsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all medical records for the current patient
+    /// Get medical records with cursor-based pagination
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(List<MedicalRecordDto>), 200)]
+    [ProducesResponseType(typeof(CursorPaginationResponse<MedicalRecordDto>), 200)]
     public async Task<IActionResult> GetMedicalRecords(
+        [FromQuery] string? cursor = null,
+        [FromQuery] int limit = 50,
         [FromQuery] string? category = null,
         [FromQuery] DateTime? from = null,
-        [FromQuery] DateTime? to = null)
+        [FromQuery] DateTime? to = null,
+        [FromQuery] bool sortDescending = true)
+    {
+        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        // Get tenant ID
+        var tenantId = GetTenantId();
+        
+        // Query actual medical records from database
+        var query = _context.Documents
+            .Where(d => d.TenantId == tenantId && d.PatientId == userId);
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(category) && category != "all")
+        {
+            query = query.Where(d => d.DocumentType == GetDocumentTypeFromCategory(category));
+        }
+
+        if (from.HasValue)
+        {
+            query = query.Where(d => d.CreatedAt >= from.Value);
+        }
+
+        if (to.HasValue)
+        {
+            query = query.Where(d => d.CreatedAt <= to.Value);
+        }
+
+        // Use cursor pagination
+        var paginationRequest = new CursorPaginationRequest
+        {
+            Cursor = cursor,
+            Limit = limit,
+            SortBy = "CreatedAt",
+            SortDescending = sortDescending
+        };
+
+        var paginatedResult = await query.ToCursorPageAsync(
+            d => d.CreatedAt,
+            d => d.Id,
+            paginationRequest);
+
+        // Convert to DTOs
+        var response = new CursorPaginationResponse<MedicalRecordDto>
+        {
+            Items = paginatedResult.Items.Select(d => 
+            {
+                var metadata = string.IsNullOrEmpty(d.Metadata) 
+                    ? new Dictionary<string, object>()
+                    : JsonSerializer.Deserialize<Dictionary<string, object>>(d.Metadata) ?? new Dictionary<string, object>();
+                
+                var tags = string.IsNullOrEmpty(d.Tags)
+                    ? Array.Empty<string>()
+                    : JsonSerializer.Deserialize<string[]>(d.Tags) ?? Array.Empty<string>();
+                    
+                return new MedicalRecordDto
+                {
+                    Id = d.Id.ToString(),
+                    Title = d.FileName,
+                    Category = GetCategoryFromDocumentType(d.DocumentType),
+                    Date = d.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    Provider = metadata.ContainsKey("provider") ? metadata["provider"].ToString() : "N/A",
+                    Facility = metadata.ContainsKey("facility") ? metadata["facility"].ToString() : "Patient Portal",
+                    FileType = GetFileTypeFromContentType(d.ContentType),
+                    FileSize = FormatFileSize(d.FileSizeBytes),
+                    Status = "available",
+                    Tags = tags,
+                    Description = d.Description
+                };
+            }).ToList(),
+            NextCursor = paginatedResult.NextCursor,
+            PreviousCursor = paginatedResult.PreviousCursor,
+            HasNext = paginatedResult.HasNext,
+            HasPrevious = paginatedResult.HasPrevious,
+            Count = paginatedResult.Count
+        };
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Get medical records with traditional pagination (legacy endpoint)
+    /// </summary>
+    [HttpGet("page")]
+    [ProducesResponseType(typeof(List<MedicalRecordDto>), 200)]
+    public async Task<IActionResult> GetMedicalRecordsPaged(
+        [FromQuery] string? category = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
     {
         var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
@@ -65,7 +162,8 @@ public class MedicalRecordsController : ControllerBase
 
         var documents = await query
             .OrderByDescending(d => d.CreatedAt)
-            .Take(100) // Limit results
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
         // Convert to DTOs

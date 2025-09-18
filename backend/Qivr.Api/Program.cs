@@ -22,6 +22,7 @@ using Qivr.Api.Workers;
 using Qivr.Api.Services;
 using Qivr.Api.Config;
 using Microsoft.AspNetCore.HttpOverrides;
+using Qivr.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -203,6 +204,42 @@ builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>(
 builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
 builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
 builder.Services.AddScoped<INotificationGate, NotificationGate>();
+builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
+
+// Add SignalR for real-time notifications
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+    options.MaximumReceiveMessageSize = 64 * 1024; // 64KB
+});
+
+// Configure Redis caching
+var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING") 
+    ?? builder.Configuration.GetConnectionString("Redis")
+    ?? "localhost:6379";
+
+if (builder.Configuration.GetValue<bool>("Features:EnableRedisCache", true))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnection;
+        options.InstanceName = "qivr-";
+    });
+    
+    builder.Services.AddSingleton<ICacheService, CacheService>();
+    
+    Console.WriteLine($"Redis caching enabled with connection: {(redisConnection.Contains("@") ? "[REDACTED]" : redisConnection)}");
+}
+else
+{
+    // Use in-memory cache as fallback
+    builder.Services.AddDistributedMemoryCache();
+    builder.Services.AddSingleton<ICacheService, CacheService>();
+    
+    Console.WriteLine("Redis caching disabled. Using in-memory cache (not suitable for production)");
+}
 
 // Configure Authorization Service for IDOR protection
 builder.Services.AddScoped<Qivr.Api.Services.IResourceAuthorizationService, Qivr.Api.Services.ResourceAuthorizationService>();
@@ -477,6 +514,9 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
 {
     ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
 });
+
+// Map SignalR hub
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 // Apply migrations when flagged via configuration
 if (builder.Configuration.GetValue<bool>("ApplyMigrations"))

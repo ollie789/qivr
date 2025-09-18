@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using System.Security.Claims;
+using Qivr.Api.Models;
 
 namespace Qivr.Api.Controllers;
 
@@ -23,8 +24,11 @@ public class NotificationsController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<NotificationDto>>> GetNotifications(
+    /// <summary>
+    /// Get notifications with traditional pagination (for backward compatibility)
+    /// </summary>
+    [HttpGet("page")]
+    public async Task<ActionResult<IEnumerable<NotificationDto>>> GetNotificationsPaged(
         [FromQuery] bool? unreadOnly = false,
         [FromQuery] NotificationChannel? channel = null,
         [FromQuery] int pageSize = 20,
@@ -62,6 +66,69 @@ public class NotificationsController : ControllerBase
             .ToListAsync();
 
         return Ok(notifications);
+    }
+    
+    /// <summary>
+    /// Get notifications with cursor-based pagination (new, more efficient)
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<CursorPaginationResponse<NotificationDto>>> GetNotifications(
+        [FromQuery] string? cursor = null,
+        [FromQuery] int limit = 20,
+        [FromQuery] bool? unreadOnly = false,
+        [FromQuery] NotificationChannel? channel = null,
+        [FromQuery] bool sortDescending = true)
+    {
+        var tenantId = GetTenantId();
+        var userId = GetUserId();
+
+        var query = _context.Set<Notification>()
+            .Where(n => n.TenantId == tenantId && n.RecipientId == userId);
+
+        if (unreadOnly == true)
+            query = query.Where(n => n.ReadAt == null);
+
+        if (channel.HasValue)
+            query = query.Where(n => n.Channel == channel.Value);
+
+        // Use cursor pagination
+        var paginationRequest = new CursorPaginationRequest
+        {
+            Cursor = cursor,
+            Limit = limit,
+            SortBy = "CreatedAt",
+            SortDescending = sortDescending
+        };
+
+        var paginatedResult = await query.ToCursorPageAsync(
+            n => n.CreatedAt,
+            n => n.Id,
+            paginationRequest);
+
+        // Transform to DTOs
+        var response = new CursorPaginationResponse<NotificationDto>
+        {
+            Items = paginatedResult.Items.Select(n => new NotificationDto
+            {
+                Id = n.Id,
+                Type = n.Type,
+                Title = n.Title,
+                Message = n.Message,
+                Channel = n.Channel,
+                Priority = n.Priority,
+                Data = n.Data,
+                ReadAt = n.ReadAt,
+                SentAt = n.SentAt,
+                CreatedAt = n.CreatedAt
+            }).ToList(),
+            NextCursor = paginatedResult.NextCursor,
+            PreviousCursor = paginatedResult.PreviousCursor,
+            HasNext = paginatedResult.HasNext,
+            HasPrevious = paginatedResult.HasPrevious,
+            Count = paginatedResult.Count
+        };
+
+        return Ok(response);
     }
 
     [HttpGet("{id}")]

@@ -5,6 +5,7 @@ using Qivr.Core.DTOs;
 using Qivr.Api.Services;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using static Qivr.Api.Services.CacheService;
 
 namespace Qivr.Api.Controllers;
 
@@ -15,15 +16,18 @@ public class PatientDashboardController : ControllerBase
 {
     private readonly QivrDbContext _context;
     private readonly IResourceAuthorizationService _authorizationService;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<PatientDashboardController> _logger;
 
     public PatientDashboardController(
         QivrDbContext context,
         IResourceAuthorizationService authorizationService,
+        ICacheService cacheService,
         ILogger<PatientDashboardController> logger)
     {
         _context = context;
         _authorizationService = authorizationService;
+        _cacheService = cacheService;
         _logger = logger;
     }
 
@@ -42,6 +46,16 @@ public class PatientDashboardController : ControllerBase
 
         try
         {
+            // Try to get from cache first
+            var cacheKey = $"dashboard:{userId}:{DateTime.UtcNow:yyyy-MM-dd-HH}";
+            var cachedDashboard = await _cacheService.GetAsync<PatientDashboardDto>(cacheKey);
+            
+            if (cachedDashboard != null)
+            {
+                _logger.LogDebug("Returning cached dashboard for patient {PatientId}", userId);
+                return Ok(cachedDashboard);
+            }
+            
             var now = DateTime.UtcNow;
             
             // Get upcoming appointments
@@ -134,6 +148,9 @@ public class PatientDashboardController : ControllerBase
                 NextAppointment = upcomingAppointments.FirstOrDefault()
             };
 
+            // Cache the dashboard data for 5 minutes
+            await _cacheService.SetAsync(cacheKey, dashboard, CacheDuration.Medium);
+            
             return Ok(dashboard);
         }
         catch (Exception ex)
@@ -201,6 +218,16 @@ public class PatientDashboardController : ControllerBase
         {
             return Unauthorized();
         }
+        
+        // Use cache with longer expiration for health summary
+        var cacheKey = CacheKeys.PatientSummary(userId);
+        var cachedSummary = await _cacheService.GetAsync<HealthSummaryDto>(cacheKey);
+        
+        if (cachedSummary != null)
+        {
+            _logger.LogDebug("Returning cached health summary for patient {PatientId}", userId);
+            return Ok(cachedSummary);
+        }
 
         // Get patient info
         var patient = await _context.Users
@@ -260,6 +287,9 @@ public class PatientDashboardController : ControllerBase
             }).ToList()
         };
 
+        // Cache health summary for 30 minutes
+        await _cacheService.SetAsync(cacheKey, summary, CacheDuration.Long);
+        
         return Ok(summary);
     }
 }

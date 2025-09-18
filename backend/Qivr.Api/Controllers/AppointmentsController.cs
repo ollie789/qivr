@@ -6,6 +6,7 @@ using Qivr.Infrastructure.Data;
 using Qivr.Services;
 using System.Security.Claims;
 using Qivr.Api.Services;
+using Qivr.Api.Models;
 
 namespace Qivr.Api.Controllers;
 
@@ -18,24 +19,123 @@ public class AppointmentsController : ControllerBase
     private readonly ILogger<AppointmentsController> _logger;
     private readonly IResourceAuthorizationService _authorizationService;
     private readonly IProviderAvailabilityService _availabilityService;
+    private readonly ICacheService _cacheService;
 
     public AppointmentsController(
         QivrDbContext context,
         ILogger<AppointmentsController> logger,
         IResourceAuthorizationService authorizationService,
-        IProviderAvailabilityService availabilityService)
+        IProviderAvailabilityService availabilityService,
+        ICacheService cacheService)
     {
         _context = context;
         _logger = logger;
         _authorizationService = authorizationService;
         _availabilityService = availabilityService;
+        _cacheService = cacheService;
     }
 
+    /// <summary>
+    /// Get appointments with cursor-based pagination
+    /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetAppointments(
+    public async Task<ActionResult<CursorPaginationResponse<AppointmentDto>>> GetAppointments(
+        [FromQuery] string? cursor = null,
+        [FromQuery] int limit = 20,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] AppointmentStatus? status = null,
+        [FromQuery] bool sortDescending = false)
+    {
+        var tenantId = GetTenantId();
+        var userId = GetUserId();
+
+        var query = _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Provider)
+            .Include(a => a.Evaluation)
+            .Where(a => a.TenantId == tenantId);
+
+        // Filter by user role
+        if (User.IsInRole("Patient"))
+        {
+            query = query.Where(a => a.PatientId == userId);
+        }
+        else if (User.IsInRole("Clinician"))
+        {
+            query = query.Where(a => a.ProviderId == userId);
+        }
+
+        if (startDate.HasValue)
+            query = query.Where(a => a.ScheduledStart >= startDate.Value);
+
+        if (endDate.HasValue)
+            query = query.Where(a => a.ScheduledStart <= endDate.Value);
+
+        if (status.HasValue)
+            query = query.Where(a => a.Status == status.Value);
+
+        // Use cursor pagination
+        var paginationRequest = new CursorPaginationRequest
+        {
+            Cursor = cursor,
+            Limit = limit,
+            SortBy = "ScheduledStart",
+            SortDescending = sortDescending
+        };
+
+        var paginatedResult = await query.ToCursorPageAsync(
+            a => a.ScheduledStart,
+            a => a.Id,
+            paginationRequest);
+
+        // Convert to DTOs
+        var response = new CursorPaginationResponse<AppointmentDto>
+        {
+            Items = paginatedResult.Items.Select(a => new AppointmentDto
+            {
+                Id = a.Id,
+                PatientId = a.PatientId,
+                PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : null,
+                ProviderId = a.ProviderId,
+                ProviderName = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : null,
+                EvaluationId = a.EvaluationId,
+                AppointmentType = a.AppointmentType,
+                Status = a.Status,
+                ScheduledStart = a.ScheduledStart,
+                ScheduledEnd = a.ScheduledEnd,
+                ActualStart = a.ActualStart,
+                ActualEnd = a.ActualEnd,
+                LocationType = a.LocationType,
+                LocationDetails = a.LocationDetails,
+                Notes = a.Notes,
+                ExternalCalendarId = a.ExternalCalendarId,
+                CancellationReason = a.CancellationReason,
+                CancelledAt = a.CancelledAt,
+                ReminderSentAt = a.ReminderSentAt,
+                CreatedAt = a.CreatedAt,
+                UpdatedAt = a.UpdatedAt
+            }).ToList(),
+            NextCursor = paginatedResult.NextCursor,
+            PreviousCursor = paginatedResult.PreviousCursor,
+            HasNext = paginatedResult.HasNext,
+            HasPrevious = paginatedResult.HasPrevious,
+            Count = paginatedResult.Count
+        };
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Get appointments with traditional pagination (legacy endpoint)
+    /// </summary>
+    [HttpGet("page")]
+    public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetAppointmentsPaged(
         [FromQuery] DateTime? startDate,
         [FromQuery] DateTime? endDate,
-        [FromQuery] AppointmentStatus? status)
+        [FromQuery] AppointmentStatus? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         var tenantId = GetTenantId();
         var userId = GetUserId();
@@ -67,6 +167,8 @@ public class AppointmentsController : ControllerBase
 
         var appointments = await query
             .OrderBy(a => a.ScheduledStart)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(a => new AppointmentDto
             {
                 Id = a.Id,
@@ -109,6 +211,15 @@ public class AppointmentsController : ControllerBase
             return NotFound(); // Return 404 instead of 403 to avoid information leakage
         }
 
+        // Try to get from cache first
+        var cacheKey = CacheService.CacheKeys.AppointmentDetails(id);
+        var cachedAppointment = await _cacheService.GetAsync<AppointmentDto>(cacheKey);
+        if (cachedAppointment != null)
+        {
+            _logger.LogDebug("Returning cached appointment {AppointmentId}", id);
+            return Ok(cachedAppointment);
+        }
+
         var appointment = await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Provider)
@@ -119,7 +230,7 @@ public class AppointmentsController : ControllerBase
         if (appointment == null)
             return NotFound();
 
-        return Ok(new AppointmentDto
+        var appointmentDto = new AppointmentDto
         {
             Id = appointment.Id,
             PatientId = appointment.PatientId,
@@ -142,7 +253,12 @@ public class AppointmentsController : ControllerBase
             ReminderSentAt = appointment.ReminderSentAt,
             CreatedAt = appointment.CreatedAt,
             UpdatedAt = appointment.UpdatedAt
-        });
+        };
+
+        // Cache the appointment for 5 minutes
+        await _cacheService.SetAsync(cacheKey, appointmentDto, CacheService.CacheDuration.Medium);
+
+        return Ok(appointmentDto);
     }
 
     [HttpPost]
@@ -193,6 +309,16 @@ public class AppointmentsController : ControllerBase
         try
         {
             await _context.SaveChangesAsync();
+            
+            // Invalidate relevant caches
+            var userRole = User.IsInRole("Patient") ? "Patient" : "Clinician";
+            var appointmentListKey = CacheService.CacheKeys.AppointmentList(tenantId, userId, userRole, request.ScheduledStart.Date, request.ScheduledEnd.Date);
+            await _cacheService.RemoveAsync(appointmentListKey);
+            await _cacheService.RemoveAsync(CacheService.CacheKeys.UserAppointments(userId));
+            if (request.PatientId != userId)
+            {
+                await _cacheService.RemoveAsync(CacheService.CacheKeys.UserAppointments(request.PatientId));
+            }
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("uq_appointments_provider_time") == true || ex.InnerException?.Message.Contains("no_double_booking") == true)
         {
