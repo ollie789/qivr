@@ -4,26 +4,30 @@ using Microsoft.EntityFrameworkCore;
 using Qivr.Api.Services;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using Qivr.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace Qivr.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class MessagesController : ControllerBase
 {
     private readonly QivrDbContext _context;
     private readonly IResourceAuthorizationService _authorizationService;
+    private readonly IMessagingService _messagingService;
     private readonly ILogger<MessagesController> _logger;
 
     public MessagesController(
         QivrDbContext context,
         IResourceAuthorizationService authorizationService,
+        IMessagingService messagingService,
         ILogger<MessagesController> logger)
     {
         _context = context;
         _authorizationService = authorizationService;
+        _messagingService = messagingService;
         _logger = logger;
     }
 
@@ -36,27 +40,46 @@ public class MessagesController : ControllerBase
         [FromQuery] string? category = null,
         [FromQuery] bool? unreadOnly = null)
     {
-        var userId = _authorizationService.GetCurrentUserId(User);
-        if (userId == Guid.Empty)
+        try
         {
-            return Unauthorized();
-        }
+            var userId = _authorizationService.GetCurrentUserId(User);
+            if (userId == Guid.Empty)
+            {
+                return Unauthorized();
+            }
 
-        // For now, return mock data formatted for the patient portal
-        var messages = GetMockMessagesForPortal(userId);
-        
-        // Apply filters
-        if (!string.IsNullOrEmpty(category) && category != "all")
-        {
-            messages = messages.Where(m => m.Category == category).ToList();
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            
+            // Get messages from service
+            var messages = await _messagingService.GetMessagesAsync(tenantId, userId, category, unreadOnly);
+            
+            // Convert to portal DTOs
+            var portalMessages = messages.Select(m => new MessagePortalDto
+            {
+                Id = m.Id.ToString(),
+                Subject = m.Subject ?? "No Subject",
+                Content = m.Content,
+                From = m.SenderId == userId 
+                    ? "You" 
+                    : $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
+                To = m.RecipientId == userId 
+                    ? "You" 
+                    : $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                Date = m.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                Category = m.MessageType,
+                Read = m.RecipientId == userId ? m.IsRead : true,
+                Urgent = m.Priority == "High" || m.Priority == "Urgent",
+                HasAttachments = m.HasAttachments,
+                ParentMessageId = m.ParentMessageId?.ToString()
+            }).ToList();
+            
+            return Ok(portalMessages);
         }
-        
-        if (unreadOnly == true)
+        catch (Exception ex)
         {
-            messages = messages.Where(m => !m.Read).ToList();
+            _logger.LogError(ex, "Failed to get messages for user");
+            return StatusCode(500, new { error = "Failed to retrieve messages" });
         }
-        
-        return Ok(messages);
     }
     
     /// <summary>
@@ -66,33 +89,42 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ConversationDto>), 200)]
     public async Task<IActionResult> GetConversations()
     {
-        var userId = _authorizationService.GetCurrentUserId(User);
-        if (userId == Guid.Empty)
+        try
         {
-            return Unauthorized();
-        }
-
-        // Get all unique conversations (grouped by other participant)
-        var conversations = await _context.Messages
-            .Include(m => m.Sender)
-            .Include(m => m.Recipient)
-            .Where(m => m.SenderId == userId || m.RecipientId == userId)
-            .GroupBy(m => m.SenderId == userId ? m.RecipientId : m.SenderId)
-            .Select(g => new ConversationDto
+            var userId = _authorizationService.GetCurrentUserId(User);
+            if (userId == Guid.Empty)
             {
-                ParticipantId = g.Key,
-                ParticipantName = g.First().SenderId == userId 
-                    ? $"{g.First().Recipient.FirstName} {g.First().Recipient.LastName}"
-                    : $"{g.First().Sender.FirstName} {g.First().Sender.LastName}",
-                LastMessage = g.OrderByDescending(m => m.CreatedAt).First().Content,
-                LastMessageTime = g.Max(m => m.CreatedAt),
-                UnreadCount = g.Count(m => m.RecipientId == userId && !m.IsRead),
-                TotalMessages = g.Count()
-            })
-            .OrderByDescending(c => c.LastMessageTime)
-            .ToListAsync();
+                return Unauthorized();
+            }
 
-        return Ok(conversations);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            
+            // Get conversations from service
+            var conversations = await _messagingService.GetConversationsAsync(tenantId, userId);
+            
+            // Convert to DTOs
+            var conversationDtos = conversations.Select(c => new ConversationDto
+            {
+                ParticipantId = c.ParticipantId,
+                ParticipantName = c.ParticipantName,
+                ParticipantAvatar = c.ParticipantAvatar,
+                ParticipantRole = c.ParticipantRole,
+                LastMessage = c.LastMessage,
+                LastMessageTime = c.LastMessageTime,
+                LastMessageSender = c.LastMessageSender,
+                UnreadCount = c.UnreadCount,
+                TotalMessages = c.TotalMessages,
+                HasAttachments = c.HasAttachments,
+                IsUrgent = c.IsUrgent
+            }).ToList();
+
+            return Ok(conversationDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get conversations for user");
+            return StatusCode(500, new { error = "Failed to retrieve conversations" });
+        }
     }
 
     /// <summary>
@@ -105,34 +137,28 @@ public class MessagesController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        var userId = _authorizationService.GetCurrentUserId(User);
-        if (userId == Guid.Empty)
+        try
         {
-            return Unauthorized();
-        }
+            var userId = _authorizationService.GetCurrentUserId(User);
+            if (userId == Guid.Empty)
+            {
+                return Unauthorized();
+            }
 
-        var query = _context.Messages
-            .Include(m => m.Sender)
-            .Include(m => m.Recipient)
-            .Where(m => (m.SenderId == userId && m.RecipientId == otherUserId) ||
-                       (m.SenderId == otherUserId && m.RecipientId == userId))
-            .OrderByDescending(m => m.CreatedAt);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            
+            // Get conversation thread from service
+            var thread = await _messagingService.GetConversationThreadAsync(
+                tenantId, userId, otherUserId, page, pageSize);
 
-        var totalCount = await query.CountAsync();
-
-        var messages = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-
-        // Convert strings to enums after materialization to avoid expression tree limitations
-        var messageDtos = messages.Select(m => new MessageDto
+            // Convert to DTOs
+            var messageDtos = thread.Messages.Select(m => new MessageDto
             {
                 Id = m.Id,
                 SenderId = m.SenderId,
-                SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}",
+                SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
                 RecipientId = m.RecipientId,
-                RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}",
+                RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
                 Subject = m.Subject ?? string.Empty,
                 Content = m.Content,
                 IsRead = m.IsRead,
@@ -142,18 +168,22 @@ public class MessagesController : ControllerBase
                 RelatedAppointmentId = m.RelatedAppointmentId,
                 ParentMessageId = m.ParentMessageId,
                 CreatedAt = m.CreatedAt,
-                IsFromCurrentUser = m.SenderId == userId
-            })
-            .ToList();
+                IsFromCurrentUser = m.SenderId == userId,
+                HasAttachments = m.HasAttachments
+            }).ToList();
 
-        // Mark messages as read
-        await MarkMessagesAsRead(messageDtos.Where(m => m.RecipientId == userId && !m.IsRead).Select(m => m.Id));
+            Response.Headers.Append("X-Total-Count", thread.TotalMessages.ToString());
+            Response.Headers.Append("X-Page", thread.CurrentPage.ToString());
+            Response.Headers.Append("X-Page-Size", thread.PageSize.ToString());
+            Response.Headers.Append("X-Total-Pages", thread.TotalPages.ToString());
 
-        Response.Headers.Add("X-Total-Count", totalCount.ToString());
-        Response.Headers.Add("X-Page", page.ToString());
-        Response.Headers.Add("X-Page-Size", pageSize.ToString());
-
-        return Ok(messageDtos.OrderBy(m => m.CreatedAt)); // Return in chronological order for display
+            return Ok(messageDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get conversation with user {OtherUserId}", otherUserId);
+            return StatusCode(500, new { error = "Failed to retrieve conversation" });
+        }
     }
 
     /// <summary>
@@ -164,84 +194,80 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
     {
-        var senderId = _authorizationService.GetCurrentUserId(User);
-        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
-
-        if (senderId == Guid.Empty || tenantId == Guid.Empty)
+        try
         {
-            return Unauthorized();
-        }
+            var senderId = _authorizationService.GetCurrentUserId(User);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
 
-        // Validate recipient exists and is in the same tenant
-        var recipient = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == request.RecipientId && u.TenantId == tenantId);
-
-        if (recipient == null)
-        {
-            return BadRequest("Recipient not found or not in the same organization");
-        }
-
-        // Check if this is regarding an appointment
-        if (request.RelatedAppointmentId.HasValue)
-        {
-            var appointment = await _context.Appointments
-                .FirstOrDefaultAsync(a => a.Id == request.RelatedAppointmentId.Value
-                    && (a.PatientId == senderId || a.ProviderId == senderId));
-
-            if (appointment == null)
+            if (senderId == Guid.Empty || tenantId == Guid.Empty)
             {
-                return BadRequest("Related appointment not found or you don't have access to it");
+                return Unauthorized();
             }
+
+            // Validate request
+            if (request == null || request.RecipientId == Guid.Empty)
+            {
+                return BadRequest("Invalid message request");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Content))
+            {
+                return BadRequest("Message content is required");
+            }
+
+            // Create message DTO for service
+            var messageDto = new SendMessageDto
+            {
+                RecipientId = request.RecipientId,
+                Subject = request.Subject,
+                Content = request.Content,
+                MessageType = request.MessageType?.ToString() ?? "General",
+                Priority = request.Priority?.ToString() ?? "Normal",
+                ParentMessageId = request.ParentMessageId,
+                RelatedAppointmentId = request.RelatedAppointmentId,
+                Attachments = request.Attachments?.Select(a => new MessageAttachment
+                {
+                    FileName = a.FileName,
+                    ContentType = a.ContentType,
+                    FileSize = a.FileSize,
+                    Base64Data = a.Base64Data
+                })
+            };
+
+            // Send message via service
+            var message = await _messagingService.SendMessageAsync(tenantId, senderId, messageDto);
+
+            // Convert to DTO for response
+            var responseDto = new MessageDto
+            {
+                Id = message.Id,
+                SenderId = message.SenderId,
+                SenderName = $"{message.Sender?.FirstName} {message.Sender?.LastName}".Trim(),
+                RecipientId = message.RecipientId,
+                RecipientName = $"{message.Recipient?.FirstName} {message.Recipient?.LastName}".Trim(),
+                Subject = message.Subject,
+                Content = message.Content,
+                IsRead = message.IsRead,
+                Priority = Enum.TryParse<MessagePriority>(message.Priority, out var p) ? p : MessagePriority.Normal,
+                MessageType = Enum.TryParse<MessageType>(message.MessageType, out var t) ? t : MessageType.General,
+                RelatedAppointmentId = message.RelatedAppointmentId,
+                ParentMessageId = message.ParentMessageId,
+                CreatedAt = message.CreatedAt,
+                IsFromCurrentUser = true,
+                HasAttachments = message.HasAttachments
+            };
+
+            return CreatedAtAction(nameof(GetMessage), new { id = message.Id }, responseDto);
         }
-
-        var message = new Message
+        catch (ArgumentException ex)
         {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
-            SenderId = senderId,
-            RecipientId = request.RecipientId,
-            Subject = request.Subject ?? "No Subject",
-            Content = request.Content,
-            MessageType = request.MessageType?.ToString() ?? "General",
-            Priority = request.Priority?.ToString() ?? "Normal",
-            RelatedAppointmentId = request.RelatedAppointmentId,
-            ParentMessageId = request.ParentMessageId,
-            IsRead = false,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        _context.Messages.Add(message);
-        await _context.SaveChangesAsync();
-
-        // Load sender for response
-        await _context.Entry(message)
-            .Reference(m => m.Sender)
-            .LoadAsync();
-        await _context.Entry(message)
-            .Reference(m => m.Recipient)
-            .LoadAsync();
-
-        _logger.LogInformation("Message {MessageId} sent from {SenderId} to {RecipientId}", 
-            message.Id, senderId, request.RecipientId);
-
-        return CreatedAtAction(nameof(GetMessage), new { id = message.Id }, new MessageDto
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
         {
-            Id = message.Id,
-            SenderId = message.SenderId,
-            SenderName = $"{message.Sender.FirstName} {message.Sender.LastName}",
-            RecipientId = message.RecipientId,
-            RecipientName = $"{message.Recipient.FirstName} {message.Recipient.LastName}",
-            Subject = message.Subject,
-            Content = message.Content,
-            IsRead = message.IsRead,
-            Priority = Enum.TryParse<MessagePriority>(message.Priority, out var p2) ? p2 : MessagePriority.Normal,
-            MessageType = Enum.TryParse<MessageType>(message.MessageType, out var t2) ? t2 : MessageType.General,
-            RelatedAppointmentId = message.RelatedAppointmentId,
-            ParentMessageId = message.ParentMessageId,
-            CreatedAt = message.CreatedAt,
-            IsFromCurrentUser = true
-        });
+            _logger.LogError(ex, "Failed to send message");
+            return StatusCode(500, new { error = "Failed to send message" });
+        }
     }
 
     /// <summary>
@@ -252,45 +278,49 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetMessage(Guid id)
     {
-        var userId = _authorizationService.GetCurrentUserId(User);
-        
-        var message = await _context.Messages
-            .Include(m => m.Sender)
-            .Include(m => m.Recipient)
-            .FirstOrDefaultAsync(m => m.Id == id 
-                && (m.SenderId == userId || m.RecipientId == userId));
-
-        if (message == null)
+        try
         {
-            return NotFound();
+            var userId = _authorizationService.GetCurrentUserId(User);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            
+            var message = await _messagingService.GetMessageAsync(tenantId, id);
+            
+            if (message == null || (message.SenderId != userId && message.RecipientId != userId))
+            {
+                return NotFound();
+            }
+
+            // Mark as read if recipient
+            if (message.RecipientId == userId && !message.IsRead)
+            {
+                await _messagingService.MarkMessagesAsReadAsync(tenantId, userId, new[] { id });
+            }
+
+            return Ok(new MessageDto
+            {
+                Id = message.Id,
+                SenderId = message.SenderId,
+                SenderName = $"{message.Sender?.FirstName} {message.Sender?.LastName}".Trim(),
+                RecipientId = message.RecipientId,
+                RecipientName = $"{message.Recipient?.FirstName} {message.Recipient?.LastName}".Trim(),
+                Subject = message.Subject,
+                Content = message.Content,
+                IsRead = message.IsRead,
+                ReadAt = message.ReadAt,
+                Priority = Enum.TryParse<MessagePriority>(message.Priority, out var p) ? p : MessagePriority.Normal,
+                MessageType = Enum.TryParse<MessageType>(message.MessageType, out var t) ? t : MessageType.General,
+                RelatedAppointmentId = message.RelatedAppointmentId,
+                ParentMessageId = message.ParentMessageId,
+                CreatedAt = message.CreatedAt,
+                IsFromCurrentUser = message.SenderId == userId,
+                HasAttachments = message.HasAttachments
+            });
         }
-
-        // Mark as read if recipient
-        if (message.RecipientId == userId && !message.IsRead)
+        catch (Exception ex)
         {
-            message.IsRead = true;
-            message.ReadAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            _logger.LogError(ex, "Failed to get message {MessageId}", id);
+            return StatusCode(500, new { error = "Failed to retrieve message" });
         }
-
-        return Ok(new MessageDto
-        {
-            Id = message.Id,
-            SenderId = message.SenderId,
-            SenderName = $"{message.Sender.FirstName} {message.Sender.LastName}",
-            RecipientId = message.RecipientId,
-            RecipientName = $"{message.Recipient.FirstName} {message.Recipient.LastName}",
-            Subject = message.Subject,
-            Content = message.Content,
-            IsRead = message.IsRead,
-            ReadAt = message.ReadAt,
-            Priority = Enum.TryParse<MessagePriority>(message.Priority, out var p3) ? p3 : MessagePriority.Normal,
-            MessageType = Enum.TryParse<MessageType>(message.MessageType, out var t3) ? t3 : MessageType.General,
-            RelatedAppointmentId = message.RelatedAppointmentId,
-            ParentMessageId = message.ParentMessageId,
-            CreatedAt = message.CreatedAt,
-            IsFromCurrentUser = message.SenderId == userId
-        });
     }
 
     /// <summary>
@@ -330,23 +360,20 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(204)]
     public async Task<IActionResult> MarkMultipleAsRead([FromBody] List<Guid> messageIds)
     {
-        var userId = _authorizationService.GetCurrentUserId(User);
-        
-        var messages = await _context.Messages
-            .Where(m => messageIds.Contains(m.Id) && m.RecipientId == userId && !m.IsRead)
-            .ToListAsync();
-
-        foreach (var message in messages)
+        try
         {
-            message.IsRead = true;
-            message.ReadAt = DateTime.UtcNow;
+            var userId = _authorizationService.GetCurrentUserId(User);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            
+            await _messagingService.MarkMessagesAsReadAsync(tenantId, userId, messageIds);
+            
+            return NoContent();
         }
-
-        await _context.SaveChangesAsync();
-        
-        _logger.LogInformation("{Count} messages marked as read by {UserId}", messages.Count, userId);
-
-        return NoContent();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark messages as read");
+            return StatusCode(500, new { error = "Failed to mark messages as read" });
+        }
     }
 
     /// <summary>
@@ -357,32 +384,25 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> DeleteMessage(Guid id)
     {
-        var userId = _authorizationService.GetCurrentUserId(User);
-        
-        var message = await _context.Messages
-            .FirstOrDefaultAsync(m => m.Id == id 
-                && (m.SenderId == userId || m.RecipientId == userId));
-
-        if (message == null)
+        try
         {
-            return NotFound();
-        }
+            var userId = _authorizationService.GetCurrentUserId(User);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            
+            var deleted = await _messagingService.DeleteMessageAsync(tenantId, userId, id);
+            
+            if (!deleted)
+            {
+                return NotFound();
+            }
 
-        // Soft delete - mark as deleted for the current user
-        if (message.SenderId == userId)
+            return NoContent();
+        }
+        catch (Exception ex)
         {
-            message.DeletedBySender = true;
+            _logger.LogError(ex, "Failed to delete message {MessageId}", id);
+            return StatusCode(500, new { error = "Failed to delete message" });
         }
-        if (message.RecipientId == userId)
-        {
-            message.DeletedByRecipient = true;
-        }
-
-        await _context.SaveChangesAsync();
-        
-        _logger.LogInformation("Message {MessageId} deleted by {UserId}", id, userId);
-
-        return NoContent();
     }
 
     /// <summary>
@@ -392,39 +412,87 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(typeof(MessageUnreadCountDto), 200)]
     public async Task<IActionResult> GetUnreadCount()
     {
-        var userId = _authorizationService.GetCurrentUserId(User);
-        
-        var count = await _context.Messages
-            .CountAsync(m => m.RecipientId == userId && !m.IsRead && !m.DeletedByRecipient);
-
-        return Ok(new MessageUnreadCountDto { Count = count });
-    }
-
-    private async Task MarkMessagesAsRead(IEnumerable<Guid> messageIds)
-    {
-        if (!messageIds.Any()) return;
-
-        var messages = await _context.Messages
-            .Where(m => messageIds.Contains(m.Id) && !m.IsRead)
-            .ToListAsync();
-
-        foreach (var message in messages)
+        try
         {
-            message.IsRead = true;
-            message.ReadAt = DateTime.UtcNow;
+            var userId = _authorizationService.GetCurrentUserId(User);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            
+            var messages = await _messagingService.GetMessagesAsync(tenantId, userId, null, true);
+            var count = messages.Count();
+
+            return Ok(new MessageUnreadCountDto { Count = count });
         }
-
-        await _context.SaveChangesAsync();
-    }
-    
-    private List<MessagePortalDto> GetMockMessagesForPortal(Guid userId)
-    {
-        return new List<MessagePortalDto>
+        catch (Exception ex)
         {
-            new MessagePortalDto
+            _logger.LogError(ex, "Failed to get unread count");
+            return StatusCode(500, new { error = "Failed to get unread count" });
+        }
+    }
+
+    // Reply to a message
+    [HttpPost("{id}/reply")]
+    [ProducesResponseType(typeof(MessageDto), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> ReplyToMessage(Guid id, [FromBody] ReplyMessageRequest request)
+    {
+        try
+        {
+            var senderId = _authorizationService.GetCurrentUserId(User);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            
+            if (string.IsNullOrWhiteSpace(request?.Content))
             {
-                Id = "1",
-                Subject = "Appointment Confirmation - January 25",
+                return BadRequest("Reply content is required");
+            }
+            
+            var reply = await _messagingService.ReplyToMessageAsync(tenantId, senderId, id, request.Content);
+            
+            if (reply == null)
+            {
+                return NotFound("Original message not found or access denied");
+            }
+            
+            var responseDto = new MessageDto
+            {
+                Id = reply.Id,
+                SenderId = reply.SenderId,
+                SenderName = $"{reply.Sender?.FirstName} {reply.Sender?.LastName}".Trim(),
+                RecipientId = reply.RecipientId,
+                RecipientName = $"{reply.Recipient?.FirstName} {reply.Recipient?.LastName}".Trim(),
+                Subject = reply.Subject,
+                Content = reply.Content,
+                IsRead = reply.IsRead,
+                Priority = Enum.TryParse<MessagePriority>(reply.Priority, out var p) ? p : MessagePriority.Normal,
+                MessageType = Enum.TryParse<MessageType>(reply.MessageType, out var t) ? t : MessageType.General,
+                ParentMessageId = reply.ParentMessageId,
+                CreatedAt = reply.CreatedAt,
+                IsFromCurrentUser = true,
+                HasAttachments = reply.HasAttachments
+            };
+            
+            return Ok(responseDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reply to message {MessageId}", id);
+            return StatusCode(500, new { error = "Failed to send reply" });
+        }
+    }
+
+// DTOs
+public class MessagePortalDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Subject { get; set; } = string.Empty;
+    public string From { get; set; } = string.Empty;
+    public string To { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string Date { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public bool Read { get; set; }
+    public bool Urgent { get; set; }
+    public bool HasAttachments { get; set; }
+    public string? ParentMessageId { get; set; }
                 Sender = new SenderDto
                 {
                     Name = "Dr. Sarah Johnson",
@@ -560,14 +628,18 @@ public class MessageDto
     public Guid? ParentMessageId { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsFromCurrentUser { get; set; }
+    public bool HasAttachments { get; set; }
 }
 
 public class ConversationDto
 {
     public Guid ParticipantId { get; set; }
     public string ParticipantName { get; set; } = string.Empty;
+    public string? ParticipantAvatar { get; set; }
+    public string ParticipantRole { get; set; } = string.Empty;
     public string LastMessage { get; set; } = string.Empty;
     public DateTime LastMessageTime { get; set; }
+    public string LastMessageSender { get; set; } = string.Empty;
     public int UnreadCount { get; set; }
     public int TotalMessages { get; set; }
 }

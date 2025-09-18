@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
+using Qivr.Services;
 
 namespace Qivr.Api.Controllers;
 
@@ -11,13 +12,16 @@ namespace Qivr.Api.Controllers;
 public class SettingsController : ControllerBase
 {
     private readonly QivrDbContext _context;
+    private readonly ISettingsService _settingsService;
     private readonly ILogger<SettingsController> _logger;
 
     public SettingsController(
         QivrDbContext context,
+        ISettingsService settingsService,
         ILogger<SettingsController> logger)
     {
         _context = context;
+        _settingsService = settingsService;
         _logger = logger;
     }
 
@@ -28,76 +32,90 @@ public class SettingsController : ControllerBase
     [ProducesResponseType(typeof(UserSettingsDto), 200)]
     public async Task<IActionResult> GetSettings()
     {
-        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
+        try
         {
-            return Unauthorized();
-        }
-
-        // For now, return mock settings. In production, this would query actual user preferences
-        var settings = new UserSettingsDto
-        {
-            Profile = new ProfileSettingsDto
+            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdClaim, out var userId))
             {
-                FirstName = "John",
-                LastName = "Doe",
-                Email = "john.doe@example.com",
-                Phone = "(555) 123-4567",
-                DateOfBirth = "1985-06-15",
-                Address = "123 Main Street",
-                City = "Springfield",
-                State = "IL",
-                ZipCode = "62701",
-                EmergencyContact = "Jane Doe",
-                EmergencyPhone = "(555) 987-6543"
-            },
-            Notifications = new NotificationSettingsDto
-            {
-                Appointments = true,
-                LabResults = true,
-                Prescriptions = true,
-                Messages = true,
-                Promotions = false,
-                Channels = new NotificationChannelsDto
-                {
-                    Email = true,
-                    Sms = true,
-                    Push = true,
-                    Phone = false
-                },
-                QuietHours = new QuietHoursDto
-                {
-                    Enabled = true,
-                    Start = "22:00",
-                    End = "08:00"
-                }
-            },
-            Privacy = new PrivacySettingsDto
-            {
-                ShareData = false,
-                MarketingEmails = false,
-                AnonymousAnalytics = true,
-                ThirdPartyAccess = Array.Empty<string>()
-            },
-            Security = new SecuritySettingsDto
-            {
-                TwoFactorEnabled = false,
-                LoginAlerts = true,
-                SessionTimeout = 30,
-                PasswordLastChanged = "2024-01-01T00:00:00"
-            },
-            Accessibility = new AccessibilitySettingsDto
-            {
-                FontSize = 16,
-                HighContrast = false,
-                ScreenReader = false,
-                ReducedMotion = false,
-                Language = "en",
-                Theme = "light"
+                return Unauthorized();
             }
-        };
 
-        return Ok(settings);
+            // Get tenant ID
+            var tenantId = GetTenantId();
+
+            // Get settings from service
+            var settings = await _settingsService.GetUserSettingsAsync(tenantId, userId);
+
+            // Convert to DTO
+            var settingsDto = new UserSettingsDto
+            {
+                Profile = new ProfileSettingsDto
+                {
+                    FirstName = settings.Profile.FirstName,
+                    LastName = settings.Profile.LastName,
+                    Email = settings.Profile.Email,
+                    Phone = settings.Profile.Phone,
+                    DateOfBirth = settings.Profile.DateOfBirth,
+                    Address = settings.Profile.Address,
+                    City = settings.Profile.City,
+                    State = settings.Profile.State,
+                    ZipCode = settings.Profile.ZipCode,
+                    EmergencyContact = settings.Profile.EmergencyContact,
+                    EmergencyPhone = settings.Profile.EmergencyPhone
+                },
+                Notifications = new NotificationSettingsDto
+                {
+                    Appointments = settings.Notifications.Appointments,
+                    LabResults = settings.Notifications.LabResults,
+                    Prescriptions = settings.Notifications.Prescriptions,
+                    Messages = settings.Notifications.Messages,
+                    Promotions = settings.Notifications.Promotions,
+                    Channels = new NotificationChannelsDto
+                    {
+                        Email = settings.Notifications.Channels.Email,
+                        Sms = settings.Notifications.Channels.Sms,
+                        Push = settings.Notifications.Channels.Push,
+                        Phone = settings.Notifications.Channels.Phone
+                    },
+                    QuietHours = new QuietHoursDto
+                    {
+                        Enabled = settings.Notifications.QuietHours.Enabled,
+                        Start = settings.Notifications.QuietHours.Start,
+                        End = settings.Notifications.QuietHours.End
+                    }
+                },
+                Privacy = new PrivacySettingsDto
+                {
+                    ShareData = settings.Privacy.ShareData,
+                    MarketingEmails = settings.Privacy.MarketingEmails,
+                    AnonymousAnalytics = settings.Privacy.AnonymousAnalytics,
+                    ThirdPartyAccess = settings.Privacy.ThirdPartyAccess
+                },
+                Security = new SecuritySettingsDto
+                {
+                    TwoFactorEnabled = settings.Security.TwoFactorEnabled,
+                    LoginAlerts = settings.Security.LoginAlerts,
+                    SessionTimeout = settings.Security.SessionTimeout,
+                    PasswordLastChanged = settings.Security.PasswordLastChanged
+                },
+                Accessibility = new AccessibilitySettingsDto
+                {
+                    FontSize = settings.Accessibility.FontSize,
+                    HighContrast = settings.Accessibility.HighContrast,
+                    ScreenReader = settings.Accessibility.ScreenReader,
+                    ReducedMotion = settings.Accessibility.ReducedMotion,
+                    Language = settings.Accessibility.Language,
+                    Theme = settings.Accessibility.Theme
+                }
+            };
+
+            return Ok(settingsDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get settings for user");
+            return StatusCode(500, new { error = "Failed to retrieve settings" });
+        }
     }
 
     /// <summary>
@@ -108,23 +126,96 @@ public class SettingsController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<IActionResult> UpdateSettings([FromBody] UserSettingsDto settings)
     {
-        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
+        try
         {
-            return Unauthorized();
-        }
+            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
 
-        // Validate settings
-        if (settings == null)
+            // Validate settings
+            if (settings == null)
+            {
+                return BadRequest("Invalid settings");
+            }
+
+            // Get tenant ID
+            var tenantId = GetTenantId();
+
+            // Convert DTO to service model
+            var userSettings = new UserSettings
+            {
+                Profile = new ProfileSettings
+                {
+                    FirstName = settings.Profile?.FirstName ?? "",
+                    LastName = settings.Profile?.LastName ?? "",
+                    Email = settings.Profile?.Email ?? "",
+                    Phone = settings.Profile?.Phone ?? "",
+                    DateOfBirth = settings.Profile?.DateOfBirth ?? "",
+                    Address = settings.Profile?.Address ?? "",
+                    City = settings.Profile?.City ?? "",
+                    State = settings.Profile?.State ?? "",
+                    ZipCode = settings.Profile?.ZipCode ?? "",
+                    EmergencyContact = settings.Profile?.EmergencyContact ?? "",
+                    EmergencyPhone = settings.Profile?.EmergencyPhone ?? ""
+                },
+                Notifications = new NotificationSettings
+                {
+                    Appointments = settings.Notifications?.Appointments ?? true,
+                    LabResults = settings.Notifications?.LabResults ?? true,
+                    Prescriptions = settings.Notifications?.Prescriptions ?? true,
+                    Messages = settings.Notifications?.Messages ?? true,
+                    Promotions = settings.Notifications?.Promotions ?? false,
+                    Channels = new NotificationChannels
+                    {
+                        Email = settings.Notifications?.Channels?.Email ?? true,
+                        Sms = settings.Notifications?.Channels?.Sms ?? true,
+                        Push = settings.Notifications?.Channels?.Push ?? true,
+                        Phone = settings.Notifications?.Channels?.Phone ?? false
+                    },
+                    QuietHours = new QuietHours
+                    {
+                        Enabled = settings.Notifications?.QuietHours?.Enabled ?? false,
+                        Start = settings.Notifications?.QuietHours?.Start ?? "22:00",
+                        End = settings.Notifications?.QuietHours?.End ?? "08:00"
+                    }
+                },
+                Privacy = new PrivacySettings
+                {
+                    ShareData = settings.Privacy?.ShareData ?? false,
+                    MarketingEmails = settings.Privacy?.MarketingEmails ?? false,
+                    AnonymousAnalytics = settings.Privacy?.AnonymousAnalytics ?? true,
+                    ThirdPartyAccess = settings.Privacy?.ThirdPartyAccess ?? Array.Empty<string>()
+                },
+                Security = new SecuritySettings
+                {
+                    TwoFactorEnabled = settings.Security?.TwoFactorEnabled ?? false,
+                    LoginAlerts = settings.Security?.LoginAlerts ?? true,
+                    SessionTimeout = settings.Security?.SessionTimeout ?? 30,
+                    PasswordLastChanged = settings.Security?.PasswordLastChanged ?? DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss")
+                },
+                Accessibility = new AccessibilitySettings
+                {
+                    FontSize = settings.Accessibility?.FontSize ?? 16,
+                    HighContrast = settings.Accessibility?.HighContrast ?? false,
+                    ScreenReader = settings.Accessibility?.ScreenReader ?? false,
+                    ReducedMotion = settings.Accessibility?.ReducedMotion ?? false,
+                    Language = settings.Accessibility?.Language ?? "en",
+                    Theme = settings.Accessibility?.Theme ?? "light"
+                }
+            };
+
+            // Update settings via service
+            await _settingsService.UpdateUserSettingsAsync(tenantId, userId, userSettings);
+
+            return NoContent();
+        }
+        catch (Exception ex)
         {
-            return BadRequest("Invalid settings");
+            _logger.LogError(ex, "Failed to update settings for user");
+            return StatusCode(500, new { error = "Failed to update settings" });
         }
-
-        // In production, save settings to database
-        // For now, just log the update
-        _logger.LogInformation("User {UserId} updated settings", userId);
-
-        return NoContent();
     }
 
     /// <summary>
@@ -137,22 +228,37 @@ public class SettingsController : ControllerBase
         string category,
         [FromBody] object categorySettings)
     {
-        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
+        try
         {
-            return Unauthorized();
-        }
+            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
 
-        var validCategories = new[] { "profile", "notifications", "privacy", "security", "accessibility" };
-        if (!validCategories.Contains(category.ToLower()))
+            var validCategories = new[] { "profile", "notifications", "privacy", "security", "accessibility" };
+            if (!validCategories.Contains(category.ToLower()))
+            {
+                return BadRequest("Invalid category");
+            }
+
+            // Get tenant ID
+            var tenantId = GetTenantId();
+
+            // Update specific category via service
+            await _settingsService.UpdateSettingsCategoryAsync(tenantId, userId, category, categorySettings);
+
+            return NoContent();
+        }
+        catch (ArgumentException ex)
         {
-            return BadRequest("Invalid category");
+            return BadRequest(ex.Message);
         }
-
-        // In production, update specific settings category
-        _logger.LogInformation("User {UserId} updated {Category} settings", userId, category);
-
-        return NoContent();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update {Category} settings for user", category);
+            return StatusCode(500, new { error = $"Failed to update {category} settings" });
+        }
     }
 
     /// <summary>
@@ -269,6 +375,18 @@ public class SettingsController : ControllerBase
         _logger.LogWarning("User {UserId} requested account deletion", userId);
 
         return NoContent();
+    }
+
+    // Helper method to get tenant ID from claims
+    private Guid GetTenantId()
+    {
+        var tenantClaim = User.FindFirst("tenant_id")?.Value;
+        if (Guid.TryParse(tenantClaim, out var tenantId))
+        {
+            return tenantId;
+        }
+        // For dev/testing, return a default tenant ID
+        return Guid.Parse("00000000-0000-0000-0000-000000000001");
     }
 }
 
