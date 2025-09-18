@@ -24,12 +24,11 @@ import PrivateRoute from './components/Auth/PrivateRoute';
 
 // Lazy load pages for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-const IntakeQueue = lazy(() => import('./pages/IntakeQueue'));
+const IntakeManagement = lazy(() => import('./pages/IntakeManagement'));
 const Appointments = lazy(() => import('./pages/Appointments'));
 const Patients = lazy(() => import('./pages/Patients'));
 const PatientDetail = lazy(() => import('./pages/PatientDetail'));
 const PROM = lazy(() => import('./pages/PROM'));
-const IntakeProcessing = lazy(() => import('./pages/IntakeProcessing'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Login = lazy(() => import('./pages/Login'));
@@ -192,7 +191,7 @@ function App() {
                   >
                     <Route index element={<Navigate to="/dashboard" replace />} />
                     <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="intake-queue" element={<IntakeQueue />} />
+                    <Route path="intake" element={<IntakeManagement />} />
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="patients" element={<Patients />} />
                     <Route path="patients/:id" element={<PatientDetail />} />
@@ -200,7 +199,6 @@ function App() {
                     <Route path="documents" element={<Documents />} />
                     <Route path="medical-records" element={<MedicalRecords />} />
                     <Route path="prom" element={<PROM />} />
-                    <Route path="intake-processing" element={<IntakeProcessing />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="settings" element={<Settings />} />
                   </Route>

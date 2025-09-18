@@ -6,13 +6,11 @@ using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
 using System.ComponentModel.DataAnnotations;
+using Qivr.Api.Exceptions;
 
 namespace Qivr.Api.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-public class MessagesController : ControllerBase
+public class MessagesController : BaseApiController
 {
     private readonly QivrDbContext _context;
     private readonly IResourceAuthorizationService _authorizationService;
@@ -40,15 +38,8 @@ public class MessagesController : ControllerBase
         [FromQuery] string? category = null,
         [FromQuery] bool? unreadOnly = null)
     {
-        try
-        {
-            var userId = _authorizationService.GetCurrentUserId(User);
-            if (userId == Guid.Empty)
-            {
-                return Unauthorized();
-            }
-
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
             
             // Get messages from service
             var messages = await _messagingService.GetMessagesAsync(tenantId, userId, category, unreadOnly);
@@ -73,13 +64,7 @@ public class MessagesController : ControllerBase
                 ParentMessageId = m.ParentMessageId?.ToString()
             }).ToList();
             
-            return Ok(portalMessages);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get messages for user");
-            return StatusCode(500, new { error = "Failed to retrieve messages" });
-        }
+        return Success(portalMessages);
     }
     
     /// <summary>
@@ -89,15 +74,8 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ConversationDto>), 200)]
     public async Task<IActionResult> GetConversations()
     {
-        try
-        {
-            var userId = _authorizationService.GetCurrentUserId(User);
-            if (userId == Guid.Empty)
-            {
-                return Unauthorized();
-            }
-
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
             
             // Get conversations from service
             var conversations = await _messagingService.GetConversationsAsync(tenantId, userId);
@@ -118,13 +96,7 @@ public class MessagesController : ControllerBase
                 IsUrgent = c.IsUrgent
             }).ToList();
 
-            return Ok(conversationDtos);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get conversations for user");
-            return StatusCode(500, new { error = "Failed to retrieve conversations" });
-        }
+        return Success(conversationDtos);
     }
 
     /// <summary>
@@ -137,15 +109,8 @@ public class MessagesController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        try
-        {
-            var userId = _authorizationService.GetCurrentUserId(User);
-            if (userId == Guid.Empty)
-            {
-                return Unauthorized();
-            }
-
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
             
             // Get conversation thread from service
             var thread = await _messagingService.GetConversationThreadAsync(
@@ -177,13 +142,7 @@ public class MessagesController : ControllerBase
             Response.Headers.Append("X-Page-Size", thread.PageSize.ToString());
             Response.Headers.Append("X-Total-Pages", thread.TotalPages.ToString());
 
-            return Ok(messageDtos);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get conversation with user {OtherUserId}", otherUserId);
-            return StatusCode(500, new { error = "Failed to retrieve conversation" });
-        }
+        return Success(messageDtos);
     }
 
     /// <summary>
@@ -194,26 +153,19 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
     {
-        try
+        var senderId = CurrentUserId;
+        var tenantId = RequireTenantId();
+
+        // Validate request
+        if (request == null || request.RecipientId == Guid.Empty)
         {
-            var senderId = _authorizationService.GetCurrentUserId(User);
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            throw new ValidationException("Invalid message request");
+        }
 
-            if (senderId == Guid.Empty || tenantId == Guid.Empty)
-            {
-                return Unauthorized();
-            }
-
-            // Validate request
-            if (request == null || request.RecipientId == Guid.Empty)
-            {
-                return BadRequest("Invalid message request");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Content))
-            {
-                return BadRequest("Message content is required");
-            }
+        if (string.IsNullOrWhiteSpace(request.Content))
+        {
+            throw new ValidationException("Message content is required");
+        }
 
             // Create message DTO for service
             var messageDto = new SendMessageDto
@@ -257,17 +209,7 @@ public class MessagesController : ControllerBase
                 HasAttachments = message.HasAttachments
             };
 
-            return CreatedAtAction(nameof(GetMessage), new { id = message.Id }, responseDto);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send message");
-            return StatusCode(500, new { error = "Failed to send message" });
-        }
+        return CreatedAtAction(nameof(GetMessage), new { id = message.Id }, responseDto);
     }
 
     /// <summary>
@@ -278,25 +220,23 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetMessage(Guid id)
     {
-        try
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
+            
+        var message = await _messagingService.GetMessageAsync(tenantId, id);
+        
+        if (message == null || (message.SenderId != userId && message.RecipientId != userId))
         {
-            var userId = _authorizationService.GetCurrentUserId(User);
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
-            
-            var message = await _messagingService.GetMessageAsync(tenantId, id);
-            
-            if (message == null || (message.SenderId != userId && message.RecipientId != userId))
-            {
-                return NotFound();
-            }
+            throw new NotFoundException("Message", id);
+        }
 
-            // Mark as read if recipient
-            if (message.RecipientId == userId && !message.IsRead)
-            {
-                await _messagingService.MarkMessagesAsReadAsync(tenantId, userId, new[] { id });
-            }
+        // Mark as read if recipient
+        if (message.RecipientId == userId && !message.IsRead)
+        {
+            await _messagingService.MarkMessagesAsReadAsync(tenantId, userId, new[] { id });
+        }
 
-            return Ok(new MessageDto
+        return Success(new MessageDto
             {
                 Id = message.Id,
                 SenderId = message.SenderId,
@@ -314,13 +254,7 @@ public class MessagesController : ControllerBase
                 CreatedAt = message.CreatedAt,
                 IsFromCurrentUser = message.SenderId == userId,
                 HasAttachments = message.HasAttachments
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get message {MessageId}", id);
-            return StatusCode(500, new { error = "Failed to retrieve message" });
-        }
+        });
     }
 
     /// <summary>
@@ -331,14 +265,14 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> MarkAsRead(Guid id)
     {
-        var userId = _authorizationService.GetCurrentUserId(User);
+        var userId = CurrentUserId;
         
         var message = await _context.Messages
             .FirstOrDefaultAsync(m => m.Id == id && m.RecipientId == userId);
 
         if (message == null)
         {
-            return NotFound();
+            throw new NotFoundException("Message", id);
         }
 
         if (!message.IsRead)
@@ -360,20 +294,12 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(204)]
     public async Task<IActionResult> MarkMultipleAsRead([FromBody] List<Guid> messageIds)
     {
-        try
-        {
-            var userId = _authorizationService.GetCurrentUserId(User);
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
-            
-            await _messagingService.MarkMessagesAsReadAsync(tenantId, userId, messageIds);
-            
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to mark messages as read");
-            return StatusCode(500, new { error = "Failed to mark messages as read" });
-        }
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
+        
+        await _messagingService.MarkMessagesAsReadAsync(tenantId, userId, messageIds);
+        
+        return NoContent();
     }
 
     /// <summary>
@@ -384,25 +310,17 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> DeleteMessage(Guid id)
     {
-        try
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
+        
+        var deleted = await _messagingService.DeleteMessageAsync(tenantId, userId, id);
+        
+        if (!deleted)
         {
-            var userId = _authorizationService.GetCurrentUserId(User);
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
-            
-            var deleted = await _messagingService.DeleteMessageAsync(tenantId, userId, id);
-            
-            if (!deleted)
-            {
-                return NotFound();
-            }
+            throw new NotFoundException("Message", id);
+        }
 
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete message {MessageId}", id);
-            return StatusCode(500, new { error = "Failed to delete message" });
-        }
+        return NoContent();
     }
 
     /// <summary>
@@ -412,21 +330,13 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(typeof(MessageUnreadCountDto), 200)]
     public async Task<IActionResult> GetUnreadCount()
     {
-        try
-        {
-            var userId = _authorizationService.GetCurrentUserId(User);
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
-            
-            var messages = await _messagingService.GetMessagesAsync(tenantId, userId, null, true);
-            var count = messages.Count();
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
+        
+        var messages = await _messagingService.GetMessagesAsync(tenantId, userId, null, true);
+        var count = messages.Count();
 
-            return Ok(new MessageUnreadCountDto { Count = count });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get unread count");
-            return StatusCode(500, new { error = "Failed to get unread count" });
-        }
+        return Success(new MessageUnreadCountDto { Count = count });
     }
 
     // Reply to a message
@@ -435,22 +345,20 @@ public class MessagesController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> ReplyToMessage(Guid id, [FromBody] ReplyMessageRequest request)
     {
-        try
+        var senderId = CurrentUserId;
+        var tenantId = RequireTenantId();
+        
+        if (string.IsNullOrWhiteSpace(request?.Content))
         {
-            var senderId = _authorizationService.GetCurrentUserId(User);
-            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
-            
-            if (string.IsNullOrWhiteSpace(request?.Content))
-            {
-                return BadRequest("Reply content is required");
-            }
-            
-            var reply = await _messagingService.ReplyToMessageAsync(tenantId, senderId, id, request.Content);
-            
-            if (reply == null)
-            {
-                return NotFound("Original message not found or access denied");
-            }
+            throw new ValidationException("Reply content is required");
+        }
+        
+        var reply = await _messagingService.ReplyToMessageAsync(tenantId, senderId, id, request.Content);
+        
+        if (reply == null)
+        {
+            throw new NotFoundException("Original message not found or access denied");
+        }
             
             var responseDto = new MessageDto
             {
@@ -470,14 +378,10 @@ public class MessagesController : ControllerBase
                 HasAttachments = reply.HasAttachments
             };
             
-            return Ok(responseDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to reply to message {MessageId}", id);
-            return StatusCode(500, new { error = "Failed to send reply" });
-        }
+        return Success(responseDto);
     }
+
+}
 
 // DTOs
 public class MessagePortalDto
@@ -493,124 +397,8 @@ public class MessagePortalDto
     public bool Urgent { get; set; }
     public bool HasAttachments { get; set; }
     public string? ParentMessageId { get; set; }
-                Sender = new SenderDto
-                {
-                    Name = "Dr. Sarah Johnson",
-                    Role = "Primary Care Physician",
-                    Avatar = "SJ"
-                },
-                Recipient = "You",
-                Content = @"Dear Patient,
-
-This is to confirm your appointment scheduled for January 25, 2024 at 10:00 AM.
-
-Please remember to:
-- Bring your insurance card
-- Arrive 15 minutes early
-- Complete the pre-visit questionnaire online
-
-If you need to reschedule, please contact us at least 24 hours in advance.
-
-Best regards,
-Dr. Sarah Johnson",
-                Preview = "This is to confirm your appointment scheduled for January 25...",
-                Date = "2024-01-22T14:30:00",
-                Read = false,
-                Starred = true,
-                Important = true,
-                Category = "inbox",
-                Labels = new[] { "Appointments", "Important" }
-            },
-            new MessagePortalDto
-            {
-                Id = "2",
-                Subject = "Lab Results Available",
-                Sender = new SenderDto
-                {
-                    Name = "Central Medical Lab",
-                    Role = "Laboratory Services",
-                    Avatar = "CL"
-                },
-                Recipient = "You",
-                Content = "Your recent lab results are now available. Please log in to view them.",
-                Preview = "Your recent lab results are now available...",
-                Date = "2024-01-20T09:15:00",
-                Read = true,
-                Starred = false,
-                Important = false,
-                Category = "inbox",
-                Labels = new[] { "Lab Results" },
-                Attachments = new[]
-                {
-                    new AttachmentDto { Name = "CBC_Results.pdf", Size = "245 KB" },
-                    new AttachmentDto { Name = "Lipid_Panel.pdf", Size = "198 KB" }
-                }
-            },
-            new MessagePortalDto
-            {
-                Id = "3",
-                Subject = "Prescription Refill Ready",
-                Sender = new SenderDto
-                {
-                    Name = "PharmaCare Pharmacy",
-                    Role = "Pharmacy",
-                    Avatar = "PC"
-                },
-                Recipient = "You",
-                Content = "Your prescription refill is ready for pickup at PharmaCare Pharmacy.",
-                Preview = "Your prescription refill is ready for pickup...",
-                Date = "2024-01-19T16:45:00",
-                Read = true,
-                Starred = false,
-                Important = false,
-                Category = "inbox",
-                Labels = new[] { "Prescriptions" }
-            },
-            new MessagePortalDto
-            {
-                Id = "4",
-                Subject = "Question about medication side effects",
-                Sender = new SenderDto
-                {
-                    Name = "You",
-                    Role = "Patient",
-                    Avatar = "ME"
-                },
-                Recipient = "Dr. Michael Chen",
-                Content = "Dr. Chen, I have been experiencing some mild side effects from the new medication...",
-                Preview = "I have been experiencing some mild side effects...",
-                Date = "2024-01-18T11:00:00",
-                Read = true,
-                Starred = false,
-                Important = false,
-                Category = "sent",
-                Labels = new[] { "Questions" }
-            },
-            new MessagePortalDto
-            {
-                Id = "5",
-                Subject = "Health Tips: Managing Stress",
-                Sender = new SenderDto
-                {
-                    Name = "Health Portal Team",
-                    Role = "System",
-                    Avatar = "HP"
-                },
-                Recipient = "You",
-                Content = "Learn effective strategies for managing stress and improving your mental health...",
-                Preview = "Learn effective strategies for managing stress...",
-                Date = "2024-01-17T08:00:00",
-                Read = false,
-                Starred = false,
-                Important = false,
-                Category = "inbox",
-                Labels = new[] { "Newsletter", "Health Tips" }
-            }
-        };
-    }
 }
 
-// DTOs
 public class MessageDto
 {
     public Guid Id { get; set; }
@@ -642,6 +430,8 @@ public class ConversationDto
     public string LastMessageSender { get; set; } = string.Empty;
     public int UnreadCount { get; set; }
     public int TotalMessages { get; set; }
+    public bool HasAttachments { get; set; }
+    public bool IsUrgent { get; set; }
 }
 
 public class SendMessageRequest
@@ -659,6 +449,15 @@ public class SendMessageRequest
     public MessageType? MessageType { get; set; }
     public Guid? RelatedAppointmentId { get; set; }
     public Guid? ParentMessageId { get; set; }
+    public List<MessageAttachmentDto>? Attachments { get; set; }
+}
+
+public class MessageAttachmentDto
+{
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string Base64Data { get; set; } = string.Empty;
 }
 
 public class MessageUnreadCountDto
@@ -666,34 +465,11 @@ public class MessageUnreadCountDto
     public int Count { get; set; }
 }
 
-public class MessagePortalDto
+public class ReplyMessageRequest
 {
-    public string Id { get; set; } = string.Empty;
-    public string Subject { get; set; } = string.Empty;
-    public SenderDto Sender { get; set; } = new();
-    public string Recipient { get; set; } = string.Empty;
+    [Required]
+    [MinLength(1)]
     public string Content { get; set; } = string.Empty;
-    public string Preview { get; set; } = string.Empty;
-    public string Date { get; set; } = string.Empty;
-    public bool Read { get; set; }
-    public bool Starred { get; set; }
-    public bool Important { get; set; }
-    public string Category { get; set; } = string.Empty;
-    public string[] Labels { get; set; } = Array.Empty<string>();
-    public AttachmentDto[]? Attachments { get; set; }
-}
-
-public class SenderDto
-{
-    public string Name { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
-    public string? Avatar { get; set; }
-}
-
-public class AttachmentDto  
-{
-    public string Name { get; set; } = string.Empty;
-    public string Size { get; set; } = string.Empty;
 }
 
 // Enums (if not already defined elsewhere)

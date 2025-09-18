@@ -454,7 +454,7 @@ app.UseStaticFiles();
 
 // Custom middleware
 app.UseMiddleware<TenantMiddleware>();
-app.UseMiddleware<ErrorHandlingMiddleware>();
+app.UseMiddleware<GlobalErrorHandlingMiddleware>();
 // Idempotency for mutating requests
 app.UseMiddleware<IdempotencyMiddleware>();
 

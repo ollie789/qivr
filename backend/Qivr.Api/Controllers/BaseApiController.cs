@@ -1,0 +1,202 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Qivr.Api.Exceptions;
+
+namespace Qivr.Api.Controllers;
+
+/// <summary>
+/// Base controller providing common functionality for all API controllers
+/// </summary>
+[ApiController]
+[Authorize]
+[Route("api/[controller]")]
+public abstract class BaseApiController : ControllerBase
+{
+    /// <summary>
+    /// Gets the current authenticated user ID
+    /// </summary>
+    protected Guid CurrentUserId
+    {
+        get
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedException("User ID not found in token");
+            }
+
+            return userId;
+        }
+    }
+
+    /// <summary>
+    /// Gets the current tenant ID from the HTTP context
+    /// </summary>
+    protected Guid? CurrentTenantId
+    {
+        get
+        {
+            if (HttpContext.Items.TryGetValue("TenantId", out var tenantId) && tenantId is Guid guid)
+            {
+                return guid;
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Gets the user's email from claims
+    /// </summary>
+    protected string? CurrentUserEmail => User.FindFirst(ClaimTypes.Email)?.Value 
+        ?? User.FindFirst("email")?.Value;
+
+    /// <summary>
+    /// Gets the user's role from claims
+    /// </summary>
+    protected string? CurrentUserRole => User.FindFirst(ClaimTypes.Role)?.Value 
+        ?? User.FindFirst("custom:role")?.Value;
+
+    /// <summary>
+    /// Checks if the current user has a specific role
+    /// </summary>
+    protected bool IsInRole(string role) => User.IsInRole(role);
+
+    /// <summary>
+    /// Checks if the current user is an admin
+    /// </summary>
+    protected bool IsAdmin => IsInRole("Admin") || IsInRole("admin");
+
+    /// <summary>
+    /// Checks if the current user is a provider
+    /// </summary>
+    protected bool IsProvider => IsInRole("Provider") || IsInRole("provider");
+
+    /// <summary>
+    /// Checks if the current user is a patient
+    /// </summary>
+    protected bool IsPatient => IsInRole("Patient") || IsInRole("patient");
+
+    /// <summary>
+    /// Creates a standard success response
+    /// </summary>
+    protected IActionResult Success<T>(T data, string? message = null)
+    {
+        return Ok(new
+        {
+            success = true,
+            data,
+            message
+        });
+    }
+
+    /// <summary>
+    /// Creates a paginated success response
+    /// </summary>
+    protected IActionResult SuccessPaginated<T>(IEnumerable<T> data, int totalCount, int page, int pageSize, string? message = null)
+    {
+        return Ok(new
+        {
+            success = true,
+            data,
+            pagination = new
+            {
+                total = totalCount,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+            },
+            message
+        });
+    }
+
+    /// <summary>
+    /// Creates a Created (201) response with location header
+    /// </summary>
+    protected IActionResult Created<T>(T data, string locationPath)
+    {
+        return base.Created(locationPath, new
+        {
+            success = true,
+            data
+        });
+    }
+
+    /// <summary>
+    /// Creates a No Content (204) response
+    /// </summary>
+    protected new IActionResult NoContent()
+    {
+        return base.NoContent();
+    }
+
+    /// <summary>
+    /// Validates that a required tenant ID is present
+    /// </summary>
+    protected Guid RequireTenantId()
+    {
+        var tenantId = CurrentTenantId;
+        if (!tenantId.HasValue)
+        {
+            throw new ForbiddenException("Tenant context is required for this operation");
+        }
+        return tenantId.Value;
+    }
+
+    /// <summary>
+    /// Validates that the current user has permission to access a specific resource
+    /// </summary>
+    protected void RequireResourceOwnership(Guid resourceOwnerId, string resourceType = "resource")
+    {
+        if (resourceOwnerId != CurrentUserId && !IsAdmin)
+        {
+            throw new ForbiddenException($"You don't have permission to access this {resourceType}");
+        }
+    }
+
+    /// <summary>
+    /// Validates model state and throws ValidationException if invalid
+    /// </summary>
+    protected void ValidateModel()
+    {
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState
+                .Where(x => x.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.Value!.Errors.Select(e => e.ErrorMessage).ToArray()
+                );
+
+            throw new ValidationException(errors);
+        }
+    }
+
+    /// <summary>
+    /// Gets the client IP address
+    /// </summary>
+    protected string? GetClientIpAddress()
+    {
+        return HttpContext.Connection.RemoteIpAddress?.ToString();
+    }
+
+    /// <summary>
+    /// Gets a request header value
+    /// </summary>
+    protected string? GetHeader(string headerName)
+    {
+        return HttpContext.Request.Headers[headerName].FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Logs an action for audit purposes
+    /// </summary>
+    protected void LogAudit(string action, object? details = null)
+    {
+        var logger = HttpContext.RequestServices.GetService<ILogger<BaseApiController>>();
+        logger?.LogInformation("Audit: {Action} by {UserId} from {IpAddress}",
+            action, CurrentUserId, GetClientIpAddress());
+    }
+}

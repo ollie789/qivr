@@ -151,21 +151,36 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   };
 
   const handleSend = async () => {
-    // Here you would call the API to send the PROM
-    console.log('Sending PROM:', {
-      template: selectedTemplate,
-      patients: selectedPatients,
-      schedule: {
-        type: scheduleType,
-        date: scheduledDate,
-        recurring: recurringConfig,
-      },
-      notifications: notificationSettings,
-    });
-
-    // Show success message and complete
-    if (onComplete) {
-      onComplete();
+    try {
+      // Send PROM to each selected patient
+      const scheduledFor = scheduleType === 'immediate' 
+        ? new Date().toISOString() 
+        : scheduledDate?.toISOString() || new Date().toISOString();
+      
+      const dueDate = addDays(new Date(scheduledFor), 7); // Default 7 days to complete
+      
+      // For each patient, send the PROM
+      const promises = selectedPatients.map(patientId => 
+        promApi.sendProm({
+          templateKey: selectedTemplate?.key || selectedTemplate?.name?.toLowerCase().replace(/\s+/g, '-'),
+          version: selectedTemplate?.version,
+          patientId: patientId,
+          scheduledFor: scheduledFor,
+          dueAt: dueDate.toISOString(),
+        })
+      );
+      
+      await Promise.all(promises);
+      
+      console.log('PROM sent successfully to', selectedPatients.length, 'patients');
+      
+      // Show success message and complete
+      if (onComplete) {
+        onComplete();
+      }
+    } catch (error) {
+      console.error('Failed to send PROM:', error);
+      alert('Failed to send PROM. Please try again.');
     }
   };
 

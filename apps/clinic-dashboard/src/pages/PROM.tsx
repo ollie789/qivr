@@ -73,6 +73,7 @@ import { useSnackbar } from 'notistack';
 import { promApi, PromTemplate, PromResponse } from '../services/promApi';
 import { patientApi } from '../services/patientApi';
 import PROMSender from '../components/PROMSender';
+import { PromBuilder } from '../features/proms/components/PromBuilder';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface TabPanelProps {
@@ -340,6 +341,7 @@ const PROM: React.FC = () => {
             <Tab label="Templates" icon={<AssignmentIcon />} iconPosition="start" />
             <Tab label="Responses" icon={<AssessmentIcon />} iconPosition="start" />
             <Tab label="Analytics" icon={<ChartIcon />} iconPosition="start" />
+            <Tab label="Builder" icon={<AddIcon />} iconPosition="start" />
           </Tabs>
 
           <TabPanel value={currentTab} index={0}>
@@ -651,6 +653,11 @@ const PROM: React.FC = () => {
                 </Paper>
               </Grid>
             </Grid>
+          </TabPanel>
+
+          <TabPanel value={currentTab} index={3}>
+            {/* Builder Tab */}
+            <PromBuilder />
           </TabPanel>
         </Paper>
 

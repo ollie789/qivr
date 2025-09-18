@@ -76,7 +76,7 @@ import {
   ContentCopy,
   ExpandMore,
 } from '@mui/icons-material';
-import { promsApi } from '../../../services/proms';
+import { promApi } from '../../../services/promApi';
 
 // Types
 interface PromQuestion {
@@ -234,6 +234,7 @@ export const PromBuilder: React.FC = () => {
   const [editingQuestion, setEditingQuestion] = useState<PromQuestion | null>(null);
   const [questionDialog, setQuestionDialog] = useState(false);
   const [libraryDialog, setLibraryDialog] = useState(false);
+  const [previewDialog, setPreviewDialog] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -316,7 +317,7 @@ export const PromBuilder: React.FC = () => {
       };
       
       console.log('Saving template:', payload);
-      const res = await promsApi.createTemplate(payload);
+      const res = await promApi.createTemplate(payload);
       console.log('Template saved successfully:', res);
       alert(`Template "${template.name}" saved successfully!`);
       
@@ -367,6 +368,7 @@ export const PromBuilder: React.FC = () => {
               variant="outlined"
               startIcon={<Preview />}
               sx={{ mr: 1 }}
+              onClick={() => setPreviewDialog(true)}
             >
               Preview
             </Button>
@@ -904,6 +906,148 @@ export const PromBuilder: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setLibraryDialog(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog
+        open={previewDialog}
+        onClose={() => setPreviewDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Preview: {template.name || 'Untitled Template'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              This is how the questionnaire will appear to patients
+            </Alert>
+            
+            {template.description && (
+              <Typography variant="body1" paragraph>
+                {template.description}
+              </Typography>
+            )}
+            
+            <Divider sx={{ my: 2 }} />
+            
+            {template.questions.length === 0 ? (
+              <Typography color="text.secondary">
+                No questions added yet
+              </Typography>
+            ) : (
+              <List>
+                {template.questions.map((question, index) => (
+                  <ListItem key={question.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', mb: 2 }}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      {index + 1}. {question.question}
+                      {question.required && <Chip label="Required" size="small" sx={{ ml: 1 }} color="primary" />}
+                    </Typography>
+                    
+                    {question.description && (
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {question.description}
+                      </Typography>
+                    )}
+                    
+                    <Box sx={{ mt: 1, width: '100%' }}>
+                      {question.type === 'text' && (
+                        <TextField
+                          fullWidth
+                          placeholder="Your answer here..."
+                          disabled
+                        />
+                      )}
+                      
+                      {question.type === 'radio' && (
+                        <RadioGroup>
+                          {question.options?.map((option) => (
+                            <FormControlLabel
+                              key={option}
+                              value={option}
+                              control={<Radio disabled />}
+                              label={option}
+                            />
+                          ))}
+                        </RadioGroup>
+                      )}
+                      
+                      {question.type === 'checkbox' && (
+                        <FormGroup>
+                          {question.options?.map((option) => (
+                            <FormControlLabel
+                              key={option}
+                              control={<Checkbox disabled />}
+                              label={option}
+                            />
+                          ))}
+                        </FormGroup>
+                      )}
+                      
+                      {question.type === 'scale' && (
+                        <Box>
+                          <Slider
+                            disabled
+                            marks
+                            min={question.min || 0}
+                            max={question.max || 10}
+                            step={question.step || 1}
+                            valueLabelDisplay="auto"
+                          />
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="caption">{question.min || 0}</Typography>
+                            <Typography variant="caption">{question.max || 10}</Typography>
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      {question.type === 'number' && (
+                        <TextField
+                          type="number"
+                          InputProps={{
+                            inputProps: {
+                              min: question.min,
+                              max: question.max,
+                              step: question.step,
+                            },
+                          }}
+                          disabled
+                        />
+                      )}
+                      
+                      {question.type === 'date' && (
+                        <TextField type="date" disabled />
+                      )}
+                      
+                      {question.type === 'time' && (
+                        <TextField type="time" disabled />
+                      )}
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+            
+            <Divider sx={{ my: 2 }} />
+            
+            <Typography variant="body2" color="text.secondary">
+              <strong>Category:</strong> {template.category}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Scoring Method:</strong> {template.scoring.method}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Total Questions:</strong> {template.questions.length}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Required Questions:</strong> {template.questions.filter(q => q.required).length}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewDialog(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

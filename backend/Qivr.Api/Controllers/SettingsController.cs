@@ -3,13 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
+using Qivr.Api.Exceptions;
 
 namespace Qivr.Api.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-public class SettingsController : ControllerBase
+public class SettingsController : BaseApiController
 {
     private readonly QivrDbContext _context;
     private readonly ISettingsService _settingsService;
@@ -32,19 +30,11 @@ public class SettingsController : ControllerBase
     [ProducesResponseType(typeof(UserSettingsDto), 200)]
     public async Task<IActionResult> GetSettings()
     {
-        try
-        {
-            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Unauthorized();
-            }
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
 
-            // Get tenant ID
-            var tenantId = GetTenantId();
-
-            // Get settings from service
-            var settings = await _settingsService.GetUserSettingsAsync(tenantId, userId);
+        // Get settings from service
+        var settings = await _settingsService.GetUserSettingsAsync(tenantId, userId);
 
             // Convert to DTO
             var settingsDto = new UserSettingsDto
@@ -109,13 +99,7 @@ public class SettingsController : ControllerBase
                 }
             };
 
-            return Ok(settingsDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get settings for user");
-            return StatusCode(500, new { error = "Failed to retrieve settings" });
-        }
+        return Success(settingsDto);
     }
 
     /// <summary>
@@ -126,22 +110,13 @@ public class SettingsController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<IActionResult> UpdateSettings([FromBody] UserSettingsDto settings)
     {
-        try
+        if (settings == null)
         {
-            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Unauthorized();
-            }
+            throw new ValidationException("Invalid settings");
+        }
 
-            // Validate settings
-            if (settings == null)
-            {
-                return BadRequest("Invalid settings");
-            }
-
-            // Get tenant ID
-            var tenantId = GetTenantId();
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
 
             // Convert DTO to service model
             var userSettings = new UserSettings
@@ -206,16 +181,10 @@ public class SettingsController : ControllerBase
                 }
             };
 
-            // Update settings via service
-            await _settingsService.UpdateUserSettingsAsync(tenantId, userId, userSettings);
+        // Update settings via service
+        await _settingsService.UpdateUserSettingsAsync(tenantId, userId, userSettings);
 
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update settings for user");
-            return StatusCode(500, new { error = "Failed to update settings" });
-        }
+        return NoContent();
     }
 
     /// <summary>
@@ -228,37 +197,19 @@ public class SettingsController : ControllerBase
         string category,
         [FromBody] object categorySettings)
     {
-        try
+        var validCategories = new[] { "profile", "notifications", "privacy", "security", "accessibility" };
+        if (!validCategories.Contains(category.ToLower()))
         {
-            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Unauthorized();
-            }
-
-            var validCategories = new[] { "profile", "notifications", "privacy", "security", "accessibility" };
-            if (!validCategories.Contains(category.ToLower()))
-            {
-                return BadRequest("Invalid category");
-            }
-
-            // Get tenant ID
-            var tenantId = GetTenantId();
-
-            // Update specific category via service
-            await _settingsService.UpdateSettingsCategoryAsync(tenantId, userId, category, categorySettings);
-
-            return NoContent();
+            throw new ValidationException($"Invalid category: {category}");
         }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update {Category} settings for user", category);
-            return StatusCode(500, new { error = $"Failed to update {category} settings" });
-        }
+
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
+
+        // Update specific category via service
+        await _settingsService.UpdateSettingsCategoryAsync(tenantId, userId, category, categorySettings);
+
+        return NoContent();
     }
 
     /// <summary>
@@ -269,18 +220,14 @@ public class SettingsController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordSettingsRequest request)
     {
-        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized();
-        }
+        var userId = CurrentUserId;
 
         // Validate passwords
         if (string.IsNullOrEmpty(request.CurrentPassword) || 
             string.IsNullOrEmpty(request.NewPassword) ||
             request.NewPassword != request.ConfirmPassword)
         {
-            return BadRequest("Invalid password data");
+            throw new ValidationException("Invalid password data");
         }
 
         // In production, verify current password and update
@@ -298,11 +245,7 @@ public class SettingsController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<IActionResult> ToggleTwoFactor([FromBody] TwoFactorRequest request)
     {
-        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized();
-        }
+        var userId = CurrentUserId;
 
         if (request.Enable)
         {
@@ -315,13 +258,13 @@ public class SettingsController : ControllerBase
             };
 
             _logger.LogInformation("User {UserId} enabled two-factor authentication", userId);
-            return Ok(response);
+            return Success(response);
         }
         else
         {
             // In production, verify password before disabling
             _logger.LogInformation("User {UserId} disabled two-factor authentication", userId);
-            return Ok(new TwoFactorResponseDto { Enabled = false });
+            return Success(new TwoFactorResponseDto { Enabled = false });
         }
     }
 
@@ -332,11 +275,7 @@ public class SettingsController : ControllerBase
     [ProducesResponseType(typeof(ExportDataResponseDto), 202)]
     public async Task<IActionResult> ExportData([FromBody] ExportDataRequest request)
     {
-        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized();
-        }
+        var userId = CurrentUserId;
 
         // In production, queue a job to export data and send via email
         var response = new ExportDataResponseDto
@@ -359,16 +298,12 @@ public class SettingsController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountRequest request)
     {
-        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized();
-        }
+        var userId = CurrentUserId;
 
         // Validate confirmation
         if (request.Confirmation != "DELETE")
         {
-            return BadRequest("Invalid confirmation");
+            throw new ValidationException("Invalid confirmation. Please type 'DELETE' to confirm.");
         }
 
         // In production, mark account for deletion and schedule cleanup
@@ -377,17 +312,6 @@ public class SettingsController : ControllerBase
         return NoContent();
     }
 
-    // Helper method to get tenant ID from claims
-    private Guid GetTenantId()
-    {
-        var tenantClaim = User.FindFirst("tenant_id")?.Value;
-        if (Guid.TryParse(tenantClaim, out var tenantId))
-        {
-            return tenantId;
-        }
-        // For dev/testing, return a default tenant ID
-        return Guid.Parse("00000000-0000-0000-0000-000000000001");
-    }
 }
 
 // DTOs
