@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using Qivr.Services;
+using System.Text.Json;
 
 namespace Qivr.Api.Controllers;
 
@@ -38,24 +40,60 @@ public class MedicalRecordsController : ControllerBase
             return Unauthorized();
         }
 
-        // For now, return mock data. In production, this would query actual medical records
-        var records = GetMockMedicalRecords(userId);
+        // Get tenant ID
+        var tenantId = GetTenantId();
+        
+        // Query actual medical records from database
+        var query = _context.Documents
+            .Where(d => d.TenantId == tenantId && d.PatientId == userId);
 
         // Apply filters
         if (!string.IsNullOrEmpty(category) && category != "all")
         {
-            records = records.Where(r => r.Category == category).ToList();
+            query = query.Where(d => d.DocumentType == GetDocumentTypeFromCategory(category));
         }
 
         if (from.HasValue)
         {
-            records = records.Where(r => DateTime.Parse(r.Date) >= from.Value).ToList();
+            query = query.Where(d => d.CreatedAt >= from.Value);
         }
 
         if (to.HasValue)
         {
-            records = records.Where(r => DateTime.Parse(r.Date) <= to.Value).ToList();
+            query = query.Where(d => d.CreatedAt <= to.Value);
         }
+
+        var documents = await query
+            .OrderByDescending(d => d.CreatedAt)
+            .Take(100) // Limit results
+            .ToListAsync();
+
+        // Convert to DTOs
+        var records = documents.Select(d => 
+        {
+            var metadata = string.IsNullOrEmpty(d.Metadata) 
+                ? new Dictionary<string, object>()
+                : JsonSerializer.Deserialize<Dictionary<string, object>>(d.Metadata) ?? new Dictionary<string, object>();
+            
+            var tags = string.IsNullOrEmpty(d.Tags)
+                ? Array.Empty<string>()
+                : JsonSerializer.Deserialize<string[]>(d.Tags) ?? Array.Empty<string>();
+                
+            return new MedicalRecordDto
+            {
+                Id = d.Id.ToString(),
+                Title = d.FileName,
+                Category = GetCategoryFromDocumentType(d.DocumentType),
+                Date = d.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
+                Provider = metadata.ContainsKey("provider") ? metadata["provider"].ToString() : "N/A",
+                Facility = metadata.ContainsKey("facility") ? metadata["facility"].ToString() : "Patient Portal",
+                FileType = GetFileTypeFromContentType(d.ContentType),
+                FileSize = FormatFileSize(d.FileSizeBytes),
+                Status = "available",
+                Tags = tags,
+                Description = d.Description
+            };
+        }).ToList();
 
         return Ok(records);
     }
@@ -74,14 +112,48 @@ public class MedicalRecordsController : ControllerBase
             return Unauthorized();
         }
 
-        // Mock implementation
-        var records = GetMockMedicalRecords(userId);
-        var record = records.FirstOrDefault(r => r.Id == id);
+        // Get tenant ID
+        var tenantId = GetTenantId();
+        
+        if (!Guid.TryParse(id, out var documentId))
+        {
+            return BadRequest("Invalid document ID");
+        }
 
-        if (record == null)
+        // Get document from database
+        var document = await _context.Documents
+            .FirstOrDefaultAsync(d => d.TenantId == tenantId && 
+                                     d.PatientId == userId && 
+                                     d.Id == documentId);
+
+        if (document == null)
         {
             return NotFound();
         }
+
+        // Convert to DTO
+        var metadata = string.IsNullOrEmpty(document.Metadata) 
+            ? new Dictionary<string, object>()
+            : JsonSerializer.Deserialize<Dictionary<string, object>>(document.Metadata) ?? new Dictionary<string, object>();
+        
+        var tags = string.IsNullOrEmpty(document.Tags)
+            ? Array.Empty<string>()
+            : JsonSerializer.Deserialize<string[]>(document.Tags) ?? Array.Empty<string>();
+            
+        var record = new MedicalRecordDto
+        {
+            Id = document.Id.ToString(),
+            Title = document.FileName,
+            Category = GetCategoryFromDocumentType(document.DocumentType),
+            Date = document.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
+            Provider = metadata.ContainsKey("provider") ? metadata["provider"].ToString() : "N/A",
+            Facility = metadata.ContainsKey("facility") ? metadata["facility"].ToString() : "Patient Portal",
+            FileType = GetFileTypeFromContentType(document.ContentType),
+            FileSize = FormatFileSize(document.FileSizeBytes),
+            Status = "available",
+            Tags = tags,
+            Description = document.Description
+        };
 
         return Ok(record);
     }
@@ -123,25 +195,61 @@ public class MedicalRecordsController : ControllerBase
             return BadRequest("File size exceeds 10MB limit");
         }
 
-        // In production, save file to storage (S3, Azure Blob, etc.)
-        // For now, create a mock record
+        // Get tenant ID
+        var tenantId = GetTenantId();
+        
+        // Read file data
+        using var memoryStream = new MemoryStream();
+        await file.CopyToAsync(memoryStream);
+        var fileData = memoryStream.ToArray();
+        
+        // Create document entity
+        var tagsArray = new[] { "Patient Upload", category };
+        var metadataDict = new Dictionary<string, object>
+        {
+            ["provider"] = "Self-uploaded",
+            ["facility"] = "Patient Portal",
+            ["originalFileName"] = file.FileName
+        };
+        
+        var document = new Document
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = userId,
+            FileName = title,
+            DocumentType = GetDocumentTypeFromCategory(category),
+            ContentType = file.ContentType,
+            FileSizeBytes = file.Length,
+            StoragePath = $"medical-records/{tenantId}/{userId}/{Guid.NewGuid()}{extension}",
+            Tags = JsonSerializer.Serialize(tagsArray),
+            Description = description,
+            Metadata = JsonSerializer.Serialize(metadataDict),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        // TODO: In production, save file data to storage (S3, Azure Blob, etc.)
+        // For now, we're just saving the metadata to the database
+        _logger.LogInformation("Would save file to storage path: {Path}", document.StoragePath);
+        
+        // Save metadata to database
+        _context.Documents.Add(document);
+        await _context.SaveChangesAsync();
+        
+        // Convert to DTO
         var record = new MedicalRecordDto
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = document.Id.ToString(),
             Title = title,
             Category = category,
-            Date = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss"),
+            Date = document.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
             Provider = "Self-uploaded",
             Facility = "Patient Portal",
-            FileType = extension switch
-            {
-                ".pdf" => "pdf",
-                ".jpg" or ".jpeg" or ".png" => "image",
-                _ => "document"
-            },
-            FileSize = $"{file.Length / 1024} KB",
+            FileType = GetFileTypeFromContentType(file.ContentType),
+            FileSize = FormatFileSize(file.Length),
             Status = "available",
-            Tags = new[] { "Patient Upload", category },
+            Tags = tagsArray,
             Description = description
         };
 
@@ -165,100 +273,115 @@ public class MedicalRecordsController : ControllerBase
             return Unauthorized();
         }
 
-        // In production, check if record exists and belongs to user
+        // Get tenant ID
+        var tenantId = GetTenantId();
+        
+        if (!Guid.TryParse(id, out var documentId))
+        {
+            return BadRequest("Invalid document ID");
+        }
+        
+        // Check if record exists and belongs to user
+        var document = await _context.Documents
+            .FirstOrDefaultAsync(d => d.TenantId == tenantId && 
+                                     d.PatientId == userId && 
+                                     d.Id == documentId);
+        
+        if (document == null)
+        {
+            return NotFound();
+        }
+        
         // Only allow deletion of patient-uploaded records
+        var metadata = string.IsNullOrEmpty(document.Metadata) 
+            ? new Dictionary<string, object>()
+            : JsonSerializer.Deserialize<Dictionary<string, object>>(document.Metadata) ?? new Dictionary<string, object>();
+            
+        if (metadata.ContainsKey("provider") && metadata["provider"].ToString() != "Self-uploaded")
+        {
+            return Forbid("Only patient-uploaded records can be deleted");
+        }
+        
+        // TODO: In production, delete file from storage (S3, Azure Blob, etc.)
+        _logger.LogInformation("Would delete file from storage path: {Path}", document.StoragePath);
+        
+        // Delete from database
+        _context.Documents.Remove(document);
+        await _context.SaveChangesAsync();
         
         _logger.LogInformation("Medical record {RecordId} deleted by patient {UserId}", id, userId);
         
         return NoContent();
     }
 
-    private List<MedicalRecordDto> GetMockMedicalRecords(Guid userId)
+    // Helper method to get tenant ID from claims
+    private Guid GetTenantId()
     {
-        return new List<MedicalRecordDto>
+        var tenantClaim = User.FindFirst("tenant_id")?.Value;
+        if (Guid.TryParse(tenantClaim, out var tenantId))
         {
-            new MedicalRecordDto
-            {
-                Id = "1",
-                Title = "Complete Blood Count (CBC)",
-                Category = "lab-results",
-                Date = "2024-01-20T10:00:00",
-                Provider = "Dr. Sarah Johnson",
-                Facility = "Central Medical Lab",
-                FileType = "pdf",
-                FileSize = "245 KB",
-                Status = "available",
-                Tags = new[] { "Blood Test", "Routine" },
-                Description = "Annual health checkup blood work"
-            },
-            new MedicalRecordDto
-            {
-                Id = "2",
-                Title = "Knee MRI Scan",
-                Category = "imaging",
-                Date = "2024-01-18T14:00:00",
-                Provider = "Dr. Michael Chen",
-                Facility = "Imaging Center",
-                FileType = "image",
-                FileSize = "12.5 MB",
-                Status = "available",
-                Tags = new[] { "MRI", "Knee", "Orthopedic" },
-                Attachments = 8
-            },
-            new MedicalRecordDto
-            {
-                Id = "3",
-                Title = "Prescription - Pain Management",
-                Category = "prescriptions",
-                Date = "2024-01-15T09:00:00",
-                Provider = "Dr. Emily Rodriguez",
-                Facility = "Primary Care Clinic",
-                FileType = "document",
-                FileSize = "156 KB",
-                Status = "available",
-                Tags = new[] { "Medication", "Active" }
-            },
-            new MedicalRecordDto
-            {
-                Id = "4",
-                Title = "COVID-19 Vaccination Record",
-                Category = "vaccinations",
-                Date = "2023-12-10T11:00:00",
-                Provider = "Nurse Williams",
-                Facility = "Community Health Center",
-                FileType = "pdf",
-                FileSize = "89 KB",
-                Status = "available",
-                Tags = new[] { "Vaccine", "COVID-19", "Booster" }
-            },
-            new MedicalRecordDto
-            {
-                Id = "5",
-                Title = "Cardiology Consultation",
-                Category = "consultations",
-                Date = "2024-01-05T15:30:00",
-                Provider = "Dr. Robert Kim",
-                Facility = "Heart Health Specialists",
-                FileType = "pdf",
-                FileSize = "512 KB",
-                Status = "available",
-                Tags = new[] { "Cardiology", "Consultation", "Follow-up" },
-                Description = "Follow-up consultation for heart health assessment"
-            },
-            new MedicalRecordDto
-            {
-                Id = "6",
-                Title = "Lipid Panel Results",
-                Category = "lab-results",
-                Date = "2024-01-22T08:00:00",
-                Provider = "Dr. Sarah Johnson",
-                Facility = "Central Medical Lab",
-                FileType = "pdf",
-                FileSize = "198 KB",
-                Status = "pending",
-                Tags = new[] { "Cholesterol", "Lab Test" }
-            }
+            return tenantId;
+        }
+        // For dev/testing, return a default tenant ID
+        return Guid.Parse("00000000-0000-0000-0000-000000000001");
+    }
+    
+    // Convert category to document type
+    private static string GetDocumentTypeFromCategory(string category)
+    {
+        return category switch
+        {
+            "lab-results" => "Laboratory Results",
+            "imaging" => "Medical Imaging",
+            "prescriptions" => "Prescription",
+            "vaccinations" => "Vaccination Record",
+            "consultations" => "Consultation Notes",
+            "discharge-summaries" => "Discharge Summary",
+            _ => "Medical Document"
         };
+    }
+    
+    // Convert document type to category
+    private static string GetCategoryFromDocumentType(string documentType)
+    {
+        return documentType switch
+        {
+            "Laboratory Results" => "lab-results",
+            "Medical Imaging" => "imaging",
+            "Prescription" => "prescriptions",
+            "Vaccination Record" => "vaccinations",
+            "Consultation Notes" => "consultations",
+            "Discharge Summary" => "discharge-summaries",
+            _ => "other"
+        };
+    }
+    
+    // Get file type from content type
+    private static string GetFileTypeFromContentType(string contentType)
+    {
+        return contentType?.ToLower() switch
+        {
+            "application/pdf" => "pdf",
+            var ct when ct?.StartsWith("image/") == true => "image",
+            var ct when ct?.Contains("word") == true => "document",
+            _ => "document"
+        };
+    }
+    
+    // Format file size for display
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size = size / 1024;
+        }
+        
+        return $"{size:0.##} {sizes[order]}";
     }
 }
 

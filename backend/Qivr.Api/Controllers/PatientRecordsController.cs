@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qivr.Core.Entities;
 using Qivr.Core.DTOs;
+using Qivr.Services;
 
 namespace Qivr.Api.Controllers;
 
@@ -10,6 +11,14 @@ namespace Qivr.Api.Controllers;
 [Authorize]
 public class PatientRecordsController : ControllerBase
 {
+	private readonly IPatientRecordService _patientRecordService;
+	private readonly ILogger<PatientRecordsController> _logger;
+
+	public PatientRecordsController(IPatientRecordService patientRecordService, ILogger<PatientRecordsController> logger)
+	{
+		_patientRecordService = patientRecordService;
+		_logger = logger;
+	}
 	// GET: api/patient-records/{patientId}
 	[HttpGet("{patientId}")]
 	[ProducesResponseType(typeof(PatientRecordDto), 200)]
@@ -29,91 +38,97 @@ public class PatientRecordsController : ControllerBase
 			return Forbid();
 		}
 		
-		var record = new PatientRecordDto
+		// Get tenant ID
+		var tenantId = GetTenantId();
+		if (tenantId == Guid.Empty)
 		{
-			Id = Guid.NewGuid(),
-			PatientId = patientId,
-			MedicalRecordNumber = "MRN-2024-0001",
+			return BadRequest("Invalid tenant context");
+		}
+		
+		// Get patient record from service
+		var record = await _patientRecordService.GetPatientRecordAsync(tenantId, patientId);
+		if (record == null)
+		{
+			return NotFound("Patient record not found");
+		}
+		
+		// Convert to DTO
+		var recordDto = new PatientRecordDto
+		{
+			Id = record.Id,
+			PatientId = record.PatientId,
+			MedicalRecordNumber = record.MedicalRecordNumber,
 			Demographics = new DemographicsDto
 			{
-				FirstName = "John",
-				LastName = "Doe",
-				DateOfBirth = new DateTime(1985, 3, 15),
-				Gender = "Male",
-				Email = "john.doe@example.com",
-				Phone = "+1-555-0123",
+				FirstName = record.Demographics.FirstName,
+				LastName = record.Demographics.LastName,
+				DateOfBirth = record.Demographics.DateOfBirth,
+				Gender = record.Demographics.Gender,
+				Email = record.Demographics.Email,
+				Phone = record.Demographics.Phone,
 				Address = new AddressDto
 				{
-					Street = "123 Main St",
-					City = "Springfield",
-					State = "IL",
-					PostalCode = "62701",
-					Country = "USA"
+					Street = record.Demographics.Address?.Street ?? "",
+					City = record.Demographics.Address?.City ?? "",
+					State = record.Demographics.Address?.State ?? "",
+					PostalCode = record.Demographics.Address?.PostalCode ?? "",
+					Country = record.Demographics.Address?.Country ?? ""
 				}
 			},
 			MedicalHistory = new MedicalHistoryDto
 			{
-				ChronicConditions = new[] { "Diabetes Type 2", "Hypertension" },
-				PastSurgeries = new[] { "Appendectomy (2010)" },
-				Allergies = new[] { "Penicillin", "Peanuts" },
-				CurrentMedications = new[]
+				ChronicConditions = record.MedicalHistory.ChronicConditions.ToArray(),
+				PastSurgeries = record.MedicalHistory.PastSurgeries.ToArray(),
+				Allergies = record.MedicalHistory.Allergies.ToArray(),
+				CurrentMedications = record.MedicalHistory.CurrentMedications.Select(m => new MedicationDto
 				{
-					new MedicationDto { Name = "Metformin", Dosage = "500mg", Frequency = "Twice daily" },
-					new MedicationDto { Name = "Lisinopril", Dosage = "10mg", Frequency = "Once daily" }
-				},
-				FamilyHistory = new[] { "Father: Heart Disease", "Mother: Diabetes" }
+					Name = m.Name,
+					Dosage = m.Dosage,
+					Frequency = m.Frequency
+				}).ToArray(),
+				FamilyHistory = record.MedicalHistory.FamilyHistory.ToArray()
 			},
-			VitalSigns = new[]
+			VitalSigns = record.VitalSigns.Select(v => new VitalSignDto
 			{
-				new VitalSignDto
-				{
-					RecordedAt = DateTime.UtcNow.AddDays(-7),
-					BloodPressure = "120/80",
-					HeartRate = 72,
-					Temperature = 98.6m,
-					Weight = 180,
-					Height = 70,
-					Bmi = 25.8m,
-					OxygenSaturation = 98
-				}
-			},
-			RecentAppointments = new[]
+				Id = v.Id,
+				RecordedAt = v.RecordedAt,
+				BloodPressure = v.BloodPressure,
+				HeartRate = v.HeartRate,
+				Temperature = v.Temperature,
+				RespiratoryRate = v.RespiratoryRate,
+				OxygenSaturation = v.OxygenSaturation,
+				Weight = v.Weight,
+				Height = v.Height,
+				Bmi = v.Bmi
+			}).ToArray(),
+			RecentAppointments = record.RecentAppointments.Select(a => new AppointmentSummaryDto
 			{
-				new AppointmentSummaryDto
-				{
-					Id = Guid.NewGuid(),
-					Date = DateTime.UtcNow.AddDays(-30),
-					Provider = "Dr. Smith",
-					Type = "Follow-up",
-					Status = "Completed",
-					Notes = "Routine diabetes check-up"
-				}
-			},
-			PromResults = new[]
+				Id = a.Id,
+				Date = a.Date,
+				Provider = a.Provider,
+				Type = a.Type,
+				Status = a.Status,
+				Notes = a.Notes
+			}).ToArray(),
+			PromResults = record.PromResults.Select(p => new PromResultSummaryDto
 			{
-				new PromResultSummaryDto
-				{
-					Id = Guid.NewGuid(),
-					Name = "PHQ-9",
-					CompletedAt = DateTime.UtcNow.AddDays(-14),
-					Score = 8,
-					Severity = "Mild"
-				}
-			},
-			Documents = new[]
+				Id = p.Id,
+				Name = p.Name,
+				CompletedAt = p.CompletedAt,
+				Score = (decimal)p.Score,
+				Severity = p.Severity
+			}).ToArray(),
+			Documents = record.Documents.Select(d => new DocumentDto
 			{
-				new DocumentDto
-				{
-					Id = Guid.NewGuid(),
-					Name = "Lab Results - 2024-01",
-					Type = "Laboratory",
-					UploadedAt = DateTime.UtcNow.AddDays(-10),
-					Size = "245 KB"
-				}
-			}
+				Id = d.Id,
+				Name = d.Name,
+				Type = d.Type,
+				UploadedAt = d.UploadedAt,
+				Size = d.Size
+			}).ToArray()
 		};
 		
-		return Ok(record);
+		return Ok(recordDto);
 	}
 	
 	// PUT: api/patient-records/{patientId}/demographics
@@ -146,9 +161,30 @@ public class PatientRecordsController : ControllerBase
 			return BadRequest("First name and last name are required");
 		}
 
-		// In production, this would update the database
-		// For now, we'll just return success
-		// await _patientService.UpdateDemographicsAsync(patientId, demographics);
+		// Get tenant ID
+		var tenantId = GetTenantId();
+		
+		// Convert DTO to service model
+		var demographicsModel = new PatientDemographics
+		{
+			FirstName = demographics.FirstName,
+			LastName = demographics.LastName,
+			DateOfBirth = demographics.DateOfBirth,
+			Gender = demographics.Gender,
+			Email = demographics.Email,
+			Phone = demographics.Phone,
+			Address = new Qivr.Services.PatientAddress
+			{
+				Street = demographics.Address?.Street ?? "",
+				City = demographics.Address?.City ?? "",
+				State = demographics.Address?.State ?? "",
+				PostalCode = demographics.Address?.PostalCode ?? "",
+				Country = demographics.Address?.Country ?? ""
+			}
+		};
+		
+		// Update demographics
+		await _patientRecordService.UpdateDemographicsAsync(tenantId, patientId, demographicsModel);
 		
 		return NoContent();
 	}
@@ -170,13 +206,40 @@ public class PatientRecordsController : ControllerBase
 			return BadRequest("Medical history data is required");
 		}
 		
+		// Get tenant ID
+		var tenantId = GetTenantId();
+		
+		// Convert DTO to service model
+		var historyModel = new MedicalHistory
+		{
+			ChronicConditions = (update.ChronicConditions ?? Array.Empty<string>()).ToList(),
+			PastSurgeries = (update.PastSurgeries ?? Array.Empty<string>()).ToList(),
+			Allergies = (update.Allergies ?? Array.Empty<string>()).ToList(),
+			CurrentMedications = (update.CurrentMedications ?? Array.Empty<MedicationDto>()).Select(m => new Qivr.Services.Medication
+			{
+				Name = m.Name,
+				Dosage = m.Dosage,
+				Frequency = m.Frequency
+			}).ToList(),
+			FamilyHistory = (update.FamilyHistory ?? Array.Empty<string>()).ToList()
+		};
+		
+		// Add medical history
+		await _patientRecordService.AddMedicalHistoryAsync(tenantId, patientId, historyModel);
+		
+		// Return the created history as DTO
 		var history = new MedicalHistoryDto
 		{
-			ChronicConditions = update.ChronicConditions ?? Array.Empty<string>(),
-			PastSurgeries = update.PastSurgeries ?? Array.Empty<string>(),
-			Allergies = update.Allergies ?? Array.Empty<string>(),
-			CurrentMedications = update.CurrentMedications ?? Array.Empty<MedicationDto>(),
-			FamilyHistory = update.FamilyHistory ?? Array.Empty<string>()
+			ChronicConditions = historyModel.ChronicConditions.ToArray(),
+			PastSurgeries = historyModel.PastSurgeries.ToArray(),
+			Allergies = historyModel.Allergies.ToArray(),
+			CurrentMedications = historyModel.CurrentMedications.Select(m => new MedicationDto
+			{
+				Name = m.Name,
+				Dosage = m.Dosage,
+				Frequency = m.Frequency
+			}).ToArray(),
+			FamilyHistory = historyModel.FamilyHistory.ToArray()
 		};
 		
 		return CreatedAtAction(nameof(GetPatientRecord), new { patientId }, history);
@@ -199,8 +262,31 @@ public class PatientRecordsController : ControllerBase
 			return BadRequest("Vital signs data is required");
 		}
 		
-		vitalSign.Id = Guid.NewGuid();
-		vitalSign.RecordedAt = DateTime.UtcNow;
+		// Get tenant ID and current user ID
+		var tenantId = GetTenantId();
+		var userId = GetUserId();
+		
+	// Convert DTO to service model
+	var vitalSignModel = new Qivr.Services.VitalSign
+	{
+		BloodPressure = vitalSign.BloodPressure ?? "",
+		HeartRate = vitalSign.HeartRate ?? 0,
+		Temperature = vitalSign.Temperature ?? 0m,
+		RespiratoryRate = vitalSign.RespiratoryRate ?? 0,
+		OxygenSaturation = vitalSign.OxygenSaturation ?? 0,
+		Weight = vitalSign.Weight ?? 0m,
+		Height = vitalSign.Height ?? 0m,
+		Notes = vitalSign.Notes,
+		RecordedBy = userId
+	};
+		
+		// Record vital signs
+		var recorded = await _patientRecordService.RecordVitalSignsAsync(tenantId, patientId, vitalSignModel);
+		
+		// Convert back to DTO
+		vitalSign.Id = recorded.Id;
+		vitalSign.RecordedAt = recorded.RecordedAt;
+		vitalSign.Bmi = recorded.Bmi;
 		
 		return CreatedAtAction(nameof(GetVitalSigns), new { patientId }, vitalSign);
 	}
@@ -224,25 +310,27 @@ public class PatientRecordsController : ControllerBase
 			return Forbid();
 		}
 
-		// Apply date filtering
-		var fromDate = from ?? DateTime.UtcNow.AddMonths(-3);
-		var toDate = to ?? DateTime.UtcNow;
+		// Get tenant ID
+		var tenantId = GetTenantId();
 		
-		var vitalSigns = new[]
+		// Get vital signs from service
+		var vitalSignsList = await _patientRecordService.GetVitalSignsAsync(tenantId, patientId, from, to);
+		
+		// Convert to DTOs
+		var vitalSigns = vitalSignsList.Select(v => new VitalSignDto
 		{
-			new VitalSignDto
-			{
-				Id = Guid.NewGuid(),
-				RecordedAt = DateTime.UtcNow.AddDays(-7),
-				BloodPressure = "120/80",
-				HeartRate = 72,
-				Temperature = 98.6m,
-				Weight = 180,
-				Height = 70,
-				Bmi = 25.8m,
-				OxygenSaturation = 98
-			}
-		};
+			Id = v.Id,
+			RecordedAt = v.RecordedAt,
+			BloodPressure = v.BloodPressure,
+			HeartRate = v.HeartRate,
+			Temperature = v.Temperature,
+			RespiratoryRate = v.RespiratoryRate,
+			OxygenSaturation = v.OxygenSaturation,
+			Weight = v.Weight,
+			Height = v.Height,
+			Bmi = v.Bmi,
+			Notes = v.Notes
+		}).ToArray();
 		
 		return Ok(vitalSigns);
 	}
@@ -305,44 +393,33 @@ public class PatientRecordsController : ControllerBase
 		if (pageSize < 1) pageSize = 20;
 		if (pageSize > 100) pageSize = 100;
 		
-		var events = new[]
+		// Get tenant ID
+		var tenantId = GetTenantId();
+		
+		// Calculate skip and take
+		var skip = (page - 1) * pageSize;
+		
+		// Get timeline events from service
+		var events = await _patientRecordService.GetPatientTimelineAsync(tenantId, patientId, skip, pageSize);
+		
+		// Convert to DTOs
+		var eventDtos = events.Select(e => new TimelineEventDto
 		{
-			new TimelineEventDto
-			{
-				Id = Guid.NewGuid(),
-				Type = "appointment",
-				Title = "Follow-up with Dr. Smith",
-				Description = "Routine diabetes check-up",
-				OccurredAt = DateTime.UtcNow.AddDays(-30),
-				Icon = "calendar"
-			},
-			new TimelineEventDto
-			{
-				Id = Guid.NewGuid(),
-				Type = "prom",
-				Title = "PHQ-9 Completed",
-				Description = "Score: 8 (Mild)",
-				OccurredAt = DateTime.UtcNow.AddDays(-14),
-				Icon = "clipboard"
-			},
-			new TimelineEventDto
-			{
-				Id = Guid.NewGuid(),
-				Type = "vital_signs",
-				Title = "Vital Signs Recorded",
-				Description = "BP: 120/80, HR: 72",
-				OccurredAt = DateTime.UtcNow.AddDays(-7),
-				Icon = "heart"
-			}
-		};
+			Id = e.Id,
+			Type = e.Type,
+			Title = e.Title,
+			Description = e.Description,
+			OccurredAt = e.OccurredAt,
+			Icon = e.Icon
+		}).ToArray();
 		
 		return Ok(new
 		{
-			items = events,
+			items = eventDtos,
 			page,
 			pageSize,
-			totalItems = events.Length,
-			totalPages = 1
+			totalItems = eventDtos.Length,
+			totalPages = (int)Math.Ceiling((double)eventDtos.Length / pageSize)
 		});
 	}
 	
@@ -365,22 +442,51 @@ public class PatientRecordsController : ControllerBase
 			return Forbid();
 		}
 		
+		// Get tenant ID
+		var tenantId = GetTenantId();
+		
+		// Get summary from service
+		var summaryData = await _patientRecordService.GetPatientSummaryAsync(tenantId, patientId);
+		
+		// Convert to DTO
 		var summary = new PatientSummaryDto
 		{
-			PatientId = patientId,
-			Name = "John Doe",
-			Age = 39,
-			MedicalRecordNumber = "MRN-2024-0001",
-			LastVisit = DateTime.UtcNow.AddDays(-30),
-			NextAppointment = DateTime.UtcNow.AddDays(14),
-			ActiveConditions = 2,
-			ActiveMedications = 2,
-			RecentPromScore = 8,
-			RiskLevel = "Low",
-			ComplianceRate = 92.5m
+			PatientId = summaryData.PatientId,
+			Name = summaryData.Name,
+			Age = summaryData.Age,
+			MedicalRecordNumber = summaryData.MedicalRecordNumber,
+			LastVisit = summaryData.LastVisit,
+			NextAppointment = summaryData.NextAppointment,
+			ActiveConditions = summaryData.ActiveConditions,
+			ActiveMedications = summaryData.ActiveMedications,
+			RecentPromScore = summaryData.RecentPromScore.HasValue ? (decimal)summaryData.RecentPromScore.Value : null,
+			RiskLevel = summaryData.RiskLevel,
+			ComplianceRate = summaryData.ComplianceRate
 		};
 		
 		return Ok(summary);
+	}
+	
+	// Helper method to get tenant ID from claims
+	private Guid GetTenantId()
+	{
+		var tenantClaim = User.FindFirst("tenant_id")?.Value;
+		if (Guid.TryParse(tenantClaim, out var tenantId))
+		{
+			return tenantId;
+		}
+		return Guid.Empty;
+	}
+	
+	// Helper method to get user ID from claims
+	private Guid GetUserId()
+	{
+		var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+		if (Guid.TryParse(userIdClaim, out var userId))
+		{
+			return userId;
+		}
+		return Guid.Empty;
 	}
 }
 

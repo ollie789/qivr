@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Qivr.Services;
 
 namespace Qivr.Api.Controllers;
 
@@ -10,10 +11,12 @@ namespace Qivr.Api.Controllers;
 public class ProfileController : ControllerBase
 {
     private readonly ILogger<ProfileController> _logger;
+    private readonly IProfileService _profileService;
     
-    public ProfileController(ILogger<ProfileController> logger)
+    public ProfileController(ILogger<ProfileController> logger, IProfileService profileService)
     {
         _logger = logger;
+        _profileService = profileService;
     }
     
     // GET: api/profile
@@ -28,47 +31,60 @@ public class ProfileController : ControllerBase
             return Unauthorized();
         }
         
-        // TODO: Fetch actual user profile from database
-        // For now, return mock data
-        var profile = new UserProfileDto
+        // Get tenant ID
+        var tenantId = GetTenantId();
+        if (!Guid.TryParse(userId, out var userGuid))
         {
-            Id = userId,
-            Email = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@example.com",
-            FirstName = "John",
-            LastName = "Doe",
-            Phone = "+1-555-0123",
-            DateOfBirth = "1985-03-15",
-            Gender = "male",
-            Address = "123 Main St",
-            City = "Springfield",
-            State = "IL",
-            Postcode = "62701",
-            EmergencyContact = new EmergencyContactDto
+            return BadRequest("Invalid user ID");
+        }
+        
+        // Fetch actual user profile from database
+        var profile = await _profileService.GetUserProfileAsync(tenantId, userGuid);
+        if (profile == null)
+        {
+            return NotFound("User profile not found");
+        }
+        
+        // Convert to DTO
+        var profileDto = new UserProfileDto
+        {
+            Id = profile.Id.ToString(),
+            Email = profile.Email,
+            FirstName = profile.FirstName,
+            LastName = profile.LastName,
+            Phone = profile.Phone,
+            DateOfBirth = profile.DateOfBirth?.ToString("yyyy-MM-dd"),
+            Gender = profile.Gender,
+            Address = profile.Address?.Street,
+            City = profile.Address?.City,
+            State = profile.Address?.State,
+            Postcode = profile.Address?.PostalCode,
+            EmergencyContact = profile.EmergencyContact != null ? new EmergencyContactDto
             {
-                Name = "Jane Doe",
-                Relationship = "Spouse",
-                Phone = "+1-555-0124"
-            },
-            MedicalInfo = new MedicalInfoDto
+                Name = profile.EmergencyContact.Name,
+                Relationship = profile.EmergencyContact.Relationship,
+                Phone = profile.EmergencyContact.Phone
+            } : null,
+            MedicalInfo = profile.MedicalInfo != null ? new MedicalInfoDto
             {
-                BloodType = "O+",
-                Allergies = new[] { "Penicillin", "Peanuts" },
-                Medications = new[] { "Metformin 500mg", "Lisinopril 10mg" },
-                Conditions = new[] { "Diabetes Type 2", "Hypertension" }
-            },
-            Preferences = new PreferencesDto
+                BloodType = profile.MedicalInfo.BloodType,
+                Allergies = profile.MedicalInfo.Allergies?.ToArray(),
+                Medications = profile.MedicalInfo.Medications?.ToArray(),
+                Conditions = profile.MedicalInfo.Conditions?.ToArray()
+            } : null,
+            Preferences = profile.Preferences != null ? new PreferencesDto
             {
-                EmailNotifications = true,
-                SmsNotifications = true,
-                AppointmentReminders = true,
-                MarketingEmails = false
-            },
-            PhotoUrl = null,
-            EmailVerified = true,
-            PhoneVerified = false
+                EmailNotifications = profile.Preferences.EmailNotifications,
+                SmsNotifications = profile.Preferences.SmsNotifications,
+                AppointmentReminders = profile.Preferences.AppointmentReminders,
+                MarketingEmails = profile.Preferences.MarketingEmails
+            } : null,
+            PhotoUrl = profile.PhotoUrl,
+            EmailVerified = profile.EmailVerified,
+            PhoneVerified = profile.PhoneVerified
         };
         
-        return Ok(profile);
+        return Ok(profileDto);
     }
     
     // PUT: api/profile
@@ -92,11 +108,56 @@ public class ProfileController : ControllerBase
         
         try
         {
-            // TODO: Update user profile in database
-            _logger.LogInformation("Updating profile for user {UserId}", userId);
+            // Get tenant ID
+            var tenantId = GetTenantId();
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return BadRequest("Invalid user ID");
+            }
             
-            // Simulate processing
-            await Task.Delay(100);
+            // Convert DTO to service model
+            var update = new UserProfileUpdate
+            {
+                FirstName = updateDto.FirstName,
+                LastName = updateDto.LastName,
+                Phone = updateDto.Phone,
+                DateOfBirth = !string.IsNullOrEmpty(updateDto.DateOfBirth) 
+                    ? DateTime.Parse(updateDto.DateOfBirth) 
+                    : null,
+                Gender = updateDto.Gender,
+                Address = !string.IsNullOrEmpty(updateDto.Address) ? new ProfileAddress
+                {
+                    Street = updateDto.Address,
+                    City = updateDto.City ?? "",
+                    State = updateDto.State ?? "",
+                    PostalCode = updateDto.Postcode ?? "",
+                    Country = "USA"
+                } : null,
+                EmergencyContact = updateDto.EmergencyContact != null ? new EmergencyContact
+                {
+                    Name = updateDto.EmergencyContact.Name,
+                    Relationship = updateDto.EmergencyContact.Relationship,
+                    Phone = updateDto.EmergencyContact.Phone
+                } : null,
+                MedicalInfo = updateDto.MedicalInfo != null ? new MedicalInfo
+                {
+                    BloodType = updateDto.MedicalInfo.BloodType,
+                    Allergies = updateDto.MedicalInfo.Allergies?.ToList() ?? new List<string>(),
+                    Medications = updateDto.MedicalInfo.Medications?.ToList() ?? new List<string>(),
+                    Conditions = updateDto.MedicalInfo.Conditions?.ToList() ?? new List<string>()
+                } : null,
+                Preferences = updateDto.Preferences != null ? new UserPreferences
+                {
+                    EmailNotifications = updateDto.Preferences.EmailNotifications,
+                    SmsNotifications = updateDto.Preferences.SmsNotifications,
+                    AppointmentReminders = updateDto.Preferences.AppointmentReminders,
+                    MarketingEmails = updateDto.Preferences.MarketingEmails
+                } : null
+            };
+            
+            // Update user profile in database
+            await _profileService.UpdateUserProfileAsync(tenantId, userGuid, update);
+            _logger.LogInformation("Updated profile for user {UserId}", userId);
             
             return NoContent();
         }
@@ -140,10 +201,20 @@ public class ProfileController : ControllerBase
         
         try
         {
-            // TODO: Save photo to storage (e.g., S3, Azure Blob, etc.)
-            // TODO: Update user profile with photo URL
+            // Get tenant ID
+            var tenantId = GetTenantId();
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return BadRequest("Invalid user ID");
+            }
             
-            var photoUrl = $"https://storage.example.com/profiles/{userId}/{Guid.NewGuid()}.jpg";
+            // Read photo data
+            using var memoryStream = new MemoryStream();
+            await photo.CopyToAsync(memoryStream);
+            var photoData = memoryStream.ToArray();
+            
+            // Save photo to storage and update user profile
+            var photoUrl = await _profileService.UploadPhotoAsync(tenantId, userGuid, photoData, photo.ContentType);
             
             _logger.LogInformation("Photo uploaded for user {UserId}", userId);
             
@@ -213,11 +284,18 @@ public class ProfileController : ControllerBase
         
         try
         {
-            // TODO: Send verification email
+            // Get tenant ID
+            var tenantId = GetTenantId();
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return BadRequest("Invalid user ID");
+            }
+            
+            // TODO: Send actual verification email via email service
             _logger.LogInformation("Email verification requested for user {UserId}", userId);
             
-            // Simulate sending email
-            await Task.Delay(100);
+            // For now, just mark as verified
+            await _profileService.UpdateEmailVerificationStatusAsync(tenantId, userGuid, true);
             
             return NoContent();
         }
@@ -273,13 +351,18 @@ public class ProfileController : ControllerBase
         
         try
         {
-            // TODO: Verify the confirmation code
-            // TODO: Update phone verification status
+            // Get tenant ID
+            var tenantId = GetTenantId();
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return BadRequest("Invalid user ID");
+            }
+            
+            // TODO: Verify the actual confirmation code
+            // For now, just mark as verified
+            await _profileService.UpdatePhoneVerificationStatusAsync(tenantId, userGuid, true);
             
             _logger.LogInformation("Phone confirmed for user {UserId}", userId);
-            
-            // Simulate verification
-            await Task.Delay(100);
             
             return NoContent();
         }
@@ -310,14 +393,20 @@ public class ProfileController : ControllerBase
         
         try
         {
-            // TODO: Soft delete or hard delete user account
-            // TODO: Clean up related data
-            // TODO: Notify relevant services
+            // Get tenant ID
+            var tenantId = GetTenantId();
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return BadRequest("Invalid user ID");
+            }
             
-            _logger.LogWarning("Account deletion requested for user {UserId}", userId);
+            // Soft delete user account
+            await _profileService.DeleteUserAccountAsync(tenantId, userGuid);
             
-            // Simulate deletion
-            await Task.Delay(100);
+            _logger.LogWarning("Account deletion completed for user {UserId}", userId);
+            
+            // TODO: Notify relevant services about account deletion
+            // TODO: Clean up authentication provider (Cognito, Auth0, etc.)
             
             return NoContent();
         }
@@ -326,6 +415,18 @@ public class ProfileController : ControllerBase
             _logger.LogError(ex, "Error deleting account for user {UserId}", userId);
             return StatusCode(500, new { message = "An error occurred while deleting your account" });
         }
+    }
+    
+    // Helper method to get tenant ID from claims
+    private Guid GetTenantId()
+    {
+        var tenantClaim = User.FindFirst("tenant_id")?.Value;
+        if (Guid.TryParse(tenantClaim, out var tenantId))
+        {
+            return tenantId;
+        }
+        // For dev/testing, return a default tenant ID
+        return Guid.Parse("00000000-0000-0000-0000-000000000001");
     }
 }
 
