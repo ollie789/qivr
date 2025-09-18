@@ -11,10 +11,10 @@ const amplifyConfig = {
           domain: import.meta.env.VITE_COGNITO_DOMAIN || 'qivr-clinic.auth.ap-southeast-2.amazoncognito.com',
           scopes: ['openid', 'profile', 'email', 'phone'],
           redirectSignIn: [
-            import.meta.env.VITE_COGNITO_REDIRECT_SIGNIN || 'http://localhost:3001/auth/callback',
+            import.meta.env.VITE_COGNITO_REDIRECT_SIGNIN || 'http://localhost:3010/auth/callback',
           ],
           redirectSignOut: [
-            import.meta.env.VITE_COGNITO_REDIRECT_SIGNOUT || 'http://localhost:3001/',
+            import.meta.env.VITE_COGNITO_REDIRECT_SIGNOUT || 'http://localhost:3010/',
           ],
           responseType: 'code' as const,
         },

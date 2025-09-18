@@ -201,57 +201,88 @@ const MedicalRecordsEnhanced: React.FC = () => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Fetch medical records data
-  const { data: medicalData, isLoading } = useQuery({
+  const { data: medicalData, isLoading, error: medicalError } = useQuery({
     queryKey: ['medicalRecords'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/MedicalRecords');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/MedicalRecords');
+        return response.data;
+      } catch (error) {
+        // Return mock data if API is not available
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Fetch vital signs
   const { data: vitalSigns } = useQuery({
     queryKey: ['vitalSigns'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/MedicalRecords/vitals');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/MedicalRecords/vitals');
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Fetch lab results
   const { data: labResults } = useQuery({
     queryKey: ['labResults'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/MedicalRecords/lab-results');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/MedicalRecords/lab-results');
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Fetch medications
   const { data: medications } = useQuery({
     queryKey: ['medications'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/MedicalRecords/medications');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/MedicalRecords/medications');
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Fetch allergies
   const { data: allergies } = useQuery({
     queryKey: ['allergies'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/MedicalRecords/allergies');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/MedicalRecords/allergies');
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Fetch immunizations
   const { data: immunizations } = useQuery({
     queryKey: ['immunizations'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/MedicalRecords/immunizations');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/MedicalRecords/immunizations');
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Chart data preparation

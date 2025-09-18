@@ -624,13 +624,13 @@ const Analytics: React.FC = () => {
               </TableHead>
               <TableBody>
                 {practitionerPerformance.map((practitioner) => (
-                  <TableRow key={practitioner.providerName || practitioner.name}>
+                  <TableRow key={practitioner.providerName}>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar sx={{ width: 32, height: 32 }}>
-                          {(practitioner.providerName || practitioner.name).split(' ').map(n => n[0]).join('')}
+                          {practitioner.providerName.split(' ').map(n => n[0]).join('')}
                         </Avatar>
-                        <Typography variant="body2">{practitioner.providerName || practitioner.name}</Typography>
+                        <Typography variant="body2">{practitioner.providerName}</Typography>
                       </Box>
                     </TableCell>
                     <TableCell align="center">

@@ -9,9 +9,6 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // Initialize Amplify
 import './config/amplify.config';
 
-// Temporary auth testing - remove after debugging
-import './test-auth';
-
 // Theme
 import { theme } from './theme';
 

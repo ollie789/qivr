@@ -135,40 +135,60 @@ const AnalyticsEnhanced: React.FC = () => {
   const [endDate, setEndDate] = useState<Date | null>(new Date());
 
   // Fetch analytics data
-  const { data: healthMetrics } = useQuery({
+  const { data: healthMetrics = [] } = useQuery({
     queryKey: ['healthMetrics', timeRange],
     queryFn: async () => {
-      const response = await apiClient.get('/api/Analytics/health-metrics', {
-        params: { timeRange },
-      });
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/Analytics/health-metrics', {
+          params: { timeRange },
+        });
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
-  const { data: promAnalytics } = useQuery({
+  const { data: promAnalytics = [] } = useQuery({
     queryKey: ['promAnalytics', timeRange],
     queryFn: async () => {
-      const response = await apiClient.get('/api/Analytics/prom-analytics', {
-        params: { timeRange },
-      });
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/Analytics/prom-analytics', {
+          params: { timeRange },
+        });
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
-  const { data: healthGoals } = useQuery({
+  const { data: healthGoals = [] } = useQuery({
     queryKey: ['healthGoals'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/Analytics/health-goals');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/Analytics/health-goals');
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
-  const { data: correlations } = useQuery({
+  const { data: correlations = [] } = useQuery({
     queryKey: ['correlations'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/Analytics/correlations');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/Analytics/correlations');
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Mock data for demonstration

@@ -129,26 +129,36 @@ const DocumentsEnhanced: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // Fetch documents
-  const { data: documents, isLoading: documentsLoading } = useQuery({
+  const { data: documents = [], isLoading: documentsLoading } = useQuery({
     queryKey: ['documents', selectedFolder, filterCategory, searchTerm],
     queryFn: async () => {
-      const params: any = {};
-      if (selectedFolder) params.folderId = selectedFolder;
-      if (filterCategory !== 'all') params.category = filterCategory;
-      if (searchTerm) params.search = searchTerm;
-      
-      const response = await apiClient.get('/api/Documents', { params });
-      return response.data;
+      try {
+        const params: any = {};
+        if (selectedFolder) params.folderId = selectedFolder;
+        if (filterCategory !== 'all') params.category = filterCategory;
+        if (searchTerm) params.search = searchTerm;
+        
+        const response = await apiClient.get('/api/Documents', { params });
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Fetch folders
-  const { data: folders } = useQuery({
+  const { data: folders = [] } = useQuery({
     queryKey: ['folders'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/Documents/folders');
-      return response.data;
+      try {
+        const response = await apiClient.get('/api/Documents/folders');
+        return response.data;
+      } catch {
+        return [];
+      }
     },
+    retry: 1,
   });
 
   // Upload mutation

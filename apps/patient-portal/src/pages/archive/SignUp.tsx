@@ -24,7 +24,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import authService from '../services/cognitoAuthService';
+import authService from '../../services/cognitoAuthService';
 
 const signUpSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
