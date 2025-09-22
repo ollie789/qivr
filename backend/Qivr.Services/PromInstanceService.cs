@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -722,23 +723,64 @@ public class PromInstanceService : IPromInstanceService
 
     private static decimal CalculateScore(PromTemplate? template, Dictionary<string, object> answers)
     {
-        if (template == null)
+        var numericAnswers = answers
+            .Select(v => new { v.Key, Value = TryParseDecimal(v.Value) })
+            .Where(v => v.Value.HasValue)
+            .Select(v => (QuestionId: v.Key, Value: v.Value!.Value))
+            .ToList();
+
+        if (numericAnswers.Count == 0)
         {
-            return answers.Values
-                .Select(v => TryParseDecimal(v))
-                .Where(v => v.HasValue)
-                .Select(v => v!.Value)
-                .DefaultIfEmpty(0m)
-                .Sum();
+            return 0m;
         }
 
-        // Simple default scoring: sum numeric values
-        return answers.Values
-            .Select(v => TryParseDecimal(v))
-            .Where(v => v.HasValue)
-            .Select(v => v!.Value)
-            .DefaultIfEmpty(0m)
-            .Sum();
+        if (template?.ScoringMethod == null || template.ScoringMethod.Count == 0)
+        {
+            return numericAnswers.Sum(x => x.Value);
+        }
+
+        var method = template.ScoringMethod.TryGetValue("type", out var typeValue)
+            ? typeValue?.ToString()?.Trim().ToLowerInvariant()
+            : null;
+
+        var weights = ExtractQuestionWeights(template.ScoringRules);
+
+        decimal WeightedSum()
+        {
+            return numericAnswers.Sum(answer =>
+            {
+                var weight = weights.TryGetValue(answer.QuestionId, out var questionWeight)
+                    ? questionWeight
+                    : 1m;
+                return answer.Value * weight;
+            });
+        }
+
+        switch (method)
+        {
+            case "average":
+                if (weights.Count > 0)
+                {
+                    var totalWeight = numericAnswers.Sum(answer =>
+                        weights.TryGetValue(answer.QuestionId, out var questionWeight) ? questionWeight : 1m);
+                    var weighted = WeightedSum();
+                    return totalWeight > 0 ? weighted / totalWeight : 0m;
+                }
+
+                return numericAnswers.Average(x => x.Value);
+
+            case "weighted":
+                var weightedSum = WeightedSum();
+                var weightSum = weights.Count > 0
+                    ? numericAnswers.Sum(answer =>
+                        weights.TryGetValue(answer.QuestionId, out var questionWeight) ? questionWeight : 1m)
+                    : numericAnswers.Count;
+                return weightSum > 0 ? weightedSum / weightSum : 0m;
+
+            case "sum":
+            default:
+                return weights.Count == 0 ? numericAnswers.Sum(x => x.Value) : WeightedSum();
+        }
     }
 
     private static decimal? TryParseDecimal(object? value)
@@ -768,6 +810,12 @@ public class PromInstanceService : IPromInstanceService
 
     private static string DetermineSeverity(PromTemplate? template, decimal score)
     {
+        var severityFromRules = ResolveSeverityFromRules(template?.ScoringRules, score);
+        if (!string.IsNullOrWhiteSpace(severityFromRules))
+        {
+            return severityFromRules!;
+        }
+
         if (template == null)
         {
             return score switch
@@ -801,6 +849,182 @@ public class PromInstanceService : IPromInstanceService
             <= 5 => "low",
             <= 10 => "medium",
             _ => "high"
+        };
+    }
+
+    private static string? ResolveSeverityFromRules(Dictionary<string, object>? scoringRules, decimal score)
+    {
+        if (scoringRules == null || scoringRules.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var range in ExtractScoreRanges(scoringRules))
+        {
+            var minSatisfied = !range.Min.HasValue || score >= range.Min.Value;
+            var maxSatisfied = !range.Max.HasValue || score <= range.Max.Value;
+            if (minSatisfied && maxSatisfied)
+            {
+                return range.Label;
+            }
+        }
+
+        return null;
+    }
+
+    private static Dictionary<string, decimal> ExtractQuestionWeights(Dictionary<string, object>? scoringRules)
+    {
+        var weights = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+        if (scoringRules == null || scoringRules.Count == 0)
+        {
+            return weights;
+        }
+
+        if (!scoringRules.TryGetValue("questions", out var questionsObj))
+        {
+            return weights;
+        }
+
+        foreach (var item in ExtractList(questionsObj))
+        {
+            if (!TryConvertToDictionary(item, out var questionDict))
+            {
+                continue;
+            }
+
+            if (!questionDict.TryGetValue("id", out var idValue))
+            {
+                continue;
+            }
+
+            var id = idValue?.ToString();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                continue;
+            }
+
+            var weight = questionDict.TryGetValue("weight", out var weightValue)
+                ? TryParseDecimal(weightValue)
+                : null;
+
+            if (weight.HasValue && weight.Value > 0m)
+            {
+                weights[id] = weight.Value;
+            }
+        }
+
+        return weights;
+    }
+
+    private static IReadOnlyList<(decimal? Min, decimal? Max, string Label)> ExtractScoreRanges(Dictionary<string, object>? scoringRules)
+    {
+        if (scoringRules == null || scoringRules.Count == 0)
+        {
+            return Array.Empty<(decimal?, decimal?, string)>();
+        }
+
+        if (!scoringRules.TryGetValue("ranges", out var rangesObj))
+        {
+            return Array.Empty<(decimal?, decimal?, string)>();
+        }
+
+        var ranges = new List<(decimal? Min, decimal? Max, string Label)>();
+
+        foreach (var item in ExtractList(rangesObj))
+        {
+            if (!TryConvertToDictionary(item, out var rangeDict))
+            {
+                continue;
+            }
+
+            var label = rangeDict.TryGetValue("label", out var labelValue)
+                ? labelValue?.ToString()
+                : null;
+
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                continue;
+            }
+
+            var min = rangeDict.TryGetValue("min", out var minValue) ? TryParseDecimal(minValue) : null;
+            var max = rangeDict.TryGetValue("max", out var maxValue) ? TryParseDecimal(maxValue) : null;
+
+            ranges.Add((min, max, label));
+        }
+
+        return ranges
+            .OrderBy(r => r.Min ?? decimal.MinValue)
+            .ToList();
+    }
+
+    private static IReadOnlyList<object?> ExtractList(object? value)
+    {
+        return value switch
+        {
+            IReadOnlyList<object?> list => list,
+            IEnumerable<object?> generic => generic.ToList(),
+            IEnumerable enumerable => enumerable.Cast<object?>().ToList(),
+            JsonElement element when element.ValueKind == JsonValueKind.Array =>
+                element.EnumerateArray().Select(ConvertJsonElement).ToList(),
+            _ => Array.Empty<object?>()
+        };
+    }
+
+    private static bool TryConvertToDictionary(object? value, out Dictionary<string, object> result)
+    {
+        switch (value)
+        {
+            case Dictionary<string, object> dict:
+                result = dict;
+                return true;
+            case IDictionary<string, object> genericDict:
+                result = new Dictionary<string, object>(genericDict, StringComparer.OrdinalIgnoreCase);
+                return true;
+            case IDictionary dictionary:
+                result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                foreach (DictionaryEntry entry in dictionary)
+                {
+                    if (entry.Key is string key)
+                    {
+                        result[key] = entry.Value!;
+                    }
+                }
+                return true;
+            case JsonElement element when element.ValueKind == JsonValueKind.Object:
+                result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                foreach (var property in element.EnumerateObject())
+                {
+                    var converted = ConvertJsonElement(property.Value);
+                    result[property.Name] = converted!;
+                }
+                return true;
+            default:
+                result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                return false;
+        }
+    }
+
+    private static object? ConvertJsonElement(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.Object => element
+                .EnumerateObject()
+                .Aggregate(new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase), (dict, prop) =>
+                {
+                    dict[prop.Name] = ConvertJsonElement(prop.Value)!;
+                    return dict;
+                }),
+            JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElement).ToList(),
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number => element.TryGetDecimal(out var dec)
+                ? dec
+                : element.TryGetDouble(out var dbl) ? dbl : (object?)null,
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            _ => element.GetRawText()
         };
     }
 
