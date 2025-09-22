@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Qivr.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
+using Qivr.Core.Entities;
+using Qivr.Infrastructure.Data;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Qivr.Services;
 
@@ -23,87 +26,133 @@ public class PromService : IPromService
 		_logger = logger;
 	}
 
-	public async Task<PromTemplateDto> CreateOrVersionTemplateAsync(Guid tenantId, CreatePromTemplateDto request, CancellationToken ct = default)
-	{
-		// Determine next version if existing
-		var version = request.Version;
-		if (version == null)
-		{
-			version = await _db.Database.SqlQuery<int>($@"
-				SELECT COALESCE(MAX(version), 0) + 1 FROM qivr.prom_templates WHERE tenant_id = {tenantId} AND key = {request.Key}")
-				.FirstAsync(ct);
-		}
+        public async Task<PromTemplateDto> CreateOrVersionTemplateAsync(Guid tenantId, CreatePromTemplateDto request, CancellationToken ct = default)
+        {
+                if (string.IsNullOrWhiteSpace(request.Category))
+                {
+                        throw new ArgumentException("Category is required", nameof(request));
+                }
 
-		var id = Guid.NewGuid();
-		var now = DateTime.UtcNow;
+                if (string.IsNullOrWhiteSpace(request.Frequency))
+                {
+                        throw new ArgumentException("Frequency is required", nameof(request));
+                }
 
-		await _db.Database.ExecuteSqlInterpolatedAsync($@"
-			INSERT INTO qivr.prom_templates (
-				id, tenant_id, key, version, name, description, questions, scoring_method, scoring_rules, is_active, created_at, updated_at
-			) VALUES (
-				{id}, {tenantId}, {request.Key}, {version}, {request.Name}, {request.Description}, {request.SchemaJson}::jsonb, {request.ScoringMethod}, {request.ScoringRules}::jsonb, {request.IsActive}, {now}, {now}
-			)", ct);
+                var version = request.Version;
+                if (!version.HasValue)
+                {
+                        var latestVersion = await _db.PromTemplates
+                                .Where(t => t.TenantId == tenantId && t.Key == request.Key)
+                                .Select(t => (int?)t.Version)
+                                .OrderByDescending(v => v)
+                                .FirstOrDefaultAsync(ct);
 
-		return new PromTemplateDto
-		{
-			Id = id,
-			Key = request.Key,
-			Version = version!.Value,
-			Name = request.Name,
-			Description = request.Description,
-			CreatedAt = now
-		};
-	}
+                        version = (latestVersion ?? 0) + 1;
+                }
 
-	public async Task<PromTemplateDto?> GetTemplateAsync(Guid tenantId, string key, int? version, CancellationToken ct = default)
-	{
-		if (version.HasValue)
-		{
-			var result = await _db.Database.SqlQuery<PromTemplateDto>($@"
-				SELECT id, key, version, name, description, created_at
-				FROM qivr.prom_templates
-				WHERE tenant_id = {tenantId} AND key = {key} AND version = {version.Value}
-				ORDER BY version DESC
-				LIMIT 1").FirstOrDefaultAsync(ct);
-			return result;
-		}
-		else
-		{
-			var result = await _db.Database.SqlQuery<PromTemplateDto>($@"
-				SELECT id, key, version, name, description, created_at
-				FROM qivr.prom_templates
-				WHERE tenant_id = {tenantId} AND key = {key}
-				ORDER BY version DESC
-				LIMIT 1").FirstOrDefaultAsync(ct);
-			return result;
-		}
-	}
+                var now = DateTime.UtcNow;
 
-	public async Task<IReadOnlyList<PromTemplateSummaryDto>> ListTemplatesAsync(Guid tenantId, int page, int pageSize, CancellationToken ct = default)
-	{
-		var offset = Math.Max(0, (page - 1) * pageSize);
-		var list = await _db.Database.SqlQuery<PromTemplateSummaryDto>($@"
-			SELECT id, key, version, name, description, created_at
-			FROM qivr.prom_templates
-			WHERE tenant_id = {tenantId}
-			ORDER BY key, version DESC
-			LIMIT {pageSize} OFFSET {offset}").ToListAsync(ct);
-		return list;
-	}
+                var template = new PromTemplate
+                {
+                        Id = Guid.NewGuid(),
+                        TenantId = tenantId,
+                        Key = request.Key,
+                        Version = version.Value,
+                        Name = request.Name,
+                        Description = request.Description,
+                        Category = request.Category,
+                        Frequency = request.Frequency,
+                        Questions = request.Questions?.Select(q => new Dictionary<string, object>(q)).ToList() ?? new List<Dictionary<string, object>>(),
+                        ScoringMethod = request.ScoringMethod != null ? new Dictionary<string, object>(request.ScoringMethod) : null,
+                        ScoringRules = request.ScoringRules != null ? new Dictionary<string, object>(request.ScoringRules) : null,
+                        IsActive = request.IsActive,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                };
 
-	public async Task<PromTemplateDto?> GetTemplateByIdAsync(Guid tenantId, Guid templateId, CancellationToken ct = default)
-	{
-		var result = await _db.Database.SqlQuery<PromTemplateDto>($@"SELECT id, key, version, name, description, created_at
-			FROM qivr.prom_templates WHERE tenant_id = {tenantId} AND id = {templateId} LIMIT 1").FirstOrDefaultAsync(ct);
-		return result;
-	}
+                await _db.PromTemplates.AddAsync(template, ct);
+                await _db.SaveChangesAsync(ct);
+
+                return MapToDto(template);
+        }
+
+        public async Task<PromTemplateDto?> GetTemplateAsync(Guid tenantId, string key, int? version, CancellationToken ct = default)
+        {
+                var query = _db.PromTemplates
+                        .AsNoTracking()
+                        .Where(t => t.TenantId == tenantId && t.Key == key);
+
+                if (version.HasValue)
+                {
+                        query = query.Where(t => t.Version == version.Value);
+                }
+
+                var template = await query
+                        .OrderByDescending(t => t.Version)
+                        .FirstOrDefaultAsync(ct);
+
+                return template == null ? null : MapToDto(template);
+        }
+
+        public async Task<IReadOnlyList<PromTemplateSummaryDto>> ListTemplatesAsync(Guid tenantId, int page, int pageSize, CancellationToken ct = default)
+        {
+                var offset = Math.Max(0, (page - 1) * pageSize);
+
+                var list = await _db.PromTemplates
+                        .AsNoTracking()
+                        .Where(t => t.TenantId == tenantId)
+                        .OrderBy(t => t.Key)
+                        .ThenByDescending(t => t.Version)
+                        .Skip(offset)
+                        .Take(pageSize)
+                        .Select(t => new PromTemplateSummaryDto
+                        {
+                                Id = t.Id,
+                                Key = t.Key,
+                                Version = t.Version,
+                                Name = t.Name,
+                                Description = t.Description,
+                                CreatedAt = t.CreatedAt
+                        })
+                        .ToListAsync(ct);
+
+                return list;
+        }
+
+        public async Task<PromTemplateDto?> GetTemplateByIdAsync(Guid tenantId, Guid templateId, CancellationToken ct = default)
+        {
+                var template = await _db.PromTemplates
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.Id == templateId, ct);
+
+                return template == null ? null : MapToDto(template);
+        }
 
 
-	private static decimal CalculateScore(string? method, string? rulesJson, Dictionary<string, object> answers)
-	{
-		if (string.IsNullOrWhiteSpace(method)) return 0m;
-		switch (method.ToLowerInvariant())
-		{
+        private static PromTemplateDto MapToDto(PromTemplate template)
+        {
+                return new PromTemplateDto
+                {
+                        Id = template.Id,
+                        Key = template.Key,
+                        Version = template.Version,
+                        Name = template.Name,
+                        Description = template.Description,
+                        Category = template.Category,
+                        Frequency = template.Frequency,
+                        Questions = template.Questions?.Select(q => new Dictionary<string, object>(q)).ToList() ?? new List<Dictionary<string, object>>(),
+                        ScoringMethod = template.ScoringMethod != null ? new Dictionary<string, object>(template.ScoringMethod) : null,
+                        ScoringRules = template.ScoringRules != null ? new Dictionary<string, object>(template.ScoringRules) : null,
+                        IsActive = template.IsActive,
+                        CreatedAt = template.CreatedAt
+                };
+        }
+
+        private static decimal CalculateScore(string? method, string? rulesJson, Dictionary<string, object> answers)
+        {
+                if (string.IsNullOrWhiteSpace(method)) return 0m;
+                switch (method.ToLowerInvariant())
+                {
 			case "sum":
 				return answers.Values
 					.Where(v => decimal.TryParse(v?.ToString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out _))
@@ -124,24 +173,32 @@ public class PromService : IPromService
 // DTOs for service layer
 public sealed class CreatePromTemplateDto
 {
-	public string Key { get; set; } = string.Empty;
-	public string Name { get; set; } = string.Empty;
-	public string? Description { get; set; }
-	public string SchemaJson { get; set; } = "{}"; // JSON string
-	public string? ScoringMethod { get; set; }
-	public string? ScoringRules { get; set; } // JSON string
-	public bool IsActive { get; set; } = true;
-	public int? Version { get; set; }
+        public string Key { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public string Frequency { get; set; } = string.Empty;
+        public List<Dictionary<string, object>> Questions { get; set; } = new();
+        public Dictionary<string, object>? ScoringMethod { get; set; }
+        public Dictionary<string, object>? ScoringRules { get; set; }
+        public bool IsActive { get; set; } = true;
+        public int? Version { get; set; }
 }
 
 public sealed class PromTemplateDto
 {
-	public Guid Id { get; set; }
-	public string Key { get; set; } = string.Empty;
-	public int Version { get; set; }
-	public string Name { get; set; } = string.Empty;
-	public string? Description { get; set; }
-	public DateTime CreatedAt { get; set; }
+        public Guid Id { get; set; }
+        public string Key { get; set; } = string.Empty;
+        public int Version { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public string Frequency { get; set; } = string.Empty;
+        public List<Dictionary<string, object>> Questions { get; set; } = new();
+        public Dictionary<string, object>? ScoringMethod { get; set; }
+        public Dictionary<string, object>? ScoringRules { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
 }
 
 public sealed class PromTemplateSummaryDto
