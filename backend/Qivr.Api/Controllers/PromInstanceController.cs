@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Qivr.Api.Services;
 using Qivr.Services;
 
 namespace Qivr.Api.Controllers;
@@ -10,13 +11,16 @@ namespace Qivr.Api.Controllers;
 public class PromInstanceController : ControllerBase
 {
     private readonly IPromInstanceService _promInstanceService;
+    private readonly IResourceAuthorizationService _authorizationService;
     private readonly ILogger<PromInstanceController> _logger;
 
     public PromInstanceController(
         IPromInstanceService promInstanceService,
+        IResourceAuthorizationService authorizationService,
         ILogger<PromInstanceController> logger)
     {
         _promInstanceService = promInstanceService;
+        _authorizationService = authorizationService;
         _logger = logger;
     }
 
@@ -30,10 +34,16 @@ public class PromInstanceController : ControllerBase
     {
         try
         {
-            // Add current user as sender
-            request.SentBy = User.Identity?.Name ?? "System";
-            
-            var result = await _promInstanceService.SendPromToPatientAsync(request, ct);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            if (tenantId == Guid.Empty)
+            {
+                return BadRequest(new { error = "Tenant context is required" });
+            }
+
+            var senderId = _authorizationService.GetCurrentUserId(User);
+            request.SentBy = senderId == Guid.Empty ? "System" : senderId.ToString();
+
+            var result = await _promInstanceService.SendPromToPatientAsync(tenantId, request, ct);
             _logger.LogInformation("PROM sent to patient {PatientId}", request.PatientId);
             
             return Ok(result);
@@ -59,9 +69,16 @@ public class PromInstanceController : ControllerBase
     {
         try
         {
-            request.SentBy = User.Identity?.Name ?? "System";
-            
-            var results = await _promInstanceService.SendPromToMultiplePatientsAsync(request, ct);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            if (tenantId == Guid.Empty)
+            {
+                return BadRequest(new { error = "Tenant context is required" });
+            }
+
+            var senderId = _authorizationService.GetCurrentUserId(User);
+            request.SentBy = senderId == Guid.Empty ? "System" : senderId.ToString();
+
+            var results = await _promInstanceService.SendPromToMultiplePatientsAsync(tenantId, request, ct);
             _logger.LogInformation("Bulk PROM sent to {Count} patients", results.Count);
             
             return Ok(results);
@@ -81,13 +98,14 @@ public class PromInstanceController : ControllerBase
         Guid instanceId,
         CancellationToken ct = default)
     {
-        var instance = await _promInstanceService.GetPromInstanceAsync(instanceId, ct);
-        
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        var instance = await _promInstanceService.GetPromInstanceAsync(tenantId, instanceId, ct);
+
         if (instance == null)
         {
             return NotFound(new { error = "PROM instance not found" });
         }
-        
+
         return Ok(instance);
     }
 
@@ -99,7 +117,35 @@ public class PromInstanceController : ControllerBase
         Guid patientId,
         CancellationToken ct = default)
     {
-        var instances = await _promInstanceService.GetPatientPromInstancesAsync(patientId, ct);
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest(new { error = "Tenant context is required" });
+        }
+
+        var instances = await _promInstanceService.GetPatientPromInstancesAsync(tenantId, patientId, null, ct);
+        return Ok(instances);
+    }
+
+    /// <summary>
+    /// Get PROM instances filtered by template, status, patient, or date range
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<List<PromInstanceDto>>> GetPromInstances(
+        [FromQuery] Guid? templateId = null,
+        [FromQuery] string? status = null,
+        [FromQuery] Guid? patientId = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        CancellationToken ct = default)
+    {
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest(new { error = "Tenant context is required" });
+        }
+
+        var instances = await _promInstanceService.GetPromInstancesAsync(tenantId, templateId, status, patientId, startDate, endDate, ct);
         return Ok(instances);
     }
 
@@ -110,31 +156,17 @@ public class PromInstanceController : ControllerBase
     [HttpPost("{instanceId}/submit")]
     public async Task<ActionResult<PromInstanceDto>> SubmitPromResponse(
         Guid instanceId,
-        [FromBody] PromResponse response,
+        [FromBody] PromSubmissionRequest response,
         CancellationToken ct = default)
     {
         try
         {
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
             response.SubmittedAt = DateTime.UtcNow;
-            var result = await _promInstanceService.SubmitPromResponseAsync(instanceId, response, ct);
-            
-            // If booking was requested, handle it
-            if (response.RequestBooking && response.BookingRequest != null)
-            {
-                try
-                {
-                    var bookingResult = await _promInstanceService.RequestBookingAsync(instanceId, response.BookingRequest, ct);
-                    _logger.LogInformation("Booking request created from PROM {InstanceId}", instanceId);
-                }
-                catch (Exception bookingEx)
-                {
-                    _logger.LogError(bookingEx, "Failed to create booking request from PROM {InstanceId}", instanceId);
-                    // Don't fail the PROM submission if booking fails
-                }
-            }
-            
+            var result = await _promInstanceService.SubmitPromResponseAsync(tenantId, instanceId, response, ct);
+
             _logger.LogInformation("PROM instance {InstanceId} completed", instanceId);
-            
+
             return Ok(result);
         }
         catch (ArgumentException ex)
@@ -160,7 +192,8 @@ public class PromInstanceController : ControllerBase
         Guid instanceId,
         CancellationToken ct = default)
     {
-        var success = await _promInstanceService.ReminderPromAsync(instanceId, ct);
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        var success = await _promInstanceService.ReminderPromAsync(tenantId, instanceId, ct);
         
         if (!success)
         {
@@ -178,7 +211,13 @@ public class PromInstanceController : ControllerBase
         [FromQuery] DateTime? dueBefore = null,
         CancellationToken ct = default)
     {
-        var instances = await _promInstanceService.GetPendingPromsAsync(dueBefore, ct);
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest(new { error = "Tenant context is required" });
+        }
+
+        var instances = await _promInstanceService.GetPendingPromsAsync(tenantId, dueBefore, ct);
         return Ok(instances);
     }
 
@@ -192,7 +231,13 @@ public class PromInstanceController : ControllerBase
         [FromQuery] DateTime? endDate = null,
         CancellationToken ct = default)
     {
-        var stats = await _promInstanceService.GetPromStatsAsync(templateId, startDate, endDate, ct);
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest(new { error = "Tenant context is required" });
+        }
+
+        var stats = await _promInstanceService.GetPromStatsAsync(tenantId, templateId, startDate, endDate, ct);
         return Ok(stats);
     }
 
@@ -205,9 +250,16 @@ public class PromInstanceController : ControllerBase
         [FromBody] CancelPromRequest request,
         CancellationToken ct = default)
     {
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest(new { error = "Tenant context is required" });
+        }
+
         var success = await _promInstanceService.CancelPromInstanceAsync(
-            instanceId, 
-            request.Reason ?? "Cancelled by user", 
+            tenantId,
+            instanceId,
+            request.Reason ?? "Cancelled by user",
             ct);
         
         if (!success)
@@ -230,7 +282,13 @@ public class PromInstanceController : ControllerBase
     {
         try
         {
-            var result = await _promInstanceService.RequestBookingAsync(instanceId, request, ct);
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            if (tenantId == Guid.Empty)
+            {
+                return BadRequest(new { error = "Tenant context is required" });
+            }
+
+            var result = await _promInstanceService.RequestBookingAsync(tenantId, instanceId, request, ct);
             
             _logger.LogInformation(
                 "Booking request created from PROM {InstanceId} for patient {PatientId}",
@@ -257,62 +315,20 @@ public class PromInstanceController : ControllerBase
         Guid templateId,
         CancellationToken ct = default)
     {
-        // This would normally fetch from database
-        // For now, return mock data based on template ID
-        var preview = new PromPreviewDto
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
         {
-            TemplateId = templateId,
-            TemplateName = "PHQ-9 Depression Scale",
-            Description = "Patient Health Questionnaire for Depression",
-            EstimatedTimeMinutes = 5,
-            QuestionCount = 9,
-            Questions = new List<PromQuestionDto>
-            {
-                new() { 
-                    Id = Guid.NewGuid(),
-                    Text = "Little interest or pleasure in doing things",
-                    Type = "scale",
-                    Required = true,
-                    Options = new[] { "Not at all", "Several days", "More than half the days", "Nearly every day" }
-                },
-                new() { 
-                    Id = Guid.NewGuid(),
-                    Text = "Feeling down, depressed, or hopeless",
-                    Type = "scale",
-                    Required = true,
-                    Options = new[] { "Not at all", "Several days", "More than half the days", "Nearly every day" }
-                },
-                // Additional questions would be loaded here
-            }
-        };
-        
-        await Task.Delay(1, ct); // Simulate async
-        
-        return Ok(preview);
+            return BadRequest(new { error = "Tenant context is required" });
+        }
+
+        try
+        {
+            var preview = await _promInstanceService.GetPromPreviewAsync(tenantId, templateId, ct);
+            return Ok(preview);
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
     }
-}
-
-// Additional DTOs
-public class CancelPromRequest
-{
-    public string? Reason { get; set; }
-}
-
-public class PromPreviewDto
-{
-    public Guid TemplateId { get; set; }
-    public string TemplateName { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public int EstimatedTimeMinutes { get; set; }
-    public int QuestionCount { get; set; }
-    public List<PromQuestionDto> Questions { get; set; } = new();
-}
-
-public class PromQuestionDto
-{
-    public Guid Id { get; set; }
-    public string Text { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
-    public bool Required { get; set; }
-    public string[]? Options { get; set; }
 }

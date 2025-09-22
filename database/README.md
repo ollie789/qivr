@@ -1,157 +1,61 @@
-# Qivr Database Migrations
+# Qivr Database Tooling
 
-This directory contains all database migrations for the Qivr platform.
+The project now uses Entity Framework Core migrations as the single source of truth for the database schema. The legacy raw SQL migration files have been removed.
 
-## 📁 Structure
+## 📦 Migration location
 
-- `migrations/` - SQL migration files
-- `run-migrations.sh` - Migration runner script
-- `README.md` - This file
+All migrations live under `backend/Qivr.Infrastructure/Migrations`. The generated files are checked into source control.
 
-## 🚀 Running Migrations
+## 🚀 Applying migrations
 
-### Prerequisites
-
-1. PostgreSQL must be installed and running
-2. Database credentials must be configured in `.env` file or environment variables
-
-### Environment Variables
-
-Create a `.env` file in the project root with:
+Run the latest migrations against your configured database:
 
 ```bash
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=qivr
-DB_USER=postgres
-DB_PASSWORD=postgres
-
-# Optional: Use connection string instead
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/qivr
+cd backend
+dotnet ef database update \
+  --project Qivr.Infrastructure \
+  --startup-project Qivr.Api
 ```
 
-### Execute Migrations
+The command honours the connection string defined in `appsettings.Development.json` or the `DATABASE_URL` environment variable.
 
-Run all pending migrations:
+## ✍️ Creating a new migration
 
-```bash
-cd database
-./run-migrations.sh
-```
+1. Make your model changes in the C# entity classes or `QivrDbContext`.
+2. Generate a migration:
 
-The script will:
-- ✅ Create a migrations tracking table
-- ✅ Execute migrations in order
-- ✅ Skip already executed migrations
-- ✅ Track execution time and checksums
-- ✅ Handle errors gracefully
-
-## 📝 Migration Files
-
-### Current Migrations
-
-1. **001_initial_schema.sql** - Base tables (tenants, users, patients, practitioners)
-2. **002_evaluations_and_intake.sql** - Evaluation and intake forms
-3. **003_create_calendar_tables.sql** - Calendar integration and appointments
-4. **004_create_prom_tables.sql** - Patient-Reported Outcome Measures
-5. **005_enhance_evaluations_table.sql** - Enhanced evaluation features
-
-### Creating New Migrations
-
-1. Create a new file in `migrations/` with naming pattern: `XXX_description.sql`
-2. Start with a comment describing the migration
-3. Use `IF NOT EXISTS` clauses for idempotency
-4. Include indexes and constraints
-5. Add comments for documentation
-
-Example:
-
-```sql
--- Migration: Add new feature
--- Description: Adds tables for new feature X
--- Date: 2024-01-15
-
-CREATE TABLE IF NOT EXISTS feature_x (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_feature_x_name ON feature_x(name);
-
-COMMENT ON TABLE feature_x IS 'Feature X main table';
-```
-
-## 🔍 Checking Migration Status
-
-View migration history:
-
-```bash
-psql -U postgres -d qivr -c "SELECT * FROM migrations ORDER BY executed_at DESC;"
-```
-
-## 🛠️ Troubleshooting
-
-### Migration Failed
-
-1. Check error message in output
-2. Fix the issue in the migration file
-3. Manually remove failed entry from migrations table:
-   ```sql
-   DELETE FROM migrations WHERE filename = 'XXX_failed_migration.sql';
+   ```bash
+   cd backend
+   dotnet ef migrations add <DescriptiveName> \
+     --project Qivr.Infrastructure \
+     --startup-project Qivr.Api
    ```
-4. Re-run migrations
+3. Review the generated files in `backend/Qivr.Infrastructure/Migrations` and commit them.
 
-### Connection Issues
+## 🌱 Seeding development data
 
-Verify database connectivity:
-
-```bash
-psql -h localhost -U postgres -d qivr -c "SELECT 1;"
-```
-
-### Reset All Migrations (Development Only)
-
-⚠️ **WARNING: This will delete all data!**
+Use the Super Admin seed endpoint while running the API locally:
 
 ```bash
-psql -U postgres -c "DROP DATABASE IF EXISTS qivr;"
-psql -U postgres -c "CREATE DATABASE qivr;"
-./run-migrations.sh
+curl -X POST http://localhost:5001/api/superadmin/seed-test-data
 ```
 
-## 📊 Database Schema Overview
+This seeds tenants, users, and baseline PROM templates/responses using EF Core.
 
-### Core Tables
-- `tenants` - Multi-tenant support
-- `users` - System users
-- `patients` - Patient records
-- `practitioners` - Healthcare providers
+## 🔍 Helpful commands
 
-### Calendar & Appointments
-- `appointments` - Appointment records
-- `calendar_tokens` - OAuth tokens
-- `provider_availability` - Schedule templates
+- Show pending migrations:
+  ```bash
+  dotnet ef migrations list --project backend/Qivr.Infrastructure --startup-project backend/Qivr.Api
+  ```
+- Remove the last migration (if not applied):
+  ```bash
+  dotnet ef migrations remove --project backend/Qivr.Infrastructure --startup-project backend/Qivr.Api
+  ```
 
-### Clinical Features
-- `evaluations` - Patient evaluations with AI analysis
-- `intake_forms` - Initial patient intake
-- `prom_templates` - PROM questionnaires
-- `prom_instances` - Patient PROM assignments
+## 🛡️ Notes
 
-### Supporting Tables
-- `audit_logs` - System audit trail
-- `migrations` - Migration tracking
+- Always generate migrations from the root of the solution to ensure references resolve correctly.
+- Never edit generated migration files after they have been applied to a shared environment.
+- Production deployments should run `dotnet ef database update` as part of the release process.
 
-## 🔒 Security Notes
-
-- All tables include tenant_id for data isolation
-- Sensitive data should be encrypted at rest
-- Use row-level security (RLS) in production
-- Regular backups are essential
-
-## 📚 Additional Resources
-
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [Migration Best Practices](https://www.postgresql.org/docs/current/ddl.html)
-- [Qivr API Documentation](../backend/README.md)

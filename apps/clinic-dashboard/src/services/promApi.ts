@@ -1,4 +1,5 @@
 import apiClient from './sharedApiClient';
+import { PromInstanceDto } from './promInstanceApi';
 
 export interface PromTemplate {
   id: string;
@@ -33,7 +34,7 @@ export interface PromResponse {
   patientId: string;
   patientName: string;
   responses: Record<string, any>;
-  status: 'pending' | 'in-progress' | 'completed' | 'expired';
+  status: 'pending' | 'in-progress' | 'completed' | 'expired' | 'cancelled';
   startedAt?: string;
   completedAt?: string;
   score?: number;
@@ -101,10 +102,52 @@ class PromApi {
     page?: number;
     limit?: number;
   }) {
-    // Mock data for now since the backend returns different format
+    const queryParams = new URLSearchParams();
+    if (params?.templateId) queryParams.append('templateId', params.templateId);
+    if (params?.patientId) queryParams.append('patientId', params.patientId);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+
+    const url = `/api/PromInstance${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const instances = await apiClient.get<PromInstanceDto[]>(url);
+
+    const mapped = instances.map(instance => {
+      const rawStatus = (instance.status || '').toLowerCase();
+      const normalizedStatus: PromResponse['status'] = rawStatus === 'completed'
+        ? 'completed'
+        : rawStatus === 'in-progress'
+        ? 'in-progress'
+        : rawStatus === 'inprogress'
+        ? 'in-progress'
+        : rawStatus === 'expired'
+        ? 'expired'
+        : rawStatus === 'cancelled'
+        ? 'cancelled'
+        : 'pending';
+
+      return {
+        id: instance.id,
+        templateId: instance.templateId,
+        patientId: instance.patientId,
+        patientName: instance.patientName,
+        responses: instance.answers ?? {},
+        status: normalizedStatus,
+        startedAt: instance.createdAt,
+        completedAt: instance.completedAt,
+        score: instance.totalScore ? Number(instance.totalScore) : undefined,
+        notes: instance.notes,
+      } as PromResponse;
+    });
+
+    const limit = params?.limit ?? mapped.length;
+    const page = params?.page ?? 1;
+    const start = (page - 1) * limit;
+    const data = mapped.slice(start, start + limit);
+
     return {
-      data: [],
-      total: 0
+      data,
+      total: mapped.length,
     };
   }
 

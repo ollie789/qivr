@@ -107,7 +107,7 @@ export const PromCompletion: React.FC<PromCompletionProps> = ({
   const handleSubmitProm = async () => {
     setIsSubmitting(true);
     try {
-      const submissionData = {
+     const submissionData = {
         answers: Object.entries(answers).map(([questionId, value]) => ({
           questionId,
           value,
@@ -120,6 +120,7 @@ export const PromCompletion: React.FC<PromCompletionProps> = ({
           reasonForVisit: bookingData.reasonForVisit || `Follow-up for ${templateName}`,
           notes: bookingData.notes,
         } : null,
+        completionSeconds: timeSpent,
       };
 
       await onSubmit(submissionData);

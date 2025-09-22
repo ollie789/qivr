@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qivr.Services;
+using System.Linq;
 
 namespace Qivr.Api.Controllers;
 
@@ -9,11 +10,13 @@ namespace Qivr.Api.Controllers;
 public class PromsController : ControllerBase
 {
 	private readonly IPromService _promService;
+	private readonly IPromInstanceService _promInstanceService;
 	private readonly ILogger<PromsController> _logger;
 
-	public PromsController(IPromService promService, ILogger<PromsController> logger)
+	public PromsController(IPromService promService, IPromInstanceService promInstanceService, ILogger<PromsController> logger)
 	{
 		_promService = promService;
+		_promInstanceService = promInstanceService;
 		_logger = logger;
 	}
 
@@ -65,7 +68,23 @@ public class PromsController : ControllerBase
 	public async Task<ActionResult<PromInstanceDto>> Schedule([FromBody] SchedulePromRequest request, CancellationToken ct)
 	{
 		var tenantId = GetTenantIdOrDefault();
-		var instance = await _promService.ScheduleInstanceAsync(tenantId, request, ct);
+		var template = await _promService.GetTemplateAsync(tenantId, request.TemplateKey, request.Version, ct);
+		if (template == null)
+		{
+			return NotFound(new { error = "PROM template not found" });
+		}
+
+		var sendRequest = new SendPromRequest
+		{
+			TemplateId = template.Id,
+			PatientId = request.PatientId,
+			ScheduledAt = request.ScheduledFor,
+			DueDate = request.DueAt,
+			NotificationMethod = NotificationMethod.Email,
+			SentBy = GetUserId().ToString()
+		};
+
+		var instance = await _promInstanceService.SendPromToPatientAsync(tenantId, sendRequest, ct);
 		return CreatedAtAction(nameof(GetInstance), new { id = instance.Id }, instance);
 	}
 
@@ -75,7 +94,7 @@ public class PromsController : ControllerBase
 	public async Task<ActionResult<PromInstanceDto>> GetInstance([FromRoute] Guid id, CancellationToken ct)
 	{
 		var tenantId = GetTenantId();
-		var result = await _promService.GetInstanceAsync(tenantId, id, ct);
+		var result = await _promInstanceService.GetPromInstanceAsync(tenantId, id, ct);
 		if (result == null) return NotFound();
 		return Ok(result);
 	}
@@ -87,7 +106,7 @@ public class PromsController : ControllerBase
 	{
 		var tenantId = GetTenantId();
 		var userId = GetUserId();
-		var list = await _promService.ListInstancesForPatientAsync(tenantId, userId, status, ct);
+		var list = await _promInstanceService.GetPatientPromInstancesAsync(tenantId, userId, status, ct);
 		return Ok(list);
 	}
 
@@ -97,8 +116,18 @@ public class PromsController : ControllerBase
 	public async Task<ActionResult<SubmitAnswersResult>> SubmitAnswers([FromRoute] Guid id, [FromBody] Dictionary<string, object> answers, CancellationToken ct)
 	{
 		var tenantId = GetTenantIdOrDefault();
-		var result = await _promService.SubmitAnswersAsync(tenantId, id, answers, ct);
-		return Ok(result);
+		var response = new PromSubmissionRequest
+		{
+			SubmittedAt = DateTime.UtcNow,
+			Answers = answers.Select(kvp => new PromAnswer
+			{
+				QuestionId = Guid.TryParse(kvp.Key, out var qid) ? qid : Guid.Empty,
+				Value = kvp.Value
+			}).ToList()
+		};
+
+		var instance = await _promInstanceService.SubmitPromResponseAsync(tenantId, id, response, ct);
+		return Ok(new SubmitAnswersResult { Score = instance.TotalScore ?? 0m, CompletedAt = instance.CompletedAt ?? DateTime.UtcNow });
 	}
 
 	private Guid GetTenantId()

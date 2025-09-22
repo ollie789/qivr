@@ -1,107 +1,111 @@
-using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Qivr.Core.Entities;
+using Qivr.Infrastructure.Data;
 
 namespace Qivr.Services;
 
 public interface IPromInstanceService
 {
-    Task<PromInstanceDto> SendPromToPatientAsync(SendPromRequest request, CancellationToken ct = default);
-    Task<List<PromInstanceDto>> SendPromToMultiplePatientsAsync(SendBulkPromRequest request, CancellationToken ct = default);
-    Task<PromInstanceDto?> GetPromInstanceAsync(Guid instanceId, CancellationToken ct = default);
-    Task<List<PromInstanceDto>> GetPatientPromInstancesAsync(Guid patientId, CancellationToken ct = default);
-    Task<PromInstanceDto> SubmitPromResponseAsync(Guid instanceId, PromResponse response, CancellationToken ct = default);
-    Task<bool> ReminderPromAsync(Guid instanceId, CancellationToken ct = default);
-    Task<List<PromInstanceDto>> GetPendingPromsAsync(DateTime? dueBefore = null, CancellationToken ct = default);
-    Task<PromInstanceStats> GetPromStatsAsync(Guid? templateId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
-    Task<bool> CancelPromInstanceAsync(Guid instanceId, string reason, CancellationToken ct = default);
-    Task<BookingRequestDto> RequestBookingAsync(Guid instanceId, BookingRequest request, CancellationToken ct = default);
+    Task<PromInstanceDto> SendPromToPatientAsync(Guid tenantId, SendPromRequest request, CancellationToken ct = default);
+    Task<List<PromInstanceDto>> SendPromToMultiplePatientsAsync(Guid tenantId, SendBulkPromRequest request, CancellationToken ct = default);
+    Task<PromInstanceDto?> GetPromInstanceAsync(Guid tenantId, Guid instanceId, CancellationToken ct = default);
+    Task<List<PromInstanceDto>> GetPatientPromInstancesAsync(Guid tenantId, Guid patientId, string? status = null, CancellationToken ct = default);
+    Task<List<PromInstanceDto>> GetPromInstancesAsync(Guid tenantId, Guid? templateId = null, string? status = null, Guid? patientId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
+    Task<PromInstanceDto> SubmitPromResponseAsync(Guid tenantId, Guid instanceId, PromSubmissionRequest response, CancellationToken ct = default);
+    Task<bool> ReminderPromAsync(Guid tenantId, Guid instanceId, CancellationToken ct = default);
+    Task<List<PromInstanceDto>> GetPendingPromsAsync(Guid tenantId, DateTime? dueBefore = null, CancellationToken ct = default);
+    Task<PromInstanceStats> GetPromStatsAsync(Guid tenantId, Guid? templateId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
+    Task<bool> CancelPromInstanceAsync(Guid tenantId, Guid instanceId, string reason, CancellationToken ct = default);
+    Task<BookingRequestDto> RequestBookingAsync(Guid tenantId, Guid instanceId, BookingRequest request, CancellationToken ct = default);
+    Task<PromPreviewDto> GetPromPreviewAsync(Guid tenantId, Guid templateId, CancellationToken ct = default);
 }
 
 public class PromInstanceService : IPromInstanceService
 {
-    private readonly ILogger<PromInstanceService> _logger;
+    private const string MetadataTagsKey = "tags";
+    private const string MetadataNotesKey = "notes";
+    private const string MetadataNotificationKey = "notificationMethod";
+    private const string MetadataAnswersKey = "answers";
+    private const string MetadataReminderCountKey = "reminderCount";
+    private const string MetadataCompletionSecondsKey = "completionSeconds";
+    private const string MetadataSentByKey = "sentBy";
+    private const string MetadataBookingRequestedKey = "bookingRequested";
+    private const string MetadataBookingRequestedAtKey = "bookingRequestedAt";
+
+    private readonly QivrDbContext _db;
     private readonly INotificationService _notificationService;
-    private readonly List<PromInstanceInternal> _promInstances = new();
-    private readonly List<PromTemplateInternal> _promTemplates = new();
+    private readonly ILogger<PromInstanceService> _logger;
 
     public PromInstanceService(
-        ILogger<PromInstanceService> logger,
-        INotificationService notificationService)
+        QivrDbContext db,
+        INotificationService notificationService,
+        ILogger<PromInstanceService> logger)
     {
-        _logger = logger;
+        _db = db;
         _notificationService = notificationService;
-        
-        // Initialize with some mock templates
-        InitializeMockData();
+        _logger = logger;
     }
 
-    public async Task<PromInstanceDto> SendPromToPatientAsync(SendPromRequest request, CancellationToken ct = default)
+    public async Task<PromInstanceDto> SendPromToPatientAsync(Guid tenantId, SendPromRequest request, CancellationToken ct = default)
     {
-        var template = _promTemplates.FirstOrDefault(t => t.Id == request.TemplateId);
-        if (template == null)
-        {
-            throw new ArgumentException($"Template {request.TemplateId} not found");
-        }
+        var template = await _db.PromTemplates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.Id == request.TemplateId, ct)
+            ?? throw new ArgumentException($"PROM template {request.TemplateId} not found");
 
-        var instance = new PromInstanceInternal
+        var patient = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Id == request.PatientId, ct)
+            ?? throw new ArgumentException($"Patient {request.PatientId} not found");
+
+        var scheduledAt = request.ScheduledAt ?? DateTime.UtcNow;
+        var dueDate = request.DueDate ?? scheduledAt.AddDays(7);
+
+        var metadata = new Dictionary<string, object>
         {
-            Id = Guid.NewGuid(),
-            TemplateId = request.TemplateId,
-            TemplateName = template.Name,
-            PatientId = request.PatientId,
-            PatientName = await GetPatientNameAsync(request.PatientId, ct),
-            CreatedAt = DateTime.UtcNow,
-            ScheduledAt = request.ScheduledAt ?? DateTime.UtcNow,
-            DueDate = request.DueDate ?? DateTime.UtcNow.AddDays(template.DefaultDueDays),
-            Status = request.ScheduledAt > DateTime.UtcNow ? PromInstanceStatus.Scheduled : PromInstanceStatus.Sent,
-            NotificationMethod = request.NotificationMethod,
-            Questions = template.Questions.Select(q => new PromQuestionInstance
-            {
-                Id = Guid.NewGuid(),
-                QuestionId = q.Id,
-                QuestionText = q.Text,
-                QuestionType = q.Type,
-                Options = q.Options,
-                Required = q.Required,
-                Order = q.Order
-            }).ToList(),
-            Metadata = new PromInstanceMetadata
-            {
-                Source = "Manual",
-                SentBy = request.SentBy,
-                Tags = request.Tags,
-                Notes = request.Notes
-            }
+            [MetadataNotificationKey] = request.NotificationMethod.ToString(),
+            [MetadataTagsKey] = request.Tags ?? new List<string>(),
+            [MetadataNotesKey] = request.Notes,
+            [MetadataSentByKey] = request.SentBy,
+            [MetadataReminderCountKey] = 0
         };
 
-        _promInstances.Add(instance);
-
-        // Send notification if not scheduled for future
-        if (instance.Status == PromInstanceStatus.Sent)
+        var instance = new PromInstance
         {
-            await SendPromNotificationAsync(instance, ct);
-        }
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            TemplateId = template.Id,
+            PatientId = request.PatientId,
+            Status = PromStatus.Pending,
+            ScheduledFor = scheduledAt,
+            DueDate = dueDate,
+            ResponseData = metadata
+        };
 
-        _logger.LogInformation("PROM instance {InstanceId} created for patient {PatientId}", 
-            instance.Id, instance.PatientId);
+        _db.PromInstances.Add(instance);
+        await _db.SaveChangesAsync(ct);
 
-        return MapToDto(instance);
+        _logger.LogInformation("PROM instance {InstanceId} created for template {TemplateId} and patient {PatientId}", instance.Id, template.Id, request.PatientId);
+
+        return await MapInstanceToDtoAsync(tenantId, instance.Id, ct);
     }
 
-    public async Task<List<PromInstanceDto>> SendPromToMultiplePatientsAsync(
-        SendBulkPromRequest request,
-        CancellationToken ct = default)
+    public async Task<List<PromInstanceDto>> SendPromToMultiplePatientsAsync(Guid tenantId, SendBulkPromRequest request, CancellationToken ct = default)
     {
         var results = new List<PromInstanceDto>();
-        
+
         foreach (var patientId in request.PatientIds)
         {
             try
             {
-                var sendRequest = new SendPromRequest
+                var dto = await SendPromToPatientAsync(tenantId, new SendPromRequest
                 {
                     TemplateId = request.TemplateId,
                     PatientId = patientId,
@@ -111,133 +115,229 @@ public class PromInstanceService : IPromInstanceService
                     SentBy = request.SentBy,
                     Tags = request.Tags,
                     Notes = request.Notes
-                };
-                
-                var instance = await SendPromToPatientAsync(sendRequest, ct);
-                results.Add(instance);
+                }, ct);
+
+                results.Add(dto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send PROM to patient {PatientId}", patientId);
+                _logger.LogError(ex, "Failed to send PROM template {TemplateId} to patient {PatientId}", request.TemplateId, patientId);
             }
         }
-
-        _logger.LogInformation("Sent PROM to {SuccessCount}/{TotalCount} patients", 
-            results.Count, request.PatientIds.Count);
 
         return results;
     }
 
-    public Task<PromInstanceDto?> GetPromInstanceAsync(Guid instanceId, CancellationToken ct = default)
+    public async Task<PromInstanceDto?> GetPromInstanceAsync(Guid tenantId, Guid instanceId, CancellationToken ct = default)
     {
-        var instance = _promInstances.FirstOrDefault(i => i.Id == instanceId);
-        return Task.FromResult(instance != null ? MapToDto(instance) : null);
+        return await MapInstanceToDtoAsync(tenantId, instanceId, ct, allowMissing: true);
     }
 
-    public Task<List<PromInstanceDto>> GetPatientPromInstancesAsync(Guid patientId, CancellationToken ct = default)
+    public async Task<List<PromInstanceDto>> GetPatientPromInstancesAsync(Guid tenantId, Guid patientId, string? status = null, CancellationToken ct = default)
     {
-        var instances = _promInstances
-            .Where(i => i.PatientId == patientId)
+        var query = _db.PromInstances
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId && i.PatientId == patientId);
+
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PromStatus>(status, true, out var parsed))
+        {
+            query = query.Where(i => i.Status == parsed);
+        }
+
+        var instances = await query
             .OrderByDescending(i => i.CreatedAt)
-            .Select(MapToDto)
-            .ToList();
+            .ToListAsync(ct);
 
-        return Task.FromResult(instances);
+        var result = new List<PromInstanceDto>(instances.Count);
+        foreach (var instance in instances)
+        {
+            result.Add(await MapInstanceToDtoAsync(tenantId, instance.Id, ct));
+        }
+
+        return result;
     }
 
-    public async Task<PromInstanceDto> SubmitPromResponseAsync(
-        Guid instanceId,
-        PromResponse response,
-        CancellationToken ct = default)
+    public async Task<List<PromInstanceDto>> GetPromInstancesAsync(Guid tenantId, Guid? templateId = null, string? status = null, Guid? patientId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default)
     {
-        var instance = _promInstances.FirstOrDefault(i => i.Id == instanceId);
-        if (instance == null)
+        var query = _db.PromInstances
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId);
+
+        if (templateId.HasValue)
         {
-            throw new ArgumentException($"PROM instance {instanceId} not found");
+            query = query.Where(i => i.TemplateId == templateId.Value);
         }
 
-        if (instance.Status == PromInstanceStatus.Completed)
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PromStatus>(status, true, out var parsedStatus))
         {
-            throw new InvalidOperationException("PROM has already been completed");
+            query = query.Where(i => i.Status == parsedStatus);
         }
 
-        // Store responses
-        foreach (var answer in response.Answers)
+        if (patientId.HasValue)
         {
-            var question = instance.Questions.FirstOrDefault(q => q.QuestionId == answer.QuestionId);
-            if (question != null)
+            query = query.Where(i => i.PatientId == patientId.Value);
+        }
+
+        if (startDate.HasValue)
+        {
+            var start = DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc);
+            query = query.Where(i => i.CreatedAt >= start);
+        }
+
+        if (endDate.HasValue)
+        {
+            var end = DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc);
+            query = query.Where(i => i.CreatedAt <= end);
+        }
+
+        var instances = await query
+            .OrderByDescending(i => i.CreatedAt)
+            .Take(200)
+            .ToListAsync(ct);
+
+        var result = new List<PromInstanceDto>(instances.Count);
+        foreach (var instance in instances)
+        {
+            result.Add(await MapInstanceToDtoAsync(tenantId, instance.Id, ct));
+        }
+
+        return result;
+    }
+
+    public async Task<PromInstanceDto> SubmitPromResponseAsync(Guid tenantId, Guid instanceId, PromSubmissionRequest response, CancellationToken ct = default)
+    {
+        var instance = await _db.PromInstances
+            .Include(i => i.Template)
+            .Include(i => i.Patient)
+            .FirstOrDefaultAsync(i => i.Id == instanceId && i.TenantId == tenantId, ct)
+            ?? await _db.PromInstances
+                .Include(i => i.Template)
+                .Include(i => i.Patient)
+                .FirstOrDefaultAsync(i => i.Id == instanceId, ct)
+            ?? throw new ArgumentException($"PROM instance {instanceId} not found");
+
+        if (instance.Status == PromStatus.Completed)
+        {
+            throw new InvalidOperationException("PROM instance already completed");
+        }
+
+        var answersDictionary = response.Answers
+            .Where(a => a.QuestionId != Guid.Empty)
+            .ToDictionary(a => a.QuestionId.ToString(), a => a.Value ?? string.Empty);
+
+        var metadata = EnsureMetadata(instance);
+        metadata[MetadataAnswersKey] = answersDictionary;
+        metadata[MetadataCompletionSecondsKey] = response.CompletionSeconds ?? 0;
+
+        var submittedAt = response.SubmittedAt == default ? DateTime.UtcNow : response.SubmittedAt;
+        var score = CalculateScore(instance.Template, answersDictionary);
+        var severity = DetermineSeverity(instance.Template, score);
+
+        instance.Status = PromStatus.Completed;
+        instance.CompletedAt = submittedAt;
+        instance.Score = score;
+        instance.ResponseData = metadata;
+
+        var promResponse = new PromResponse
+        {
+            Id = Guid.NewGuid(),
+            TenantId = instance.TenantId,
+            PatientId = instance.PatientId,
+            PromInstanceId = instance.Id,
+            PromType = instance.Template?.Key ?? instance.Template?.Name ?? string.Empty,
+            CompletedAt = submittedAt,
+            Score = score,
+            Severity = severity,
+            Answers = answersDictionary,
+            Notes = response.Notes
+        };
+
+        _db.PromResponses.Add(promResponse);
+        await _db.SaveChangesAsync(ct);
+
+        if (response.RequestBooking && response.BookingRequest != null)
+        {
+            try
             {
-                question.Answer = answer.Value;
-                question.AnsweredAt = DateTime.UtcNow;
+                await RequestBookingAsync(instance.TenantId, instance.Id, response.BookingRequest, ct);
+            }
+            catch (Exception bookingEx)
+            {
+                _logger.LogError(bookingEx, "Failed to create booking request from PROM instance {InstanceId}", instance.Id);
             }
         }
 
-        instance.Status = PromInstanceStatus.Completed;
-        instance.CompletedAt = DateTime.UtcNow;
-        instance.CompletionTimeMinutes = (int)(DateTime.UtcNow - instance.CreatedAt).TotalMinutes;
-
-        // Calculate scores if applicable
-        instance.TotalScore = CalculateTotalScore(instance);
-
-        _logger.LogInformation("PROM instance {InstanceId} completed by patient {PatientId}", 
-            instanceId, instance.PatientId);
-
-        await Task.Delay(1, ct); // Simulate async operation
-
-        return MapToDto(instance);
+        return await MapInstanceToDtoAsync(instance.TenantId, instance.Id, ct);
     }
 
-    public async Task<bool> ReminderPromAsync(Guid instanceId, CancellationToken ct = default)
+    public async Task<bool> ReminderPromAsync(Guid tenantId, Guid instanceId, CancellationToken ct = default)
     {
-        var instance = _promInstances.FirstOrDefault(i => i.Id == instanceId);
-        if (instance == null || instance.Status != PromInstanceStatus.Sent)
+        var instance = await _db.PromInstances
+            .FirstOrDefaultAsync(i => i.Id == instanceId && i.TenantId == tenantId, ct);
+
+        if (instance == null)
         {
             return false;
         }
 
-        await _notificationService.SendPromReminderAsync(
-            instance.PatientId,
-            instance.Id,
-            instance.TemplateName,
-            instance.DueDate,
-            ct);
+        if (instance.Status is PromStatus.Completed or PromStatus.Cancelled)
+        {
+            return false;
+        }
 
-        instance.LastReminderSentAt = DateTime.UtcNow;
-        instance.ReminderCount++;
+        var metadata = EnsureMetadata(instance);
+        var reminderCount = ExtractInt(metadata, MetadataReminderCountKey);
+        metadata[MetadataReminderCountKey] = reminderCount + 1;
+        instance.ResponseData = metadata;
+        instance.ReminderSentAt = DateTime.UtcNow;
 
-        _logger.LogInformation("Reminder sent for PROM instance {InstanceId}", instanceId);
+        await _db.SaveChangesAsync(ct);
+
+        try
+        {
+            await _notificationService.SendPromReminderAsync(
+                instance.PatientId,
+                instance.Id,
+                instance.Template?.Name ?? "PROM",
+                instance.DueDate,
+                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to dispatch reminder for PROM instance {InstanceId}", instance.Id);
+        }
 
         return true;
     }
 
-    public Task<List<PromInstanceDto>> GetPendingPromsAsync(
-        DateTime? dueBefore = null,
-        CancellationToken ct = default)
+    public async Task<List<PromInstanceDto>> GetPendingPromsAsync(Guid tenantId, DateTime? dueBefore = null, CancellationToken ct = default)
     {
-        var query = _promInstances.Where(i => 
-            i.Status == PromInstanceStatus.Sent || 
-            i.Status == PromInstanceStatus.Scheduled);
+        var query = _db.PromInstances
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId && i.Status == PromStatus.Pending);
 
         if (dueBefore.HasValue)
         {
             query = query.Where(i => i.DueDate <= dueBefore.Value);
         }
 
-        var results = query
+        var instances = await query
             .OrderBy(i => i.DueDate)
-            .Select(MapToDto)
-            .ToList();
+            .ToListAsync(ct);
 
-        return Task.FromResult(results);
+        var result = new List<PromInstanceDto>(instances.Count);
+        foreach (var instance in instances)
+        {
+            result.Add(await MapInstanceToDtoAsync(tenantId, instance.Id, ct));
+        }
+
+        return result;
     }
 
-    public Task<PromInstanceStats> GetPromStatsAsync(
-        Guid? templateId = null,
-        DateTime? startDate = null,
-        DateTime? endDate = null,
-        CancellationToken ct = default)
+    public async Task<PromInstanceStats> GetPromStatsAsync(Guid tenantId, Guid? templateId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default)
     {
-        var query = _promInstances.AsEnumerable();
+        var now = DateTime.UtcNow;
+        var query = _db.PromInstances.AsNoTracking().Where(i => i.TenantId == tenantId);
 
         if (templateId.HasValue)
         {
@@ -254,372 +354,561 @@ public class PromInstanceService : IPromInstanceService
             query = query.Where(i => i.CreatedAt <= endDate.Value);
         }
 
-        var instances = query.ToList();
+        var instances = await query.ToListAsync(ct);
 
-        var stats = new PromInstanceStats
+        var total = instances.Count;
+        var completed = instances.Count(i => i.Status == PromStatus.Completed);
+        var pending = instances.Count(i => i.Status == PromStatus.Pending && i.DueDate >= now);
+        var scheduled = instances.Count(i => i.Status == PromStatus.Pending && i.ScheduledFor > now);
+        var expired = instances.Count(i => i.Status != PromStatus.Completed && i.DueDate < now);
+
+        var completionTimes = instances
+            .Where(i => i.Status == PromStatus.Completed)
+            .Select(i => ExtractDouble(EnsureMetadata(i), MetadataCompletionSecondsKey))
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value / 60d)
+            .ToList();
+
+        var averageCompletion = completionTimes.Count > 0 ? completionTimes.Average() : 0d;
+        var averageScore = instances
+            .Where(i => i.Score.HasValue)
+            .Select(i => (double)i.Score!.Value)
+            .DefaultIfEmpty(0d)
+            .Average();
+
+        var completionRate = total == 0 ? 0d : (double)completed / total * 100d;
+
+        return new PromInstanceStats
         {
-            TotalSent = instances.Count,
-            Completed = instances.Count(i => i.Status == PromInstanceStatus.Completed),
-            Pending = instances.Count(i => i.Status == PromInstanceStatus.Sent),
-            Scheduled = instances.Count(i => i.Status == PromInstanceStatus.Scheduled),
-            Expired = instances.Count(i => i.Status == PromInstanceStatus.Expired),
-            CompletionRate = instances.Any() ? 
-                (double)instances.Count(i => i.Status == PromInstanceStatus.Completed) / instances.Count * 100 : 0,
-            AverageCompletionTimeMinutes = instances
-                .Where(i => i.CompletionTimeMinutes.HasValue)
-                .Select(i => i.CompletionTimeMinutes!.Value)
-                .DefaultIfEmpty(0)
-                .Average(),
-            AverageScore = instances
-                .Where(i => i.TotalScore.HasValue)
-                .Select(i => i.TotalScore!.Value)
-                .DefaultIfEmpty(0)
-                .Average()
+            TotalSent = total,
+            Completed = completed,
+            Pending = pending,
+            Scheduled = scheduled,
+            Expired = expired,
+            CompletionRate = Math.Round(completionRate, 2),
+            AverageCompletionTimeMinutes = Math.Round(averageCompletion, 2),
+            AverageScore = Math.Round(averageScore, 2)
+        };
+    }
+
+    public async Task<bool> CancelPromInstanceAsync(Guid tenantId, Guid instanceId, string reason, CancellationToken ct = default)
+    {
+        var instance = await _db.PromInstances
+            .FirstOrDefaultAsync(i => i.Id == instanceId && i.TenantId == tenantId, ct);
+
+        if (instance == null)
+        {
+            return false;
+        }
+
+        if (instance.Status == PromStatus.Completed || instance.Status == PromStatus.Cancelled)
+        {
+            return false;
+        }
+
+        var metadata = EnsureMetadata(instance);
+        metadata["cancelReason"] = reason;
+        instance.ResponseData = metadata;
+        instance.Status = PromStatus.Cancelled;
+        instance.CompletedAt = null;
+
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<BookingRequestDto> RequestBookingAsync(Guid tenantId, Guid instanceId, BookingRequest request, CancellationToken ct = default)
+    {
+        var instance = await _db.PromInstances
+            .Include(i => i.Patient)
+            .Include(i => i.Template)
+            .FirstOrDefaultAsync(i => i.Id == instanceId && i.TenantId == tenantId, ct)
+            ?? throw new ArgumentException($"PROM instance {instanceId} not found");
+
+        var booking = new PromBookingRequest
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PromInstanceId = instanceId,
+            PatientId = instance.PatientId,
+            PreferredDate = request.PreferredDate,
+            AlternativeDate = request.AlternativeDate,
+            TimePreference = request.TimePreference,
+            ReasonForVisit = request.ReasonForVisit ?? $"Follow-up for {instance.Template?.Name ?? "PROM"}",
+            Notes = request.Notes,
+            Status = "Pending",
+            RequestedAt = DateTime.UtcNow
         };
 
-        return Task.FromResult(stats);
+        _db.PromBookingRequests.Add(booking);
+
+        var metadata = EnsureMetadata(instance);
+        metadata[MetadataBookingRequestedKey] = true;
+        metadata[MetadataBookingRequestedAtKey] = booking.RequestedAt;
+        instance.ResponseData = metadata;
+
+        await _db.SaveChangesAsync(ct);
+
+        return new BookingRequestDto
+        {
+            Id = booking.Id,
+            PromInstanceId = booking.PromInstanceId,
+            PatientId = booking.PatientId,
+            PatientName = instance.Patient != null ? $"{instance.Patient.FirstName} {instance.Patient.LastName}" : string.Empty,
+            RequestedDate = booking.PreferredDate,
+            AlternativeDate = booking.AlternativeDate,
+            TimePreference = booking.TimePreference,
+            ReasonForVisit = booking.ReasonForVisit,
+            Urgency = DetermineBookingUrgency(instance.Score),
+            Notes = booking.Notes,
+            CreatedAt = booking.RequestedAt,
+            Status = booking.Status,
+            PromTemplateName = instance.Template?.Name ?? string.Empty,
+            PromCompletedAt = instance.CompletedAt,
+            PromScore = instance.Score
+        };
     }
 
-    public Task<bool> CancelPromInstanceAsync(Guid instanceId, string reason, CancellationToken ct = default)
+    public async Task<PromPreviewDto> GetPromPreviewAsync(Guid tenantId, Guid templateId, CancellationToken ct = default)
     {
-        var instance = _promInstances.FirstOrDefault(i => i.Id == instanceId);
-        if (instance == null)
+        var template = await _db.PromTemplates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == templateId && t.TenantId == tenantId, ct)
+            ?? throw new ArgumentException($"PROM template {templateId} not found");
+
+        var questions = BuildQuestionDtos(template);
+        var estimatedMinutes = Math.Max(5, questions.Count * 2);
+
+        return new PromPreviewDto
         {
-            return Task.FromResult(false);
-        }
-
-        if (instance.Status == PromInstanceStatus.Completed)
-        {
-            throw new InvalidOperationException("Cannot cancel a completed PROM");
-        }
-
-        instance.Status = PromInstanceStatus.Cancelled;
-        instance.CancelledAt = DateTime.UtcNow;
-        instance.CancellationReason = reason;
-
-        _logger.LogInformation("PROM instance {InstanceId} cancelled. Reason: {Reason}", 
-            instanceId, reason);
-
-        return Task.FromResult(true);
+            TemplateId = template.Id,
+            TemplateName = template.Name,
+            Description = template.Description ?? string.Empty,
+            EstimatedTimeMinutes = estimatedMinutes,
+            QuestionCount = questions.Count,
+            Questions = questions
+        };
     }
 
-    public async Task<BookingRequestDto> RequestBookingAsync(
-        Guid instanceId, 
-        BookingRequest request, 
-        CancellationToken ct = default)
+    private async Task<PromInstanceDto> MapInstanceToDtoAsync(Guid tenantId, Guid instanceId, CancellationToken ct, bool allowMissing = false)
     {
-        var instance = _promInstances.FirstOrDefault(i => i.Id == instanceId);
+        var instance = await _db.PromInstances
+            .AsNoTracking()
+            .Include(i => i.Template)
+            .Include(i => i.Patient)
+            .Include(i => i.BookingRequests)
+            .FirstOrDefaultAsync(i => i.Id == instanceId && (tenantId == Guid.Empty || i.TenantId == tenantId), ct);
+
         if (instance == null)
         {
+            if (allowMissing)
+            {
+                return null!;
+            }
+
             throw new ArgumentException($"PROM instance {instanceId} not found");
         }
 
-        // Create booking request
-        var bookingRequest = new BookingRequestDto
-        {
-            Id = Guid.NewGuid(),
-            PromInstanceId = instanceId,
-            PatientId = instance.PatientId,
-            PatientName = instance.PatientName,
-            RequestedDate = request.PreferredDate,
-            AlternativeDate = request.AlternativeDate,
-            TimePreference = request.TimePreference,
-            ReasonForVisit = request.ReasonForVisit ?? $"Follow-up for {instance.TemplateName}",
-            Urgency = DetermineUrgency(instance),
-            Notes = request.Notes,
-            CreatedAt = DateTime.UtcNow,
-            Status = "Pending",
-            PromTemplateName = instance.TemplateName,
-            PromCompletedAt = instance.CompletedAt,
-            PromScore = instance.TotalScore
-        };
-
-        // Add to intake queue
-        await AddBookingToIntakeQueueAsync(bookingRequest, ct);
-
-        // Mark that booking was requested from this PROM
-        instance.BookingRequested = true;
-        instance.BookingRequestedAt = DateTime.UtcNow;
-
-        _logger.LogInformation(
-            "Booking requested from PROM {InstanceId} for patient {PatientId}",
-            instanceId, instance.PatientId);
-
-        return bookingRequest;
+        return MapToDto(instance);
     }
 
-    private string DetermineUrgency(PromInstanceInternal instance)
+    private PromInstanceDto MapToDto(PromInstance instance)
     {
-        // Determine urgency based on PROM score
-        if (!instance.TotalScore.HasValue) return "medium";
-        
-        // For PHQ-9 (depression scale)
-        if (instance.TemplateName.Contains("PHQ-9"))
-        {
-            if (instance.TotalScore >= 20) return "critical"; // Severe depression
-            if (instance.TotalScore >= 15) return "high";     // Moderately severe
-            if (instance.TotalScore >= 10) return "medium";   // Moderate
-            return "low";
-        }
-        
-        // For GAD-7 (anxiety scale)
-        if (instance.TemplateName.Contains("GAD-7"))
-        {
-            if (instance.TotalScore >= 15) return "high";   // Severe anxiety
-            if (instance.TotalScore >= 10) return "medium"; // Moderate anxiety
-            return "low";
-        }
-        
-        // For pain assessment
-        if (instance.TemplateName.Contains("Pain"))
-        {
-            if (instance.TotalScore >= 7) return "high";
-            if (instance.TotalScore >= 4) return "medium";
-            return "low";
-        }
-        
-        return "medium";
-    }
+        var metadata = EnsureMetadata(instance);
+        var notification = metadata.TryGetValue(MetadataNotificationKey, out var notificationRaw)
+            ? notificationRaw?.ToString() ?? NotificationMethod.Email.ToString()
+            : NotificationMethod.Email.ToString();
 
-    private async Task AddBookingToIntakeQueueAsync(BookingRequestDto booking, CancellationToken ct)
-    {
-        // This would integrate with the intake service
-        // For now, we'll simulate it
-        await Task.Delay(100, ct);
-        
-        _logger.LogInformation(
-            "Booking request {BookingId} added to intake queue with urgency: {Urgency}",
-            booking.Id, booking.Urgency);
-    }
+        var tags = ExtractStringList(metadata, MetadataTagsKey);
+        var reminderCount = ExtractInt(metadata, MetadataReminderCountKey);
+        var answers = metadata.TryGetValue(MetadataAnswersKey, out var answersRaw)
+            ? ExtractAnswersDictionary(answersRaw)
+            : null;
+        var answered = answers?.Count ?? 0;
+        var completionMinutes = ExtractDouble(metadata, MetadataCompletionSecondsKey);
+        var bookingRequested = ExtractBool(metadata, MetadataBookingRequestedKey);
+        var bookingRequestedAt = ExtractDate(metadata, MetadataBookingRequestedAtKey);
 
-    private async Task SendPromNotificationAsync(PromInstanceInternal instance, CancellationToken ct)
-    {
-        var portalUrl = $"https://portal.qivr.com/prom/{instance.Id}";
-        var subject = $"New Health Assessment: {instance.TemplateName}";
-        var htmlContent = $@"
-            <html>
-            <body style='font-family: Arial, sans-serif;'>
-                <h2>New Health Assessment Available</h2>
-                <p>Dear {instance.PatientName},</p>
-                <p>You have a new health assessment to complete: <strong>{instance.TemplateName}</strong></p>
-                <p>This assessment will help us better understand your health status and provide you with the best care.</p>
-                <div style='margin: 30px 0;'>
-                    <a href='{portalUrl}' 
-                       style='background-color: #4CAF50; color: white; padding: 12px 24px; 
-                              text-decoration: none; border-radius: 4px; display: inline-block;'>
-                        Start Assessment
-                    </a>
-                </div>
-                <p>The assessment should take approximately {instance.Questions.Count * 30 / 60} minutes to complete.</p>
-                <p>Please complete by: <strong>{instance.DueDate:MMMM d, yyyy}</strong></p>
-                <p>If you have any questions, please contact your healthcare provider.</p>
-            </body>
-            </html>";
+        var patientName = instance.Patient != null
+            ? $"{instance.Patient.FirstName} {instance.Patient.LastName}".Trim()
+            : string.Empty;
 
-        if (instance.NotificationMethod.HasFlag(NotificationMethod.Email))
-        {
-            // In real implementation, get patient email from database
-            await _notificationService.SendEmailAsync(
-                "patient@example.com",
-                subject,
-                htmlContent,
-                ct: ct);
-        }
-
-        if (instance.NotificationMethod.HasFlag(NotificationMethod.Sms))
-        {
-            var smsMessage = $"New health assessment: {instance.TemplateName}. " +
-                           $"Complete by {instance.DueDate:MMM d}. " +
-                           $"Start here: https://qivr.link/p/{instance.Id}";
-            
-            // In real implementation, get patient phone from database
-            await _notificationService.SendSmsAsync("+1234567890", smsMessage, ct);
-        }
-    }
-
-    private async Task<string> GetPatientNameAsync(Guid patientId, CancellationToken ct)
-    {
-        // In real implementation, query database for patient name
-        await Task.Delay(1, ct);
-        return $"Patient {patientId.ToString().Substring(0, 8)}";
-    }
-
-    private double? CalculateTotalScore(PromInstanceInternal instance)
-    {
-        var numericAnswers = instance.Questions
-            .Where(q => q.Answer != null && double.TryParse(q.Answer.ToString(), out _))
-            .Select(q => double.Parse(q.Answer!.ToString()!))
-            .ToList();
-
-        return numericAnswers.Any() ? numericAnswers.Sum() : null;
-    }
-
-    private PromInstanceDto MapToDto(PromInstanceInternal instance)
-    {
         return new PromInstanceDto
         {
             Id = instance.Id,
             TemplateId = instance.TemplateId,
-            TemplateName = instance.TemplateName,
+            TemplateName = instance.Template?.Name ?? string.Empty,
             PatientId = instance.PatientId,
-            PatientName = instance.PatientName,
+            PatientName = patientName,
             Status = instance.Status.ToString(),
             CreatedAt = instance.CreatedAt,
-            ScheduledAt = instance.ScheduledAt,
+            ScheduledAt = instance.ScheduledFor,
             DueDate = instance.DueDate,
             CompletedAt = instance.CompletedAt,
-            CompletionTimeMinutes = instance.CompletionTimeMinutes,
-            TotalScore = instance.TotalScore,
-            QuestionCount = instance.Questions.Count,
-            AnsweredCount = instance.Questions.Count(q => q.Answer != null),
-            NotificationMethod = instance.NotificationMethod.ToString(),
-            ReminderCount = instance.ReminderCount,
-            LastReminderSentAt = instance.LastReminderSentAt,
-            Tags = instance.Metadata?.Tags,
-            Notes = instance.Metadata?.Notes,
-            BookingRequested = instance.BookingRequested,
-            BookingRequestedAt = instance.BookingRequestedAt
+            CompletionTimeMinutes = completionMinutes.HasValue ? Math.Round(completionMinutes.Value / 60d, 2) : (double?)null,
+            TotalScore = instance.Score,
+            QuestionCount = instance.Template?.Questions?.Count ?? 0,
+            AnsweredCount = answered,
+            NotificationMethod = notification,
+            ReminderCount = reminderCount,
+            LastReminderSentAt = instance.ReminderSentAt,
+            Tags = tags,
+            Notes = metadata.TryGetValue(MetadataNotesKey, out var notesRaw) ? notesRaw?.ToString() : null,
+            BookingRequested = bookingRequested || instance.BookingRequests.Any(),
+            BookingRequestedAt = bookingRequestedAt ?? instance.BookingRequests.OrderByDescending(b => b.RequestedAt).FirstOrDefault()?.RequestedAt,
+            Answers = answers
         };
     }
 
-    private void InitializeMockData()
+    private static Dictionary<string, object> EnsureMetadata(PromInstance instance)
     {
-        // Add some mock templates
-        _promTemplates.AddRange(new[]
+        if (instance.ResponseData is Dictionary<string, object> dict)
         {
-            new PromTemplateInternal
+            return new Dictionary<string, object>(dict);
+        }
+
+        if (instance.ResponseData is not null)
+        {
+            var json = JsonSerializer.Serialize(instance.ResponseData);
+            return JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new Dictionary<string, object>();
+        }
+
+        return new Dictionary<string, object>();
+    }
+
+    private static IReadOnlyList<string> ExtractStringList(Dictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var raw) || raw == null)
+        {
+            return Array.Empty<string>();
+        }
+
+        if (raw is JsonElement element && element.ValueKind == JsonValueKind.Array)
+        {
+            return element
+                .EnumerateArray()
+                .Select(e => e.ValueKind == JsonValueKind.String ? e.GetString() : e.ToString())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Cast<string>()
+                .ToArray();
+        }
+
+        if (raw is IEnumerable<string> strEnumerable)
+        {
+            return strEnumerable.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+        }
+
+        if (raw is IEnumerable<object> objEnumerable)
+        {
+            return objEnumerable.Select(o => o?.ToString() ?? string.Empty).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+        }
+
+        return new[] { raw.ToString() ?? string.Empty };
+    }
+
+    private static int ExtractInt(Dictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var raw) || raw == null)
+        {
+            return 0;
+        }
+
+        if (raw is JsonElement element && element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var jsonValue))
+        {
+            return jsonValue;
+        }
+
+        if (int.TryParse(raw.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
+        {
+            return value;
+        }
+
+        return 0;
+    }
+
+    private static double? ExtractDouble(Dictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var raw) || raw == null)
+        {
+            return null;
+        }
+
+        if (raw is JsonElement element)
+        {
+            return element.ValueKind switch
             {
-                Id = Guid.NewGuid(),
-                Name = "PHQ-9 Depression Scale",
-                Description = "Patient Health Questionnaire for Depression",
-                DefaultDueDays = 7,
-                Questions = GeneratePHQ9Questions()
-            },
-            new PromTemplateInternal
+                JsonValueKind.Number when element.TryGetDouble(out var val) => val,
+                JsonValueKind.String when double.TryParse(element.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) => parsed,
+                _ => (double?)null
+            };
+        }
+
+        return double.TryParse(raw.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var result)
+            ? result
+            : null;
+    }
+
+    private static bool ExtractBool(Dictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var raw) || raw == null)
+        {
+            return false;
+        }
+
+        if (raw is JsonElement element)
+        {
+            return element.ValueKind switch
             {
-                Id = Guid.NewGuid(),
-                Name = "GAD-7 Anxiety Scale",
-                Description = "Generalized Anxiety Disorder 7-item scale",
-                DefaultDueDays = 7,
-                Questions = GenerateGAD7Questions()
-            },
-            new PromTemplateInternal
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.String when bool.TryParse(element.GetString(), out var parsed) => parsed,
+                _ => false
+            };
+        }
+
+        return bool.TryParse(raw.ToString(), out var value) && value;
+    }
+
+    private static DateTime? ExtractDate(Dictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var raw) || raw == null)
+        {
+            return null;
+        }
+
+        if (raw is JsonElement element && element.ValueKind == JsonValueKind.String && DateTime.TryParse(element.GetString(), null, DateTimeStyles.AdjustToUniversal, out var parsedJson))
+        {
+            return DateTime.SpecifyKind(parsedJson, DateTimeKind.Utc);
+        }
+
+        return DateTime.TryParse(raw.ToString(), null, DateTimeStyles.AdjustToUniversal, out var parsed)
+            ? DateTime.SpecifyKind(parsed, DateTimeKind.Utc)
+            : null;
+    }
+
+    private static Dictionary<string, object>? ExtractAnswersDictionary(object? raw)
+    {
+        if (raw == null)
+        {
+            return null;
+        }
+
+        if (raw is JsonElement element && element.ValueKind == JsonValueKind.Object)
+        {
+            var dict = new Dictionary<string, object>();
+            foreach (var property in element.EnumerateObject())
             {
-                Id = Guid.NewGuid(),
-                Name = "Pain Assessment",
-                Description = "Comprehensive pain assessment questionnaire",
-                DefaultDueDays = 3,
-                Questions = GeneratePainAssessmentQuestions()
+                dict[property.Name] = property.Value.ValueKind switch
+                {
+                    JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                    JsonValueKind.Number when property.Value.TryGetDecimal(out var dec) => dec,
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.Array => property.Value.ToString(),
+                    JsonValueKind.Object => property.Value.ToString(),
+                    _ => property.Value.ToString() ?? string.Empty
+                };
             }
-        });
+
+            return dict;
+        }
+
+        if (raw is IDictionary<string, object> dictObj)
+        {
+            return dictObj.ToDictionary(k => k.Key, v => v.Value ?? string.Empty);
+        }
+
+        return null;
     }
 
-    private List<PromQuestion> GeneratePHQ9Questions()
+    private static decimal CalculateScore(PromTemplate? template, Dictionary<string, object> answers)
     {
-        var questions = new List<PromQuestion>();
-        var prompts = new[]
+        if (template == null)
         {
-            "Little interest or pleasure in doing things",
-            "Feeling down, depressed, or hopeless",
-            "Trouble falling or staying asleep, or sleeping too much",
-            "Feeling tired or having little energy",
-            "Poor appetite or overeating",
-            "Feeling bad about yourself",
-            "Trouble concentrating on things",
-            "Moving or speaking slowly or being fidgety",
-            "Thoughts of self-harm"
-        };
+            return answers.Values
+                .Select(v => TryParseDecimal(v))
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .DefaultIfEmpty(0m)
+                .Sum();
+        }
 
-        for (int i = 0; i < prompts.Length; i++)
+        // Simple default scoring: sum numeric values
+        return answers.Values
+            .Select(v => TryParseDecimal(v))
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value)
+            .DefaultIfEmpty(0m)
+            .Sum();
+    }
+
+    private static decimal? TryParseDecimal(object? value)
+    {
+        if (value == null)
         {
-            questions.Add(new PromQuestion
+            return null;
+        }
+
+        if (value is JsonElement element)
+        {
+            switch (element.ValueKind)
             {
-                Id = Guid.NewGuid(),
-                Text = prompts[i],
-                Type = "scale",
-                Required = true,
-                Order = i + 1,
-                Options = new[] { "0 - Not at all", "1 - Several days", "2 - More than half the days", "3 - Nearly every day" }
+                case JsonValueKind.Number:
+                    return element.TryGetDecimal(out var numeric) ? numeric : null;
+                case JsonValueKind.String:
+                    return decimal.TryParse(element.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+                        ? parsed
+                        : null;
+                default:
+                    return null;
+            }
+        }
+
+        return decimal.TryParse(value.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result : null;
+    }
+
+    private static string DetermineSeverity(PromTemplate? template, decimal score)
+    {
+        if (template == null)
+        {
+            return score switch
+            {
+                <= 5 => "low",
+                <= 10 => "medium",
+                _ => "high"
+            };
+        }
+
+        var key = template.Key.ToLowerInvariant();
+        if (key.Contains("phq"))
+        {
+            if (score >= 20) return "severe";
+            if (score >= 15) return "moderately-severe";
+            if (score >= 10) return "moderate";
+            if (score >= 5) return "mild";
+            return "minimal";
+        }
+
+        if (key.Contains("gad"))
+        {
+            if (score >= 15) return "severe";
+            if (score >= 10) return "moderate";
+            if (score >= 5) return "mild";
+            return "minimal";
+        }
+
+        return score switch
+        {
+            <= 5 => "low",
+            <= 10 => "medium",
+            _ => "high"
+        };
+    }
+
+    private static string DetermineBookingUrgency(decimal? score)
+    {
+        if (!score.HasValue)
+        {
+            return "medium";
+        }
+
+        return score.Value switch
+        {
+            >= 20 => "critical",
+            >= 15 => "high",
+            >= 10 => "medium",
+            _ => "low"
+        };
+    }
+
+    private static List<PromQuestionDto> BuildQuestionDtos(PromTemplate template)
+    {
+        var result = new List<PromQuestionDto>();
+
+        foreach (var question in template.Questions)
+        {
+            var id = question.TryGetValue("id", out var idValue) && Guid.TryParse(idValue?.ToString(), out var parsedId)
+                ? parsedId
+                : Guid.NewGuid();
+
+            var text = question.TryGetValue("text", out var textValue)
+                ? textValue?.ToString() ?? string.Empty
+                : string.Empty;
+
+            var type = question.TryGetValue("type", out var typeValue)
+                ? typeValue?.ToString() ?? "text"
+                : "text";
+
+            var required = question.TryGetValue("required", out var requiredValue) && ExtractBool(requiredValue);
+            var options = question.TryGetValue("options", out var optionsValue)
+                ? ExtractStringArray(optionsValue)
+                : Array.Empty<string>();
+
+            result.Add(new PromQuestionDto
+            {
+                Id = id,
+                Text = text,
+                Type = type,
+                Required = required,
+                Options = options
             });
         }
 
-        return questions;
+        return result;
     }
 
-    private List<PromQuestion> GenerateGAD7Questions()
+    private static bool ExtractBool(object? value)
     {
-        var questions = new List<PromQuestion>();
-        var prompts = new[]
+        if (value == null)
         {
-            "Feeling nervous, anxious, or on edge",
-            "Not being able to stop or control worrying",
-            "Worrying too much about different things",
-            "Trouble relaxing",
-            "Being so restless that it's hard to sit still",
-            "Becoming easily annoyed or irritable",
-            "Feeling afraid as if something awful might happen"
-        };
-
-        for (int i = 0; i < prompts.Length; i++)
-        {
-            questions.Add(new PromQuestion
-            {
-                Id = Guid.NewGuid(),
-                Text = prompts[i],
-                Type = "scale",
-                Required = true,
-                Order = i + 1,
-                Options = new[] { "0 - Not at all", "1 - Several days", "2 - More than half the days", "3 - Nearly every day" }
-            });
+            return false;
         }
 
-        return questions;
+        if (value is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Number when element.TryGetInt32(out var numeric) => numeric != 0,
+                JsonValueKind.String when bool.TryParse(element.GetString(), out var parsed) => parsed,
+                _ => false
+            };
+        }
+
+        return bool.TryParse(value.ToString(), out var result) && result;
     }
 
-    private List<PromQuestion> GeneratePainAssessmentQuestions()
+    private static string[] ExtractStringArray(object? value)
     {
-        return new List<PromQuestion>
+        if (value == null)
         {
-            new PromQuestion
-            {
-                Id = Guid.NewGuid(),
-                Text = "Rate your current pain level",
-                Type = "scale",
-                Required = true,
-                Order = 1,
-                Options = Enumerable.Range(0, 11).Select(i => i.ToString()).ToArray()
-            },
-            new PromQuestion
-            {
-                Id = Guid.NewGuid(),
-                Text = "Where is your pain located?",
-                Type = "text",
-                Required = true,
-                Order = 2
-            },
-            new PromQuestion
-            {
-                Id = Guid.NewGuid(),
-                Text = "How would you describe your pain?",
-                Type = "multiple-choice",
-                Required = true,
-                Order = 3,
-                Options = new[] { "Sharp", "Dull", "Burning", "Throbbing", "Aching", "Other" }
-            },
-            new PromQuestion
-            {
-                Id = Guid.NewGuid(),
-                Text = "How long have you been experiencing this pain?",
-                Type = "single-choice",
-                Required = true,
-                Order = 4,
-                Options = new[] { "Less than 1 week", "1-4 weeks", "1-3 months", "More than 3 months" }
-            }
-        };
+            return Array.Empty<string>();
+        }
+
+        if (value is JsonElement element && element.ValueKind == JsonValueKind.Array)
+        {
+            return element
+                .EnumerateArray()
+                .Select(e => e.ValueKind == JsonValueKind.String ? e.GetString() ?? string.Empty : e.ToString())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToArray();
+        }
+
+        if (value is IEnumerable<string> stringEnumerable)
+        {
+            return stringEnumerable.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+        }
+
+        if (value is IEnumerable<object> objectEnumerable)
+        {
+            return objectEnumerable.Select(o => o?.ToString() ?? string.Empty).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+        }
+
+        return new[] { value.ToString() ?? string.Empty };
     }
 }
 
-// DTOs and Models
+// DTOs and models
 public class SendPromRequest
 {
     public Guid TemplateId { get; set; }
@@ -644,12 +933,14 @@ public class SendBulkPromRequest
     public string? Notes { get; set; }
 }
 
-public class PromResponse
+public class PromSubmissionRequest
 {
     public List<PromAnswer> Answers { get; set; } = new();
     public DateTime SubmittedAt { get; set; }
     public bool RequestBooking { get; set; }
     public BookingRequest? BookingRequest { get; set; }
+    public int? CompletionSeconds { get; set; }
+    public string? Notes { get; set; }
 }
 
 public class PromAnswer
@@ -670,24 +961,25 @@ public class PromInstanceDto
     public DateTime ScheduledAt { get; set; }
     public DateTime DueDate { get; set; }
     public DateTime? CompletedAt { get; set; }
-    public int? CompletionTimeMinutes { get; set; }
-    public double? TotalScore { get; set; }
+    public double? CompletionTimeMinutes { get; set; }
+    public decimal? TotalScore { get; set; }
     public int QuestionCount { get; set; }
     public int AnsweredCount { get; set; }
     public string NotificationMethod { get; set; } = string.Empty;
     public int ReminderCount { get; set; }
     public DateTime? LastReminderSentAt { get; set; }
-    public List<string>? Tags { get; set; }
+    public IReadOnlyList<string> Tags { get; set; } = Array.Empty<string>();
     public string? Notes { get; set; }
     public bool BookingRequested { get; set; }
     public DateTime? BookingRequestedAt { get; set; }
+    public Dictionary<string, object>? Answers { get; set; }
 }
 
 public class BookingRequest
 {
     public DateTime PreferredDate { get; set; }
     public DateTime? AlternativeDate { get; set; }
-    public string TimePreference { get; set; } = string.Empty; // morning, afternoon, evening
+    public string TimePreference { get; set; } = string.Empty;
     public string? ReasonForVisit { get; set; }
     public string? Notes { get; set; }
 }
@@ -708,7 +1000,7 @@ public class BookingRequestDto
     public string Status { get; set; } = string.Empty;
     public string PromTemplateName { get; set; } = string.Empty;
     public DateTime? PromCompletedAt { get; set; }
-    public double? PromScore { get; set; }
+    public decimal? PromScore { get; set; }
 }
 
 public class PromInstanceStats
@@ -723,79 +1015,28 @@ public class PromInstanceStats
     public double AverageScore { get; set; }
 }
 
-// Internal models
-internal class PromInstanceInternal
+public class CancelPromRequest
 {
-    public Guid Id { get; set; }
+    public string? Reason { get; set; }
+}
+
+public class PromPreviewDto
+{
     public Guid TemplateId { get; set; }
     public string TemplateName { get; set; } = string.Empty;
-    public Guid PatientId { get; set; }
-    public string PatientName { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
-    public DateTime ScheduledAt { get; set; }
-    public DateTime DueDate { get; set; }
-    public DateTime? CompletedAt { get; set; }
-    public DateTime? CancelledAt { get; set; }
-    public string? CancellationReason { get; set; }
-    public PromInstanceStatus Status { get; set; }
-    public NotificationMethod NotificationMethod { get; set; }
-    public List<PromQuestionInstance> Questions { get; set; } = new();
-    public int? CompletionTimeMinutes { get; set; }
-    public double? TotalScore { get; set; }
-    public int ReminderCount { get; set; }
-    public DateTime? LastReminderSentAt { get; set; }
-    public PromInstanceMetadata? Metadata { get; set; }
-    public bool BookingRequested { get; set; }
-    public DateTime? BookingRequestedAt { get; set; }
-}
-
-internal class PromQuestionInstance
-{
-    public Guid Id { get; set; }
-    public Guid QuestionId { get; set; }
-    public string QuestionText { get; set; } = string.Empty;
-    public string QuestionType { get; set; } = string.Empty;
-    public string[]? Options { get; set; }
-    public bool Required { get; set; }
-    public int Order { get; set; }
-    public object? Answer { get; set; }
-    public DateTime? AnsweredAt { get; set; }
-}
-
-internal class PromInstanceMetadata
-{
-    public string Source { get; set; } = string.Empty;
-    public string SentBy { get; set; } = string.Empty;
-    public List<string>? Tags { get; set; }
-    public string? Notes { get; set; }
-}
-
-internal class PromTemplateInternal
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public int DefaultDueDays { get; set; }
-    public List<PromQuestion> Questions { get; set; } = new();
+    public int EstimatedTimeMinutes { get; set; }
+    public int QuestionCount { get; set; }
+    public List<PromQuestionDto> Questions { get; set; } = new();
 }
 
-internal class PromQuestion
+public class PromQuestionDto
 {
     public Guid Id { get; set; }
     public string Text { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public bool Required { get; set; }
-    public int Order { get; set; }
     public string[]? Options { get; set; }
-}
-
-internal enum PromInstanceStatus
-{
-    Scheduled,
-    Sent,
-    Completed,
-    Expired,
-    Cancelled
 }
 
 [Flags]

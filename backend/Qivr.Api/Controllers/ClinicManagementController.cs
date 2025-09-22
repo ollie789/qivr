@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Qivr.Core.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Qivr.Api.Services;
 using Qivr.Core.DTOs;
+using Qivr.Core.Entities;
+using Qivr.Infrastructure.Data;
 
 namespace Qivr.Api.Controllers;
 
@@ -10,6 +14,20 @@ namespace Qivr.Api.Controllers;
 [Authorize]
 public class ClinicManagementController : ControllerBase
 {
+    private readonly QivrDbContext _context;
+    private readonly IResourceAuthorizationService _authorizationService;
+    private readonly ILogger<ClinicManagementController> _logger;
+
+    public ClinicManagementController(
+        QivrDbContext context,
+        IResourceAuthorizationService authorizationService,
+        ILogger<ClinicManagementController> logger)
+    {
+        _context = context;
+        _authorizationService = authorizationService;
+        _logger = logger;
+    }
+
     // GET: api/clinic-management/clinics
     [HttpGet("clinics")]
     [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
@@ -312,68 +330,153 @@ public class ClinicManagementController : ControllerBase
     [HttpGet("clinics/{clinicId}/analytics")]
     [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
     [ProducesResponseType(typeof(ClinicAnalyticsDto), 200)]
-    public async Task<IActionResult> GetClinicAnalytics(Guid clinicId, [FromQuery] DateTime from, [FromQuery] DateTime to)
+    public async Task<IActionResult> GetClinicAnalytics(Guid clinicId, [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct = default)
     {
-        // TODO: Implement clinic analytics retrieval
-        
-        var analytics = new ClinicAnalyticsDto
+        try
         {
-            Period = new PeriodDto { From = from, To = to },
-            
-            AppointmentMetrics = new AppointmentMetricsDto
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            if (tenantId == Guid.Empty)
             {
-                TotalScheduled = 450,
-                Completed = 420,
-                NoShows = 15,
-                Cancelled = 15,
-                AverageWaitTime = 14,
-                AverageDuration = 28,
-                UtilizationRate = 85.5m
-            },
-            
-            PatientMetrics = new PatientMetricsDto
-            {
-                NewPatients = 45,
-                ReturningPatients = 405,
-                AverageVisitsPerPatient = 2.3m,
-                PatientRetentionRate = 92.0m,
-                PatientSatisfactionScore = 4.6m
-            },
-            
-            PromMetrics = new PromMetricsDto
-            {
-                TotalSent = 180,
-                Completed = 145,
-                CompletionRate = 80.6m,
-                AverageScore = 7.2m,
-                HighRiskPatients = 12
-            },
-            
-            RevenueMetrics = new RevenueMetricsDto
-            {
-                TotalBilled = 125000.00m,
-                TotalCollected = 98000.00m,
-                OutstandingBalance = 27000.00m,
-                CollectionRate = 78.4m,
-                AverageRevenuePerPatient = 275.00m
-            },
-            
-            TopDiagnoses = new[]
-            {
-                new DiagnosisCountDto { Code = "E11.9", Description = "Type 2 Diabetes", Count = 65 },
-                new DiagnosisCountDto { Code = "I10", Description = "Essential Hypertension", Count = 58 },
-                new DiagnosisCountDto { Code = "Z00.00", Description = "General Exam", Count = 45 }
-            },
-            
-            TopProcedures = new[]
-            {
-                new ProcedureCountDto { Code = "99213", Description = "Office Visit - Established", Count = 180 },
-                new ProcedureCountDto { Code = "99214", Description = "Office Visit - Complex", Count = 95 },
-                new ProcedureCountDto { Code = "36415", Description = "Venipuncture", Count = 75 }
+                return BadRequest(new { error = "Tenant context is required" });
             }
-        };
-        
-        return Ok(analytics);
+
+            var periodStart = from == default ? DateTime.UtcNow.AddDays(-30) : DateTime.SpecifyKind(from, DateTimeKind.Utc);
+            var periodEnd = to == default ? DateTime.UtcNow : DateTime.SpecifyKind(to, DateTimeKind.Utc);
+
+            if (periodEnd < periodStart)
+            {
+                (periodStart, periodEnd) = (periodEnd, periodStart);
+            }
+
+            var appointments = await _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.TenantId == tenantId && a.ClinicId == clinicId && a.ScheduledStart >= periodStart && a.ScheduledStart <= periodEnd)
+                .ToListAsync(ct);
+
+            var totalAppointments = appointments.Count;
+            var completedAppointments = appointments.Count(a => a.Status == AppointmentStatus.Completed);
+            var cancelledAppointments = appointments.Count(a => a.Status == AppointmentStatus.Cancelled);
+            var noShowAppointments = appointments.Count(a => a.Status == AppointmentStatus.NoShow);
+
+            var averageDuration = appointments
+                .Where(a => a.ScheduledEnd > a.ScheduledStart)
+                .Select(a => (a.ScheduledEnd - a.ScheduledStart).TotalMinutes)
+                .DefaultIfEmpty(0d)
+                .Average();
+
+            var utilization = totalAppointments == 0
+                ? 0m
+                : Math.Round((decimal)completedAppointments / totalAppointments * 100m, 2);
+
+            var patientIds = appointments
+                .Select(a => a.PatientId)
+                .Where(id => id != Guid.Empty)
+                .Distinct()
+                .ToList();
+
+            var totalPatients = patientIds.Count;
+
+            var firstAppointments = await _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.TenantId == tenantId && a.ClinicId == clinicId && patientIds.Contains(a.PatientId))
+                .GroupBy(a => a.PatientId)
+                .Select(g => new { PatientId = g.Key, First = g.Min(a => a.ScheduledStart) })
+                .ToListAsync(ct);
+
+            var newPatients = firstAppointments.Count(fp => fp.First >= periodStart && fp.First <= periodEnd);
+            var returningPatients = Math.Max(0, totalPatients - newPatients);
+
+            var averageVisits = totalPatients == 0
+                ? 0m
+                : Math.Round((decimal)totalAppointments / totalPatients, 2);
+
+            var retentionRate = totalPatients == 0
+                ? 0m
+                : Math.Round((decimal)returningPatients / totalPatients * 100m, 2);
+
+            var promInstances = await _context.PromInstances
+                .AsNoTracking()
+                .Where(i => i.TenantId == tenantId && patientIds.Contains(i.PatientId) && i.CreatedAt >= periodStart && i.CreatedAt <= periodEnd)
+                .ToListAsync(ct);
+
+            var totalProms = promInstances.Count;
+            var completedProms = promInstances.Count(i => i.Status == PromStatus.Completed);
+            var averagePromScore = promInstances
+                .Where(i => i.Score.HasValue)
+                .Select(i => (double)i.Score!)
+                .DefaultIfEmpty(0d)
+                .Average();
+
+            var highRiskProms = promInstances
+                .Count(i => i.Score.HasValue && i.Score.Value >= 15m);
+
+            var totalBilled = appointments.Sum(a => a.PaymentAmount ?? 0m);
+            var totalCollected = appointments.Where(a => a.IsPaid && a.PaymentAmount.HasValue).Sum(a => a.PaymentAmount!.Value);
+            var outstandingBalance = totalBilled - totalCollected;
+            var collectionRate = totalBilled == 0m ? 0m : Math.Round(totalCollected / totalBilled * 100m, 2);
+            var averageRevenuePerPatient = totalPatients == 0 ? 0m : Math.Round(totalCollected / totalPatients, 2);
+
+            var topProcedures = appointments
+                .Where(a => !string.IsNullOrWhiteSpace(a.AppointmentType))
+                .GroupBy(a => a.AppointmentType ?? "Unknown")
+                .Select(g => new ProcedureCountDto
+                {
+                    Code = g.Key,
+                    Description = g.Key,
+                    Count = g.Count()
+                })
+                .OrderByDescending(p => p.Count)
+                .Take(5)
+                .ToArray();
+
+            var analytics = new ClinicAnalyticsDto
+            {
+                Period = new PeriodDto { From = periodStart, To = periodEnd },
+                AppointmentMetrics = new AppointmentMetricsDto
+                {
+                    TotalScheduled = totalAppointments,
+                    Completed = completedAppointments,
+                    NoShows = noShowAppointments,
+                    Cancelled = cancelledAppointments,
+                    AverageWaitTime = 0, // not tracked yet
+                    AverageDuration = (int)Math.Round(averageDuration),
+                    UtilizationRate = utilization
+                },
+                PatientMetrics = new PatientMetricsDto
+                {
+                    NewPatients = newPatients,
+                    ReturningPatients = returningPatients,
+                    AverageVisitsPerPatient = averageVisits,
+                    PatientRetentionRate = retentionRate,
+                    PatientSatisfactionScore = 0 // placeholder until surveys implemented
+                },
+                PromMetrics = new PromMetricsDto
+                {
+                    TotalSent = totalProms,
+                    Completed = completedProms,
+                    CompletionRate = totalProms == 0 ? 0m : Math.Round((decimal)completedProms / totalProms * 100m, 2),
+                    AverageScore = Math.Round((decimal)averagePromScore, 2),
+                    HighRiskPatients = highRiskProms
+                },
+                RevenueMetrics = new RevenueMetricsDto
+                {
+                    TotalBilled = totalBilled,
+                    TotalCollected = totalCollected,
+                    OutstandingBalance = outstandingBalance,
+                    CollectionRate = collectionRate,
+                    AverageRevenuePerPatient = averageRevenuePerPatient
+                },
+                TopDiagnoses = Array.Empty<DiagnosisCountDto>(),
+                TopProcedures = topProcedures
+            };
+
+            return Ok(analytics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to compute clinic analytics for clinic {ClinicId}", clinicId);
+            return StatusCode(500, new { error = "Failed to compute clinic analytics" });
+        }
     }
 }
 

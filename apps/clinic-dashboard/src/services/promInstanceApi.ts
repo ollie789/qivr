@@ -41,6 +41,9 @@ export interface PromInstanceDto {
   lastReminderSentAt?: string;
   tags?: string[];
   notes?: string;
+  bookingRequested?: boolean;
+  bookingRequestedAt?: string;
+  answers?: Record<string, any>;
 }
 
 export interface PromResponse {
@@ -116,13 +119,13 @@ export enum NotificationMethod {
 }
 
 // Base path for API
-const BASE_PATH = '';
+const BASE_PATH = '/api/PromInstance';
 
 export const promInstanceApi = {
   // Send PROM to a single patient
   sendToPatient: async (request: SendPromRequest): Promise<PromInstanceDto> => {
     return await api.post<PromInstanceDto>(
-      '/prominstance/send',
+      `${BASE_PATH}/send`,
       request
     );
   },
@@ -130,7 +133,7 @@ export const promInstanceApi = {
   // Send PROM to multiple patients
   sendBulk: async (request: SendBulkPromRequest): Promise<PromInstanceDto[]> => {
     return await api.post<PromInstanceDto[]>(
-      '/prominstance/send/bulk',
+      `${BASE_PATH}/send/bulk`,
       request
     );
   },
@@ -138,14 +141,14 @@ export const promInstanceApi = {
   // Get a specific PROM instance
   getInstance: async (instanceId: string): Promise<PromInstanceDto> => {
     return await api.get<PromInstanceDto>(
-      `/prominstance/${instanceId}`
+      `${BASE_PATH}/${instanceId}`
     );
   },
 
   // Get all PROM instances for a patient
   getPatientInstances: async (patientId: string): Promise<PromInstanceDto[]> => {
     return await api.get<PromInstanceDto[]>(
-      `/prominstance/patient/${patientId}`
+      `${BASE_PATH}/patient/${patientId}`
     );
   },
 
@@ -153,7 +156,7 @@ export const promInstanceApi = {
   submitResponse: async (instanceId: string, response: PromResponse): Promise<PromInstanceDto> => {
     // Use regular API post for patient submission
     return await api.post<PromInstanceDto>(
-      `/prominstance/${instanceId}/submit`,
+      `${BASE_PATH}/${instanceId}/submit`,
       response
     );
   },
@@ -161,7 +164,7 @@ export const promInstanceApi = {
   // Send reminder for a PROM
   sendReminder: async (instanceId: string): Promise<void> => {
     await api.post<void>(
-      `/prominstance/${instanceId}/reminder`,
+      `${BASE_PATH}/${instanceId}/reminder`,
       {}
     );
   },
@@ -170,7 +173,7 @@ export const promInstanceApi = {
   getPending: async (dueBefore?: string): Promise<PromInstanceDto[]> => {
     const params = dueBefore ? `?dueBefore=${dueBefore}` : '';
     return await api.get<PromInstanceDto[]>(
-      `/prominstance/pending${params}`
+      `${BASE_PATH}/pending${params}`
     );
   },
 
@@ -186,7 +189,7 @@ export const promInstanceApi = {
     if (params?.endDate) queryParams.append('endDate', params.endDate);
     
     const queryString = queryParams.toString();
-    const url = `/prominstance/stats${queryString ? `?${queryString}` : ''}`;
+    const url = `${BASE_PATH}/stats${queryString ? `?${queryString}` : ''}`;
     
     return await api.get<PromInstanceStats>(url);
   },
@@ -194,7 +197,7 @@ export const promInstanceApi = {
   // Cancel a PROM instance
   cancel: async (instanceId: string, reason?: string): Promise<void> => {
     await api.post<void>(
-      `/prominstance/${instanceId}/cancel`,
+      `${BASE_PATH}/${instanceId}/cancel`,
       { reason }
     );
   },
@@ -202,7 +205,7 @@ export const promInstanceApi = {
   // Preview a PROM template
   previewTemplate: async (templateId: string): Promise<PromPreviewDto> => {
     return await api.get<PromPreviewDto>(
-      `/prominstance/preview/${templateId}`
+      `${BASE_PATH}/preview/${templateId}`
     );
   },
 
@@ -210,7 +213,7 @@ export const promInstanceApi = {
   requestBooking: async (instanceId: string, request: BookingRequest): Promise<BookingRequestDto> => {
     // Use regular API post for patient booking
     return await api.post<BookingRequestDto>(
-      `/prominstance/${instanceId}/booking`,
+      `${BASE_PATH}/${instanceId}/booking`,
       request
     );
   }

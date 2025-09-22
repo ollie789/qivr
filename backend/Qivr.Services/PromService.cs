@@ -10,10 +10,6 @@ public interface IPromService
 	Task<PromTemplateDto?> GetTemplateAsync(Guid tenantId, string key, int? version, CancellationToken ct = default);
 	Task<IReadOnlyList<PromTemplateSummaryDto>> ListTemplatesAsync(Guid tenantId, int page, int pageSize, CancellationToken ct = default);
 	Task<PromTemplateDto?> GetTemplateByIdAsync(Guid tenantId, Guid templateId, CancellationToken ct = default);
-	Task<PromInstanceDto> ScheduleInstanceAsync(Guid tenantId, SchedulePromRequest request, CancellationToken ct = default);
-	Task<PromInstanceDto?> GetInstanceAsync(Guid tenantId, Guid id, CancellationToken ct = default);
-	Task<IReadOnlyList<PromInstanceDto>> ListInstancesForPatientAsync(Guid tenantId, Guid patientId, string? status, CancellationToken ct = default);
-	Task<SubmitAnswersResult> SubmitAnswersAsync(Guid tenantId, Guid instanceId, Dictionary<string, object> answers, CancellationToken ct = default);
 }
 
 public class PromService : IPromService
@@ -102,92 +98,6 @@ public class PromService : IPromService
 		return result;
 	}
 
-	public async Task<PromInstanceDto> ScheduleInstanceAsync(Guid tenantId, SchedulePromRequest request, CancellationToken ct = default)
-	{
-		// Resolve template id by key/version
-		var template = await _db.Database.SqlQuery<TemplateIdVersion>(
-			$"SELECT id, version FROM qivr.prom_templates WHERE tenant_id = {tenantId} AND key = {request.TemplateKey} ORDER BY version DESC LIMIT 1")
-			.FirstOrDefaultAsync(ct);
-
-		if (template == null)
-			throw new InvalidOperationException("Template not found");
-
-		if (request.Version.HasValue && request.Version.Value != template.Version)
-		{
-			template = await _db.Database.SqlQuery<TemplateIdVersion>(
-				$"SELECT id, version FROM qivr.prom_templates WHERE tenant_id = {tenantId} AND key = {request.TemplateKey} AND version = {request.Version.Value} LIMIT 1")
-				.FirstOrDefaultAsync(ct) ?? throw new InvalidOperationException("Template version not found");
-		}
-
-		var id = Guid.NewGuid();
-		var now = DateTime.UtcNow;
-		var due = request.DueAt ?? request.ScheduledFor.AddDays(7);
-		var status = "scheduled";
-
-		await _db.Database.ExecuteSqlInterpolatedAsync($@"
-			INSERT INTO qivr.prom_instances (
-				id, tenant_id, template_id, patient_id, status, scheduled_for, due_date, created_at, updated_at
-			) VALUES (
-				{id}, {tenantId}, {template.Id}, {request.PatientId}, {status}, {request.ScheduledFor}, {due}, {now}, {now}
-			)", ct);
-
-		return new PromInstanceDto
-		{
-			Id = id,
-			TemplateId = template.Id,
-			PatientId = request.PatientId,
-			Status = status,
-			ScheduledAt = request.ScheduledFor,
-			DueDate = due,
-			CreatedAt = now
-		};
-	}
-
-	public async Task<PromInstanceDto?> GetInstanceAsync(Guid tenantId, Guid id, CancellationToken ct = default)
-	{
-		var result = await _db.Database.SqlQuery<PromInstanceDto>($@"SELECT 
-			id, template_id as TemplateId, patient_id as PatientId, status, scheduled_for as ScheduledAt,
-			completed_at as CompletedAt, due_date as DueDate, responses as AnswersJson, score as TotalScore, created_at as CreatedAt
-			FROM qivr.prom_instances WHERE tenant_id = {tenantId} AND id = {id}").FirstOrDefaultAsync(ct);
-		return result;
-	}
-
-	public async Task<IReadOnlyList<PromInstanceDto>> ListInstancesForPatientAsync(Guid tenantId, Guid patientId, string? status, CancellationToken ct = default)
-	{
-		var whereStatus = string.IsNullOrWhiteSpace(status)
-			? ""
-			: $" AND status = '{status!.Replace("'", "''")}'";
-		var list = await _db.Database.SqlQuery<PromInstanceDto>($@"SELECT 
-			id, template_id as TemplateId, patient_id as PatientId, status, scheduled_for as ScheduledAt,
-			completed_at as CompletedAt, due_date as DueDate, responses as AnswersJson, score as TotalScore, created_at as CreatedAt
-			FROM qivr.prom_instances WHERE tenant_id = {tenantId} AND patient_id = {patientId}{whereStatus}
-			ORDER BY scheduled_for DESC").ToListAsync(ct);
-		return list;
-	}
-
-	public async Task<SubmitAnswersResult> SubmitAnswersAsync(Guid tenantId, Guid instanceId, Dictionary<string, object> answers, CancellationToken ct = default)
-	{
-		// Load template scoring method
-		var tpl = await _db.Database.SqlQuery<TemplateScoreInfo>($@"
-			SELECT t.scoring_method as ScoringMethod, t.scoring_rules as ScoringRules
-			FROM qivr.prom_instances i
-			JOIN qivr.prom_templates t ON t.id = i.template_id
-			WHERE i.tenant_id = {tenantId} AND i.id = {instanceId}")
-			.FirstOrDefaultAsync(ct);
-
-		if (tpl == null) throw new InvalidOperationException("Instance not found");
-
-		var score = CalculateScore(tpl.ScoringMethod, tpl.ScoringRules, answers);
-		var now = DateTime.UtcNow;
-
-		await _db.Database.ExecuteSqlInterpolatedAsync($@"
-			UPDATE qivr.prom_instances
-			SET responses = {System.Text.Json.JsonSerializer.Serialize(answers)}::jsonb,
-				score = {score}, status = {"completed"}, completed_at = {now}, updated_at = {now}
-			WHERE tenant_id = {tenantId} AND id = {instanceId}", ct);
-
-		return new SubmitAnswersResult { Score = score, CompletedAt = now };
-	}
 
 	private static decimal CalculateScore(string? method, string? rulesJson, Dictionary<string, object> answers)
 	{
@@ -209,8 +119,6 @@ public class PromService : IPromService
 		}
 	}
 
-	private sealed record TemplateIdVersion(Guid Id, int Version);
-	private sealed record TemplateScoreInfo(string? ScoringMethod, string? ScoringRules);
 }
 
 // DTOs for service layer

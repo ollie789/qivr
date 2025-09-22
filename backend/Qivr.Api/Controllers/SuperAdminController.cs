@@ -84,6 +84,102 @@ public class SuperAdminController : ControllerBase
         };
 
         _dbContext.Tenants.Add(tenant);
+        var mainTenantId = tenants[0].Id;
+        var demoPatient = users.First(u => u.UserType == UserType.Patient);
+
+        if (!await _dbContext.PromTemplates.AnyAsync(t => t.TenantId == mainTenantId && t.Key == "phq9"))
+        {
+            var templateId = Guid.NewGuid();
+            var template = new PromTemplate
+            {
+                Id = templateId,
+                TenantId = mainTenantId,
+                Key = "phq9",
+                Version = 1,
+                Name = "PHQ-9 Depression Scale",
+                Description = "Patient Health Questionnaire for depression severity",
+                Category = "Mental Health",
+                Frequency = "Weekly",
+                IsActive = true,
+                Questions = new List<Dictionary<string, object>>
+                {
+                    new()
+                    {
+                        ["id"] = "q1",
+                        ["text"] = "Little interest or pleasure in doing things",
+                        ["type"] = "scale",
+                        ["required"] = true,
+                        ["options"] = new[] { "0", "1", "2", "3" }
+                    },
+                    new()
+                    {
+                        ["id"] = "q2",
+                        ["text"] = "Feeling down, depressed, or hopeless",
+                        ["type"] = "scale",
+                        ["required"] = true,
+                        ["options"] = new[] { "0", "1", "2", "3" }
+                    }
+                },
+                ScoringMethod = new Dictionary<string, object>
+                {
+                    ["type"] = "sum"
+                },
+                ScoringRules = new Dictionary<string, object>
+                {
+                    ["low"] = 0,
+                    ["medium"] = 10,
+                    ["high"] = 15
+                }
+            };
+
+            _dbContext.PromTemplates.Add(template);
+
+            var instanceId = Guid.NewGuid();
+            var scheduledAt = DateTime.UtcNow.AddDays(-7);
+            var completedAt = DateTime.UtcNow.AddDays(-3);
+
+            var instance = new PromInstance
+            {
+                Id = instanceId,
+                TenantId = mainTenantId,
+                TemplateId = templateId,
+                PatientId = demoPatient.Id,
+                Status = PromStatus.Completed,
+                ScheduledFor = scheduledAt,
+                DueDate = scheduledAt.AddDays(7),
+                CompletedAt = completedAt,
+                Score = 6m,
+                ResponseData = new Dictionary<string, object>
+                {
+                    ["answers"] = new Dictionary<string, object>
+                    {
+                        ["q1"] = 3,
+                        ["q2"] = 3
+                    },
+                    ["notificationMethod"] = "Email"
+                }
+            };
+
+            _dbContext.PromInstances.Add(instance);
+
+            _dbContext.PromResponses.Add(new PromResponse
+            {
+                Id = Guid.NewGuid(),
+                TenantId = mainTenantId,
+                PatientId = demoPatient.Id,
+                PromInstanceId = instanceId,
+                PromType = template.Key,
+                CompletedAt = completedAt,
+                Score = 6m,
+                Severity = "moderate",
+                Answers = new Dictionary<string, object>
+                {
+                    ["q1"] = 3,
+                    ["q2"] = 3
+                }
+            });
+        }
+
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Tenant {TenantName} created with ID {TenantId}", 

@@ -36,6 +36,7 @@ public class QivrDbContext : DbContext
     public DbSet<PromResponse> PromResponses => Set<PromResponse>();
     public DbSet<PromInstance> PromInstances => Set<PromInstance>();
     public DbSet<PromTemplate> PromTemplates => Set<PromTemplate>();
+    public DbSet<PromBookingRequest> PromBookingRequests => Set<PromBookingRequest>();
     public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
     public DbSet<Notification> Notifications => Set<Notification>();
 
@@ -290,6 +291,9 @@ public class QivrDbContext : DbContext
         {
             entity.ToTable("prom_templates");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Key).HasColumnName("key");
+            entity.Property(e => e.Version).HasColumnName("version");
+            entity.HasIndex(e => new { e.TenantId, e.Key, e.Version }).IsUnique();
             entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
             
             // Configure the Questions property with a custom converter
@@ -300,6 +304,7 @@ public class QivrDbContext : DbContext
             
             entity.Property(e => e.Questions).HasConversion(questionsConverter);
             entity.Property(e => e.ScoringMethod).HasConversion(jsonConverter);
+            entity.Property(e => e.ScoringRules).HasConversion(jsonConverter).HasColumnName("scoring_rules");
             
             entity.HasQueryFilter(e => e.TenantId == _tenantId);
         });
@@ -349,6 +354,23 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.AppointmentId)
                 .OnDelete(DeleteBehavior.SetNull);
                 
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // PromBookingRequest configuration
+        modelBuilder.Entity<PromBookingRequest>(entity =>
+        {
+            entity.ToTable("prom_booking_requests");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PromInstanceId });
+            entity.Property(e => e.TimePreference).HasMaxLength(50);
+            entity.Property(e => e.Status).HasMaxLength(50);
+
+            entity.HasOne(e => e.PromInstance)
+                .WithMany(i => i.BookingRequests)
+                .HasForeignKey(e => e.PromInstanceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasQueryFilter(e => e.TenantId == _tenantId);
         });
         

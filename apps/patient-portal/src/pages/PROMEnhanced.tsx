@@ -173,7 +173,11 @@ const PROMEnhanced: React.FC = () => {
   const { data: promInstances, isLoading: instancesLoading } = useQuery({
     queryKey: ['promInstances'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/PromInstance');
+      const response = await apiClient.get('/api/PromInstance', {
+        params: {
+          status: 'pending',
+        },
+      });
       return response.data;
     },
   });
@@ -182,7 +186,11 @@ const PROMEnhanced: React.FC = () => {
   const { data: promHistory } = useQuery({
     queryKey: ['promHistory'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/PromInstance/history');
+      const response = await apiClient.get('/api/PromInstance', {
+        params: {
+          status: 'completed',
+        },
+      });
       return response.data;
     },
   });
@@ -200,8 +208,11 @@ const PROMEnhanced: React.FC = () => {
   const submitPROMMutation = useMutation({
     mutationFn: async (data: { instanceId: string; responses: Record<string, any>; timeSpent: number }) => {
       const response = await apiClient.post(`/api/PromInstance/${data.instanceId}/submit`, {
-        responses: data.responses,
-        timeSpent: data.timeSpent,
+        answers: Object.entries(data.responses).map(([questionId, value]) => ({
+          questionId,
+          value,
+        })),
+        completionSeconds: data.timeSpent,
       });
       return response.data;
     },

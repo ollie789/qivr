@@ -37,7 +37,9 @@ public static class ServiceCollectionExtensions
         
         // Register PROM service
         services.AddScoped<IPromService, PromService>();
-        
+        services.AddScoped<IPromInstanceService, PromInstanceService>();
+        services.AddHttpClient<INotificationService, NotificationService>();
+
         // Add HttpClient for external APIs
         services.AddHttpClient("MessageMedia", client =>
         {
