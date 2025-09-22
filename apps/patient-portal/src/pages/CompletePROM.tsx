@@ -154,11 +154,11 @@ export const CompletePROM = () => {
     
     try {
       setSubmitting(true);
-      
-      await api.post(`/api/v1/proms/instances/${id}/answers`, { responses });
-      
+
+      await api.post(`/api/v1/proms/instances/${id}/answers`, responses);
+
       setSuccess(true);
-      
+
       // Redirect after 2 seconds
       setTimeout(() => {
         navigate('/proms');

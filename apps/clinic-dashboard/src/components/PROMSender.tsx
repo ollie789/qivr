@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Stepper,
@@ -66,9 +66,9 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, addDays, addWeeks, addMonths } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
-import { promApi } from '../services/promApi';
+import { promApi, PromTemplateDetail, PromTemplateSummary } from '../services/promApi';
 import { patientApi } from '../services/patientApi';
 
 interface PROMSenderProps {
@@ -85,7 +85,9 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   preSelectedTemplateId,
 }) => {
   const [activeStep, setActiveStep] = useState(0);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
+    preSelectedTemplateId || ''
+  );
   const [selectedPatients, setSelectedPatients] = useState<string[]>(
     preSelectedPatientId ? [preSelectedPatientId] : []
   );
@@ -111,10 +113,27 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   const [previewOpen, setPreviewOpen] = useState(false);
 
   // Fetch templates
-  const { data: templates } = useQuery({
+  const { data: templates } = useQuery<PromTemplateSummary[]>({
     queryKey: ['prom-templates'],
     queryFn: () => promApi.getTemplates(),
   });
+
+  const { data: selectedTemplate } = useQuery<PromTemplateDetail>({
+    queryKey: ['prom-template-detail', selectedTemplateId],
+    queryFn: () => promApi.getTemplate(selectedTemplateId),
+    enabled: Boolean(selectedTemplateId),
+  });
+
+  const templateSummaries = templates ?? [];
+  const selectedTemplateSummary = useMemo(
+    () => templateSummaries.find((template) => template.id === selectedTemplateId) || null,
+    [templateSummaries, selectedTemplateId]
+  );
+
+  const activeTemplateName = selectedTemplate?.name ?? selectedTemplateSummary?.name ?? '';
+  const activeTemplateDescription =
+    selectedTemplate?.description ?? selectedTemplateSummary?.description ?? '';
+  const activeTemplateQuestions = selectedTemplate?.questions ?? [];
 
   // Fetch patients
   const { data: patientsData } = useQuery({
@@ -137,7 +156,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
 
   const handleReset = () => {
     setActiveStep(0);
-    setSelectedTemplate(null);
+    setSelectedTemplateId('');
     setSelectedPatients([]);
     setScheduleType('immediate');
     setNotificationSettings({
@@ -152,18 +171,31 @@ const PROMSender: React.FC<PROMSenderProps> = ({
 
   const handleSend = async () => {
     try {
+      if (!selectedTemplateSummary) {
+        alert('Please select a PROM template');
+        return;
+      }
+
       // Send PROM to each selected patient
-      const scheduledFor = scheduleType === 'immediate' 
-        ? new Date().toISOString() 
+      const scheduledFor = scheduleType === 'immediate'
+        ? new Date().toISOString()
         : scheduledDate?.toISOString() || new Date().toISOString();
-      
+
       const dueDate = addDays(new Date(scheduledFor), 7); // Default 7 days to complete
-      
+
+      const templateKey = selectedTemplate?.key ?? selectedTemplateSummary.key;
+      const templateVersion = selectedTemplate?.version ?? selectedTemplateSummary.version;
+
+      if (!templateKey) {
+        alert('Selected template is missing an integration key.');
+        return;
+      }
+
       // For each patient, send the PROM
-      const promises = selectedPatients.map(patientId => 
+      const promises = selectedPatients.map(patientId =>
         promApi.sendProm({
-          templateKey: selectedTemplate?.key || selectedTemplate?.name?.toLowerCase().replace(/\s+/g, '-'),
-          version: selectedTemplate?.version,
+          templateKey,
+          version: templateVersion,
           patientId: patientId,
           scheduledFor: scheduledFor,
           dueAt: dueDate.toISOString(),
@@ -171,9 +203,9 @@ const PROMSender: React.FC<PROMSenderProps> = ({
       );
       
       await Promise.all(promises);
-      
+
       console.log('PROM sent successfully to', selectedPatients.length, 'patients');
-      
+
       // Show success message and complete
       if (onComplete) {
         onComplete();
@@ -202,40 +234,60 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               Select PROM Template
             </Typography>
             <Grid container spacing={2}>
-              {templates?.map((template: any) => (
-                <Grid item xs={12} md={6} key={template.id}>
-                  <Card
-                    sx={{
-                      cursor: 'pointer',
-                      border: selectedTemplate?.id === template.id ? 2 : 1,
-                      borderColor: selectedTemplate?.id === template.id ? 'primary.main' : 'divider',
-                      '&:hover': { borderColor: 'primary.main' },
-                    }}
-                    onClick={() => setSelectedTemplate(template)}
-                  >
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <AssignmentIcon color="primary" sx={{ mr: 1 }} />
-                        <Typography variant="h6">{template.name}</Typography>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        {template.description}
-                      </Typography>
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {template.questions?.length || 0} questions • 
-                          Estimated time: {template.estimatedTime || '5-10'} minutes
+              {templateSummaries.map((template) => {
+                const isSelected = selectedTemplateId === template.id;
+                const templateDetail = isSelected ? selectedTemplate : undefined;
+                const questionCount = isSelected ? activeTemplateQuestions.length : undefined;
+                const categoryLabel = templateDetail?.category;
+                const frequencyLabel = templateDetail?.frequency;
+
+                return (
+                  <Grid item xs={12} md={6} key={template.id}>
+                    <Card
+                      sx={{
+                        cursor: 'pointer',
+                        border: isSelected ? 2 : 1,
+                        borderColor: isSelected ? 'primary.main' : 'divider',
+                        '&:hover': { borderColor: 'primary.main' },
+                      }}
+                      onClick={() => setSelectedTemplateId(template.id)}
+                    >
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <AssignmentIcon color="primary" sx={{ mr: 1 }} />
+                          <Typography variant="h6">{template.name}</Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          {template.description || 'No description provided'}
                         </Typography>
-                      </Box>
-                      <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        {template.tags?.map((tag: string) => (
-                          <Chip key={tag} label={tag} size="small" />
-                        ))}
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Version {template.version} • Created {format(new Date(template.createdAt), 'dd MMM yyyy')}
+                        </Typography>
+                        {isSelected ? (
+                          <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Chip
+                              label={`${questionCount ?? 0} questions`}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                            {categoryLabel && (
+                              <Chip label={categoryLabel} size="small" variant="outlined" />
+                            )}
+                            {frequencyLabel && (
+                              <Chip label={frequencyLabel} size="small" variant="outlined" />
+                            )}
+                          </Box>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                            Select to preview questions and metadata
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
             </Grid>
           </Box>
         );
@@ -595,9 +647,11 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                     <AssignmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Template
                   </Typography>
-                  <Typography variant="h6">{selectedTemplate?.name}</Typography>
+                  <Typography variant="h6">
+                    {activeTemplateName || 'No template selected'}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {selectedTemplate?.questions?.length || 0} questions
+                    {activeTemplateQuestions.length} questions
                   </Typography>
                 </Paper>
               </Grid>
@@ -685,7 +739,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   const isStepValid = () => {
     switch (activeStep) {
       case 0:
-        return selectedTemplate !== null;
+        return Boolean(selectedTemplateId);
       case 1:
         return selectedPatients.length > 0;
       case 2:
@@ -760,17 +814,17 @@ const PROMSender: React.FC<PROMSenderProps> = ({
         <DialogTitle>PROM Preview</DialogTitle>
         <DialogContent>
           <Typography variant="h6" gutterBottom>
-            {selectedTemplate?.name}
+            {activeTemplateName || 'PROM Template'}
           </Typography>
           <Typography variant="body2" color="text.secondary" paragraph>
-            {selectedTemplate?.description}
+            {activeTemplateDescription || 'Select a template to view details.'}
           </Typography>
           <Divider sx={{ my: 2 }} />
           <Typography variant="subtitle2" gutterBottom>
             Sample Questions:
           </Typography>
           <List>
-            {selectedTemplate?.questions?.slice(0, 3).map((question: any, index: number) => (
+            {activeTemplateQuestions.slice(0, 3).map((question, index) => (
               <ListItem key={index}>
                 <ListItemText
                   primary={`${index + 1}. ${question.text}`}
@@ -779,9 +833,9 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               </ListItem>
             ))}
           </List>
-          {selectedTemplate?.questions?.length > 3 && (
+          {activeTemplateQuestions.length > 3 && (
             <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-              ... and {selectedTemplate.questions.length - 3} more questions
+              ... and {activeTemplateQuestions.length - 3} more questions
             </Typography>
           )}
         </DialogContent>

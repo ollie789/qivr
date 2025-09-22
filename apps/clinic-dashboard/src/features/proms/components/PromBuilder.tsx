@@ -83,6 +83,7 @@ interface PromQuestion {
   id: string;
   type: 'text' | 'radio' | 'checkbox' | 'scale' | 'date' | 'time' | 'number';
   question: string;
+  text?: string;
   description?: string;
   required: boolean;
   options?: string[];
@@ -95,9 +96,10 @@ interface PromQuestion {
     value: any;
   };
   scoring?: {
-    weight: number;
+    weight?: number;
     values?: Record<string, number>;
   };
+  order?: number;
 }
 
 interface PromTemplate {
@@ -105,6 +107,7 @@ interface PromTemplate {
   name: string;
   description: string;
   category: string;
+  frequency: string;
   questions: PromQuestion[];
   scoring: {
     method: 'sum' | 'average' | 'weighted' | 'custom';
@@ -211,6 +214,7 @@ export const PromBuilder: React.FC = () => {
     name: '',
     description: '',
     category: 'general',
+    frequency: 'one-time',
     questions: [],
     scoring: {
       method: 'sum',
@@ -259,12 +263,28 @@ export const PromBuilder: React.FC = () => {
   };
 
   const addQuestion = (questionData: Partial<PromQuestion>) => {
+    const newId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `q_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+    const {
+      type = 'text',
+      question: questionLabel,
+      text: textLabel,
+      required = false,
+      ...rest
+    } = questionData;
+
+    const label = textLabel ?? questionLabel ?? '';
+
     const newQuestion: PromQuestion = {
-      id: `q_${Date.now()}`,
-      type: questionData.type || 'text',
-      question: questionData.question || '',
-      required: false,
-      ...questionData,
+      id: newId,
+      type,
+      question: label,
+      text: label,
+      required,
+      ...rest,
     };
     setTemplate((prev) => ({
       ...prev,
@@ -276,7 +296,24 @@ export const PromBuilder: React.FC = () => {
     setTemplate((prev) => ({
       ...prev,
       questions: prev.questions.map((q) =>
-        q.id === questionId ? { ...q, ...updates } : q
+        q.id === questionId
+          ? {
+              ...q,
+              ...updates,
+              question:
+                updates.question !== undefined
+                  ? updates.question
+                  : updates.text !== undefined
+                  ? updates.text
+                  : q.question,
+              text:
+                updates.text !== undefined
+                  ? updates.text
+                  : updates.question !== undefined
+                  ? updates.question
+                  : q.text ?? q.question,
+            }
+          : q
       ),
     }));
   };
@@ -300,22 +337,59 @@ export const PromBuilder: React.FC = () => {
         return;
       }
 
+      const normalizedQuestions = template.questions.map((q, index) => {
+        const questionId =
+          q.id ||
+          (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : `q_${Date.now()}_${index}`);
+
+        const baseText = q.text ?? q.question ?? '';
+
+        return {
+          id: questionId,
+          order: index,
+          text: baseText,
+          question: baseText,
+          type: q.type,
+          required: q.required,
+          options: q.options,
+          min: q.min,
+          max: q.max,
+          step: q.step,
+          description: q.description,
+          conditionalLogic: q.conditionalLogic,
+          scoring: q.scoring,
+        };
+      });
+
+      const { method, ...scoringConfig } = template.scoring;
+      const questionRules = template.questions
+        .filter((q) => q.scoring && (q.scoring.weight !== undefined || q.scoring.values))
+        .map((q) => ({
+          id: q.id,
+          weight: q.scoring?.weight,
+          values: q.scoring?.values,
+        }));
+
+      const scoringRules: Record<string, unknown> = { ...scoringConfig };
+      if (questionRules.length > 0) {
+        scoringRules.questions = questionRules;
+      }
+
       const payload = {
         key: template.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         name: template.name,
         description: template.description || '',
-        schemaJson: JSON.stringify({
-          questions: template.questions,
-          scoring: template.scoring,
-          schedule: template.schedule,
-          category: template.category,
-        }),
-        scoringMethod: template.scoring.method || 'sum',
-        scoringRules: JSON.stringify(template.scoring),
+        category: template.category,
+        frequency: template.frequency,
+        questions: normalizedQuestions,
+        scoringMethod: { type: method },
+        scoringRules: Object.keys(scoringRules).length > 0 ? scoringRules : undefined,
         isActive: template.isActive,
         version: template.version,
       };
-      
+
       console.log('Saving template:', payload);
       const res = await promApi.createTemplate(payload);
       console.log('Template saved successfully:', res);
@@ -327,6 +401,7 @@ export const PromBuilder: React.FC = () => {
         name: '',
         description: '',
         category: 'general',
+        frequency: 'one-time',
         questions: [],
         scoring: {
           method: 'sum',
@@ -423,6 +498,22 @@ export const PromBuilder: React.FC = () => {
                     <MenuItem value="function">Functional Status</MenuItem>
                     <MenuItem value="satisfaction">Patient Satisfaction</MenuItem>
                     <MenuItem value="mental-health">Mental Health</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Frequency</InputLabel>
+                  <Select
+                    value={template.frequency}
+                    onChange={(e) =>
+                      setTemplate({ ...template, frequency: e.target.value as string })
+                    }
+                    label="Frequency"
+                  >
+                    <MenuItem value="one-time">One-time</MenuItem>
+                    <MenuItem value="daily">Daily</MenuItem>
+                    <MenuItem value="weekly">Weekly</MenuItem>
+                    <MenuItem value="monthly">Monthly</MenuItem>
+                    <MenuItem value="quarterly">Quarterly</MenuItem>
                   </Select>
                 </FormControl>
                 <FormControlLabel
@@ -664,6 +755,9 @@ export const PromBuilder: React.FC = () => {
               </Typography>
               <Typography variant="subtitle2" gutterBottom>
                 Scoring: {template.scoring.method}
+              </Typography>
+              <Typography variant="subtitle2" gutterBottom>
+                Frequency: {template.frequency}
               </Typography>
             </Box>
 
