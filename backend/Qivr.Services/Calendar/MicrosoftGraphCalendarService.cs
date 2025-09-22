@@ -40,9 +40,9 @@ public class MicrosoftGraphCalendarService : ICalendarService
         return Task.FromResult(true);
     }
 
-    public Task<List<TimeSlot>> GetAvailabilityAsync(string userId, DateTime startDate, DateTime endDate)
+    public Task<List<Qivr.Core.Interfaces.TimeSlot>> GetAvailabilityAsync(string userId, DateTime startDate, DateTime endDate)
     {
-        return Task.FromResult(new List<TimeSlot>());
+        return Task.FromResult(new List<Qivr.Core.Interfaces.TimeSlot>());
     }
 
     public Task<Core.Interfaces.CalendarEvent> CreateEventAsync(string userId, Core.Interfaces.CalendarEvent calendarEvent)
@@ -94,9 +94,9 @@ public class MicrosoftGraphCalendarService : ICalendarService
         }
     }
 
-    public Task<List<TimeSlot>> GetAvailableSlotsAsync(string userId, DateTime date, int durationMinutes)
+    public Task<List<Qivr.Core.Interfaces.TimeSlot>> GetAvailableSlotsAsync(string userId, DateTime date, int durationMinutes)
     {
-        return Task.FromResult(new List<TimeSlot>());
+        return Task.FromResult(new List<Qivr.Core.Interfaces.TimeSlot>());
     }
 }
 

@@ -5,12 +5,17 @@ using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using Qivr.Api.Services;
 using Qivr.Api.Models;
+using Microsoft.AspNetCore.RateLimiting;
+using Qivr.Api.Middleware;
 
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/patients")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/patients")]
+[Route("api/patients")] // Maintain backward compatibility
 [Authorize(Roles = "Clinician,Admin,ClinicAdmin,Provider")]
+[EnableRateLimiting("api")]
 public class PatientsController : ControllerBase
 {
     private readonly QivrDbContext _context;
@@ -33,8 +38,15 @@ public class PatientsController : ControllerBase
     /// <summary>
     /// Search for patients by name, email, or phone
     /// </summary>
+    /// <param name="query">Search query (minimum 3 characters)</param>
+    /// <param name="limit">Maximum number of results to return</param>
+    /// <returns>List of matching patients</returns>
+    /// <response code="200">Returns matching patients</response>
+    /// <response code="400">Search query too short</response>
     [HttpGet("search")]
+    [EnableRateLimiting("search")]
     [ProducesResponseType(typeof(IEnumerable<PatientSearchResultDto>), 200)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> SearchPatients([FromQuery] string query, [FromQuery] int limit = 20)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Length < 3)

@@ -13,7 +13,7 @@ public interface IClinicManagementService
     Task<Clinic> CreateClinicAsync(Guid tenantId, CreateClinicRequest request);
     Task<bool> UpdateClinicAsync(Guid tenantId, Guid clinicId, UpdateClinicRequest request);
     Task<IEnumerable<ProviderSummary>> GetClinicProvidersAsync(Guid tenantId, Guid clinicId, bool activeOnly = true);
-    Task<Provider> AddProviderToClinicAsync(Guid tenantId, Guid clinicId, CreateProviderRequest request);
+    Task<Qivr.Core.Entities.Provider> AddProviderToClinicAsync(Guid tenantId, Guid clinicId, CreateProviderRequest request);
     Task<ProviderDetail?> GetProviderDetailsAsync(Guid tenantId, Guid providerId);
     Task<bool> UpdateProviderAsync(Guid tenantId, Guid providerId, UpdateProviderRequest request);
     Task<IEnumerable<Department>> GetDepartmentsAsync(Guid tenantId, Guid clinicId);
@@ -35,7 +35,7 @@ public class ClinicManagementService : IClinicManagementService
     public async Task<IEnumerable<ClinicSummary>> GetClinicsAsync(Guid tenantId, int page = 1, int pageSize = 20)
     {
         var query = _context.Clinics
-            .Where(c => c.TenantId == tenantId && !c.IsDeleted);
+            .Where(c => c.TenantId == tenantId);
 
         var totalCount = await query.CountAsync();
 
@@ -62,9 +62,9 @@ public class ClinicManagementService : IClinicManagementService
             var appointmentsToday = await _context.Appointments
                 .CountAsync(a => a.TenantId == tenantId && 
                                a.ClinicId == clinic.Id &&
-                               a.ScheduledAt >= todayStart && 
-                               a.ScheduledAt < todayEnd &&
-                               a.Status != "Cancelled");
+                               a.ScheduledStart >= todayStart && 
+                               a.ScheduledStart < todayEnd &&
+                               a.Status != AppointmentStatus.Cancelled);
 
             var pendingPROMs = await _context.PromInstances
                 .CountAsync(p => p.TenantId == tenantId &&
@@ -92,7 +92,7 @@ public class ClinicManagementService : IClinicManagementService
     public async Task<ClinicDetail?> GetClinicDetailsAsync(Guid tenantId, Guid clinicId)
     {
         var clinic = await _context.Clinics
-            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Id == clinicId && !c.IsDeleted);
+            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Id == clinicId);
 
         if (clinic == null)
             return null;
@@ -176,7 +176,7 @@ public class ClinicManagementService : IClinicManagementService
     public async Task<bool> UpdateClinicAsync(Guid tenantId, Guid clinicId, UpdateClinicRequest request)
     {
         var clinic = await _context.Clinics
-            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Id == clinicId && !c.IsDeleted);
+            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Id == clinicId);
 
         if (clinic == null)
             return false;
@@ -258,9 +258,9 @@ public class ClinicManagementService : IClinicManagementService
 
             var appointmentsToday = await _context.Appointments
                 .CountAsync(a => a.ProviderId == provider.UserId &&
-                               a.ScheduledAt >= todayStart && 
-                               a.ScheduledAt < todayEnd &&
-                               a.Status != "Cancelled");
+                               a.ScheduledStart >= todayStart && 
+                               a.ScheduledStart < todayEnd &&
+                               a.Status != AppointmentStatus.Cancelled);
 
             // Get next available slot (simplified - just find next free hour)
             var nextSlot = await GetNextAvailableSlot(provider.UserId);
@@ -286,7 +286,7 @@ public class ClinicManagementService : IClinicManagementService
         return summaries.OrderBy(p => p.LastName).ThenBy(p => p.FirstName);
     }
 
-    public async Task<Provider> AddProviderToClinicAsync(Guid tenantId, Guid clinicId, CreateProviderRequest request)
+    public async Task<Qivr.Core.Entities.Provider> AddProviderToClinicAsync(Guid tenantId, Guid clinicId, CreateProviderRequest request)
     {
         // First, create or find the user
         var user = await _context.Users
@@ -327,7 +327,7 @@ public class ClinicManagementService : IClinicManagementService
         }
 
         // Create new provider
-        var provider = new Provider
+        var provider = new Qivr.Core.Entities.Provider
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
@@ -371,12 +371,10 @@ public class ClinicManagementService : IClinicManagementService
             .CountAsync(a => a.ProviderId == providerId);
 
         var completedAppointments = await _context.Appointments
-            .CountAsync(a => a.ProviderId == providerId && a.Status == "Completed");
+            .CountAsync(a => a.ProviderId == providerId && a.Status == AppointmentStatus.Completed);
 
-        // Get average rating from evaluations
-        var averageRating = await _context.Evaluations
-            .Where(e => e.ProviderId == providerId && e.Rating.HasValue)
-            .AverageAsync(e => (decimal?)e.Rating) ?? 0m;
+        // Get average rating - TODO: Implement rating system when evaluation ratings are available
+        var averageRating = 0m;
 
         // Get schedule from metadata
         var schedule = GetSchedule(provider.User.Preferences);
@@ -535,7 +533,7 @@ public class ClinicManagementService : IClinicManagementService
 
         var activePatients = await _context.Appointments
             .Where(a => a.TenantId == tenantId && a.ClinicId == clinicId)
-            .Where(a => a.ScheduledAt >= DateTime.UtcNow.AddMonths(-6))
+            .Where(a => a.ScheduledStart >= DateTime.UtcNow.AddMonths(-6))
             .Select(a => a.PatientId)
             .Distinct()
             .CountAsync();
@@ -553,17 +551,16 @@ public class ClinicManagementService : IClinicManagementService
         var appointmentsThisMonth = await _context.Appointments
             .CountAsync(a => a.TenantId == tenantId && 
                            a.ClinicId == clinicId &&
-                           a.ScheduledAt >= thisMonthStart);
+                           a.ScheduledStart >= thisMonthStart);
 
         var appointmentsLastMonth = await _context.Appointments
             .CountAsync(a => a.TenantId == tenantId && 
                            a.ClinicId == clinicId &&
-                           a.ScheduledAt >= lastMonthStart && 
-                           a.ScheduledAt < lastMonthEnd);
+                           a.ScheduledStart >= lastMonthStart && 
+                           a.ScheduledStart < lastMonthEnd);
 
-        var avgSatisfaction = await _context.Evaluations
-            .Where(e => e.TenantId == tenantId && e.Rating.HasValue)
-            .AverageAsync(e => (decimal?)e.Rating) ?? 0m;
+        // Average satisfaction - TODO: Implement rating system
+        var avgSatisfaction = 0m;
 
         var completedPromsThisMonth = await _context.PromInstances
             .CountAsync(p => p.TenantId == tenantId &&
@@ -696,10 +693,10 @@ public class ClinicManagementService : IClinicManagementService
         
         var appointments = await _context.Appointments
             .Where(a => a.ProviderId == providerId &&
-                       a.ScheduledAt >= now &&
-                       a.ScheduledAt <= searchEnd &&
-                       a.Status != "Cancelled")
-            .Select(a => a.ScheduledAt)
+                       a.ScheduledStart >= now &&
+                       a.ScheduledStart <= searchEnd &&
+                       a.Status != AppointmentStatus.Cancelled)
+            .Select(a => a.ScheduledStart)
             .ToListAsync();
 
         // Start from next business hour

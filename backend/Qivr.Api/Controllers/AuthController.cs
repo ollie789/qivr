@@ -5,8 +5,13 @@ using Qivr.Api.Services;
 
 namespace Qivr.Api.Controllers;
 
+/// <summary>
+/// Authentication and authorization endpoints
+/// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/auth")]
+[Route("api/auth")] // Maintain backward compatibility
 public class AuthController : ControllerBase
 {
     private readonly ICognitoAuthService _authService;
@@ -20,8 +25,19 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Authenticate user with username and password
+    /// </summary>
+    /// <param name="request">Login credentials</param>
+    /// <returns>Authentication tokens and user information</returns>
+    /// <response code="200">Login successful</response>
+    /// <response code="401">Invalid credentials</response>
+    /// <response code="429">Too many login attempts</response>
     [HttpPost("login")]
     [EnableRateLimiting("auth")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(429)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         if (!ModelState.IsValid)

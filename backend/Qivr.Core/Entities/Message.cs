@@ -72,6 +72,7 @@ public class Message : TenantEntity
     // For attachments
     public Guid? AttachmentId { get; set; }
     public virtual Document? Attachment { get; set; }
+    public bool HasAttachments => AttachmentId != null;  // Added computed property
     
     // For system messages
     public bool IsSystemMessage { get; set; } = false;

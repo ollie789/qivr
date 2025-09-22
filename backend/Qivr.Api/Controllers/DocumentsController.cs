@@ -6,18 +6,24 @@ using Qivr.Core.Entities;
 using Qivr.Core.Interfaces;
 using Qivr.Infrastructure.Data;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.RateLimiting;
+using Qivr.Api.Middleware;
 
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/documents")]
+[Route("api/documents")] // Maintain backward compatibility
 [Authorize]
+[EnableRateLimiting("api")]
 public class DocumentsController : ControllerBase
 {
     private readonly QivrDbContext _context;
     private readonly IStorageService _storageService;
     private readonly ILogger<DocumentsController> _logger;
     private readonly IResourceAuthorizationService _authorizationService;
+    private readonly IEnhancedAuditService _auditService;
 
     // File upload limits and allowed types
     private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
@@ -44,19 +50,30 @@ public class DocumentsController : ControllerBase
         QivrDbContext context,
         IStorageService storageService,
         ILogger<DocumentsController> logger,
-        IResourceAuthorizationService authorizationService)
+        IResourceAuthorizationService authorizationService,
+        IEnhancedAuditService auditService)
     {
         _context = context;
         _storageService = storageService;
         _logger = logger;
         _authorizationService = authorizationService;
+        _auditService = auditService;
     }
 
     /// <summary>
     /// Upload a document for a patient
     /// </summary>
+    /// <param name="patientId">The patient ID</param>
+    /// <param name="file">The file to upload (max 10MB)</param>
+    /// <param name="documentType">Type of document</param>
+    /// <param name="description">Optional description</param>
+    /// <returns>The uploaded document information</returns>
+    /// <response code="201">Document uploaded successfully</response>
+    /// <response code="400">Invalid file or request</response>
+    /// <response code="403">Access denied</response>
     [HttpPost("patient/{patientId}")]
     [RequestSizeLimit(10_485_760)] // 10MB limit
+    [EnableRateLimiting("file-upload")]
     [ProducesResponseType(typeof(DocumentResponseDto), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(403)]
@@ -133,7 +150,25 @@ public class DocumentsController : ControllerBase
             };
 
             _context.Documents.Add(document);
+            
+            // Track entity changes for audit
+            _auditService.TrackEntityChanges(_context);
             await _context.SaveChangesAsync();
+            
+            // Log the document upload
+            await _auditService.SaveTrackedChangesAsync(_context, tenantId, uploadedByGuid);
+            await _auditService.LogEntityChangeAsync(
+                tenantId,
+                uploadedByGuid,
+                "UPLOAD",
+                document,
+                additionalMetadata: new Dictionary<string, object>
+                {
+                    ["documentType"] = documentType,
+                    ["patientId"] = patientId,
+                    ["fileSize"] = file.Length,
+                    ["fileName"] = file.FileName
+                });
 
             _logger.LogInformation("Document {DocumentId} uploaded for patient {PatientId}", document.Id, patientId);
 

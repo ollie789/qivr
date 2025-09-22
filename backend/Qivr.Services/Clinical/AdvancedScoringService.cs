@@ -159,7 +159,7 @@ public class AdvancedScoringService : IAdvancedScoringService
         foreach (var instance in instances)
         {
             // Convert Dictionary responses to PromResponse list
-            var responses = ConvertDictionaryToPromResponses(instance.Responses);
+            var responses = ConvertDictionaryToPromResponses(instance.ResponseData);
             var scoringConfig = GetDefaultScoringConfig(instance.Template?.Name ?? "default");
             var score = await CalculateScores(instance, responses, scoringConfig);
             

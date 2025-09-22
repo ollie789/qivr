@@ -64,14 +64,14 @@ public class GoogleCalendarService : ICalendarService
         return Task.FromResult(_calendarServices.ContainsKey(userId));
     }
 
-    public async Task<List<TimeSlot>> GetAvailabilityAsync(
+    public async Task<List<Qivr.Core.Interfaces.TimeSlot>> GetAvailabilityAsync(
         string userId, 
         DateTime startDate, 
         DateTime endDate)
     {
         var calendarService = GetCalendarService(userId);
 
-        var events = new List<TimeSlot>();
+        var events = new List<Qivr.Core.Interfaces.TimeSlot>();
         
         try
         {
@@ -94,7 +94,7 @@ public class GoogleCalendarService : ICalendarService
                 if (startDateTime == null || endDateTime == null)
                     continue;
 
-                events.Add(new TimeSlot
+                events.Add(new Qivr.Core.Interfaces.TimeSlot
                 {
                     Start = startDateTime.Value,
                     End = endDateTime.Value,
@@ -286,12 +286,12 @@ public class GoogleCalendarService : ICalendarService
         return calendarService.Channels.Stop(new Channel { Id = channelId, ResourceId = "primary" }).ExecuteAsync();
     }
 
-    public async Task<List<TimeSlot>> GetAvailableSlotsAsync(
+    public async Task<List<Qivr.Core.Interfaces.TimeSlot>> GetAvailableSlotsAsync(
         string userId,
         DateTime date,
         int durationMinutes)
     {
-        var availableSlots = new List<TimeSlot>();
+        var availableSlots = new List<Qivr.Core.Interfaces.TimeSlot>();
         var events = await GetAvailabilityAsync(userId, date.Date, date.Date.AddDays(1));
         
         // Define business hours (9 AM to 5 PM)
@@ -309,7 +309,7 @@ public class GoogleCalendarService : ICalendarService
             
             if (isAvailable)
             {
-                availableSlots.Add(new TimeSlot
+                availableSlots.Add(new Qivr.Core.Interfaces.TimeSlot
                 {
                     Start = currentSlot,
                     End = slotEnd,

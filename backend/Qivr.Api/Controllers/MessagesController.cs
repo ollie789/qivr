@@ -317,12 +317,12 @@ public class MessagesController : BaseApiController
         // Validate request
         if (request == null || request.RecipientId == Guid.Empty)
         {
-            throw new ValidationException("Invalid message request");
+            throw new Qivr.Api.Exceptions.ValidationException("Invalid message request");
         }
 
         if (string.IsNullOrWhiteSpace(request.Content))
         {
-            throw new ValidationException("Message content is required");
+            throw new Qivr.Api.Exceptions.ValidationException("Message content is required");
         }
 
             // Create message DTO for service
@@ -530,7 +530,7 @@ public class MessagesController : BaseApiController
         
         if (string.IsNullOrWhiteSpace(request?.Content))
         {
-            throw new ValidationException("Reply content is required");
+            throw new Qivr.Api.Exceptions.ValidationException("Reply content is required");
         }
         
         var reply = await _messagingService.ReplyToMessageAsync(tenantId, senderId, id, request.Content);

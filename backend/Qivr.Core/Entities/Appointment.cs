@@ -6,12 +6,14 @@ public class Appointment : TenantEntity
 {
     public Guid PatientId { get; set; }
     public Guid ProviderId { get; set; }
+    public Guid? ClinicId { get; set; }  // Added ClinicId
     public Guid? EvaluationId { get; set; }
     public string? ExternalCalendarId { get; set; }
     public string AppointmentType { get; set; } = string.Empty;
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Requested;
     public DateTime ScheduledStart { get; set; }
     public DateTime ScheduledEnd { get; set; }
+    public DateTime ScheduledAt => ScheduledStart;  // Added alias for backward compatibility
     public DateTime? ActualStart { get; set; }
     public DateTime? ActualEnd { get; set; }
     public LocationType LocationType { get; set; } = LocationType.InPerson;

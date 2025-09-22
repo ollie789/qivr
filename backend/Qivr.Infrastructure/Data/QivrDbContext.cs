@@ -23,6 +23,8 @@ public class QivrDbContext : DbContext
     // DbSets
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Clinic> Clinics => Set<Clinic>();
+    public DbSet<Provider> Providers => Set<Provider>();
     public DbSet<Evaluation> Evaluations => Set<Evaluation>();
     public DbSet<PainMap> PainMaps => Set<PainMap>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
@@ -34,6 +36,8 @@ public class QivrDbContext : DbContext
     public DbSet<PromResponse> PromResponses => Set<PromResponse>();
     public DbSet<PromInstance> PromInstances => Set<PromInstance>();
     public DbSet<PromTemplate> PromTemplates => Set<PromTemplate>();
+    public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -306,7 +310,7 @@ public class QivrDbContext : DbContext
             entity.ToTable("prom_instances");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.PatientId });
-            entity.Property(e => e.Responses).HasConversion(jsonConverter);
+            entity.Property(e => e.ResponseData).HasConversion(jsonConverter);
             entity.Property(e => e.Status).HasConversion<string>();
             
             entity.HasOne(e => e.Patient)
@@ -336,13 +340,83 @@ public class QivrDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
                 
             entity.HasOne(e => e.PromInstance)
-                .WithMany()
+                .WithMany(i => i.Responses)
                 .HasForeignKey(e => e.PromInstanceId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
             entity.HasOne(e => e.Appointment)
                 .WithMany()
                 .HasForeignKey(e => e.AppointmentId)
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+        
+        // Clinic configuration
+        modelBuilder.Entity<Clinic>(entity =>
+        {
+            entity.ToTable("clinics");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.Name });
+            entity.Property(e => e.Metadata).HasConversion(jsonConverter);
+            
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+        
+        // Provider configuration
+        modelBuilder.Entity<Provider>(entity =>
+        {
+            entity.ToTable("providers");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.ClinicId });
+            
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Clinic)
+                .WithMany(c => c.Providers)
+                .HasForeignKey(e => e.ClinicId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+        
+        // NotificationPreferences configuration
+        modelBuilder.Entity<NotificationPreferences>(entity =>
+        {
+            entity.ToTable("notification_preferences");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.UserId }).IsUnique();
+            
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+        
+        // Notification configuration
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("notifications");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.RecipientId, e.CreatedAt });
+            entity.Property(e => e.Type).HasMaxLength(50);
+            entity.Property(e => e.Channel).HasConversion<string>();
+            entity.Property(e => e.Priority).HasConversion<string>();
+            entity.Property(e => e.Data).HasConversion(jsonConverter);
+            
+            entity.HasOne(e => e.Recipient)
+                .WithMany()
+                .HasForeignKey(e => e.RecipientId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Sender)
+                .WithMany()
+                .HasForeignKey(e => e.SenderId)
                 .OnDelete(DeleteBehavior.SetNull);
                 
             entity.HasQueryFilter(e => e.TenantId == _tenantId);

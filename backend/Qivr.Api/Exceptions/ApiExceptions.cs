@@ -32,11 +32,6 @@ public class NotFoundException : ApiException
         : base($"{entityName} with id {id} was not found", 404, "NOT_FOUND")
     {
     }
-
-    public NotFoundException(string entityName, string identifier) 
-        : base($"{entityName} '{identifier}' was not found", 404, "NOT_FOUND")
-    {
-    }
 }
 
 /// <summary>

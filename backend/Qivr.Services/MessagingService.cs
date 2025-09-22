@@ -184,7 +184,7 @@ public class MessagingService : IMessagingService
             Priority = messageDto.Priority ?? "Normal",
             ParentMessageId = messageDto.ParentMessageId,
             RelatedAppointmentId = messageDto.RelatedAppointmentId,
-            HasAttachments = messageDto.Attachments?.Any() ?? false,
+            // HasAttachments is now a computed property based on AttachmentId
             IsRead = false,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

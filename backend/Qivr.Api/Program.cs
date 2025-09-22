@@ -11,6 +11,7 @@ using Qivr.Api.Extensions;
 using Qivr.Api.Middleware;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
+using Microsoft.AspNetCore.Mvc.Versioning;
 using Serilog;
 using Serilog.Events;
 using Microsoft.AspNetCore.RateLimiting;
@@ -106,6 +107,9 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container
+// Add API Versioning
+builder.Services.AddApiVersioningConfiguration();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
@@ -200,8 +204,9 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 builder.Services.AddScoped<Qivr.Api.Services.IEmailService, Qivr.Api.Services.EmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 
-// Configure Notification Services
+// Configure Audit and Notification Services
 builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
+builder.Services.AddScoped<IEnhancedAuditService, EnhancedAuditService>();
 builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
 builder.Services.AddScoped<INotificationGate, NotificationGate>();
 builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
@@ -259,8 +264,11 @@ builder.Services.AddSecretsManager();
 // Configure Authentication - Always use Cognito for production
 builder.Services.AddCognitoAuthentication(builder.Configuration);
 
-// Configure Swagger/OpenAPI
-builder.Services.AddSwaggerGen(c =>
+// Configure Swagger/OpenAPI with versioning support
+builder.Services.AddVersionedSwagger(builder.Configuration);
+
+// OLD Swagger configuration - Replaced by AddVersionedSwagger above
+/*builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
@@ -297,7 +305,7 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
-});
+});*/
 
 // Configure OpenTelemetry
 builder.Services.AddOpenTelemetry()
@@ -365,7 +373,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-builder.Services.AddRateLimiter(options =>
+// Replace with enhanced user-based rate limiting
+builder.Services.AddUserBasedRateLimiting();
+builder.Services.AddScoped<IRateLimitMetricsService, RateLimitMetricsService>();
+
+// OLD Rate limiting configuration - Replaced by AddUserBasedRateLimiting above
+/*builder.Services.AddRateLimiter(options =>
 {
     // Strict rate limiting for authentication endpoints
     options.AddFixedWindowLimiter("auth", opt =>
@@ -415,7 +428,7 @@ builder.Services.AddRateLimiter(options =>
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 50
             }));
-});
+});*/
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Qivr.Api.Validators.IntakeSubmissionRequestValidator>();

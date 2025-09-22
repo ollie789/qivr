@@ -24,13 +24,14 @@ public class PromInstance : TenantEntity
     public DateTime ScheduledFor { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime DueDate { get; set; }
-    public Dictionary<string, object>? Responses { get; set; }
+    public Dictionary<string, object>? ResponseData { get; set; }  // Raw response data
     public decimal? Score { get; set; }
     public DateTime? ReminderSentAt { get; set; }
     
     // Navigation properties
     public virtual PromTemplate? Template { get; set; }
     public virtual User? Patient { get; set; }
+    public virtual ICollection<PromResponse> Responses { get; set; } = new List<PromResponse>();
 }
 
 public enum PromStatus

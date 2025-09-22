@@ -8,7 +8,7 @@ namespace Qivr.Services;
 
 public interface IProviderAvailabilityService
 {
-    Task<List<TimeSlot>> GetAvailableSlots(Guid providerId, DateTime date, int durationMinutes = 30);
+    Task<List<Qivr.Core.Interfaces.TimeSlot>> GetAvailableSlots(Guid providerId, DateTime date, int durationMinutes = 30);
     Task<bool> IsSlotAvailable(Guid providerId, DateTime startTime, DateTime endTime);
     Task<List<ProviderSchedule>> GetProviderSchedule(Guid providerId, DateTime startDate, DateTime endDate);
     Task<bool> BookAppointment(Guid patientId, Guid providerId, DateTime startTime, int durationMinutes, string appointmentType);
@@ -39,9 +39,9 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         _logger = logger;
     }
 
-    public async Task<List<TimeSlot>> GetAvailableSlots(Guid providerId, DateTime date, int durationMinutes = 30)
+    public async Task<List<Qivr.Core.Interfaces.TimeSlot>> GetAvailableSlots(Guid providerId, DateTime date, int durationMinutes = 30)
     {
-        var availableSlots = new List<TimeSlot>();
+        var availableSlots = new List<Qivr.Core.Interfaces.TimeSlot>();
         
         // Get provider's working hours for the day
         var workingHours = await GetProviderWorkingHours(providerId, date.DayOfWeek);
@@ -75,7 +75,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             // Only add future slots
             if (isAvailable && currentSlotStart > DateTime.UtcNow)
             {
-                availableSlots.Add(new TimeSlot
+                availableSlots.Add(new Qivr.Core.Interfaces.TimeSlot
                 {
                     Start = currentSlotStart,
                     End = currentSlotEnd,
@@ -279,7 +279,7 @@ public class ProviderSchedule
     public DateTime Date { get; set; }
     public WorkingHours WorkingHours { get; set; } = new();
     public List<Appointment> Appointments { get; set; } = new();
-    public List<TimeSlot> AvailableSlots { get; set; } = new();
+    public List<Qivr.Core.Interfaces.TimeSlot> AvailableSlots { get; set; } = new();
 }
 
 public class Provider

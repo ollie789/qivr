@@ -7,12 +7,17 @@ using Qivr.Services;
 using System.Security.Claims;
 using Qivr.Api.Services;
 using Qivr.Api.Models;
+using Microsoft.AspNetCore.RateLimiting;
+using Qivr.Api.Middleware;
 
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/appointments")]
+[Route("api/appointments")] // Maintain backward compatibility
 [Authorize]
+[EnableRateLimiting("api")]
 public class AppointmentsController : ControllerBase
 {
     private readonly QivrDbContext _context;
@@ -20,25 +25,41 @@ public class AppointmentsController : ControllerBase
     private readonly IResourceAuthorizationService _authorizationService;
     private readonly IProviderAvailabilityService _availabilityService;
     private readonly ICacheService _cacheService;
+    private readonly IEnhancedAuditService _auditService;
 
     public AppointmentsController(
         QivrDbContext context,
         ILogger<AppointmentsController> logger,
         IResourceAuthorizationService authorizationService,
         IProviderAvailabilityService availabilityService,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IEnhancedAuditService auditService)
     {
         _context = context;
         _logger = logger;
         _authorizationService = authorizationService;
         _availabilityService = availabilityService;
         _cacheService = cacheService;
+        _auditService = auditService;
     }
 
     /// <summary>
     /// Get appointments with cursor-based pagination
     /// </summary>
+    /// <param name="cursor">Pagination cursor for next/previous page</param>
+    /// <param name="limit">Number of items per page (max 100)</param>
+    /// <param name="startDate">Filter appointments starting from this date</param>
+    /// <param name="endDate">Filter appointments ending before this date</param>
+    /// <param name="status">Filter by appointment status</param>
+    /// <param name="sortDescending">Sort in descending order (newest first)</param>
+    /// <returns>Paginated list of appointments</returns>
+    /// <response code="200">Returns the list of appointments</response>
+    /// <response code="401">Unauthorized - Authentication required</response>
+    /// <response code="429">Too many requests - Rate limit exceeded</response>
     [HttpGet]
+    [ProducesResponseType(typeof(CursorPaginationResponse<AppointmentDto>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(429)]
     public async Task<ActionResult<CursorPaginationResponse<AppointmentDto>>> GetAppointments(
         [FromQuery] string? cursor = null,
         [FromQuery] int limit = 20,
@@ -198,7 +219,16 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
+    /// <summary>
+    /// Get a specific appointment by ID
+    /// </summary>
+    /// <param name="id">The appointment ID</param>
+    /// <returns>The appointment details</returns>
+    /// <response code="200">Returns the appointment</response>
+    /// <response code="404">Appointment not found or access denied</response>
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(AppointmentDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<ActionResult<AppointmentDto>> GetAppointment(Guid id)
     {
         var tenantId = GetTenantId();
@@ -261,7 +291,19 @@ public class AppointmentsController : ControllerBase
         return Ok(appointmentDto);
     }
 
+    /// <summary>
+    /// Create a new appointment
+    /// </summary>
+    /// <param name="request">Appointment creation request</param>
+    /// <returns>The created appointment</returns>
+    /// <response code="201">Appointment created successfully</response>
+    /// <response code="400">Invalid request or time slot not available</response>
+    /// <response code="409">Time slot conflict - double booking detected</response>
     [HttpPost]
+    [EnableRateLimiting("api")]
+    [ProducesResponseType(typeof(AppointmentDto), 201)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(409)]
     public async Task<ActionResult<AppointmentDto>> CreateAppointment(CreateAppointmentRequest request)
     {
         var tenantId = GetTenantId();
@@ -308,7 +350,24 @@ public class AppointmentsController : ControllerBase
         _context.Appointments.Add(appointment);
         try
         {
+            // Track entity changes for audit
+            _auditService.TrackEntityChanges(_context);
+            
             await _context.SaveChangesAsync();
+            
+            // Log the appointment creation
+            await _auditService.SaveTrackedChangesAsync(_context, tenantId, userId);
+            await _auditService.LogEntityChangeAsync(
+                tenantId,
+                userId,
+                "CREATE",
+                appointment,
+                additionalMetadata: new Dictionary<string, object>
+                {
+                    ["appointmentType"] = appointment.AppointmentType,
+                    ["provider"] = provider.Email,
+                    ["scheduledTime"] = appointment.ScheduledStart
+                });
             
             // Invalidate relevant caches
             var userRole = User.IsInRole("Patient") ? "Patient" : "Clinician";

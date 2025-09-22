@@ -80,8 +80,8 @@ public class McidTrackingService : IMcidTrackingService
         var baseline = instances.First();
         var current = instances.Last();
         
-        analysis.BaselineScore = baseline.Score ?? CalculateTotalScoreFromDictionary(baseline.Responses);
-        analysis.CurrentScore = current.Score ?? CalculateTotalScoreFromDictionary(current.Responses);
+        analysis.BaselineScore = baseline.Score ?? CalculateTotalScoreFromDictionary(baseline.ResponseData);
+        analysis.CurrentScore = current.Score ?? CalculateTotalScoreFromDictionary(current.ResponseData);
         analysis.BaselineDate = baseline.CompletedAt ?? baseline.CreatedAt;
         analysis.CurrentDate = current.CompletedAt ?? current.CreatedAt;
         analysis.ScoreChange = analysis.CurrentScore - analysis.BaselineScore;
@@ -126,7 +126,7 @@ public class McidTrackingService : IMcidTrackingService
         // Calculate trajectory
         if (instances.Count >= 3)
         {
-            var scores = instances.Select(i => i.Score ?? CalculateTotalScoreFromDictionary(i.Responses)).ToList();
+            var scores = instances.Select(i => i.Score ?? CalculateTotalScoreFromDictionary(i.ResponseData)).ToList();
             analysis.Trajectory = CalculateTrajectory(scores);
             
             // Predict time to MCID if not yet achieved

@@ -42,13 +42,13 @@ public class RealTimeNotificationService : IRealTimeNotificationService
             var entity = new Notification
             {
                 Id = Guid.NewGuid(),
-                UserId = userId,
+                RecipientId = userId,
                 Title = notification.Title,
                 Message = notification.Message,
                 Type = notification.Type,
-                Priority = notification.Priority,
+                Priority = Enum.Parse<NotificationPriority>(notification.Priority),
                 Data = notification.Data,
-                IsRead = false,
+                Channel = NotificationChannel.InApp,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -84,13 +84,13 @@ public class RealTimeNotificationService : IRealTimeNotificationService
                 notifications.Add(new Notification
                 {
                     Id = Guid.NewGuid(),
-                    UserId = userId,
+                    RecipientId = userId,
                     Title = notification.Title,
                     Message = notification.Message,
                     Type = notification.Type,
-                    Priority = notification.Priority,
+                    Priority = Enum.Parse<NotificationPriority>(notification.Priority),
                     Data = notification.Data,
-                    IsRead = false,
+                    Channel = NotificationChannel.InApp,
                     CreatedAt = createdAt
                 });
             }
@@ -121,7 +121,7 @@ public class RealTimeNotificationService : IRealTimeNotificationService
         {
             // Get all users with this role
             var users = await _context.Users
-                .Where(u => u.Role == role)
+                .Where(u => u.Roles.Contains(role))
                 .Select(u => u.Id)
                 .ToListAsync();
 
