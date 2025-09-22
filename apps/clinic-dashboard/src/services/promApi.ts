@@ -1,31 +1,59 @@
 import apiClient from './sharedApiClient';
 import { PromInstanceDto } from './promInstanceApi';
 
-export interface PromTemplate {
-  id: string;
-  name: string;
-  description: string;
-  questions: PromQuestion[];
-  estimatedTime?: string;
-  tags?: string[];
-  category?: string;
-  isActive: boolean;
-  version: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface PromQuestion {
   id: string;
   text: string;
-  type: 'text' | 'number' | 'scale' | 'multiple-choice' | 'checkbox' | 'date' | 'time';
+  type:
+    | 'text'
+    | 'number'
+    | 'scale'
+    | 'multiple-choice'
+    | 'checkbox'
+    | 'date'
+    | 'time'
+    | 'radio';
   required: boolean;
   options?: string[];
   min?: number;
   max?: number;
   step?: number;
-  placeholder?: string;
-  validation?: any;
+  description?: string;
+  conditionalLogic?: Record<string, unknown>;
+  scoring?: Record<string, unknown>;
+}
+
+export interface PromTemplateSummary {
+  id: string;
+  key: string;
+  version: number;
+  name: string;
+  description?: string;
+  category: string;
+  frequency: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PromTemplateDetail extends PromTemplateSummary {
+  questions: PromQuestion[];
+  scoringMethod?: Record<string, unknown>;
+  scoringRules?: Record<string, unknown>;
+  isActive: boolean;
+}
+
+export interface CreatePromTemplateRequest {
+  key: string;
+  name: string;
+  description?: string;
+  category: string;
+  frequency: string;
+  questions: PromQuestion[];
+  scoringMethod?: Record<string, unknown>;
+  scoringRules?: Record<string, unknown>;
+  isActive?: boolean;
+  version?: number;
 }
 
 export interface PromResponse {
@@ -48,31 +76,22 @@ class PromApi {
     search?: string;
     page?: number;
     limit?: number;
-  }) {
+  }): Promise<PromTemplateSummary[]> {
     const response = await apiClient.get('/api/v1/proms/templates', { params });
     return response.data;
   }
 
-  async getTemplate(id: string) {
+  async getTemplate(id: string): Promise<PromTemplateDetail> {
     const response = await apiClient.get(`/api/v1/proms/templates/by-id/${id}`);
     return response.data;
   }
 
-  async createTemplate(data: {
-    key: string;
-    name: string;
-    description?: string;
-    schemaJson: string;
-    scoringMethod?: string;
-    scoringRules?: string;
-    isActive?: boolean;
-    version?: number;
-  }) {
+  async createTemplate(data: CreatePromTemplateRequest): Promise<PromTemplateDetail> {
     const response = await apiClient.post('/api/v1/proms/templates', data);
     return response.data;
   }
 
-  async updateTemplate(id: string, data: Partial<PromTemplate>) {
+  async updateTemplate(id: string, data: Partial<PromTemplateDetail>) {
     const response = await apiClient.put(`/api/v1/proms/templates/by-id/${id}`, data);
     return response.data;
   }
@@ -157,7 +176,7 @@ class PromApi {
   }
 
   async submitResponse(id: string, responses: Record<string, any>) {
-    const response = await apiClient.post(`/api/v1/proms/instances/${id}/answers`, { responses });
+    const response = await apiClient.post(`/api/v1/proms/instances/${id}/answers`, responses);
     return response.data;
   }
 
