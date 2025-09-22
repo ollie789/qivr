@@ -1,266 +1,37 @@
 # QIVR Project Status & Roadmap
-*Generated: September 3, 2025*
+*Last reviewed: September 23, 2025*
 
-## ✅ Completed Features
+## MVP Readiness Snapshot
+| Area | Status | Notes |
+| --- | --- | --- |
+| Backend services | 🚧 Partial | PROM workflows now persist through Entity Framework, but core clinic management and analytics endpoints still serve placeholder data and tenant resolution from subdomains remains unimplemented. |
+| Frontend applications | 🚧 Partial | The clinic dashboard continues to call legacy analytics routes and fabricates PROM breakdowns, while the PROM builder still falls back to non-GUID question IDs. The patient portal relies on a relative `fetch` wrapper without a configurable API base URL. |
+| Data layer & migrations | ✅ Baseline | EF Core migrations are the source of truth and development seeding covers tenants, users, and PROM templates, yet no analytics or booking fixtures are provisioned. |
+| Quality & testing | ⚠️ Minimal | Automated coverage remains limited to a single controller test—no integration or E2E guards exist for PROM, booking, or analytics flows. |
+| Documentation | ⚠️ Divergent | `API_AUDIT_REPORT.md` still lists several controllers as "fully functional" even though the implementation contains TODOs and mock data. |
 
-### Infrastructure
-- ✅ Docker services (PostgreSQL, Redis, MinIO, Mailhog, etc.)
-- ✅ .NET Core backend API with multi-tenant support
-- ✅ AWS Cognito authentication for both clinic staff and patients
-- ✅ Monorepo structure with shared packages
+## Backend reality check
+- **Clinic management endpoints**: `ClinicManagementController` returns hard-coded clinics, providers, and statistics in every action instead of querying `QivrDbContext`, leaving roster management, booking analytics, and clinic overviews without real data.【F:backend/Qivr.Api/Controllers/ClinicManagementController.cs†L33-L123】
+- **Analytics**: The patient analytics controller keeps all vital-sign calculations behind `if (false)` blocks, so only PROM-derived metrics reach the dashboards and no clinical trends are produced yet.【F:backend/Qivr.Api/Controllers/AnalyticsController.cs†L42-L109】
+- **Tenant safeguards**: `TenantMiddleware` still logs the detected subdomain but never resolves it to a tenant record, so multi-tenant isolation depends solely on JWT claims or headers.【F:backend/Qivr.Api/Middleware/TenantMiddleware.cs†L46-L66】
+- **PROM architecture**: `PromInstanceService` now reads and writes templates, instances, responses, and booking requests through EF Core and is registered in DI, establishing the backend foundation described in `proms-integration-plan.md` and replacing the former in-memory mocks.【F:backend/Qivr.Services/PromInstanceService.cs†L32-L204】【F:backend/Qivr.Services/ServiceCollectionExtensions.cs†L28-L45】
 
-### Frontend Applications
-- ✅ **Clinic Dashboard** (React + TypeScript + MUI)
-  - Dashboard with statistics and charts
-  - Patient management (CRUD)
-  - Appointment scheduling
-  - PROM builder interface
-  - Analytics page
-  - Settings management
-  - Notifications system
+## Frontend reality check
+- **Clinic dashboard analytics**: `analyticsApi` still queries `/api/clinic-dashboard/metrics` and synthesises completion datasets when the backend returns nothing, so charts never reflect live totals even if the API is fixed.【F:apps/clinic-dashboard/src/services/analyticsApi.ts†L79-L142】
+- **PROM builder payloads**: When `crypto.randomUUID` is unavailable (e.g., older browsers or SSR), new PROM questions fall back to IDs like `q_<timestamp>`, which do not satisfy the backend requirement for GUID question identifiers outlined in `proms-integration-plan.md`.【F:apps/clinic-dashboard/src/features/proms/components/PromBuilder.tsx†L260-L290】
+- **Patient portal API client**: The portal's `apiClient` constructs requests with bare `fetch` calls and no configurable API base, so deployments that host the SPA separately from the API require additional proxying before any request succeeds.【F:apps/patient-portal/src/services/apiClient.ts†L14-L55】
 
-- ✅ **Patient Portal** (React + TypeScript + MUI)
-  - Patient dashboard
-  - Appointment viewing
-  - Medical records access
-  - PROM completion
-  - Messages
-  - Profile management
+## Data & tooling
+- EF Core migrations under `backend/Qivr.Infrastructure/Migrations` are now authoritative and the legacy SQL artifacts have been removed; the database README documents the updated workflow and the super-admin endpoint seeds PROM templates/instances for local testing.【F:database/README.md†L1-L47】
+- No automated process seeds analytics data, booking history, or vital signs, leaving the dashboards without representative fixtures.
 
-- ✅ **Widget** (Embeddable booking widget)
-  - Basic implementation ready
+## Documentation alignment
+- `API_AUDIT_REPORT.md` marks controllers such as ClinicManagement, Analytics, and PromInstance as "fully functional," but the current source still contains TODOs and static responses. Treat the audit as historical context until it can be reconciled with the codebase.【F:docs/API_AUDIT_REPORT.md†L25-L73】
+- `proms-integration-plan.md` accurately describes the remaining gaps between the refined PROM backend and the React clients; the workstreams in that plan should be prioritised before claiming PROM readiness.【F:docs/proms-integration-plan.md†L1-L32】
 
-### Recent Migrations
-- ✅ Complete axios to fetch migration
-- ✅ Cognito integration with automatic token refresh
-- ✅ Type-safe HTTP client (@qivr/http package)
-- ✅ SSR-safe implementation
-
-## 🚧 TODO - High Priority
-
-### 1. Backend Implementation Gaps
-Based on TODO comments found in the codebase:
-
-#### Authentication & Authorization
-- [ ] Implement subdomain to tenant lookup (TenantMiddleware.cs)
-- [ ] Complete user profile CRUD operations (ProfileController.cs)
-- [ ] Implement password change in Cognito (ProfileController.cs)
-- [ ] Add email verification flow completion
-
-#### Core Medical Features
-- [ ] **Patient Records Controller** - Multiple TODOs:
-  - Demographics update logic
-  - Medical history addition
-  - Vital signs recording and retrieval
-  - Timeline retrieval with pagination
-  - Patient summary generation
-
-#### Intake Processing
-- [ ] Complete IntakeProcessingWorker implementation
-  - AI service integration for intake analysis
-  - Email notifications after processing
-  - Automatic patient record creation from intake
-
-#### Calendar Integration
-- [ ] Fix Microsoft Graph Calendar Service
-  - Update authentication provider for Graph SDK v5
-  - Complete subscription creation
-  - Implement calendar sync
-
-#### Messaging & Notifications
-- [ ] Complete SMS integration (MessageMediaWebhookController)
-- [ ] Implement appointment rescheduling notifications
-- [ ] Complete notification preferences system
-
-### 2. Frontend Feature Completion
-
-#### Clinic Dashboard
-- [ ] **Intake Queue Processing**
-  - Connect to backend intake processing
-  - Add AI-assisted review interface
-  - Implement bulk actions
-
-- [ ] **PROM Builder**
-  - Complete template creation UI
-  - Add question library
-  - Implement scoring logic builder
-  - Add preview functionality
-
-- [ ] **Staff Management**
-  - Add staff CRUD operations
-  - Implement role-based permissions UI
-  - Add schedule management
-
-- [ ] **Billing Integration**
-  - Add invoice generation
-  - Payment tracking
-  - Insurance claim management
-
-#### Patient Portal
-- [ ] **Document Upload**
-  - Implement file upload to S3/MinIO
-  - Add document categorization
-  - OCR integration for scanned documents
-
-- [ ] **Telehealth Integration**
-  - Video consultation scheduling
-  - Implement video call interface
-  - Pre-consultation forms
-
-- [ ] **Health Tracking**
-  - Add vital signs input
-  - Medication tracking
-  - Symptom diary
-
-### 3. Data & Analytics
-
-- [ ] **Reporting System**
-  - Clinical outcomes reports
-  - Financial reports
-  - PROM analytics dashboard
-  - Export functionality (PDF/Excel)
-
-- [ ] **AI/ML Features**
-  - Predictive analytics for patient risk
-  - Appointment no-show predictions
-  - Treatment recommendation engine
-
-### 4. Integration & Compliance
-
-- [ ] **External Integrations**
-  - Medicare/Insurance APIs
-  - Pathology lab systems
-  - Pharmacy systems
-  - Wearable device data (Apple Health, Google Fit)
-
-- [ ] **Compliance & Security**
-  - HIPAA compliance audit
-  - GDPR compliance for EU
-  - Australian Privacy Act compliance
-  - Implement audit logging
-  - Data encryption at rest
-
-### 5. DevOps & Testing
-
-- [ ] **Testing**
-  - Add unit tests (target 80% coverage)
-  - Integration tests for API endpoints
-  - E2E tests with Playwright/Cypress
-  - Load testing with k6
-
-- [ ] **CI/CD**
-  - Complete GitHub Actions workflows
-  - Add automated database migrations
-  - Implement blue-green deployments
-  - Add monitoring and alerting (Datadog/New Relic)
-
-## 🎯 Suggested Next Steps (Priority Order)
-
-### Phase 1: Core Functionality (Week 1-2)
-1. **Complete Patient Records Management**
-   - Implement all TODO items in PatientRecordsController
-   - Add frontend UI for medical history and vitals
-   - Test with real patient data scenarios
-
-2. **Fix Intake Processing**
-   - Complete IntakeProcessingWorker
-   - Add AI integration for data extraction
-   - Create review interface in clinic dashboard
-
-3. **Complete Profile Management**
-   - Implement profile updates in both portals
-   - Add photo upload to S3/MinIO
-   - Connect password change to Cognito
-
-### Phase 2: Communication (Week 3-4)
-1. **Messaging System**
-   - Complete SMS integration
-   - Add in-app messaging
-   - Implement notification preferences
-
-2. **Calendar Integration**
-   - Fix Microsoft Graph integration
-   - Add appointment reminders
-   - Implement availability management
-
-### Phase 3: Advanced Features (Week 5-6)
-1. **PROM System**
-   - Complete PROM builder UI
-   - Add scoring engine
-   - Implement automated PROM scheduling
-
-2. **Analytics & Reporting**
-   - Build reporting dashboard
-   - Add export functionality
-   - Implement basic predictive analytics
-
-### Phase 4: Polish & Deploy (Week 7-8)
-1. **Testing & QA**
-   - Write comprehensive tests
-   - Fix bugs and edge cases
-   - Performance optimization
-
-2. **Deployment**
-   - Set up production environment
-   - Configure monitoring
-   - Create deployment documentation
-
-## 📊 Current Technical Debt
-
-1. **Code Quality**
-   - Many controllers have TODO comments
-   - Missing error handling in some areas
-   - Inconsistent data validation
-
-2. **Testing**
-   - Very few unit tests
-   - No integration tests
-   - No E2E tests
-
-3. **Documentation**
-   - Missing API documentation
-   - No developer onboarding guide
-   - Incomplete deployment documentation
-
-4. **Security**
-   - Need security audit
-   - Missing rate limiting
-   - Incomplete RBAC implementation
-
-## 🚀 Quick Wins (Can be done immediately)
-
-1. **API Documentation**
-   - Add Swagger/OpenAPI annotations
-   - Document all endpoints
-   - Create Postman collection
-
-2. **Error Handling**
-   - Add global error handler
-   - Implement proper logging
-   - Add user-friendly error messages
-
-3. **Basic Testing**
-   - Add tests for critical paths
-   - Set up test database
-   - Add GitHub Actions for test runs
-
-## 💡 Recommendations
-
-1. **Focus on MVP features first** - Complete core patient management and appointment booking
-2. **Add testing as you go** - Don't accumulate more technical debt
-3. **Document as you build** - Maintain API docs and user guides
-4. **Regular security reviews** - Healthcare data is sensitive
-5. **Get user feedback early** - Deploy to staging and get real user input
-
-## 📈 Success Metrics
-
-- [ ] 100% of critical TODOs resolved
-- [ ] 80% test coverage achieved
-- [ ] All CRUD operations functional
-- [ ] Production deployment successful
-- [ ] First 10 real users onboarded
-- [ ] Zero critical security vulnerabilities
-
----
-
-*This document should be updated weekly to track progress*
+## Immediate priorities for baseline completion
+1. Replace the remaining mock responses in clinic management and analytics controllers with tenant-aware EF queries so both dashboards can surface real data.
+2. Finish tenant resolution by wiring subdomain lookups into `TenantMiddleware` and hardening logging/metrics for header overrides.
+3. Align clinic dashboard and patient portal PROM clients with the EF-backed DTOs (stable GUID question IDs, real analytics endpoints, consistent payloads) and expose environment-aware API base URLs.
+4. Backfill development fixtures for analytics, bookings, and vitals to exercise the new endpoints and unblock automated smoke tests.
+5. Update `API_AUDIT_REPORT.md` after the above fixes so documentation once again reflects the deployed behaviour.
