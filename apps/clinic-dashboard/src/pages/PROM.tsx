@@ -70,10 +70,11 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO, differenceInDays, isAfter, isBefore } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { promApi, PromTemplate, PromResponse } from '../services/promApi';
+import { promApi, PromTemplateSummary, PromResponse } from '../services/promApi';
 import { patientApi } from '../services/patientApi';
 import PROMSender from '../components/PROMSender';
 import { PromBuilder } from '../features/proms/components/PromBuilder';
+import { PromPreview } from '../components/PromPreview';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface TabPanelProps {
@@ -103,7 +104,7 @@ const PROM: React.FC = () => {
   
   const [currentTab, setCurrentTab] = useState(0);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<PromTemplate | null>(null);
+  const [sendTemplateId, setSendTemplateId] = useState<string | null>(null);
   const [selectedResponse, setSelectedResponse] = useState<PromResponse | null>(null);
   const [responseDetailOpen, setResponseDetailOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -113,14 +114,16 @@ const PROM: React.FC = () => {
   });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Fetch templates
-  const { data: templatesData, isLoading: templatesLoading, refetch: refetchTemplates } = useQuery({
+  const { data: templatesData, isLoading: templatesLoading, refetch: refetchTemplates } = useQuery<PromTemplateSummary[]>({
     queryKey: ['prom-templates'],
     queryFn: () => promApi.getTemplates({ isActive: true }),
   });
 
-  const templates = templatesData || [];
+  const templates: PromTemplateSummary[] = templatesData || [];
 
   // Fetch responses
   const { data: responsesData, isLoading: responsesLoading, refetch: refetchResponses } = useQuery({
@@ -213,7 +216,7 @@ const PROM: React.FC = () => {
     setCurrentTab(newValue);
   };
 
-  const handleDeleteTemplate = (template: PromTemplate) => {
+  const handleDeleteTemplate = (template: PromTemplateSummary) => {
     if (window.confirm(`Are you sure you want to delete the template "${template.name}"?`)) {
       deleteTemplateMutation.mutate(template.id);
     }
@@ -364,7 +367,7 @@ const PROM: React.FC = () => {
                 </Box>
               ) : (
                 <Grid container spacing={3}>
-                  {templates.map((template: PromTemplate) => (
+                  {templates.map((template) => (
                     <Grid item xs={12} md={6} lg={4} key={template.id}>
                       <Card>
                         <CardContent>
@@ -374,44 +377,23 @@ const PROM: React.FC = () => {
                           <Typography variant="body2" color="text.secondary" paragraph>
                             {template.description}
                           </Typography>
-                          
-                          <Box display="flex" gap={1} mb={2}>
-                            {template.category && (
-                              <Chip label={template.category} size="small" color="primary" variant="outlined" />
-                            )}
-                            {template.estimatedTime && (
-                              <Chip 
-                                icon={<ScheduleIcon />} 
-                                label={template.estimatedTime} 
-                                size="small" 
-                                variant="outlined"
-                              />
-                            )}
-                          </Box>
-                          
+
                           <Typography variant="body2" color="text.secondary">
-                            {template.questions.length} questions
+                            Version {template.version}
                           </Typography>
-                          
-                          {template.tags && template.tags.length > 0 && (
-                            <Box mt={1}>
-                              {template.tags.map((tag) => (
-                                <Chip
-                                  key={tag}
-                                  label={tag}
-                                  size="small"
-                                  sx={{ mr: 0.5, mb: 0.5 }}
-                                />
-                              ))}
-                            </Box>
-                          )}
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                            Created {format(new Date(template.createdAt), 'dd MMM yyyy')}
+                          </Typography>
                         </CardContent>
-                        
+
                         <CardActions>
                           <Button
                             size="small"
                             startIcon={<PreviewIcon />}
-                            onClick={() => setSelectedTemplate(template)}
+                            onClick={() => {
+                              setPreviewTemplateId(template.id);
+                              setPreviewOpen(true);
+                            }}
                           >
                             Preview
                           </Button>
@@ -419,7 +401,7 @@ const PROM: React.FC = () => {
                             size="small"
                             startIcon={<SendIcon />}
                             onClick={() => {
-                              setSelectedTemplate(template);
+                              setSendTemplateId(template.id);
                               setSendDialogOpen(true);
                             }}
                           >
@@ -664,22 +646,35 @@ const PROM: React.FC = () => {
         {/* Send PROM Dialog */}
         <Dialog
           open={sendDialogOpen}
-          onClose={() => setSendDialogOpen(false)}
+          onClose={() => {
+            setSendDialogOpen(false);
+            setSendTemplateId(null);
+          }}
           maxWidth="md"
           fullWidth
         >
           <DialogTitle>Send PROM Questionnaire</DialogTitle>
           <DialogContent>
             <PROMSender
-              preSelectedTemplateId={selectedTemplate?.id}
+              preSelectedTemplateId={sendTemplateId || undefined}
               onComplete={() => {
                 setSendDialogOpen(false);
+                setSendTemplateId(null);
                 refetchResponses();
                 enqueueSnackbar('PROM sent successfully', { variant: 'success' });
               }}
             />
           </DialogContent>
         </Dialog>
+
+        <PromPreview
+          open={previewOpen}
+          onClose={() => {
+            setPreviewOpen(false);
+            setPreviewTemplateId(null);
+          }}
+          templateId={previewTemplateId || undefined}
+        />
 
         {/* Response Detail Dialog */}
         <Dialog
