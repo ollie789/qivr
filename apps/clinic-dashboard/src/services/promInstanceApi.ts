@@ -1,4 +1,4 @@
-import api from '../lib/api-client';
+import apiClient from "./sharedApiClient";
 
 // Types
 export interface SendPromRequest {
@@ -115,65 +115,65 @@ export enum NotificationMethod {
   None = 0,
   Email = 1,
   Sms = 2,
-  InApp = 4
+  InApp = 4,
 }
 
 // Base path for API
-const BASE_PATH = '/api/PromInstance';
+const BASE_PATH = "/api/PromInstance";
 
 export const promInstanceApi = {
   // Send PROM to a single patient
   sendToPatient: async (request: SendPromRequest): Promise<PromInstanceDto> => {
-    return await api.post<PromInstanceDto>(
-      `${BASE_PATH}/send`,
-      request
-    );
+    return await apiClient.post<PromInstanceDto>(`${BASE_PATH}/send`, request);
   },
 
   // Send PROM to multiple patients
-  sendBulk: async (request: SendBulkPromRequest): Promise<PromInstanceDto[]> => {
-    return await api.post<PromInstanceDto[]>(
+  sendBulk: async (
+    request: SendBulkPromRequest,
+  ): Promise<PromInstanceDto[]> => {
+    return await apiClient.post<PromInstanceDto[]>(
       `${BASE_PATH}/send/bulk`,
-      request
+      request,
     );
   },
 
   // Get a specific PROM instance
   getInstance: async (instanceId: string): Promise<PromInstanceDto> => {
-    return await api.get<PromInstanceDto>(
-      `${BASE_PATH}/${instanceId}`
-    );
+    return await apiClient.get<PromInstanceDto>(`${BASE_PATH}/${instanceId}`);
   },
 
   // Get all PROM instances for a patient
-  getPatientInstances: async (patientId: string): Promise<PromInstanceDto[]> => {
-    return await api.get<PromInstanceDto[]>(
-      `${BASE_PATH}/patient/${patientId}`
+  getPatientInstances: async (
+    patientId: string,
+  ): Promise<PromInstanceDto[]> => {
+    return await apiClient.get<PromInstanceDto[]>(
+      `${BASE_PATH}/patient/${patientId}`,
     );
   },
 
   // Submit PROM response (for patient portal)
-  submitResponse: async (instanceId: string, response: PromResponse): Promise<PromInstanceDto> => {
+  submitResponse: async (
+    instanceId: string,
+    response: PromResponse,
+  ): Promise<PromInstanceDto> => {
     // Use regular API post for patient submission
-    return await api.post<PromInstanceDto>(
+    return await apiClient.post<PromInstanceDto>(
       `${BASE_PATH}/${instanceId}/submit`,
-      response
+      response,
     );
   },
 
   // Send reminder for a PROM
   sendReminder: async (instanceId: string): Promise<void> => {
-    await api.post<void>(
-      `${BASE_PATH}/${instanceId}/reminder`,
-      {}
-    );
+    await apiClient.post<void>(`${BASE_PATH}/${instanceId}/reminder`, {});
   },
 
   // Get pending PROMs
   getPending: async (dueBefore?: string): Promise<PromInstanceDto[]> => {
-    const params = dueBefore ? `?dueBefore=${dueBefore}` : '';
-    return await api.get<PromInstanceDto[]>(
-      `${BASE_PATH}/pending${params}`
+    const params = dueBefore ? { dueBefore } : undefined;
+    return await apiClient.get<PromInstanceDto[]>(
+      `${BASE_PATH}/pending`,
+      params,
     );
   },
 
@@ -183,40 +183,31 @@ export const promInstanceApi = {
     startDate?: string;
     endDate?: string;
   }): Promise<PromInstanceStats> => {
-    const queryParams = new URLSearchParams();
-    if (params?.templateId) queryParams.append('templateId', params.templateId);
-    if (params?.startDate) queryParams.append('startDate', params.startDate);
-    if (params?.endDate) queryParams.append('endDate', params.endDate);
-    
-    const queryString = queryParams.toString();
-    const url = `${BASE_PATH}/stats${queryString ? `?${queryString}` : ''}`;
-    
-    return await api.get<PromInstanceStats>(url);
+    return await apiClient.get<PromInstanceStats>(`${BASE_PATH}/stats`, params);
   },
 
   // Cancel a PROM instance
   cancel: async (instanceId: string, reason?: string): Promise<void> => {
-    await api.post<void>(
-      `${BASE_PATH}/${instanceId}/cancel`,
-      { reason }
-    );
+    await apiClient.post<void>(`${BASE_PATH}/${instanceId}/cancel`, { reason });
   },
 
   // Preview a PROM template
   previewTemplate: async (templateId: string): Promise<PromPreviewDto> => {
-    return await api.get<PromPreviewDto>(
-      `${BASE_PATH}/preview/${templateId}`
+    return await apiClient.get<PromPreviewDto>(
+      `${BASE_PATH}/preview/${templateId}`,
     );
   },
 
   // Request a booking from a PROM instance
-  requestBooking: async (instanceId: string, request: BookingRequest): Promise<BookingRequestDto> => {
-    // Use regular API post for patient booking
-    return await api.post<BookingRequestDto>(
+  requestBooking: async (
+    instanceId: string,
+    request: BookingRequest,
+  ): Promise<BookingRequestDto> => {
+    return await apiClient.post<BookingRequestDto>(
       `${BASE_PATH}/${instanceId}/booking`,
-      request
+      request,
     );
-  }
+  },
 };
 
 export default promInstanceApi;

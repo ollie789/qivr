@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -7,17 +7,15 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import {
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Box,
   Paper,
@@ -39,7 +37,6 @@ import {
   DialogActions,
   List,
   ListItem,
-  ListItemIcon,
   ListItemText,
   Switch,
   FormControlLabel,
@@ -55,33 +52,24 @@ import {
   Checkbox,
   FormGroup,
   Divider,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add,
   Delete,
   Edit,
-  Save,
-  Cancel,
   DragIndicator,
-  TextFields,
-  RadioButtonChecked,
-  CheckBox,
-  LinearScale,
-  CalendarToday,
-  Schedule,
   Functions,
-  AccountTree,
   Preview,
   Publish,
   ContentCopy,
   ExpandMore,
-} from '@mui/icons-material';
-import { promApi } from '../../../services/promApi';
+} from "@mui/icons-material";
+import { promApi, PromTemplateQuestion } from "../../../services/promApi";
 
 // Types
 interface PromQuestion {
   id: string;
-  type: 'text' | 'radio' | 'checkbox' | 'scale' | 'date' | 'time' | 'number';
+  type: "text" | "radio" | "checkbox" | "scale" | "date" | "time" | "number";
   question: string;
   text?: string;
   description?: string;
@@ -92,7 +80,7 @@ interface PromQuestion {
   step?: number;
   conditionalLogic?: {
     showIf: string;
-    operator: 'equals' | 'notEquals' | 'contains' | 'greaterThan' | 'lessThan';
+    operator: "equals" | "notEquals" | "contains" | "greaterThan" | "lessThan";
     value: any;
   };
   scoring?: {
@@ -110,7 +98,7 @@ interface PromTemplate {
   frequency: string;
   questions: PromQuestion[];
   scoring: {
-    method: 'sum' | 'average' | 'weighted' | 'custom';
+    method: "sum" | "average" | "weighted" | "custom";
     ranges?: Array<{
       min: number;
       max: number;
@@ -119,7 +107,7 @@ interface PromTemplate {
     }>;
   };
   schedule: {
-    triggers: Array<'post-appointment' | 'manual' | 'recurring'>;
+    triggers: Array<"post-appointment" | "manual" | "recurring">;
     intervals?: number[];
     reminderDays?: number[];
   };
@@ -132,20 +120,199 @@ interface PromTemplate {
 // Question Library
 const QUESTION_LIBRARY = {
   pain: [
-    { question: 'Rate your pain level', type: 'scale' as const, min: 0, max: 10 },
-    { question: 'Describe your pain', type: 'radio' as const, options: ['Sharp', 'Dull', 'Burning', 'Throbbing', 'Aching'] },
-    { question: 'When does the pain occur?', type: 'checkbox' as const, options: ['Morning', 'Afternoon', 'Evening', 'Night', 'During activity', 'At rest'] },
+    {
+      question: "Rate your pain level",
+      type: "scale" as const,
+      min: 0,
+      max: 10,
+    },
+    {
+      question: "Describe your pain",
+      type: "radio" as const,
+      options: ["Sharp", "Dull", "Burning", "Throbbing", "Aching"],
+    },
+    {
+      question: "When does the pain occur?",
+      type: "checkbox" as const,
+      options: [
+        "Morning",
+        "Afternoon",
+        "Evening",
+        "Night",
+        "During activity",
+        "At rest",
+      ],
+    },
   ],
   function: [
-    { question: 'Can you perform daily activities?', type: 'radio' as const, options: ['Yes, easily', 'Yes, with difficulty', 'No'] },
-    { question: 'Rate your mobility', type: 'scale' as const, min: 0, max: 10 },
-    { question: 'Which activities are difficult?', type: 'checkbox' as const, options: ['Walking', 'Sitting', 'Standing', 'Lifting', 'Bending'] },
+    {
+      question: "Can you perform daily activities?",
+      type: "radio" as const,
+      options: ["Yes, easily", "Yes, with difficulty", "No"],
+    },
+    { question: "Rate your mobility", type: "scale" as const, min: 0, max: 10 },
+    {
+      question: "Which activities are difficult?",
+      type: "checkbox" as const,
+      options: ["Walking", "Sitting", "Standing", "Lifting", "Bending"],
+    },
   ],
   satisfaction: [
-    { question: 'How satisfied are you with your treatment?', type: 'scale' as const, min: 0, max: 10 },
-    { question: 'Would you recommend our clinic?', type: 'radio' as const, options: ['Definitely', 'Probably', 'Not sure', 'Probably not', 'Definitely not'] },
-    { question: 'Additional comments', type: 'text' as const },
+    {
+      question: "How satisfied are you with your treatment?",
+      type: "scale" as const,
+      min: 0,
+      max: 10,
+    },
+    {
+      question: "Would you recommend our clinic?",
+      type: "radio" as const,
+      options: [
+        "Definitely",
+        "Probably",
+        "Not sure",
+        "Probably not",
+        "Definitely not",
+      ],
+    },
+    { question: "Additional comments", type: "text" as const },
   ],
+};
+
+const GUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const generateGuid = (): string => {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID().toLowerCase();
+  }
+
+  // RFC4122 v4 compliant fallback
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+    .replace(/[xy]/g, (char) => {
+      const random = (Math.random() * 16) | 0;
+      const value = char === "x" ? random : (random & 0x3) | 0x8;
+      return value.toString(16);
+    })
+    .toLowerCase();
+};
+
+const generateUniqueGuid = (used: Set<string>): string => {
+  let candidate = generateGuid();
+  while (used.has(candidate)) {
+    candidate = generateGuid();
+  }
+  return candidate;
+};
+
+const sanitizeQuestionsForPayload = (
+  questions: PromQuestion[],
+): {
+  updatedQuestions: PromQuestion[];
+  payloadQuestions: PromTemplateQuestion[];
+  hasChanges: boolean;
+} => {
+  const idMap = new Map<string, string>();
+  const used = new Set<string>();
+  let hasChanges = false;
+
+  // First pass: assign stable GUIDs for each question id
+  questions.forEach((question, index) => {
+    const sourceKey = question.id || `__index_${index}`;
+    const trimmed = typeof question.id === "string" ? question.id.trim() : "";
+    let normalizedId =
+      trimmed && GUID_REGEX.test(trimmed) ? trimmed.toLowerCase() : "";
+
+    if (!normalizedId || used.has(normalizedId)) {
+      normalizedId = generateUniqueGuid(used);
+      hasChanges = true;
+    }
+
+    idMap.set(sourceKey, normalizedId);
+    used.add(normalizedId);
+  });
+
+  const updatedQuestions: PromQuestion[] = [];
+  const payloadQuestions: PromTemplateQuestion[] = [];
+
+  questions.forEach((question, index) => {
+    const sourceKey = question.id || `__index_${index}`;
+    const sanitizedId = idMap.get(sourceKey) ?? generateUniqueGuid(used);
+    const questionText = question.text ?? question.question ?? "";
+
+    const conditionalLogic = question.conditionalLogic
+      ? {
+          ...question.conditionalLogic,
+          showIf:
+            idMap.get(question.conditionalLogic.showIf) ??
+            question.conditionalLogic.showIf,
+        }
+      : undefined;
+
+    if (conditionalLogic?.showIf !== question.conditionalLogic?.showIf) {
+      hasChanges = true;
+    }
+
+    const updatedQuestion: PromQuestion = {
+      ...question,
+      id: sanitizedId,
+      question: questionText,
+      text: questionText,
+      conditionalLogic,
+    };
+
+    if (question.id !== sanitizedId) {
+      hasChanges = true;
+    }
+
+    updatedQuestions.push(updatedQuestion);
+
+    const payload: PromTemplateQuestion = {
+      id: sanitizedId,
+      text: questionText,
+      type: question.type,
+      required: Boolean(question.required),
+      order: index,
+    };
+
+    if (question.description) {
+      payload.description = question.description;
+    }
+
+    if (question.options && question.options.length > 0) {
+      payload.options = question.options;
+    }
+
+    if (typeof question.min === "number") {
+      payload.min = question.min;
+    }
+
+    if (typeof question.max === "number") {
+      payload.max = question.max;
+    }
+
+    if (typeof question.step === "number") {
+      payload.step = question.step;
+    }
+
+    if (conditionalLogic) {
+      payload.conditionalLogic = conditionalLogic;
+    }
+
+    if (
+      question.scoring &&
+      (question.scoring.weight !== undefined || question.scoring.values)
+    ) {
+      payload.scoring = question.scoring;
+    }
+
+    payloadQuestions.push(payload);
+  });
+
+  return { updatedQuestions, payloadQuestions, hasChanges };
 };
 
 // Sortable Question Item
@@ -173,7 +340,7 @@ const SortableQuestionItem: React.FC<{
     <Card
       ref={setNodeRef}
       style={style}
-      sx={{ mb: 2, cursor: 'move' }}
+      sx={{ mb: 2, cursor: "move" }}
       elevation={isDragging ? 4 : 1}
     >
       <CardContent>
@@ -185,11 +352,20 @@ const SortableQuestionItem: React.FC<{
           </Grid>
           <Grid item xs>
             <Typography variant="subtitle1">{question.question}</Typography>
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+            <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
               <Chip label={question.type} size="small" />
-              {question.required && <Chip label="Required" size="small" color="primary" />}
-              {question.conditionalLogic && <Chip label="Conditional" size="small" color="secondary" />}
-              {question.scoring && <Chip label={`Weight: ${question.scoring.weight}`} size="small" />}
+              {question.required && (
+                <Chip label="Required" size="small" color="primary" />
+              )}
+              {question.conditionalLogic && (
+                <Chip label="Conditional" size="small" color="secondary" />
+              )}
+              {question.scoring && (
+                <Chip
+                  label={`Weight: ${question.scoring.weight}`}
+                  size="small"
+                />
+              )}
             </Box>
           </Grid>
           <Grid item>
@@ -210,22 +386,22 @@ const SortableQuestionItem: React.FC<{
 export const PromBuilder: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [template, setTemplate] = useState<PromTemplate>({
-    id: '',
-    name: '',
-    description: '',
-    category: 'general',
-    frequency: 'one-time',
+    id: "",
+    name: "",
+    description: "",
+    category: "general",
+    frequency: "one-time",
     questions: [],
     scoring: {
-      method: 'sum',
+      method: "sum",
       ranges: [
-        { min: 0, max: 30, label: 'Low', color: '#4caf50' },
-        { min: 31, max: 70, label: 'Medium', color: '#ff9800' },
-        { min: 71, max: 100, label: 'High', color: '#f44336' },
+        { min: 0, max: 30, label: "Low", color: "#4caf50" },
+        { min: 31, max: 70, label: "Medium", color: "#ff9800" },
+        { min: 71, max: 100, label: "High", color: "#f44336" },
       ],
     },
     schedule: {
-      triggers: ['post-appointment'],
+      triggers: ["post-appointment"],
       intervals: [1, 7, 30],
       reminderDays: [2],
     },
@@ -235,7 +411,9 @@ export const PromBuilder: React.FC = () => {
     updatedAt: new Date().toISOString(),
   });
 
-  const [editingQuestion, setEditingQuestion] = useState<PromQuestion | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<PromQuestion | null>(
+    null,
+  );
   const [questionDialog, setQuestionDialog] = useState(false);
   const [libraryDialog, setLibraryDialog] = useState(false);
   const [previewDialog, setPreviewDialog] = useState(false);
@@ -244,7 +422,7 @@ export const PromBuilder: React.FC = () => {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -263,20 +441,17 @@ export const PromBuilder: React.FC = () => {
   };
 
   const addQuestion = (questionData: Partial<PromQuestion>) => {
-    const newId =
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `q_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const newId = generateGuid();
 
     const {
-      type = 'text',
+      type = "text",
       question: questionLabel,
       text: textLabel,
       required = false,
       ...rest
     } = questionData;
 
-    const label = textLabel ?? questionLabel ?? '';
+    const label = textLabel ?? questionLabel ?? "";
 
     const newQuestion: PromQuestion = {
       id: newId,
@@ -292,7 +467,10 @@ export const PromBuilder: React.FC = () => {
     }));
   };
 
-  const updateQuestion = (questionId: string, updates: Partial<PromQuestion>) => {
+  const updateQuestion = (
+    questionId: string,
+    updates: Partial<PromQuestion>,
+  ) => {
     setTemplate((prev) => ({
       ...prev,
       questions: prev.questions.map((q) =>
@@ -304,16 +482,16 @@ export const PromBuilder: React.FC = () => {
                 updates.question !== undefined
                   ? updates.question
                   : updates.text !== undefined
-                  ? updates.text
-                  : q.question,
+                    ? updates.text
+                    : q.question,
               text:
                 updates.text !== undefined
                   ? updates.text
                   : updates.question !== undefined
-                  ? updates.question
-                  : q.text ?? q.question,
+                    ? updates.question
+                    : (q.text ?? q.question),
             }
-          : q
+          : q,
       ),
     }));
   };
@@ -329,43 +507,30 @@ export const PromBuilder: React.FC = () => {
     try {
       // Validate template
       if (!template.name) {
-        alert('Please enter a template name');
+        alert("Please enter a template name");
         return;
       }
       if (template.questions.length === 0) {
-        alert('Please add at least one question');
+        alert("Please add at least one question");
         return;
       }
 
-      const normalizedQuestions = template.questions.map((q, index) => {
-        const questionId =
-          q.id ||
-          (typeof crypto !== 'undefined' && 'randomUUID' in crypto
-            ? crypto.randomUUID()
-            : `q_${Date.now()}_${index}`);
+      const { updatedQuestions, payloadQuestions, hasChanges } =
+        sanitizeQuestionsForPayload(template.questions);
 
-        const baseText = q.text ?? q.question ?? '';
-
-        return {
-          id: questionId,
-          order: index,
-          text: baseText,
-          question: baseText,
-          type: q.type,
-          required: q.required,
-          options: q.options,
-          min: q.min,
-          max: q.max,
-          step: q.step,
-          description: q.description,
-          conditionalLogic: q.conditionalLogic,
-          scoring: q.scoring,
-        };
-      });
+      if (hasChanges) {
+        setTemplate((prev) => ({
+          ...prev,
+          questions: updatedQuestions,
+        }));
+      }
 
       const { method, ...scoringConfig } = template.scoring;
-      const questionRules = template.questions
-        .filter((q) => q.scoring && (q.scoring.weight !== undefined || q.scoring.values))
+      const questionRules = updatedQuestions
+        .filter(
+          (q) =>
+            q.scoring && (q.scoring.weight !== undefined || q.scoring.values),
+        )
         .map((q) => ({
           id: q.id,
           weight: q.scoring?.weight,
@@ -378,41 +543,45 @@ export const PromBuilder: React.FC = () => {
       }
 
       const payload = {
-        key: template.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        key: template.name
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, ""),
         name: template.name,
-        description: template.description || '',
+        description: template.description || "",
         category: template.category,
         frequency: template.frequency,
-        questions: normalizedQuestions,
+        questions: payloadQuestions,
         scoringMethod: { type: method },
-        scoringRules: Object.keys(scoringRules).length > 0 ? scoringRules : undefined,
+        scoringRules:
+          Object.keys(scoringRules).length > 0 ? scoringRules : undefined,
         isActive: template.isActive,
         version: template.version,
       };
 
-      console.log('Saving template:', payload);
+      console.log("Saving template:", payload);
       const res = await promApi.createTemplate(payload);
-      console.log('Template saved successfully:', res);
+      console.log("Template saved successfully:", res);
       alert(`Template "${template.name}" saved successfully!`);
-      
+
       // Reset form after successful save
       setTemplate({
-        id: '',
-        name: '',
-        description: '',
-        category: 'general',
-        frequency: 'one-time',
+        id: "",
+        name: "",
+        description: "",
+        category: "general",
+        frequency: "one-time",
         questions: [],
         scoring: {
-          method: 'sum',
+          method: "sum",
           ranges: [
-            { min: 0, max: 30, label: 'Low', color: '#4caf50' },
-            { min: 31, max: 70, label: 'Medium', color: '#ff9800' },
-            { min: 71, max: 100, label: 'High', color: '#f44336' },
+            { min: 0, max: 30, label: "Low", color: "#4caf50" },
+            { min: 31, max: 70, label: "Medium", color: "#ff9800" },
+            { min: 71, max: 100, label: "High", color: "#f44336" },
           ],
         },
         schedule: {
-          triggers: ['post-appointment'],
+          triggers: ["post-appointment"],
           intervals: [1, 7, 30],
           reminderDays: [2],
         },
@@ -422,8 +591,11 @@ export const PromBuilder: React.FC = () => {
         updatedAt: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error('Failed to save template:', error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save template';
+      console.error("Failed to save template:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to save template";
       alert(`Error: ${errorMessage}`);
     }
   };
@@ -461,7 +633,11 @@ export const PromBuilder: React.FC = () => {
       <Grid container spacing={3}>
         <Grid item xs={12} lg={8}>
           <Paper sx={{ p: 3 }}>
-            <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3 }}>
+            <Tabs
+              value={activeTab}
+              onChange={(_, v) => setActiveTab(v)}
+              sx={{ mb: 3 }}
+            >
               <Tab label="Template Info" />
               <Tab label="Questions" />
               <Tab label="Scoring" />
@@ -474,7 +650,9 @@ export const PromBuilder: React.FC = () => {
                   fullWidth
                   label="Template Name"
                   value={template.name}
-                  onChange={(e) => setTemplate({ ...template, name: e.target.value })}
+                  onChange={(e) =>
+                    setTemplate({ ...template, name: e.target.value })
+                  }
                   sx={{ mb: 2 }}
                 />
                 <TextField
@@ -483,20 +661,26 @@ export const PromBuilder: React.FC = () => {
                   rows={3}
                   label="Description"
                   value={template.description}
-                  onChange={(e) => setTemplate({ ...template, description: e.target.value })}
+                  onChange={(e) =>
+                    setTemplate({ ...template, description: e.target.value })
+                  }
                   sx={{ mb: 2 }}
                 />
                 <FormControl fullWidth sx={{ mb: 2 }}>
                   <InputLabel>Category</InputLabel>
                   <Select
                     value={template.category}
-                    onChange={(e) => setTemplate({ ...template, category: e.target.value })}
+                    onChange={(e) =>
+                      setTemplate({ ...template, category: e.target.value })
+                    }
                     label="Category"
                   >
                     <MenuItem value="general">General</MenuItem>
                     <MenuItem value="pain">Pain Assessment</MenuItem>
                     <MenuItem value="function">Functional Status</MenuItem>
-                    <MenuItem value="satisfaction">Patient Satisfaction</MenuItem>
+                    <MenuItem value="satisfaction">
+                      Patient Satisfaction
+                    </MenuItem>
                     <MenuItem value="mental-health">Mental Health</MenuItem>
                   </Select>
                 </FormControl>
@@ -505,7 +689,10 @@ export const PromBuilder: React.FC = () => {
                   <Select
                     value={template.frequency}
                     onChange={(e) =>
-                      setTemplate({ ...template, frequency: e.target.value as string })
+                      setTemplate({
+                        ...template,
+                        frequency: e.target.value as string,
+                      })
                     }
                     label="Frequency"
                   >
@@ -520,7 +707,9 @@ export const PromBuilder: React.FC = () => {
                   control={
                     <Switch
                       checked={template.isActive}
-                      onChange={(e) => setTemplate({ ...template, isActive: e.target.checked })}
+                      onChange={(e) =>
+                        setTemplate({ ...template, isActive: e.target.checked })
+                      }
                     />
                   }
                   label="Active Template"
@@ -530,15 +719,15 @@ export const PromBuilder: React.FC = () => {
 
             {activeTab === 1 && (
               <Box>
-                <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+                <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
                   <Button
                     variant="contained"
                     startIcon={<Add />}
                     onClick={() => {
                       setEditingQuestion({
                         id: `q_${Date.now()}`,
-                        type: 'text',
-                        question: '',
+                        type: "text",
+                        question: "",
                         required: false,
                       });
                       setQuestionDialog(true);
@@ -557,7 +746,8 @@ export const PromBuilder: React.FC = () => {
 
                 {template.questions.length === 0 ? (
                   <Alert severity="info">
-                    No questions added yet. Click "Add Question" or select from the library.
+                    No questions added yet. Click "Add Question" or select from
+                    the library.
                   </Alert>
                 ) : (
                   <DndContext
@@ -595,7 +785,10 @@ export const PromBuilder: React.FC = () => {
                     onChange={(e) =>
                       setTemplate({
                         ...template,
-                        scoring: { ...template.scoring, method: e.target.value as any },
+                        scoring: {
+                          ...template.scoring,
+                          method: e.target.value as any,
+                        },
                       })
                     }
                     label="Scoring Method"
@@ -643,11 +836,11 @@ export const PromBuilder: React.FC = () => {
                         <Grid item xs={2}>
                           <Box
                             sx={{
-                              width: '100%',
+                              width: "100%",
                               height: 36,
                               bgcolor: range.color,
                               borderRadius: 1,
-                              cursor: 'pointer',
+                              cursor: "pointer",
                             }}
                           />
                         </Grid>
@@ -670,7 +863,9 @@ export const PromBuilder: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Checkbox
-                        checked={template.schedule.triggers.includes('post-appointment')}
+                        checked={template.schedule.triggers.includes(
+                          "post-appointment",
+                        )}
                       />
                     }
                     label="After Appointment"
@@ -678,7 +873,7 @@ export const PromBuilder: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Checkbox
-                        checked={template.schedule.triggers.includes('manual')}
+                        checked={template.schedule.triggers.includes("manual")}
                       />
                     }
                     label="Manual Assignment"
@@ -686,7 +881,9 @@ export const PromBuilder: React.FC = () => {
                   <FormControlLabel
                     control={
                       <Checkbox
-                        checked={template.schedule.triggers.includes('recurring')}
+                        checked={template.schedule.triggers.includes(
+                          "recurring",
+                        )}
                       />
                     }
                     label="Recurring Schedule"
@@ -696,7 +893,7 @@ export const PromBuilder: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   Follow-up Intervals (days)
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+                <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
                   {template.schedule.intervals?.map((interval, index) => (
                     <Chip
                       key={index}
@@ -715,7 +912,7 @@ export const PromBuilder: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   Send reminders after these many days of no response
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: "flex", gap: 1 }}>
                   {template.schedule.reminderDays?.map((day, index) => (
                     <Chip
                       key={index}
@@ -733,25 +930,25 @@ export const PromBuilder: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} lg={4}>
-          <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
+          <Paper sx={{ p: 3, position: "sticky", top: 20 }}>
             <Typography variant="h6" gutterBottom>
               Template Preview
             </Typography>
             <Divider sx={{ mb: 2 }} />
-            
+
             <Typography variant="subtitle1" gutterBottom>
-              {template.name || 'Untitled Template'}
+              {template.name || "Untitled Template"}
             </Typography>
             <Typography variant="body2" color="text.secondary" gutterBottom>
-              {template.description || 'No description'}
+              {template.description || "No description"}
             </Typography>
-            
+
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Questions: {template.questions.length}
               </Typography>
               <Typography variant="subtitle2" gutterBottom>
-                Required: {template.questions.filter(q => q.required).length}
+                Required: {template.questions.filter((q) => q.required).length}
               </Typography>
               <Typography variant="subtitle2" gutterBottom>
                 Scoring: {template.scoring.method}
@@ -766,7 +963,7 @@ export const PromBuilder: React.FC = () => {
             <Typography variant="subtitle2" gutterBottom>
               Quick Actions
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Button
                 variant="outlined"
                 startIcon={<ContentCopy />}
@@ -774,18 +971,10 @@ export const PromBuilder: React.FC = () => {
               >
                 Duplicate Template
               </Button>
-              <Button
-                variant="outlined"
-                startIcon={<Functions />}
-                size="small"
-              >
+              <Button variant="outlined" startIcon={<Functions />} size="small">
                 Test Scoring
               </Button>
-              <Button
-                variant="outlined"
-                startIcon={<Preview />}
-                size="small"
-              >
+              <Button variant="outlined" startIcon={<Preview />} size="small">
                 Patient View
               </Button>
             </Box>
@@ -801,7 +990,7 @@ export const PromBuilder: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          {editingQuestion?.question ? 'Edit Question' : 'Add Question'}
+          {editingQuestion?.question ? "Edit Question" : "Add Question"}
         </DialogTitle>
         <DialogContent>
           {editingQuestion && (
@@ -811,7 +1000,10 @@ export const PromBuilder: React.FC = () => {
                 label="Question"
                 value={editingQuestion.question}
                 onChange={(e) =>
-                  setEditingQuestion({ ...editingQuestion, question: e.target.value })
+                  setEditingQuestion({
+                    ...editingQuestion,
+                    question: e.target.value,
+                  })
                 }
                 sx={{ mb: 2 }}
               />
@@ -820,9 +1012,12 @@ export const PromBuilder: React.FC = () => {
                 multiline
                 rows={2}
                 label="Description (optional)"
-                value={editingQuestion.description || ''}
+                value={editingQuestion.description || ""}
                 onChange={(e) =>
-                  setEditingQuestion({ ...editingQuestion, description: e.target.value })
+                  setEditingQuestion({
+                    ...editingQuestion,
+                    description: e.target.value,
+                  })
                 }
                 sx={{ mb: 2 }}
               />
@@ -831,7 +1026,10 @@ export const PromBuilder: React.FC = () => {
                 <Select
                   value={editingQuestion.type}
                   onChange={(e) =>
-                    setEditingQuestion({ ...editingQuestion, type: e.target.value as any })
+                    setEditingQuestion({
+                      ...editingQuestion,
+                      type: e.target.value as any,
+                    })
                   }
                   label="Question Type"
                 >
@@ -845,7 +1043,8 @@ export const PromBuilder: React.FC = () => {
                 </Select>
               </FormControl>
 
-              {(editingQuestion.type === 'radio' || editingQuestion.type === 'checkbox') && (
+              {(editingQuestion.type === "radio" ||
+                editingQuestion.type === "checkbox") && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     Options
@@ -858,7 +1057,10 @@ export const PromBuilder: React.FC = () => {
                       onChange={(e) => {
                         const newOptions = [...(editingQuestion.options || [])];
                         newOptions[index] = e.target.value;
-                        setEditingQuestion({ ...editingQuestion, options: newOptions });
+                        setEditingQuestion({
+                          ...editingQuestion,
+                          options: newOptions,
+                        });
                       }}
                       sx={{ mb: 1 }}
                       size="small"
@@ -870,7 +1072,7 @@ export const PromBuilder: React.FC = () => {
                     onClick={() =>
                       setEditingQuestion({
                         ...editingQuestion,
-                        options: [...(editingQuestion.options || []), ''],
+                        options: [...(editingQuestion.options || []), ""],
                       })
                     }
                   >
@@ -879,7 +1081,8 @@ export const PromBuilder: React.FC = () => {
                 </Box>
               )}
 
-              {(editingQuestion.type === 'scale' || editingQuestion.type === 'number') && (
+              {(editingQuestion.type === "scale" ||
+                editingQuestion.type === "number") && (
                 <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={4}>
                     <TextField
@@ -931,7 +1134,10 @@ export const PromBuilder: React.FC = () => {
                   <Switch
                     checked={editingQuestion.required}
                     onChange={(e) =>
-                      setEditingQuestion({ ...editingQuestion, required: e.target.checked })
+                      setEditingQuestion({
+                        ...editingQuestion,
+                        required: e.target.checked,
+                      })
                     }
                   />
                 }
@@ -946,7 +1152,7 @@ export const PromBuilder: React.FC = () => {
             variant="contained"
             onClick={() => {
               if (editingQuestion) {
-                if (editingQuestion.id.startsWith('q_')) {
+                if (editingQuestion.id.startsWith("q_")) {
                   addQuestion(editingQuestion);
                 } else {
                   updateQuestion(editingQuestion.id, editingQuestion);
@@ -973,7 +1179,9 @@ export const PromBuilder: React.FC = () => {
           {Object.entries(QUESTION_LIBRARY).map(([category, questions]) => (
             <Accordion key={category}>
               <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography>{category.charAt(0).toUpperCase() + category.slice(1)}</Typography>
+                <Typography>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <List>
@@ -1011,22 +1219,22 @@ export const PromBuilder: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          Preview: {template.name || 'Untitled Template'}
+          Preview: {template.name || "Untitled Template"}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Alert severity="info" sx={{ mb: 2 }}>
               This is how the questionnaire will appear to patients
             </Alert>
-            
+
             {template.description && (
               <Typography variant="body1" paragraph>
                 {template.description}
               </Typography>
             )}
-            
+
             <Divider sx={{ my: 2 }} />
-            
+
             {template.questions.length === 0 ? (
               <Typography color="text.secondary">
                 No questions added yet
@@ -1034,28 +1242,46 @@ export const PromBuilder: React.FC = () => {
             ) : (
               <List>
                 {template.questions.map((question, index) => (
-                  <ListItem key={question.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', mb: 2 }}>
+                  <ListItem
+                    key={question.id}
+                    sx={{
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      mb: 2,
+                    }}
+                  >
                     <Typography variant="subtitle1" gutterBottom>
                       {index + 1}. {question.question}
-                      {question.required && <Chip label="Required" size="small" sx={{ ml: 1 }} color="primary" />}
+                      {question.required && (
+                        <Chip
+                          label="Required"
+                          size="small"
+                          sx={{ ml: 1 }}
+                          color="primary"
+                        />
+                      )}
                     </Typography>
-                    
+
                     {question.description && (
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        gutterBottom
+                      >
                         {question.description}
                       </Typography>
                     )}
-                    
-                    <Box sx={{ mt: 1, width: '100%' }}>
-                      {question.type === 'text' && (
+
+                    <Box sx={{ mt: 1, width: "100%" }}>
+                      {question.type === "text" && (
                         <TextField
                           fullWidth
                           placeholder="Your answer here..."
                           disabled
                         />
                       )}
-                      
-                      {question.type === 'radio' && (
+
+                      {question.type === "radio" && (
                         <RadioGroup>
                           {question.options?.map((option) => (
                             <FormControlLabel
@@ -1067,8 +1293,8 @@ export const PromBuilder: React.FC = () => {
                           ))}
                         </RadioGroup>
                       )}
-                      
-                      {question.type === 'checkbox' && (
+
+                      {question.type === "checkbox" && (
                         <FormGroup>
                           {question.options?.map((option) => (
                             <FormControlLabel
@@ -1079,8 +1305,8 @@ export const PromBuilder: React.FC = () => {
                           ))}
                         </FormGroup>
                       )}
-                      
-                      {question.type === 'scale' && (
+
+                      {question.type === "scale" && (
                         <Box>
                           <Slider
                             disabled
@@ -1090,14 +1316,23 @@ export const PromBuilder: React.FC = () => {
                             step={question.step || 1}
                             valueLabelDisplay="auto"
                           />
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography variant="caption">{question.min || 0}</Typography>
-                            <Typography variant="caption">{question.max || 10}</Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Typography variant="caption">
+                              {question.min || 0}
+                            </Typography>
+                            <Typography variant="caption">
+                              {question.max || 10}
+                            </Typography>
                           </Box>
                         </Box>
                       )}
-                      
-                      {question.type === 'number' && (
+
+                      {question.type === "number" && (
                         <TextField
                           type="number"
                           InputProps={{
@@ -1110,12 +1345,12 @@ export const PromBuilder: React.FC = () => {
                           disabled
                         />
                       )}
-                      
-                      {question.type === 'date' && (
+
+                      {question.type === "date" && (
                         <TextField type="date" disabled />
                       )}
-                      
-                      {question.type === 'time' && (
+
+                      {question.type === "time" && (
                         <TextField type="time" disabled />
                       )}
                     </Box>
@@ -1123,9 +1358,9 @@ export const PromBuilder: React.FC = () => {
                 ))}
               </List>
             )}
-            
+
             <Divider sx={{ my: 2 }} />
-            
+
             <Typography variant="body2" color="text.secondary">
               <strong>Category:</strong> {template.category}
             </Typography>
@@ -1136,7 +1371,8 @@ export const PromBuilder: React.FC = () => {
               <strong>Total Questions:</strong> {template.questions.length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              <strong>Required Questions:</strong> {template.questions.filter(q => q.required).length}
+              <strong>Required Questions:</strong>{" "}
+              {template.questions.filter((q) => q.required).length}
             </Typography>
           </Box>
         </DialogContent>

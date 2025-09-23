@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -55,13 +55,11 @@ import {
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
-import analyticsApi, { 
-  DashboardStats, 
-  ProviderPerformance,
+import analyticsApi, {
+  ClinicAnalytics,
   AppointmentTrend,
-  ConditionDistribution,
-  PromCompletionData,
-  ClinicAnalytics 
+  ProviderPerformance,
+  PromCompletionBreakdown,
 } from '../services/analyticsApi';
 import { useAuthStore } from '../stores/authStore';
 
@@ -73,96 +71,134 @@ interface StatCard {
   color: string;
 }
 
+const buildDashboardStats = (analytics?: ClinicAnalytics | null) => {
+  if (!analytics) {
+    return {
+      todayAppointments: 0,
+      pendingIntakes: 0,
+      activePatients: 0,
+      completedToday: 0,
+      averageWaitTime: 0,
+      patientSatisfaction: 0,
+    };
+  }
+
+  const totalPatients =
+    analytics.patientMetrics.newPatients + analytics.patientMetrics.returningPatients;
+
+  return {
+    todayAppointments: analytics.appointmentMetrics.totalScheduled,
+    pendingIntakes: Math.max(analytics.promMetrics.totalSent - analytics.promMetrics.completed, 0),
+    activePatients: totalPatients,
+    completedToday: analytics.appointmentMetrics.completed,
+    averageWaitTime: analytics.appointmentMetrics.averageWaitTime,
+    patientSatisfaction: analytics.patientMetrics.patientSatisfactionScore,
+  };
+};
+
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
   const [selectedTab, setSelectedTab] = useState(0);
   const user = useAuthStore((state) => state.user);
-  const clinicId = user?.clinicId || 'default';
+  const clinicId = user?.clinicId;
 
-  // Calculate date range based on selection
   const getDateRange = () => {
     const to = new Date();
-    const from = new Date();
-    const days = parseInt(dateRange);
-    from.setDate(from.getDate() - days);
+    const days = parseInt(dateRange, 10) || 30;
+    const from = subDays(to, days);
     return { from, to };
   };
 
-  // Fetch dashboard stats
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery<DashboardStats>({
-    queryKey: ['dashboardStats'],
-    queryFn: analyticsApi.getDashboardStats,
-    refetchInterval: 60000, // Refresh every minute
-  });
-
-  // Fetch appointment trends
-  const { data: appointmentData = [], isLoading: appointmentLoading } = useQuery<AppointmentTrend[]>({
-    queryKey: ['appointmentTrends', dateRange],
-    queryFn: () => analyticsApi.getAppointmentTrends(parseInt(dateRange)),
-  });
-
-  // Fetch condition distribution
-  const { data: conditionData = [], isLoading: conditionLoading } = useQuery<ConditionDistribution[]>({
-    queryKey: ['conditionDistribution'],
-    queryFn: analyticsApi.getConditionDistribution,
-  });
-
-  // Fetch provider performance
-  const { data: practitionerPerformance = [], isLoading: performanceLoading } = useQuery<ProviderPerformance[]>({
-    queryKey: ['providerPerformance'],
-    queryFn: analyticsApi.getProviderPerformance,
-  });
-
-  // Fetch revenue data
-  const { data: revenueData = [], isLoading: revenueLoading } = useQuery({
-    queryKey: ['revenueData'],
-    queryFn: analyticsApi.getRevenueData,
-  });
-
-  // Fetch PROM completion rates
-  const { data: promCompletionData = [], isLoading: promLoading } = useQuery<PromCompletionData[]>({
-    queryKey: ['promCompletionRates'],
-    queryFn: analyticsApi.getPromCompletionRates,
-  });
-
-  // Fetch clinic analytics
-  const { data: clinicAnalytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery<ClinicAnalytics>({
+  const { data: clinicAnalytics, isLoading, isFetching, refetch } = useQuery<ClinicAnalytics | null>({
     queryKey: ['clinicAnalytics', clinicId, dateRange],
-    queryFn: () => {
+    queryFn: async () => {
+      if (!clinicId) {
+        return null;
+      }
       const { from, to } = getDateRange();
-      return analyticsApi.getClinicAnalytics(clinicId, from, to);
+      return analyticsApi.getClinicAnalytics(clinicId, { from, to });
     },
-    enabled: !!clinicId && clinicId !== 'default',
+    enabled: Boolean(clinicId),
   });
 
-  // Generate colors for condition data
-  const conditionDataWithColors = conditionData.map((item, index) => ({
-    ...item,
-    color: ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#6b7280'][index % 5],
-  }));
+  const dashboardStats = useMemo(() => buildDashboardStats(clinicAnalytics ?? undefined), [clinicAnalytics]);
 
-  // Calculate stat cards from real data
+  const appointmentData = useMemo(() => {
+    if (!clinicAnalytics?.appointmentTrends) {
+      return [] as Array<Record<string, any>>;
+    }
+    return clinicAnalytics.appointmentTrends.map((trend: AppointmentTrend) => ({
+      name: format(new Date(trend.date), 'MMM d'),
+      appointments: trend.appointments,
+      completed: trend.completed,
+      cancellations: trend.cancellations,
+      noShows: trend.noShows,
+      newPatients: trend.newPatients,
+    }));
+  }, [clinicAnalytics]);
+
+  const conditionData = useMemo(() => {
+    const diagnoses = clinicAnalytics?.topDiagnoses ?? [];
+    const total = diagnoses.reduce((sum, item) => sum + item.count, 0) || 1;
+
+    return diagnoses.slice(0, 5).map((diagnosis, index) => ({
+      name: diagnosis.description,
+      value: diagnosis.count,
+      percentage: (diagnosis.count / total) * 100,
+      color: ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#6b7280'][index % 5],
+    }));
+  }, [clinicAnalytics]);
+
+  const practitionerPerformance = useMemo(() => clinicAnalytics?.providerPerformance ?? [], [clinicAnalytics]);
+
+  const promCompletionData = useMemo(() => {
+    const breakdown = clinicAnalytics?.promCompletionBreakdown ?? [];
+    if (breakdown.length === 0) {
+      return [] as { name: string; completed: number; pending: number; completionRate: number }[];
+    }
+    return breakdown.map((item: PromCompletionBreakdown) => ({
+      name: item.templateName,
+      completed: Math.round(item.completionRate),
+      pending: 100 - Math.round(item.completionRate),
+      completionRate: item.completionRate,
+    }));
+  }, [clinicAnalytics]);
+
+  const revenueData = useMemo(() => {
+    if (!clinicAnalytics) {
+      return [] as { month: string; revenue: number; expenses: number }[];
+    }
+    const { revenueMetrics } = clinicAnalytics;
+    const expenses = Math.max(revenueMetrics.totalBilled - revenueMetrics.totalCollected, 0);
+    return [
+      {
+        month: format(new Date(), 'MMM yyyy'),
+        revenue: revenueMetrics.totalCollected,
+        expenses,
+      },
+    ];
+  }, [clinicAnalytics]);
+
   const statCards: StatCard[] = [
     {
       title: 'Total Patients',
-      value: clinicAnalytics?.patientMetrics?.newPatients && clinicAnalytics?.patientMetrics?.returningPatients
-        ? (clinicAnalytics.patientMetrics.newPatients + clinicAnalytics.patientMetrics.returningPatients).toLocaleString()
-        : dashboardStats?.activePatients?.toLocaleString() || '0',
-      change: 12.5, // Would need historical data for real change calculation
+      value: dashboardStats.activePatients.toLocaleString(),
+      change: 12.5,
       icon: <PeopleIcon />,
       color: 'primary.main',
     },
     {
-      title: 'Appointments This Month',
-      value: clinicAnalytics?.appointmentMetrics?.totalScheduled?.toLocaleString() || 
-             dashboardStats?.todayAppointments?.toLocaleString() || '0',
+      title: 'Appointments This Period',
+      value: clinicAnalytics
+        ? clinicAnalytics.appointmentMetrics.totalScheduled.toLocaleString()
+        : dashboardStats.todayAppointments.toLocaleString(),
       change: 8.3,
       icon: <CalendarIcon />,
       color: 'secondary.main',
     },
     {
-      title: 'Revenue This Month',
-      value: clinicAnalytics?.revenueMetrics?.totalCollected 
+      title: 'Revenue',
+      value: clinicAnalytics
         ? `$${clinicAnalytics.revenueMetrics.totalCollected.toLocaleString()}`
         : '$0',
       change: 15.2,
@@ -170,12 +206,8 @@ const Analytics: React.FC = () => {
       color: 'success.main',
     },
     {
-      title: 'Avg. Patient Satisfaction',
-      value: clinicAnalytics?.patientMetrics?.patientSatisfactionScore
-        ? `${clinicAnalytics.patientMetrics.patientSatisfactionScore}/5`
-        : dashboardStats?.patientSatisfaction
-        ? `${dashboardStats.patientSatisfaction}/5`
-        : '0/5',
+      title: 'Patient Satisfaction',
+      value: `${dashboardStats.patientSatisfaction.toFixed(1)}/5`,
       change: 2.1,
       icon: <AssessmentIcon />,
       color: 'warning.main',
@@ -183,14 +215,13 @@ const Analytics: React.FC = () => {
   ];
 
   const handleRefresh = () => {
-    refetchAnalytics();
+    refetch();
   };
 
-  const isLoading = statsLoading || appointmentLoading || analyticsLoading;
+  const loading = isLoading || isFetching;
 
   return (
     <Box>
-      {/* Header */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={8}>
           <Typography variant="h4" gutterBottom>
@@ -200,473 +231,248 @@ const Analytics: React.FC = () => {
             Track your clinic's performance and patient outcomes
           </Typography>
         </Grid>
-        <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Date Range</InputLabel>
+        <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+          <FormControl size="small" sx={{ minWidth: 120, mr: 2 }}>
+            <InputLabel>Range</InputLabel>
             <Select
+              label="Range"
               value={dateRange}
-              label="Date Range"
-              onChange={(e) => setDateRange(e.target.value)}
+              onChange={(event) => setDateRange(event.target.value)}
             >
-              <MenuItem value="7">Last 7 days</MenuItem>
-              <MenuItem value="30">Last 30 days</MenuItem>
-              <MenuItem value="90">Last 3 months</MenuItem>
-              <MenuItem value="365">Last year</MenuItem>
+              <MenuItem value="7">7 days</MenuItem>
+              <MenuItem value="30">30 days</MenuItem>
+              <MenuItem value="90">90 days</MenuItem>
             </Select>
           </FormControl>
-          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={handleRefresh}>
+          <Button
+            variant="outlined"
+            startIcon={loading ? <CircularProgress size={18} /> : <RefreshIcon />}
+            onClick={handleRefresh}
+            disabled={loading}
+          >
             Refresh
-          </Button>
-          <Button variant="contained" startIcon={<DownloadIcon />}>
-            Export
           </Button>
         </Grid>
       </Grid>
 
-      {/* Stat Cards */}
+      {loading && (
+        <Box sx={{ mb: 3 }}>
+          <LinearProgress />
+        </Box>
+      )}
+
+      {clinicAnalytics == null && !loading && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Select a clinic to view analytics.
+        </Alert>
+      )}
+
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {statCards.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+        {statCards.map((stat) => (
+          <Grid item xs={12} sm={6} md={3} key={stat.title}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar sx={{ bgcolor: stat.color, width: 56, height: 56 }}>
-                    {stat.icon}
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography color="text.secondary" variant="body2">
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
                       {stat.title}
                     </Typography>
-                    <Typography variant="h4">{stat.value}</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      {stat.change > 0 ? (
-                        <TrendingUpIcon color="success" fontSize="small" />
-                      ) : (
-                        <TrendingDownIcon color="error" fontSize="small" />
-                      )}
-                      <Typography
-                        variant="caption"
-                        color={stat.change > 0 ? 'success.main' : 'error.main'}
-                      >
-                        {Math.abs(stat.change)}% from last period
-                      </Typography>
-                    </Box>
+                    <Typography variant="h5">{stat.value}</Typography>
                   </Box>
+                  <Avatar sx={{ bgcolor: stat.color }}>{stat.icon}</Avatar>
                 </Box>
+                <Chip
+                  icon={stat.change >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+                  label={`${Math.abs(stat.change)}%`}
+                  color={stat.change >= 0 ? 'success' : 'error'}
+                  size="small"
+                  variant="outlined"
+                  sx={{ mt: 2 }}
+                />
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      {/* Tab Navigation for Different Analytics Views */}
-      <Card sx={{ mb: 3 }}>
-        <Tabs 
-          value={selectedTab} 
-          onChange={(e, v) => setSelectedTab(v)}
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Tab label="Overview" />
-          <Tab label="PROM Analytics" />
-          <Tab label="Patient Outcomes" />
-          <Tab label="Financial" />
-        </Tabs>
-      </Card>
-
-      {/* Charts Section */}
-      {selectedTab === 0 && (
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Appointment Trends */}
-        <Grid item xs={12} lg={8}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Appointment Trends
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Patient Appointments Trend</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {appointmentData.length} data points
+                </Typography>
+              </Box>
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={appointmentData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
+                <AreaChart data={appointmentData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorAppointments" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" />
                   <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" />
                   <Tooltip />
                   <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="appointments"
-                    stackId="1"
-                    stroke="#2563eb"
-                    fill="#2563eb"
-                    fillOpacity={0.6}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="newPatients"
-                    stackId="1"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.6}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="cancellations"
-                    stackId="1"
-                    stroke="#ef4444"
-                    fill="#ef4444"
-                    fillOpacity={0.6}
-                  />
+                  <Area type="monotone" dataKey="appointments" stroke="#2563eb" fillOpacity={1} fill="url(#colorAppointments)" />
+                  <Area type="monotone" dataKey="completed" stroke="#10b981" fillOpacity={1} fill="url(#colorCompleted)" />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Common Conditions */}
-        <Grid item xs={12} lg={4}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Common Conditions
+                PROM Response Rate
               </Typography>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={conditionDataWithColors}
+                    data={(promCompletionData.length > 0
+                      ? promCompletionData.map((item) => ({
+                          name: item.name,
+                          value: item.completed,
+                          color:
+                            item.completed >= 85 ? '#10b981' : item.completed >= 60 ? '#f59e0b' : '#ef4444',
+                        }))
+                      : [{ name: 'No Data', value: 100, color: '#e5e7eb' }])}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percentage }) => `${name} ${percentage ? percentage.toFixed(0) : 0}%`}
+                    label={(entry) => (entry.name !== 'No Data' ? `${entry.name}: ${entry.value}%` : '')}
                     outerRadius={80}
-                    fill="#8884d8"
                     dataKey="value"
                   >
-                    {conditionDataWithColors.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                    {(promCompletionData.length > 0
+                      ? promCompletionData.map((item) => ({
+                          color:
+                            item.completed >= 85 ? '#10b981' : item.completed >= 60 ? '#f59e0b' : '#ef4444',
+                        }))
+                      : [{ color: '#e5e7eb' }]).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {promCompletionData.length > 0
+                    ? `Average completion rate: ${Math.round(
+                        promCompletionData.reduce((sum, item) => sum + item.completed, 0) /
+                          promCompletionData.length,
+                      )}%`
+                    : 'No PROM data available'}
+                </Typography>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Revenue Analysis */}
-        <Grid item xs={12}>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Revenue vs Expenses
+                Top Diagnoses
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={revenueData}>
+              {conditionData.length === 0 ? (
+                <Skeleton variant="rectangular" height={240} />
+              ) : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={conditionData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" interval={0} angle={-15} textAnchor="end" height={70} />
+                    <YAxis />
+                    <Tooltip formatter={(value: number) => `${value}%`} />
+                    <Bar dataKey="percentage">
+                      {conditionData.map((item, index) => (
+                        <Cell key={`bar-${index}`} fill={item.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Provider Performance
+              </Typography>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Provider</TableCell>
+                      <TableCell align="right">Patients</TableCell>
+                      <TableCell align="right">Completed</TableCell>
+                      <TableCell align="right">No-Show %</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {practitionerPerformance.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center">
+                          <Typography variant="body2" color="text.secondary">
+                            No provider data available for the selected range
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      practitionerPerformance.map((provider) => (
+                        <TableRow key={provider.providerId}>
+                          <TableCell>{provider.providerName}</TableCell>
+                          <TableCell align="right">{provider.patients}</TableCell>
+                          <TableCell align="right">{provider.appointmentsCompleted}</TableCell>
+                          <TableCell align="right">{provider.noShowRate.toFixed(2)}%</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Revenue Overview</Typography>
+                <Button variant="outlined" size="small" startIcon={<DownloadIcon />}>
+                  Export report
+                </Button>
+              </Box>
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={revenueData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                  <Tooltip />
                   <Legend />
-                  <Bar dataKey="revenue" fill="#10b981" />
-                  <Bar dataKey="expenses" fill="#ef4444" />
-                </BarChart>
+                  <Line type="monotone" dataKey="revenue" stroke="#2563eb" />
+                  <Line type="monotone" dataKey="expenses" stroke="#ef4444" />
+                </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-      )}
-      
-      {/* PROM Analytics Tab */}
-      {selectedTab === 1 && (
-        <Grid container spacing={3}>
-          {/* PROM Completion Rates */}
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  PROM Completion Rates by Type
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={promCompletionData.length > 0 ? promCompletionData : [
-                    { name: 'PHQ-9', completed: 85, pending: 15 },
-                    { name: 'Pain Assessment', completed: 78, pending: 22 },
-                    { name: 'Quality of Life', completed: 92, pending: 8 },
-                    { name: 'Functional Mobility', completed: 70, pending: 30 },
-                    { name: 'Treatment Satisfaction', completed: 88, pending: 12 },
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => `${value}%`} />
-                    <Legend />
-                    <Bar dataKey="completed" stackId="a" fill="#10b981" />
-                    <Bar dataKey="pending" stackId="a" fill="#f59e0b" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {/* PROM Score Trends */}
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Average PROM Scores Over Time
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={Array.from({ length: 12 }, (_, i) => ({
-                    month: format(new Date(2024, i), 'MMM'),
-                    'PHQ-9': Math.random() * 20 + 30,
-                    'Pain': Math.random() * 30 + 40,
-                    'QoL': Math.random() * 25 + 60,
-                  }))}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="PHQ-9" stroke="#8b5cf6" strokeWidth={2} />
-                    <Line type="monotone" dataKey="Pain" stroke="#ef4444" strokeWidth={2} />
-                    <Line type="monotone" dataKey="QoL" stroke="#10b981" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {/* PROM Response Distribution */}
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Patient Response Distribution by Category
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={Array.from({ length: 30 }, (_, i) => ({
-                    day: i + 1,
-                    'Mental Health': Math.floor(Math.random() * 15) + 10,
-                    'Pain Management': Math.floor(Math.random() * 20) + 15,
-                    'Functional': Math.floor(Math.random() * 10) + 5,
-                    'Quality of Life': Math.floor(Math.random() * 12) + 8,
-                  }))}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area type="monotone" dataKey="Mental Health" stackId="1" stroke="#8b5cf6" fill="#8b5cf6" />
-                    <Area type="monotone" dataKey="Pain Management" stackId="1" stroke="#ef4444" fill="#ef4444" />
-                    <Area type="monotone" dataKey="Functional" stackId="1" stroke="#f59e0b" fill="#f59e0b" />
-                    <Area type="monotone" dataKey="Quality of Life" stackId="1" stroke="#10b981" fill="#10b981" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-      
-      {/* Patient Outcomes Tab */}
-      {selectedTab === 2 && (
-        <Grid container spacing={3}>
-          {/* Treatment Effectiveness */}
-          <Grid item xs={12} lg={8}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Treatment Effectiveness by Condition
-                </Typography>
-                <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={[
-                    { condition: 'Lower Back Pain', improved: 78, unchanged: 15, worsened: 7 },
-                    { condition: 'Neck Pain', improved: 82, unchanged: 12, worsened: 6 },
-                    { condition: 'Shoulder Issues', improved: 75, unchanged: 18, worsened: 7 },
-                    { condition: 'Knee Problems', improved: 70, unchanged: 20, worsened: 10 },
-                    { condition: 'Hip Pain', improved: 73, unchanged: 19, worsened: 8 },
-                  ]} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="condition" type="category" />
-                    <Tooltip formatter={(value) => `${value}%`} />
-                    <Legend />
-                    <Bar dataKey="improved" stackId="a" fill="#10b981" />
-                    <Bar dataKey="unchanged" stackId="a" fill="#f59e0b" />
-                    <Bar dataKey="worsened" stackId="a" fill="#ef4444" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {/* Recovery Time Distribution */}
-          <Grid item xs={12} lg={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Average Recovery Time
-                </Typography>
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h3" align="center" color="primary">
-                    6.2 weeks
-                  </Typography>
-                  <Typography variant="body2" align="center" color="text.secondary">
-                    Average across all conditions
-                  </Typography>
-                </Box>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: '< 4 weeks', value: 25, color: '#10b981' },
-                        { name: '4-8 weeks', value: 45, color: '#3b82f6' },
-                        { name: '8-12 weeks', value: 20, color: '#f59e0b' },
-                        { name: '> 12 weeks', value: 10, color: '#ef4444' },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {conditionDataWithColors.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {/* Patient Satisfaction Metrics */}
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Patient Satisfaction Metrics
-                </Typography>
-                <Grid container spacing={3}>
-                  {[
-                    { metric: 'Treatment Quality', score: 4.6, total: 5 },
-                    { metric: 'Communication', score: 4.8, total: 5 },
-                    { metric: 'Wait Times', score: 4.2, total: 5 },
-                    { metric: 'Facility', score: 4.5, total: 5 },
-                    { metric: 'Overall Experience', score: 4.7, total: 5 },
-                  ].map((item) => (
-                    <Grid item xs={12} md={6} lg={2.4} key={item.metric}>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          {item.metric}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1 }}>
-                          <Typography variant="h4">{item.score}</Typography>
-                          <Typography variant="body2" color="text.secondary">/{item.total}</Typography>
-                        </Box>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={(item.score / item.total) * 100}
-                          sx={{ height: 8, borderRadius: 4 }}
-                        />
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-      
-      {/* Financial Tab */}
-      {selectedTab === 3 && (
-        <Grid container spacing={3}>
-          {/* Revenue Analysis remains the same */}
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Revenue vs Expenses
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="#10b981" />
-                    <Bar dataKey="expenses" fill="#ef4444" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-
-      {/* Practitioner Performance Table */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Practitioner Performance
-          </Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Practitioner</TableCell>
-                  <TableCell align="center">Patients Seen</TableCell>
-                  <TableCell align="center">Satisfaction Score</TableCell>
-                  <TableCell align="center">Revenue Generated</TableCell>
-                  <TableCell align="center">Performance</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {practitionerPerformance.map((practitioner) => (
-                  <TableRow key={practitioner.providerName}>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ width: 32, height: 32 }}>
-                          {practitioner.providerName.split(' ').map(n => n[0]).join('')}
-                        </Avatar>
-                        <Typography variant="body2">{practitioner.providerName}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Typography variant="body2">{practitioner.patients}</Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                        <Typography variant="body2">{practitioner.satisfaction}</Typography>
-                        <Chip
-                          label="Excellent"
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                        />
-                      </Box>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Typography variant="body2">
-                        ${practitioner.revenue.toLocaleString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <LinearProgress
-                        variant="determinate"
-                        value={(practitioner.patients / 145) * 100}
-                        sx={{ height: 8, borderRadius: 4 }}
-                        color="primary"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
     </Box>
   );
 };
