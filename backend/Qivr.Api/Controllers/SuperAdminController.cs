@@ -84,8 +84,28 @@ public class SuperAdminController : ControllerBase
         };
 
         _dbContext.Tenants.Add(tenant);
-        var mainTenantId = tenants[0].Id;
-        var demoPatient = users.First(u => u.UserType == UserType.Patient);
+        
+        // Use the new tenant's ID instead of looking for existing ones
+        var mainTenantId = tenant.Id;
+        
+        // Find or create a demo patient for the tenant
+        var demoPatient = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.TenantId == mainTenantId && u.UserType == UserType.Patient);
+            
+        if (demoPatient == null)
+        {
+            // Create a demo patient if none exists
+            demoPatient = new User
+            {
+                Id = Guid.NewGuid(),
+                TenantId = mainTenantId,
+                UserType = UserType.Patient,
+                Email = $"demo.patient@{request.Slug}.com",
+                FirstName = "Demo",
+                LastName = "Patient"
+            };
+            _dbContext.Users.Add(demoPatient);
+        }
 
         if (!await _dbContext.PromTemplates.AnyAsync(t => t.TenantId == mainTenantId && t.Key == "phq9"))
         {

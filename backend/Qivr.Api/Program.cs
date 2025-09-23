@@ -532,12 +532,13 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 // Apply migrations when flagged via configuration
-if (builder.Configuration.GetValue<bool>("ApplyMigrations"))
+// TEMPORARILY DISABLED - Database already exists
+/*if (builder.Configuration.GetValue<bool>("ApplyMigrations"))
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
     await dbContext.Database.MigrateAsync();
-}
+}*/
 
 Log.Information("Qivr API starting on {Environment} environment", app.Environment.EnvironmentName);
 

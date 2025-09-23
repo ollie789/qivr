@@ -4,6 +4,7 @@
 
 ### Primary Documents (Root Level)
 - **README.md** - Project overview, quick start, architecture summary
+- **AGENTS.md** - Contributor guidelines and workflows
 - **CHANGELOG.md** - Version history and release notes  
 - **LICENSE** - Licensing information
 
@@ -39,6 +40,7 @@
 | Document | Purpose | Audience | Update Frequency |
 |----------|---------|----------|------------------|
 | README.md | Project intro & quick start | All | As needed |
+| AGENTS.md | Contributor standards & workflow tips | Developers | As processes change |
 | LOCAL_SETUP.md | Dev environment setup | Developers | Major changes |
 | PROJECT_STATUS.md | Implementation tracking | Team/Management | Weekly |
 | API_AUDIT_REPORT.md | API health & coverage | Backend devs | Sprint end |

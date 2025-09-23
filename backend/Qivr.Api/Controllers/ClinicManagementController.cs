@@ -2,10 +2,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Qivr.Api.Services;
 using Qivr.Core.DTOs;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using Qivr.Services;
 
 namespace Qivr.Api.Controllers;
 
@@ -17,15 +22,18 @@ public class ClinicManagementController : ControllerBase
     private readonly QivrDbContext _context;
     private readonly IResourceAuthorizationService _authorizationService;
     private readonly ILogger<ClinicManagementController> _logger;
+    private readonly IClinicManagementService _clinicService;
 
     public ClinicManagementController(
         QivrDbContext context,
         IResourceAuthorizationService authorizationService,
-        ILogger<ClinicManagementController> logger)
+        ILogger<ClinicManagementController> logger,
+        IClinicManagementService clinicService)
     {
         _context = context;
         _authorizationService = authorizationService;
         _logger = logger;
+        _clinicService = clinicService;
     }
 
     // GET: api/clinic-management/clinics
@@ -34,32 +42,29 @@ public class ClinicManagementController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ClinicDto>), 200)]
     public async Task<IActionResult> GetClinics([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        // TODO: Implement clinic retrieval with pagination
-        
-        var clinics = new[]
+        if (page < 1 || pageSize < 1)
         {
-            new ClinicDto
-            {
-                Id = Guid.NewGuid(),
-                Name = "Springfield Medical Center",
-                Address = "123 Main St, Springfield, IL 62701",
-                Phone = "+1-555-0100",
-                Email = "info@springfieldmed.com",
-                IsActive = true,
-                PatientCount = 1250,
-                ProviderCount = 15,
-                AppointmentsToday = 42,
-                PendingPROMs = 18
-            }
-        };
-        
+            return BadRequest(new { error = "Page and pageSize must be positive integers." });
+        }
+
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var summaries = (await _clinicService.GetClinicsAsync(tenantId, page, pageSize)).ToList();
+        var items = summaries.Select(MapClinicSummary).ToArray();
+        var totalItems = summaries.FirstOrDefault()?.TotalCount ?? 0;
+        var totalPages = pageSize == 0 ? 0 : (int)Math.Ceiling(totalItems / (double)pageSize);
+
         return Ok(new
         {
-            items = clinics,
+            items,
             page,
             pageSize,
-            totalItems = clinics.Length,
-            totalPages = 1
+            totalItems,
+            totalPages
         });
     }
     
@@ -69,58 +74,22 @@ public class ClinicManagementController : ControllerBase
     [ProducesResponseType(typeof(ClinicDetailDto), 200)]
     public async Task<IActionResult> GetClinicDetails(Guid clinicId)
     {
-        // TODO: Implement clinic details retrieval
-        
-        var clinic = new ClinicDetailDto
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
         {
-            Id = clinicId,
-            Name = "Springfield Medical Center",
-            Description = "Full-service medical center offering comprehensive healthcare services",
-            Address = new AddressDto
-            {
-                Street = "123 Main St",
-                City = "Springfield",
-                State = "IL",
-                PostalCode = "62701",
-                Country = "USA"
-            },
-            Phone = "+1-555-0100",
-            Fax = "+1-555-0101",
-            Email = "info@springfieldmed.com",
-            Website = "https://springfieldmed.com",
-            IsActive = true,
-            EstablishedDate = new DateTime(2010, 1, 1),
-            LicenseNumber = "IL-MED-2010-001",
-            TaxId = "12-3456789",
-            
-            OperatingHours = new[]
-            {
-                new OperatingHoursDto { Day = "Monday", Open = "08:00", Close = "18:00" },
-                new OperatingHoursDto { Day = "Tuesday", Open = "08:00", Close = "18:00" },
-                new OperatingHoursDto { Day = "Wednesday", Open = "08:00", Close = "18:00" },
-                new OperatingHoursDto { Day = "Thursday", Open = "08:00", Close = "18:00" },
-                new OperatingHoursDto { Day = "Friday", Open = "08:00", Close = "17:00" },
-                new OperatingHoursDto { Day = "Saturday", Open = "09:00", Close = "13:00" }
-            },
-            
-            Services = new[] { "Primary Care", "Cardiology", "Orthopedics", "Physical Therapy" },
-            AcceptedInsurance = new[] { "Blue Cross", "Aetna", "United Healthcare", "Medicare" },
-            
-            Statistics = new ClinicStatisticsDto
-            {
-                TotalPatients = 1250,
-                ActivePatients = 980,
-                TotalProviders = 15,
-                TotalStaff = 35,
-                AppointmentsThisMonth = 850,
-                AppointmentsLastMonth = 820,
-                AveragePatientSatisfaction = 4.6m,
-                CompletedPromsThisMonth = 145,
-                PendingProms = 18
-            }
-        };
-        
-        return Ok(clinic);
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var detail = await _clinicService.GetClinicDetailsAsync(tenantId, clinicId);
+        if (detail is null)
+        {
+            return NotFound();
+        }
+
+        var appointmentsToday = await CountAppointmentsForClinicAsync(clinicId);
+        var dto = MapClinicDetail(detail, appointmentsToday);
+
+        return Ok(dto);
     }
     
     // POST: api/clinic-management/clinics
@@ -129,23 +98,65 @@ public class ClinicManagementController : ControllerBase
     [ProducesResponseType(typeof(ClinicDto), 201)]
     public async Task<IActionResult> CreateClinic([FromBody] CreateClinicDto dto)
     {
-        // TODO: Implement clinic creation logic
-        
-        var clinic = new ClinicDto
+        if (dto is null)
         {
-            Id = Guid.NewGuid(),
+            return BadRequest(new { error = "Request body is required." });
+        }
+
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var request = new CreateClinicRequest
+        {
             Name = dto.Name,
-            Address = $"{dto.Street}, {dto.City}, {dto.State} {dto.PostalCode}",
+            Description = dto.Description,
+            Street = dto.Street,
+            City = dto.City,
+            State = dto.State,
+            PostalCode = dto.PostalCode,
+            Country = string.IsNullOrWhiteSpace(dto.Country) ? "USA" : dto.Country,
             Phone = dto.Phone,
             Email = dto.Email,
-            IsActive = true,
-            PatientCount = 0,
-            ProviderCount = 0,
-            AppointmentsToday = 0,
-            PendingPROMs = 0
+            Fax = dto.Fax,
+            Website = dto.Website,
+            LicenseNumber = dto.LicenseNumber,
+            TaxId = dto.TaxId,
+            Services = dto.Services,
+            AcceptedInsurance = dto.AcceptedInsurance,
+            OperatingHours = dto.OperatingHours
         };
-        
-        return CreatedAtAction(nameof(GetClinicDetails), new { clinicId = clinic.Id }, clinic);
+
+        var clinic = await _clinicService.CreateClinicAsync(tenantId, request);
+        var detail = await _clinicService.GetClinicDetailsAsync(tenantId, clinic.Id);
+        var appointmentsToday = await CountAppointmentsForClinicAsync(clinic.Id);
+        var response = detail != null
+            ? MapClinicDetail(detail, appointmentsToday)
+            : MapClinicSummary(new ClinicSummary
+            {
+                Id = clinic.Id,
+                Name = clinic.Name,
+                Address = FormatAddress(new ClinicAddress
+                {
+                    Street = clinic.Address ?? string.Empty,
+                    City = clinic.City ?? string.Empty,
+                    State = clinic.State ?? string.Empty,
+                    PostalCode = clinic.ZipCode ?? string.Empty,
+                    Country = clinic.Country ?? "USA"
+                }),
+                Phone = clinic.Phone ?? string.Empty,
+                Email = clinic.Email ?? string.Empty,
+                IsActive = clinic.IsActive,
+                PatientCount = 0,
+                ProviderCount = 0,
+                AppointmentsToday = appointmentsToday,
+                PendingPROMs = 0,
+                TotalCount = 1
+            }) as ClinicDto;
+
+        return CreatedAtAction(nameof(GetClinicDetails), new { clinicId = clinic.Id }, response);
     }
     
     // PUT: api/clinic-management/clinics/{clinicId}
@@ -154,8 +165,50 @@ public class ClinicManagementController : ControllerBase
     [ProducesResponseType(204)]
     public async Task<IActionResult> UpdateClinic(Guid clinicId, [FromBody] UpdateClinicDto dto)
     {
-        // TODO: Implement clinic update logic
-        
+        if (dto is null)
+        {
+            return BadRequest(new { error = "Request body is required." });
+        }
+
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var request = new UpdateClinicRequest
+        {
+            Name = Normalize(dto.Name),
+            Description = Normalize(dto.Description),
+            Street = Normalize(dto.Street),
+            City = Normalize(dto.City),
+            State = Normalize(dto.State),
+            PostalCode = Normalize(dto.PostalCode),
+            Phone = Normalize(dto.Phone),
+            Email = Normalize(dto.Email),
+            Fax = Normalize(dto.Fax),
+            Website = Normalize(dto.Website),
+            Services = dto.Services,
+            AcceptedInsurance = dto.AcceptedInsurance,
+            OperatingHours = dto.OperatingHours
+        };
+
+        var updated = await _clinicService.UpdateClinicAsync(tenantId, clinicId, request);
+        if (!updated)
+        {
+            return NotFound();
+        }
+
+        if (dto.IsActive.HasValue)
+        {
+            var clinic = await _context.Clinics.FirstOrDefaultAsync(c => c.Id == clinicId);
+            if (clinic != null)
+            {
+                clinic.IsActive = dto.IsActive.Value;
+                await _context.SaveChangesAsync();
+            }
+        }
+
         return NoContent();
     }
     
@@ -165,28 +218,20 @@ public class ClinicManagementController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ProviderDto>), 200)]
     public async Task<IActionResult> GetClinicProviders(Guid clinicId, [FromQuery] bool activeOnly = true)
     {
-        // TODO: Implement provider retrieval for clinic
-        
-        var providers = new[]
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
         {
-            new ProviderDto
-            {
-                Id = Guid.NewGuid(),
-                FirstName = "Jane",
-                LastName = "Smith",
-                Title = "MD",
-                Specialty = "Internal Medicine",
-                Email = "jane.smith@springfieldmed.com",
-                Phone = "+1-555-0102",
-                LicenseNumber = "IL-MD-12345",
-                IsActive = true,
-                PatientCount = 150,
-                AppointmentsToday = 8,
-                NextAvailableSlot = DateTime.UtcNow.AddDays(2)
-            }
-        };
-        
-        return Ok(providers);
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
+        if (!clinicExists)
+        {
+            return NotFound();
+        }
+
+        var providers = await _clinicService.GetClinicProvidersAsync(tenantId, clinicId, activeOnly);
+        return Ok(providers.Select(MapProviderSummary).ToArray());
     }
     
     // POST: api/clinic-management/clinics/{clinicId}/providers
@@ -195,24 +240,60 @@ public class ClinicManagementController : ControllerBase
     [ProducesResponseType(typeof(ProviderDto), 201)]
     public async Task<IActionResult> AddProvider(Guid clinicId, [FromBody] CreateProviderDto dto)
     {
-        // TODO: Implement provider addition logic
-        
-        var provider = new ProviderDto
+        if (dto is null)
         {
-            Id = Guid.NewGuid(),
+            return BadRequest(new { error = "Request body is required." });
+        }
+
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
+        if (!clinicExists)
+        {
+            return NotFound();
+        }
+
+        var request = new CreateProviderRequest
+        {
             FirstName = dto.FirstName,
             LastName = dto.LastName,
-            Title = dto.Title,
-            Specialty = dto.Specialty,
             Email = dto.Email,
             Phone = dto.Phone,
+            Title = dto.Title,
+            Specialty = dto.Specialty,
             LicenseNumber = dto.LicenseNumber,
-            IsActive = true,
-            PatientCount = 0,
-            AppointmentsToday = 0
+            NpiNumber = dto.NpiNumber
         };
-        
-        return CreatedAtAction(nameof(GetProvider), new { providerId = provider.Id }, provider);
+
+        var provider = await _clinicService.AddProviderToClinicAsync(tenantId, clinicId, request);
+        var detail = await _clinicService.GetProviderDetailsAsync(tenantId, provider.UserId);
+        var summary = await FindProviderSummary(provider.ClinicId, provider.UserId, tenantId);
+
+        var response = detail != null
+            ? MapProviderDetail(detail, summary)
+            : new ProviderDetailDto
+            {
+                Id = provider.UserId,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Title = dto.Title ?? string.Empty,
+                Specialty = dto.Specialty ?? string.Empty,
+                Email = dto.Email,
+                Phone = dto.Phone ?? string.Empty,
+                LicenseNumber = dto.LicenseNumber ?? string.Empty,
+                NpiNumber = dto.NpiNumber ?? string.Empty,
+                IsActive = true,
+                PatientCount = summary?.PatientCount ?? 0,
+                AppointmentsToday = summary?.AppointmentsToday ?? 0,
+                NextAvailableSlot = summary?.NextAvailableSlot,
+                Statistics = new ProviderStatisticsDto()
+            };
+
+        return CreatedAtAction(nameof(GetProvider), new { providerId = provider.UserId }, response);
     }
     
     // GET: api/clinic-management/providers/{providerId}
@@ -221,109 +302,90 @@ public class ClinicManagementController : ControllerBase
     [ProducesResponseType(typeof(ProviderDetailDto), 200)]
     public async Task<IActionResult> GetProvider(Guid providerId)
     {
-        // TODO: Implement provider details retrieval
-        
-        var provider = new ProviderDetailDto
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
         {
-            Id = providerId,
-            FirstName = "Jane",
-            LastName = "Smith",
-            Title = "MD",
-            Specialty = "Internal Medicine",
-            SubSpecialties = new[] { "Diabetes Management", "Preventive Care" },
-            Email = "jane.smith@springfieldmed.com",
-            Phone = "+1-555-0102",
-            LicenseNumber = "IL-MD-12345",
-            LicenseState = "Illinois",
-            LicenseExpiry = new DateTime(2025, 12, 31),
-            NpiNumber = "1234567890",
-            IsActive = true,
-            Biography = "Dr. Smith has over 15 years of experience in internal medicine...",
-            Education = new[]
-            {
-                "MD - University of Illinois College of Medicine",
-                "Residency - Northwestern Memorial Hospital"
-            },
-            Languages = new[] { "English", "Spanish" },
-            
-            Schedule = new ProviderScheduleDto
-            {
-                DefaultAppointmentDuration = 30,
-                BufferTime = 10,
-                WorkingHours = new[]
-                {
-                    new OperatingHoursDto { Day = "Monday", Open = "09:00", Close = "17:00" },
-                    new OperatingHoursDto { Day = "Tuesday", Open = "09:00", Close = "17:00" },
-                    new OperatingHoursDto { Day = "Wednesday", Open = "09:00", Close = "17:00" },
-                    new OperatingHoursDto { Day = "Thursday", Open = "09:00", Close = "17:00" },
-                    new OperatingHoursDto { Day = "Friday", Open = "09:00", Close = "15:00" }
-                }
-            },
-            
-            Statistics = new ProviderStatisticsDto
-            {
-                TotalPatients = 150,
-                NewPatientsThisMonth = 12,
-                AppointmentsThisWeek = 35,
-                AppointmentsThisMonth = 140,
-                AverageRating = 4.8m,
-                TotalReviews = 67,
-                NoShowRate = 3.5m,
-                AverageWaitTime = 12
-            }
-        };
-        
-        return Ok(provider);
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var detail = await _clinicService.GetProviderDetailsAsync(tenantId, providerId);
+        if (detail is null)
+        {
+            return NotFound();
+        }
+
+        var summary = await FindProviderSummary(detail.ClinicId, providerId, tenantId);
+        var dto = MapProviderDetail(detail, summary);
+
+        return Ok(dto);
     }
     
     // GET: api/clinic-management/clinics/{clinicId}/schedule
     [HttpGet("clinics/{clinicId}/schedule")]
     [Authorize]
     [ProducesResponseType(typeof(ClinicScheduleDto), 200)]
-    public async Task<IActionResult> GetClinicSchedule(Guid clinicId, [FromQuery] DateTime date)
+    public async Task<IActionResult> GetClinicSchedule(Guid clinicId, [FromQuery] DateTime? date = null)
     {
-        // TODO: Implement clinic schedule retrieval
-        
-        var schedule = new ClinicScheduleDto
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
+        if (!clinicExists)
+        {
+            return NotFound();
+        }
+
+        var targetDate = (date ?? DateTime.UtcNow).Date;
+        var nextDay = targetDate.AddDays(1);
+
+        var providers = await _context.Providers
+            .Include(p => p.User)
+            .Where(p => p.ClinicId == clinicId)
+            .ToListAsync();
+
+        var appointments = await _context.Appointments
+            .Include(a => a.Patient)
+            .Where(a => a.ClinicId == clinicId && a.ScheduledStart >= targetDate && a.ScheduledStart < nextDay)
+            .ToListAsync();
+
+        var providerSchedules = providers
+            .Select(provider =>
+            {
+                var providerAppointments = appointments
+                    .Where(a => a.ProviderId == provider.UserId)
+                    .OrderBy(a => a.ScheduledStart)
+                    .Select(a => new ScheduleSlotDto
+                    {
+                        StartTime = a.ScheduledStart,
+                        EndTime = a.ScheduledEnd,
+                        IsAvailable = false,
+                        AppointmentType = a.AppointmentType,
+                        PatientId = a.PatientId,
+                        PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}".Trim() : string.Empty
+                    })
+                    .ToArray();
+
+                return new ProviderScheduleSlotDto
+                {
+                    ProviderId = provider.UserId,
+                    ProviderName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : "",
+                    Appointments = providerAppointments,
+                    AvailableSlots = Array.Empty<DateTime>()
+                };
+            })
+            .ToArray();
+
+        var response = new ClinicScheduleDto
         {
             ClinicId = clinicId,
-            Date = date.Date,
-            Providers = new[]
-            {
-                new ProviderScheduleSlotDto
-                {
-                    ProviderId = Guid.NewGuid(),
-                    ProviderName = "Dr. Jane Smith",
-                    Appointments = new[]
-                    {
-                        new Qivr.Core.DTOs.ScheduleSlotDto
-                        {
-                            StartTime = date.Date.AddHours(9),
-                            EndTime = date.Date.AddHours(9).AddMinutes(30),
-                            PatientName = "John Doe",
-                            AppointmentType = "Follow-up",
-                            IsAvailable = false
-                        },
-                        new Qivr.Core.DTOs.ScheduleSlotDto
-                        {
-                            StartTime = date.Date.AddHours(10),
-                            EndTime = date.Date.AddHours(10).AddMinutes(30),
-                            PatientName = "Jane Smith",
-                            AppointmentType = "New Patient",
-                            IsAvailable = false
-                        }
-                    },
-                    AvailableSlots = new[]
-                    {
-                        date.Date.AddHours(11),
-                        date.Date.AddHours(14),
-                        date.Date.AddHours(15)
-                    }
-                }
-            }
+            Date = targetDate,
+            Providers = providerSchedules
         };
-        
-        return Ok(schedule);
+
+        return Ok(response);
     }
     
     // GET: api/clinic-management/clinics/{clinicId}/analytics
@@ -350,10 +412,19 @@ public class ClinicManagementController : ControllerBase
 
             var appointments = await _context.Appointments
                 .AsNoTracking()
+                .Include(a => a.Patient)
+                .Include(a => a.Provider)
                 .Where(a => a.TenantId == tenantId && a.ClinicId == clinicId && a.ScheduledStart >= periodStart && a.ScheduledStart <= periodEnd)
                 .ToListAsync(ct);
+            
+            // Load Provider.User separately if needed
+            var providerIds = appointments.Select(a => a.ProviderId).Where(id => id != Guid.Empty).Distinct().ToList();
+            var providersWithUsers = await _context.Providers
+                .Include(p => p.User)
+                .Where(p => providerIds.Contains(p.UserId))
+                .ToDictionaryAsync(p => p.UserId, ct);
 
-            var totalAppointments = appointments.Count;
+            var totalAppointments = appointments.Count();
             var completedAppointments = appointments.Count(a => a.Status == AppointmentStatus.Completed);
             var cancelledAppointments = appointments.Count(a => a.Status == AppointmentStatus.Cancelled);
             var noShowAppointments = appointments.Count(a => a.Status == AppointmentStatus.NoShow);
@@ -374,7 +445,7 @@ public class ClinicManagementController : ControllerBase
                 .Distinct()
                 .ToList();
 
-            var totalPatients = patientIds.Count;
+            var totalPatients = patientIds.Count();
 
             var firstAppointments = await _context.Appointments
                 .AsNoTracking()
@@ -399,7 +470,7 @@ public class ClinicManagementController : ControllerBase
                 .Where(i => i.TenantId == tenantId && patientIds.Contains(i.PatientId) && i.CreatedAt >= periodStart && i.CreatedAt <= periodEnd)
                 .ToListAsync(ct);
 
-            var totalProms = promInstances.Count;
+            var totalProms = promInstances.Count();
             var completedProms = promInstances.Count(i => i.Status == PromStatus.Completed);
             var averagePromScore = promInstances
                 .Where(i => i.Score.HasValue)
@@ -427,6 +498,87 @@ public class ClinicManagementController : ControllerBase
                 })
                 .OrderByDescending(p => p.Count)
                 .Take(5)
+                .ToArray();
+
+            var firstAppointmentLookup = firstAppointments
+                .GroupBy(fp => fp.PatientId)
+                .ToDictionary(g => g.Key, g => g.Min(x => x.First).Date);
+
+            var appointmentTrends = appointments
+                .GroupBy(a => a.ScheduledStart.Date)
+                .Select(g =>
+                {
+                    var date = g.Key.Date;
+                    var total = g.Count();
+                    var completedCount = g.Count(a => a.Status == AppointmentStatus.Completed);
+                    var cancelledCount = g.Count(a => a.Status == AppointmentStatus.Cancelled);
+                    var noShowCount = g.Count(a => a.Status == AppointmentStatus.NoShow);
+                    var newPatientCount = g.Select(a => a.PatientId)
+                        .Distinct()
+                        .Count(pid => firstAppointmentLookup.TryGetValue(pid, out var firstDate) && firstDate == date);
+
+                    return new AppointmentTrendDto
+                    {
+                        Date = date,
+                        Appointments = total,
+                        Completed = completedCount,
+                        Cancellations = cancelledCount,
+                        NoShows = noShowCount,
+                        NewPatients = newPatientCount
+                    };
+                })
+                .OrderBy(t => t.Date)
+                .ToArray();
+
+            var promCompletionBreakdown = promInstances
+                .GroupBy(i => i.Template?.Name ?? "Unknown")
+                .Select(g =>
+                {
+                    var total = g.Count();
+                    var completed = g.Count(i => i.Status == PromStatus.Completed);
+                    var pending = g.Count(i => i.Status == PromStatus.Pending || i.Status == PromStatus.InProgress);
+
+                    return new PromCompletionBreakdownDto
+                    {
+                        TemplateName = g.Key,
+                        Completed = completed,
+                        Pending = pending,
+                        CompletionRate = total == 0 ? 0 : Math.Round(completed * 100d / total, 1)
+                    };
+                })
+                .OrderByDescending(x => x.Completed)
+                .ToArray();
+
+            var providerPerformance = appointments
+                .Where(a => a.ProviderId != Guid.Empty)
+                .GroupBy(a => new
+                {
+                    a.ProviderId,
+                    Name = providersWithUsers.TryGetValue(a.ProviderId, out var provider) && provider.User != null
+                        ? ($"{provider.User.FirstName} {provider.User.LastName}").Trim()
+                        : "Unknown"
+                })
+                .Select(g =>
+                {
+                    var totalAppointments = g.Count();
+                    var completedAppointments = g.Count(a => a.Status == AppointmentStatus.Completed);
+                    var noShowAppointments = g.Count(a => a.Status == AppointmentStatus.NoShow);
+                    var distinctPatients = g.Select(a => a.PatientId).Distinct().Count();
+                    var revenue = g.Where(a => a.PaymentAmount.HasValue).Sum(a => a.PaymentAmount!.Value);
+
+                    return new ProviderPerformanceDto
+                    {
+                        ProviderId = g.Key.ProviderId,
+                        ProviderName = string.IsNullOrWhiteSpace(g.Key.Name) ? "Unknown" : g.Key.Name,
+                        Patients = distinctPatients,
+                        AppointmentsCompleted = completedAppointments,
+                        NoShowRate = totalAppointments == 0 ? 0 : Math.Round(noShowAppointments * 100d / totalAppointments, 2),
+                        Revenue = revenue,
+                        Satisfaction = 0,
+                        AverageWaitTime = 0
+                    };
+                })
+                .OrderByDescending(p => p.AppointmentsCompleted)
                 .ToArray();
 
             var analytics = new ClinicAnalyticsDto
@@ -467,7 +619,10 @@ public class ClinicManagementController : ControllerBase
                     AverageRevenuePerPatient = averageRevenuePerPatient
                 },
                 TopDiagnoses = Array.Empty<DiagnosisCountDto>(),
-                TopProcedures = topProcedures
+                TopProcedures = topProcedures,
+                AppointmentTrends = appointmentTrends,
+                PromCompletionBreakdown = promCompletionBreakdown,
+                ProviderPerformance = providerPerformance
             };
 
             return Ok(analytics);
@@ -477,6 +632,224 @@ public class ClinicManagementController : ControllerBase
             _logger.LogError(ex, "Failed to compute clinic analytics for clinic {ClinicId}", clinicId);
             return StatusCode(500, new { error = "Failed to compute clinic analytics" });
         }
+    }
+
+    private async Task<int> CountAppointmentsForClinicAsync(Guid clinicId)
+    {
+        var today = DateTime.UtcNow.Date;
+        var tomorrow = today.AddDays(1);
+
+        return await _context.Appointments
+            .AsNoTracking()
+            .Where(a => a.ClinicId == clinicId && a.ScheduledStart >= today && a.ScheduledStart < tomorrow && a.Status != AppointmentStatus.Cancelled)
+            .CountAsync();
+    }
+
+    private static ClinicDto MapClinicSummary(ClinicSummary summary)
+    {
+        return new ClinicDto
+        {
+            Id = summary.Id,
+            Name = summary.Name,
+            Address = summary.Address,
+            Phone = summary.Phone,
+            Email = summary.Email,
+            IsActive = summary.IsActive,
+            PatientCount = summary.PatientCount,
+            ProviderCount = summary.ProviderCount,
+            AppointmentsToday = summary.AppointmentsToday,
+            PendingPROMs = summary.PendingPROMs
+        };
+    }
+
+    private ClinicDetailDto MapClinicDetail(ClinicDetail detail, int appointmentsToday)
+    {
+        var statistics = MapClinicStatistics(detail.Statistics, appointmentsToday);
+        var dto = new ClinicDetailDto
+        {
+            Id = detail.Id,
+            Name = detail.Name,
+            Description = detail.Description,
+            Phone = detail.Phone,
+            Fax = detail.Fax,
+            Email = detail.Email,
+            Website = detail.Website,
+            IsActive = detail.IsActive,
+            EstablishedDate = detail.EstablishedDate,
+            LicenseNumber = detail.LicenseNumber,
+            TaxId = detail.TaxId,
+            Services = detail.Services ?? Array.Empty<string>(),
+            AcceptedInsurance = detail.AcceptedInsurance ?? Array.Empty<string>(),
+            OperatingHours = MapOperatingHours(detail.OperatingHours),
+            Statistics = statistics
+        };
+
+        dto.Address = new AddressDto
+        {
+            Street = detail.Address.Street,
+            City = detail.Address.City,
+            State = detail.Address.State,
+            PostalCode = detail.Address.PostalCode,
+            Country = detail.Address.Country
+        };
+
+        dto.PatientCount = statistics.TotalPatients;
+        dto.ProviderCount = statistics.TotalProviders;
+        dto.PendingPROMs = statistics.PendingProms;
+        dto.AppointmentsToday = appointmentsToday;
+        ((ClinicDto)dto).Address = FormatAddress(detail.Address);
+
+        return dto;
+    }
+
+    private static ClinicStatisticsDto MapClinicStatistics(ClinicStatistics stats, int appointmentsToday)
+    {
+        return new ClinicStatisticsDto
+        {
+            TotalPatients = stats.TotalPatients,
+            ActivePatients = stats.ActivePatients,
+            TotalProviders = stats.TotalProviders,
+            TotalStaff = stats.TotalStaff,
+            AppointmentsThisMonth = stats.AppointmentsThisMonth,
+            AppointmentsLastMonth = stats.AppointmentsLastMonth,
+            AveragePatientSatisfaction = stats.AveragePatientSatisfaction,
+            CompletedPromsThisMonth = stats.CompletedPromsThisMonth,
+            PendingProms = stats.PendingProms,
+            TodayAppointments = appointmentsToday,
+            TotalAppointmentsToday = appointmentsToday,
+            CompletedAppointments = 0,
+            PendingAppointments = Math.Max(0, appointmentsToday - stats.CompletedPromsThisMonth),
+            AverageWaitTime = 0,
+            TotalPatientsThisWeek = stats.ActivePatients,
+            NoShowRate = 0,
+            WeekAppointments = 0,
+            MonthAppointments = stats.AppointmentsThisMonth,
+            PendingEvaluations = 0,
+            CompletedEvaluations = 0,
+            AverageRating = stats.AveragePatientSatisfaction,
+            UnreadMessages = 0,
+            AppointmentsByType = new Dictionary<string, int>(),
+            AppointmentsByStatus = new Dictionary<string, int>()
+        };
+    }
+
+    private static OperatingHoursDto[] MapOperatingHours(IEnumerable<OperatingHours> hours)
+    {
+        return hours?
+            .Select(h => new OperatingHoursDto
+            {
+                Day = h.Day,
+                Open = h.Open,
+                Close = h.Close,
+                IsClosed = string.IsNullOrWhiteSpace(h.Open) && string.IsNullOrWhiteSpace(h.Close)
+            })
+            .ToArray() ?? Array.Empty<OperatingHoursDto>();
+    }
+
+    private static string FormatAddress(ClinicAddress address)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(address.Street)) parts.Add(address.Street);
+        if (!string.IsNullOrWhiteSpace(address.City)) parts.Add(address.City);
+        if (!string.IsNullOrWhiteSpace(address.State)) parts.Add(address.State);
+        if (!string.IsNullOrWhiteSpace(address.PostalCode)) parts.Add(address.PostalCode);
+        if (!string.IsNullOrWhiteSpace(address.Country)) parts.Add(address.Country);
+        return string.Join(", ", parts);
+    }
+
+    private static ProviderDto MapProviderSummary(ProviderSummary summary)
+    {
+        return new ProviderDto
+        {
+            Id = summary.Id,
+            FirstName = summary.FirstName,
+            LastName = summary.LastName,
+            Title = summary.Title,
+            Specialty = summary.Specialty,
+            Email = summary.Email,
+            Phone = summary.Phone,
+            LicenseNumber = summary.LicenseNumber,
+            IsActive = summary.IsActive,
+            PatientCount = summary.PatientCount,
+            AppointmentsToday = summary.AppointmentsToday,
+            NextAvailableSlot = summary.NextAvailableSlot
+        };
+    }
+
+    private ProviderDetailDto MapProviderDetail(ProviderDetail detail, ProviderSummary? summary)
+    {
+        var dto = new ProviderDetailDto
+        {
+            Id = detail.Id,
+            FirstName = detail.FirstName,
+            LastName = detail.LastName,
+            Title = detail.Title,
+            Specialty = detail.Specialty,
+            Email = detail.Email,
+            Phone = detail.Phone,
+            LicenseNumber = detail.LicenseNumber,
+            NpiNumber = detail.NpiNumber ?? string.Empty,
+            IsActive = detail.IsActive,
+            Biography = detail.Biography,
+            Education = detail.Education?.ToArray() ?? Array.Empty<string>(),
+            Languages = detail.Languages?.ToArray() ?? Array.Empty<string>(),
+            Schedule = MapProviderSchedule(detail),
+            Statistics = MapProviderStatistics(detail.Statistics),
+            SubSpecialties = detail.Certifications?.ToArray() ?? Array.Empty<string>(),
+            LicenseState = string.Empty,
+            LicenseExpiry = DateTime.UtcNow.AddYears(1)
+        };
+
+        dto.PatientCount = summary?.PatientCount ?? detail.Statistics.TotalPatients;
+        dto.AppointmentsToday = summary?.AppointmentsToday ?? 0;
+        dto.NextAvailableSlot = summary?.NextAvailableSlot;
+
+        return dto;
+    }
+
+    private static ProviderScheduleDto MapProviderSchedule(ProviderDetail detail)
+    {
+        return new ProviderScheduleDto
+        {
+            ProviderId = detail.Id,
+            ProviderName = $"{detail.FirstName} {detail.LastName}".Trim(),
+            Specialty = detail.Specialty,
+            Schedule = new List<ScheduleSlotDto>(),
+            WorkingHours = Array.Empty<OperatingHoursDto>(),
+            DefaultAppointmentDuration = 30,
+            BufferTime = 0
+        };
+    }
+
+    private static ProviderStatisticsDto MapProviderStatistics(ProviderStatistics stats)
+    {
+        return new ProviderStatisticsDto
+        {
+            TotalPatients = stats.TotalPatients,
+            NewPatientsThisMonth = 0,
+            AppointmentsThisWeek = stats.CompletedAppointments,
+            AppointmentsThisMonth = stats.TotalAppointments,
+            AverageRating = stats.AverageRating,
+            TotalReviews = 0,
+            NoShowRate = 0,
+            AverageWaitTime = 0
+        };
+    }
+
+    private async Task<ProviderSummary?> FindProviderSummary(Guid? clinicId, Guid providerId, Guid tenantId)
+    {
+        if (!clinicId.HasValue)
+        {
+            return null;
+        }
+
+        var providers = await _clinicService.GetClinicProvidersAsync(tenantId, clinicId.Value, activeOnly: false);
+        return providers.FirstOrDefault(p => p.Id == providerId);
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 }
 
@@ -525,6 +898,13 @@ public class CreateClinicDto
     public string Country { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string? Fax { get; set; }
+    public string? Website { get; set; }
+    public string? LicenseNumber { get; set; }
+    public string? TaxId { get; set; }
+    public string[]? Services { get; set; }
+    public string[]? AcceptedInsurance { get; set; }
+    public Dictionary<string, object>? OperatingHours { get; set; }
 }
 
 public class UpdateClinicDto : CreateClinicDto
@@ -570,6 +950,7 @@ public class CreateProviderDto
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string LicenseNumber { get; set; } = string.Empty;
+    public string? NpiNumber { get; set; }
 }
 
 // ProviderScheduleDto is now in SharedDtos
@@ -612,6 +993,9 @@ public class ClinicAnalyticsDto
     public RevenueMetricsDto RevenueMetrics { get; set; } = new();
     public DiagnosisCountDto[] TopDiagnoses { get; set; } = Array.Empty<DiagnosisCountDto>();
     public ProcedureCountDto[] TopProcedures { get; set; } = Array.Empty<ProcedureCountDto>();
+    public AppointmentTrendDto[] AppointmentTrends { get; set; } = Array.Empty<AppointmentTrendDto>();
+    public PromCompletionBreakdownDto[] PromCompletionBreakdown { get; set; } = Array.Empty<PromCompletionBreakdownDto>();
+    public ProviderPerformanceDto[] ProviderPerformance { get; set; } = Array.Empty<ProviderPerformanceDto>();
 }
 
 public class PeriodDto
@@ -671,3 +1055,33 @@ public class ProcedureCountDto
     public string Description { get; set; } = string.Empty;
     public int Count { get; set; }
 }
+public class AppointmentTrendDto
+{
+    public DateTime Date { get; set; }
+    public int Appointments { get; set; }
+    public int Completed { get; set; }
+    public int Cancellations { get; set; }
+    public int NoShows { get; set; }
+    public int NewPatients { get; set; }
+}
+
+public class PromCompletionBreakdownDto
+{
+    public string TemplateName { get; set; } = string.Empty;
+    public int Completed { get; set; }
+    public int Pending { get; set; }
+    public double CompletionRate { get; set; }
+}
+
+public class ProviderPerformanceDto
+{
+    public Guid ProviderId { get; set; }
+    public string ProviderName { get; set; } = string.Empty;
+    public int Patients { get; set; }
+    public int AppointmentsCompleted { get; set; }
+    public double NoShowRate { get; set; }
+    public decimal Revenue { get; set; }
+    public double Satisfaction { get; set; }
+    public double AverageWaitTime { get; set; }
+}
+

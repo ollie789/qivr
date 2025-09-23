@@ -9,6 +9,8 @@
 
 ## Quick Start
 See README.md for quick start guide.
+Refer to [AGENTS.md](../AGENTS.md) for coding standards and PR expectations before opening changes.
+
 
 ## Detailed Setup
 

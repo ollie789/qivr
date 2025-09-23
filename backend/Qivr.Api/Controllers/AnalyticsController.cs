@@ -45,149 +45,98 @@ public class AnalyticsController : ControllerBase
                 return Unauthorized();
             }
 
-            // Parse time range
-            var days = timeRange switch
-            {
-                "7days" => 7,
-                "14days" => 14,
-                "30days" => 30,
-                "90days" => 90,
-                _ => 30
-            };
+            var days = ResolveTimeRangeDays(timeRange);
+            var windowStart = DateTime.UtcNow.AddDays(-days);
+            var previousStart = windowStart.AddDays(-days);
 
-            var startDate = DateTime.UtcNow.AddDays(-days);
-
-            // Get patient's vital signs (from PROM responses for now)
-            // In a full implementation, this would query actual VitalSigns table
-            var vitalSigns = new List<VitalSignRecord>();
+            var snapshot = await BuildPromSnapshot(userId, windowStart, previousStart);
 
             var metrics = new List<AnalyticsHealthMetricDto>();
 
-            // Process blood pressure metrics
-            // For now, use mock data - in production, query actual vitals
-            if (false) // Temporarily disabled until VitalSigns table is added
+            if (snapshot.LatestScore.HasValue)
             {
-                var latestBP = vitalSigns.Where(v => v.SystolicBP.HasValue).LastOrDefault();
-                var previousBP = vitalSigns.Where(v => v.SystolicBP.HasValue && v.Id != latestBP?.Id).LastOrDefault();
-                
-                if (latestBP != null)
+                var latest = (double)snapshot.LatestScore.Value;
+                var previous = snapshot.PreviousScore.HasValue ? (double)snapshot.PreviousScore.Value : 0d;
+
+                metrics.Add(new AnalyticsHealthMetricDto
                 {
-                    metrics.Add(new AnalyticsHealthMetricDto
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        Category = "vitals",
-                        Name = "Blood Pressure",
-                        Value = latestBP.SystolicBP ?? 0,
-                        Unit = "mmHg",
-                        Date = latestBP.RecordedAt.ToString("yyyy-MM-dd"),
-                        Trend = DetermineTrend(latestBP.SystolicBP ?? 0, previousBP?.SystolicBP ?? 0),
-                        PercentageChange = CalculatePercentageChange(latestBP.SystolicBP ?? 0, previousBP?.SystolicBP ?? 0),
-                        Status = DetermineBloodPressureStatus(latestBP.SystolicBP ?? 0),
-                        Target = 120
-                    });
-                }
+                    Id = Guid.NewGuid().ToString(),
+                    Category = "prom",
+                    Name = "Latest PROM Score",
+                    Value = Math.Round(latest, 1),
+                    Unit = "points",
+                    Date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                    Trend = DetermineTrend(latest, previous),
+                    PercentageChange = CalculatePercentageChange(latest, previous),
+                    Status = GetPromScoreStatus(latest),
+                    Target = 80
+                });
             }
 
-            // Process heart rate metrics
-            if (false) // Temporarily disabled until VitalSigns table is added
+            metrics.Add(new AnalyticsHealthMetricDto
             {
-                var latestHR = vitalSigns.Where(v => v.HeartRate.HasValue).LastOrDefault();
-                var previousHR = vitalSigns.Where(v => v.HeartRate.HasValue && v.Id != latestHR?.Id).LastOrDefault();
-                
-                if (latestHR != null)
-                {
-                    metrics.Add(new AnalyticsHealthMetricDto
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        Category = "vitals",
-                        Name = "Heart Rate",
-                        Value = latestHR.HeartRate ?? 0,
-                        Unit = "bpm",
-                        Date = latestHR.RecordedAt.ToString("yyyy-MM-dd"),
-                        Trend = DetermineTrend(latestHR.HeartRate ?? 0, previousHR?.HeartRate ?? 0),
-                        PercentageChange = CalculatePercentageChange(latestHR.HeartRate ?? 0, previousHR?.HeartRate ?? 0),
-                        Status = DetermineHeartRateStatus(latestHR.HeartRate ?? 0),
-                        Target = 70
-                    });
-                }
-            }
+                Id = Guid.NewGuid().ToString(),
+                Category = "prom",
+                Name = "PROM Completion Rate",
+                Value = snapshot.CompletionRate,
+                Unit = "%",
+                Date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                Trend = DetermineTrend(snapshot.CompletionRate, snapshot.PreviousCompletionRate),
+                PercentageChange = CalculatePercentageChange(snapshot.CompletionRate, snapshot.PreviousCompletionRate),
+                Status = GetCompletionStatus(snapshot.CompletionRate),
+                Target = 85
+            });
 
-            // Process weight metrics  
-            if (false) // Temporarily disabled until VitalSigns table is added
+            metrics.Add(new AnalyticsHealthMetricDto
             {
-                var latestWeight = vitalSigns.Where(v => v.Weight.HasValue).LastOrDefault();
-                var previousWeight = vitalSigns.Where(v => v.Weight.HasValue && v.Id != latestWeight?.Id).LastOrDefault();
-                
-                if (latestWeight != null)
-                {
-                    metrics.Add(new AnalyticsHealthMetricDto
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        Category = "vitals",
-                        Name = "Weight",
-                        Value = (double)(latestWeight.Weight ?? 0),
-                        Unit = "lbs",
-                        Date = latestWeight.RecordedAt.ToString("yyyy-MM-dd"),
-                        Trend = DetermineTrend((double)(latestWeight.Weight ?? 0), (double)(previousWeight?.Weight ?? 0)),
-                        PercentageChange = CalculatePercentageChange((double)(latestWeight.Weight ?? 0), (double)(previousWeight?.Weight ?? 0)),
-                        Status = "stable",
-                        Target = null
-                    });
-                }
-            }
+                Id = Guid.NewGuid().ToString(),
+                Category = "prom",
+                Name = "Pending PROMs",
+                Value = snapshot.PendingCount,
+                Unit = "count",
+                Date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                Trend = DetermineTrend(snapshot.PendingCount, snapshot.PreviousPendingCount),
+                PercentageChange = CalculatePercentageChange(snapshot.PendingCount, snapshot.PreviousPendingCount),
+                Status = GetPendingStatus(snapshot.PendingCount),
+                Target = 0
+            });
 
-            // Process BMI metrics
-            if (false) // Temporarily disabled until VitalSigns table is added
+            var upcomingAppointments = await _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.PatientId == userId && a.ScheduledStart >= DateTime.UtcNow &&
+                            a.ScheduledStart < DateTime.UtcNow.AddDays(days) &&
+                            a.Status != AppointmentStatus.Cancelled)
+                .CountAsync();
+
+            metrics.Add(new AnalyticsHealthMetricDto
             {
-                var latestBMI = vitalSigns.Where(v => v.BMI.HasValue).LastOrDefault();
-                
-                if (latestBMI != null)
-                {
-                    metrics.Add(new AnalyticsHealthMetricDto
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        Category = "vitals",
-                        Name = "BMI",
-                        Value = (double)(latestBMI.BMI ?? 0),
-                        Unit = "kg/m²",
-                        Date = latestBMI.RecordedAt.ToString("yyyy-MM-dd"),
-                        Trend = "stable",
-                        PercentageChange = 0,
-                        Status = DetermineBMIStatus(latestBMI.BMI ?? 0),
-                        Target = 22.5
-                    });
-                }
-            }
+                Id = Guid.NewGuid().ToString(),
+                Category = "appointments",
+                Name = "Upcoming Appointments",
+                Value = upcomingAppointments,
+                Unit = "count",
+                Date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                Trend = "stable",
+                PercentageChange = 0,
+                Status = GetAppointmentsStatus(upcomingAppointments),
+                Target = 1
+            });
 
-            // Get PROM scores and add as health metrics
-            var promResponses = await _context.PromResponses
-                .Include(r => r.PromInstance)
-                    .ThenInclude(i => i.Template)
-                .Where(r => r.PromInstance.PatientId == userId && r.CreatedAt >= startDate)
-                .OrderBy(r => r.CreatedAt)
-                .ToListAsync();
-
-            if (promResponses.Any())
+            if (snapshot.AverageResponseMinutes > 0)
             {
-                var latestProm = promResponses.LastOrDefault();
-                var previousProm = promResponses.Count > 1 ? promResponses[promResponses.Count - 2] : null;
-                
-                if (latestProm != null)
+                metrics.Add(new AnalyticsHealthMetricDto
                 {
-                    metrics.Add(new AnalyticsHealthMetricDto
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        Category = "prom",
-                        Name = "Overall Health Score",
-                        Value = (double)latestProm.Score,
-                        Unit = "points",
-                        Date = latestProm.CreatedAt.ToString("yyyy-MM-dd"),
-                        Trend = DetermineTrend((double)latestProm.Score, (double)(previousProm?.Score ?? 0)),
-                        PercentageChange = CalculatePercentageChange((double)latestProm.Score, (double)(previousProm?.Score ?? 0)),
-                        Status = latestProm.Score > 70 ? "good" : (latestProm.Score > 40 ? "warning" : "critical"),
-                        Target = 80
-                    });
-                }
+                    Id = Guid.NewGuid().ToString(),
+                    Category = "prom",
+                    Name = "Average PROM Response Time",
+                    Value = Math.Round(snapshot.AverageResponseMinutes, 1),
+                    Unit = "minutes",
+                    Date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                    Trend = "stable",
+                    PercentageChange = 0,
+                    Status = snapshot.AverageResponseMinutes <= 60 ? "good" : (snapshot.AverageResponseMinutes <= 180 ? "warning" : "critical"),
+                    Target = 60
+                });
             }
 
             return Ok(metrics);
@@ -214,54 +163,44 @@ public class AnalyticsController : ControllerBase
                 return Unauthorized();
             }
 
-            var days = timeRange switch
-            {
-                "7days" => 7,
-                "14days" => 14,
-                "30days" => 30,
-                "90days" => 90,
-                _ => 30
-            };
+            var days = ResolveTimeRangeDays(timeRange);
+            var windowStart = DateTime.UtcNow.AddDays(-days);
+            var previousStart = windowStart.AddDays(-days);
 
-            var startDate = DateTime.UtcNow.AddDays(-days);
+            var snapshot = await BuildPromSnapshot(userId, windowStart, previousStart);
 
-            // Get PROM instances and responses
-            var promData = await _context.PromInstances
-                .Include(i => i.Template)
-                .Include(i => i.Responses)
-                .Where(i => i.PatientId == userId && i.CreatedAt >= startDate)
-                .ToListAsync();
-
-            var analytics = promData
-                .GroupBy(i => i.Template?.Name ?? "Unknown")
-                .Select(group => 
-                {
-                    var completedCount = group.Count(i => i.Status == PromStatus.Completed);
-                    var totalCount = group.Count();
-                    var responses = group.SelectMany(i => i.Responses).ToList();
-                    
-                    return new PROMAnalyticsDto
-                    {
-                        TemplateName = group.Key,
-                        CompletionRate = totalCount > 0 ? (completedCount * 100.0 / totalCount) : 0,
-                        AverageScore = responses.Any() ? (double)responses.Average(r => r.Score) : 0,
-                        TrendData = responses
-                            .OrderBy(r => r.CreatedAt)
-                            .Select(r => new TrendDataPoint
-                            {
-                                Date = r.CreatedAt.ToString("yyyy-MM-dd"),
-                                Score = (double)r.Score
-                            })
-                            .ToList(),
-                        CategoryScores = CalculateCategoryScores(responses),
-                        ResponseTime = responses.Any() && responses.All(r => r.PromInstance != null)
-                            ? responses.Average(r => (r.CreatedAt - r.PromInstance!.CreatedAt).TotalMinutes)
-                            : 0
-                    };
-                })
+            var templateGroups = snapshot.CurrentInstances
+                .GroupBy(i => new { i.TemplateId, TemplateName = i.Template?.Name ?? "Unknown" })
                 .ToList();
 
-            return Ok(analytics);
+            var responseLookup = snapshot.CurrentResponses
+                .GroupBy(tuple => new { tuple.Instance.TemplateId, TemplateName = tuple.Instance.Template?.Name ?? "Unknown" })
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var analytics = new List<PROMAnalyticsDto>();
+
+            foreach (var group in templateGroups)
+            {
+                responseLookup.TryGetValue(group.Key, out var responseTuples);
+                responseTuples ??= new List<(PromInstance Instance, PromResponse Response)>();
+
+                analytics.Add(BuildPromAnalyticsDto(group.Key.TemplateName, group.ToList(), responseTuples));
+            }
+
+            foreach (var kvp in responseLookup)
+            {
+                if (analytics.Any(a => a.TemplateName == kvp.Key.TemplateName))
+                {
+                    continue;
+                }
+
+                analytics.Add(BuildPromAnalyticsDto(kvp.Key.TemplateName, new List<PromInstance>(), kvp.Value));
+            }
+
+            return Ok(analytics
+                .OrderByDescending(a => a.TrendData.Count)
+                .ThenBy(a => a.TemplateName)
+                .ToList());
         }
         catch (Exception ex)
         {
@@ -285,46 +224,66 @@ public class AnalyticsController : ControllerBase
                 return Unauthorized();
             }
 
-            // For now, return sample goals - in production, these would come from a Goals table
+            var windowStart = DateTime.UtcNow.AddDays(-ResolveTimeRangeDays("30days"));
+            var previousStart = windowStart.AddDays(-ResolveTimeRangeDays("30days"));
+
+            var snapshot = await BuildPromSnapshot(userId, windowStart, previousStart);
+
             var goals = new List<HealthGoalDto>
             {
                 new HealthGoalDto
                 {
                     Id = Guid.NewGuid().ToString(),
-                    Title = "Lower Blood Pressure",
-                    Category = "vitals",
-                    Target = 120,
-                    Current = 125,
-                    Unit = "mmHg",
-                    Deadline = DateTime.UtcNow.AddMonths(2).ToString("yyyy-MM-dd"),
-                    Progress = 75,
-                    Status = "on-track"
-                },
-                new HealthGoalDto
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Title = "Increase Activity Level",
-                    Category = "activity",
-                    Target = 10000,
-                    Current = 7500,
-                    Unit = "steps/day",
-                    Deadline = DateTime.UtcNow.AddMonths(1).ToString("yyyy-MM-dd"),
-                    Progress = 75,
-                    Status = "on-track"
-                },
-                new HealthGoalDto
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Title = "Improve PROM Score",
+                    Title = "Keep PROM completion above 85%",
                     Category = "prom",
                     Target = 85,
-                    Current = 72,
+                    Current = Math.Round(snapshot.CompletionRate, 1),
+                    Unit = "%",
+                    Deadline = DateTime.UtcNow.AddMonths(1).ToString("yyyy-MM-dd"),
+                    Progress = Math.Clamp(snapshot.CompletionRate, 0, 100),
+                    Status = GetCompletionStatus(snapshot.CompletionRate)
+                },
+                new HealthGoalDto
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Title = "Improve average PROM score",
+                    Category = "prom",
+                    Target = 80,
+                    Current = Math.Round(snapshot.AverageScore, 1),
                     Unit = "points",
-                    Deadline = DateTime.UtcNow.AddMonths(3).ToString("yyyy-MM-dd"),
-                    Progress = 85,
-                    Status = "behind"
+                    Deadline = DateTime.UtcNow.AddMonths(2).ToString("yyyy-MM-dd"),
+                    Progress = Math.Clamp(snapshot.AverageScore, 0, 100),
+                    Status = GetPromScoreStatus(snapshot.AverageScore)
+                },
+                new HealthGoalDto
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Title = "Clear pending PROMs",
+                    Category = "prom",
+                    Target = 0,
+                    Current = snapshot.PendingCount,
+                    Unit = "count",
+                    Deadline = DateTime.UtcNow.AddMonths(1).ToString("yyyy-MM-dd"),
+                    Progress = snapshot.PendingCount == 0 ? 100 : Math.Clamp(100 - snapshot.PendingCount * 15, 0, 100),
+                    Status = GetPendingStatus(snapshot.PendingCount)
                 }
             };
+
+            if (snapshot.AverageResponseMinutes > 0)
+            {
+                goals.Add(new HealthGoalDto
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Title = "Respond to PROMs within 60 minutes",
+                    Category = "prom",
+                    Target = 60,
+                    Current = Math.Round(snapshot.AverageResponseMinutes, 1),
+                    Unit = "minutes",
+                    Deadline = DateTime.UtcNow.AddMonths(1).ToString("yyyy-MM-dd"),
+                    Progress = Math.Clamp(100 - Math.Max(0, snapshot.AverageResponseMinutes - 60) * 2, 0, 100),
+                    Status = snapshot.AverageResponseMinutes <= 60 ? "good" : (snapshot.AverageResponseMinutes <= 180 ? "warning" : "critical")
+                });
+            }
 
             return Ok(goals);
         }
@@ -350,31 +309,61 @@ public class AnalyticsController : ControllerBase
                 return Unauthorized();
             }
 
-            // Sample correlations - in production, this would use statistical analysis
-            var correlations = new List<CorrelationDto>
+            var windowStart = DateTime.UtcNow.AddDays(-ResolveTimeRangeDays("90days"));
+            var previousStart = windowStart.AddDays(-ResolveTimeRangeDays("90days"));
+            var snapshot = await BuildPromSnapshot(userId, windowStart, previousStart);
+
+            var orderedResponses = snapshot.CurrentResponses
+                .OrderBy(tuple => GetResponseTimestamp(tuple.Response))
+                .ToList();
+
+            var correlations = new List<CorrelationDto>();
+
+            var scoreSeries = orderedResponses.Select(tuple => (double)tuple.Response.Score).ToList();
+            var responseMinutes = orderedResponses
+                .Select(tuple => Math.Max(0, (GetResponseTimestamp(tuple.Response) - GetScheduledTimestamp(tuple.Instance)).TotalMinutes))
+                .ToList();
+
+            var correlation = CalculateCorrelation(scoreSeries, responseMinutes);
+            if (correlation.HasValue)
             {
-                new CorrelationDto
-                {
-                    Metric1 = "Blood Pressure",
-                    Metric2 = "Activity Level",
-                    Correlation = -0.72,
-                    Significance = "high"
-                },
-                new CorrelationDto
-                {
-                    Metric1 = "Weight",
-                    Metric2 = "BMI",
-                    Correlation = 0.95,
-                    Significance = "high"
-                },
-                new CorrelationDto
+                correlations.Add(new CorrelationDto
                 {
                     Metric1 = "PROM Score",
-                    Metric2 = "Activity Level",
-                    Correlation = 0.68,
-                    Significance = "medium"
+                    Metric2 = "Response Time (minutes)",
+                    Correlation = correlation.Value,
+                    Significance = DescribeSignificance(correlation.Value)
+                });
+            }
+
+            if (orderedResponses.Count > 1)
+            {
+                var gapScores = new List<double>();
+                var gapDays = new List<double>();
+                for (var i = 1; i < orderedResponses.Count; i++)
+                {
+                    var previous = GetResponseTimestamp(orderedResponses[i - 1].Response);
+                    var current = GetResponseTimestamp(orderedResponses[i].Response);
+                    var gap = (current - previous).TotalDays;
+                    if (gap >= 0)
+                    {
+                        gapDays.Add(gap);
+                        gapScores.Add((double)orderedResponses[i].Response.Score);
+                    }
                 }
-            };
+
+                var cadenceCorrelation = CalculateCorrelation(gapScores, gapDays);
+                if (cadenceCorrelation.HasValue)
+                {
+                    correlations.Add(new CorrelationDto
+                    {
+                        Metric1 = "PROM Score",
+                        Metric2 = "Days Since Previous PROM",
+                        Correlation = cadenceCorrelation.Value,
+                        Significance = DescribeSignificance(cadenceCorrelation.Value)
+                    });
+                }
+            }
 
             return Ok(correlations);
         }
@@ -400,32 +389,30 @@ public class AnalyticsController : ControllerBase
                 return Unauthorized();
             }
 
-            var startDate = DateTime.UtcNow.AddDays(-days);
+            var windowStart = DateTime.UtcNow.AddDays(-Math.Max(1, days));
+            var previousStart = windowStart.AddDays(-Math.Max(1, days));
+            var snapshot = await BuildPromSnapshot(userId, windowStart, previousStart);
 
-            // For now, use empty list - in production, query actual VitalSigns table
-            var vitalSigns = new List<VitalSignRecord>();
-
-            var promResponses = await _context.PromResponses
-                .Include(r => r.PromInstance)
-                .Where(r => r.PromInstance.PatientId == userId && r.CreatedAt >= startDate)
-                .OrderBy(r => r.CreatedAt)
-                .ToListAsync();
+            var promTrendPoints = snapshot.CurrentResponses
+                .OrderBy(tuple => GetResponseTimestamp(tuple.Response))
+                .Select(tuple => new PromTrendPoint
+                {
+                    Date = GetResponseTimestamp(tuple.Response).ToString("yyyy-MM-dd"),
+                    Score = tuple.Response.Score,
+                    TemplateName = tuple.Instance.Template?.Name ?? "Unknown"
+                })
+                .ToList();
 
             var trends = new PatientTrendsDto
             {
-                VitalTrends = new List<VitalTrendPoint>(), // Empty for now
-                PromTrends = promResponses.Select(r => new PromTrendPoint
-                {
-                    Date = r.CreatedAt.ToString("yyyy-MM-dd"),
-                    Score = r.Score,
-                    TemplateName = r.PromInstance.Template?.Name ?? "Unknown"
-                }).ToList(),
+                VitalTrends = new List<VitalTrendPoint>(),
+                PromTrends = promTrendPoints,
                 Summary = new TrendSummary
                 {
-                    TotalDataPoints = vitalSigns.Count + promResponses.Count(),
-                    StartDate = startDate.ToString("yyyy-MM-dd"),
-                    EndDate = DateTime.UtcNow.ToString("yyyy-MM-dd"),
-                    OverallTrend = "stable" // Would calculate based on actual data
+                    TotalDataPoints = promTrendPoints.Count,
+                    StartDate = promTrendPoints.FirstOrDefault()?.Date ?? string.Empty,
+                    EndDate = promTrendPoints.LastOrDefault()?.Date ?? string.Empty,
+                    OverallTrend = DetermineOverallTrend(promTrendPoints)
                 }
             };
 
@@ -440,11 +427,37 @@ public class AnalyticsController : ControllerBase
 
     #region Helper Methods
 
+    private static int ResolveTimeRangeDays(string timeRange)
+    {
+        if (string.IsNullOrWhiteSpace(timeRange))
+        {
+            return 30;
+        }
+
+        var normalized = timeRange.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "7" or "7days" => 7,
+            "14" or "14days" => 14,
+            "90" or "90days" => 90,
+            _ => 30
+        };
+    }
+
     private string DetermineTrend(double current, double previous)
     {
-        if (previous == 0) return "stable";
+        if (Math.Abs(previous) < double.Epsilon)
+        {
+            if (Math.Abs(current) < double.Epsilon)
+            {
+                return "stable";
+            }
+
+            return current > 0 ? "up" : "down";
+        }
+
         var change = ((current - previous) / previous) * 100;
-        
+
         if (change > 5) return "up";
         if (change < -5) return "down";
         return "stable";
@@ -452,44 +465,275 @@ public class AnalyticsController : ControllerBase
 
     private double CalculatePercentageChange(double current, double previous)
     {
-        if (previous == 0) return 0;
+        if (Math.Abs(previous) < double.Epsilon)
+        {
+            return Math.Abs(current) < double.Epsilon ? 0 : 100;
+        }
+
         return Math.Round(((current - previous) / previous) * 100, 1);
     }
 
-    private string DetermineBloodPressureStatus(int systolic)
+    private static string GetPromScoreStatus(double score)
     {
-        if (systolic < 120) return "good";
-        if (systolic < 140) return "warning";
+        if (score >= 80) return "good";
+        if (score >= 50) return "warning";
         return "critical";
     }
 
-    private string DetermineHeartRateStatus(int heartRate)
+    private static string GetCompletionStatus(double rate)
     {
-        if (heartRate >= 60 && heartRate <= 100) return "good";
-        if ((heartRate >= 50 && heartRate < 60) || (heartRate > 100 && heartRate <= 110)) return "warning";
+        if (rate >= 85) return "good";
+        if (rate >= 60) return "warning";
         return "critical";
     }
 
-    private string DetermineBMIStatus(decimal bmi)
+    private static string GetPendingStatus(int pendingCount)
     {
-        if (bmi >= 18.5m && bmi < 25) return "good";
-        if ((bmi >= 25 && bmi < 30) || (bmi >= 17 && bmi < 18.5m)) return "warning";
+        if (pendingCount == 0) return "good";
+        if (pendingCount <= 3) return "warning";
         return "critical";
     }
 
-    private Dictionary<string, double> CalculateCategoryScores(List<PromResponse> responses)
+    private static string GetAppointmentsStatus(int upcoming)
     {
-        // This would be more sophisticated in production, analyzing actual response categories
-        var categories = new Dictionary<string, double>
+        return upcoming > 0 ? "good" : "warning";
+    }
+
+    private PROMAnalyticsDto BuildPromAnalyticsDto(string templateName, IReadOnlyCollection<PromInstance> instances, IReadOnlyCollection<(PromInstance Instance, PromResponse Response)> responses)
+    {
+        var completionRate = CalculateCompletionRate(instances);
+
+        var trendData = responses
+            .OrderBy(tuple => GetResponseTimestamp(tuple.Response))
+            .Select(tuple => new TrendDataPoint
+            {
+                Date = GetResponseTimestamp(tuple.Response).ToString("yyyy-MM-dd"),
+                Score = Math.Round((double)tuple.Response.Score, 2)
+            })
+            .ToList();
+
+        var averageScore = responses.Any()
+            ? Math.Round(responses.Average(tuple => (double)tuple.Response.Score), 2)
+            : 0d;
+
+        var responseMinutes = responses
+            .Select(tuple => (GetResponseTimestamp(tuple.Response) - GetScheduledTimestamp(tuple.Instance)).TotalMinutes)
+            .Where(minutes => minutes >= 0)
+            .ToList();
+
+        var responseTime = responseMinutes.Count > 0
+            ? Math.Round(responseMinutes.Average(), 1)
+            : 0d;
+
+        var categoryScores = CalculateCategoryScores(responses);
+
+        return new PROMAnalyticsDto
         {
-            { "Physical", responses.Any() ? (double)responses.Average(r => Math.Min(r.Score * 1.1m, 100)) : 0 },
-            { "Mental", responses.Any() ? (double)responses.Average(r => Math.Min(r.Score * 0.95m, 100)) : 0 },
-            { "Pain", responses.Any() ? (double)responses.Average(r => Math.Max(100 - r.Score, 0)) : 0 },
-            { "Overall", responses.Any() ? (double)responses.Average(r => r.Score) : 0 }
+            TemplateName = templateName,
+            CompletionRate = completionRate,
+            AverageScore = averageScore,
+            TrendData = trendData,
+            CategoryScores = categoryScores,
+            ResponseTime = responseTime
         };
-        
-        return categories;
     }
+
+    private static Dictionary<string, double> CalculateCategoryScores(IReadOnlyCollection<(PromInstance Instance, PromResponse Response)> responses)
+    {
+        if (responses.Count == 0)
+        {
+            return new Dictionary<string, double>();
+        }
+
+        if (responses.Any(r => !string.IsNullOrWhiteSpace(r.Response.Severity)))
+        {
+            return responses
+                .GroupBy(r => string.IsNullOrWhiteSpace(r.Response.Severity) ? "Unknown" : r.Response.Severity)
+                .ToDictionary(g => g.Key, g => Math.Round(g.Average(x => (double)x.Response.Score), 2));
+        }
+
+        return new Dictionary<string, double>
+        {
+            { "Average", Math.Round(responses.Average(r => (double)r.Response.Score), 2) }
+        };
+    }
+
+    private static double? CalculateCorrelation(IReadOnlyList<double> seriesA, IReadOnlyList<double> seriesB)
+    {
+        if (seriesA.Count != seriesB.Count || seriesA.Count < 2)
+        {
+            return null;
+        }
+
+        var meanA = seriesA.Average();
+        var meanB = seriesB.Average();
+
+        double numerator = 0;
+        double sumSqA = 0;
+        double sumSqB = 0;
+
+        for (var i = 0; i < seriesA.Count; i++)
+        {
+            var deltaA = seriesA[i] - meanA;
+            var deltaB = seriesB[i] - meanB;
+            numerator += deltaA * deltaB;
+            sumSqA += deltaA * deltaA;
+            sumSqB += deltaB * deltaB;
+        }
+
+        var denominator = Math.Sqrt(sumSqA * sumSqB);
+        if (Math.Abs(denominator) < double.Epsilon)
+        {
+            return null;
+        }
+
+        return Math.Round(numerator / denominator, 4);
+    }
+
+    private static string DescribeSignificance(double correlation)
+    {
+        var magnitude = Math.Abs(correlation);
+        if (magnitude >= 0.7) return "high";
+        if (magnitude >= 0.4) return "medium";
+        return "low";
+    }
+
+    private static string DetermineOverallTrend(IReadOnlyList<PromTrendPoint> points)
+    {
+        if (points.Count < 2)
+        {
+            return "stable";
+        }
+
+        var first = (double)points.First().Score;
+        var last = (double)points.Last().Score;
+        var delta = last - first;
+
+        if (delta > 2) return "up";
+        if (delta < -2) return "down";
+        return "stable";
+    }
+
+    private async Task<PromSnapshot> BuildPromSnapshot(Guid patientId, DateTime windowStart, DateTime previousWindowStart)
+    {
+        var instances = await _context.PromInstances
+            .AsNoTracking()
+            .Include(i => i.Template)
+            .Include(i => i.Responses)
+            .Where(i => i.PatientId == patientId &&
+                        (i.ScheduledFor >= previousWindowStart ||
+                         (i.ScheduledFor == default && i.CreatedAt >= previousWindowStart)))
+            .ToListAsync();
+
+        var currentInstances = instances
+            .Where(i => GetScheduledTimestamp(i) >= windowStart)
+            .ToList();
+
+        var previousInstances = instances
+            .Where(i =>
+            {
+                var scheduled = GetScheduledTimestamp(i);
+                return scheduled >= previousWindowStart && scheduled < windowStart;
+            })
+            .ToList();
+
+        var currentResponses = currentInstances
+            .SelectMany(i => i.Responses.Select(r => (Instance: i, Response: r)))
+            .Where(tuple => GetResponseTimestamp(tuple.Response) >= windowStart)
+            .OrderBy(tuple => GetResponseTimestamp(tuple.Response))
+            .ToList();
+
+        var previousResponses = previousInstances
+            .SelectMany(i => i.Responses.Select(r => (Instance: i, Response: r)))
+            .Where(tuple =>
+            {
+                var timestamp = GetResponseTimestamp(tuple.Response);
+                return timestamp >= previousWindowStart && timestamp < windowStart;
+            })
+            .OrderBy(tuple => GetResponseTimestamp(tuple.Response))
+            .ToList();
+
+        decimal? latestScore = currentResponses.LastOrDefault().Response?.Score;
+
+        decimal? previousScore = null;
+        if (currentResponses.Count > 1)
+        {
+            previousScore = currentResponses[^2].Response.Score;
+        }
+        else if (previousResponses.Count > 0)
+        {
+            previousScore = previousResponses.Last().Response.Score;
+        }
+
+        var averageScore = currentResponses.Any()
+            ? currentResponses.Average(tuple => (double)tuple.Response.Score)
+            : 0d;
+
+        var responseMinutes = currentResponses
+            .Select(tuple => (GetResponseTimestamp(tuple.Response) - GetScheduledTimestamp(tuple.Instance)).TotalMinutes)
+            .Where(minutes => minutes >= 0)
+            .ToList();
+
+        var averageResponseMinutes = responseMinutes.Count > 0 ? responseMinutes.Average() : 0d;
+
+        var completionRate = CalculateCompletionRate(currentInstances);
+        var previousCompletionRate = CalculateCompletionRate(previousInstances);
+
+        var pendingCount = currentInstances.Count(i => i.Status == PromStatus.Pending);
+        var previousPendingCount = previousInstances.Count(i => i.Status == PromStatus.Pending);
+        var completedCount = currentInstances.Count(i => i.Status == PromStatus.Completed);
+
+        return new PromSnapshot(
+            currentInstances,
+            previousInstances,
+            currentResponses,
+            previousResponses,
+            completionRate,
+            previousCompletionRate,
+            pendingCount,
+            previousPendingCount,
+            completedCount,
+            latestScore,
+            previousScore,
+            averageScore,
+            averageResponseMinutes);
+    }
+
+    private static double CalculateCompletionRate(IReadOnlyCollection<PromInstance> instances)
+    {
+        if (instances.Count == 0)
+        {
+            return 0;
+        }
+
+        var completed = instances.Count(i => i.Status == PromStatus.Completed);
+        return Math.Round(completed * 100d / instances.Count, 1);
+    }
+
+    private static DateTime GetResponseTimestamp(PromResponse response)
+    {
+        return response.CompletedAt != default ? response.CompletedAt : response.CreatedAt;
+    }
+
+    private static DateTime GetScheduledTimestamp(PromInstance instance)
+    {
+        return instance.ScheduledFor != default ? instance.ScheduledFor : instance.CreatedAt;
+    }
+
+    private sealed record PromSnapshot(
+        IReadOnlyList<PromInstance> CurrentInstances,
+        IReadOnlyList<PromInstance> PreviousInstances,
+        IReadOnlyList<(PromInstance Instance, PromResponse Response)> CurrentResponses,
+        IReadOnlyList<(PromInstance Instance, PromResponse Response)> PreviousResponses,
+        double CompletionRate,
+        double PreviousCompletionRate,
+        int PendingCount,
+        int PreviousPendingCount,
+        int CompletedCount,
+        decimal? LatestScore,
+        decimal? PreviousScore,
+        double AverageScore,
+        double AverageResponseMinutes);
 
     #endregion
 }

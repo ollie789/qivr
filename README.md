@@ -19,6 +19,10 @@ npm run clinic:dev       # Clinic Dashboard
 npm run patient:dev      # Patient Portal
 ```
 
+## 🤝 Contributor Guide
+
+Start with [AGENTS.md](AGENTS.md) for contributor expectations, tooling tips, and pull request norms before diving into feature work.
+
 ## 📍 Service URLs
 
 | Service | Port | URL | Description |
