@@ -8,7 +8,6 @@ import {
   TextField,
   InputAdornment,
   Chip,
-  Button,
   IconButton,
   Table,
   TableBody,
@@ -19,20 +18,15 @@ import {
   Paper,
   TablePagination,
   CircularProgress,
-  Alert,
   Menu,
   MenuItem,
-  Badge,
-  Tooltip,
   Avatar
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  FilterList as FilterIcon,
   Assessment as AssessmentIcon,
   Schedule as ScheduleIcon,
   CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
   Info as InfoIcon,
   MoreVert as MoreVertIcon,
   Download as DownloadIcon,
@@ -44,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import type { ChipProps } from '@mui/material/Chip';
 
 interface Evaluation {
   id: string;
@@ -163,7 +158,7 @@ export const Evaluations = () => {
     navigate(`/evaluations/${evaluationId}`);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): ChipProps['color'] => {
     switch (status) {
       case 'completed': return 'success';
       case 'in-progress': return 'warning';
@@ -403,7 +398,7 @@ export const Evaluations = () => {
                   <TableCell>
                     <Chip
                       label={evaluation.status.replace('-', ' ')}
-                      color={getStatusColor(evaluation.status) as any}
+                      color={getStatusColor(evaluation.status)}
                       size="small"
                     />
                   </TableCell>

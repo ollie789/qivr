@@ -13,17 +13,33 @@ interface User {
   phoneVerified: boolean;
 }
 
+type SignInResponse = Awaited<ReturnType<typeof authService.signIn>>;
+type RegisterResponse = Awaited<ReturnType<typeof authService.signUp>>;
+
+interface AuthResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<{success: boolean; data?: any; error?: any}>;
+  login: (email: string, password: string) => Promise<AuthResult<SignInResponse>>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<{success: boolean; data?: any; error?: any}>;
+  signIn: (email: string, password: string) => Promise<AuthResult<SignInResponse>>;
   signInWithGoogle: () => Promise<void>;
   signInWithFacebook: () => Promise<void>;
   signOut: () => Promise<void>;
   loading: boolean;
-  register: (email: string, password: string, emailAddr: string, phoneNumber?: string, firstName?: string, lastName?: string) => Promise<any>;
+  register: (
+    email: string,
+    password: string,
+    emailAddr: string,
+    phoneNumber?: string,
+    firstName?: string,
+    lastName?: string
+  ) => Promise<RegisterResponse>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -82,9 +98,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Sign in not completed:', response);
         return { success: false, error: 'Sign in not completed' };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      const errorMessage = error.message || error.toString();
+      const errorMessage = error instanceof Error ? error.message : 'Unknown authentication error';
       
       // Handle specific error cases
       if (errorMessage.includes('CONFIRM_SIGNUP_REQUIRED')) {
@@ -105,7 +121,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await authService.signOut();
       setIsAuthenticated(false);
       setUser(null);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Logout error:', error);
     }
   };
@@ -122,19 +138,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     throw new Error('Facebook sign-in not available');
   };
 
-  const register = async (email: string, password: string, emailAddr: string, phoneNumber?: string, firstName?: string, lastName?: string) => {
-    try {
-      const result = await authService.signUp({
-        email,
-        password,
-        firstName: firstName || '',
-        lastName: lastName || '',
-        phoneNumber
-      });
-      return result;
-    } catch (error) {
-      throw error;
-    }
+  const register = async (
+    email: string,
+    password: string,
+    emailAddr: string,
+    phoneNumber?: string,
+    firstName?: string,
+    lastName?: string,
+  ): Promise<RegisterResponse> => {
+    return authService.signUp({
+      email,
+      password,
+      firstName: firstName || '',
+      lastName: lastName || '',
+      phoneNumber,
+    });
   };
 
   return (

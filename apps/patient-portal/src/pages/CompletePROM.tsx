@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -31,38 +31,17 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { api } from '../services/api';
-
-interface PromTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  category: string;
-  questions: Question[];
-  scoringMethod?: any;
-}
-
-interface Question {
-  id: string;
-  text: string;
-  type: 'radio' | 'scale' | 'text' | 'checkbox' | 'slider';
-  options?: string[];
-  min?: number;
-  max?: number;
-  step?: number;
-  required?: boolean;
-  helpText?: string;
-}
-
-interface PromInstance {
-  id: string;
-  templateId: string;
-  templateName: string;
-  status: string;
-  scheduledFor: string;
-  dueDate: string;
-  template?: PromTemplate;
-}
+import {
+  fetchPromInstance as fetchPromInstanceById,
+  fetchPromTemplate,
+  submitPromAnswers,
+} from '../services/promsApi';
+import type {
+  PromAnswerValue,
+  PromInstance,
+  PromQuestion,
+  PromTemplate,
+} from '../types';
 
 export const CompletePROM = () => {
   const { id } = useParams<{ id: string }>();
@@ -76,25 +55,22 @@ export const CompletePROM = () => {
   const [promInstance, setPromInstance] = useState<PromInstance | null>(null);
   const [template, setTemplate] = useState<PromTemplate | null>(null);
   const [activeStep, setActiveStep] = useState(0);
-  const [responses, setResponses] = useState<Record<string, any>>({});
+  const [responses, setResponses] = useState<Record<string, PromAnswerValue>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    fetchPromInstance();
-  }, [id]);
-
-  const fetchPromInstance = async () => {
+  const fetchPromInstance = useCallback(async () => {
     try {
       setLoading(true);
+      if (!id) {
+        setError('Missing assessment identifier.');
+        return;
+      }
       
       // Fetch the PROM instance
-      const instanceResponse = await api.get<PromInstance>(`/api/v1/proms/instances/${id}`);
+      const instanceResponse = await fetchPromInstanceById(id!);
       setPromInstance(instanceResponse);
       
-      // Fetch the template details by ID
-      const templateResponse = await api.get<PromTemplate>(
-        `/api/v1/proms/templates/by-id/${instanceResponse.templateId}`
-      );
+      const templateResponse = await fetchPromTemplate(instanceResponse.templateId);
       setTemplate(templateResponse);
       
     } catch (err) {
@@ -103,9 +79,13 @@ export const CompletePROM = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const handleResponseChange = (questionId: string, value: any) => {
+  useEffect(() => {
+    void fetchPromInstance();
+  }, [fetchPromInstance]);
+
+  const handleResponseChange = (questionId: string, value: PromAnswerValue) => {
     setResponses(prev => ({ ...prev, [questionId]: value }));
     // Clear validation error when user provides input
     if (validationErrors[questionId]) {
@@ -128,8 +108,15 @@ export const CompletePROM = () => {
     const errors: Record<string, string> = {};
     let isValid = true;
     
-    stepQuestions.forEach(question => {
-      if (question.required && !responses[question.id]) {
+    stepQuestions.forEach((question) => {
+      const responseValue = responses[question.id];
+      const hasValue =
+        responseValue !== null &&
+        responseValue !== undefined &&
+        !(typeof responseValue === 'string' && responseValue.trim() === '') &&
+        !(Array.isArray(responseValue) && responseValue.length === 0);
+
+      if (question.required && !hasValue) {
         errors[question.id] = 'This field is required';
         isValid = false;
       }
@@ -151,11 +138,15 @@ export const CompletePROM = () => {
 
   const handleSubmit = async () => {
     if (!validateStep(activeStep)) return;
-    
+    if (!id) {
+      setError('Missing assessment identifier.');
+      return;
+    }
+
     try {
       setSubmitting(true);
 
-      await api.post(`/api/v1/proms/instances/${id}/answers`, responses);
+      await submitPromAnswers(id, responses);
 
       setSuccess(true);
 
@@ -172,8 +163,8 @@ export const CompletePROM = () => {
     }
   };
 
-  const renderQuestion = (question: Question) => {
-    const value = responses[question.id] || '';
+  const renderQuestion = (question: PromQuestion) => {
+    const value = responses[question.id] ?? null;
     const hasError = !!validationErrors[question.id];
     
     return (
@@ -193,7 +184,7 @@ export const CompletePROM = () => {
           
           {question.type === 'radio' && question.options && (
             <RadioGroup
-              value={value}
+              value={typeof value === 'string' ? value : ''}
               onChange={(e) => handleResponseChange(question.id, e.target.value)}
             >
               {question.options.map(option => (
@@ -211,7 +202,7 @@ export const CompletePROM = () => {
             <Box>
               <RadioGroup
                 row
-                value={value}
+                value={typeof value === 'string' ? value : ''}
                 onChange={(e) => handleResponseChange(question.id, e.target.value)}
               >
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
@@ -233,15 +224,34 @@ export const CompletePROM = () => {
           
           {question.type === 'slider' && (
             <Box px={2}>
-              <Slider
-                value={value || question.min || 0}
-                onChange={(_, newValue) => handleResponseChange(question.id, newValue)}
-                min={question.min || 0}
-                max={question.max || 100}
-                step={question.step || 1}
-                marks
-                valueLabelDisplay="on"
-              />
+              {(() => {
+                const numericValue =
+                  typeof value === 'number'
+                    ? value
+                    : typeof value === 'string'
+                      ? Number.parseFloat(value)
+                      : question.min ?? 0;
+
+                const safeValue = Number.isNaN(numericValue) ? question.min ?? 0 : numericValue;
+
+                return (
+                  <Slider
+                    value={safeValue}
+                    onChange={(_, newValue) => {
+                      if (Array.isArray(newValue)) {
+                        // Range sliders are not supported yet
+                        return;
+                      }
+                      handleResponseChange(question.id, newValue);
+                    }}
+                    min={question.min || 0}
+                    max={question.max || 100}
+                    step={question.step || 1}
+                    marks
+                    valueLabelDisplay="on"
+                  />
+                );
+              })()}
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="caption">{question.min || 0}</Typography>
                 <Typography variant="caption">{question.max || 100}</Typography>
@@ -253,30 +263,36 @@ export const CompletePROM = () => {
             <TextField
               multiline
               rows={4}
-              value={value}
+              value={typeof value === 'string' ? value : ''}
               onChange={(e) => handleResponseChange(question.id, e.target.value)}
               placeholder="Enter your response here..."
               fullWidth
             />
           )}
-          
+
           {question.type === 'checkbox' && question.options && (
             <FormGroup>
-              {question.options.map(option => (
-                <FormControlLabel
-                  key={option}
-                  control={
-                    <Checkbox
-                      checked={value[option] || false}
-                      onChange={(e) => handleResponseChange(question.id, {
-                        ...value,
-                        [option]: e.target.checked,
-                      })}
-                    />
-                  }
-                  label={option}
-                />
-              ))}
+              {question.options.map((option) => {
+                const selectedOptions = Array.isArray(value) ? value : [];
+                const isChecked = selectedOptions.includes(option);
+                return (
+                  <FormControlLabel
+                    key={option}
+                    control={
+                      <Checkbox
+                        checked={isChecked}
+                        onChange={(event) => {
+                          const updated = event.target.checked
+                            ? [...selectedOptions, option]
+                            : selectedOptions.filter((item) => item !== option);
+                          handleResponseChange(question.id, updated);
+                        }}
+                      />
+                    }
+                    label={option}
+                  />
+                );
+              })}
             </FormGroup>
           )}
           

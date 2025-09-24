@@ -52,8 +52,8 @@ export const ConfirmEmail: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const result = await authService.confirmSignUp(data.email, data.code);
-      
+      await authService.confirmSignUp(data.email, data.code);
+
       setSuccess('Email verified successfully! Redirecting to login...');
       
       // Wait a moment to show success message
@@ -65,8 +65,8 @@ export const ConfirmEmail: React.FC = () => {
           } 
         });
       }, 2000);
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to verify email';
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to verify email';
       
       if (errorMessage.includes('CodeMismatchException')) {
         setError('Invalid verification code. Please check and try again.');
@@ -95,8 +95,8 @@ export const ConfirmEmail: React.FC = () => {
     try {
       await authService.resendConfirmationCode(email);
       setSuccess('Verification code sent! Please check your email.');
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend verification code');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to resend verification code');
     } finally {
       setIsResending(false);
     }

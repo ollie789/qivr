@@ -6,14 +6,14 @@ import { MainLayout } from './layouts/MainLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 
 // Pages
-import { Dashboard } from './pages/Dashboard';
+import Dashboard from './pages/Dashboard';
 import { Evaluations } from './pages/Evaluations';
 import { EvaluationDetail } from './pages/EvaluationDetail';
-import { Appointments } from './pages/Appointments';
+import Appointments from './pages/Appointments';
 import { BookAppointment } from './pages/BookAppointment';
 import PROMEnhanced from './pages/PROMEnhanced';
 import { CompletePROM } from './pages/CompletePROM';
-import { Profile } from './pages/Profile';
+import Profile from './pages/Profile';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';

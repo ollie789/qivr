@@ -11,7 +11,13 @@ import {
 } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import api from '../lib/api-client';
+import api, { handleApiError } from '../lib/api-client';
+
+interface VerifyEmailResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
 
 const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -29,24 +35,20 @@ const VerifyEmail: React.FC = () => {
       }
 
       try {
-        const response = await api.post('/api/EmailVerification/verify', {
+        const response = await api.post<VerifyEmailResponse>('/api/EmailVerification/verify', {
           token,
         });
 
-        if (response.data.success) {
+        if (response.success) {
           setStatus('success');
-          setMessage('Your email has been verified successfully! You can now log in.');
+          setMessage(response.message ?? 'Your email has been verified successfully! You can now log in.');
         } else {
           setStatus('error');
-          setMessage(response.data.error || 'Verification failed. Please try again.');
+          setMessage(response.error || 'Verification failed. Please try again.');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         setStatus('error');
-        if (error.response?.data?.error) {
-          setMessage(error.response.data.error);
-        } else {
-          setMessage('An error occurred during verification. Please try again later.');
-        }
+        setMessage(handleApiError(error, 'An error occurred during verification. Please try again later.'));
       }
     };
 
@@ -63,10 +65,11 @@ const VerifyEmail: React.FC = () => {
     const email = localStorage.getItem('pendingVerificationEmail');
     if (email) {
       try {
-        await api.post('/api/EmailVerification/resend', { email });
+        await api.post<VerifyEmailResponse>('/api/EmailVerification/resend', { email });
         setMessage('A new verification email has been sent. Please check your inbox.');
-      } catch (error) {
-        setMessage('Failed to resend verification email. Please try again later.');
+      } catch (error: unknown) {
+        console.error('Failed to resend verification email:', error);
+        setMessage(handleApiError(error, 'Failed to resend verification email. Please try again later.'));
       }
     }
   };

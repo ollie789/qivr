@@ -1,225 +1,106 @@
 # QIVR Healthcare Platform
 
-## 🏥 Overview
-QIVR is a comprehensive healthcare platform connecting patients with allied health providers. Built with .NET Core 8.0 backend and React/TypeScript frontends, it provides multi-tenant support with AWS Cognito authentication.
+QIVR connects allied health providers with patients through a multi-tenant platform built on ASP.NET Core 8 and React/TypeScript clients. This repository hosts the API, the clinic and patient portals, and the shared tooling that keeps them in sync.
 
-## 🚀 Quick Start
+## 🚀 Quick start
 
 ```bash
-# Install dependencies
+# Clone & install
+git clone git@github.com:qivr-health/qivr.git
+cd qivr
 npm install
 
-# Start all services
-./start-all.sh
+# Start infrastructure (Postgres, Redis, MinIO, Mailhog)
+npm run docker:up
 
-# Or start individually:
-docker compose up -d     # Infrastructure (PostgreSQL, Redis, MinIO)
-npm run backend:dev      # Backend API
-npm run clinic:dev       # Clinic Dashboard  
-npm run patient:dev      # Patient Portal
+# Run the API (http://localhost:5050)
+npm run backend:dev
+
+# In separate terminals run the frontends
+npm run clinic:dev    # http://localhost:3010
+npm run patient:dev   # http://localhost:3005
+npm run widget:dev    # http://localhost:3000
 ```
 
-## 🤝 Contributor Guide
+Copy the `.env.example` files in `backend/` and each app workspace, then drop in your Cognito pool IDs, client IDs, and API URL (`http://localhost:5050` for local dev). More detail lives in [docs/setup.md](docs/setup.md).
 
-Start with [AGENTS.md](AGENTS.md) for contributor expectations, tooling tips, and pull request norms before diving into feature work.
+## 📍 Services & ports
 
-## 📍 Service URLs
+| Surface | Port | URL | Notes |
+| --- | --- | --- | --- |
+| Backend API | 5050 | http://localhost:5050 | Swagger at `/swagger` |
+| Clinic dashboard | 3010 | http://localhost:3010 | React + Vite dev server |
+| Patient portal | 3005 | http://localhost:3005 | React + Vite dev server |
+| Widget | 3000 | http://localhost:3000 | Embeddable widget playground |
+| PostgreSQL | 5432 | — | User `qivr_user`, database `qivr` |
+| Redis | 6379 | — | Ephemeral cache |
+| MinIO | 9000 / 9001 | http://localhost:9001 | S3-compatible storage |
+| Mailhog | 1025 / 8025 | http://localhost:8025 | Email catcher for dev |
 
-| Service | Port | URL | Description |
-|---------|------|-----|-------------|
-| **Backend API** | 5050 | http://localhost:5050 | REST API & Swagger |
-| **Clinic Dashboard** | 3001 | http://localhost:3001 | Provider interface |
-| **Patient Portal** | 3000/3005 | http://localhost:3000 | Patient interface |
-| **Widget** | 3003 | http://localhost:3003 | Embeddable booking |
-| **pgAdmin** | 8081 | http://localhost:8081 | Database management |
-| **MinIO Console** | 9001 | http://localhost:9001 | S3 storage UI |
-| **Mailhog** | 8025 | http://localhost:8025 | Email testing |
+Seed data creates `test.doctor@clinic.com` (`ClinicTest123!`) and `patient@qivr.health` (`Patient123!`) after running `database/seed-data.sql`.
 
-## 🔑 Test Credentials
-
-### Clinic Dashboard
-- Email: `clinic@qivr.health` or `test.doctor@clinic.com`
-- Password: `Clinic123!` or `ClinicTest123!`
-- Tenant ID: `b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11`
-
-### Patient Portal
-- Email: `patient@qivr.health`
-- Password: `Patient123!`
-
-## 🏗️ Architecture
+## 🏗️ Project layout
 
 ```
 qivr/
-├── apps/                    # Frontend applications
-│   ├── clinic-dashboard/    # React clinic management
-│   ├── patient-portal/      # React patient app
-│   └── widget/              # Embeddable widget
-├── backend/                 # .NET Core API
-│   ├── Qivr.Api/            # API controllers & middleware
-│   ├── Qivr.Core/           # Domain models & interfaces
-│   ├── Qivr.Infrastructure/ # Data access & external services
-│   └── Qivr.Services/       # Business logic
-├── packages/                # Shared packages
-│   └── http/                # Fetch wrapper with Cognito auth
-├── database/                # Database scripts
-└── infrastructure/          # Deployment & configuration
+├── apps/
+│   ├── clinic-dashboard/     # Staff-facing React app
+│   ├── patient-portal/       # Patient React app
+│   └── widget/               # Embeddable widget
+├── backend/
+│   ├── Qivr.Api/             # ASP.NET Core API
+│   ├── Qivr.Core/            # Domain contracts
+│   ├── Qivr.Infrastructure/  # EF Core + integrations
+│   └── Qivr.Services/        # Business logic layer
+├── packages/
+│   └── http/                 # Shared TS HTTP client
+├── database/                 # Migrations, seeds, helpers
+└── infrastructure/           # Terraform, deployment scripts
 ```
 
-## 💻 Development
+See [docs/architecture.md](docs/architecture.md) for a deeper walkthrough of each component.
 
-### Backend Development
-```bash
-cd backend
+## 🧑‍💻 Development
 
-# Run API
-dotnet watch run --project Qivr.Api --urls "http://localhost:5050"
+| Task | Command |
+| --- | --- |
+| Start API | `npm run backend:dev` |
+| Start clinic dashboard | `npm run clinic:dev` |
+| Start patient portal | `npm run patient:dev` |
+| Start widget | `npm run widget:dev` |
+| Run lint | `npm run lint` |
+| Run tests | `npm run test` (fan-outs via Turbo) |
+| Apply migrations | `npm run db:migrate` |
 
-# Run tests
-dotnet test
+Refer to [docs/development.md](docs/development.md) for branching conventions, coding standards, and helper scripts.
 
-# Database migrations
-dotnet ef migrations add MigrationName --project Qivr.Infrastructure --startup-project Qivr.Api
-dotnet ef database update --project Qivr.Infrastructure --startup-project Qivr.Api
-```
+## ✅ Testing
 
-### Frontend Development
-```bash
-# Install dependencies
-npm install
+- Backend: `cd backend && dotnet test`
+- React workspaces: `npm run test --workspace=@qivr/<app>`
+- Smoke check before pushing: `apps/check-status.sh`
+- Extra flows: `test-auth-flow.mjs`, `test-api-migration.ts`
 
-# Run specific app
-npm run clinic:dev    # Clinic dashboard
-npm run patient:dev   # Patient portal
-npm run widget:dev    # Widget
-
-# Build all
-npm run build
-
-# Lint & format
-npm run lint
-npm run format
-```
-
-### Docker Services
-```bash
-docker compose up -d     # Start all services
-docker compose down      # Stop all services
-docker compose logs -f   # View logs
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-Create `.env` files in each frontend app:
-
-```env
-# apps/clinic-dashboard/.env
-VITE_API_URL=http://localhost:5050
-VITE_COGNITO_REGION=ap-southeast-2
-VITE_COGNITO_USER_POOL_ID=your-pool-id
-VITE_COGNITO_CLIENT_ID=your-client-id
-```
-
-### AWS Cognito Setup
-- Region: `ap-southeast-2`
-- Separate User Pools for clinic staff and patients
-- JWT token refresh handled automatically by `@qivr/http` package
-
-## 📊 Current Status
-
-### ✅ Working Features
-- **Authentication**: AWS Cognito with multi-tenant support
-- **Dashboard**: Real-time metrics and analytics
-- **Patient Management**: Full CRUD operations
-- **Appointments**: Scheduling with provider availability
-- **Messaging**: Secure patient-provider communication
-- **Documents**: File upload/download with S3 storage
-- **PROM System**: Patient-reported outcome measures
-- **Settings**: User preferences and notifications
-
-### 🚧 In Progress
-- Calendar integration (Microsoft Graph)
-- SMS notifications (MessageMedia)
-- Telehealth video calls
-- Billing & insurance claims
-- Advanced analytics dashboard
-
-### 📈 Build Status (as of 2025-09-22)
-- **Compilation**: ✅ Success (0 errors, 100 warnings)
-- **Database**: Migration ready for new entities
-- **API Coverage**: 10/18 controllers fully functional
-- **Test Coverage**: Pending implementation
-
-## 🛠️ Troubleshooting
-
-### Build Issues
-```bash
-# Clear build artifacts
-dotnet clean
-rm -rf bin/ obj/
-
-# Restore packages
-dotnet restore
-```
-
-### Authentication Issues
-```javascript
-// Clear browser storage
-localStorage.clear();
-sessionStorage.clear();
-// Then re-login
-```
-
-### Database Issues
-```bash
-# Check PostgreSQL status
-docker compose ps
-
-# Connect to database
-psql -h localhost -U qivr_user -d qivr
-
-# Reset database
-docker compose down -v
-docker compose up -d
-dotnet ef database update --project Qivr.Infrastructure --startup-project Qivr.Api
-```
-
-## 🚀 Deployment
-
-### Prerequisites
-- .NET 8.0 SDK
-- Node.js 20+
-- Docker & Docker Compose
-- PostgreSQL 16+
-
-### Production Deployment
-1. Set production environment variables
-2. Build applications:
-   ```bash
-   dotnet publish -c Release
-   npm run build
-   ```
-3. Run database migrations
-4. Deploy to hosting platform (AWS, Azure, etc.)
+The full testing guidance, including coverage expectations and CI behaviour, lives in [docs/testing.md](docs/testing.md).
 
 ## 📚 Documentation
 
-- [API Documentation](http://localhost:5050/swagger) - Swagger UI
-- [WARP.md](WARP.md) - AI assistant guidance
-- [Project Status](docs/PROJECT_STATUS.md) - Detailed feature status
+All documentation now sits under [`/docs`](docs/README.md). Start there for setup, architecture, operations, and security guides. Historical audits are preserved under [`/docs/archive`](docs/archive/).
 
 ## 🤝 Contributing
 
-1. Create feature branch from `main`
-2. Follow existing code patterns
-3. Ensure tenant isolation in all queries
-4. Add tests for new features
-5. Update relevant documentation
+- Read [AGENTS.md](AGENTS.md) for contributor etiquette and PR expectations.
+- Use feature branches, keep commits focused, and include screenshots/curl output for UI or API changes.
+- Update the relevant doc when altering workflows or infrastructure.
+
+## 🛠️ Troubleshooting & operations
+
+- Docker issues? `npm run docker:logs` and `npm run docker:down` usually clear stale containers.
+- Authentication stuck? Clear browser storage and run `node test-auth-flow.mjs`.
+- Port conflict? Adjust the Vite `server.port` value or stop the conflicting process.
+
+Find more runbook-style fixes, deployment reminders, and environment notes in [docs/operations.md](docs/operations.md).
 
 ## 📝 License
 
-Proprietary - All rights reserved
-
----
-
-*For detailed implementation status and technical documentation, see [PROJECT_STATUS.md](docs/PROJECT_STATUS.md)*
+Proprietary – all rights reserved.

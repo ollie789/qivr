@@ -16,12 +16,20 @@ import {
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { Email as EmailIcon } from '@mui/icons-material';
+import { api, handleApiError } from '../services/api';
+
+interface EmailVerificationResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
 
 export const Register = () => {
   const navigate = useNavigate();
   const { register: signUp } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     email: '',
@@ -40,6 +48,7 @@ export const Register = () => {
       [e.target.name]: e.target.value,
     });
     setError('');
+    setInfoMessage('');
   };
 
   const validateForm = () => {
@@ -87,11 +96,16 @@ export const Register = () => {
         formData.lastName
       );
 
-      if (result.userConfirmed) {
+      const isSignUpComplete = (result as { isSignUpComplete?: boolean })?.isSignUpComplete ?? false;
+
+      if (isSignUpComplete) {
         // User is already confirmed (shouldn't happen with email verification)
         navigate('/login');
       } else {
         // Redirect to confirmation page with email
+        setStep(1);
+        setInfoMessage('Registration successful! Please check your email for the verification code.');
+        localStorage.setItem('pendingVerificationEmail', formData.email);
         navigate('/confirm-email', { 
           state: { 
             email: formData.email,
@@ -99,29 +113,37 @@ export const Register = () => {
           } 
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Registration error:', err);
-      setError(err.message || 'Failed to create account. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendVerification = async () => {
+    if (!formData.email) {
+      setError('Please enter your email address first.');
+      return;
+    }
+
     setLoading(true);
+    setError('');
+    setInfoMessage('');
     try {
-      const response = await fetch('/api/EmailVerification/resend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email }),
-      });
-      
-      if (response.ok) {
-        setError('');
-        alert('Verification email resent. Please check your inbox.');
+      const response = await api.post<EmailVerificationResponse>(
+        '/api/EmailVerification/resend',
+        { email: formData.email },
+      );
+
+      if (response.success) {
+        setInfoMessage(response.message ?? 'Verification email resent. Please check your inbox.');
+      } else {
+        setError(response.error ?? 'Failed to resend verification email');
       }
-    } catch (err) {
-      setError('Failed to resend verification email');
+    } catch (err: unknown) {
+      console.error('Resend verification email error:', err);
+      setError(handleApiError(err, 'Failed to resend verification email'));
     } finally {
       setLoading(false);
     }
@@ -145,9 +167,9 @@ export const Register = () => {
 
           {step === 0 && (
             <Box component="form" onSubmit={handleSubmit}>
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
+              {(error || infoMessage) && (
+                <Alert severity={error ? 'error' : 'success'} sx={{ mb: 2 }}>
+                  {error || infoMessage}
                 </Alert>
               )}
 

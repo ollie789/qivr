@@ -16,36 +16,26 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
-  Alert,
   CircularProgress,
   Paper,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  ListItemButton,
   Skeleton,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
 } from '@mui/material';
 import {
   Person as PersonIcon,
-  CalendarMonth as CalendarIcon,
-  Schedule as ScheduleIcon,
   LocationOn as LocationIcon,
   VideoCall as VideoCallIcon,
   CheckCircle as CheckCircleIcon,
   ArrowBack as ArrowBackIcon,
-  ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { format, addDays, setHours, setMinutes, isSameDay, isAfter } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { api } from '../services/api';
 
 interface Provider {
@@ -91,13 +81,14 @@ export const BookAppointment: React.FC = () => {
   // Fetch providers
   const { data: providers, isLoading: providersLoading } = useQuery<Provider[]>({
     queryKey: ['providers'],
-    queryFn: () => api.get('/providers').then(res => res.data),
+    queryFn: () => api.get<Provider[]>('/providers'),
   });
 
   // Fetch services
   const { data: services, isLoading: servicesLoading } = useQuery<Service[]>({
     queryKey: ['services', bookingData.providerId],
-    queryFn: () => api.get(`/services?providerId=${bookingData.providerId}`).then(res => res.data),
+    queryFn: () =>
+      api.get<Service[]>(`/services?providerId=${bookingData.providerId}`),
     enabled: !!bookingData.providerId,
   });
 
@@ -106,7 +97,7 @@ export const BookAppointment: React.FC = () => {
     queryKey: ['timeSlots', bookingData.providerId, selectedDate],
     queryFn: () => {
       const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
-      return api.get(`/appointments/availability?providerId=${bookingData.providerId}&date=${dateStr}`).then(res => res.data);
+      return api.get<TimeSlot[]>(`/appointments/availability?providerId=${bookingData.providerId}&date=${dateStr}`);
     },
     enabled: !!bookingData.providerId && !!selectedDate,
   });
@@ -342,10 +333,10 @@ export const BookAppointment: React.FC = () => {
           </Box>
         );
 
-      case 3:
+      case 3: {
         const provider = getSelectedProvider();
         const service = getSelectedService();
-        
+
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -413,6 +404,7 @@ export const BookAppointment: React.FC = () => {
             </Paper>
           </Box>
         );
+      }
 
       default:
         return null;

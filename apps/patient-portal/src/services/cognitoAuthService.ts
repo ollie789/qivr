@@ -15,10 +15,14 @@ import {
   updateMFAPreference,
   resendSignUpCode,
   type SignInInput,
+  type SignInOutput,
   type SignUpInput,
+  type SignUpOutput,
   type ConfirmSignUpInput,
+  type ConfirmSignUpOutput,
   type ResetPasswordInput,
   type ConfirmResetPasswordInput,
+  type ResetPasswordOutput,
 } from '@aws-amplify/auth';
 import { Hub } from '@aws-amplify/core';
 
@@ -55,8 +59,12 @@ export interface MFASetupData {
   secretKey: string;
 }
 
+type SignInResult = SignInOutput & { isSignedIn: boolean };
+type ConfirmSignUpResult = ConfirmSignUpOutput | { isSignedIn: boolean };
+type ForgotPasswordResult = ResetPasswordOutput;
+
 class CognitoAuthService {
-  private authStateChangeCallbacks: ((isAuthenticated: boolean) => void)[] = [];
+  private authStateChangeCallbacks: Array<(isAuthenticated: boolean) => void> = [];
 
   constructor() {
     this.setupAuthListener();
@@ -93,7 +101,7 @@ class CognitoAuthService {
     };
   }
 
-  async signIn(email: string, password: string): Promise<any> {
+  async signIn(email: string, password: string): Promise<SignInResult> {
     try {
       const result = await signIn({
         username: email,
@@ -126,13 +134,13 @@ class CognitoAuthService {
         ...result,
         isSignedIn
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign in error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  async signUp(data: SignUpData): Promise<any> {
+  async signUp(data: SignUpData): Promise<SignUpOutput> {
     try {
       const result = await signUp({
         username: data.email,
@@ -151,13 +159,13 @@ class CognitoAuthService {
       } as SignUpInput);
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign up error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  async confirmSignUp(email: string, code: string): Promise<any> {
+  async confirmSignUp(email: string, code: string): Promise<ConfirmSignUpResult> {
     try {
       const result = await confirmSignUp({
         username: email,
@@ -171,7 +179,7 @@ class CognitoAuthService {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Confirm sign up error:', error);
       throw this.handleAuthError(error);
     }
@@ -180,7 +188,7 @@ class CognitoAuthService {
   async resendConfirmationCode(email: string): Promise<void> {
     try {
       await resendSignUpCode({ username: email });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Resend confirmation code error:', error);
       throw this.handleAuthError(error);
     }
@@ -189,17 +197,17 @@ class CognitoAuthService {
   async signOut(): Promise<void> {
     try {
       await signOut();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign out error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  async forgotPassword(email: string): Promise<any> {
+  async forgotPassword(email: string): Promise<ForgotPasswordResult> {
     try {
       const result = await resetPassword({ username: email } as ResetPasswordInput);
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Forgot password error:', error);
       throw this.handleAuthError(error);
     }
@@ -212,7 +220,7 @@ class CognitoAuthService {
         confirmationCode: code,
         newPassword,
       } as ConfirmResetPasswordInput);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Confirm forgot password error:', error);
       throw this.handleAuthError(error);
     }
@@ -265,19 +273,19 @@ class CognitoAuthService {
       if (attributes.phone_number) updateAttributes.phone_number = attributes.phone_number;
       
       await updateUserAttributes({ userAttributes: updateAttributes });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Update user attributes error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  async confirmUserAttribute(attributeName: string, code: string): Promise<void> {
+  async confirmUserAttribute(attributeName: 'email' | 'phone_number', code: string): Promise<void> {
     try {
       await confirmUserAttribute({
-        userAttributeKey: attributeName as any,
+        userAttributeKey: attributeName,
         confirmationCode: code,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Confirm user attribute error:', error);
       throw this.handleAuthError(error);
     }
@@ -293,7 +301,7 @@ class CognitoAuthService {
         qrCode: qrCodeUrl,
         secretKey: secretCode,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Setup MFA error:', error);
       throw this.handleAuthError(error);
     }
@@ -303,7 +311,7 @@ class CognitoAuthService {
     try {
       await verifyTOTPSetup({ code: token });
       await updateMFAPreference({ totp: 'PREFERRED' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Verify MFA token error:', error);
       throw this.handleAuthError(error);
     }
@@ -312,14 +320,14 @@ class CognitoAuthService {
   async disableMFA(): Promise<void> {
     try {
       await updateMFAPreference({ totp: 'NOT_PREFERRED' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Disable MFA error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  private handleAuthError(error: any): Error {
-    const errorMessage = error.message || error.toString();
+  private handleAuthError(error: unknown): Error {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     
     // Map Cognito error codes to user-friendly messages
     if (errorMessage.includes('UserNotFoundException')) {

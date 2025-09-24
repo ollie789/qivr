@@ -62,9 +62,9 @@ export const Login: React.FC = () => {
       } else {
         setError(result.error || 'Invalid email or password');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      setError(err.message || 'Invalid email or password');
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
@@ -81,8 +81,8 @@ export const Login: React.FC = () => {
         await signInWithFacebook();
       }
       navigate(from, { replace: true });
-    } catch (err: any) {
-      setError(err.message || `Failed to sign in with ${provider}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : `Failed to sign in with ${provider}`);
     } finally {
       setIsLoading(false);
     }
