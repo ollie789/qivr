@@ -1,9 +1,12 @@
 import { format } from 'date-fns';
 
+// Type for exportable data - any object with string keys
+type ExportableData = Record<string, unknown>;
+
 /**
  * Convert array of objects to CSV string
  */
-export function arrayToCSV(data: any[], columns?: { key: string; label: string }[]): string {
+export function arrayToCSV(data: ExportableData[], columns?: { key: string; label: string }[]): string {
   if (!data || data.length === 0) {
     return '';
   }
@@ -35,14 +38,14 @@ export function arrayToCSV(data: any[], columns?: { key: string; label: string }
 /**
  * Get nested object value using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
+function getNestedValue(obj: ExportableData, path: string): unknown {
   return path.split('.').reduce((current, key) => current?.[key], obj);
 }
 
 /**
  * Download data as CSV file
  */
-export function downloadCSV(data: any[], filename: string, columns?: { key: string; label: string }[]) {
+export function downloadCSV(data: ExportableData[], filename: string, columns?: { key: string; label: string }[]) {
   const csv = arrayToCSV(data, columns);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -58,7 +61,7 @@ export function downloadCSV(data: any[], filename: string, columns?: { key: stri
 /**
  * Convert array to Excel-compatible HTML table
  */
-export function arrayToExcelHTML(data: any[], columns?: { key: string; label: string }[]): string {
+export function arrayToExcelHTML(data: ExportableData[], columns?: { key: string; label: string }[]): string {
   if (!data || data.length === 0) {
     return '<table></table>';
   }
@@ -111,7 +114,7 @@ function escapeHtml(text: string): string {
 /**
  * Download data as Excel file (using HTML table format)
  */
-export function downloadExcel(data: any[], filename: string, columns?: { key: string; label: string }[]) {
+export function downloadExcel(data: ExportableData[], filename: string, columns?: { key: string; label: string }[]) {
   const html = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
     <head>
@@ -173,7 +176,7 @@ export const intakeQueueColumns = [
 /**
  * Prepare intake data for export
  */
-export function prepareIntakeExportData(intakes: IntakeExportData[]): any[] {
+export function prepareIntakeExportData(intakes: IntakeExportData[]): ExportableData[] {
   return intakes.map(intake => ({
     ...intake,
     symptomsString: intake.symptoms ? intake.symptoms.join(', ') : '',
@@ -222,7 +225,7 @@ export const patientColumns = [
 /**
  * Prepare patient data for export
  */
-export function preparePatientExportData(patients: PatientExportData[]): any[] {
+export function preparePatientExportData(patients: PatientExportData[]): ExportableData[] {
   return patients.map(patient => ({
     ...patient,
     addressString: patient.address 

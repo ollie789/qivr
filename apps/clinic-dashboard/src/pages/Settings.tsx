@@ -15,7 +15,6 @@ import {
   ListItemSecondaryAction,
   Avatar,
   Paper,
-  Divider,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -24,11 +23,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent,
   Tabs,
   Tab,
   Alert,
-  FormControlLabel,
   Chip,
   IconButton,
   Table,
@@ -37,7 +34,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  FormGroup,
   InputAdornment,
 } from '@mui/material';
 import {
@@ -62,14 +58,9 @@ import {
   Refresh as RefreshIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
-  Person as PersonIcon,
-  AdminPanelSettings as AdminIcon,
-  MedicalServices as MedicalIcon,
-  Support as SupportIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
-import { useAuthStore } from '../stores/authStore';
 import { useSnackbar } from 'notistack';
 
 interface TabPanelProps {
@@ -182,7 +173,6 @@ const TabPanel = (props: TabPanelProps) => {
 };
 
 export default function Settings() {
-  const { user } = useAuthStore();
   const { enqueueSnackbar } = useSnackbar();
   const [tabValue, setTabValue] = useState(0);
   const [editMode, setEditMode] = useState(false);

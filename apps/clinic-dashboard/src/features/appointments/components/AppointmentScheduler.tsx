@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Dialog,
@@ -40,7 +40,20 @@ import {
   NavigateBefore as BackIcon,
 } from '@mui/icons-material';
 import { format, addDays } from 'date-fns';
-import { getWithAuth, postWithAuth } from '@qivr/http';
+import { postWithAuth } from '@qivr/http';
+
+// Type for scheduled appointment result
+interface ScheduledAppointment {
+  id: string;
+  patientId: string;
+  providerId: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  status: string;
+  location?: string;
+  videoLink?: string;
+}
 
 interface AppointmentSchedulerProps {
   open: boolean;
@@ -48,7 +61,7 @@ interface AppointmentSchedulerProps {
   patientId?: string;
   patientName?: string;
   evaluationId?: string;
-  onScheduled?: (appointment: any) => void;
+  onScheduled?: (appointment: ScheduledAppointment) => void;
 }
 
 interface Provider {
@@ -96,19 +109,16 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   // Mock data - replace with API calls
   const [providers, setProviders] = useState<Provider[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [proposedSlots, setProposedSlots] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (open) {
-      fetchProviders();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (selectedProvider && selectedDate) {
-      fetchAvailability();
-    }
-  }, [selectedProvider, selectedDate]);
+  // Type for proposed appointment slots
+  interface ProposedSlot {
+    date: string;
+    time: string;
+    providerId: string;
+    providerName: string;
+    available: boolean;
+  }
+  
+  const [proposedSlots, setProposedSlots] = useState<ProposedSlot[]>([]);
 
   const fetchProviders = async () => {
     try {
@@ -145,17 +155,20 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     }
   };
 
-  const fetchAvailability = async () => {
+  const fetchAvailability = useCallback(async () => {
     try {
       setLoading(true);
       // TODO: Replace with actual API call
-      const params = new URLSearchParams({
-        providerId: selectedProvider?.id || '',
-        startDate: format(selectedDate!, 'yyyy-MM-dd'),
-        endDate: format(selectedDate!, 'yyyy-MM-dd'),
-        duration: String(appointmentTypes.find(t => t.value === appointmentType)?.duration || 30),
-      });
-      const response = await getWithAuth<any>(`/api/calendar/availability?${params}`);
+      // Will use selectedProvider, selectedDate, and appointmentType when API is implemented
+      // const params = new URLSearchParams({
+      //   providerId: selectedProvider?.id || '',
+      //   startDate: format(selectedDate!, 'yyyy-MM-dd'),
+      //   endDate: format(selectedDate!, 'yyyy-MM-dd'),
+      //   duration: String(appointmentTypes.find(t => t.value === appointmentType)?.duration || 30),
+      // });
+      // TODO: Use the response from the availability API
+      // const response = await getWithAuth<TimeSlot[]>(`/api/calendar/availability?${params}`);
+      // For now, using mock data
       
       // Generate time slots for the day
       const slots: TimeSlot[] = [];
@@ -179,13 +192,25 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      fetchProviders();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (selectedProvider && selectedDate) {
+      fetchAvailability();
+    }
+  }, [selectedProvider, selectedDate, fetchAvailability]);
 
   const proposeAlternativeTimes = async () => {
     try {
       setLoading(true);
       // TODO: Replace with actual API call
-      const response = await postWithAuth<any>('/api/calendar/appointments/propose', {
+      const response = await postWithAuth<{ proposedSlots: ProposedSlot[] }>('/api/calendar/appointments/propose', {
         providerId: selectedProvider?.id,
         duration: appointmentTypes.find(t => t.value === appointmentType)?.duration,
         preferredDates: [
@@ -237,7 +262,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       };
       
       // TODO: Replace with actual API call
-      const response = await postWithAuth<any>('/api/calendar/appointments', appointmentData);
+      const response = await postWithAuth<{ appointment?: ScheduledAppointment }>('/api/calendar/appointments', appointmentData);
       
       onScheduled?.(response.appointment || response);
       onClose();
@@ -502,7 +527,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       </Paper>
       
       <Alert severity="info" sx={{ mt: 2 }}>
-        A confirmation will be sent to the patient's email and SMS.
+        A confirmation will be sent to the patient{"'s"} email and SMS.
       </Alert>
     </Box>
   );

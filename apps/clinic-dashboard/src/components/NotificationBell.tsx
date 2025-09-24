@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   IconButton,
   Badge,
   Menu,
-  MenuItem,
   List,
   ListItem,
   ListItemText,
@@ -21,22 +20,18 @@ import {
   Sms as SmsIcon,
   Assignment as AssignmentIcon,
   Event as EventIcon,
-  CheckCircle as CheckIcon,
-  MoreVert as MoreIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import api from "../lib/api-client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Notification as NotificationType } from '../types';
 
-interface Notification {
-  id: string;
+interface Notification extends Omit<NotificationType, 'isRead' | 'type'> {
   type: 'email' | 'sms' | 'appointment' | 'prom' | 'system';
-  title: string;
-  message: string;
   read: boolean;
   createdAt: Date;
-  data?: any;
+  data?: unknown;
 }
 
 const NotificationBell: React.FC = () => {
@@ -48,7 +43,7 @@ const NotificationBell: React.FC = () => {
     queryKey: ['notifications'],
     queryFn: async () => {
       const response = await api.get('/api/Notifications');
-      return response.data.map((n: any) => ({
+      return response.data.map((n: Notification) => ({
         ...n,
         createdAt: new Date(n.createdAt),
       }));

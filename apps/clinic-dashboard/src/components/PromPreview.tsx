@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,7 +13,6 @@ import {
   RadioGroup,
   FormControlLabel,
   FormControl,
-  FormLabel,
   TextField,
   Checkbox,
   FormGroup,
@@ -25,7 +24,6 @@ import {
   Alert,
   Chip,
   IconButton,
-  Divider,
 } from '@mui/material';
 import {
   Preview as PreviewIcon,
@@ -35,14 +33,23 @@ import {
   Timer as TimerIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import { promInstanceApi, PromPreviewDto, PromQuestionDto } from '../services/promInstanceApi';
+import {
+  promInstanceApi,
+  PromPreviewDto,
+  PromQuestionDto,
+} from '../services/promInstanceApi';
+import type {
+  PromTemplateDetail,
+  PromTemplateQuestion,
+  PromAnswerValue,
+} from '../services/promApi';
 import { useSnackbar } from 'notistack';
 
 interface PromPreviewProps {
   open: boolean;
   onClose: () => void;
   templateId?: string;
-  templateData?: any; // Full template data if available
+  templateData?: PromTemplateDetail; // Full template data if available
 }
 
 export const PromPreview: React.FC<PromPreviewProps> = ({
@@ -55,32 +62,10 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<PromPreviewDto | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<Record<string, PromAnswerValue>>({});
   const [showAllQuestions, setShowAllQuestions] = useState(false);
 
-  useEffect(() => {
-    if (open && templateId) {
-      loadPreview();
-    } else if (open && templateData) {
-      // Use provided template data
-      setPreview({
-        templateId: templateData.id,
-        templateName: templateData.name,
-        description: templateData.description || '',
-        estimatedTimeMinutes: Math.ceil(templateData.questions?.length * 0.5) || 5,
-        questionCount: templateData.questions?.length || 0,
-        questions: templateData.questions?.map((q: any) => ({
-          id: q.id,
-          text: q.text,
-          type: q.type,
-          required: q.required !== false,
-          options: q.options,
-        })) || [],
-      });
-    }
-  }, [open, templateId, templateData]);
-
-  const loadPreview = async () => {
+  const loadPreview = useCallback(async () => {
     if (!templateId) return;
     
     setLoading(true);
@@ -93,9 +78,31 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [templateId, enqueueSnackbar]);
 
-  const handleAnswer = (questionId: string, value: any) => {
+  useEffect(() => {
+    if (open && templateId) {
+      loadPreview();
+    } else if (open && templateData) {
+      // Use provided template data
+      setPreview({
+        templateId: templateData.id,
+        templateName: templateData.name,
+        description: templateData.description || '',
+        estimatedTimeMinutes: Math.ceil(templateData.questions?.length * 0.5) || 5,
+        questionCount: templateData.questions?.length || 0,
+        questions: templateData.questions?.map((q: PromTemplateQuestion) => ({
+          id: q.id,
+          text: q.text,
+          type: q.type,
+          required: q.required !== false,
+          options: q.options,
+        })) || [],
+      });
+    }
+  }, [open, templateId, templateData, loadPreview]);
+
+  const handleAnswer = (questionId: string, value: PromAnswerValue) => {
     setAnswers({ ...answers, [questionId]: value });
   };
 
@@ -155,13 +162,16 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
                 key={option}
                 control={
                   <Checkbox
-                    checked={value?.includes(option) || false}
+                    checked={Array.isArray(value) ? value.includes(option) : false}
                     onChange={(e) => {
-                      const current = value || [];
+                      const current = Array.isArray(value) ? value : [];
                       if (e.target.checked) {
                         handleAnswer(question.id, [...current, option]);
                       } else {
-                        handleAnswer(question.id, current.filter((v: string) => v !== option));
+                        handleAnswer(
+                          question.id,
+                          current.filter((v) => v !== option),
+                        );
                       }
                     }}
                   />
@@ -172,7 +182,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
           </FormGroup>
         );
 
-      case 'scale':
+      case 'scale': {
         const scaleOptions = question.options || ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
         const isNumeric = scaleOptions.every(opt => !isNaN(Number(opt)));
         
@@ -182,8 +192,18 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
           return (
             <Box sx={{ px: 2 }}>
               <Slider
-                value={value !== undefined ? Number(value) : min}
-                onChange={(_, newValue) => handleAnswer(question.id, newValue)}
+                value={typeof value === 'number' ? value : min}
+                onChange={(_, newValue) => {
+                  const numericValue = Array.isArray(newValue)
+                    ? newValue[0]
+                    : newValue;
+                  handleAnswer(
+                    question.id,
+                    typeof numericValue === 'number'
+                      ? numericValue
+                      : Number(numericValue),
+                  );
+                }}
                 min={min}
                 max={max}
                 step={1}
@@ -214,6 +234,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
             </RadioGroup>
           );
         }
+      }
 
       case 'boolean':
         return (
@@ -230,7 +251,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
       default:
         return (
           <Typography color="text.secondary">
-            Question type "{question.type}" preview not available
+            Question type {`"${question.type}"`} preview not available
           </Typography>
         );
     }

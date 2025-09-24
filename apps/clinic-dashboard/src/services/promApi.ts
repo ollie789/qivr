@@ -1,4 +1,4 @@
-import apiClient from "./sharedApiClient";
+import apiClient from '../lib/api-client';
 import { PromInstanceDto } from "./promInstanceApi";
 
 export interface PromTemplateQuestion {
@@ -57,12 +57,15 @@ export interface CreatePromTemplateRequest {
   version?: number;
 }
 
+// Type for PROM answer values
+export type PromAnswerValue = string | number | boolean | string[] | Date | null;
+
 export interface PromResponse {
   id: string;
   templateId: string;
   patientId: string;
   patientName: string;
-  responses: Record<string, any>;
+  responses: Record<string, PromAnswerValue>;
   status: "pending" | "in-progress" | "completed" | "expired" | "cancelled";
   startedAt?: string;
   completedAt?: string;
@@ -183,7 +186,7 @@ class PromApi {
     return await apiClient.get(`/api/v1/proms/instances/${id}`);
   }
 
-  async submitResponse(id: string, responses: Record<string, any>) {
+  async submitResponse(id: string, responses: Record<string, PromAnswerValue>) {
     return await apiClient.post(
       `/api/v1/proms/instances/${id}/answers`,
       responses,

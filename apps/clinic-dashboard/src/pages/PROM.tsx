@@ -8,17 +8,11 @@ import {
   Card,
   CardContent,
   CardActions,
-  TextField,
   IconButton,
   Tabs,
   Tab,
   Chip,
   Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  ListItemSecondaryAction,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -27,7 +21,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  LinearProgress,
   Table,
   TableBody,
   TableCell,
@@ -37,15 +30,12 @@ import {
   TablePagination,
   Alert,
   Stack,
-  Tooltip,
-  Badge,
   CircularProgress,
   Divider,
 } from '@mui/material';
 import {
   Send as SendIcon,
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
   Preview as PreviewIcon,
   Assessment as AssessmentIcon,
@@ -53,29 +43,23 @@ import {
   CheckCircle as CheckCircleIcon,
   PendingActions as PendingIcon,
   Cancel as CancelIcon,
-  TrendingUp as TrendingUpIcon,
-  Person as PersonIcon,
-  FilterList as FilterIcon,
-  Download as DownloadIcon,
   Email as EmailIcon,
   Refresh as RefreshIcon,
   Assignment as AssignmentIcon,
-  Timeline as TimelineIcon,
   QuestionAnswer as QuestionIcon,
   BarChart as ChartIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parseISO, differenceInDays, isAfter, isBefore } from 'date-fns';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, parseISO } from 'date-fns';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { promApi, PromTemplateSummary, PromResponse } from '../services/promApi';
-import { patientApi } from '../services/patientApi';
 import PROMSender from '../components/PROMSender';
 import { PromBuilder } from '../features/proms/components/PromBuilder';
 import { PromPreview } from '../components/PromPreview';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -99,7 +83,6 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const PROM: React.FC = () => {
-  const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   
   const [currentTab, setCurrentTab] = useState(0);
@@ -152,20 +135,6 @@ const PROM: React.FC = () => {
     },
   });
 
-  // Submit response mutation
-  const submitResponseMutation = useMutation({
-    mutationFn: ({ id, answers }: { id: string; answers: Record<string, any> }) =>
-      promApi.submitResponse(id, answers),
-    onSuccess: () => {
-      enqueueSnackbar('Response submitted successfully', { variant: 'success' });
-      refetchResponses();
-      setResponseDetailOpen(false);
-    },
-    onError: () => {
-      enqueueSnackbar('Failed to submit response', { variant: 'error' });
-    },
-  });
-
   // Calculate statistics
   const statistics = {
     total: responses.length,
@@ -187,7 +156,16 @@ const PROM: React.FC = () => {
     { name: 'Expired', value: statistics.expired, color: '#f44336' },
   ];
 
-  const trendsData = responses.reduce((acc: any[], response: PromResponse) => {
+  // Type for trends data accumulator
+  interface TrendsDataItem {
+    date: string;
+    count: number;
+    totalScore: number;
+    scoreCount: number;
+    avgScore?: number;
+  }
+
+  const trendsData = responses.reduce((acc: TrendsDataItem[], response: PromResponse) => {
     if (response.completedAt) {
       const date = format(parseISO(response.completedAt), 'MMM dd');
       const existing = acc.find(item => item.date === date);
@@ -227,7 +205,7 @@ const PROM: React.FC = () => {
     setResponseDetailOpen(true);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'success' | 'warning' | 'info' | 'error' | 'default' => {
     switch (status) {
       case 'completed': return 'success';
       case 'pending': return 'warning';
@@ -503,7 +481,7 @@ const PROM: React.FC = () => {
                             <Chip
                               icon={getStatusIcon(response.status)}
                               label={response.status}
-                              color={getStatusColor(response.status) as any}
+                              color={getStatusColor(response.status)}
                               size="small"
                             />
                           </TableCell>
@@ -688,7 +666,7 @@ const PROM: React.FC = () => {
             {selectedResponse && (
               <Chip
                 label={selectedResponse.status}
-                color={getStatusColor(selectedResponse.status) as any}
+                color={getStatusColor(selectedResponse.status)}
                 size="small"
                 sx={{ ml: 2 }}
               />

@@ -1,4 +1,4 @@
-import apiClient from './sharedApiClient';
+import apiClient from '../lib/api-client';
 
 export interface Appointment {
   id: string;

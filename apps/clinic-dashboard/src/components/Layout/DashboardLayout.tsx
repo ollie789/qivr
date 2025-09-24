@@ -30,7 +30,6 @@ import {
   Assignment as AssignmentIcon,
   Analytics as AnalyticsIcon,
   Settings as SettingsIcon,
-  Notifications as NotificationsIcon,
   AccountCircle as AccountIcon,
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -38,7 +37,7 @@ import {
   FolderOpen as DocumentsIcon,
   LocalHospital as MedicalIcon,
 } from '@mui/icons-material';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthActions, useAuthUser } from '../../stores/authStore';
 import NotificationBell from '../NotificationBell';
 
 const drawerWidth = 280;
@@ -75,7 +74,8 @@ const DashboardLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   
-  const { user, logout } = useAuthStore();
+  const user = useAuthUser();
+  const { logout } = useAuthActions();
 
   const handleDrawerToggle = () => {
     if (isMobile) {
@@ -98,10 +98,6 @@ const DashboardLayout: React.FC = () => {
 
   const handleProfileMenuClose = () => {
     setAnchorEl(null);
-  };
-
-  const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchor(event.currentTarget);
   };
 
   const handleNotificationClose = () => {

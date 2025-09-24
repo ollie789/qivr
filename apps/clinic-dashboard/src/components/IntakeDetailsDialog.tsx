@@ -8,10 +8,34 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { EvaluationViewer } from '../features/intake/components/EvaluationViewer';
 
+// Type for intake data
+interface IntakeData {
+  id: string;
+  patientName: string;
+  email?: string;
+  phone?: string;
+  dateOfBirth?: string;
+  submittedAt: string;
+  status?: string;
+  urgency?: string;
+  chiefComplaint: string;
+  symptoms?: string[];
+  painLocation?: string;
+  painLevel?: number;
+  duration?: string;
+  medicalHistory?: string;
+  medications?: string[];
+  allergies?: string[];
+  aiSummary?: string;
+  aiFlags?: string[];
+  triageNotes?: string;
+  internalNotes?: string;
+}
+
 interface IntakeDetailsDialogProps {
   open: boolean;
   onClose: () => void;
-  intake: any;
+  intake: IntakeData | null;
   onSchedule?: () => void;
 }
 

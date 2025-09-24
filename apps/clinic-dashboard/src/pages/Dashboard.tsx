@@ -32,13 +32,6 @@ import {
 import {
   LineChart,
   Line,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -51,13 +44,25 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
-import { useAuthStore } from "../stores/authStore";
+import { useAuthUser } from "../stores/authStore";
 import dashboardApi from "../services/dashboardApi";
 import analyticsApi, { ClinicAnalytics } from "../services/analyticsApi";
+import {
+  AppointmentTrendCard,
+  PromCompletionCard,
+  StatCardGrid,
+  TopDiagnosesCard,
+} from "../features/analytics";
+import type {
+  AppointmentTrendDatum,
+  DiagnosisDatum,
+  PromCompletionDatum,
+  StatCardItem,
+} from "../features/analytics";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const user = useAuthUser();
   const [chartPeriod, setChartPeriod] = React.useState("7d");
 
   // Fetch dashboard stats
@@ -95,9 +100,9 @@ const Dashboard: React.FC = () => {
   });
 
   // Create stats array with real data
-  const appointmentTrends = React.useMemo(() => {
+  const appointmentTrends = React.useMemo<AppointmentTrendDatum[]>(() => {
     if (!clinicAnalytics?.appointmentTrends) {
-      return [] as Array<Record<string, any>>;
+      return [];
     }
     const days = chartPeriod === "7d" ? 7 : chartPeriod === "30d" ? 30 : 90;
     const cutoff = subDays(new Date(), days);
@@ -114,15 +119,10 @@ const Dashboard: React.FC = () => {
       }));
   }, [clinicAnalytics, chartPeriod]);
 
-  const promCompletionData = React.useMemo(() => {
+  const promCompletionData = React.useMemo<PromCompletionDatum[]>(() => {
     const breakdown = clinicAnalytics?.promCompletionBreakdown ?? [];
     if (breakdown.length === 0) {
-      return [] as {
-        name: string;
-        completed: number;
-        pending: number;
-        completionRate: number;
-      }[];
+      return [];
     }
     return breakdown.map((item) => ({
       name: item.templateName,
@@ -132,14 +132,14 @@ const Dashboard: React.FC = () => {
     }));
   }, [clinicAnalytics]);
 
-  const conditionData = React.useMemo(() => {
+  const conditionData = React.useMemo<DiagnosisDatum[]>(() => {
     const diagnoses = clinicAnalytics?.topDiagnoses ?? [];
     const total = diagnoses.reduce((sum, item) => sum + item.count, 0) || 1;
 
     return diagnoses.slice(0, 5).map((diagnosis, index) => ({
       name: diagnosis.description,
-      value: diagnosis.count,
       percentage: (diagnosis.count / total) * 100,
+      value: diagnosis.count,
       color: ["#2563eb", "#7c3aed", "#10b981", "#f59e0b", "#6b7280"][index % 5],
     }));
   }, [clinicAnalytics]);
@@ -192,43 +192,49 @@ const Dashboard: React.FC = () => {
     };
   }, [clinicAnalytics, statsData]);
 
-  const stats = React.useMemo(
+  const stats = React.useMemo<StatCardItem[]>(
     () => [
       {
+        id: "appointments-today",
         title: "Appointments Today",
         value: derivedStats.todayAppointments.toString(),
         icon: <CalendarIcon />,
-        color: "#2563eb",
+        avatarColor: "#2563eb",
       },
       {
+        id: "pending-intakes",
         title: "Pending Intakes",
         value: derivedStats.pendingIntakes.toString(),
         icon: <AssignmentIcon />,
-        color: "#f59e0b",
+        avatarColor: "#f59e0b",
       },
       {
+        id: "active-patients",
         title: "Active Patients",
         value: derivedStats.activePatients.toString(),
         icon: <PeopleIcon />,
-        color: "#7c3aed",
+        avatarColor: "#7c3aed",
       },
       {
+        id: "average-wait-time",
         title: "Avg Wait Time",
         value: `${derivedStats.averageWaitTime} min`,
         icon: <AccessTimeIcon />,
-        color: "#10b981",
+        avatarColor: "#10b981",
       },
       {
+        id: "completed-today",
         title: "Completed Today",
         value: derivedStats.completedToday.toString(),
         icon: <CheckCircleIcon />,
-        color: "#10b981",
+        avatarColor: "#10b981",
       },
       {
+        id: "patient-satisfaction",
         title: "Patient Satisfaction",
         value: derivedStats.patientSatisfaction.toFixed(1),
         icon: <StarIcon />,
-        color: "#f59e0b",
+        avatarColor: "#f59e0b",
       },
     ],
     [derivedStats],
@@ -242,42 +248,17 @@ const Dashboard: React.FC = () => {
         Welcome back, {user?.name || "Doctor"}
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Here's your clinic overview for today
+        Here&apos;s your clinic overview for today
       </Typography>
 
       {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {isStatsLoading
-          ? // Loading skeletons
-            [...Array(6)].map((_, index) => (
-              <Grid item xs={12} sm={6} md={2} key={index}>
-                <Card>
-                  <CardContent>
-                    <Skeleton variant="rectangular" height={80} />
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
-          : stats.map((stat, index) => (
-              <Grid item xs={12} sm={6} md={2} key={index}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                      <Avatar sx={{ bgcolor: stat.color, mr: 2 }}>
-                        {stat.icon}
-                      </Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography color="text.secondary" variant="body2">
-                          {stat.title}
-                        </Typography>
-                        <Typography variant="h5">{stat.value}</Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-      </Grid>
+      <StatCardGrid
+        items={stats}
+        loading={isStatsLoading}
+        skeletonCount={6}
+        itemSizes={{ xs: 12, sm: 6, md: 2 }}
+        sx={{ mb: 3 }}
+      />
 
       {/* Main Content Grid */}
       <Grid container spacing={3}>
@@ -286,7 +267,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Today's Appointments
+                Today&apos;s Appointments
               </Typography>
               <List>
                 {appointmentsLoading ? (
@@ -399,7 +380,7 @@ const Dashboard: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 sx={{ mt: 2 }}
-                onClick={() => navigate("/intake-queue")}
+                onClick={() => navigate("/intake")}
               >
                 Review Intake Queue
               </Button>
@@ -409,179 +390,41 @@ const Dashboard: React.FC = () => {
 
         {/* Analytics Charts */}
         <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h6">Patient Appointments Trend</Typography>
-                <FormControl size="small">
-                  <Select
-                    value={chartPeriod}
-                    onChange={(e) => setChartPeriod(e.target.value)}
-                  >
-                    <MenuItem value="7d">Last 7 days</MenuItem>
-                    <MenuItem value="30d">Last 30 days</MenuItem>
-                    <MenuItem value="90d">Last 90 days</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart
-                  data={appointmentTrends || []}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+          <AppointmentTrendCard
+            data={appointmentTrends}
+            headerAction={
+              <FormControl size="small">
+                <Select
+                  value={chartPeriod}
+                  onChange={(e) => setChartPeriod(e.target.value)}
                 >
-                  <defs>
-                    <linearGradient
-                      id="colorAppointments"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient
-                      id="colorCompleted"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="appointments"
-                    stroke="#2563eb"
-                    fillOpacity={1}
-                    fill="url(#colorAppointments)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="completed"
-                    stroke="#10b981"
-                    fillOpacity={1}
-                    fill="url(#colorCompleted)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+                  <MenuItem value="7d">Last 7 days</MenuItem>
+                  <MenuItem value="30d">Last 30 days</MenuItem>
+                  <MenuItem value="90d">Last 90 days</MenuItem>
+                </Select>
+              </FormControl>
+            }
+          />
         </Grid>
 
         {/* PROM Response Rate */}
         <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                PROM Response Rate
-              </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={
-                      promCompletionData.length > 0
-                        ? promCompletionData.map((p) => ({
-                            name: p.name,
-                            value: p.completed,
-                            color:
-                              p.completed > 80
-                                ? "#10b981"
-                                : p.completed > 50
-                                  ? "#f59e0b"
-                                  : "#ef4444",
-                          }))
-                        : [{ name: "No Data", value: 100, color: "#e5e7eb" }]
-                    }
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) =>
-                      entry.name !== "No Data"
-                        ? `${entry.name}: ${entry.value}%`
-                        : ""
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {(promCompletionData.length > 0
-                      ? promCompletionData.map((p) => ({
-                          name: p.name,
-                          value: p.completed,
-                          color:
-                            p.completed > 80
-                              ? "#10b981"
-                              : p.completed > 50
-                                ? "#f59e0b"
-                                : "#ef4444",
-                        }))
-                      : [{ name: "No Data", value: 100, color: "#e5e7eb" }]
-                    ).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  {promCompletionData.length > 0
-                    ? `Overall response rate: ${Math.round(promCompletionData.reduce((sum, p) => sum + p.completed, 0) / promCompletionData.length)}%`
-                    : "No PROM data available"}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+          <PromCompletionCard
+            data={promCompletionData}
+            summaryFormatter={(average, { isEmpty }) =>
+              isEmpty ? "No PROM data available" : `Overall response rate: ${average}%`
+            }
+          />
         </Grid>
 
         {/* Patient Conditions Distribution */}
         <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Patient Conditions Distribution
-              </Typography>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart
-                  data={
-                    conditionData.length > 0
-                      ? conditionData
-                      : [{ name: "No Data", percentage: 0 }]
-                  }
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: number) =>
-                      `${value.toFixed ? value.toFixed(1) : value}%`
-                    }
-                  />
-                  <Bar dataKey="percentage" fill="#7c3aed" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <TopDiagnosesCard
+            title="Patient Conditions Distribution"
+            data={conditionData}
+            emptyMessage="No condition data available"
+            xAxisAngle={-45}
+          />
         </Grid>
 
         {/* Clinic Performance Metrics */}

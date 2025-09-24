@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthActions, useAuthStatus } from '../../stores/authStore';
 import { Box, CircularProgress } from '@mui/material';
 
 interface PrivateRouteProps {
@@ -8,12 +8,13 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStatus();
+  const { checkAuth } = useAuthActions();
   
   useEffect(() => {
     // Check if user is authenticated on mount
     checkAuth();
-  }, []);
+  }, [checkAuth]);
   
   // Show loading while checking authentication
   if (isLoading) {

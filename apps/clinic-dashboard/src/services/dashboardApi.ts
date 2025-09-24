@@ -1,4 +1,5 @@
 import api from '../lib/api-client';
+import type { Appointment } from '../types';
 
 export interface DashboardStats {
   todayAppointments: number;
@@ -31,7 +32,15 @@ export const dashboardApi = {
   // Get dashboard statistics from clinic dashboard overview
   async getStats(): Promise<DashboardStats> {
     try {
-      const data = await api.get<any>('/api/clinic-dashboard/overview');
+      const data = await api.get<{
+        statistics?: {
+          totalAppointmentsToday?: number;
+          pendingAppointments?: number;
+          totalPatientsThisWeek?: number;
+          completedAppointments?: number;
+          averageWaitTime?: number;
+        };
+      }>('/api/clinic-dashboard/overview');
       
       // Map the actual backend response to our dashboard stats
       return {
@@ -59,13 +68,28 @@ export const dashboardApi = {
   // Get recent activity from PROM submissions and appointments
   async getRecentActivity(): Promise<RecentActivity[]> {
     try {
-      const data = await api.get<any>('/api/clinic-dashboard/overview');
+      const data = await api.get<{
+        recentPromSubmissions?: Array<{
+          id: string;
+          patientName: string;
+          templateName: string;
+          submittedAt: string;
+          requiresReview?: boolean;
+        }>;
+        todaysAppointments?: Array<{
+          id: string;
+          patientName: string;
+          appointmentType?: string;
+          scheduledStart: string;
+          status?: string;
+        }>;
+      }>('/api/clinic-dashboard/overview');
       
       const activities: RecentActivity[] = [];
       
       // Add PROM submissions as activities
       if (data.recentPromSubmissions) {
-        data.recentPromSubmissions.forEach((prom: any) => {
+        data.recentPromSubmissions.forEach((prom) => {
           activities.push({
             id: prom.id,
             type: 'prom',
@@ -79,7 +103,7 @@ export const dashboardApi = {
       
       // Add today's appointments as activities
       if (data.todaysAppointments) {
-        data.todaysAppointments.forEach((apt: any) => {
+        data.todaysAppointments.forEach((apt) => {
           activities.push({
             id: apt.id,
             type: 'appointment',
@@ -112,9 +136,9 @@ export const dashboardApi = {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
       });
-      const response = await api.get<any[]>(`/api/Appointments?${params}`);
+      const response = await api.get<Appointment[]>(`/api/Appointments?${params}`);
       const appts = Array.isArray(response) ? response : [];
-      return appts.map((a: any) => ({
+      return appts.map((a) => ({
         id: a.id,
         patientName: a.patientName || '',
         time: new Date(a.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

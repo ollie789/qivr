@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
+// MUI Components
 import {
   Box,
   Card,
@@ -28,41 +29,50 @@ import {
   Tooltip,
   Divider,
   Stack,
-  Alert,
   Tab,
   Tabs,
-} from '@mui/material';
+} from '../components/mui';
+// Icons
 import {
-  CalendarMonth as CalendarIcon,
-  ViewWeek as WeekIcon,
-  ViewDay as DayIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Person as PersonIcon,
-  Schedule as ScheduleIcon,
-  VideoCall as VideoIcon,
-  LocationOn as LocationIcon,
-  ChevronLeft,
-  ChevronRight,
-  Today as TodayIcon,
-  AccessTime,
-  CheckCircle,
-  Cancel,
-  Pending,
-  Circle,
-  ViewList as ListIcon,
-  ViewModule as GridIcon,
-} from '@mui/icons-material';
+  CalendarMonthIcon,
+  ViewWeekIcon,
+  ViewDayIcon,
+  AddIcon,
+  VideoCallIcon,
+  LocationOnIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  TodayIcon,
+  CircleIcon,
+  ViewListIcon,
+  ViewModuleIcon,
+} from '../components/icons';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, isToday, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, parseISO, isSameMonth } from 'date-fns';
+// Date utilities
+import {
+  format,
+  addDays,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  isSameDay,
+  isToday,
+  addWeeks,
+  subWeeks,
+  addMonths,
+  subMonths,
+  setHours,
+  setMinutes,
+  parseISO,
+} from '../utils/date';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import apiClient from '../services/sharedApiClient';
+import apiClient from '../lib/api-client';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -110,7 +120,7 @@ const Appointments: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [viewTab, setViewTab] = useState(0); // 0 = calendar, 1 = list
-  const calendarRef = React.useRef<any>(null);
+  const calendarRef = React.useRef<FullCalendar>(null);
 
   // Form state for new appointment
   const [newAppointment, setNewAppointment] = useState({
@@ -159,8 +169,21 @@ const Appointments: React.FC = () => {
   });
 
   // Create appointment mutation
+  // Type for appointment creation
+  interface CreateAppointmentData {
+    patientName: string;
+    patientEmail: string;
+    patientPhone: string;
+    providerId: string;
+    scheduledStart: string;
+    scheduledEnd: string;
+    appointmentType: string;
+    notes?: string;
+    status: string;
+  }
+
   const createAppointmentMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: CreateAppointmentData) => {
       const response = await apiClient.post('/api/Appointments/book', data);
       return response.data;
     },
@@ -196,7 +219,7 @@ const Appointments: React.FC = () => {
     });
   }, [newAppointment, createAppointmentMutation]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'success' | 'error' | 'primary' | 'warning' | 'default' => {
     switch (status) {
       case 'confirmed': return 'success';
       case 'cancelled': return 'error';
@@ -271,7 +294,7 @@ const Appointments: React.FC = () => {
                           <Chip 
                             label={apt.status} 
                             size="small" 
-                            color={getStatusColor(apt.status) as any}
+                            color={getStatusColor(apt.status)}
                           />
                         </Box>
                       </CardContent>
@@ -418,7 +441,7 @@ const Appointments: React.FC = () => {
           onChange={(newDate) => newDate && setSelectedDate(newDate)}
           sx={{ width: '100%', height: 500 }}
           slots={{
-            day: (props: any) => {
+            day: (props: { day: Date; outsideCurrentMonth?: boolean }) => {
               const dayAppointments = appointments.filter((apt: Appointment) => 
                 isSameDay(parseISO(apt.scheduledStart), props.day)
               );
@@ -447,7 +470,7 @@ const Appointments: React.FC = () => {
                   {dayAppointments.length > 0 && (
                     <Box sx={{ display: 'flex', gap: 0.25, mt: 0.5 }}>
                       {dayAppointments.slice(0, 3).map((apt, idx) => (
-                        <Circle
+                        <CircleIcon
                           key={idx}
                           sx={{ 
                             fontSize: 6, 
@@ -513,7 +536,7 @@ const Appointments: React.FC = () => {
               </Grid>
               <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', gap: 1, alignItems: 'center' }}>
                 <IconButton onClick={() => navigateDate('prev')}>
-                  <ChevronLeft />
+                  <ChevronLeftIcon />
                 </IconButton>
                 <Button
                   startIcon={<TodayIcon />}
@@ -527,7 +550,7 @@ const Appointments: React.FC = () => {
                   {viewMode === 'month' && format(selectedDate, 'MMMM yyyy')}
                 </Typography>
                 <IconButton onClick={() => navigateDate('next')}>
-                  <ChevronRight />
+                  <ChevronRightIcon />
                 </IconButton>
               </Grid>
               <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -538,13 +561,13 @@ const Appointments: React.FC = () => {
                   size="small"
                 >
                   <ToggleButton value="day">
-                    <DayIcon />
+                    <ViewDayIcon />
                   </ToggleButton>
                   <ToggleButton value="week">
-                    <WeekIcon />
+                    <ViewWeekIcon />
                   </ToggleButton>
                   <ToggleButton value="month">
-                    <CalendarIcon />
+                    <CalendarMonthIcon />
                   </ToggleButton>
                 </ToggleButtonGroup>
               </Grid>
@@ -555,9 +578,9 @@ const Appointments: React.FC = () => {
         {/* View Tabs */}
         <Card sx={{ mb: 3 }}>
           <Tabs value={viewTab} onChange={(e, v) => setViewTab(v)}>
-            <Tab icon={<CalendarIcon />} label="Calendar View" />
-            <Tab icon={<GridIcon />} label="Grid View" />
-            <Tab icon={<ListIcon />} label="List View" />
+            <Tab icon={<CalendarMonthIcon />} label="Calendar View" />
+            <Tab icon={<ViewModuleIcon />} label="Grid View" />
+            <Tab icon={<ViewListIcon />} label="List View" />
           </Tabs>
         </Card>
 
@@ -704,7 +727,7 @@ const Appointments: React.FC = () => {
                                       <Chip 
                                         label={apt.status} 
                                         size="small" 
-                                        color={getStatusColor(apt.status) as any}
+                                        color={getStatusColor(apt.status)}
                                       />
                                     </Box>
                                   }
@@ -730,14 +753,14 @@ const Appointments: React.FC = () => {
                                   {apt.videoLink && (
                                     <Tooltip title="Video Call">
                                       <IconButton size="small">
-                                        <VideoIcon />
+                                        <VideoCallIcon />
                                       </IconButton>
                                     </Tooltip>
                                   )}
                                   {apt.location && (
                                     <Tooltip title={apt.location}>
                                       <IconButton size="small">
-                                        <LocationIcon />
+                                        <LocationOnIcon />
                                       </IconButton>
                                     </Tooltip>
                                   )}
@@ -758,7 +781,7 @@ const Appointments: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Today's Summary
+                  Today{"'"}s Summary
                 </Typography>
                 <Stack spacing={1}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -999,7 +1022,7 @@ const Appointments: React.FC = () => {
                 <Box>
                   <Chip 
                     label={selectedAppointment.status} 
-                    color={getStatusColor(selectedAppointment.status) as any}
+                    color={getStatusColor(selectedAppointment.status)}
                   />
                 </Box>
               </Stack>

@@ -19,7 +19,6 @@ import {
   ListItem,
   ListItemText,
   Rating,
-  Tooltip,
 } from '@mui/material';
 import {
   AccessTime,
@@ -33,11 +32,9 @@ import {
   Save,
   Cancel,
   Flag,
-  Notes,
-  Psychology,
-  Timeline,
   LocalHospital,
 } from '@mui/icons-material';
+import type { ChipProps } from '@mui/material/Chip';
 
 interface PainPoint {
   id: string;
@@ -91,7 +88,8 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [triageNotes, setTriageNotes] = useState(evaluation.triageNotes || '');
   const [internalNotes, setInternalNotes] = useState(evaluation.internalNotes || '');
-  const [urgency, setUrgency] = useState(evaluation.urgency);
+  const [urgency, setUrgency] = useState<EvaluationData['urgency']>(evaluation.urgency);
+  const urgencyLevels: EvaluationData['urgency'][] = ['low', 'medium', 'high', 'critical'];
 
   const handleSaveNotes = () => {
     const updated = {
@@ -104,12 +102,16 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
     setIsEditingNotes(false);
   };
 
-  const getUrgencyColor = (level: string) => {
+  const getUrgencyColor = (level: EvaluationData['urgency']): ChipProps['color'] => {
     switch (level) {
-      case 'critical': return 'error';
-      case 'high': return 'warning';
-      case 'medium': return 'info';
-      default: return 'default';
+      case 'critical':
+        return 'error';
+      case 'high':
+        return 'warning';
+      case 'medium':
+        return 'info';
+      default:
+        return 'default';
     }
   };
 
@@ -428,12 +430,12 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="subtitle2" gutterBottom>Urgency Level</Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
-                      {['low', 'medium', 'high', 'critical'].map((level) => (
+                      {urgencyLevels.map((level) => (
                         <Chip
                           key={level}
                           label={level.toUpperCase()}
                           color={urgency === level ? getUrgencyColor(level) : 'default'}
-                          onClick={() => setUrgency(level as any)}
+                          onClick={() => setUrgency(level)}
                           clickable
                         />
                       ))}

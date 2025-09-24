@@ -26,18 +26,11 @@ import {
   ListItemAvatar,
   ListItemText,
   ListItemSecondaryAction,
-  IconButton,
   Paper,
   Alert,
   Divider,
   Switch,
   InputAdornment,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -51,14 +44,7 @@ import {
   Preview as PreviewIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
-  Check as CheckIcon,
-  Close as CloseIcon,
-  Add as AddIcon,
-  Delete as DeleteIcon,
   Search as SearchIcon,
-  CalendarMonth as CalendarIcon,
-  AccessTime as TimeIcon,
-  Repeat as RepeatIcon,
   Email as EmailIcon,
   Sms as SmsIcon,
   Notifications as NotificationIcon,
@@ -69,7 +55,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, addDays } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { promApi, PromTemplateDetail, PromTemplateSummary } from '../services/promApi';
-import { patientApi } from '../services/patientApi';
+import { patientApi, type Patient, type PatientListResponse } from '../services/patientApi';
 
 interface PROMSenderProps {
   onComplete?: () => void;
@@ -78,6 +64,8 @@ interface PROMSenderProps {
 }
 
 const steps = ['Select Template', 'Choose Recipients', 'Configure Schedule', 'Set Notifications', 'Review & Send'];
+
+type ScheduleType = 'immediate' | 'scheduled' | 'recurring';
 
 const PROMSender: React.FC<PROMSenderProps> = ({
   onComplete,
@@ -91,7 +79,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   const [selectedPatients, setSelectedPatients] = useState<string[]>(
     preSelectedPatientId ? [preSelectedPatientId] : []
   );
-  const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
+  const [scheduleType, setScheduleType] = useState<ScheduleType>('immediate');
   const [scheduledDate, setScheduledDate] = useState<Date | null>(new Date());
   const [recurringConfig, setRecurringConfig] = useState({
     frequency: 'weekly',
@@ -124,7 +112,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
     enabled: Boolean(selectedTemplateId),
   });
 
-  const templateSummaries = templates ?? [];
+  const templateSummaries = useMemo(() => templates ?? [], [templates]);
   const selectedTemplateSummary = useMemo(
     () => templateSummaries.find((template) => template.id === selectedTemplateId) || null,
     [templateSummaries, selectedTemplateId]
@@ -136,7 +124,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   const activeTemplateQuestions = selectedTemplate?.questions ?? [];
 
   // Fetch patients
-  const { data: patientsData } = useQuery({
+  const { data: patientsData } = useQuery<PatientListResponse>({
     queryKey: ['patients', patientSearch, patientFilter],
     queryFn: () => patientApi.getPatients({
       search: patientSearch || undefined,
@@ -144,7 +132,12 @@ const PROMSender: React.FC<PROMSenderProps> = ({
     }),
   });
 
-  const patients = patientsData?.data || [];
+  const patients = patientsData?.data ?? [];
+
+  const handleScheduleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value as ScheduleType;
+    setScheduleType(value);
+  };
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -152,21 +145,6 @@ const PROMSender: React.FC<PROMSenderProps> = ({
 
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
-  };
-
-  const handleReset = () => {
-    setActiveStep(0);
-    setSelectedTemplateId('');
-    setSelectedPatients([]);
-    setScheduleType('immediate');
-    setNotificationSettings({
-      sendEmail: true,
-      sendSMS: false,
-      sendPushNotification: true,
-      reminderEnabled: true,
-      reminderDays: [1, 3, 7],
-      customMessage: '',
-    });
   };
 
   const handleSend = async () => {
@@ -352,7 +330,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
 
             {/* Patient List */}
             <List>
-              {patients.map((patient: any) => (
+              {patients.map((patient: Patient) => (
                 <ListItem key={patient.id}>
                   <ListItemAvatar>
                     <Avatar>
@@ -395,7 +373,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
             
             <RadioGroup
               value={scheduleType}
-              onChange={(e) => setScheduleType(e.target.value as any)}
+              onChange={handleScheduleTypeChange}
             >
               <FormControlLabel
                 value="immediate"

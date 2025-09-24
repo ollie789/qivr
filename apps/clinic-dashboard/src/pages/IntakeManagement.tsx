@@ -30,31 +30,27 @@ import {
   Stack,
   Menu,
 } from '@mui/material';
+import type { ChipProps } from '@mui/material/Chip';
 import {
   Visibility as ViewIcon,
   Assignment as AssignIcon,
   Schedule as ScheduleIcon,
-  Flag as FlagIcon,
-  CheckCircle as ApproveIcon,
   Cancel as RejectIcon,
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
   Download as DownloadIcon,
-  Person as PersonIcon,
   Warning as WarningIcon,
-  PersonAdd as PersonAddIcon,
-  ProcessingOnSharp,
   Queue as QueueIcon,
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useSnackbar } from 'notistack';
 import { intakeApi, type IntakeSubmission } from '../services/intakeApi';
 import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDialog';
 import IntakeDetailsDialog from '../components/IntakeDetailsDialog';
 import { downloadCSV, downloadExcel, prepareIntakeExportData, intakeQueueColumns } from '../utils/exportUtils';
-import { handleApiError } from '../services/sharedApiClient';
+import { handleApiError } from '../lib/api-client';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -78,7 +74,6 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const IntakeManagement: React.FC = () => {
-  const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   
   // State Management
@@ -146,7 +141,7 @@ const IntakeManagement: React.FC = () => {
     }
   }, [error, enqueueSnackbar]);
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: IntakeSubmission['severity']): ChipProps['color'] => {
     switch (severity) {
       case 'critical': return 'error';
       case 'high': return 'warning';
@@ -155,7 +150,7 @@ const IntakeManagement: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: IntakeSubmission['status']): ChipProps['color'] => {
     switch (status) {
       case 'approved': return 'success';
       case 'rejected': return 'error';
@@ -175,23 +170,12 @@ const IntakeManagement: React.FC = () => {
     setScheduleOpen(true);
   };
 
-  const handleApprove = async (intakeId: string) => {
-    try {
-      await intakeApi.updateIntakeStatus(intakeId, 'Triaged');
-      enqueueSnackbar('Intake approved successfully', { variant: 'success' });
-      await refetch();
-    } catch (error: any) {
-      const errorMessage = handleApiError(error, 'Failed to approve intake');
-      enqueueSnackbar(errorMessage, { variant: 'error' });
-    }
-  };
-
   const handleReject = async (intakeId: string) => {
     try {
       await intakeApi.updateIntakeStatus(intakeId, 'Archived');
       enqueueSnackbar('Intake archived', { variant: 'info' });
       await refetch();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage = handleApiError(error, 'Failed to archive intake');
       enqueueSnackbar(errorMessage, { variant: 'error' });
     }
@@ -202,7 +186,7 @@ const IntakeManagement: React.FC = () => {
       await intakeApi.updateIntakeStatus(intakeId, 'Reviewed');
       enqueueSnackbar('Started reviewing intake', { variant: 'info' });
       await refetch();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage = handleApiError(error, 'Failed to update intake status');
       enqueueSnackbar(errorMessage, { variant: 'error' });
     }
@@ -243,7 +227,7 @@ const IntakeManagement: React.FC = () => {
       <TableCell>
         <Chip 
           label={intake.severity}
-          color={getSeverityColor(intake.severity) as any}
+          color={getSeverityColor(intake.severity)}
           size="small"
         />
       </TableCell>
@@ -259,7 +243,7 @@ const IntakeManagement: React.FC = () => {
       <TableCell>
         <Chip 
           label={intake.status}
-          color={getStatusColor(intake.status) as any}
+          color={getStatusColor(intake.status)}
           size="small"
           variant="outlined"
         />
@@ -404,7 +388,7 @@ const IntakeManagement: React.FC = () => {
                 {stats.todayIntakes}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Today's Intakes
+                Today{"'s"} Intakes
               </Typography>
             </CardContent>
           </Card>

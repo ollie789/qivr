@@ -8,8 +8,6 @@ import {
   fetchAuthSession,
   getCurrentUser,
   fetchUserAttributes,
-  updateUserAttributes,
-  confirmUserAttribute,
   setUpTOTP,
   verifyTOTPSetup,
   updateMFAPreference,
@@ -19,6 +17,10 @@ import {
   type ConfirmSignUpInput,
   type ResetPasswordInput,
   type ConfirmResetPasswordInput,
+  type SignInOutput,
+  type SignUpOutput,
+  type ConfirmSignUpOutput,
+  type ResetPasswordOutput,
 } from '@aws-amplify/auth';
 import { Hub } from '@aws-amplify/core';
 
@@ -101,7 +103,7 @@ class ClinicCognitoAuthService {
     };
   }
 
-  async signIn(email: string, password: string): Promise<any> {
+  async signIn(email: string, password: string): Promise<SignInOutput> {
     try {
       const result = await signIn({
         username: email,
@@ -139,23 +141,23 @@ class ClinicCognitoAuthService {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Sign in error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  async confirmMFACode(code: string): Promise<any> {
+  async confirmMFACode(code: string): Promise<SignInOutput> {
     try {
       const result = await confirmSignIn({ challengeResponse: code });
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error('MFA confirmation error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  async signUp(data: ClinicSignUpData): Promise<any> {
+  async signUp(data: ClinicSignUpData): Promise<SignUpOutput> {
     try {
       const result = await signUp({
         username: data.email,
@@ -177,13 +179,13 @@ class ClinicCognitoAuthService {
       } as SignUpInput);
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Sign up error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  async confirmSignUp(email: string, code: string): Promise<any> {
+  async confirmSignUp(email: string, code: string): Promise<ConfirmSignUpOutput> {
     try {
       const result = await confirmSignUp({
         username: email,
@@ -191,7 +193,7 @@ class ClinicCognitoAuthService {
       } as ConfirmSignUpInput);
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Confirm sign up error:', error);
       throw this.handleAuthError(error);
     }
@@ -200,17 +202,17 @@ class ClinicCognitoAuthService {
   async signOut(): Promise<void> {
     try {
       await signOut();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Sign out error:', error);
       throw this.handleAuthError(error);
     }
   }
 
-  async forgotPassword(email: string): Promise<any> {
+  async forgotPassword(email: string): Promise<ResetPasswordOutput> {
     try {
       const result = await resetPassword({ username: email } as ResetPasswordInput);
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Forgot password error:', error);
       throw this.handleAuthError(error);
     }
@@ -223,7 +225,7 @@ class ClinicCognitoAuthService {
         confirmationCode: code,
         newPassword,
       } as ConfirmResetPasswordInput);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Confirm forgot password error:', error);
       throw this.handleAuthError(error);
     }
@@ -231,7 +233,7 @@ class ClinicCognitoAuthService {
 
   async getCurrentUser(): Promise<ClinicUserAttributes | null> {
     try {
-      const user = await getCurrentUser();
+      await getCurrentUser(); // Ensure user exists
       const attributes = await fetchUserAttributes();
       return attributes as unknown as ClinicUserAttributes;
     } catch (error) {
@@ -285,7 +287,7 @@ class ClinicCognitoAuthService {
         qrCode: qrCodeUrl,
         secretKey: secretCode,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Setup MFA error:', error);
       throw this.handleAuthError(error);
     }
@@ -296,7 +298,7 @@ class ClinicCognitoAuthService {
       await verifyTOTPSetup({ code: token });
       await updateMFAPreference({ totp: 'PREFERRED' });
       this.mfaSetupRequired = false;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Verify MFA token error:', error);
       throw this.handleAuthError(error);
     }
@@ -306,8 +308,8 @@ class ClinicCognitoAuthService {
     return this.mfaSetupRequired;
   }
 
-  private handleAuthError(error: any): Error {
-    const errorMessage = error.message || error.toString();
+  private handleAuthError(error: unknown): Error {
+    const errorMessage = (error as Error).message || String(error);
     
     // Map Cognito error codes to user-friendly messages
     if (errorMessage.includes('UNAUTHORIZED_ROLE')) {

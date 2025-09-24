@@ -1,4 +1,5 @@
-import apiClient from './sharedApiClient';
+import apiClient from '../lib/api-client';
+import { MedicalRecordMetadata } from '../types/api';
 
 export interface MedicalRecord {
   id: string;
@@ -10,7 +11,7 @@ export interface MedicalRecord {
   providerId: string;
   providerName: string;
   attachments?: string[];
-  metadata?: Record<string, any>;
+  metadata?: MedicalRecordMetadata;
   createdAt: string;
   updatedAt: string;
 }

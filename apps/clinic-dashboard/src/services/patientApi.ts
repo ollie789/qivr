@@ -1,4 +1,5 @@
 import api from '../lib/api-client';
+import type { Appointment, ApiResponse } from '../types';
 
 export interface Patient {
   id: string;
@@ -61,11 +62,23 @@ export interface PatientSearchParams {
   pageSize?: number;
 }
 
+export interface PatientListResponse {
+  data: Patient[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+type PatientRecord = Partial<Patient> & {
+  patientId?: string;
+  mrn?: string;
+};
+
 class PatientApi {
   private basePath = '/api/v1';
 
   // Get all patients with optional filters
-  async getPatients(params?: PatientSearchParams) {
+  async getPatients(_params?: PatientSearchParams): Promise<PatientListResponse> {
     // NOTE: Backend doesn't have a generic patients list endpoint
     // Return mock data for now
     console.log('Note: Backend does not have /api/v1/patients endpoint - using mock data');
@@ -78,11 +91,11 @@ class PatientApi {
   }
 
   // Get a single patient by ID
-  async getPatient(id: string) {
+  async getPatient(id: string): Promise<Patient | undefined> {
     try {
       // Use patient-records endpoint
-      const data = await api.get<any>(`/api/patient-records/${id}`);
-      return this.mapPatientRecord(data);
+      const data = await api.get<Patient>(`/api/patient-records/${id}`);
+      return data;
     } catch (error) {
       console.error('Error fetching patient:', error);
       // Return mock data for development
@@ -91,7 +104,7 @@ class PatientApi {
   }
 
   // Create a new patient
-  async createPatient(patient: CreatePatientDto) {
+  async createPatient(patient: CreatePatientDto): Promise<Patient> {
     try {
       return await api.post<Patient>(`${this.basePath}/patients`, patient);
     } catch (error) {
@@ -111,7 +124,7 @@ class PatientApi {
   }
 
   // Update an existing patient
-  async updatePatient(id: string, updates: UpdatePatientDto) {
+  async updatePatient(id: string, updates: UpdatePatientDto): Promise<Patient | undefined> {
     try {
       return await api.patch<Patient>(`${this.basePath}/patients/${id}`, updates);
     } catch (error) {
@@ -125,7 +138,7 @@ class PatientApi {
   // Delete a patient (soft delete)
   async deletePatient(id: string) {
     try {
-      return await api.delete<any>(`${this.basePath}/patients/${id}`);
+      return await api.delete<ApiResponse<void>>(`${this.basePath}/patients/${id}`);
     } catch (error) {
       console.error('Error deleting patient:', error);
       return { success: true };
@@ -135,7 +148,12 @@ class PatientApi {
   // Get patient's medical history
   async getPatientHistory(id: string) {
     try {
-      return await api.get<any>(`${this.basePath}/patients/${id}/history`);
+      return await api.get<{
+        appointments: Appointment[];
+        evaluations: unknown[];
+        proms: unknown[];
+        documents: unknown[];
+      }>(`${this.basePath}/patients/${id}/history`);
     } catch (error) {
       console.error('Error fetching patient history:', error);
       return {
@@ -150,7 +168,7 @@ class PatientApi {
   // Get patient's appointments
   async getPatientAppointments(id: string) {
     try {
-      return await api.get<any[]>(`${this.basePath}/patients/${id}/appointments`);
+      return await api.get<Appointment[]>(`${this.basePath}/patients/${id}/appointments`);
     } catch (error) {
       console.error('Error fetching patient appointments:', error);
       return [];
@@ -160,7 +178,7 @@ class PatientApi {
   // Get patient's evaluations
   async getPatientEvaluations(id: string) {
     try {
-      return await api.get<any[]>(`${this.basePath}/patients/${id}/evaluations`);
+      return await api.get<unknown[]>(`${this.basePath}/patients/${id}/evaluations`);
     } catch (error) {
       console.error('Error fetching patient evaluations:', error);
       return [];
@@ -170,7 +188,7 @@ class PatientApi {
   // Link patient to intake submission
   async linkPatientToIntake(patientId: string, intakeId: string) {
     try {
-      return await api.post<any>(`${this.basePath}/patients/${patientId}/link-intake`, { intakeId });
+      return await api.post<ApiResponse<{ success: boolean }>>(`${this.basePath}/patients/${patientId}/link-intake`, { intakeId });
     } catch (error) {
       console.error('Error linking patient to intake:', error);
       return { success: true };
@@ -225,7 +243,7 @@ class PatientApi {
   }
 
   // Helper to map patient record from backend to Patient interface
-  private mapPatientRecord(record: any): Patient {
+  private mapPatientRecord(record: PatientRecord): Patient {
     return {
       id: record.id || record.patientId,
       firstName: record.firstName || '',

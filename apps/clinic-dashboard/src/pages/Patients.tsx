@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -12,7 +12,6 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  Paper,
   TextField,
   InputAdornment,
   Button,
@@ -35,13 +34,12 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider,
 } from '@mui/material';
+import type { ChipProps } from '@mui/material/Chip';
 import {
   Search as SearchIcon,
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Visibility as ViewIcon,
   Schedule as ScheduleIcon,
   Person as PersonIcon,
@@ -50,7 +48,6 @@ import {
   LocationOn as LocationIcon,
   CalendarMonth as CalendarIcon,
   Assignment as AssignmentIcon,
-  History as HistoryIcon,
   MedicalServices as MedicalIcon,
   Download as DownloadIcon,
   FilterList as FilterIcon,
@@ -59,18 +56,42 @@ import {
   Send as SendIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { patientApi, type Patient as PatientType } from '../services/patientApi';
+import {
+  patientApi,
+  type Patient as PatientType,
+  type PatientListResponse,
+  type CreatePatientDto,
+  type UpdatePatientDto,
+} from '../services/patientApi';
 import MessageComposer from '../components/MessageComposer';
 import FileUpload from '../components/FileUpload';
+import { SelectField, type SelectOption } from '../components/forms';
 
 // Using Patient type from patientApi
 
+const GENDER_OPTIONS: SelectOption[] = [
+  { value: '', label: 'Select gender', disabled: true },
+  { value: 'Male', label: 'Male' },
+  { value: 'Female', label: 'Female' },
+  { value: 'Other', label: 'Other' },
+];
+
+const STATE_OPTIONS: SelectOption[] = [
+  { value: '', label: 'Select state', disabled: true },
+  { value: 'NSW', label: 'NSW - New South Wales' },
+  { value: 'VIC', label: 'VIC - Victoria' },
+  { value: 'QLD', label: 'QLD - Queensland' },
+  { value: 'WA', label: 'WA - Western Australia' },
+  { value: 'SA', label: 'SA - South Australia' },
+  { value: 'TAS', label: 'TAS - Tasmania' },
+  { value: 'ACT', label: 'ACT - Australian Capital Territory' },
+  { value: 'NT', label: 'NT - Northern Territory' },
+];
 
 const Patients: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,21 +104,47 @@ const Patients: React.FC = () => {
   const [messageOpen, setMessageOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
 
+  const queryClient = useQueryClient();
+  const patientsQueryKey = useMemo(
+    () => ['patients', searchQuery, filterStatus] as const,
+    [searchQuery, filterStatus],
+  );
+
+  const matchesFilters = useCallback(
+    (patient: PatientType) => {
+      const normalizedQuery = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        normalizedQuery.length === 0 ||
+        [patient.firstName, patient.lastName, patient.email, patient.medicalRecordNumber]
+          .some((field) => field?.toLowerCase().includes(normalizedQuery));
+      const matchesStatus = filterStatus === 'all' || patient.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    },
+    [filterStatus, searchQuery],
+  );
+
   // Fetch patients from API
-  const { data: patientsData, isLoading, refetch } = useQuery({
-    queryKey: ['patients', searchQuery, filterStatus],
+  const { data: patientsData, isLoading } = useQuery<PatientListResponse>({
+    queryKey: patientsQueryKey,
     queryFn: () => patientApi.getPatients({
       search: searchQuery || undefined,
       status: filterStatus !== 'all' ? filterStatus : undefined,
     }),
   });
 
-  const patients = patientsData?.data || [];
+  const patients = useMemo(
+    () => patientsData?.data ?? [],
+    [patientsData],
+  );
+  const filteredPatients = useMemo(
+    () => patients.filter(matchesFilters),
+    [matchesFilters, patients],
+  );
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: PatientType['status']): ChipProps['color'] => {
     switch (status) {
       case 'active': return 'success';
-      case 'inactive': return 'error';
+      case 'inactive': return 'default';
       case 'pending': return 'warning';
       default: return 'default';
     }
@@ -132,36 +179,79 @@ const Patients: React.FC = () => {
     setCreateOpen(true);
   };
 
-  const handleSavePatient = async (patientData: any) => {
+  const handleSavePatient = async (patientData?: CreatePatientDto) => {
     try {
       if (editOpen && selectedPatient) {
-        // Update existing patient
-        await patientApi.updatePatient(selectedPatient.id, patientData);
+        if (!patientData) {
+          enqueueSnackbar('Please enter patient details before saving', { variant: 'warning' });
+          return;
+        }
+
+        const { intakeId: _intakeId, ...rest } = patientData;
+        const updates: UpdatePatientDto = {
+          ...rest,
+          status: selectedPatient.status,
+        };
+        const updatedResponse = await patientApi.updatePatient(selectedPatient.id, updates);
+        const updatedPatient = updatedResponse ?? {
+          ...selectedPatient,
+          ...rest,
+        };
+
+        setSelectedPatient(updatedPatient);
+
+        queryClient.setQueryData<PatientListResponse | undefined>(patientsQueryKey, (previous) => {
+          if (!previous) return previous;
+          const matches = matchesFilters(updatedPatient);
+          const alreadyPresent = previous.data.some((p) => p.id === updatedPatient.id);
+          let nextData = previous.data;
+
+          if (alreadyPresent) {
+            nextData = matches
+              ? previous.data.map((p) => (p.id === updatedPatient.id ? updatedPatient : p))
+              : previous.data.filter((p) => p.id !== updatedPatient.id);
+          } else if (matches) {
+            nextData = [updatedPatient, ...previous.data];
+          }
+
+          return {
+            ...previous,
+            data: nextData,
+          };
+        });
+
         enqueueSnackbar('Patient updated successfully', { variant: 'success' });
       } else {
-        // Create new patient
-        await patientApi.createPatient(patientData);
+        if (!patientData) {
+          enqueueSnackbar('Please enter patient details before saving', { variant: 'warning' });
+          return;
+        }
+
+        const createdPatient = await patientApi.createPatient(patientData);
+        const matches = matchesFilters(createdPatient);
+
+        if (matches) {
+          queryClient.setQueryData<PatientListResponse | undefined>(patientsQueryKey, (previous) => {
+            if (!previous) {
+              return previous;
+            }
+            return {
+              ...previous,
+              data: [createdPatient, ...previous.data],
+              total: previous.total + 1,
+            };
+          });
+        }
+
         enqueueSnackbar('Patient created successfully', { variant: 'success' });
       }
+
       setEditOpen(false);
       setCreateOpen(false);
-      refetch();
     } catch (error) {
       enqueueSnackbar('Failed to save patient', { variant: 'error' });
     }
   };
-
-  const filteredPatients = patients.filter(patient => {
-    const matchesSearch = 
-      patient.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.medicalRecordNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = filterStatus === 'all' || patient.status === filterStatus;
-    
-    return matchesSearch && matchesStatus;
-  });
 
   return (
     <Box>
@@ -403,11 +493,11 @@ const Patients: React.FC = () => {
                     <Typography variant="body2">{patient.provider || '—'}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={patient.status}
-                      color={getStatusColor(patient.status) as any}
-                      size="small"
-                    />
+                      <Chip
+                        label={patient.status}
+                        color={getStatusColor(patient.status)}
+                        size="small"
+                      />
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
@@ -697,7 +787,7 @@ interface PatientFormDialogProps {
   open: boolean;
   onClose: () => void;
   patient: PatientType | null;
-  onSave: (data: any) => void;
+  onSave: (data?: CreatePatientDto) => void;
 }
 
 const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
@@ -706,6 +796,92 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
   patient,
   onSave,
 }) => {
+  const buildInitialFormState = useCallback(
+    (source?: PatientType | null): CreatePatientDto => ({
+        firstName: source?.firstName ?? '',
+        lastName: source?.lastName ?? '',
+        email: source?.email ?? '',
+        phone: source?.phone ?? '',
+        dateOfBirth: source?.dateOfBirth ?? '',
+        gender: source?.gender ?? '',
+        address: {
+          street: source?.address?.street ?? '',
+          city: source?.address?.city ?? '',
+          state: source?.address?.state ?? '',
+          postcode: source?.address?.postcode ?? '',
+        },
+        insuranceProvider: source?.insuranceProvider ?? '',
+        medicareNumber: '',
+        initialConditions: source?.conditions ?? [],
+        intakeId: undefined,
+      }),
+    [],
+  );
+
+  const [formState, setFormState] = useState<CreatePatientDto>(() => buildInitialFormState(patient));
+
+  useEffect(() => {
+    setFormState(buildInitialFormState(patient));
+  }, [patient, open, buildInitialFormState]);
+
+  const handleInputChange = (field: keyof CreatePatientDto) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setFormState((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    };
+
+  const handleAddressChange = (field: keyof CreatePatientDto['address']) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setFormState((prev) => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          [field]: value,
+        },
+      }));
+    };
+
+  const handleGenderChange = (value: string) => {
+    setFormState((prev) => ({
+      ...prev,
+      gender: value,
+    }));
+  };
+
+  const handleStateChange = (value: string) => {
+    setFormState((prev) => ({
+      ...prev,
+      address: {
+        ...prev.address,
+        state: value,
+      },
+    }));
+  };
+
+  const isValid = Boolean(
+    formState.firstName.trim() &&
+      formState.lastName.trim() &&
+      formState.email.trim() &&
+      formState.phone.trim() &&
+      formState.dateOfBirth.trim() &&
+      formState.gender.trim() &&
+      formState.address.street.trim() &&
+      formState.address.city.trim() &&
+      formState.address.state.trim() &&
+      formState.address.postcode.trim(),
+  );
+
+  const handleSubmit = () => {
+    if (!isValid) {
+      return;
+    }
+    onSave(formState);
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{patient ? 'Edit Patient' : 'New Patient'}</DialogTitle>
@@ -715,14 +891,16 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
             <TextField
               fullWidth
               label="First Name"
-              defaultValue={patient?.firstName}
+              value={formState.firstName}
+              onChange={handleInputChange('firstName')}
             />
           </Grid>
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
               label="Last Name"
-              defaultValue={patient?.lastName}
+              value={formState.lastName}
+              onChange={handleInputChange('lastName')}
             />
           </Grid>
           <Grid item xs={12} md={6}>
@@ -730,14 +908,16 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
               fullWidth
               label="Email"
               type="email"
-              defaultValue={patient?.email}
+              value={formState.email}
+              onChange={handleInputChange('email')}
             />
           </Grid>
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
               label="Phone"
-              defaultValue={patient?.phone}
+              value={formState.phone}
+              onChange={handleInputChange('phone')}
             />
           </Grid>
           <Grid item xs={12} md={6}>
@@ -745,81 +925,76 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
               fullWidth
               label="Date of Birth"
               type="date"
-              defaultValue={patient?.dateOfBirth}
+              value={formState.dateOfBirth}
               InputLabelProps={{ shrink: true }}
+              onChange={handleInputChange('dateOfBirth')}
             />
           </Grid>
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <InputLabel>Gender</InputLabel>
-              <Select
-                defaultValue={patient?.gender || ''}
-                label="Gender"
-              >
-                <MenuItem value="Male">Male</MenuItem>
-                <MenuItem value="Female">Female</MenuItem>
-                <MenuItem value="Other">Other</MenuItem>
-              </Select>
-            </FormControl>
+            <SelectField
+              label="Gender"
+              value={formState.gender}
+              onChange={handleGenderChange}
+              options={GENDER_OPTIONS}
+              required
+              size="small"
+            />
           </Grid>
           <Grid item xs={12}>
             <TextField
               fullWidth
               label="Street Address"
-              defaultValue={patient?.address?.street}
+              value={formState.address.street}
+              onChange={handleAddressChange('street')}
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
               label="City"
-              defaultValue={patient?.address?.city}
+              value={formState.address.city}
+              onChange={handleAddressChange('city')}
             />
           </Grid>
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>State</InputLabel>
-              <Select
-                defaultValue={patient?.address?.state || ''}
-                label="State"
-              >
-                <MenuItem value="NSW">NSW</MenuItem>
-                <MenuItem value="VIC">VIC</MenuItem>
-                <MenuItem value="QLD">QLD</MenuItem>
-                <MenuItem value="WA">WA</MenuItem>
-                <MenuItem value="SA">SA</MenuItem>
-                <MenuItem value="TAS">TAS</MenuItem>
-                <MenuItem value="ACT">ACT</MenuItem>
-                <MenuItem value="NT">NT</MenuItem>
-              </Select>
-            </FormControl>
+            <SelectField
+              label="State"
+              value={formState.address.state}
+              onChange={handleStateChange}
+              options={STATE_OPTIONS}
+              required
+              size="small"
+            />
           </Grid>
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
               label="Postcode"
-              defaultValue={patient?.address?.postcode}
+              value={formState.address.postcode}
+              onChange={handleAddressChange('postcode')}
             />
           </Grid>
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
               label="Insurance Provider"
-              defaultValue={patient?.insuranceProvider}
+              value={formState.insuranceProvider ?? ''}
+              onChange={handleInputChange('insuranceProvider')}
             />
           </Grid>
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
               label="Medicare Number"
-              defaultValue=""
+              value={formState.medicareNumber ?? ''}
+              onChange={handleInputChange('medicareNumber')}
             />
           </Grid>
         </Grid>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={onSave}>
+        <Button variant="contained" onClick={handleSubmit} disabled={!isValid}>
           {patient ? 'Save Changes' : 'Create Patient'}
         </Button>
       </DialogActions>

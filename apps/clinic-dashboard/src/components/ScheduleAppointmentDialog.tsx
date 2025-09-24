@@ -38,6 +38,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, addDays, setHours, setMinutes } from 'date-fns';
 import { enAU } from 'date-fns/locale';
+import type { ChipProps } from '@mui/material/Chip';
 import { useSnackbar } from 'notistack';
 
 export interface ScheduleAppointmentDialogProps {
@@ -64,7 +65,14 @@ const providers = [
   { id: '3', name: 'Dr. Priya Patel', title: 'Pain Specialist', availability: 'Mon-Thu' },
 ];
 
-const appointmentTypes = [
+type AppointmentTypeOption = {
+  id: string;
+  label: string;
+  duration: number;
+  color: ChipProps['color'];
+};
+
+const appointmentTypes: AppointmentTypeOption[] = [
   { id: 'initial', label: 'Initial Consultation', duration: 60, color: 'primary' },
   { id: 'followup', label: 'Follow-up', duration: 30, color: 'info' },
   { id: 'treatment', label: 'Treatment Session', duration: 45, color: 'success' },
@@ -267,7 +275,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
             <Grid item key={type.id}>
               <Chip
                 label={`${type.label} (${type.duration} min)`}
-                color={appointmentData.appointmentType === type.id ? type.color as any : 'default'}
+                color={appointmentData.appointmentType === type.id ? type.color : 'default'}
                 onClick={() => setAppointmentData({
                   ...appointmentData,
                   appointmentType: type.id,
@@ -456,7 +464,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
       </Paper>
       {intakeId && (
         <Alert severity="info" sx={{ mt: 2 }}>
-          This appointment is linked to intake #{intakeId}. The intake status will be updated to "Scheduled" upon confirmation.
+          This appointment is linked to intake #{intakeId}. The intake status will be updated to {`"Scheduled"`} upon confirmation.
         </Alert>
       )}
     </Box>

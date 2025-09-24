@@ -18,16 +18,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Avatar,
   CircularProgress,
   Alert,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
-  Add as AddIcon,
   Search as SearchIcon,
   FolderOpen as FolderIcon,
   InsertDriveFile as FileIcon,
@@ -39,12 +36,11 @@ import {
   Share as ShareIcon,
   Delete as DeleteIcon,
   Visibility as ViewIcon,
-  FilterList as FilterIcon,
   CloudUpload as UploadIcon,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import apiClient from '../services/sharedApiClient';
+import apiClient from '../lib/api-client';
 import FileUpload from '../components/FileUpload';
 
 interface Document {
@@ -57,6 +53,21 @@ interface Document {
   patientName?: string;
   uploadedBy: string;
   uploadedAt: Date;
+  url: string;
+  thumbnailUrl?: string;
+}
+
+// API response type for documents
+interface DocumentApiResponse {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  category: string;
+  patientId?: string;
+  patientName?: string;
+  uploadedBy: string;
+  uploadedAt: string; // comes as string from API
   url: string;
   thumbnailUrl?: string;
 }
@@ -80,7 +91,7 @@ const Documents: React.FC = () => {
           limit: 100,
         }
       });
-      return response.data.map((d: any) => ({
+      return response.data.map((d: DocumentApiResponse): Document => ({
         ...d,
         uploadedAt: new Date(d.uploadedAt),
       }));

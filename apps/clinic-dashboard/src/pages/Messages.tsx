@@ -8,7 +8,6 @@ import {
   ListItem,
   ListItemText,
   ListItemAvatar,
-  ListItemSecondaryAction,
   Avatar,
   Chip,
   IconButton,
@@ -34,7 +33,7 @@ import {
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
-import apiClient from '../services/sharedApiClient';
+import apiClient from '../lib/api-client';
 import MessageComposer from '../components/MessageComposer';
 
 interface Message {
@@ -54,6 +53,24 @@ interface Message {
   readAt?: Date;
 }
 
+// API response type for messages
+interface MessageApiResponse {
+  id: string;
+  type: 'sms' | 'email';
+  direction: 'sent' | 'received';
+  recipient: {
+    id: string;
+    name: string;
+    type: 'patient' | 'staff';
+  };
+  subject?: string;
+  content: string;
+  status: 'sent' | 'delivered' | 'failed' | 'pending';
+  sentAt: string; // comes as string from API
+  deliveredAt?: string;
+  readAt?: string;
+}
+
 const Messages: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,7 +86,7 @@ const Messages: React.FC = () => {
       const response = await apiClient.get('/api/Messages', {
         params: { type, limit: 100 }
       });
-      return response.data.map((m: any) => ({
+      return response.data.map((m: MessageApiResponse): Message => ({
         ...m,
         sentAt: new Date(m.sentAt),
         deliveredAt: m.deliveredAt ? new Date(m.deliveredAt) : undefined,

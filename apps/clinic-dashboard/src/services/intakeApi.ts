@@ -1,4 +1,5 @@
-import apiClient from './sharedApiClient';
+import apiClient from '../lib/api-client';
+import { EvaluationResponse } from '../types/api';
 
 export interface IntakeSubmission {
   id: string;
@@ -83,7 +84,7 @@ export interface IntakeFilters {
   limit?: number;
 }
 
-function mapEvaluationToIntake(e: any): IntakeSubmission {
+function mapEvaluationToIntake(e: EvaluationResponse): IntakeSubmission {
   const severityMap: Record<string, IntakeSubmission['severity']> = {
     urgent: 'critical',
     high: 'high',
@@ -151,7 +152,7 @@ export const intakeApi = {
       };
     } catch (error) {
       console.error('Error fetching intake details:', error);
-      throw error as any;
+      throw error;
     }
   },
 

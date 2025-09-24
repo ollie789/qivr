@@ -1,4 +1,5 @@
-import { postJson, getJson, ApiError } from '@qivr/http';
+import { postJson, ApiError } from '@qivr/http';
+import type { AuthResponse } from '../types/auth';
 
 export interface ClinicUserAttributes {
   sub?: string;
@@ -95,14 +96,14 @@ class JwtAuthService {
     };
   }
 
-  async signIn(email: string, password: string): Promise<any> {
+  async signIn(email: string, password: string): Promise<{ isSignedIn: boolean; nextStep: { signInStep: string } }> {
     try {
-      const response = await postJson<any>('/api/Auth/login', {
+      const response = await postJson<AuthResponse>('/api/Auth/login', {
         username: email,
         password: password,
       });
 
-      const { accessToken, idToken, refreshToken, expiresIn, userInfo } = response;
+      const { accessToken, idToken, refreshToken, userInfo } = response;
 
       // Map user info to our format
       const user: ClinicUserAttributes = {
@@ -133,7 +134,7 @@ class JwtAuthService {
         isSignedIn: true, 
         nextStep: { signInStep: 'DONE' } 
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Sign in error:', error);
       
       if (error instanceof ApiError && error.problem?.detail) {
@@ -156,7 +157,7 @@ class JwtAuthService {
     }
   }
 
-  async confirmMFACode(code: string): Promise<any> {
+  async confirmMFACode(_code: string): Promise<void> {
     // MFA not yet implemented in JWT backend
     throw new Error('MFA not yet implemented');
   }
@@ -166,14 +167,14 @@ class JwtAuthService {
     throw new Error('MFA not yet implemented');
   }
 
-  async verifyMFASetup(code: string): Promise<void> {
+  async verifyMFASetup(_code: string): Promise<void> {
     // MFA not yet implemented in JWT backend
     throw new Error('MFA not yet implemented');
   }
 
-  async signUp(data: ClinicSignUpData): Promise<any> {
+  async signUp(data: ClinicSignUpData): Promise<{ isSignUpComplete: boolean; userId: string; nextStep: unknown }> {
     try {
-      const response = await postJson<any>('/api/Auth/signup', {
+      const response = await postJson<{ userSub: string }>('/api/Auth/signup', {
         email: data.email,
         password: data.password,
         firstName: data.firstName,
@@ -194,7 +195,7 @@ class JwtAuthService {
           }
         }
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Sign up error:', error);
       
       if (error instanceof ApiError && error.problem?.detail) {
@@ -205,7 +206,7 @@ class JwtAuthService {
     }
   }
 
-  async confirmSignUp(email: string, code: string): Promise<any> {
+  async confirmSignUp(email: string, code: string): Promise<{ isSignUpComplete: boolean }> {
     try {
       await postJson('/api/EmailVerification/verify', {
         token: code,
@@ -215,7 +216,7 @@ class JwtAuthService {
         isSignUpComplete: true,
         nextStep: { signUpStep: 'DONE' }
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Confirm sign up error:', error);
       
       if (error instanceof ApiError && error.problem?.detail) {
@@ -238,7 +239,7 @@ class JwtAuthService {
     }
   }
 
-  async forgotPassword(email: string): Promise<any> {
+  async forgotPassword(email: string): Promise<{ isPasswordReset: boolean }> {
     try {
       await postJson('/api/Auth/forgot-password', {
         email,
@@ -254,13 +255,13 @@ class JwtAuthService {
           }
         }
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Forgot password error:', error);
       throw new Error('Unable to reset password. Please try again.');
     }
   }
 
-  async confirmResetPassword(email: string, code: string, newPassword: string): Promise<any> {
+  async confirmResetPassword(email: string, code: string, newPassword: string): Promise<void> {
     try {
       await postJson('/api/Auth/confirm-forgot-password', {
         email,
@@ -269,7 +270,7 @@ class JwtAuthService {
       });
 
       return { isPasswordReset: true };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Confirm reset password error:', error);
       throw new Error('Unable to reset password. Please try again.');
     }
@@ -282,7 +283,7 @@ class JwtAuthService {
 
     try {
       const { getWithAuth } = await import('@qivr/http');
-      const userInfo = await getWithAuth<any>('/api/Auth/user-info');
+      const userInfo = await getWithAuth<ClinicUserAttributes>('/api/Auth/user-info');
       
       const user: ClinicUserAttributes = {
         sub: userInfo.id || userInfo.username,
@@ -343,7 +344,7 @@ class JwtAuthService {
     }
 
     try {
-      const response = await postJson<any>('/api/Auth/refresh-token', {
+      const response = await postJson<AuthTokens>('/api/Auth/refresh-token', {
         refreshToken: this.tokens.refreshToken,
       });
 
@@ -373,7 +374,7 @@ class JwtAuthService {
     return !!session;
   }
 
-  private handleAuthError(error: any): Error {
+  private handleAuthError(error: unknown): Error {
     if (error.message) {
       return error;
     }

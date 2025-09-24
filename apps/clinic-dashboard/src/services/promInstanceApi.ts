@@ -1,4 +1,5 @@
-import apiClient from "./sharedApiClient";
+import apiClient from '../lib/api-client';
+import type { PromAnswerValue } from './promApi';
 
 // Types
 export interface SendPromRequest {
@@ -43,7 +44,7 @@ export interface PromInstanceDto {
   notes?: string;
   bookingRequested?: boolean;
   bookingRequestedAt?: string;
-  answers?: Record<string, any>;
+  answers?: Record<string, PromAnswerValue>;
 }
 
 export interface PromResponse {
@@ -80,7 +81,7 @@ export interface BookingRequestDto {
 
 export interface PromAnswer {
   questionId: string;
-  value: any;
+  value: PromAnswerValue;
 }
 
 export interface PromInstanceStats {

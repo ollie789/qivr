@@ -81,7 +81,7 @@ interface PromQuestion {
   conditionalLogic?: {
     showIf: string;
     operator: "equals" | "notEquals" | "contains" | "greaterThan" | "lessThan";
-    value: any;
+    value: string | number | boolean | null;
   };
   scoring?: {
     weight?: number;
@@ -590,12 +590,11 @@ export const PromBuilder: React.FC = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to save template:", error);
       const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to save template";
+        (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+        (error instanceof Error ? error.message : "Failed to save template");
       alert(`Error: ${errorMessage}`);
     }
   };
@@ -746,7 +745,7 @@ export const PromBuilder: React.FC = () => {
 
                 {template.questions.length === 0 ? (
                   <Alert severity="info">
-                    No questions added yet. Click "Add Question" or select from
+                    No questions added yet. Click {"\"Add Question\""} or select from
                     the library.
                   </Alert>
                 ) : (
@@ -787,7 +786,7 @@ export const PromBuilder: React.FC = () => {
                         ...template,
                         scoring: {
                           ...template.scoring,
-                          method: e.target.value as any,
+                          method: e.target.value as "sum" | "average" | "weighted" | "custom",
                         },
                       })
                     }
@@ -1028,7 +1027,7 @@ export const PromBuilder: React.FC = () => {
                   onChange={(e) =>
                     setEditingQuestion({
                       ...editingQuestion,
-                      type: e.target.value as any,
+                      type: e.target.value as "text" | "radio" | "checkbox" | "scale" | "date" | "time" | "number",
                     })
                   }
                   label="Question Type"

@@ -1,4 +1,4 @@
-import apiClient from "./sharedApiClient";
+import apiClient from '../lib/api-client';
 import type {
   CreatePromTemplateRequest,
   PromTemplateDetail,

@@ -10,8 +10,6 @@ import {
   FormControl,
   InputLabel,
   Button,
-  Avatar,
-  Chip,
   Table,
   TableBody,
   TableCell,
@@ -19,16 +17,11 @@ import {
   TableHead,
   TableRow,
   LinearProgress,
-  Tab,
-  Tabs,
   Paper,
   Alert,
   CircularProgress,
-  Skeleton,
 } from '@mui/material';
 import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
   People as PeopleIcon,
   CalendarMonth as CalendarIcon,
   AttachMoney as MoneyIcon,
@@ -39,37 +32,33 @@ import {
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  AreaChart,
-  Area,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import analyticsApi, {
   ClinicAnalytics,
   AppointmentTrend,
-  ProviderPerformance,
   PromCompletionBreakdown,
 } from '../services/analyticsApi';
-import { useAuthStore } from '../stores/authStore';
-
-interface StatCard {
-  title: string;
-  value: string | number;
-  change: number;
-  icon: React.ReactNode;
-  color: string;
-}
+import {
+  AppointmentTrendCard,
+  PromCompletionCard,
+  StatCardGrid,
+  TopDiagnosesCard,
+} from '../features/analytics';
+import type {
+  AppointmentTrendDatum,
+  DiagnosisDatum,
+  PromCompletionDatum,
+  StatCardItem,
+} from '../features/analytics';
+import { useAuthUser } from '../stores/authStore';
 
 const buildDashboardStats = (analytics?: ClinicAnalytics | null) => {
   if (!analytics) {
@@ -98,8 +87,7 @@ const buildDashboardStats = (analytics?: ClinicAnalytics | null) => {
 
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
-  const [selectedTab, setSelectedTab] = useState(0);
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthUser();
   const clinicId = user?.clinicId;
 
   const getDateRange = () => {
@@ -123,9 +111,9 @@ const Analytics: React.FC = () => {
 
   const dashboardStats = useMemo(() => buildDashboardStats(clinicAnalytics ?? undefined), [clinicAnalytics]);
 
-  const appointmentData = useMemo(() => {
+  const appointmentData = useMemo<AppointmentTrendDatum[]>(() => {
     if (!clinicAnalytics?.appointmentTrends) {
-      return [] as Array<Record<string, any>>;
+      return [];
     }
     return clinicAnalytics.appointmentTrends.map((trend: AppointmentTrend) => ({
       name: format(new Date(trend.date), 'MMM d'),
@@ -137,7 +125,7 @@ const Analytics: React.FC = () => {
     }));
   }, [clinicAnalytics]);
 
-  const conditionData = useMemo(() => {
+  const conditionData = useMemo<DiagnosisDatum[]>(() => {
     const diagnoses = clinicAnalytics?.topDiagnoses ?? [];
     const total = diagnoses.reduce((sum, item) => sum + item.count, 0) || 1;
 
@@ -151,10 +139,10 @@ const Analytics: React.FC = () => {
 
   const practitionerPerformance = useMemo(() => clinicAnalytics?.providerPerformance ?? [], [clinicAnalytics]);
 
-  const promCompletionData = useMemo(() => {
+  const promCompletionData = useMemo<PromCompletionDatum[]>(() => {
     const breakdown = clinicAnalytics?.promCompletionBreakdown ?? [];
     if (breakdown.length === 0) {
-      return [] as { name: string; completed: number; pending: number; completionRate: number }[];
+      return [];
     }
     return breakdown.map((item: PromCompletionBreakdown) => ({
       name: item.templateName,
@@ -179,38 +167,42 @@ const Analytics: React.FC = () => {
     ];
   }, [clinicAnalytics]);
 
-  const statCards: StatCard[] = [
+  const statCards: StatCardItem[] = [
     {
+      id: 'total-patients',
       title: 'Total Patients',
       value: dashboardStats.activePatients.toLocaleString(),
       change: 12.5,
       icon: <PeopleIcon />,
-      color: 'primary.main',
+      avatarColor: 'primary.main',
     },
     {
+      id: 'appointments-period',
       title: 'Appointments This Period',
       value: clinicAnalytics
         ? clinicAnalytics.appointmentMetrics.totalScheduled.toLocaleString()
         : dashboardStats.todayAppointments.toLocaleString(),
       change: 8.3,
       icon: <CalendarIcon />,
-      color: 'secondary.main',
+      avatarColor: 'secondary.main',
     },
     {
+      id: 'revenue',
       title: 'Revenue',
       value: clinicAnalytics
         ? `$${clinicAnalytics.revenueMetrics.totalCollected.toLocaleString()}`
         : '$0',
       change: 15.2,
       icon: <MoneyIcon />,
-      color: 'success.main',
+      avatarColor: 'success.main',
     },
     {
+      id: 'patient-satisfaction',
       title: 'Patient Satisfaction',
       value: `${dashboardStats.patientSatisfaction.toFixed(1)}/5`,
       change: 2.1,
       icon: <AssessmentIcon />,
-      color: 'warning.main',
+      avatarColor: 'warning.main',
     },
   ];
 
@@ -228,7 +220,7 @@ const Analytics: React.FC = () => {
             Analytics Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Track your clinic's performance and patient outcomes
+            Track your clinic&apos;s performance and patient outcomes
           </Typography>
         </Grid>
         <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -267,144 +259,38 @@ const Analytics: React.FC = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {statCards.map((stat) => (
-          <Grid item xs={12} sm={6} md={3} key={stat.title}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      {stat.title}
-                    </Typography>
-                    <Typography variant="h5">{stat.value}</Typography>
-                  </Box>
-                  <Avatar sx={{ bgcolor: stat.color }}>{stat.icon}</Avatar>
-                </Box>
-                <Chip
-                  icon={stat.change >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
-                  label={`${Math.abs(stat.change)}%`}
-                  color={stat.change >= 0 ? 'success' : 'error'}
-                  size="small"
-                  variant="outlined"
-                  sx={{ mt: 2 }}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      <StatCardGrid items={statCards} sx={{ mb: 3 }} />
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Patient Appointments Trend</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Showing {appointmentData.length} data points
-                </Typography>
-              </Box>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={appointmentData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorAppointments" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <Tooltip />
-                  <Legend />
-                  <Area type="monotone" dataKey="appointments" stroke="#2563eb" fillOpacity={1} fill="url(#colorAppointments)" />
-                  <Area type="monotone" dataKey="completed" stroke="#10b981" fillOpacity={1} fill="url(#colorCompleted)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <AppointmentTrendCard
+            data={appointmentData}
+            showLegend
+            headerAction={
+              <Typography variant="body2" color="text.secondary">
+                Showing {appointmentData.length} data points
+              </Typography>
+            }
+          />
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                PROM Response Rate
-              </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={(promCompletionData.length > 0
-                      ? promCompletionData.map((item) => ({
-                          name: item.name,
-                          value: item.completed,
-                          color:
-                            item.completed >= 85 ? '#10b981' : item.completed >= 60 ? '#f59e0b' : '#ef4444',
-                        }))
-                      : [{ name: 'No Data', value: 100, color: '#e5e7eb' }])}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) => (entry.name !== 'No Data' ? `${entry.name}: ${entry.value}%` : '')}
-                    outerRadius={80}
-                    dataKey="value"
-                  >
-                    {(promCompletionData.length > 0
-                      ? promCompletionData.map((item) => ({
-                          color:
-                            item.completed >= 85 ? '#10b981' : item.completed >= 60 ? '#f59e0b' : '#ef4444',
-                        }))
-                      : [{ color: '#e5e7eb' }]).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  {promCompletionData.length > 0
-                    ? `Average completion rate: ${Math.round(
-                        promCompletionData.reduce((sum, item) => sum + item.completed, 0) /
-                          promCompletionData.length,
-                      )}%`
-                    : 'No PROM data available'}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+          <PromCompletionCard
+            data={promCompletionData}
+            summaryFormatter={(average, { isEmpty }) =>
+              isEmpty ? 'No PROM data available' : `Average completion rate: ${average}%`
+            }
+          />
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Top Diagnoses
-              </Typography>
-              {conditionData.length === 0 ? (
-                <Skeleton variant="rectangular" height={240} />
-              ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={conditionData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" interval={0} angle={-15} textAnchor="end" height={70} />
-                    <YAxis />
-                    <Tooltip formatter={(value: number) => `${value}%`} />
-                    <Bar dataKey="percentage">
-                      {conditionData.map((item, index) => (
-                        <Cell key={`bar-${index}`} fill={item.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
+          <TopDiagnosesCard
+            title="Top Diagnoses"
+            data={conditionData}
+            loading={loading}
+            emptyMessage="No diagnosis data available for the selected range"
+            xAxisAngle={-15}
+          />
         </Grid>
 
         <Grid item xs={12} md={6}>

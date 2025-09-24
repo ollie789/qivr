@@ -18,7 +18,6 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -31,11 +30,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Divider,
   Stack,
-  Alert,
-  CircularProgress,
-  Tooltip,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -53,25 +48,18 @@ import {
   Person as PersonIcon,
   LocalHospital as HospitalIcon,
   Favorite as HeartIcon,
-  Speed as SpeedIcon,
   Timeline as TimelineIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Save as SaveIcon,
-  Cancel as CancelIcon,
   ExpandMore as ExpandMoreIcon,
-  AccessTime as ClockIcon,
   ThermostatAuto as TempIcon,
   MonitorHeart as PulseIcon,
-  Air as BreathIcon,
   Bloodtype as BloodIcon,
-  Height as HeightIcon,
   Scale as WeightIcon,
   MedicalServices as MedicalIcon,
   Vaccines as VaccineIcon,
   Medication as MedicationIcon,
-  LocalPharmacy as PharmacyIcon,
-  Psychology as PsychologyIcon,
   Warning as WarningIcon,
   CheckCircle as CheckIcon,
   Info as InfoIcon,
@@ -82,35 +70,10 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO, differenceInYears } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import apiClient from '../services/sharedApiClient';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
-
-interface PatientRecord {
-  id: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  gender: string;
-  email: string;
-  phone: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  insurance?: {
-    provider: string;
-    policyNumber: string;
-    groupNumber: string;
-  };
-}
+import apiClient from '../lib/api-client';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
+import type { ChipProps } from '@mui/material/Chip';
+import type { SelectChangeEvent } from '@mui/material/Select';
 
 interface VitalSign {
   id: string;
@@ -142,6 +105,17 @@ interface MedicalHistory {
   notes?: string;
 }
 
+type TimelineEvent = {
+  type: string;
+  date: string;
+  title: string;
+  description?: string;
+  icon: React.ReactNode;
+  color: 'inherit' | 'grey' | 'primary' | 'secondary';
+};
+
+type TimelineFilter = 'all' | 'vital' | MedicalHistory['category'];
+
 const MedicalRecords: React.FC = () => {
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
@@ -151,10 +125,10 @@ const MedicalRecords: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [vitalDialogOpen, setVitalDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [timelineFilter, setTimelineFilter] = useState('all');
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('all');
 
   // Fetch patient data
-  const { data: patient, isLoading: patientLoading } = useQuery({
+  const { data: patient } = useQuery({
     queryKey: ['patient', selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return null;
@@ -265,7 +239,7 @@ const MedicalRecords: React.FC = () => {
       }));
   };
 
-  const getCategoryIcon = (category: string) => {
+  const getCategoryIcon = (category: MedicalHistory['category'] | string) => {
     switch (category) {
       case 'condition': return <MedicalIcon />;
       case 'surgery': return <HospitalIcon />;
@@ -277,7 +251,7 @@ const MedicalRecords: React.FC = () => {
     }
   };
 
-  const getSeverityColor = (severity?: string) => {
+  const getSeverityColor = (severity?: MedicalHistory['severity']): ChipProps['color'] => {
     switch (severity) {
       case 'critical': return 'error';
       case 'severe': return 'warning';
@@ -288,7 +262,7 @@ const MedicalRecords: React.FC = () => {
   };
 
   const generateTimeline = () => {
-    const events: any[] = [];
+    const events: TimelineEvent[] = [];
     
     // Add vital signs to timeline
     vitalSigns.forEach((vital: VitalSign) => {
@@ -304,17 +278,17 @@ const MedicalRecords: React.FC = () => {
 
     // Add medical history to timeline
     medicalHistory.forEach((history: MedicalHistory) => {
-      if (history.date) {
-        events.push({
-          type: history.category,
-          date: history.date,
-          title: history.title,
-          description: history.description,
-          icon: getCategoryIcon(history.category),
-          color: history.status === 'active' ? 'error' : 'success',
-        });
-      }
-    });
+        if (history.date) {
+          events.push({
+            type: history.category,
+            date: history.date,
+            title: history.title,
+            description: history.description,
+            icon: getCategoryIcon(history.category),
+            color: history.status === 'active' ? 'secondary' : 'primary',
+          });
+        }
+      });
 
     // Sort by date
     events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -774,7 +748,7 @@ const MedicalRecords: React.FC = () => {
                               .map((item: MedicalHistory) => (
                                 <ListItem key={item.id}>
                                   <ListItemIcon>
-                                    {item.status === 'active' ? <CheckCircle color="success" /> : <InfoIcon />}
+                                    {item.status === 'active' ? <CheckIcon color="success" /> : <InfoIcon />}
                                   </ListItemIcon>
                                   <ListItemText
                                     primary={
@@ -784,7 +758,7 @@ const MedicalRecords: React.FC = () => {
                                           <Chip 
                                             label={item.severity}
                                             size="small"
-                                            color={getSeverityColor(item.severity) as any}
+                                            color={getSeverityColor(item.severity)}
                                           />
                                         )}
                                         <Chip 
@@ -824,7 +798,10 @@ const MedicalRecords: React.FC = () => {
                       <FormControl size="small">
                         <Select
                           value={timelineFilter}
-                          onChange={(e) => setTimelineFilter(e.target.value)}
+                          onChange={(event: SelectChangeEvent<TimelineFilter>) => {
+                            const value = event.target.value as TimelineFilter;
+                            setTimelineFilter(value);
+                          }}
                         >
                           <MenuItem value="all">All Events</MenuItem>
                           <MenuItem value="vital">Vital Signs</MenuItem>
@@ -995,7 +972,10 @@ const MedicalRecords: React.FC = () => {
                   <Select
                     value={newHistory.category}
                     label="Category"
-                    onChange={(e) => setNewHistory({ ...newHistory, category: e.target.value as any })}
+                    onChange={(event: SelectChangeEvent<MedicalHistory['category']>) => {
+                      const value = event.target.value as MedicalHistory['category'];
+                      setNewHistory({ ...newHistory, category: value });
+                    }}
                   >
                     <MenuItem value="condition">Condition</MenuItem>
                     <MenuItem value="surgery">Surgery</MenuItem>
@@ -1032,7 +1012,10 @@ const MedicalRecords: React.FC = () => {
                   <Select
                     value={newHistory.status}
                     label="Status"
-                    onChange={(e) => setNewHistory({ ...newHistory, status: e.target.value as any })}
+                    onChange={(event: SelectChangeEvent<MedicalHistory['status']>) => {
+                      const value = event.target.value as MedicalHistory['status'];
+                      setNewHistory({ ...newHistory, status: value });
+                    }}
                   >
                     <MenuItem value="active">Active</MenuItem>
                     <MenuItem value="resolved">Resolved</MenuItem>
@@ -1046,7 +1029,10 @@ const MedicalRecords: React.FC = () => {
                   <Select
                     value={newHistory.severity}
                     label="Severity"
-                    onChange={(e) => setNewHistory({ ...newHistory, severity: e.target.value as any })}
+                    onChange={(event: SelectChangeEvent<NonNullable<MedicalHistory['severity']>>) => {
+                      const value = event.target.value as NonNullable<MedicalHistory['severity']>;
+                      setNewHistory({ ...newHistory, severity: value });
+                    }}
                   >
                     <MenuItem value="mild">Mild</MenuItem>
                     <MenuItem value="moderate">Moderate</MenuItem>

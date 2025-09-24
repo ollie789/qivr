@@ -20,11 +20,12 @@ import {
   Lock as LockIcon,
   LocalHospital as ClinicIcon,
 } from '@mui/icons-material';
-import { useAuthStore } from '../stores/authStore';
+import { useAuth, useAuthActions } from '../stores/authStore';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { isAuthenticated, login, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuth();
+  const { login } = useAuthActions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -50,16 +51,17 @@ export default function Login() {
     try {
       await login(email, password);
       navigate('/dashboard');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      if (err.message?.includes('not verified')) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('not verified')) {
         setError('Please verify your email address before logging in. Check your inbox for the verification link.');
-      } else if (err.message?.includes('Incorrect username or password')) {
+      } else if (message.includes('Incorrect username or password')) {
         setError('Invalid email or password');
-      } else if (err.message?.includes('User does not exist')) {
+      } else if (message.includes('User does not exist')) {
         setError('No account found with this email address');
       } else {
-        setError(err.message || 'Login failed. Please try again.');
+        setError(message || 'Login failed. Please try again.');
       }
     }
   };
@@ -173,7 +175,7 @@ export default function Login() {
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Don't have a clinic account?
+                Don{"'"}t have a clinic account?
               </Typography>
               <Link to="/register" style={{ textDecoration: 'none' }}>
                 <Typography variant="body2" color="primary">

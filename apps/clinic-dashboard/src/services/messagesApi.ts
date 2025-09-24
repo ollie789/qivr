@@ -1,4 +1,4 @@
-import apiClient from './sharedApiClient';
+import apiClient from '../lib/api-client';
 
 export interface Message {
   id: string;
@@ -75,7 +75,13 @@ class MessagesApi {
     return response.data;
   }
 
-  async updateTemplate(id: string, data: any) {
+  async updateTemplate(id: string, data: {
+    name?: string;
+    subject?: string;
+    body?: string;
+    type?: 'sms' | 'email';
+    variables?: string[];
+  }) {
     const response = await apiClient.put(`/api/Messages/templates/${id}`, data);
     return response.data;
   }

@@ -20,7 +20,7 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import apiClient from '../services/sharedApiClient';
+import apiClient from '../lib/api-client';
 
 interface FileUploadProps {
   patientId?: string;
@@ -63,9 +63,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   maxSize = 10 * 1024 * 1024, // 10MB
 }) => {
   const [files, setFiles] = useState<FileWithProgress[]>([]);
-  const [uploading, setUploading] = useState(false);
 
-  const uploadFile = async (file: FileWithProgress) => {
+  const uploadFile = useCallback(async (file: FileWithProgress) => {
     const formData = new FormData();
     formData.append('file', file);
     if (patientId) formData.append('patientId', patientId);
@@ -119,9 +118,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
       );
 
       return uploadedFile;
-    } catch (error: any) {
+    } catch (error) {
       // Update file status to error
-      const errorMessage = error.response?.data?.message || 'Upload failed';
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed';
       setFiles(prev =>
         prev.map(f =>
           f.name === file.name
@@ -131,7 +132,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       );
       throw error;
     }
-  };
+  }, [patientId, category]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const newFiles = acceptedFiles.map(file => ({
@@ -141,7 +142,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }));
 
     setFiles(prev => [...prev, ...newFiles]);
-    setUploading(true);
 
     const uploadedFiles: UploadedFile[] = [];
     const errors: string[] = [];
@@ -150,12 +150,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
       try {
         const uploaded = await uploadFile(file as FileWithProgress);
         uploadedFiles.push(uploaded);
-      } catch (error: any) {
-        errors.push(`${file.name}: ${error.message}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        errors.push(`${file.name}: ${errorMessage}`);
       }
     }
-
-    setUploading(false);
 
     if (uploadedFiles.length > 0 && onUpload) {
       onUpload(uploadedFiles);
@@ -164,7 +163,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
     if (errors.length > 0 && onError) {
       onError(errors.join(', '));
     }
-  }, [patientId, category, onUpload, onError]);
+  }, [uploadFile, onUpload, onError]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

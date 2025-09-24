@@ -20,6 +20,9 @@
 - **API_AUDIT_REPORT.md** - API endpoint status, testing coverage, issues
 - **FEATURE_STATUS.md** - Feature implementation tracking
 - **deployment.md** - Production deployment guide
+- **frontend-architecture.md** - Frontend client structure, duplication audit, consolidation plan
+- **FRONTEND_ARCHITECTURE.md** - Cleanup campaign history & metrics (clinic dashboard)
+- **frontend-cleanup-overview.md** - Current cleanup summary + remaining tasks (this doc)
 - **security.md** - Security guidelines and best practices
 
 #### Testing & Quality

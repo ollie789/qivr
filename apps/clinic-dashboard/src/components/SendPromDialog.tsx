@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,29 +16,27 @@ import {
   MenuItem,
   Chip,
   Alert,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   Checkbox,
   FormControlLabel,
   Switch,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
   Send as SendIcon,
-  Schedule as ScheduleIcon,
   Person as PersonIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
-  Event as EventIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { promsApi } from '../services/proms';
-import { patientApi } from '../services/patientApi';
+import { patientApi, type Patient as PatientSummary } from '../services/patientApi';
 import { promInstanceApi, NotificationMethod } from '../services/promInstanceApi';
+import type { PromTemplateSummary } from '../services/promApi';
+import { handleApiError } from '../lib/api-client';
 
 interface SendPromDialogProps {
   open: boolean;
@@ -48,27 +46,18 @@ interface SendPromDialogProps {
   preselectedPatients?: string[];
 }
 
-interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  lastVisit?: string;
-}
-
 export const SendPromDialog: React.FC<SendPromDialogProps> = ({
   open,
   onClose,
   templateId,
-  templateName,
+  templateName: _templateName,
   preselectedPatients = [],
 }) => {
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [selectedPatients, setSelectedPatients] = useState<Patient[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [patients, setPatients] = useState<PatientSummary[]>([]);
+  const [selectedPatients, setSelectedPatients] = useState<PatientSummary[]>([]);
+  const [templates, setTemplates] = useState<PromTemplateSummary[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>(templateId || '');
   const [scheduledDate, setScheduledDate] = useState<Date | null>(new Date());
   const [dueDate, setDueDate] = useState<Date | null>(null);
@@ -79,19 +68,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
   const [message, setMessage] = useState('');
   const [tags, setTags] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadPatients();
-    loadTemplates();
-  }, []);
-
-  useEffect(() => {
-    if (preselectedPatients.length > 0) {
-      const preselected = patients.filter(p => preselectedPatients.includes(p.id));
-      setSelectedPatients(preselected);
-    }
-  }, [patients, preselectedPatients]);
-
-  const loadPatients = async () => {
+  const loadPatients = useCallback(async () => {
     try {
       const response = await patientApi.getPatients({ page: 1, limit: 100 });
       setPatients(response.data);
@@ -99,19 +76,31 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
       console.error('Failed to load patients:', error);
       enqueueSnackbar('Failed to load patients', { variant: 'error' });
     }
-  };
+  }, [enqueueSnackbar]);
 
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     try {
-      const templates = await promsApi.listTemplates(1, 100);
-      setTemplates(templates);
+      const templateResults = await promsApi.listTemplates(1, 100);
+      setTemplates(templateResults);
       if (templateId) {
         setSelectedTemplate(templateId);
       }
     } catch (error) {
       console.error('Failed to load templates:', error);
     }
-  };
+  }, [templateId]);
+
+  useEffect(() => {
+    loadPatients();
+    loadTemplates();
+  }, [loadPatients, loadTemplates]);
+
+  useEffect(() => {
+    if (preselectedPatients.length > 0) {
+      const preselected = patients.filter(p => preselectedPatients.includes(p.id));
+      setSelectedPatients(preselected);
+    }
+  }, [patients, preselectedPatients]);
 
   const handleSend = async () => {
     if (!selectedTemplate) {
@@ -160,7 +149,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
       }
 
       enqueueSnackbar(
-        `PROM "${template.name}" sent to ${selectedPatients.length} patient(s)`,
+        `PROM "${template?.name ?? selectedTemplate}" sent to ${selectedPatients.length} patient(s)`,
         { variant: 'success' }
       );
 
@@ -169,9 +158,10 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
       setMessage('');
       setTags([]);
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send PROMs:', error);
-      enqueueSnackbar(error?.message || 'Failed to send PROMs', { variant: 'error' });
+      const message = handleApiError(error, 'Failed to send PROMs');
+      enqueueSnackbar(message, { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -223,6 +213,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip
+                    key={option.id || index}
                     variant="outlined"
                     label={`${option.firstName} ${option.lastName}`}
                     {...getTagProps({ index })}
@@ -378,6 +369,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip
+                    key={option || index}
                     variant="outlined"
                     label={option}
                     size="small"

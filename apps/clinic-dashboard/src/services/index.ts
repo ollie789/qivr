@@ -15,7 +15,7 @@ export * from './patientApi';
 export * from './proms';
 
 // Export default instances
-export { default as apiClient } from './sharedApiClient';
+export { default as apiClient, handleApiError, isApiError } from '../lib/api-client';
 export { default as dashboardApi } from './dashboardApi';
 
 // Centralized API object for convenience

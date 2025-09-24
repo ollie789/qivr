@@ -23,14 +23,24 @@ import {
   Close as CloseIcon,
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
-import apiClient from '../services/sharedApiClient';
+import apiClient from '../lib/api-client';
+
+// Type for message send result
+interface MessageSendResult {
+  id: string;
+  recipients: string[];
+  messageType: 'sms' | 'email';
+  status: 'sent' | 'scheduled' | 'failed';
+  scheduledTime?: string;
+  sentAt?: string;
+}
 
 interface MessageComposerProps {
   open: boolean;
   onClose: () => void;
   recipients?: Recipient[];
   defaultType?: 'sms' | 'email';
-  onSent?: (result: any) => void;
+  onSent?: (result: MessageSendResult) => void;
 }
 
 interface Recipient {
@@ -164,8 +174,11 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
         setTemplateVariables({});
         setSuccess(false);
       }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send message');
+    } catch (err) {
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to send message';
+      setError(errorMessage);
     } finally {
       setSending(false);
     }

@@ -1,4 +1,4 @@
-import apiClient from './sharedApiClient';
+import apiClient from '../lib/api-client';
 
 export interface Notification {
   id: string;
@@ -11,7 +11,7 @@ export interface Notification {
   readAt?: string;
   actionUrl?: string;
   actionText?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string | number | boolean | null>;
 }
 
 export interface NotificationPreferences {

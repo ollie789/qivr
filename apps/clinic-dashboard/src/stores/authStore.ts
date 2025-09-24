@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import cognitoAuthService, { type ClinicUserAttributes } from '../services/cognitoAuthService';
+import cognitoAuthService from '../services/cognitoAuthService';
 
 interface User {
   id: string;
@@ -105,10 +105,11 @@ export const useAuthStore = create<AuthState>()(
               });
             }
           }
-        } catch (error: any) {
-          if (error.message === 'MFA_TOTP_REQUIRED') {
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (errorMessage === 'MFA_TOTP_REQUIRED') {
             set({ mfaRequired: true });
-          } else if (error.message === 'MFA_SETUP_REQUIRED') {
+          } else if (errorMessage === 'MFA_SETUP_REQUIRED') {
             set({ mfaSetupRequired: true });
           } else {
             throw error;
@@ -284,3 +285,36 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+export const useAuth = () =>
+  useAuthStore((state) => ({
+    user: state.user,
+    token: state.token,
+    isAuthenticated: state.isAuthenticated,
+    isLoading: state.isLoading,
+    mfaRequired: state.mfaRequired,
+    mfaSetupRequired: state.mfaSetupRequired,
+  }));
+
+export const useAuthUser = () => useAuthStore((state) => state.user);
+
+export const useAuthStatus = () =>
+  useAuthStore((state) => ({
+    isAuthenticated: state.isAuthenticated,
+    isLoading: state.isLoading,
+    mfaRequired: state.mfaRequired,
+    mfaSetupRequired: state.mfaSetupRequired,
+  }));
+
+export const useAuthActions = () =>
+  useAuthStore((state) => ({
+    login: state.login,
+    confirmMFA: state.confirmMFA,
+    setupMFA: state.setupMFA,
+    verifyMFASetup: state.verifyMFASetup,
+    logout: state.logout,
+    checkAuth: state.checkAuth,
+    refreshToken: state.refreshToken,
+    setUser: state.setUser,
+    setToken: state.setToken,
+  }));
