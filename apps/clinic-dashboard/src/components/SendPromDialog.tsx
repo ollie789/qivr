@@ -34,7 +34,7 @@ import {
 import { useSnackbar } from 'notistack';
 import { promsApi } from '../services/proms';
 import { patientApi, type Patient as PatientSummary } from '../services/patientApi';
-import { promInstanceApi, NotificationMethod } from '../services/promInstanceApi';
+import { NotificationMethod } from '../services/promApi';
 import type { PromTemplateSummary } from '../services/promApi';
 import { handleApiError } from '../lib/api-client';
 
@@ -124,28 +124,34 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
       if (sendSms) notificationMethod |= NotificationMethod.Sms;
 
       // Send PROM using the new API
+      if (!template) {
+        throw new Error('Unable to load template metadata.');
+      }
+
+      const schedulePayload = {
+        templateKey: template.key,
+        version: template.version,
+        scheduledFor: scheduledFor ?? new Date().toISOString(),
+        dueAt: due.toISOString(),
+        notificationMethod,
+        tags,
+        notes: message || undefined,
+      } as const;
+
       if (selectedPatients.length === 1) {
-        // Single patient
-        await promInstanceApi.sendToPatient({
-          templateId: selectedTemplate,
+        await promsApi.sendProm({
+          ...schedulePayload,
           patientId: selectedPatients[0].id,
-          scheduledAt: scheduledFor,
-          dueDate: due.toISOString(),
-          notificationMethod,
-          tags,
-          notes: message || undefined,
         });
       } else {
-        // Multiple patients
-        await promInstanceApi.sendBulk({
-          templateId: selectedTemplate,
-          patientIds: selectedPatients.map(p => p.id),
-          scheduledAt: scheduledFor,
-          dueDate: due.toISOString(),
-          notificationMethod,
-          tags,
-          notes: message || undefined,
-        });
+        await Promise.all(
+          selectedPatients.map((patient) =>
+            promsApi.sendProm({
+              ...schedulePayload,
+              patientId: patient.id,
+            }),
+          ),
+        );
       }
 
       enqueueSnackbar(

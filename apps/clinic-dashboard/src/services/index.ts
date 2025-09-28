@@ -9,9 +9,8 @@ export * from './medicalRecordsApi';
 export * from './messagesApi';
 export * from './notificationsApi';
 export * from './patientApi';
-// Note: Skipping promApi and promInstanceApi due to duplicate PromResponse export
+// Note: Skipping promApi due to duplicate PromResponse export
 // export * from './promApi';
-// export * from './promInstanceApi';
 export * from './proms';
 
 // Export default instances
@@ -29,7 +28,6 @@ import { messagesApi } from './messagesApi';
 import { notificationsApi } from './notificationsApi';
 import { patientApi } from './patientApi';
 import { promApi } from './promApi';
-import { promInstanceApi } from './promInstanceApi';
 import { promsApi } from './proms';
 
 const api = {
@@ -43,7 +41,6 @@ const api = {
   notifications: notificationsApi,
   patients: patientApi,
   prom: promApi,
-  promInstance: promInstanceApi,
   proms: promsApi,
 };
 

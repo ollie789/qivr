@@ -23,12 +23,22 @@ import {
   MenuItem,
   Stack,
   Divider,
+  Chip,
 } from '@mui/material';
 import { CloudUpload as UploadIcon, Star as StarIcon, StarBorder as StarBorderIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import type { DocumentCategory, DocumentSummary, UploadDocumentInput } from '../../../types';
-import { fetchDocuments, toggleStar, deleteDocument, uploadDocument } from '../../../services/documentsApi';
+import {
+  fetchDocuments,
+  toggleStar,
+  deleteDocument,
+  uploadDocument,
+  createDocumentShare,
+  requestDocumentReview,
+  completeDocumentReview,
+} from '../../../services/documentsApi';
+import { useSnackbar } from 'notistack';
 
 interface UploadDialogProps {
   open: boolean;
@@ -130,6 +140,8 @@ const DocumentsPage: React.FC = () => {
   const [category, setCategory] = useState<DocumentCategory | 'all'>('all');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [shareDialog, setShareDialog] = useState({ open: false, documentId: '', userId: '', message: '' });
+  const { enqueueSnackbar } = useSnackbar();
 
   const filters = useMemo(() => ({
     category,
@@ -165,12 +177,43 @@ const DocumentsPage: React.FC = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents'] }),
   });
 
+  const shareMutation = useMutation({
+    mutationFn: ({ id, userId, message }: { id: string; userId: string; message?: string }) =>
+      createDocumentShare(id, { userId, message }),
+    onSuccess: () => {
+      enqueueSnackbar('Document shared successfully', { variant: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setShareDialog({ open: false, documentId: '', userId: '', message: '' });
+    },
+    onError: () => enqueueSnackbar('Unable to share document', { variant: 'error' }),
+  });
+
+  const requestReviewMutation = useMutation({
+    mutationFn: (documentId: string) =>
+      requestDocumentReview(documentId, { notes: 'Review requested via patient portal' }),
+    onSuccess: () => {
+      enqueueSnackbar('Review requested', { variant: 'info' });
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+    },
+    onError: () => enqueueSnackbar('Unable to request review', { variant: 'error' }),
+  });
+
+  const completeReviewMutation = useMutation({
+    mutationFn: (documentId: string) =>
+      completeDocumentReview(documentId, { notes: 'Reviewed via patient portal', status: 'completed' }),
+    onSuccess: () => {
+      enqueueSnackbar('Document marked as reviewed', { variant: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+    },
+    onError: () => enqueueSnackbar('Unable to mark document as reviewed', { variant: 'error' }),
+  });
+
   const stats = useMemo(() => ({
     total: documents.length,
     medical: documents.filter((doc) => doc.category === 'medical').length,
-    insurance: documents.filter((doc) => doc.category === 'insurance').length,
     verified: documents.filter((doc) => doc.verified).length,
-    shared: documents.filter((doc) => doc.sharedWith.length > 0).length,
+    pendingReview: documents.filter((doc) => doc.requiresReview).length,
+    shared: documents.filter((doc) => doc.shares.some((share) => !share.revoked)).length,
   }), [documents]);
 
   const filteredDocuments = useMemo(() => {
@@ -253,6 +296,14 @@ const DocumentsPage: React.FC = () => {
         <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
+              <Typography color="text.secondary" gutterBottom>Pending Review</Typography>
+              <Typography variant="h5">{stats.pendingReview}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
               <Typography color="text.secondary" gutterBottom>Shared</Typography>
               <Typography variant="h5">{stats.shared}</Typography>
             </CardContent>
@@ -278,26 +329,64 @@ const DocumentsPage: React.FC = () => {
                   <ListItem alignItems="flex-start">
                     <ListItemText
                       primary={document.name}
-                      secondary={`Uploaded ${format(parseISO(document.uploadedDate), 'MMM dd, yyyy')} • ${document.category}`}
+                      secondary={
+                        <Stack spacing={0.5}>
+                          <Typography variant="body2" color="text.secondary">
+                            Uploaded {format(parseISO(document.uploadedDate), 'MMM dd, yyyy')} • {document.category}
+                          </Typography>
+                          {document.requiresReview && (
+                            <Chip label="Review required" color="warning" size="small" />
+                          )}
+                          {document.shares.length > 0 && (
+                            <Typography variant="caption" color="text.secondary">
+                              Shared with {document.sharedWith.join(', ')}
+                            </Typography>
+                          )}
+                        </Stack>
+                      }
                     />
                     <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        onClick={() =>
-                          starMutation.mutate({ id: document.id, starred: !document.starred })
-                        }
-                        aria-label={document.starred ? 'Unstar' : 'Star'}
-                      >
-                        {document.starred ? <StarIcon color="warning" /> : <StarBorderIcon />}
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        sx={{ ml: 1 }}
-                        onClick={() => deleteMutation.mutate(document.id)}
-                        aria-label="Delete"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setShareDialog({ open: true, documentId: document.id, userId: '', message: '' })}
+                          disabled={shareMutation.isPending && shareDialog.documentId === document.id}
+                        >
+                          Share
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color={document.requiresReview ? 'success' : 'primary'}
+                          disabled={requestReviewMutation.isPending || completeReviewMutation.isPending}
+                          onClick={() => {
+                            if (document.requiresReview) {
+                              completeReviewMutation.mutate(document.id);
+                            } else {
+                              requestReviewMutation.mutate(document.id);
+                            }
+                          }}
+                        >
+                          {document.requiresReview ? 'Mark reviewed' : 'Request review'}
+                        </Button>
+                        <IconButton
+                          edge="end"
+                          onClick={() =>
+                            starMutation.mutate({ id: document.id, starred: !document.starred })
+                          }
+                          aria-label={document.starred ? 'Unstar' : 'Star'}
+                        >
+                          {document.starred ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                        </IconButton>
+                        <IconButton
+                          edge="end"
+                          onClick={() => deleteMutation.mutate(document.id)}
+                          aria-label="Delete"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Stack>
                     </ListItemSecondaryAction>
                   </ListItem>
                   <Divider component="li" />
@@ -318,6 +407,53 @@ const DocumentsPage: React.FC = () => {
         uploadProgress={uploadProgress}
         uploading={uploadMutation.isPending}
       />
+
+      <Dialog
+        open={shareDialog.open}
+        onClose={() => setShareDialog({ open: false, documentId: '', userId: '', message: '' })}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Share document</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Recipient user ID"
+              value={shareDialog.userId}
+              onChange={(event) => setShareDialog((prev) => ({ ...prev, userId: event.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Message (optional)"
+              value={shareDialog.message}
+              onChange={(event) => setShareDialog((prev) => ({ ...prev, message: event.target.value }))}
+              fullWidth
+              multiline
+              minRows={2}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShareDialog({ open: false, documentId: '', userId: '', message: '' })}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (!shareDialog.userId) {
+                enqueueSnackbar('Recipient user ID is required', { variant: 'warning' });
+                return;
+              }
+              shareMutation.mutate({
+                id: shareDialog.documentId,
+                userId: shareDialog.userId,
+                message: shareDialog.message || undefined,
+              });
+            }}
+            disabled={!shareDialog.userId || shareMutation.isPending}
+          >
+            Share
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

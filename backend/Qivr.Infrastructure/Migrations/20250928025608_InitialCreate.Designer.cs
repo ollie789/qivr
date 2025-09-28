@@ -12,14 +12,14 @@ using Qivr.Infrastructure.Data;
 namespace Qivr.Infrastructure.Migrations
 {
     [DbContext(typeof(QivrDbContext))]
-    [Migration("20250925094500_AddMedicalRecordsTables")]
-    partial class AddMedicalRecordsTables
+    [Migration("20250928025608_InitialCreate")]
+    partial class InitialCreate
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("qivr")
                 .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -173,7 +173,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("no_double_booking");
 
-                    b.ToTable("appointments", "qivr");
+                    b.ToTable("appointments", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.AppointmentWaitlistEntry", b =>
@@ -189,13 +189,13 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("appointment_type");
 
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
 
                     b.Property<DateTime?>("FulfilledAt")
                         .HasColumnType("timestamp with time zone")
@@ -240,8 +240,8 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid")
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text")
                         .HasColumnName("updated_by");
 
                     b.HasKey("Id")
@@ -260,27 +260,9 @@ namespace Qivr.Infrastructure.Migrations
                         .HasDatabaseName("ix_appointment_waitlist_entries_tenant_status");
 
                     b.HasIndex("TenantId", "PatientId", "Status")
-                        .HasDatabaseName("ix_appointment_waitlist_entries_tenant_patient_status");
+                        .HasDatabaseName("ix_appointment_waitlist_entries_patient_status");
 
-                    b.HasOne("Qivr.Core.Entities.Appointment", "MatchedAppointment")
-                        .WithMany()
-                        .HasForeignKey("MatchedAppointmentId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_waitlist_entries_appointments_matched_appointment_id");
-
-                    b.HasOne("Qivr.Core.Entities.User", "Patient")
-                        .WithMany()
-                        .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .HasConstraintName("fk_waitlist_entries_users_patient_id");
-
-                    b.HasOne("Qivr.Core.Entities.User", "Provider")
-                        .WithMany()
-                        .HasForeignKey("ProviderId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_waitlist_entries_users_provider_id");
-
-                    b.ToTable("appointment_waitlist_entries", "qivr");
+                    b.ToTable("appointment_waitlist_entries", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.BrandTheme", b =>
@@ -352,7 +334,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_brand_themes_tenant_id_name");
 
-                    b.ToTable("brand_themes", "qivr");
+                    b.ToTable("brand_themes", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Clinic", b =>
@@ -435,7 +417,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Name")
                         .HasDatabaseName("ix_clinics_tenant_id_name");
 
-                    b.ToTable("clinics", "qivr");
+                    b.ToTable("clinics", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Conversation", b =>
@@ -506,7 +488,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "PatientId")
                         .HasDatabaseName("ix_conversations_tenant_id_patient_id");
 
-                    b.ToTable("conversations", "qivr");
+                    b.ToTable("conversations", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.ConversationParticipant", b =>
@@ -573,7 +555,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_conversation_participants_conversation_id_user_id");
 
-                    b.ToTable("conversation_participants", "qivr");
+                    b.ToTable("conversation_participants", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Document", b =>
@@ -679,7 +661,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "PatientId")
                         .HasDatabaseName("ix_documents_tenant_id_patient_id");
 
-                    b.ToTable("documents", "qivr");
+                    b.ToTable("documents", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Evaluation", b =>
@@ -783,7 +765,440 @@ namespace Qivr.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_evaluations_tenant_id_evaluation_number");
 
-                    b.ToTable("evaluations", "qivr");
+                    b.ToTable("evaluations", (string)null);
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalAllergy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Allergen")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("allergen");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DiagnosedDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("diagnosed_date");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("Reaction")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reaction");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("severity");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_medical_allergies");
+
+                    b.HasIndex("TenantId", "PatientId", "Allergen")
+                        .HasDatabaseName("ix_medical_allergies_tenant_id_patient_id_allergen");
+
+                    b.ToTable("medical_allergies", (string)null);
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalCondition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Condition")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("condition");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("DiagnosedDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("diagnosed_date");
+
+                    b.Property<string>("Icd10Code")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("icd10code");
+
+                    b.Property<DateTime>("LastReviewed")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_reviewed");
+
+                    b.Property<string>("ManagedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("managed_by");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_medical_conditions");
+
+                    b.HasIndex("TenantId", "PatientId", "Condition")
+                        .HasDatabaseName("ix_medical_conditions_tenant_id_patient_id_condition");
+
+                    b.ToTable("medical_conditions", (string)null);
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalImmunization", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("date");
+
+                    b.Property<string>("Facility")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("facility");
+
+                    b.Property<string>("LotNumber")
+                        .HasColumnType("text")
+                        .HasColumnName("lot_number");
+
+                    b.Property<DateTime?>("NextDue")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_due");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("Series")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("series");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Vaccine")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("vaccine");
+
+                    b.HasKey("Id")
+                        .HasName("pk_medical_immunizations");
+
+                    b.HasIndex("TenantId", "PatientId", "Date")
+                        .HasDatabaseName("ix_medical_immunizations_tenant_id_patient_id_date");
+
+                    b.ToTable("medical_immunizations", (string)null);
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalLabResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("OrderedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ordered_by");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("ReferenceRange")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference_range");
+
+                    b.Property<DateTime>("ResultDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("result_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TestName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("test_name");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("unit");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("value");
+
+                    b.HasKey("Id")
+                        .HasName("pk_medical_lab_results");
+
+                    b.HasIndex("TenantId", "PatientId", "Category", "ResultDate")
+                        .HasDatabaseName("ix_medical_lab_results_tenant_id_patient_id_category_result_da");
+
+                    b.ToTable("medical_lab_results", (string)null);
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalMedication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Dosage")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("dosage");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_date");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("frequency");
+
+                    b.Property<string>("Instructions")
+                        .HasColumnType("text")
+                        .HasColumnName("instructions");
+
+                    b.Property<DateTime?>("LastFilled")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_filled");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("Pharmacy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("pharmacy");
+
+                    b.Property<string>("PrescribedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("prescribed_by");
+
+                    b.Property<int?>("RefillsRemaining")
+                        .HasColumnType("integer")
+                        .HasColumnName("refills_remaining");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_medical_medications");
+
+                    b.HasIndex("TenantId", "PatientId", "Status")
+                        .HasDatabaseName("ix_medical_medications_tenant_id_patient_id_status");
+
+                    b.ToTable("medical_medications", (string)null);
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalVital", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Diastolic")
+                        .HasColumnType("integer")
+                        .HasColumnName("diastolic");
+
+                    b.Property<int>("HeartRate")
+                        .HasColumnType("integer")
+                        .HasColumnName("heart_rate");
+
+                    b.Property<decimal>("HeightCentimetres")
+                        .HasColumnType("numeric")
+                        .HasColumnName("height_centimetres");
+
+                    b.Property<int>("OxygenSaturation")
+                        .HasColumnType("integer")
+                        .HasColumnName("oxygen_saturation");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<int>("RespiratoryRate")
+                        .HasColumnType("integer")
+                        .HasColumnName("respiratory_rate");
+
+                    b.Property<int>("Systolic")
+                        .HasColumnType("integer")
+                        .HasColumnName("systolic");
+
+                    b.Property<decimal>("TemperatureCelsius")
+                        .HasColumnType("numeric")
+                        .HasColumnName("temperature_celsius");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<decimal>("WeightKilograms")
+                        .HasColumnType("numeric")
+                        .HasColumnName("weight_kilograms");
+
+                    b.HasKey("Id")
+                        .HasName("pk_medical_vitals");
+
+                    b.HasIndex("TenantId", "PatientId", "RecordedAt")
+                        .HasDatabaseName("ix_medical_vitals_tenant_id_patient_id_recorded_at");
+
+                    b.ToTable("medical_vitals", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Message", b =>
@@ -904,7 +1319,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("SenderId", "DirectRecipientId")
                         .HasDatabaseName("ix_messages_sender_id_direct_recipient_id");
 
-                    b.ToTable("messages", "qivr");
+                    b.ToTable("messages", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Notification", b =>
@@ -992,7 +1407,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "RecipientId", "CreatedAt")
                         .HasDatabaseName("ix_notifications_tenant_id_recipient_id_created_at");
 
-                    b.ToTable("notifications", "qivr");
+                    b.ToTable("notifications", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.NotificationPreferences", b =>
@@ -1081,7 +1496,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_notification_preferences_tenant_id_user_id");
 
-                    b.ToTable("notification_preferences", "qivr");
+                    b.ToTable("notification_preferences", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PainMap", b =>
@@ -1143,7 +1558,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("EvaluationId")
                         .HasDatabaseName("ix_pain_maps_evaluation_id");
 
-                    b.ToTable("pain_maps", "qivr");
+                    b.ToTable("pain_maps", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PromBookingRequest", b =>
@@ -1215,7 +1630,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "PromInstanceId")
                         .HasDatabaseName("ix_prom_booking_requests_tenant_id_prom_instance_id");
 
-                    b.ToTable("prom_booking_requests", "qivr");
+                    b.ToTable("prom_booking_requests", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PromInstance", b =>
@@ -1286,7 +1701,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "PatientId")
                         .HasDatabaseName("ix_prom_instances_tenant_id_patient_id");
 
-                    b.ToTable("prom_instances", "qivr");
+                    b.ToTable("prom_instances", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PromResponse", b =>
@@ -1362,7 +1777,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "PatientId", "CompletedAt")
                         .HasDatabaseName("ix_prom_responses_tenant_id_patient_id_completed_at");
 
-                    b.ToTable("prom_responses", "qivr");
+                    b.ToTable("prom_responses", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PromTemplate", b =>
@@ -1440,7 +1855,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_prom_templates_tenant_id_key_version");
 
-                    b.ToTable("prom_templates", "qivr");
+                    b.ToTable("prom_templates", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Provider", b =>
@@ -1506,7 +1921,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "UserId", "ClinicId")
                         .HasDatabaseName("ix_providers_tenant_id_user_id_clinic_id");
 
-                    b.ToTable("providers", "qivr");
+                    b.ToTable("providers", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Tenant", b =>
@@ -1520,48 +1935,20 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<string>("Locale")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("locale");
-
-                    b.Property<string>("Metadata")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("metadata");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("name");
 
-                    b.Property<string>("Plan")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("plan");
-
                     b.Property<string>("Settings")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("jsonb")
                         .HasColumnName("settings");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("slug");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Timezone")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("timezone");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1574,7 +1961,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_tenants_slug");
 
-                    b.ToTable("tenants", "qivr");
+                    b.ToTable("tenants", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.User", b =>
@@ -1584,56 +1971,23 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("AvatarUrl")
-                        .HasColumnType("text")
-                        .HasColumnName("avatar_url");
-
                     b.Property<string>("CognitoSub")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("cognito_sub");
-
-                    b.Property<string>("Consent")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("consent");
+                        .HasColumnName("cognito_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("date_of_birth");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("email");
 
-                    b.Property<bool>("EmailVerified")
-                        .HasColumnType("boolean")
-                        .HasColumnName("email_verified");
-
                     b.Property<string>("FirstName")
                         .HasColumnType("text")
                         .HasColumnName("first_name");
-
-                    b.Property<string>("Gender")
-                        .HasColumnType("text")
-                        .HasColumnName("gender");
-
-                    b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_login_at");
 
                     b.Property<string>("LastName")
                         .HasColumnType("text")
@@ -1643,19 +1997,10 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("phone");
 
-                    b.Property<bool>("PhoneVerified")
-                        .HasColumnType("boolean")
-                        .HasColumnName("phone_verified");
-
                     b.Property<string>("Preferences")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("preferences");
-
-                    b.Property<string[]>("Roles")
-                        .IsRequired()
-                        .HasColumnType("text[]")
-                        .HasColumnName("roles");
+                        .HasColumnName("metadata");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -1665,14 +2010,10 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("updated_by");
-
                     b.Property<string>("UserType")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("user_type");
+                        .HasColumnName("role");
 
                     b.HasKey("Id")
                         .HasName("pk_users");
@@ -1685,7 +2026,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_users_tenant_id_email");
 
-                    b.ToTable("users", "qivr");
+                    b.ToTable("users", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Appointment", b =>
@@ -1726,7 +2067,7 @@ namespace Qivr.Infrastructure.Migrations
                         .HasForeignKey("ProviderId1")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_appointments_providers_provider_id1");
+                        .HasConstraintName("fk_appointments_providers_provider_id");
 
                     b.HasOne("Qivr.Core.Entities.Tenant", null)
                         .WithMany("Appointments")
@@ -1738,6 +2079,34 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("CancelledByUser");
 
                     b.Navigation("Evaluation");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.AppointmentWaitlistEntry", b =>
+                {
+                    b.HasOne("Qivr.Core.Entities.Appointment", "MatchedAppointment")
+                        .WithMany()
+                        .HasForeignKey("MatchedAppointmentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_appointment_waitlist_entries_appointments_matched_appointme");
+
+                    b.HasOne("Qivr.Core.Entities.User", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_appointment_waitlist_entries_users_patient_id");
+
+                    b.HasOne("Qivr.Core.Entities.User", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_appointment_waitlist_entries_users_provider_id");
+
+                    b.Navigation("MatchedAppointment");
 
                     b.Navigation("Patient");
 
@@ -1850,7 +2219,7 @@ namespace Qivr.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("DirectRecipientId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_messages_users_direct_recipient_id");
+                        .HasConstraintName("fk_messages_users_recipient_id");
 
                     b.HasOne("Qivr.Core.Entities.Message", "ParentMessage")
                         .WithMany("Replies")
@@ -1921,7 +2290,7 @@ namespace Qivr.Infrastructure.Migrations
                         {
                             b1.Property<Guid>("PainMapId")
                                 .HasColumnType("uuid")
-                                .HasColumnName("id");
+                                .HasColumnName("pain_map_id");
 
                             b1.Property<float>("X")
                                 .HasColumnType("real")
@@ -1935,13 +2304,14 @@ namespace Qivr.Infrastructure.Migrations
                                 .HasColumnType("real")
                                 .HasColumnName("coordinate_z");
 
-                            b1.HasKey("PainMapId");
+                            b1.HasKey("PainMapId")
+                                .HasName("pk_pain_coordinates");
 
-                            b1.ToTable("pain_maps", "qivr");
+                            b1.ToTable("pain_coordinates");
 
                             b1.WithOwner()
                                 .HasForeignKey("PainMapId")
-                                .HasConstraintName("fk_pain_maps_pain_maps_id");
+                                .HasConstraintName("fk_pain_coordinates_pain_maps_pain_map_id");
                         });
 
                     b.Navigation("Coordinates")
@@ -2043,15 +2413,6 @@ namespace Qivr.Infrastructure.Migrations
                         .HasConstraintName("fk_users_tenants_tenant_id");
 
                     b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.AppointmentWaitlistEntry", b =>
-                {
-                    b.Navigation("MatchedAppointment");
-
-                    b.Navigation("Patient");
-
-                    b.Navigation("Provider");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Clinic", b =>

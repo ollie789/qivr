@@ -77,6 +77,7 @@ Refer to [docs/development.md](docs/development.md) for branching conventions, c
 ## ✅ Testing
 
 - Backend: `cd backend && dotnet test`
+  - The suite connects to the shared AWS RDS instance. Set `TEST_CONNECTION_STRING` (or copy credentials into `backend/.env.aws-dev`) before running locally.
 - React workspaces: `npm run test --workspace=@qivr/<app>`
 - Smoke check before pushing: `apps/check-status.sh`
 - Extra flows: `test-auth-flow.mjs`, `test-api-migration.ts`

@@ -40,7 +40,7 @@ export interface PromTemplate {
   questions: PromQuestion[];
 }
 
-export type PromInstanceStatus = 'pending' | 'in-progress' | 'completed' | 'expired';
+export type PromInstanceStatus = 'pending' | 'in-progress' | 'completed' | 'expired' | 'cancelled';
 
 export interface PromInstance {
   id: string;

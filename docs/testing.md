@@ -6,12 +6,16 @@ This document captures the current expectations for automated and manual testing
 
 | Layer | Command | Notes |
 | --- | --- | --- |
-| Backend unit/integration | `cd backend && dotnet test` | Pass `--collect:"XPlat Code Coverage"` when you need coverage reports |
+| Backend unit/integration | `cd backend && dotnet test` | Pass `--collect:"XPlat Code Coverage"` when you need coverage reports (covers appointments + documents controller flows) |
 | Patient portal | `npm run test --workspace=@qivr/patient-portal` | Uses Vitest + React Testing Library |
-| Clinic dashboard | `npm run test --workspace=@qivr/clinic-dashboard` | Mirror the patient portal approach |
+| Clinic dashboard | `npm run test --workspace=@qivr/clinic-dashboard` | Vitest suite covers PROM API stat mapping (`src/services/__tests__/promApi.test.ts`) |
 | Widget | `npm run test --workspace=@qivr/widget` | Smaller footprint but keep parity |
 | Lint | `npm run lint` | Fails the pipeline on warnings; fix before committing |
 | Smoke check | `apps/check-status.sh` | Runs lint + targeted tests used in CI preflight |
+
+### Backend database dependency
+
+Backend tests run against the AWS RDS PostgreSQL instance. Export `TEST_CONNECTION_STRING` (or provide `CONNECTION_STRING` in `backend/.env.aws-dev`) before calling `dotnet test`. The `Qivr.Tests` harness pulls the connection string from those sources and applies EF's snake_case naming convention automatically.
 
 ## End-to-end and flows
 
@@ -35,7 +39,7 @@ The pipeline runs `npm run lint`, workspace tests, and `dotnet test` on every pu
 
 ## Troubleshooting
 
-- If `dotnet test` fails because a database is missing, ensure `npm run docker:up` is running or override the connection string to point at a local Postgres instance.
+- If `dotnet test` fails with a connection error, verify `TEST_CONNECTION_STRING` is set (or `.env.aws-dev` exists) and that your IP is allowed against the AWS security group.
 - Frontend tests require a modern Node environment (20+). Delete `node_modules` and reinstall if you see binary build errors.
 - Snapshot updates belong in a dedicated commit unless they accompany code changes.
 

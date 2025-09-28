@@ -26,7 +26,6 @@ public class User : DeletableEntity, IAuditable
     public virtual Tenant? Tenant { get; set; }
     public virtual ICollection<Evaluation> Evaluations { get; set; } = new List<Evaluation>();
     public virtual ICollection<Appointment> PatientAppointments { get; set; } = new List<Appointment>();
-    public virtual ICollection<Appointment> ProviderAppointments { get; set; } = new List<Appointment>();
     
     public string FullName => $"{FirstName} {LastName}".Trim();
     

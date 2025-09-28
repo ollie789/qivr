@@ -32,6 +32,7 @@ import {
   Stack,
   CircularProgress,
   Divider,
+  Tooltip,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -55,7 +56,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO } from 'date-fns';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { promApi, PromTemplateSummary, PromResponse } from '../services/promApi';
+import { promApi, PromTemplateSummary, PromResponse, PromResponsesResult, PromAnswerValue } from '../services/promApi';
 import PROMSender from '../components/PROMSender';
 import { PromBuilder } from '../features/proms/components/PromBuilder';
 import { PromPreview } from '../components/PromPreview';
@@ -90,6 +91,7 @@ const PROM: React.FC = () => {
   const [sendTemplateId, setSendTemplateId] = useState<string | null>(null);
   const [selectedResponse, setSelectedResponse] = useState<PromResponse | null>(null);
   const [responseDetailOpen, setResponseDetailOpen] = useState(false);
+  const [responseDetailLoading, setResponseDetailLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [dateRange, setDateRange] = useState({
     start: null as Date | null,
@@ -109,7 +111,7 @@ const PROM: React.FC = () => {
   const templates: PromTemplateSummary[] = templatesData || [];
 
   // Fetch responses
-  const { data: responsesData, isLoading: responsesLoading, refetch: refetchResponses } = useQuery({
+  const { data: responsesData, isLoading: responsesLoading, refetch: refetchResponses } = useQuery<PromResponsesResult>({
     queryKey: ['prom-responses', filterStatus, dateRange, page, rowsPerPage],
     queryFn: () => promApi.getResponses({
       status: filterStatus !== 'all' ? filterStatus : undefined,
@@ -120,8 +122,9 @@ const PROM: React.FC = () => {
     }),
   });
 
-  const responses = responsesData?.data || [];
-  const totalResponses = responsesData?.total || 0;
+  const responses = responsesData?.data ?? [];
+  const totalResponses = responsesData?.total ?? 0;
+  const aggregateStats = responsesData?.stats;
 
   // Delete template mutation
   const deleteTemplateMutation = useMutation({
@@ -137,16 +140,40 @@ const PROM: React.FC = () => {
 
   // Calculate statistics
   const statistics = {
-    total: responses.length,
-    completed: responses.filter((r: PromResponse) => r.status === 'completed').length,
-    pending: responses.filter((r: PromResponse) => r.status === 'pending').length,
-    inProgress: responses.filter((r: PromResponse) => r.status === 'in-progress').length,
-    expired: responses.filter((r: PromResponse) => r.status === 'expired').length,
+    total: aggregateStats?.total ?? responses.length,
+    completed: aggregateStats?.completedCount ?? responses.filter((r) => r.status === 'completed').length,
+    pending: aggregateStats?.pendingCount ?? responses.filter((r) => r.status === 'pending').length,
+    inProgress: aggregateStats?.inProgressCount ?? responses.filter((r) => r.status === 'in-progress').length,
+    expired: aggregateStats?.expiredCount ?? responses.filter((r) => r.status === 'expired').length,
+    cancelled: aggregateStats?.cancelledCount ?? responses.filter((r) => r.status === 'cancelled').length,
   };
 
-  const completionRate = statistics.total > 0
-    ? Math.round((statistics.completed / statistics.total) * 100)
-    : 0;
+  const fallbackAverageScore = () => {
+    const scored = responses.filter((item) => typeof item.score === 'number');
+    if (!scored.length) return 0;
+    const totalScore = scored.reduce((total, item) => total + (item.score ?? 0), 0);
+    return Math.round((totalScore / scored.length) * 100) / 100;
+  };
+
+  const averageScore = aggregateStats?.averageScore ?? fallbackAverageScore();
+
+  const completionRate = aggregateStats?.completionRate
+    ?? (statistics.total > 0
+        ? Math.round((statistics.completed / statistics.total) * 1000) / 10
+        : 0);
+
+  const nextDueDate = aggregateStats?.nextDue ?? statistics.nextDue;
+  const lastCompletedDate = aggregateStats?.lastCompleted ?? statistics.lastCompleted;
+  const streak = aggregateStats?.streak ?? statistics.streak ?? 0;
+
+  const formatDate = (value?: string) => {
+    if (!value) return '—';
+    try {
+      return format(parseISO(value), 'MMM dd, yyyy');
+    } catch (error) {
+      return '—';
+    }
+  };
 
   // Chart data
   const statusChartData = [
@@ -154,6 +181,7 @@ const PROM: React.FC = () => {
     { name: 'Pending', value: statistics.pending, color: '#ff9800' },
     { name: 'In Progress', value: statistics.inProgress, color: '#2196f3' },
     { name: 'Expired', value: statistics.expired, color: '#f44336' },
+    { name: 'Cancelled', value: statistics.cancelled, color: '#9e9e9e' },
   ];
 
   // Type for trends data accumulator
@@ -200,9 +228,27 @@ const PROM: React.FC = () => {
     }
   };
 
-  const handleViewResponse = (response: PromResponse) => {
-    setSelectedResponse(response);
+  const handleViewResponse = async (response: PromResponse) => {
+    setResponseDetailLoading(true);
     setResponseDetailOpen(true);
+    setSelectedResponse(null);
+
+    try {
+      const detailed = await promApi.getResponse(response.id);
+      setSelectedResponse(detailed);
+    } catch (error) {
+      console.error('Failed to load response details', error);
+      setSelectedResponse(response);
+      enqueueSnackbar('Unable to load full response details; showing cached data.', { variant: 'warning' });
+    } finally {
+      setResponseDetailLoading(false);
+    }
+  };
+
+  const handleCloseResponseDetail = () => {
+    setResponseDetailOpen(false);
+    setSelectedResponse(null);
+    setResponseDetailLoading(false);
   };
 
   const getStatusColor = (status: string): 'success' | 'warning' | 'info' | 'error' | 'default' => {
@@ -211,6 +257,7 @@ const PROM: React.FC = () => {
       case 'pending': return 'warning';
       case 'in-progress': return 'info';
       case 'expired': return 'error';
+      case 'cancelled': return 'default';
       default: return 'default';
     }
   };
@@ -221,8 +268,37 @@ const PROM: React.FC = () => {
       case 'pending': return <PendingIcon />;
       case 'in-progress': return <ScheduleIcon />;
       case 'expired': return <CancelIcon />;
+      case 'cancelled': return <CancelIcon />;
       default: return <AssignmentIcon />;
     }
+  };
+
+  const renderAnswerValue = (answer: PromAnswerValue): React.ReactNode => {
+    if (answer === null || answer === undefined) {
+      return '—';
+    }
+
+    if (Array.isArray(answer)) {
+      return answer.length ? answer.join(', ') : '—';
+    }
+
+    if (answer instanceof Date) {
+      return format(answer, 'PPP');
+    }
+
+    if (typeof answer === 'object') {
+      return (
+        <Box component="pre" sx={{ m: 0, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+          {JSON.stringify(answer, null, 2)}
+        </Box>
+      );
+    }
+
+    if (typeof answer === 'boolean') {
+      return answer ? 'Yes' : 'No';
+    }
+
+    return answer;
   };
 
   return (
@@ -265,7 +341,7 @@ const PROM: React.FC = () => {
                     <Typography color="textSecondary" gutterBottom variant="body2">
                       Completion Rate
                     </Typography>
-                    <Typography variant="h4">{completionRate}%</Typography>
+                    <Typography variant="h4">{completionRate.toFixed(1)}%</Typography>
                   </Box>
                   <CircularProgress
                     variant="determinate"
@@ -311,6 +387,83 @@ const PROM: React.FC = () => {
                     <QuestionIcon />
                   </Avatar>
                 </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography color="textSecondary" gutterBottom variant="body2">
+                      In Progress
+                    </Typography>
+                    <Typography variant="h4">{statistics.inProgress}</Typography>
+                  </Box>
+                  <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                    <ScheduleIcon />
+                  </Avatar>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography color="textSecondary" gutterBottom variant="body2">
+                      Cancelled
+                    </Typography>
+                    <Typography variant="h4">{statistics.cancelled}</Typography>
+                  </Box>
+                  <Avatar sx={{ bgcolor: 'grey.600' }}>
+                    <CancelIcon />
+                  </Avatar>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography color="textSecondary" gutterBottom variant="body2">
+                      Average Score
+                    </Typography>
+                    <Typography variant="h4">{averageScore.toFixed(1)}%</Typography>
+                  </Box>
+                  <CircularProgress
+                    variant="determinate"
+                    value={Math.min(averageScore, 100)}
+                    size={50}
+                    thickness={4}
+                    sx={{ color: 'primary.main' }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom variant="body2">
+                  Upcoming & Streak
+                </Typography>
+                <Stack spacing={1}>
+                  <Typography variant="body2">
+                    <strong>Next Due:</strong> {formatDate(nextDueDate)}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Last Completed:</strong> {formatDate(lastCompletedDate)}
+                  </Typography>
+                  <Chip label={`Streak: ${streak} day${streak === 1 ? '' : 's'}`} color={streak > 0 ? 'success' : 'default'} size="small" />
+                </Stack>
               </CardContent>
             </Card>
           </Grid>
@@ -417,6 +570,7 @@ const PROM: React.FC = () => {
                       <MenuItem value="in-progress">In Progress</MenuItem>
                       <MenuItem value="completed">Completed</MenuItem>
                       <MenuItem value="expired">Expired</MenuItem>
+                      <MenuItem value="cancelled">Cancelled</MenuItem>
                     </Select>
                   </FormControl>
                   
@@ -476,7 +630,7 @@ const PROM: React.FC = () => {
                       responses.map((response: PromResponse) => (
                         <TableRow key={response.id}>
                           <TableCell>{response.patientName}</TableCell>
-                          <TableCell>{response.templateId}</TableCell>
+                          <TableCell>{response.templateName || response.templateId || '—'}</TableCell>
                           <TableCell>
                             <Chip
                               icon={getStatusIcon(response.status)}
@@ -497,11 +651,17 @@ const PROM: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             {response.score !== undefined ? (
-                              <Chip
-                                label={`${response.score}%`}
-                                color={response.score >= 70 ? 'success' : 'warning'}
-                                size="small"
-                              />
+                              <Tooltip
+                                title={response.rawScore !== undefined && response.maxScore !== undefined
+                                  ? `Raw score: ${response.rawScore} / ${response.maxScore}`
+                                  : 'Percentage score'}
+                              >
+                                <Chip
+                                  label={`${response.score.toFixed(1)}%`}
+                                  color={response.score >= 70 ? 'success' : 'warning'}
+                                  size="small"
+                                />
+                              </Tooltip>
                             ) : (
                               '-'
                             )}
@@ -509,7 +669,7 @@ const PROM: React.FC = () => {
                           <TableCell>
                             <IconButton
                               size="small"
-                              onClick={() => handleViewResponse(response)}
+                              onClick={() => { void handleViewResponse(response); }}
                             >
                               <PreviewIcon />
                             </IconButton>
@@ -657,7 +817,7 @@ const PROM: React.FC = () => {
         {/* Response Detail Dialog */}
         <Dialog
           open={responseDetailOpen}
-          onClose={() => setResponseDetailOpen(false)}
+          onClose={handleCloseResponseDetail}
           maxWidth="md"
           fullWidth
         >
@@ -673,7 +833,11 @@ const PROM: React.FC = () => {
             )}
           </DialogTitle>
           <DialogContent>
-            {selectedResponse && (
+            {responseDetailLoading ? (
+              <Box display="flex" justifyContent="center" py={4}>
+                <CircularProgress />
+              </Box>
+            ) : selectedResponse ? (
               <Box>
                 <Stack spacing={2}>
                   <Alert severity="info">
@@ -681,11 +845,16 @@ const PROM: React.FC = () => {
                       <strong>Patient:</strong> {selectedResponse.patientName}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>Template ID:</strong> {selectedResponse.templateId}
+                      <strong>Template:</strong> {selectedResponse.templateName || selectedResponse.templateId}
                     </Typography>
-                    {selectedResponse.startedAt && (
+                    {selectedResponse.assignedAt && (
                       <Typography variant="body2">
-                        <strong>Started:</strong> {format(parseISO(selectedResponse.startedAt), 'PPP')}
+                        <strong>Assigned:</strong> {format(parseISO(selectedResponse.assignedAt), 'PPP')}
+                      </Typography>
+                    )}
+                    {selectedResponse.scheduledAt && (
+                      <Typography variant="body2">
+                        <strong>Scheduled:</strong> {format(parseISO(selectedResponse.scheduledAt), 'PPP')}
                       </Typography>
                     )}
                     {selectedResponse.completedAt && (
@@ -693,21 +862,37 @@ const PROM: React.FC = () => {
                         <strong>Completed:</strong> {format(parseISO(selectedResponse.completedAt), 'PPP')}
                       </Typography>
                     )}
+                    {selectedResponse.score !== undefined && (
+                      <Typography variant="body2">
+                        <strong>Score:</strong> {Math.round(selectedResponse.score)}%
+                      </Typography>
+                    )}
+                    {selectedResponse.rawScore !== undefined && selectedResponse.maxScore !== undefined && (
+                      <Typography variant="body2">
+                        <strong>Raw Score:</strong> {selectedResponse.rawScore} / {selectedResponse.maxScore}
+                      </Typography>
+                    )}
                   </Alert>
 
                   <Divider />
 
                   <Typography variant="h6">Responses</Typography>
-                  {Object.entries(selectedResponse.responses).map(([question, answer]) => (
-                    <Paper key={question} sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        {question}
-                      </Typography>
-                      <Typography variant="body1">
-                        {typeof answer === 'object' ? JSON.stringify(answer) : answer}
-                      </Typography>
-                    </Paper>
-                  ))}
+                  {Object.keys(selectedResponse.responses).length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      No answers recorded.
+                    </Typography>
+                  ) : (
+                    Object.entries(selectedResponse.responses).map(([question, answer]) => (
+                      <Paper key={question} sx={{ p: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          {question}
+                        </Typography>
+                        <Typography variant="body1">
+                          {renderAnswerValue(answer)}
+                        </Typography>
+                      </Paper>
+                    ))
+                  )}
 
                   {selectedResponse.notes && (
                     <>
@@ -718,11 +903,15 @@ const PROM: React.FC = () => {
                   )}
                 </Stack>
               </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Select a response to view details.
+              </Typography>
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setResponseDetailOpen(false)}>Close</Button>
-            {selectedResponse?.status === 'pending' && (
+            <Button onClick={handleCloseResponseDetail}>Close</Button>
+            {!responseDetailLoading && selectedResponse?.status === 'pending' && (
               <Button variant="contained" startIcon={<EmailIcon />}>
                 Send Reminder
               </Button>

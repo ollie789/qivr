@@ -102,6 +102,224 @@
           "notes": "Manual therapy session"
         }
       ],
+      "promTemplates": [
+        {
+          "key": "phq-9",
+          "version": 1,
+          "name": "PHQ-9 Depression Screener",
+          "description": "Nine-item questionnaire for depression severity",
+          "category": "Mental Health",
+          "frequency": "monthly",
+          "questions": [
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901001",
+              "text": "Little interest or pleasure in doing things",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 1,
+              "description": "0 = Not at all, 3 = Nearly every day"
+            },
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901002",
+              "text": "Feeling down, depressed, or hopeless",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 2
+            },
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901003",
+              "text": "Trouble falling or staying asleep, or sleeping too much",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 3
+            },
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901004",
+              "text": "Feeling tired or having little energy",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 4
+            },
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901005",
+              "text": "Poor appetite or overeating",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 5
+            },
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901006",
+              "text": "Feeling bad about yourself — or that you are a failure or have let yourself or your family down",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 6
+            },
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901007",
+              "text": "Trouble concentrating on things, such as reading or watching television",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 7
+            },
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901008",
+              "text": "Moving or speaking so slowly that other people could have noticed, or being so fidgety that you move around a lot more than usual",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 8
+            },
+            {
+              "id": "0d2c09cf-d2be-4bf6-9fd0-c3abca901009",
+              "text": "Thoughts that you would be better off dead or of hurting yourself",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 9
+            }
+          ],
+          "scoringMethod": {
+            "type": "sum"
+          },
+          "scoringRules": {
+            "minimal": 4,
+            "mild": 9,
+            "moderate": 14,
+            "moderatelySevere": 19,
+            "severe": 27
+          },
+          "isActive": true
+        },
+        {
+          "key": "gad-7",
+          "version": 1,
+          "name": "GAD-7 Anxiety Screener",
+          "description": "Seven-item generalised anxiety disorder assessment",
+          "category": "Mental Health",
+          "frequency": "monthly",
+          "questions": [
+            {
+              "id": "1fa0b25b-8f2d-41d4-9fab-4a11aa100001",
+              "text": "Feeling nervous, anxious, or on edge",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 1
+            },
+            {
+              "id": "1fa0b25b-8f2d-41d4-9fab-4a11aa100002",
+              "text": "Not being able to stop or control worrying",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 2
+            },
+            {
+              "id": "1fa0b25b-8f2d-41d4-9fab-4a11aa100003",
+              "text": "Worrying too much about different things",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 3
+            },
+            {
+              "id": "1fa0b25b-8f2d-41d4-9fab-4a11aa100004",
+              "text": "Trouble relaxing",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 4
+            },
+            {
+              "id": "1fa0b25b-8f2d-41d4-9fab-4a11aa100005",
+              "text": "Being so restless that it is hard to sit still",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 5
+            },
+            {
+              "id": "1fa0b25b-8f2d-41d4-9fab-4a11aa100006",
+              "text": "Becoming easily annoyed or irritable",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 6
+            },
+            {
+              "id": "1fa0b25b-8f2d-41d4-9fab-4a11aa100007",
+              "text": "Feeling afraid as if something awful might happen",
+              "type": "scale",
+              "required": true,
+              "options": [0, 1, 2, 3],
+              "order": 7
+            }
+          ],
+          "scoringMethod": {
+            "type": "sum"
+          },
+          "scoringRules": {
+            "minimal": 4,
+            "mild": 9,
+            "moderate": 14,
+            "severe": 21
+          },
+          "isActive": true
+        }
+      ],
+      "promInstances": [
+        {
+          "id": "11111111-aaaa-4bbb-8888-999999999001",
+          "templateKey": "phq-9",
+          "templateVersion": 1,
+          "patientEmail": "ollie.bingemann@gmail.com",
+          "status": "Completed",
+          "scheduledFor": "2025-09-10T08:00:00Z",
+          "dueDate": "2025-09-17T08:00:00Z",
+          "completedAt": "2025-09-11T09:15:00Z",
+          "score": 12,
+          "completionSeconds": 420,
+          "notes": "Patient reports improvement after starting CBT.",
+          "notificationMethod": "Email",
+          "sentBy": "test.doctor@clinic.com",
+          "tags": [
+            "baseline",
+            "telehealth"
+          ],
+          "answers": {
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901001": 1,
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901002": 2,
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901003": 1,
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901004": 1,
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901005": 2,
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901006": 1,
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901007": 1,
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901008": 2,
+            "0d2c09cf-d2be-4bf6-9fd0-c3abca901009": 1
+          }
+        },
+        {
+          "id": "11111111-aaaa-4bbb-8888-999999999002",
+          "templateKey": "gad-7",
+          "templateVersion": 1,
+          "patientEmail": "ollie.bingemann@gmail.com",
+          "status": "Pending",
+          "scheduledFor": "2025-09-24T08:00:00Z",
+          "dueDate": "2025-09-27T08:00:00Z",
+          "notificationMethod": "Sms",
+          "sentBy": "test.doctor@clinic.com",
+          "tags": [
+            "follow-up"
+          ]
+        }
+      ],
       "medicalRecords": {
         "conditions": [
           {

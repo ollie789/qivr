@@ -22,6 +22,14 @@ public class QivrDbContext : DbContext
         _httpContextAccessor = httpContextAccessor;
         ExtractTenantAndUser();
     }
+    
+    /// <summary>
+    /// Allows tests to explicitly set the tenant ID for query filtering
+    /// </summary>
+    public void SetTenantId(Guid tenantId)
+    {
+        _tenantId = tenantId;
+    }
 
     // DbSets
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -54,7 +62,8 @@ public class QivrDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         
-        modelBuilder.HasDefaultSchema("qivr");
+        // Use default public schema for PostgreSQL
+        // modelBuilder.HasDefaultSchema("qivr");
         
         // Configure snake_case naming convention for PostgreSQL
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
@@ -90,7 +99,7 @@ public class QivrDbContext : DbContext
                 foreignKey.SetConstraintName(ToSnakeCase(foreignKey.GetConstraintName()));
             }
         }
-        modelBuilder.HasDefaultSchema("qivr");
+        // modelBuilder.HasDefaultSchema("qivr");
         
         // Configure value converters for complex types
         var jsonConverter = new ValueConverter<Dictionary<string, object>, string>(
@@ -225,9 +234,14 @@ public class QivrDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
                 
             entity.HasOne(e => e.Provider)
-                .WithMany(u => u.ProviderAppointments)
+                .WithMany()  // No ProviderAppointments collection on User anymore
                 .HasForeignKey(e => e.ProviderId)
                 .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.Clinic)
+                .WithMany()
+                .HasForeignKey(e => e.ClinicId)
+                .OnDelete(DeleteBehavior.SetNull);
                 
             entity.HasOne(e => e.Evaluation)
                 .WithMany(ev => ev.Appointments)

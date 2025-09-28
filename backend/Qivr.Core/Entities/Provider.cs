@@ -28,6 +28,12 @@ public class Provider : TenantEntity
     // Navigation properties
     public virtual User? User { get; set; }
     public virtual Clinic? Clinic { get; set; }
-    public virtual ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
     public virtual ICollection<Evaluation> Evaluations { get; set; } = new List<Evaluation>();
+    
+    // Computed properties from User
+    public string? FirstName => User?.FirstName;
+    public string? LastName => User?.LastName;
+    public string FullName => User?.FullName ?? string.Empty;
+    public string Email => User?.Email ?? string.Empty;
+    public string? Phone => User?.Phone;
 }

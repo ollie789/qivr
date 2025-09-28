@@ -6,17 +6,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Qivr.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class ComprehensiveFixEntities : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.EnsureSchema(
-                name: "qivr");
-
             migrationBuilder.CreateTable(
                 name: "clinics",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -41,17 +37,158 @@ namespace Qivr.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "prom_templates",
-                schema: "qivr",
+                name: "medical_allergies",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    allergen = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    severity = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    reaction = table.Column<string>(type: "text", nullable: false),
+                    diagnosed_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    notes = table.Column<string>(type: "text", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_medical_allergies", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "medical_conditions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    condition = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    icd10code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    diagnosed_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    managed_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    last_reviewed = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    notes = table.Column<string>(type: "text", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_medical_conditions", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "medical_immunizations",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    vaccine = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    next_due = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    provider = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    facility = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    lot_number = table.Column<string>(type: "text", nullable: true),
+                    series = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_medical_immunizations", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "medical_lab_results",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    result_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    category = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    test_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    value = table.Column<string>(type: "text", nullable: false),
+                    unit = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    reference_range = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ordered_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    notes = table.Column<string>(type: "text", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_medical_lab_results", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "medical_medications",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    dosage = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    frequency = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    start_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    end_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    prescribed_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    instructions = table.Column<string>(type: "text", nullable: true),
+                    refills_remaining = table.Column<int>(type: "integer", nullable: true),
+                    last_filled = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    pharmacy = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_medical_medications", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "medical_vitals",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    recorded_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    systolic = table.Column<int>(type: "integer", nullable: false),
+                    diastolic = table.Column<int>(type: "integer", nullable: false),
+                    heart_rate = table.Column<int>(type: "integer", nullable: false),
+                    temperature_celsius = table.Column<decimal>(type: "numeric", nullable: false),
+                    weight_kilograms = table.Column<decimal>(type: "numeric", nullable: false),
+                    height_centimetres = table.Column<decimal>(type: "numeric", nullable: false),
+                    oxygen_saturation = table.Column<int>(type: "integer", nullable: false),
+                    respiratory_rate = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_medical_vitals", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "prom_templates",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    key = table.Column<string>(type: "text", nullable: false),
+                    version = table.Column<int>(type: "integer", nullable: false),
                     name = table.Column<string>(type: "text", nullable: false),
                     description = table.Column<string>(type: "text", nullable: true),
                     category = table.Column<string>(type: "text", nullable: false),
                     frequency = table.Column<string>(type: "text", nullable: false),
                     questions = table.Column<string>(type: "text", nullable: false),
                     scoring_method = table.Column<string>(type: "text", nullable: true),
+                    scoring_rules = table.Column<string>(type: "text", nullable: true),
                     is_active = table.Column<bool>(type: "boolean", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -64,19 +201,12 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "tenants",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     slug = table.Column<string>(type: "text", nullable: false),
                     name = table.Column<string>(type: "text", nullable: false),
-                    status = table.Column<int>(type: "integer", nullable: false),
-                    plan = table.Column<string>(type: "text", nullable: false),
-                    timezone = table.Column<string>(type: "text", nullable: false),
-                    locale = table.Column<string>(type: "text", nullable: false),
-                    settings = table.Column<string>(type: "text", nullable: false),
-                    metadata = table.Column<string>(type: "text", nullable: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    settings = table.Column<string>(type: "jsonb", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -87,7 +217,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "brand_themes",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -111,7 +240,6 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_brand_themes_tenants_tenant_id",
                         column: x => x.tenant_id,
-                        principalSchema: "qivr",
                         principalTable: "tenants",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -119,31 +247,19 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "users",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    cognito_sub = table.Column<string>(type: "text", nullable: false),
+                    cognito_id = table.Column<string>(type: "text", nullable: false),
                     email = table.Column<string>(type: "text", nullable: false),
-                    email_verified = table.Column<bool>(type: "boolean", nullable: false),
                     phone = table.Column<string>(type: "text", nullable: true),
-                    phone_verified = table.Column<bool>(type: "boolean", nullable: false),
                     first_name = table.Column<string>(type: "text", nullable: true),
                     last_name = table.Column<string>(type: "text", nullable: true),
-                    date_of_birth = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    gender = table.Column<string>(type: "text", nullable: true),
-                    user_type = table.Column<string>(type: "text", nullable: false),
-                    roles = table.Column<string[]>(type: "text[]", nullable: false),
-                    avatar_url = table.Column<string>(type: "text", nullable: true),
-                    preferences = table.Column<string>(type: "text", nullable: false),
-                    consent = table.Column<string>(type: "text", nullable: false),
-                    last_login_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    created_by = table.Column<string>(type: "text", nullable: true),
-                    updated_by = table.Column<string>(type: "text", nullable: true),
+                    role = table.Column<string>(type: "text", nullable: false),
+                    metadata = table.Column<string>(type: "text", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -151,7 +267,6 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_users_tenants_tenant_id",
                         column: x => x.tenant_id,
-                        principalSchema: "qivr",
                         principalTable: "tenants",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -159,7 +274,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "conversations",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -181,14 +295,12 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_conversations_users_patient_id",
                         column: x => x.patient_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_conversations_users_provider_id",
                         column: x => x.provider_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
@@ -196,7 +308,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "documents",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -226,7 +337,6 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_documents_users_patient_id",
                         column: x => x.patient_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -234,7 +344,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "notification_preferences",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -262,7 +371,6 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_notification_preferences_users_user_id",
                         column: x => x.user_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -270,7 +378,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "notifications",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -296,14 +403,12 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_notifications_users_recipient_id",
                         column: x => x.recipient_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_notifications_users_sender_id",
                         column: x => x.sender_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
@@ -311,7 +416,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "prom_instances",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -334,14 +438,12 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_prom_instances_prom_templates_template_id",
                         column: x => x.template_id,
-                        principalSchema: "qivr",
                         principalTable: "prom_templates",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_prom_instances_users_patient_id",
                         column: x => x.patient_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -349,7 +451,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "providers",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -370,14 +471,12 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_providers_clinics_clinic_id",
                         column: x => x.clinic_id,
-                        principalSchema: "qivr",
                         principalTable: "clinics",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_providers_users_user_id",
                         column: x => x.user_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -385,7 +484,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "conversation_participants",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -408,7 +506,6 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_conversation_participants_conversations_conversation_id",
                         column: x => x.conversation_id,
-                        principalSchema: "qivr",
                         principalTable: "conversations",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -416,7 +513,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "messages",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -450,43 +546,66 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_messages_conversations_conversation_id",
                         column: x => x.conversation_id,
-                        principalSchema: "qivr",
                         principalTable: "conversations",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_messages_documents_attachment_id",
                         column: x => x.attachment_id,
-                        principalSchema: "qivr",
                         principalTable: "documents",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "fk_messages_messages_parent_message_id",
                         column: x => x.parent_message_id,
-                        principalSchema: "qivr",
                         principalTable: "messages",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "fk_messages_users_direct_recipient_id",
+                        name: "fk_messages_users_recipient_id",
                         column: x => x.direct_recipient_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "fk_messages_users_sender_id",
                         column: x => x.sender_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
+                name: "prom_booking_requests",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    prom_instance_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    preferred_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    alternative_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    time_preference = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    reason_for_visit = table.Column<string>(type: "text", nullable: false),
+                    notes = table.Column<string>(type: "text", nullable: true),
+                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    requested_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_prom_booking_requests", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_prom_booking_requests_prom_instances_prom_instance_id",
+                        column: x => x.prom_instance_id,
+                        principalTable: "prom_instances",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "evaluations",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -515,27 +634,23 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_evaluations_providers_provider_id",
                         column: x => x.provider_id,
-                        principalSchema: "qivr",
                         principalTable: "providers",
                         principalColumn: "id");
                     table.ForeignKey(
                         name: "fk_evaluations_tenants_tenant_id",
                         column: x => x.tenant_id,
-                        principalSchema: "qivr",
                         principalTable: "tenants",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_evaluations_users_patient_id",
                         column: x => x.patient_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_evaluations_users_reviewed_by",
                         column: x => x.reviewed_by,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
@@ -543,7 +658,6 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "appointments",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -582,48 +696,41 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_appointments_clinics_clinic_id",
                         column: x => x.clinic_id,
-                        principalSchema: "qivr",
                         principalTable: "clinics",
                         principalColumn: "id");
                     table.ForeignKey(
                         name: "fk_appointments_evaluations_evaluation_id",
                         column: x => x.evaluation_id,
-                        principalSchema: "qivr",
                         principalTable: "evaluations",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "fk_appointments_providers_provider_id1",
+                        name: "fk_appointments_providers_provider_id",
                         column: x => x.provider_id1,
-                        principalSchema: "qivr",
                         principalTable: "providers",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_appointments_tenants_tenant_id",
                         column: x => x.tenant_id,
-                        principalSchema: "qivr",
                         principalTable: "tenants",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_appointments_users_cancelled_by",
                         column: x => x.cancelled_by,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "fk_appointments_users_patient_id",
                         column: x => x.patient_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_appointments_users_provider_id",
                         column: x => x.provider_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
@@ -631,16 +738,12 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "pain_maps",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     evaluation_id = table.Column<Guid>(type: "uuid", nullable: false),
                     body_region = table.Column<string>(type: "text", nullable: false),
                     anatomical_code = table.Column<string>(type: "text", nullable: true),
-                    coordinate_x = table.Column<float>(type: "real", nullable: false),
-                    coordinate_y = table.Column<float>(type: "real", nullable: false),
-                    coordinate_z = table.Column<float>(type: "real", nullable: false),
                     pain_intensity = table.Column<int>(type: "integer", nullable: false),
                     pain_type = table.Column<string>(type: "text", nullable: true),
                     pain_quality = table.Column<string[]>(type: "text[]", nullable: false),
@@ -656,15 +759,56 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_pain_maps_evaluations_evaluation_id",
                         column: x => x.evaluation_id,
-                        principalSchema: "qivr",
                         principalTable: "evaluations",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
+                name: "appointment_waitlist_entries",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    patient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    provider_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    appointment_type = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    notes = table.Column<string>(type: "text", nullable: true),
+                    preferred_dates = table.Column<string>(type: "text", nullable: false),
+                    status = table.Column<string>(type: "text", nullable: false),
+                    created_by = table.Column<string>(type: "text", nullable: true),
+                    updated_by = table.Column<string>(type: "text", nullable: true),
+                    fulfilled_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    matched_appointment_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    metadata = table.Column<string>(type: "text", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_appointment_waitlist_entries", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_appointment_waitlist_entries_appointments_matched_appointme",
+                        column: x => x.matched_appointment_id,
+                        principalTable: "appointments",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_appointment_waitlist_entries_users_patient_id",
+                        column: x => x.patient_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_appointment_waitlist_entries_users_provider_id",
+                        column: x => x.provider_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "prom_responses",
-                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -687,295 +831,339 @@ namespace Qivr.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_prom_responses_appointments_appointment_id",
                         column: x => x.appointment_id,
-                        principalSchema: "qivr",
                         principalTable: "appointments",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "fk_prom_responses_prom_instances_prom_instance_id",
                         column: x => x.prom_instance_id,
-                        principalSchema: "qivr",
                         principalTable: "prom_instances",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_prom_responses_users_patient_id",
                         column: x => x.patient_id,
-                        principalSchema: "qivr",
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "pain_coordinates",
+                columns: table => new
+                {
+                    pain_map_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    coordinate_x = table.Column<float>(type: "real", nullable: false),
+                    coordinate_y = table.Column<float>(type: "real", nullable: false),
+                    coordinate_z = table.Column<float>(type: "real", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_pain_coordinates", x => x.pain_map_id);
+                    table.ForeignKey(
+                        name: "fk_pain_coordinates_pain_maps_pain_map_id",
+                        column: x => x.pain_map_id,
+                        principalTable: "pain_maps",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_appointment_waitlist_entries_matched_appointment_id",
+                table: "appointment_waitlist_entries",
+                column: "matched_appointment_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_appointment_waitlist_entries_patient_id",
+                table: "appointment_waitlist_entries",
+                column: "patient_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_appointment_waitlist_entries_patient_status",
+                table: "appointment_waitlist_entries",
+                columns: new[] { "tenant_id", "patient_id", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_appointment_waitlist_entries_provider_id",
+                table: "appointment_waitlist_entries",
+                column: "provider_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_appointment_waitlist_entries_tenant_status",
+                table: "appointment_waitlist_entries",
+                columns: new[] { "tenant_id", "status" });
+
             migrationBuilder.CreateIndex(
                 name: "ix_appointments_cancelled_by",
-                schema: "qivr",
                 table: "appointments",
                 column: "cancelled_by");
 
             migrationBuilder.CreateIndex(
                 name: "ix_appointments_clinic_id",
-                schema: "qivr",
                 table: "appointments",
                 column: "clinic_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_appointments_evaluation_id",
-                schema: "qivr",
                 table: "appointments",
                 column: "evaluation_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_appointments_patient_id",
-                schema: "qivr",
                 table: "appointments",
                 column: "patient_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_appointments_provider_id1",
-                schema: "qivr",
                 table: "appointments",
                 column: "provider_id1");
 
             migrationBuilder.CreateIndex(
                 name: "ix_appointments_tenant_id",
-                schema: "qivr",
                 table: "appointments",
                 column: "tenant_id");
 
             migrationBuilder.CreateIndex(
                 name: "no_double_booking",
-                schema: "qivr",
                 table: "appointments",
                 columns: new[] { "provider_id", "scheduled_start", "scheduled_end" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_brand_themes_tenant_id_name",
-                schema: "qivr",
                 table: "brand_themes",
                 columns: new[] { "tenant_id", "name" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_clinics_tenant_id_name",
-                schema: "qivr",
                 table: "clinics",
                 columns: new[] { "tenant_id", "name" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_conversation_participants_conversation_id_user_id",
-                schema: "qivr",
                 table: "conversation_participants",
                 columns: new[] { "conversation_id", "user_id" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_conversations_patient_id",
-                schema: "qivr",
                 table: "conversations",
                 column: "patient_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_conversations_provider_id",
-                schema: "qivr",
                 table: "conversations",
                 column: "provider_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_conversations_tenant_id_patient_id",
-                schema: "qivr",
                 table: "conversations",
                 columns: new[] { "tenant_id", "patient_id" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_documents_patient_id",
-                schema: "qivr",
                 table: "documents",
                 column: "patient_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_documents_tenant_id_patient_id",
-                schema: "qivr",
                 table: "documents",
                 columns: new[] { "tenant_id", "patient_id" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_evaluations_patient_id",
-                schema: "qivr",
                 table: "evaluations",
                 column: "patient_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_evaluations_provider_id",
-                schema: "qivr",
                 table: "evaluations",
                 column: "provider_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_evaluations_reviewed_by",
-                schema: "qivr",
                 table: "evaluations",
                 column: "reviewed_by");
 
             migrationBuilder.CreateIndex(
                 name: "ix_evaluations_tenant_id_evaluation_number",
-                schema: "qivr",
                 table: "evaluations",
                 columns: new[] { "tenant_id", "evaluation_number" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "ix_medical_allergies_tenant_id_patient_id_allergen",
+                table: "medical_allergies",
+                columns: new[] { "tenant_id", "patient_id", "allergen" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_medical_conditions_tenant_id_patient_id_condition",
+                table: "medical_conditions",
+                columns: new[] { "tenant_id", "patient_id", "condition" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_medical_immunizations_tenant_id_patient_id_date",
+                table: "medical_immunizations",
+                columns: new[] { "tenant_id", "patient_id", "date" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_medical_lab_results_tenant_id_patient_id_category_result_da",
+                table: "medical_lab_results",
+                columns: new[] { "tenant_id", "patient_id", "category", "result_date" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_medical_medications_tenant_id_patient_id_status",
+                table: "medical_medications",
+                columns: new[] { "tenant_id", "patient_id", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_medical_vitals_tenant_id_patient_id_recorded_at",
+                table: "medical_vitals",
+                columns: new[] { "tenant_id", "patient_id", "recorded_at" });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_messages_attachment_id",
-                schema: "qivr",
                 table: "messages",
                 column: "attachment_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_messages_conversation_id_sent_at",
-                schema: "qivr",
                 table: "messages",
                 columns: new[] { "conversation_id", "sent_at" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_messages_direct_recipient_id",
-                schema: "qivr",
                 table: "messages",
                 column: "direct_recipient_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_messages_parent_message_id",
-                schema: "qivr",
                 table: "messages",
                 column: "parent_message_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_messages_sender_id_direct_recipient_id",
-                schema: "qivr",
                 table: "messages",
                 columns: new[] { "sender_id", "direct_recipient_id" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_notification_preferences_tenant_id_user_id",
-                schema: "qivr",
                 table: "notification_preferences",
                 columns: new[] { "tenant_id", "user_id" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_notification_preferences_user_id",
-                schema: "qivr",
                 table: "notification_preferences",
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_notifications_recipient_id",
-                schema: "qivr",
                 table: "notifications",
                 column: "recipient_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_notifications_sender_id",
-                schema: "qivr",
                 table: "notifications",
                 column: "sender_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_notifications_tenant_id_recipient_id_created_at",
-                schema: "qivr",
                 table: "notifications",
                 columns: new[] { "tenant_id", "recipient_id", "created_at" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_pain_maps_evaluation_id",
-                schema: "qivr",
                 table: "pain_maps",
                 column: "evaluation_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_prom_booking_requests_prom_instance_id",
+                table: "prom_booking_requests",
+                column: "prom_instance_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_prom_booking_requests_tenant_id_prom_instance_id",
+                table: "prom_booking_requests",
+                columns: new[] { "tenant_id", "prom_instance_id" });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_prom_instances_patient_id",
-                schema: "qivr",
                 table: "prom_instances",
                 column: "patient_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_prom_instances_template_id",
-                schema: "qivr",
                 table: "prom_instances",
                 column: "template_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_prom_instances_tenant_id_patient_id",
-                schema: "qivr",
                 table: "prom_instances",
                 columns: new[] { "tenant_id", "patient_id" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_prom_responses_appointment_id",
-                schema: "qivr",
                 table: "prom_responses",
                 column: "appointment_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_prom_responses_patient_id",
-                schema: "qivr",
                 table: "prom_responses",
                 column: "patient_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_prom_responses_prom_instance_id",
-                schema: "qivr",
                 table: "prom_responses",
                 column: "prom_instance_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_prom_responses_tenant_id_patient_id_completed_at",
-                schema: "qivr",
                 table: "prom_responses",
                 columns: new[] { "tenant_id", "patient_id", "completed_at" });
 
             migrationBuilder.CreateIndex(
+                name: "ix_prom_templates_tenant_id_key_version",
+                table: "prom_templates",
+                columns: new[] { "tenant_id", "key", "version" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "ix_prom_templates_tenant_id_name",
-                schema: "qivr",
                 table: "prom_templates",
                 columns: new[] { "tenant_id", "name" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_providers_clinic_id",
-                schema: "qivr",
                 table: "providers",
                 column: "clinic_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_providers_tenant_id_user_id_clinic_id",
-                schema: "qivr",
                 table: "providers",
                 columns: new[] { "tenant_id", "user_id", "clinic_id" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_providers_user_id",
-                schema: "qivr",
                 table: "providers",
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_tenants_slug",
-                schema: "qivr",
                 table: "tenants",
                 column: "slug",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_users_cognito_sub",
-                schema: "qivr",
                 table: "users",
-                column: "cognito_sub",
+                column: "cognito_id",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_users_tenant_id_email",
-                schema: "qivr",
                 table: "users",
                 columns: new[] { "tenant_id", "email" },
                 unique: true);
@@ -985,72 +1173,82 @@ namespace Qivr.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "brand_themes",
-                schema: "qivr");
+                name: "appointment_waitlist_entries");
 
             migrationBuilder.DropTable(
-                name: "conversation_participants",
-                schema: "qivr");
+                name: "brand_themes");
 
             migrationBuilder.DropTable(
-                name: "messages",
-                schema: "qivr");
+                name: "conversation_participants");
 
             migrationBuilder.DropTable(
-                name: "notification_preferences",
-                schema: "qivr");
+                name: "medical_allergies");
 
             migrationBuilder.DropTable(
-                name: "notifications",
-                schema: "qivr");
+                name: "medical_conditions");
 
             migrationBuilder.DropTable(
-                name: "pain_maps",
-                schema: "qivr");
+                name: "medical_immunizations");
 
             migrationBuilder.DropTable(
-                name: "prom_responses",
-                schema: "qivr");
+                name: "medical_lab_results");
 
             migrationBuilder.DropTable(
-                name: "conversations",
-                schema: "qivr");
+                name: "medical_medications");
 
             migrationBuilder.DropTable(
-                name: "documents",
-                schema: "qivr");
+                name: "medical_vitals");
 
             migrationBuilder.DropTable(
-                name: "appointments",
-                schema: "qivr");
+                name: "messages");
 
             migrationBuilder.DropTable(
-                name: "prom_instances",
-                schema: "qivr");
+                name: "notification_preferences");
 
             migrationBuilder.DropTable(
-                name: "evaluations",
-                schema: "qivr");
+                name: "notifications");
 
             migrationBuilder.DropTable(
-                name: "prom_templates",
-                schema: "qivr");
+                name: "pain_coordinates");
 
             migrationBuilder.DropTable(
-                name: "providers",
-                schema: "qivr");
+                name: "prom_booking_requests");
 
             migrationBuilder.DropTable(
-                name: "clinics",
-                schema: "qivr");
+                name: "prom_responses");
 
             migrationBuilder.DropTable(
-                name: "users",
-                schema: "qivr");
+                name: "conversations");
 
             migrationBuilder.DropTable(
-                name: "tenants",
-                schema: "qivr");
+                name: "documents");
+
+            migrationBuilder.DropTable(
+                name: "pain_maps");
+
+            migrationBuilder.DropTable(
+                name: "appointments");
+
+            migrationBuilder.DropTable(
+                name: "prom_instances");
+
+            migrationBuilder.DropTable(
+                name: "evaluations");
+
+            migrationBuilder.DropTable(
+                name: "prom_templates");
+
+            migrationBuilder.DropTable(
+                name: "providers");
+
+            migrationBuilder.DropTable(
+                name: "clinics");
+
+            migrationBuilder.DropTable(
+                name: "users");
+
+            migrationBuilder.DropTable(
+                name: "tenants");
         }
     }
 }

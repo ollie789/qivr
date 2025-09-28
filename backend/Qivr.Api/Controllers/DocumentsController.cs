@@ -26,6 +26,9 @@ namespace Qivr.Api.Controllers;
 [EnableRateLimiting("api")]
 public class DocumentsController : ControllerBase
 {
+    private const string SharesMetadataKey = "shares";
+    private const string ReviewMetadataKey = "review";
+
     private readonly QivrDbContext _context;
     private readonly IStorageService _storageService;
     private readonly ILogger<DocumentsController> _logger;
@@ -109,6 +112,11 @@ public class DocumentsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(request.ProviderId))
         {
             query = query.Where(d => d.Metadata.Contains(request.ProviderId));
+        }
+
+        if (request.RequiresReview.HasValue)
+        {
+            query = query.Where(d => d.RequiresReview == request.RequiresReview.Value);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -471,6 +479,166 @@ public class DocumentsController : ControllerBase
     }
 
     /// <summary>
+    /// Share a document with another user in the tenant
+    /// </summary>
+    [HttpPost("{documentId}/share")]
+    [ProducesResponseType(typeof(DocumentShareDto), 201)]
+    public async Task<ActionResult<DocumentShareDto>> ShareDocument(
+        Guid documentId,
+        [FromBody] DocumentShareRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.UserId == Guid.Empty)
+        {
+            return BadRequest(new { error = "A target user is required" });
+        }
+
+        if (request.ExpiresAt.HasValue && request.ExpiresAt.Value <= DateTime.UtcNow)
+        {
+            return BadRequest(new { error = "Expiration must be in the future" });
+        }
+
+        var document = await _context.Documents
+            .Include(d => d.Patient)
+            .FirstOrDefaultAsync(d => d.Id == documentId && !d.IsArchived, cancellationToken);
+
+        if (document == null)
+        {
+            return NotFound("Document not found");
+        }
+
+        var currentUserId = _authorizationService.GetCurrentUserId(User);
+        if (!await _authorizationService.UserCanAccessPatientDataAsync(currentUserId, document.PatientId))
+        {
+            return Forbid("You do not have access to this document");
+        }
+
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        var recipient = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == request.UserId && u.TenantId == tenantId, cancellationToken);
+
+        if (recipient == null)
+        {
+            return NotFound("Recipient user not found");
+        }
+
+        var currentUser = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken);
+
+        var metadata = ParseMetadata(document.Metadata);
+        var shares = ExtractShares(metadata);
+
+        var accessLevel = string.IsNullOrWhiteSpace(request.AccessLevel)
+            ? "view"
+            : request.AccessLevel!.Trim().ToLowerInvariant();
+
+        var shareEntry = new DocumentShareMetadata
+        {
+            ShareId = Guid.NewGuid(),
+            SharedWithUserId = recipient.Id,
+            SharedWithName = string.IsNullOrWhiteSpace(recipient.FullName) ? recipient.Email ?? recipient.Id.ToString() : recipient.FullName,
+            SharedByUserId = currentUserId,
+            SharedByName = currentUser != null && !string.IsNullOrWhiteSpace(currentUser.FullName)
+                ? currentUser.FullName
+                : currentUser?.Email ?? currentUserId.ToString(),
+            SharedAt = DateTime.UtcNow,
+            ExpiresAt = request.ExpiresAt?.ToUniversalTime(),
+            AccessLevel = accessLevel,
+            Message = string.IsNullOrWhiteSpace(request.Message) ? null : request.Message.Trim(),
+            Revoked = false
+        };
+
+        shares.Add(shareEntry);
+        StoreShares(metadata, shares);
+
+        document.Metadata = SerializeMetadata(metadata);
+        document.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var dto = MapShareToDto(shareEntry);
+        return CreatedAtAction(nameof(GetDocumentShares), new { documentId }, dto);
+    }
+
+    /// <summary>
+    /// List document shares
+    /// </summary>
+    [HttpGet("{documentId}/shares")]
+    [ProducesResponseType(typeof(IEnumerable<DocumentShareDto>), 200)]
+    public async Task<ActionResult<IEnumerable<DocumentShareDto>>> GetDocumentShares(Guid documentId, CancellationToken cancellationToken)
+    {
+        var document = await _context.Documents
+            .Include(d => d.Patient)
+            .FirstOrDefaultAsync(d => d.Id == documentId && !d.IsArchived, cancellationToken);
+
+        if (document == null)
+        {
+            return NotFound("Document not found");
+        }
+
+        var currentUserId = _authorizationService.GetCurrentUserId(User);
+        if (!await _authorizationService.UserCanAccessPatientDataAsync(currentUserId, document.PatientId))
+        {
+            return Forbid("You do not have access to this document");
+        }
+
+        var metadata = ParseMetadata(document.Metadata);
+        var shares = ExtractShares(metadata)
+            .Select(MapShareToDto)
+            .OrderByDescending(s => s.SharedAt)
+            .ToList();
+
+        return Ok(shares);
+    }
+
+    /// <summary>
+    /// Revoke a document share link
+    /// </summary>
+    [HttpDelete("{documentId}/shares/{shareId}")]
+    [ProducesResponseType(204)]
+    public async Task<IActionResult> RevokeDocumentShare(Guid documentId, Guid shareId, CancellationToken cancellationToken)
+    {
+        var document = await _context.Documents
+            .Include(d => d.Patient)
+            .FirstOrDefaultAsync(d => d.Id == documentId && !d.IsArchived, cancellationToken);
+
+        if (document == null)
+        {
+            return NotFound("Document not found");
+        }
+
+        var currentUserId = _authorizationService.GetCurrentUserId(User);
+        if (!await _authorizationService.UserCanAccessPatientDataAsync(currentUserId, document.PatientId))
+        {
+            return Forbid("You do not have access to this document");
+        }
+
+        var metadata = ParseMetadata(document.Metadata);
+        var shares = ExtractShares(metadata);
+        var share = shares.FirstOrDefault(s => s.ShareId == shareId);
+        if (share == null)
+        {
+            return NotFound("Share not found");
+        }
+
+        if (!share.Revoked)
+        {
+            share.Revoked = true;
+            share.RevokedAt = DateTime.UtcNow;
+
+            StoreShares(metadata, shares);
+            document.Metadata = SerializeMetadata(metadata);
+            document.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return NoContent();
+    }
+
+    /// <summary>
     /// List documents for a patient
     /// </summary>
     [HttpGet("patient/{patientId}")]
@@ -548,6 +716,138 @@ public class DocumentsController : ControllerBase
             .ToArray();
 
         return Ok(merged);
+    }
+
+    /// <summary>
+    /// Request a clinician review for a document
+    /// </summary>
+    [HttpPost("{documentId}/review/request")]
+    [ProducesResponseType(typeof(DocumentResponseDto), 202)]
+    public async Task<ActionResult<DocumentResponseDto>> RequestDocumentReview(
+        Guid documentId,
+        [FromBody] DocumentReviewRequest request,
+        CancellationToken cancellationToken)
+    {
+        var document = await _context.Documents
+            .Include(d => d.Patient)
+            .FirstOrDefaultAsync(d => d.Id == documentId && !d.IsArchived, cancellationToken);
+
+        if (document == null)
+        {
+            return NotFound("Document not found");
+        }
+
+        var currentUserId = _authorizationService.GetCurrentUserId(User);
+        if (!await _authorizationService.UserCanAccessPatientDataAsync(currentUserId, document.PatientId))
+        {
+            return Forbid("You do not have access to this document");
+        }
+
+        User? assignedUser = null;
+        if (request.AssignedToUserId.HasValue && request.AssignedToUserId.Value != Guid.Empty)
+        {
+            assignedUser = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == request.AssignedToUserId.Value && u.TenantId == document.TenantId, cancellationToken);
+
+            if (assignedUser == null)
+            {
+                return NotFound("Assigned reviewer not found");
+            }
+        }
+
+        var currentUser = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken);
+
+        var metadata = ParseMetadata(document.Metadata);
+        var review = new DocumentReviewMetadata
+        {
+            Status = "pending",
+            RequestedAt = DateTime.UtcNow,
+            RequestedByUserId = currentUserId,
+            RequestedByName = currentUser != null && !string.IsNullOrWhiteSpace(currentUser.FullName)
+                ? currentUser.FullName
+                : currentUser?.Email ?? currentUserId.ToString(),
+            AssignedToUserId = assignedUser?.Id,
+            AssignedToName = assignedUser != null && !string.IsNullOrWhiteSpace(assignedUser.FullName)
+                ? assignedUser.FullName
+                : assignedUser?.Email,
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
+        };
+
+        StoreReviewMetadata(metadata, review);
+
+        document.RequiresReview = true;
+        document.ReviewedAt = null;
+        document.ReviewedBy = null;
+        document.Metadata = SerializeMetadata(metadata);
+        document.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return Accepted(MapDocumentToDto(document));
+    }
+
+    /// <summary>
+    /// Complete a document review
+    /// </summary>
+    [HttpPost("{documentId}/review/complete")]
+    [ProducesResponseType(typeof(DocumentResponseDto), 200)]
+    public async Task<ActionResult<DocumentResponseDto>> CompleteDocumentReview(
+        Guid documentId,
+        [FromBody] DocumentReviewCompleteRequest request,
+        CancellationToken cancellationToken)
+    {
+        var document = await _context.Documents
+            .Include(d => d.Patient)
+            .FirstOrDefaultAsync(d => d.Id == documentId && !d.IsArchived, cancellationToken);
+
+        if (document == null)
+        {
+            return NotFound("Document not found");
+        }
+
+        var currentUserId = _authorizationService.GetCurrentUserId(User);
+        if (!await _authorizationService.UserCanAccessPatientDataAsync(currentUserId, document.PatientId))
+        {
+            return Forbid("You do not have access to this document");
+        }
+
+        var currentUser = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken);
+
+        var metadata = ParseMetadata(document.Metadata);
+        var review = ExtractReviewMetadata(metadata) ?? new DocumentReviewMetadata
+        {
+            Status = "pending",
+            RequestedAt = DateTime.UtcNow,
+            RequestedByUserId = currentUserId,
+            RequestedByName = currentUser != null && !string.IsNullOrWhiteSpace(currentUser.FullName)
+                ? currentUser.FullName
+                : currentUser?.Email ?? currentUserId.ToString()
+        };
+
+        review.Status = string.IsNullOrWhiteSpace(request.Status) ? "completed" : request.Status!.Trim();
+        review.ReviewedAt = DateTime.UtcNow;
+        review.ReviewedByUserId = currentUserId;
+        review.ReviewedByName = currentUser != null && !string.IsNullOrWhiteSpace(currentUser.FullName)
+            ? currentUser.FullName
+            : currentUser?.Email ?? currentUserId.ToString();
+        review.Notes = string.IsNullOrWhiteSpace(request.Notes) ? review.Notes : request.Notes!.Trim();
+        review.AgreesWithAssessment = request.AgreesWithAssessment ?? review.AgreesWithAssessment;
+        review.Recommendations = string.IsNullOrWhiteSpace(request.Recommendations) ? review.Recommendations : request.Recommendations!.Trim();
+
+        StoreReviewMetadata(metadata, review);
+
+        document.RequiresReview = false;
+        document.ReviewedAt = review.ReviewedAt;
+        document.ReviewedBy = currentUserId;
+        document.Metadata = SerializeMetadata(metadata);
+        document.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return Ok(MapDocumentToDto(document));
     }
 
     /// <summary>
@@ -664,6 +964,24 @@ public class DocumentsController : ControllerBase
     {
         var tags = ParseTags(document.Tags);
         var metadata = ParseMetadata(document.Metadata);
+        var shares = ExtractShares(metadata);
+        var shareDtos = shares
+            .Select(MapShareToDto)
+            .OrderByDescending(s => s.SharedAt)
+            .ToArray();
+
+        var reviewMetadata = ExtractReviewMetadata(metadata);
+        var reviewStatus = DetermineReviewStatus(document, reviewMetadata);
+
+        var metadataCopy = new Dictionary<string, object>(metadata, StringComparer.OrdinalIgnoreCase)
+        {
+            [SharesMetadataKey] = shareDtos
+        };
+
+        if (reviewMetadata != null)
+        {
+            metadataCopy[ReviewMetadataKey] = reviewMetadata;
+        }
 
         var patientName = document.Patient != null ? document.Patient.FullName.Trim() : string.Empty;
         var uploadedById = document.UploadedBy;
@@ -671,7 +989,7 @@ public class DocumentsController : ControllerBase
             ? name
             : uploadedById?.ToString() ?? "Unknown";
 
-        var dto = new DocumentResponseDto
+        return new DocumentResponseDto
         {
             Id = document.Id,
             PatientId = document.PatientId,
@@ -690,12 +1008,17 @@ public class DocumentsController : ControllerBase
             UploadedBy = uploadedByDisplay,
             UploadedAt = document.CreatedAt,
             Tags = tags,
-            Metadata = new Dictionary<string, object>(metadata, StringComparer.OrdinalIgnoreCase),
+            Metadata = metadataCopy,
             Url = downloadUrl,
-            ThumbnailUrl = metadata.TryGetValue("thumbnailUrl", out var thumbnail) ? thumbnail?.ToString() : null
+            ThumbnailUrl = metadata.TryGetValue("thumbnailUrl", out var thumbnail) ? thumbnail?.ToString() : null,
+            RequiresReview = document.RequiresReview,
+            ReviewStatus = reviewStatus,
+            ReviewNotes = reviewMetadata?.Notes,
+            ReviewedById = document.ReviewedBy,
+            ReviewedBy = reviewMetadata?.ReviewedByName,
+            ReviewedAt = document.ReviewedAt ?? reviewMetadata?.ReviewedAt,
+            Shares = shareDtos
         };
-
-        return dto;
     }
 
     private static string FormatFileSize(long bytes)
@@ -758,10 +1081,115 @@ public class DocumentsController : ControllerBase
         return JsonSerializer.Serialize(tags ?? Enumerable.Empty<string>());
     }
 
-    private static string SerializeMetadata(IDictionary<string, object>? metadata)
+private static string SerializeMetadata(IDictionary<string, object>? metadata)
+{
+    return JsonSerializer.Serialize(metadata ?? new Dictionary<string, object>());
+}
+
+private static T? DeserializeMetadataValue<T>(object? raw)
+{
+    if (raw == null)
     {
-        return JsonSerializer.Serialize(metadata ?? new Dictionary<string, object>());
+        return default;
     }
+
+    try
+    {
+        if (raw is JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+            {
+                return default;
+            }
+
+            return element.Deserialize<T>();
+        }
+
+        if (raw is string str)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+            {
+                return default;
+            }
+
+            return JsonSerializer.Deserialize<T>(str);
+        }
+
+        return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(raw));
+    }
+    catch
+    {
+        return default;
+    }
+}
+
+private static List<DocumentShareMetadata> ExtractShares(IDictionary<string, object> metadata)
+{
+    if (!metadata.TryGetValue(SharesMetadataKey, out var raw) || raw == null)
+    {
+        return new List<DocumentShareMetadata>();
+    }
+
+    var shares = DeserializeMetadataValue<List<DocumentShareMetadata>>(raw);
+    return shares?.Where(s => s != null).Select(s => s!).ToList() ?? new List<DocumentShareMetadata>();
+}
+
+private static void StoreShares(IDictionary<string, object> metadata, IList<DocumentShareMetadata> shares)
+{
+    metadata[SharesMetadataKey] = shares;
+}
+
+private static DocumentReviewMetadata? ExtractReviewMetadata(IDictionary<string, object> metadata)
+{
+    if (!metadata.TryGetValue(ReviewMetadataKey, out var raw) || raw == null)
+    {
+        return null;
+    }
+
+    return DeserializeMetadataValue<DocumentReviewMetadata>(raw);
+}
+
+private static void StoreReviewMetadata(IDictionary<string, object> metadata, DocumentReviewMetadata review)
+{
+    metadata[ReviewMetadataKey] = review;
+}
+
+private DocumentShareDto MapShareToDto(DocumentShareMetadata share)
+{
+    return new DocumentShareDto
+    {
+        ShareId = share.ShareId,
+        SharedWithUserId = share.SharedWithUserId,
+        SharedWithName = string.IsNullOrWhiteSpace(share.SharedWithName)
+            ? share.SharedWithUserId.ToString()
+            : share.SharedWithName!,
+        SharedByUserId = share.SharedByUserId,
+        SharedByName = string.IsNullOrWhiteSpace(share.SharedByName)
+            ? share.SharedByUserId.ToString()
+            : share.SharedByName!,
+        SharedAt = share.SharedAt,
+        ExpiresAt = share.ExpiresAt,
+        AccessLevel = string.IsNullOrWhiteSpace(share.AccessLevel) ? "view" : share.AccessLevel,
+        Message = share.Message,
+        Revoked = share.Revoked,
+        RevokedAt = share.RevokedAt
+    };
+}
+
+private static string DetermineReviewStatus(Document document, DocumentReviewMetadata? reviewMetadata)
+{
+    if (document.RequiresReview)
+    {
+        return reviewMetadata?.Status ?? "pending";
+    }
+
+    if (document.ReviewedAt.HasValue || reviewMetadata?.ReviewedAt != null)
+    {
+        return reviewMetadata?.Status ?? "completed";
+    }
+
+    return "not-required";
+}
 
     private async Task<(Document document, string downloadUrl)> SaveDocumentAsync(
         Guid tenantId,
@@ -876,6 +1304,28 @@ public class DocumentResponseDto
     public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
     public string? Url { get; set; }
     public string? ThumbnailUrl { get; set; }
+    public bool RequiresReview { get; set; }
+    public string ReviewStatus { get; set; } = "not-required";
+    public string? ReviewNotes { get; set; }
+    public Guid? ReviewedById { get; set; }
+    public string? ReviewedBy { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+    public IReadOnlyList<DocumentShareDto> Shares { get; set; } = Array.Empty<DocumentShareDto>();
+}
+
+public class DocumentShareDto
+{
+    public Guid ShareId { get; set; }
+    public Guid SharedWithUserId { get; set; }
+    public string SharedWithName { get; set; } = string.Empty;
+    public Guid SharedByUserId { get; set; }
+    public string SharedByName { get; set; } = string.Empty;
+    public DateTime SharedAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+    public string AccessLevel { get; set; } = "view";
+    public string? Message { get; set; }
+    public bool Revoked { get; set; }
+    public DateTime? RevokedAt { get; set; }
 }
 
 public class DocumentListQuery
@@ -887,6 +1337,7 @@ public class DocumentListQuery
     public string? Category { get; set; }
     public string? ProviderId { get; set; }
     public string? Search { get; set; }
+    public bool? RequiresReview { get; set; }
     public int Page { get; set; } = 1;
 
     public int PageSize
@@ -894,6 +1345,42 @@ public class DocumentListQuery
         get => _pageSize;
         set => _pageSize = Math.Clamp(value, 1, MaxPageSize);
     }
+}
+
+public class DocumentShareRequest
+{
+    [Required]
+    public Guid UserId { get; set; }
+
+    public DateTime? ExpiresAt { get; set; }
+
+    [StringLength(1000)]
+    public string? Message { get; set; }
+
+    [StringLength(32)]
+    public string AccessLevel { get; set; } = "view";
+}
+
+public class DocumentReviewRequest
+{
+    public Guid? AssignedToUserId { get; set; }
+
+    [StringLength(2000)]
+    public string? Notes { get; set; }
+}
+
+public class DocumentReviewCompleteRequest
+{
+    [StringLength(2000)]
+    public string? Notes { get; set; }
+
+    public bool? AgreesWithAssessment { get; set; }
+
+    [StringLength(2000)]
+    public string? Recommendations { get; set; }
+
+    [StringLength(32)]
+    public string? Status { get; set; }
 }
 
 public class GeneralDocumentUploadRequest
@@ -909,4 +1396,34 @@ public class GeneralDocumentUploadRequest
     public string? ProviderName { get; set; }
     public string? Description { get; set; }
     public string? Tags { get; set; }
+}
+private sealed class DocumentShareMetadata
+{
+    public Guid ShareId { get; set; }
+    public Guid SharedWithUserId { get; set; }
+    public string? SharedWithName { get; set; }
+    public Guid SharedByUserId { get; set; }
+    public string? SharedByName { get; set; }
+    public DateTime SharedAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+    public string AccessLevel { get; set; } = "view";
+    public string? Message { get; set; }
+    public bool Revoked { get; set; }
+    public DateTime? RevokedAt { get; set; }
+}
+
+private sealed class DocumentReviewMetadata
+{
+    public string Status { get; set; } = "pending";
+    public Guid RequestedByUserId { get; set; }
+    public string? RequestedByName { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public Guid? AssignedToUserId { get; set; }
+    public string? AssignedToName { get; set; }
+    public Guid? ReviewedByUserId { get; set; }
+    public string? ReviewedByName { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+    public string? Notes { get; set; }
+    public bool? AgreesWithAssessment { get; set; }
+    public string? Recommendations { get; set; }
 }

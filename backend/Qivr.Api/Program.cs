@@ -592,3 +592,6 @@ static string BuildPgConnectionStringFromUrl(string url, bool isDevelopment)
 
     return sb.ToString();
 }
+
+// Make the Program class public so it can be referenced in tests
+public partial class Program { }

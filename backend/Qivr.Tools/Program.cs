@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
@@ -73,6 +74,16 @@ internal static class SeedRunner
                 if (tenant.MedicalRecords != null)
                 {
                     await ProcessMedicalRecordsAsync(dbContext, resolvedTenant, tenant.MedicalRecords, options.DryRun, logger);
+                }
+
+                if (tenant.PromTemplates.Any())
+                {
+                    await ProcessPromTemplatesAsync(dbContext, resolvedTenant, tenant.PromTemplates, options.DryRun, logger);
+                }
+
+                if (tenant.PromInstances.Any())
+                {
+                    await ProcessPromInstancesAsync(dbContext, resolvedTenant, tenant.PromInstances, options.DryRun, logger);
                 }
             }
 
@@ -951,6 +962,436 @@ internal static class SeedRunner
         }
     }
 
+    private static async Task ProcessPromTemplatesAsync(
+        QivrDbContext dbContext,
+        SeedTenant tenantSeed,
+        IEnumerable<SeedPromTemplate> templates,
+        bool dryRun,
+        ILogger logger)
+    {
+        await ApplyTenantContextAsync(dbContext, tenantSeed.Id, logger);
+
+        foreach (var templateSeed in templates)
+        {
+            PromTemplate? existing = null;
+
+            if (templateSeed.Id.HasValue)
+            {
+                existing = await dbContext.PromTemplates
+                    .IgnoreQueryFilters()
+                    .AsTracking()
+                    .FirstOrDefaultAsync(t => t.TenantId == tenantSeed.Id && t.Id == templateSeed.Id.Value);
+            }
+
+            existing ??= await dbContext.PromTemplates
+                .IgnoreQueryFilters()
+                .AsTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantSeed.Id && t.Key == templateSeed.Key && t.Version == templateSeed.Version);
+
+            if (existing == null)
+            {
+                if (dryRun)
+                {
+                    logger.LogInformation("[dry-run] Would create PROM template {Key} v{Version} for tenant {TenantId}", templateSeed.Key, templateSeed.Version, tenantSeed.Id);
+                    continue;
+                }
+
+                var template = new PromTemplate
+                {
+                    Id = templateSeed.Id ?? Guid.NewGuid(),
+                    TenantId = tenantSeed.Id,
+                    Key = templateSeed.Key,
+                    Version = templateSeed.Version,
+                    Name = templateSeed.Name,
+                    Description = templateSeed.Description,
+                    Category = templateSeed.Category,
+                    Frequency = templateSeed.Frequency,
+                    Questions = NormalizeQuestions(templateSeed.Questions),
+                    ScoringMethod = NormalizeOptionalDictionary(templateSeed.ScoringMethod),
+                    ScoringRules = NormalizeOptionalDictionary(templateSeed.ScoringRules),
+                    IsActive = templateSeed.IsActive,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                dbContext.PromTemplates.Add(template);
+                await dbContext.SaveChangesAsync();
+                continue;
+            }
+
+            if (dryRun)
+            {
+                logger.LogInformation("[dry-run] Would update PROM template {Key} v{Version} for tenant {TenantId}", templateSeed.Key, templateSeed.Version, tenantSeed.Id);
+                dbContext.Entry(existing).State = EntityState.Unchanged;
+                continue;
+            }
+
+            existing.Name = templateSeed.Name;
+            existing.Description = templateSeed.Description;
+            existing.Category = templateSeed.Category;
+            existing.Frequency = templateSeed.Frequency;
+            existing.Questions = NormalizeQuestions(templateSeed.Questions);
+            existing.ScoringMethod = NormalizeOptionalDictionary(templateSeed.ScoringMethod);
+            existing.ScoringRules = NormalizeOptionalDictionary(templateSeed.ScoringRules);
+            existing.IsActive = templateSeed.IsActive;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    private static async Task ProcessPromInstancesAsync(
+        QivrDbContext dbContext,
+        SeedTenant tenantSeed,
+        IEnumerable<SeedPromInstance> instances,
+        bool dryRun,
+        ILogger logger)
+    {
+        await ApplyTenantContextAsync(dbContext, tenantSeed.Id, logger);
+
+        foreach (var instanceSeed in instances)
+        {
+            var patient = await ResolvePatientAsync(dbContext, tenantSeed.Id, instanceSeed.PatientEmail, logger);
+            if (patient == null)
+            {
+                continue;
+            }
+
+            var template = await dbContext.PromTemplates
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantSeed.Id
+                    && t.Key == instanceSeed.TemplateKey
+                    && (!instanceSeed.TemplateVersion.HasValue || t.Version == instanceSeed.TemplateVersion.Value));
+
+            if (template == null)
+            {
+                logger.LogWarning("Skipping PROM seed for {Email}: template {TemplateKey} v{Version} not found", instanceSeed.PatientEmail, instanceSeed.TemplateKey, instanceSeed.TemplateVersion ?? 0);
+                continue;
+            }
+
+            var scheduledFor = DateTime.SpecifyKind(instanceSeed.ScheduledFor == default ? DateTime.UtcNow : instanceSeed.ScheduledFor, DateTimeKind.Utc);
+            var dueDate = instanceSeed.DueDate.HasValue
+                ? DateTime.SpecifyKind(instanceSeed.DueDate.Value, DateTimeKind.Utc)
+                : scheduledFor.AddDays(7);
+
+            PromInstance? existing = null;
+
+            if (instanceSeed.Id.HasValue)
+            {
+                existing = await dbContext.PromInstances
+                    .IgnoreQueryFilters()
+                    .Include(i => i.Responses)
+                    .FirstOrDefaultAsync(i => i.TenantId == tenantSeed.Id && i.Id == instanceSeed.Id.Value);
+            }
+
+            existing ??= await dbContext.PromInstances
+                .IgnoreQueryFilters()
+                .Include(i => i.Responses)
+                .FirstOrDefaultAsync(i => i.TenantId == tenantSeed.Id
+                    && i.TemplateId == template.Id
+                    && i.PatientId == patient.Id
+                    && i.ScheduledFor == scheduledFor);
+
+            var status = ParseEnumOrDefault(instanceSeed.Status, PromStatus.Pending, "PROM status");
+            var metadata = BuildPromMetadata(instanceSeed, status);
+
+            if (existing == null)
+            {
+                if (dryRun)
+                {
+                    logger.LogInformation("[dry-run] Would create PROM instance for template {TemplateKey} and patient {PatientEmail}", template.Key, instanceSeed.PatientEmail);
+                    continue;
+                }
+
+                var instance = new PromInstance
+                {
+                    Id = instanceSeed.Id ?? Guid.NewGuid(),
+                    TenantId = tenantSeed.Id,
+                    TemplateId = template.Id,
+                    PatientId = patient.Id,
+                    Status = status,
+                    ScheduledFor = scheduledFor,
+                    DueDate = dueDate,
+                    CompletedAt = instanceSeed.CompletedAt,
+                    Score = instanceSeed.Score,
+                    ResponseData = metadata,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    ReminderSentAt = null
+                };
+
+                if (instance.Status == PromStatus.Completed && instance.CompletedAt == null)
+                {
+                    instance.CompletedAt = DateTime.UtcNow;
+                }
+
+                dbContext.PromInstances.Add(instance);
+                await dbContext.SaveChangesAsync();
+
+                await EnsurePromResponseAsync(dbContext, tenantSeed.Id, template, instance, patient.Id, instanceSeed, status, dryRun, logger);
+                continue;
+            }
+
+            if (dryRun)
+            {
+                logger.LogInformation("[dry-run] Would update PROM instance {InstanceId}", existing.Id);
+                dbContext.Entry(existing).State = EntityState.Unchanged;
+                continue;
+            }
+
+            existing.Status = status;
+            existing.ScheduledFor = scheduledFor;
+            existing.DueDate = dueDate;
+            existing.Score = instanceSeed.Score;
+            existing.CompletedAt = instanceSeed.CompletedAt;
+            existing.ResponseData = metadata;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+
+            await EnsurePromResponseAsync(dbContext, tenantSeed.Id, template, existing, patient.Id, instanceSeed, status, dryRun, logger);
+        }
+    }
+
+    private static Dictionary<string, object> BuildPromMetadata(SeedPromInstance instanceSeed, PromStatus status)
+    {
+        var metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["notificationMethod"] = string.IsNullOrWhiteSpace(instanceSeed.NotificationMethod) ? "Email" : instanceSeed.NotificationMethod!,
+            ["sentBy"] = string.IsNullOrWhiteSpace(instanceSeed.SentBy) ? "seed" : instanceSeed.SentBy!,
+            ["tags"] = instanceSeed.Tags ?? new List<string>(),
+            ["reminderCount"] = 0
+        };
+
+        if (!string.IsNullOrWhiteSpace(instanceSeed.Notes))
+        {
+            metadata["notes"] = instanceSeed.Notes!;
+        }
+
+        if (instanceSeed.Answers != null && instanceSeed.Answers.Count > 0)
+        {
+            metadata["answers"] = NormalizeDictionary(instanceSeed.Answers);
+        }
+
+        if (instanceSeed.CompletionSeconds.HasValue)
+        {
+            metadata["completionSeconds"] = instanceSeed.CompletionSeconds.Value;
+        }
+
+        if (status == PromStatus.Completed && instanceSeed.CompletedAt.HasValue)
+        {
+            metadata["completedAt"] = instanceSeed.CompletedAt.Value;
+        }
+
+        return metadata;
+    }
+
+    private static async Task EnsurePromResponseAsync(
+        QivrDbContext dbContext,
+        Guid tenantId,
+        PromTemplate template,
+        PromInstance instance,
+        Guid patientId,
+        SeedPromInstance instanceSeed,
+        PromStatus status,
+        bool dryRun,
+        ILogger logger)
+    {
+        var existing = await dbContext.PromResponses
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.PromInstanceId == instance.Id);
+
+        if (status != PromStatus.Completed)
+        {
+            if (existing != null && !dryRun)
+            {
+                dbContext.PromResponses.Remove(existing);
+                await dbContext.SaveChangesAsync();
+            }
+
+            return;
+        }
+
+        var completedAt = instanceSeed.CompletedAt ?? instance.CompletedAt ?? DateTime.UtcNow;
+        var score = instanceSeed.Score ?? instance.Score ?? 0m;
+        var answers = instanceSeed.Answers != null ? NormalizeDictionary(instanceSeed.Answers) : new Dictionary<string, object>();
+        var severity = DeterminePromSeverity(template.Key, score);
+
+        if (existing == null)
+        {
+            if (dryRun)
+            {
+                logger.LogInformation("[dry-run] Would create PROM response for instance {InstanceId}", instance.Id);
+                return;
+            }
+
+            var response = new PromResponse
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                PatientId = patientId,
+                PromInstanceId = instance.Id,
+                PromType = template.Key,
+                CompletedAt = completedAt,
+                Score = score,
+                Severity = severity,
+                Answers = answers,
+                Notes = instanceSeed.Notes,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            dbContext.PromResponses.Add(response);
+            await dbContext.SaveChangesAsync();
+            return;
+        }
+
+        if (dryRun)
+        {
+            logger.LogInformation("[dry-run] Would update PROM response {ResponseId}", existing.Id);
+            dbContext.Entry(existing).State = EntityState.Unchanged;
+            return;
+        }
+
+        existing.CompletedAt = completedAt;
+        existing.Score = score;
+        existing.Severity = severity;
+        existing.Answers = answers;
+        existing.Notes = instanceSeed.Notes;
+        existing.UpdatedAt = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static List<Dictionary<string, object>> NormalizeQuestions(IEnumerable<Dictionary<string, object>> questions)
+    {
+        return questions.Select(NormalizeDictionary).ToList();
+    }
+
+    private static Dictionary<string, object>? NormalizeOptionalDictionary(Dictionary<string, object>? source)
+    {
+        return source == null ? null : NormalizeDictionary(source);
+    }
+
+    private static Dictionary<string, object> NormalizeDictionary(Dictionary<string, object> source)
+    {
+        var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in source)
+        {
+            var normalized = NormalizeValue(kvp.Value);
+            result[kvp.Key] = normalized!;
+        }
+
+        return result;
+    }
+
+    private static object? NormalizeValue(object? value)
+    {
+        if (value is JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        dict[property.Name] = NormalizeValue(property.Value)!;
+                    }
+
+                    return dict;
+                case JsonValueKind.Array:
+                    var list = new List<object?>();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        list.Add(NormalizeValue(item));
+                    }
+
+                    return list;
+                case JsonValueKind.String:
+                    if (element.TryGetDateTime(out var dt))
+                    {
+                        return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                    }
+
+                    return element.GetString();
+                case JsonValueKind.Number:
+                    if (element.TryGetInt64(out var longValue))
+                    {
+                        return longValue;
+                    }
+
+                    if (element.TryGetDecimal(out var decimalValue))
+                    {
+                        return decimalValue;
+                    }
+
+                    return element.GetDouble();
+                case JsonValueKind.True:
+                case JsonValueKind.False:
+                    return element.GetBoolean();
+                case JsonValueKind.Null:
+                case JsonValueKind.Undefined:
+                    return null;
+                default:
+                    return element.GetRawText();
+            }
+        }
+
+        if (value is IDictionary dictionary)
+        {
+            var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            foreach (DictionaryEntry entry in dictionary)
+            {
+                if (entry.Key is string key)
+                {
+                    dict[key] = NormalizeValue(entry.Value)!;
+                }
+            }
+
+            return dict;
+        }
+
+        if (value is IEnumerable enumerable && value is not string)
+        {
+            var list = new List<object?>();
+            foreach (var item in enumerable)
+            {
+                list.Add(NormalizeValue(item));
+            }
+
+            return list;
+        }
+
+        return value;
+    }
+
+    private static string DeterminePromSeverity(string templateKey, decimal score)
+    {
+        var key = templateKey.ToLowerInvariant();
+
+        if (key.Contains("phq", StringComparison.OrdinalIgnoreCase))
+        {
+            if (score >= 20) return "severe";
+            if (score >= 15) return "moderately-severe";
+            if (score >= 10) return "moderate";
+            if (score >= 5) return "mild";
+            return "minimal";
+        }
+
+        if (key.Contains("gad", StringComparison.OrdinalIgnoreCase))
+        {
+            if (score >= 15) return "severe";
+            if (score >= 10) return "moderate";
+            if (score >= 5) return "mild";
+            return "minimal";
+        }
+
+        if (score >= 15) return "high";
+        if (score >= 10) return "medium";
+        if (score > 0) return "low";
+        return "none";
+    }
+
     private static DateTime ParseDateTimeUtc(string value, string propertyName)
     {
         if (DateTime.TryParse(
@@ -1182,6 +1623,8 @@ internal sealed class SeedTenant
     public List<SeedProvider> Providers { get; set; } = new();
     public List<SeedAppointment> Appointments { get; set; } = new();
     public SeedMedicalRecords? MedicalRecords { get; set; }
+    public List<SeedPromTemplate> PromTemplates { get; set; } = new();
+    public List<SeedPromInstance> PromInstances { get; set; } = new();
 }
 
 internal sealed class SeedUser
@@ -1248,6 +1691,40 @@ internal sealed class SeedMedicalRecords
     public List<SeedMedicalMedication> Medications { get; set; } = new();
     public List<SeedMedicalAllergy> Allergies { get; set; } = new();
     public List<SeedMedicalImmunization> Immunizations { get; set; } = new();
+}
+
+internal sealed class SeedPromTemplate
+{
+    public Guid? Id { get; set; }
+    public string Key { get; set; } = string.Empty;
+    public int Version { get; set; } = 1;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public string Frequency { get; set; } = string.Empty;
+    public List<Dictionary<string, object>> Questions { get; set; } = new();
+    public Dictionary<string, object>? ScoringMethod { get; set; }
+    public Dictionary<string, object>? ScoringRules { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+internal sealed class SeedPromInstance
+{
+    public Guid? Id { get; set; }
+    public string TemplateKey { get; set; } = string.Empty;
+    public int? TemplateVersion { get; set; }
+    public string PatientEmail { get; set; } = string.Empty;
+    public string Status { get; set; } = "Pending";
+    public DateTime ScheduledFor { get; set; }
+    public DateTime? DueDate { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public decimal? Score { get; set; }
+    public Dictionary<string, object>? Answers { get; set; }
+    public int? CompletionSeconds { get; set; }
+    public string? Notes { get; set; }
+    public string NotificationMethod { get; set; } = "Email";
+    public string SentBy { get; set; } = "seed-script";
+    public List<string>? Tags { get; set; }
 }
 
 internal sealed class SeedMedicalCondition

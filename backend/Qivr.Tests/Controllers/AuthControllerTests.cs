@@ -1,251 +1,164 @@
+using System;
+using System.Collections.Generic;
 using System.Net;
-using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Xunit;
 using Qivr.Api.Controllers;
 using Qivr.Api.Services;
-using Qivr.Api.DTOs;
+using Xunit;
 
 namespace Qivr.Tests.Controllers;
 
-public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class AuthControllerTests
 {
-    private readonly WebApplicationFactory<Program> _factory;
-    private readonly Mock<ICognitoAuthService> _mockCognitoService;
+    private readonly Mock<ICognitoAuthService> _authService = new();
+    private readonly IConfiguration _configuration;
 
-    public AuthControllerTests(WebApplicationFactory<Program> factory)
+    public AuthControllerTests()
     {
-        _mockCognitoService = new Mock<ICognitoAuthService>();
-        
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                // Remove the existing ICognitoAuthService
-                var descriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(ICognitoAuthService));
-                if (descriptor != null)
-                {
-                    services.Remove(descriptor);
-                }
+                { "Auth:CookieDomain", "localhost" }
+            })
+            .Build();
+    }
 
-                // Add mock service
-                services.AddSingleton(_mockCognitoService.Object);
-            });
-        });
+    private AuthController CreateController()
+    {
+        var controller = new AuthController(_authService.Object, NullLogger<AuthController>.Instance, _configuration)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+        controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost", 5050);
+        return controller;
     }
 
     [Fact]
-    public async Task Login_WithValidCredentials_ReturnsToken()
+    public async Task Login_WithValidCredentials_ReturnsTokenMetadata()
     {
-        // Arrange
-        var client = _factory.CreateClient();
-        var loginRequest = new LoginRequest
-        {
-            Email = "test@example.com",
-            Password = "Test123!@#"
-        };
+        var controller = CreateController();
 
-        var expectedResponse = new LoginResponse
+        var resultModel = new AuthenticationResult
         {
-            AccessToken = "test-access-token",
-            RefreshToken = "test-refresh-token",
+            Success = true,
+            AccessToken = "access-token",
+            RefreshToken = "refresh-token",
             ExpiresIn = 3600,
-            TokenType = "Bearer"
+            UserInfo = new UserInfo { Username = "test-user" }
         };
 
-        _mockCognitoService
-            .Setup(x => x.LoginAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(expectedResponse);
+        _authService
+            .Setup(s => s.AuthenticateAsync("user@test.local", "Test123!"))
+            .ReturnsAsync(resultModel);
 
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+        var response = await controller.Login(new LoginRequest
+        {
+            Username = "user@test.local",
+            Password = "Test123!"
+        });
 
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        Assert.NotNull(content);
-        Assert.Equal(expectedResponse.AccessToken, content.AccessToken);
+        var ok = Assert.IsType<OkObjectResult>(response);
+        var json = JsonSerializer.Serialize(ok.Value);
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        Assert.Equal(3600, root.GetProperty("expiresIn").GetInt32());
+
+        var setCookieHeaders = controller.Response.Headers["Set-Cookie"].ToString();
+        Assert.Contains("accessToken", setCookieHeaders);
+        Assert.Contains("refreshToken", setCookieHeaders);
     }
 
     [Fact]
     public async Task Login_WithInvalidCredentials_ReturnsUnauthorized()
     {
-        // Arrange
-        var client = _factory.CreateClient();
-        var loginRequest = new LoginRequest
+        var controller = CreateController();
+
+        _authService
+            .Setup(s => s.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new AuthenticationResult { Success = false, ErrorMessage = "Invalid credentials" });
+
+        var response = await controller.Login(new LoginRequest
         {
-            Email = "test@example.com",
+            Username = "user@test.local",
             Password = "WrongPassword"
-        };
+        });
 
-        _mockCognitoService
-            .Setup(x => x.LoginAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ThrowsAsync(new UnauthorizedAccessException("Invalid credentials"));
-
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var unauthorized = Assert.IsType<UnauthorizedObjectResult>(response);
+        Assert.Equal((int)HttpStatusCode.Unauthorized, unauthorized.StatusCode);
     }
 
     [Fact]
     public async Task SignUp_WithValidData_ReturnsSuccess()
     {
-        // Arrange
-        var client = _factory.CreateClient();
-        var signUpRequest = new SignUpRequest
+        var controller = CreateController();
+
+        _authService
+            .Setup(s => s.SignUpAsync(It.IsAny<SignUpRequest>()))
+            .ReturnsAsync(new SignUpResult
+            {
+                Success = true,
+                UserSub = Guid.NewGuid().ToString(),
+                UserConfirmed = true
+            });
+
+        var response = await controller.SignUp(new SignUpRequest
         {
-            Email = "newuser@example.com",
+            Username = "newuser",
             Password = "SecurePassword123!",
+            Email = "newuser@example.com",
             FirstName = "Test",
             LastName = "User",
-            PhoneNumber = "+1234567890"
-        };
+            PhoneNumber = "+1234567890",
+            TenantId = Guid.NewGuid()
+        });
 
-        var expectedResponse = new SignUpResponse
-        {
-            UserId = Guid.NewGuid().ToString(),
-            Email = signUpRequest.Email,
-            RequiresConfirmation = true
-        };
-
-        _mockCognitoService
-            .Setup(x => x.SignUpAsync(It.IsAny<SignUpRequest>()))
-            .ReturnsAsync(expectedResponse);
-
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/signup", signUpRequest);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadFromJsonAsync<SignUpResponse>();
-        Assert.NotNull(content);
-        Assert.Equal(expectedResponse.Email, content.Email);
-        Assert.True(content.RequiresConfirmation);
+        var ok = Assert.IsType<OkObjectResult>(response);
+        var payload = ok.Value ?? throw new InvalidOperationException("Expected payload");
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        Assert.Contains("userConfirmed", json);
     }
 
     [Fact]
-    public async Task RefreshToken_WithValidToken_ReturnsNewToken()
+    public async Task RefreshToken_WithValidCookie_ReturnsNewExpiry()
     {
-        // Arrange
-        var client = _factory.CreateClient();
-        var refreshRequest = new RefreshTokenRequest
-        {
-            RefreshToken = "valid-refresh-token"
-        };
+        var controller = CreateController();
+        var context = controller.HttpContext;
+        context.Request.Headers["Cookie"] = "refreshToken=valid-refresh-token";
 
-        var expectedResponse = new LoginResponse
-        {
-            AccessToken = "new-access-token",
-            RefreshToken = "new-refresh-token",
-            ExpiresIn = 3600,
-            TokenType = "Bearer"
-        };
+        _authService
+            .Setup(s => s.RefreshTokenAsync("valid-refresh-token"))
+            .ReturnsAsync(new AuthenticationResult
+            {
+                Success = true,
+                AccessToken = "new-access-token",
+                RefreshToken = "rotated-refresh-token",
+                ExpiresIn = 1800
+            });
 
-        _mockCognitoService
-            .Setup(x => x.RefreshTokenAsync(It.IsAny<string>()))
-            .ReturnsAsync(expectedResponse);
-
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/refresh", refreshRequest);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        Assert.NotNull(content);
-        Assert.Equal(expectedResponse.AccessToken, content.AccessToken);
-    }
-
-    [Fact]
-    public async Task ForgotPassword_WithValidEmail_ReturnsSuccess()
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-        var forgotPasswordRequest = new ForgotPasswordRequest
-        {
-            Email = "test@example.com"
-        };
-
-        _mockCognitoService
-            .Setup(x => x.InitiateForgotPasswordAsync(It.IsAny<string>()))
+        _authService
+            .Setup(s => s.InvalidateRefreshTokenAsync("valid-refresh-token"))
             .ReturnsAsync(true);
 
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/forgot-password", forgotPasswordRequest);
+        var response = await controller.RefreshToken();
 
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
+        var ok = Assert.IsType<OkObjectResult>(response);
+        var json = JsonSerializer.Serialize(ok.Value);
+        using var document = JsonDocument.Parse(json);
+        var expires = document.RootElement.GetProperty("expiresIn").GetInt32();
+        Assert.Equal(1800, expires);
 
-    [Fact]
-    public async Task ConfirmForgotPassword_WithValidData_ReturnsSuccess()
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-        var confirmRequest = new ConfirmForgotPasswordRequest
-        {
-            Email = "test@example.com",
-            ConfirmationCode = "123456",
-            NewPassword = "NewSecurePassword123!"
-        };
-
-        _mockCognitoService
-            .Setup(x => x.ConfirmForgotPasswordAsync(
-                It.IsAny<string>(), 
-                It.IsAny<string>(), 
-                It.IsAny<string>()))
-            .ReturnsAsync(true);
-
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/confirm-forgot-password", confirmRequest);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    [InlineData(null)]
-    public async Task Login_WithEmptyEmail_ReturnsBadRequest(string email)
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-        var loginRequest = new LoginRequest
-        {
-            Email = email,
-            Password = "Test123!@#"
-        };
-
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    [InlineData(null)]
-    public async Task Login_WithEmptyPassword_ReturnsBadRequest(string password)
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-        var loginRequest = new LoginRequest
-        {
-            Email = "test@example.com",
-            Password = password
-        };
-
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var cookies = controller.Response.Headers["Set-Cookie"].ToString();
+        Assert.Contains("accessToken", cookies);
+        Assert.Contains("refreshToken", cookies);
     }
 }

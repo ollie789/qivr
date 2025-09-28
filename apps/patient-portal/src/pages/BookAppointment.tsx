@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Container,
@@ -12,400 +12,286 @@ import {
   Grid,
   Avatar,
   Chip,
-  TextField,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
   CircularProgress,
   Paper,
-  Skeleton,
   Dialog,
   DialogContent,
   DialogActions,
+  Skeleton,
 } from '@mui/material';
 import {
   Person as PersonIcon,
-  LocationOn as LocationIcon,
-  VideoCall as VideoCallIcon,
   CheckCircle as CheckCircleIcon,
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { addDays, differenceInMinutes, format } from 'date-fns';
+import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { format, addDays } from 'date-fns';
-import { api } from '../services/api';
+import {
+  AvailableProvider,
+  AvailableSlot,
+  BookAppointmentPayload,
+  bookAppointment,
+  fetchAvailableProviders,
+  fetchAvailableSlots,
+} from '../services/appointmentsApi';
 
-interface Provider {
-  id: string;
-  name: string;
-  specialty: string;
-  bio?: string;
-  photoUrl?: string;
-  nextAvailable?: string;
-}
-
-interface Service {
-  id: string;
-  name: string;
-  duration: number;
-  price?: number;
-  description?: string;
-}
-
-interface TimeSlot {
-  time: string;
-  available: boolean;
-}
+const steps = ['Select Provider', 'Pick Date & Time', 'Confirm Details'];
 
 interface BookingData {
   providerId?: string;
-  serviceId?: string;
-  date?: Date;
-  time?: string;
-  isVirtual?: boolean;
-  notes?: string;
+  startTime?: string;
+  durationMinutes: number;
+  appointmentType: string;
 }
-
-const steps = ['Select Provider', 'Choose Service', 'Pick Date & Time', 'Confirm Details'];
 
 export const BookAppointment: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
+
   const [activeStep, setActiveStep] = useState(0);
-  const [bookingData, setBookingData] = useState<BookingData>({});
+  const [bookingData, setBookingData] = useState<BookingData>({
+    durationMinutes: 30,
+    appointmentType: 'consultation',
+  });
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
-  // Fetch providers
-  const { data: providers, isLoading: providersLoading } = useQuery<Provider[]>({
-    queryKey: ['providers'],
-    queryFn: () => api.get<Provider[]>('/providers'),
+  const dateParam = useMemo(() => {
+    const base = selectedDate ?? new Date();
+    return format(base, 'yyyy-MM-dd');
+  }, [selectedDate]);
+
+  useEffect(() => {
+    setSelectedSlot(null);
+    setBookingData((prev) => ({ ...prev, startTime: undefined }));
+  }, [dateParam]);
+
+  const { data: providers = [], isLoading: providersLoading } = useQuery<AvailableProvider[]>({
+    queryKey: ['availableProviders', dateParam],
+    queryFn: () => fetchAvailableProviders(dateParam),
   });
 
-  // Fetch services
-  const { data: services, isLoading: servicesLoading } = useQuery<Service[]>({
-    queryKey: ['services', bookingData.providerId],
-    queryFn: () =>
-      api.get<Service[]>(`/services?providerId=${bookingData.providerId}`),
-    enabled: !!bookingData.providerId,
+  const { data: slots = [], isLoading: slotsLoading } = useQuery<AvailableSlot[]>({
+    queryKey: ['availableSlots', bookingData.providerId, dateParam],
+    queryFn: () => fetchAvailableSlots(bookingData.providerId!, dateParam, bookingData.durationMinutes),
+    enabled: Boolean(bookingData.providerId && selectedDate),
   });
 
-  // Fetch available time slots
-  const { data: timeSlots, isLoading: timeSlotsLoading } = useQuery<TimeSlot[]>({
-    queryKey: ['timeSlots', bookingData.providerId, selectedDate],
-    queryFn: () => {
-      const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
-      return api.get<TimeSlot[]>(`/appointments/availability?providerId=${bookingData.providerId}&date=${dateStr}`);
-    },
-    enabled: !!bookingData.providerId && !!selectedDate,
-  });
-
-  // Book appointment mutation
   const bookMutation = useMutation({
-    mutationFn: (data: BookingData) => {
-      const appointmentData = {
-        providerId: data.providerId,
-        serviceId: data.serviceId,
-        scheduledStart: `${format(data.date!, 'yyyy-MM-dd')}T${data.time}:00`,
-        isVirtual: data.isVirtual || false,
-        notes: data.notes || '',
-      };
-      return api.post('/appointments', appointmentData);
-    },
-    onSuccess: () => {
+    mutationFn: (payload: BookAppointmentPayload) => bookAppointment(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['appointments'] });
       setConfirmDialogOpen(true);
     },
+    onError: (error: unknown) => {
+      enqueueSnackbar(error instanceof Error ? error.message : 'Unable to book appointment', {
+        variant: 'error',
+      });
+    },
   });
 
-  const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
-  };
+  const selectedProvider = useMemo(
+    () => providers.find((provider) => provider.id === bookingData.providerId),
+    [providers, bookingData.providerId],
+  );
 
-  const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
-  };
+  const appointmentDateTime = bookingData.startTime
+    ? format(new Date(bookingData.startTime), 'EEEE, MMMM d, yyyy • h:mm a')
+    : null;
+
+  const handleBack = () => setActiveStep((prev) => Math.max(prev - 1, 0));
 
   const handleProviderSelect = (providerId: string) => {
-    setBookingData({ ...bookingData, providerId });
-    handleNext();
+    setBookingData((prev) => ({ ...prev, providerId, startTime: undefined }));
+    setSelectedSlot(null);
+    setActiveStep(1);
   };
 
-  const handleServiceSelect = (serviceId: string) => {
-    setBookingData({ ...bookingData, serviceId });
-    handleNext();
-  };
-
-  const handleTimeSelect = (time: string) => {
-    setBookingData({ ...bookingData, date: selectedDate!, time });
-    handleNext();
+  const handleSlotSelect = (slot: AvailableSlot) => {
+    const duration = differenceInMinutes(new Date(slot.endTime), new Date(slot.startTime)) || 30;
+    setSelectedSlot(slot);
+    setBookingData((prev) => ({
+      ...prev,
+      startTime: slot.startTime,
+      durationMinutes: duration,
+    }));
+    setActiveStep(2);
   };
 
   const handleBookingConfirm = () => {
-    bookMutation.mutate(bookingData);
+    if (!bookingData.providerId || !bookingData.startTime) {
+      enqueueSnackbar('Please select a provider and time slot before confirming.', { variant: 'warning' });
+      return;
+    }
+
+    bookMutation.mutate({
+      providerId: bookingData.providerId,
+      startTime: bookingData.startTime,
+      durationMinutes: bookingData.durationMinutes,
+      appointmentType: bookingData.appointmentType,
+    });
   };
 
-  const getSelectedProvider = () => providers?.find(p => p.id === bookingData.providerId);
-  const getSelectedService = () => services?.find(s => s.id === bookingData.serviceId);
-
-  const renderStepContent = (step: number) => {
-    switch (step) {
-      case 0:
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Choose Your Healthcare Provider
-            </Typography>
-            {providersLoading ? (
-              [...Array(3)].map((_, i) => (
-                <Skeleton key={i} variant="rectangular" height={100} sx={{ mb: 2 }} />
-              ))
-            ) : (
-              <Grid container spacing={2}>
-                {providers?.map((provider) => (
-                  <Grid item xs={12} md={6} key={provider.id}>
-                    <Card 
-                      sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
-                      onClick={() => handleProviderSelect(provider.id)}
-                    >
-                      <CardContent>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                          <Avatar sx={{ width: 60, height: 60 }}>
-                            {provider.photoUrl ? (
-                              <img src={provider.photoUrl} alt={provider.name} />
-                            ) : (
-                              <PersonIcon />
-                            )}
-                          </Avatar>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="h6">{provider.name}</Typography>
-                            <Typography color="text.secondary">
-                              {provider.specialty}
-                            </Typography>
-                            {provider.bio && (
-                              <Typography variant="body2" sx={{ mt: 1 }}>
-                                {provider.bio}
-                              </Typography>
-                            )}
-                            {provider.nextAvailable && (
-                              <Chip
-                                label={`Next available: ${provider.nextAvailable}`}
-                                size="small"
-                                color="primary"
-                                sx={{ mt: 1 }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            )}
-          </Box>
-        );
-
-      case 1:
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Select Appointment Type
-            </Typography>
-            {servicesLoading ? (
-              <CircularProgress />
-            ) : (
-              <RadioGroup
-                value={bookingData.serviceId || ''}
-                onChange={(e) => handleServiceSelect(e.target.value)}
+  const renderProviderStep = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Choose Your Healthcare Provider
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Showing providers with availability on {format(selectedDate ?? new Date(), 'MMMM d, yyyy')}
+      </Typography>
+      {providersLoading ? (
+        [...Array(3)].map((_, index) => (
+          <Skeleton key={index} variant="rectangular" height={100} sx={{ mb: 2 }} />
+        ))
+      ) : providers.length === 0 ? (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            No providers have availability for this date. Please try another date.
+          </Typography>
+        </Paper>
+      ) : (
+        <Grid container spacing={2}>
+          {providers.map((provider) => (
+            <Grid item xs={12} md={6} key={provider.id}>
+              <Card
+                sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
+                onClick={() => handleProviderSelect(provider.id)}
               >
-                <Grid container spacing={2}>
-                  {services?.map((service) => (
-                    <Grid item xs={12} key={service.id}>
-                      <Paper sx={{ p: 2 }}>
-                        <FormControlLabel
-                          value={service.id}
-                          control={<Radio />}
-                          label={
-                            <Box>
-                              <Typography variant="subtitle1">
-                                {service.name}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                Duration: {service.duration} minutes
-                                {service.price && ` • $${service.price}`}
-                              </Typography>
-                              {service.description && (
-                                <Typography variant="body2" sx={{ mt: 1 }}>
-                                  {service.description}
-                                </Typography>
-                              )}
-                            </Box>
-                          }
+                <CardContent>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Avatar sx={{ width: 60, height: 60 }}>
+                      <PersonIcon />
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6">{provider.name}</Typography>
+                      {provider.specialty && (
+                        <Typography color="text.secondary">{provider.specialty}</Typography>
+                      )}
+                      {provider.title && (
+                        <Chip
+                          label={provider.title}
+                          size="small"
+                          color="primary"
+                          sx={{ mt: 1 }}
                         />
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              </RadioGroup>
-            )}
-            {bookingData.serviceId && (
-              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button variant="contained" onClick={handleNext}>
-                  Continue
-                </Button>
-              </Box>
-            )}
-          </Box>
-        );
-
-      case 2:
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Select Date and Time
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <StaticDatePicker
-                    displayStaticWrapperAs="desktop"
-                    value={selectedDate}
-                    onChange={(newValue) => setSelectedDate(newValue)}
-                    minDate={new Date()}
-                    maxDate={addDays(new Date(), 60)}
-                  />
-                </LocalizationProvider>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Available Times for {selectedDate && format(selectedDate, 'MMMM d, yyyy')}
-                </Typography>
-                {timeSlotsLoading ? (
-                  <CircularProgress />
-                ) : (
-                  <Grid container spacing={1}>
-                    {timeSlots?.map((slot) => (
-                      <Grid item xs={4} key={slot.time}>
-                        <Button
-                          variant={bookingData.time === slot.time ? 'contained' : 'outlined'}
-                          disabled={!slot.available}
-                          fullWidth
-                          onClick={() => handleTimeSelect(slot.time)}
-                        >
-                          {slot.time}
-                        </Button>
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Appointment Location
-                  </Typography>
-                  <RadioGroup
-                    value={bookingData.isVirtual ? 'virtual' : 'in-person'}
-                    onChange={(e) => setBookingData({ ...bookingData, isVirtual: e.target.value === 'virtual' })}
-                  >
-                    <FormControlLabel
-                      value="in-person"
-                      control={<Radio />}
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <LocationIcon /> In-Person Visit
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel
-                      value="virtual"
-                      control={<Radio />}
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <VideoCallIcon /> Virtual Consultation
-                        </Box>
-                      }
-                    />
-                  </RadioGroup>
-                </Box>
-              </Grid>
+                      )}
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
             </Grid>
-          </Box>
-        );
+          ))}
+        </Grid>
+      )}
+    </Box>
+  );
 
-      case 3: {
-        const provider = getSelectedProvider();
-        const service = getSelectedService();
-
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Confirm Your Appointment
+  const renderSlotSelectionStep = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Select Date and Time
+      </Typography>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <StaticDatePicker
+              displayStaticWrapperAs="desktop"
+              value={selectedDate}
+              onChange={(newValue) => setSelectedDate(newValue)}
+              minDate={new Date()}
+              maxDate={addDays(new Date(), 60)}
+            />
+          </LocalizationProvider>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Typography variant="subtitle1" gutterBottom>
+            Available times for {format(selectedDate ?? new Date(), 'MMMM d, yyyy')}
+          </Typography>
+          {slotsLoading ? (
+            <CircularProgress />
+          ) : slots.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No slots available for this provider on the selected date. Try another day.
             </Typography>
-            <Paper sx={{ p: 3 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Provider
-                  </Typography>
-                  <Typography variant="body1">
-                    {provider?.name} - {provider?.specialty}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Service
-                  </Typography>
-                  <Typography variant="body1">
-                    {service?.name} ({service?.duration} minutes)
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Date & Time
-                  </Typography>
-                  <Typography variant="body1">
-                    {bookingData.date && format(bookingData.date, 'EEEE, MMMM d, yyyy')}
-                    {' at '}
-                    {bookingData.time}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Location
-                  </Typography>
-                  <Typography variant="body1">
-                    {bookingData.isVirtual ? 'Virtual Consultation' : 'In-Person Visit'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
+          ) : (
+            <Grid container spacing={1}>
+              {slots.map((slot) => (
+                <Grid item xs={4} key={slot.startTime}>
+                  <Button
+                    variant={selectedSlot?.startTime === slot.startTime ? 'contained' : 'outlined'}
                     fullWidth
-                    multiline
-                    rows={3}
-                    label="Additional Notes (Optional)"
-                    value={bookingData.notes || ''}
-                    onChange={(e) => setBookingData({ ...bookingData, notes: e.target.value })}
-                  />
+                    onClick={() => handleSlotSelect(slot)}
+                  >
+                    {format(new Date(slot.startTime), 'h:mm a')}
+                  </Button>
                 </Grid>
-              </Grid>
-              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
-                <Button onClick={handleBack}>
-                  Back
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handleBookingConfirm}
-                  disabled={bookMutation.isPending}
-                >
-                  {bookMutation.isPending ? <CircularProgress size={24} /> : 'Confirm Booking'}
-                </Button>
-              </Box>
-            </Paper>
-          </Box>
-        );
-      }
+              ))}
+            </Grid>
+          )}
+        </Grid>
+      </Grid>
+    </Box>
+  );
 
+  const renderConfirmationStep = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Confirm Your Appointment
+      </Typography>
+      <Paper sx={{ p: 3 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Provider
+            </Typography>
+            <Typography variant="body1">
+              {selectedProvider?.name}
+              {selectedProvider?.specialty ? ` • ${selectedProvider.specialty}` : ''}
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Date & Time
+            </Typography>
+            <Typography variant="body1">{appointmentDateTime}</Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Duration
+            </Typography>
+            <Typography variant="body1">{bookingData.durationMinutes} minutes</Typography>
+          </Grid>
+        </Grid>
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+          <Button onClick={handleBack}>Back</Button>
+          <Button
+            variant="contained"
+            onClick={handleBookingConfirm}
+            disabled={bookMutation.isPending}
+          >
+            {bookMutation.isPending ? <CircularProgress size={24} /> : 'Confirm Booking'}
+          </Button>
+        </Box>
+      </Paper>
+    </Box>
+  );
+
+  const renderStepContent = () => {
+    switch (activeStep) {
+      case 0:
+        return renderProviderStep();
+      case 1:
+        return renderSlotSelectionStep();
+      case 2:
+        return renderConfirmationStep();
       default:
         return null;
     }
@@ -430,11 +316,9 @@ export const BookAppointment: React.FC = () => {
         ))}
       </Stepper>
 
-      <Box>
-        {renderStepContent(activeStep)}
-      </Box>
+      {renderStepContent()}
 
-      {activeStep > 0 && activeStep < 3 && (
+      {activeStep > 0 && activeStep < steps.length - 1 && (
         <Box sx={{ mt: 3 }}>
           <Button onClick={handleBack} startIcon={<ArrowBackIcon />}>
             Back
@@ -442,7 +326,6 @@ export const BookAppointment: React.FC = () => {
         </Box>
       )}
 
-      {/* Success Dialog */}
       <Dialog open={confirmDialogOpen} onClose={() => navigate('/appointments')}>
         <DialogContent sx={{ textAlign: 'center', py: 4 }}>
           <CheckCircleIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
@@ -451,7 +334,6 @@ export const BookAppointment: React.FC = () => {
           </Typography>
           <Typography color="text.secondary">
             Your appointment has been successfully scheduled.
-            You will receive a confirmation email shortly.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>

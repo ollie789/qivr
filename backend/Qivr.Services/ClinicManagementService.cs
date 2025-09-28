@@ -51,7 +51,7 @@ public class ClinicManagementService : IClinicManagementService
         {
             // Get counts for each clinic
             var patientCount = await _context.Users
-                .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Patient && !u.IsDeleted);
+                .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
 
             var providerCount = await _context.Providers
                 .CountAsync(p => p.TenantId == tenantId && p.ClinicId == clinic.Id && p.IsActive);
@@ -529,7 +529,7 @@ public class ClinicManagementService : IClinicManagementService
     public async Task<ClinicStatistics> GetClinicStatisticsAsync(Guid tenantId, Guid clinicId)
     {
         var totalPatients = await _context.Users
-            .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Patient && !u.IsDeleted);
+            .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
 
         var activePatients = await _context.Appointments
             .Where(a => a.TenantId == tenantId && a.ClinicId == clinicId)
@@ -544,7 +544,7 @@ public class ClinicManagementService : IClinicManagementService
         var totalStaff = await _context.Users
             .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Staff);
 
-        var thisMonthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        var thisMonthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var lastMonthStart = thisMonthStart.AddMonths(-1);
         var lastMonthEnd = thisMonthStart;
 

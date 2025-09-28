@@ -33,16 +33,12 @@ import {
   Timer as TimerIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import {
-  promInstanceApi,
-  PromPreviewDto,
-  PromQuestionDto,
-} from '../services/promInstanceApi';
 import type {
   PromTemplateDetail,
   PromTemplateQuestion,
   PromAnswerValue,
 } from '../services/promApi';
+import { promApi } from '../services/promApi';
 import { useSnackbar } from 'notistack';
 
 interface PromPreviewProps {
@@ -60,7 +56,14 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
 }) => {
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<PromPreviewDto | null>(null);
+  const [preview, setPreview] = useState<{
+    templateId: string;
+    templateName: string;
+    description: string;
+    estimatedTimeMinutes: number;
+    questionCount: number;
+    questions: PromTemplateQuestion[];
+  } | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, PromAnswerValue>>({});
   const [showAllQuestions, setShowAllQuestions] = useState(false);
@@ -70,8 +73,15 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
     
     setLoading(true);
     try {
-      const data = await promInstanceApi.previewTemplate(templateId);
-      setPreview(data);
+      const templateDetail = await promApi.getTemplate(templateId);
+      setPreview({
+        templateId: templateDetail.id,
+        templateName: templateDetail.name,
+        description: templateDetail.description || '',
+        estimatedTimeMinutes: Math.ceil((templateDetail.questions?.length ?? 0) * 0.5) || 5,
+        questionCount: templateDetail.questions?.length || 0,
+        questions: templateDetail.questions || [],
+      });
     } catch (error) {
       console.error('Failed to load preview:', error);
       enqueueSnackbar('Failed to load PROM preview', { variant: 'error' });
@@ -89,15 +99,9 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
         templateId: templateData.id,
         templateName: templateData.name,
         description: templateData.description || '',
-        estimatedTimeMinutes: Math.ceil(templateData.questions?.length * 0.5) || 5,
+        estimatedTimeMinutes: Math.ceil((templateData.questions?.length ?? 0) * 0.5) || 5,
         questionCount: templateData.questions?.length || 0,
-        questions: templateData.questions?.map((q: PromTemplateQuestion) => ({
-          id: q.id,
-          text: q.text,
-          type: q.type,
-          required: q.required !== false,
-          options: q.options,
-        })) || [],
+        questions: templateData.questions ?? [],
       });
     }
   }, [open, templateId, templateData, loadPreview]);
@@ -118,7 +122,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
     }
   };
 
-  const renderQuestion = (question: PromQuestionDto) => {
+  const renderQuestion = (question: PromTemplateQuestion) => {
     const value = answers[question.id];
 
     switch (question.type) {

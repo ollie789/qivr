@@ -441,15 +441,18 @@ export const PromBuilder: React.FC = () => {
   };
 
   const addQuestion = (questionData: Partial<PromQuestion>) => {
-    const newId = generateGuid();
-
     const {
+      id: providedId,
       type = "text",
       question: questionLabel,
       text: textLabel,
       required = false,
       ...rest
     } = questionData;
+
+    const newId = providedId && GUID_REGEX.test(providedId)
+      ? providedId.toLowerCase()
+      : generateGuid();
 
     const label = textLabel ?? questionLabel ?? "";
 
@@ -724,7 +727,7 @@ export const PromBuilder: React.FC = () => {
                     startIcon={<Add />}
                     onClick={() => {
                       setEditingQuestion({
-                        id: `q_${Date.now()}`,
+                        id: generateGuid(),
                         type: "text",
                         question: "",
                         required: false,
@@ -1151,10 +1154,14 @@ export const PromBuilder: React.FC = () => {
             variant="contained"
             onClick={() => {
               if (editingQuestion) {
-                if (editingQuestion.id.startsWith("q_")) {
-                  addQuestion(editingQuestion);
-                } else {
+                const exists = template.questions.some(
+                  (question) => question.id === editingQuestion.id,
+                );
+
+                if (exists) {
                   updateQuestion(editingQuestion.id, editingQuestion);
+                } else {
+                  addQuestion(editingQuestion);
                 }
               }
               setQuestionDialog(false);

@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:15
+    container_name: qivr-test-db
+    environment:
+      POSTGRES_DB: qivr_test
+      POSTGRES_USER: qivr_test
+      POSTGRES_PASSWORD: TestPassword123!
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qivr_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-test-data:

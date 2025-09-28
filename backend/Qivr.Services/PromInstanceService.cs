@@ -19,6 +19,7 @@ public interface IPromInstanceService
     Task<List<PromInstanceDto>> GetPatientPromInstancesAsync(Guid tenantId, Guid patientId, string? status = null, CancellationToken ct = default);
     Task<List<PromInstanceDto>> GetPromInstancesAsync(Guid tenantId, Guid? templateId = null, string? status = null, Guid? patientId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
     Task<PromInstanceDto> SubmitPromResponseAsync(Guid tenantId, Guid instanceId, PromSubmissionRequest response, CancellationToken ct = default);
+    Task<PromInstanceDto> SaveDraftAsync(Guid tenantId, Guid instanceId, PromDraftRequest draft, CancellationToken ct = default);
     Task<bool> ReminderPromAsync(Guid tenantId, Guid instanceId, CancellationToken ct = default);
     Task<List<PromInstanceDto>> GetPendingPromsAsync(Guid tenantId, DateTime? dueBefore = null, CancellationToken ct = default);
     Task<PromInstanceStats> GetPromStatsAsync(Guid tenantId, Guid? templateId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
@@ -38,6 +39,9 @@ public class PromInstanceService : IPromInstanceService
     private const string MetadataSentByKey = "sentBy";
     private const string MetadataBookingRequestedKey = "bookingRequested";
     private const string MetadataBookingRequestedAtKey = "bookingRequestedAt";
+    private const string MetadataDraftResponsesKey = "draftResponses";
+    private const string MetadataDraftLastQuestionIndexKey = "draftLastQuestionIndex";
+    private const string MetadataDraftSavedAtKey = "draftSavedAt";
 
     private readonly QivrDbContext _db;
     private readonly INotificationService _notificationService;
@@ -204,6 +208,56 @@ public class PromInstanceService : IPromInstanceService
         return result;
     }
 
+    public async Task<PromInstanceDto> SaveDraftAsync(Guid tenantId, Guid instanceId, PromDraftRequest draft, CancellationToken ct = default)
+    {
+        var instance = await _db.PromInstances
+            .Include(i => i.Template)
+            .Include(i => i.Patient)
+            .FirstOrDefaultAsync(i => i.Id == instanceId && i.TenantId == tenantId, ct)
+            ?? await _db.PromInstances
+                .Include(i => i.Template)
+                .Include(i => i.Patient)
+                .FirstOrDefaultAsync(i => i.Id == instanceId, ct)
+            ?? throw new ArgumentException($"PROM instance {instanceId} not found");
+
+        if (instance.Status is PromStatus.Completed or PromStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Cannot save a draft for a completed or cancelled PROM");
+        }
+
+        var metadata = EnsureMetadata(instance);
+
+        if (draft.Responses != null)
+        {
+            metadata[MetadataDraftResponsesKey] = draft.Responses;
+        }
+
+        if (draft.LastQuestionIndex.HasValue)
+        {
+            metadata[MetadataDraftLastQuestionIndexKey] = draft.LastQuestionIndex.Value;
+        }
+
+        if (draft.CompletionSeconds.HasValue)
+        {
+            metadata[MetadataCompletionSecondsKey] = draft.CompletionSeconds.Value;
+        }
+
+        metadata[MetadataDraftSavedAtKey] = DateTime.UtcNow;
+
+        instance.ResponseData = metadata;
+
+        if (instance.Status == PromStatus.Pending)
+        {
+            instance.Status = PromStatus.InProgress;
+        }
+
+        instance.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        return await MapInstanceToDtoAsync(instance.TenantId, instance.Id, ct);
+    }
+
     public async Task<PromInstanceDto> SubmitPromResponseAsync(Guid tenantId, Guid instanceId, PromSubmissionRequest response, CancellationToken ct = default)
     {
         var instance = await _db.PromInstances
@@ -361,6 +415,7 @@ public class PromInstanceService : IPromInstanceService
         var pending = instances.Count(i => i.Status == PromStatus.Pending && i.DueDate >= now);
         var scheduled = instances.Count(i => i.Status == PromStatus.Pending && i.ScheduledFor > now);
         var expired = instances.Count(i => i.Status != PromStatus.Completed && i.DueDate < now);
+        var cancelled = instances.Count(i => i.Status == PromStatus.Cancelled);
 
         var completionTimes = instances
             .Where(i => i.Status == PromStatus.Completed)
@@ -385,6 +440,7 @@ public class PromInstanceService : IPromInstanceService
             Pending = pending,
             Scheduled = scheduled,
             Expired = expired,
+            Cancelled = cancelled,
             CompletionRate = Math.Round(completionRate, 2),
             AverageCompletionTimeMinutes = Math.Round(averageCompletion, 2),
             AverageScore = Math.Round(averageScore, 2)
@@ -523,10 +579,18 @@ public class PromInstanceService : IPromInstanceService
         var answers = metadata.TryGetValue(MetadataAnswersKey, out var answersRaw)
             ? ExtractAnswersDictionary(answersRaw)
             : null;
+
+        if (answers == null && metadata.TryGetValue(MetadataDraftResponsesKey, out var draftRaw))
+        {
+            answers = ExtractAnswersDictionary(draftRaw);
+        }
+
         var answered = answers?.Count ?? 0;
         var completionMinutes = ExtractDouble(metadata, MetadataCompletionSecondsKey);
         var bookingRequested = ExtractBool(metadata, MetadataBookingRequestedKey);
         var bookingRequestedAt = ExtractDate(metadata, MetadataBookingRequestedAtKey);
+        var draftLastQuestionIndex = ExtractNullableInt(metadata, MetadataDraftLastQuestionIndexKey);
+        var draftSavedAt = ExtractDate(metadata, MetadataDraftSavedAtKey);
 
         var patientName = instance.Patient != null
             ? $"{instance.Patient.FirstName} {instance.Patient.LastName}".Trim()
@@ -555,7 +619,9 @@ public class PromInstanceService : IPromInstanceService
             Notes = metadata.TryGetValue(MetadataNotesKey, out var notesRaw) ? notesRaw?.ToString() : null,
             BookingRequested = bookingRequested || instance.BookingRequests.Any(),
             BookingRequestedAt = bookingRequestedAt ?? instance.BookingRequests.OrderByDescending(b => b.RequestedAt).FirstOrDefault()?.RequestedAt,
-            Answers = answers
+            Answers = answers,
+            DraftLastQuestionIndex = draftLastQuestionIndex,
+            DraftSavedAt = draftSavedAt
         };
     }
 
@@ -623,6 +689,36 @@ public class PromInstanceService : IPromInstanceService
         }
 
         return 0;
+    }
+
+    private static int? ExtractNullableInt(Dictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var raw) || raw == null)
+        {
+            return null;
+        }
+
+        if (raw is JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var numeric))
+            {
+                return numeric;
+            }
+
+            if (element.ValueKind == JsonValueKind.String && int.TryParse(element.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedString))
+            {
+                return parsedString;
+            }
+
+            return null;
+        }
+
+        if (int.TryParse(raw.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
+        {
+            return value;
+        }
+
+        return null;
     }
 
     private static double? ExtractDouble(Dictionary<string, object> metadata, string key)
@@ -943,6 +1039,13 @@ public class PromSubmissionRequest
     public string? Notes { get; set; }
 }
 
+public class PromDraftRequest
+{
+    public Dictionary<string, object?>? Responses { get; set; }
+    public int? LastQuestionIndex { get; set; }
+    public int? CompletionSeconds { get; set; }
+}
+
 public class PromAnswer
 {
     public Guid QuestionId { get; set; }
@@ -973,6 +1076,8 @@ public class PromInstanceDto
     public bool BookingRequested { get; set; }
     public DateTime? BookingRequestedAt { get; set; }
     public Dictionary<string, object>? Answers { get; set; }
+    public int? DraftLastQuestionIndex { get; set; }
+    public DateTime? DraftSavedAt { get; set; }
 }
 
 public class BookingRequest
@@ -1010,6 +1115,7 @@ public class PromInstanceStats
     public int Pending { get; set; }
     public int Scheduled { get; set; }
     public int Expired { get; set; }
+    public int Cancelled { get; set; }
     public double CompletionRate { get; set; }
     public double AverageCompletionTimeMinutes { get; set; }
     public double AverageScore { get; set; }

@@ -5,12 +5,17 @@ import type {
   PromTemplateSummary,
 } from "./promApi";
 
+import { NotificationMethod } from "./promApi";
+
 export interface SchedulePromPayload {
   templateKey: string;
   version?: number;
   patientId: string;
   scheduledFor: string;
   dueAt?: string;
+  notificationMethod?: NotificationMethod;
+  tags?: string[];
+  notes?: string;
 }
 
 export const promsApi = {

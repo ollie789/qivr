@@ -17,9 +17,9 @@ This document tracks the work required to unblock the clinic dashboard and patie
 | Auth configuration audit |  | ☐ Not started | Ensure Cognito metadata matches across environments. |
 | Seed users & tenants |  | ☑ Done | New provisioning CLI syncs Cognito users into Postgres. |
 | Appointments API parity |  | ⧗ In progress | Audit surfaced missing waitlist/reminder APIs + DTO gaps. |
-| Documents API parity |  | ⧗ In progress | Tenant-wide list/upload + categories live; sharing/review still remaining. |
+| Documents API parity |  | ⧗ In progress | Listing/upload + sharing/review endpoints live; integration tests and demo seeding still outstanding. |
 | Medical records API |  | ☑ Done | Summary/vitals endpoints + full medical record entities deployed; uses sample data when DB empty. |
-| PROM scheduling & metrics |  | ☐ Not started | `/api/v1/proms/*` scheduling, submission, stats. |
+| PROM scheduling & metrics |  | ⧗ In progress | Legacy `/api/v1/proms/*` scheduling/submission/stats wired; template CRUD + scoring polish pending. |
 | Integration/E2E tests |  | ☐ Not started | Backfill coverage and smoke tests. |
 | Observability & logging |  | ☐ Not started | Useful logging for auth/tenant issues. |
 
@@ -79,6 +79,8 @@ For each area (appointments, documents, medical records, PROMs):
 
 - Core CRUD, booking, availability, confirm/cancel/reschedule endpoints exist. Waitlist endpoints now persist entries via EF + new table, and reminders trigger the notification gateway + in-app alerts; email/SMS integration still pending.
 - Seed tooling now provisions a demo clinic, provider profile, and three upcoming appointments. Appointment DTOs surface contact data, telehealth links, and payment flags so the clinic UI can render the seeded data.
+- ☑ **Patient portal booking:** `/appointments/providers/available`, `/appointments/availability`, and `/appointments/book` now power the patient booking flow (see `apps/patient-portal/src/pages/BookAppointment.tsx`).
+- ☑ **Booking regression tests:** Added controller tests exercising `/appointments/book` success and failure paths (`backend/Qivr.Tests/Controllers/AppointmentsControllerTests.cs`).
 - Next step: extend waitlist service with triage/assignment workflow, add email/SMS delivery on reminders, and backfill integration tests covering booking, upcoming, reminders, and waitlist flows.
 
 ### 2.2 Documents
@@ -90,9 +92,12 @@ For each area (appointments, documents, medical records, PROMs):
   - Add integration test: upload → list → download.
 - **Seeds:** Create a few patient documents per seeded patient.
 
-#### Current status _(2025-09-25)_
-- Tenant-wide listing, patient filtering, and general upload endpoints now hit EF-backed data (with presigned download URLs, metadata, and tags). Categories endpoint merges defaults with stored document types so the clinic app can drop mock data.
-- Remaining gaps: document sharing API, staff review workflow, and integration tests exercising upload → list → download flows (including storage cleanup). Seed data still needed for demo documents.
+#### Current status _(2025-09-28)_
+- ☑ **Listing & upload:** Tenant-wide listing, patient filtering, and general upload endpoints now hit EF-backed data (with presigned download URLs, metadata, and tags). Categories endpoint merges defaults with stored document types so the clinic app can drop mock data.
+- ☑ **Sharing:** Added `/api/documents/{id}/share`, `/api/documents/{id}/shares`, and `/api/documents/{id}/shares/{shareId}` (see `DocumentsController`) and wired patient portal services to consume them (`documentsApi.ts`).
+- ☑ **Review workflow:** Clinicians can flag documents for review (`POST /review/request`) and close them out (`POST /review/complete`); metadata now tracks review status, notes, and reviewer IDs.
+- ☑ **Regression tests:** `DocumentsControllerTests` exercise the sharing and review endpoints with EF-backed persistence.
+- ⧗ **Outstanding:** Add integration tests covering upload → list → download flows (including storage cleanup) and seed review/share examples for demo tenants.
 
 ### 2.3 Medical Records
 - **Endpoints:** `/api/MedicalRecords`, `/api/MedicalRecords/vitals`, `/api/MedicalRecords/lab-results`, `/api/MedicalRecords/medications`, `/api/MedicalRecords/allergies`, `/api/MedicalRecords/immunizations`.
@@ -118,13 +123,13 @@ For each area (appointments, documents, medical records, PROMs):
 - Next: Add export endpoints for PDF/CSV bundles, fix CLI tool for future seeding needs
 
 ### 2.4 PROMs
-- **Endpoints:** `/api/v1/proms/templates`, `/api/v1/proms/templates/by-id/{id}`, `/api/v1/proms/schedule`, `/api/v1/proms/instances`, `/api/v1/proms/instances/{id}/answers`, `/api/PromInstance`.
-- **Tasks:**
-  - Ensure templates/instances endpoints return real data (leverage `PromInstanceService`).
-  - Implement scheduling to create an instance assigned to a patient.
-  - Confirm submission endpoint stores answers and updates completion status.
-  - Add stats endpoint (`/stats`) to drive dashboard widgets.
-- **Seeds:** Provide at least one PROM template and pre-populated instance for the seeded patient.
+- ☑ **Legacy endpoints wired up:** `/api/v1/proms/schedule` now routes through `PromInstanceService`; `/api/v1/proms/instances/{id}/answers` accepts flat or wrapped payloads (booking requests, completion seconds, legacy `responses` payloads); new `GET /api/v1/proms/stats` proxies service aggregates for dashboards.
+- ☑ **Seeds:** Added PHQ-9 and GAD-7 templates plus completed/pending instances to `backend/Qivr.Tools/dev-users.json`; CLI seeding now hydrates `prom_templates`, `prom_instances`, and `prom_responses`.
+- ☑ **Tests:** Backend suite now runs against the AWS RDS instance (`Qivr.Tests` uses `DatabaseTestBase`) covering template CRUD, submission parsing, booking hooks, and stats aggregation.
+- ☑ **Front-end:** Patient portal now consumes `/api/v1/proms` for instances, history, stats, and submissions; clinic dashboard schedules PROMs through `/api/v1/proms/schedule`.
+- ☑ **Dashboard metrics:** Clinic dashboard surfaces aggregated PROM stats (in-progress, cancelled, average score, streak/next-due) via the new admin list payload; Vitest coverage (`apps/clinic-dashboard/src/services/__tests__/promApi.test.ts`) guards the mapping.
+- ☑ **PROM builder IDs:** Clinic builder now creates RFC4122 question IDs up front (see `PromBuilder.tsx`); queue for legacy hash-id cleanup is cleared.
+- ⧗ **Outstanding:** Retire the `/api/PromInstance` fallback once remaining admin screens migrate, then add UI smoke coverage that exercises the `/api/v1/proms` flow end-to-end.
 
 ## Phase 3 – Testing & Tooling
 

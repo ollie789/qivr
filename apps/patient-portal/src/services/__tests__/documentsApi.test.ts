@@ -27,26 +27,37 @@ import {
   deleteDocument,
   toggleStar,
 } from '../documentsApi';
-import type { DocumentFolder, DocumentSummary } from '../../types';
+import type { DocumentFolder, DocumentShare, DocumentSummary } from '../../types';
 
 const mockClient = vi.mocked(apiClient);
 
 describe('documentsApi', () => {
-  const documents: DocumentSummary[] = [
+  const apiDocuments = [
     {
       id: 'doc-1',
-      name: 'Intake.pdf',
-      type: 'pdf',
+      patientId: 'patient-1',
+      fileName: 'Intake.pdf',
+      mimeType: 'application/pdf',
       category: 'medical',
-      size: 1234,
-      uploadedDate: '2024-01-01T00:00:00Z',
-      modifiedDate: '2024-01-01T00:00:00Z',
+      description: 'Initial intake form',
+      fileSize: 1234,
       uploadedBy: 'Nurse Joy',
-      sharedWith: [],
-      tags: [],
-      starred: false,
-      verified: false,
-      encrypted: false,
+      uploadedAt: '2024-01-01T00:00:00Z',
+      requiresReview: true,
+      reviewStatus: 'pending',
+      tags: ['intake'],
+      shares: [
+        {
+          shareId: 'share-1',
+          sharedWithUserId: 'clinician-1',
+          sharedWithName: 'Dr. Smith',
+          sharedByUserId: 'staff-1',
+          sharedByName: 'Nurse Joy',
+          sharedAt: '2024-01-02T00:00:00Z',
+          accessLevel: 'view',
+          revoked: false,
+        },
+      ],
     },
   ];
 
@@ -63,13 +74,24 @@ describe('documentsApi', () => {
     vi.clearAllMocks();
   });
 
-  it('fetchDocuments unwraps envelope and forwards filters', async () => {
-    mockClient.get.mockResolvedValueOnce({ data: documents });
+  it('fetchDocuments unwraps envelope, forwards filters, and maps metadata', async () => {
+    mockClient.get.mockResolvedValueOnce({ data: apiDocuments });
 
-    const result = await fetchDocuments({ category: 'medical', search: 'intake' });
+    const result = await fetchDocuments({ category: 'medical', search: 'intake', requiresReview: true });
 
-    expect(mockClient.get).toHaveBeenCalledWith('/api/Documents', { category: 'medical', search: 'intake' });
-    expect(result).toEqual(documents);
+    expect(mockClient.get).toHaveBeenCalledWith('/api/Documents', {
+      category: 'medical',
+      search: 'intake',
+      requiresReview: 'true',
+    });
+
+    expect(result).toHaveLength(1);
+    const mapped = result[0];
+    expect(mapped.name).toBe('Intake.pdf');
+    expect(mapped.requiresReview).toBe(true);
+    expect(mapped.reviewStatus).toBe('pending');
+    expect(mapped.sharedWith).toEqual(['Dr. Smith']);
+    expect(mapped.shares).toHaveLength(1);
   });
 
   it('fetchFolders returns plain data', async () => {
@@ -93,6 +115,8 @@ describe('documentsApi', () => {
     expect(path).toBe('/api/Documents/upload');
     expect(formData).toBeInstanceOf(FormData);
     expect(typeof options.onUploadProgress).toBe('function');
+    expect(formData.get('category')).toBe('medical');
+    expect(formData.get('tags')).toBe(JSON.stringify(['intake']));
 
     // simulate progress callback
     options.onUploadProgress?.(42);

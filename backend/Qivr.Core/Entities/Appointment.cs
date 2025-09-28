@@ -34,7 +34,8 @@ public class Appointment : TenantEntity
     
     // Navigation properties
     public virtual User? Patient { get; set; }
-    public virtual User? Provider { get; set; }
+    public virtual User? Provider { get; set; }  // Temporarily keeping as User to match database schema
+    public virtual Clinic? Clinic { get; set; }
     public virtual Evaluation? Evaluation { get; set; }
     public virtual User? CancelledByUser { get; set; }
     
