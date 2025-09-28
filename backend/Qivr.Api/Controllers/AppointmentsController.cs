@@ -1,14 +1,19 @@
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Security.Claims;
+using System.Text.Json;
+using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Qivr.Api.Models;
+using Qivr.Api.Middleware;
+using Qivr.Api.Services;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
-using System.Security.Claims;
-using Qivr.Api.Services;
-using Qivr.Api.Models;
-using Microsoft.AspNetCore.RateLimiting;
-using Qivr.Api.Middleware;
 
 namespace Qivr.Api.Controllers;
 
@@ -26,6 +31,9 @@ public class AppointmentsController : ControllerBase
     private readonly IProviderAvailabilityService _availabilityService;
     private readonly ICacheService _cacheService;
     private readonly IEnhancedAuditService _auditService;
+    private readonly IAppointmentWaitlistService _waitlistService;
+    private readonly INotificationGate _notificationGate;
+    private readonly IRealTimeNotificationService _realTimeNotificationService;
 
     public AppointmentsController(
         QivrDbContext context,
@@ -33,7 +41,10 @@ public class AppointmentsController : ControllerBase
         IResourceAuthorizationService authorizationService,
         IProviderAvailabilityService availabilityService,
         ICacheService cacheService,
-        IEnhancedAuditService auditService)
+        IEnhancedAuditService auditService,
+        IAppointmentWaitlistService waitlistService,
+        INotificationGate notificationGate,
+        IRealTimeNotificationService realTimeNotificationService)
     {
         _context = context;
         _logger = logger;
@@ -41,6 +52,9 @@ public class AppointmentsController : ControllerBase
         _availabilityService = availabilityService;
         _cacheService = cacheService;
         _auditService = auditService;
+        _waitlistService = waitlistService;
+        _notificationGate = notificationGate;
+        _realTimeNotificationService = realTimeNotificationService;
     }
 
     /// <summary>
@@ -113,30 +127,7 @@ public class AppointmentsController : ControllerBase
         // Convert to DTOs
         var response = new CursorPaginationResponse<AppointmentDto>
         {
-            Items = paginatedResult.Items.Select(a => new AppointmentDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : null,
-                ProviderId = a.ProviderId,
-                ProviderName = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : null,
-                EvaluationId = a.EvaluationId,
-                AppointmentType = a.AppointmentType,
-                Status = a.Status,
-                ScheduledStart = a.ScheduledStart,
-                ScheduledEnd = a.ScheduledEnd,
-                ActualStart = a.ActualStart,
-                ActualEnd = a.ActualEnd,
-                LocationType = a.LocationType,
-                LocationDetails = a.LocationDetails,
-                Notes = a.Notes,
-                ExternalCalendarId = a.ExternalCalendarId,
-                CancellationReason = a.CancellationReason,
-                CancelledAt = a.CancelledAt,
-                ReminderSentAt = a.ReminderSentAt,
-                CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
-            }).ToList(),
+            Items = paginatedResult.Items.Select(MapAppointmentToDto).ToList(),
             NextCursor = paginatedResult.NextCursor,
             PreviousCursor = paginatedResult.PreviousCursor,
             HasNext = paginatedResult.HasNext,
@@ -190,33 +181,9 @@ public class AppointmentsController : ControllerBase
             .OrderBy(a => a.ScheduledStart)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(a => new AppointmentDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : null,
-                ProviderId = a.ProviderId,
-                ProviderName = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : null,
-                EvaluationId = a.EvaluationId,
-                AppointmentType = a.AppointmentType,
-                Status = a.Status,
-                ScheduledStart = a.ScheduledStart,
-                ScheduledEnd = a.ScheduledEnd,
-                ActualStart = a.ActualStart,
-                ActualEnd = a.ActualEnd,
-                LocationType = a.LocationType,
-                LocationDetails = a.LocationDetails,
-                Notes = a.Notes,
-                ExternalCalendarId = a.ExternalCalendarId,
-                CancellationReason = a.CancellationReason,
-                CancelledAt = a.CancelledAt,
-                ReminderSentAt = a.ReminderSentAt,
-                CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
-            })
             .ToListAsync();
 
-        return Ok(appointments);
+        return Ok(appointments.Select(MapAppointmentToDto).ToList());
     }
 
     /// <summary>
@@ -260,35 +227,11 @@ public class AppointmentsController : ControllerBase
         if (appointment == null)
             return NotFound();
 
-        var appointmentDto = new AppointmentDto
-        {
-            Id = appointment.Id,
-            PatientId = appointment.PatientId,
-            PatientName = appointment.Patient != null ? $"{appointment.Patient.FirstName} {appointment.Patient.LastName}" : null,
-            ProviderId = appointment.ProviderId,
-            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" : null,
-            EvaluationId = appointment.EvaluationId,
-            AppointmentType = appointment.AppointmentType,
-            Status = appointment.Status,
-            ScheduledStart = appointment.ScheduledStart,
-            ScheduledEnd = appointment.ScheduledEnd,
-            ActualStart = appointment.ActualStart,
-            ActualEnd = appointment.ActualEnd,
-            LocationType = appointment.LocationType,
-            LocationDetails = appointment.LocationDetails,
-            Notes = appointment.Notes,
-            ExternalCalendarId = appointment.ExternalCalendarId,
-            CancellationReason = appointment.CancellationReason,
-            CancelledAt = appointment.CancelledAt,
-            ReminderSentAt = appointment.ReminderSentAt,
-            CreatedAt = appointment.CreatedAt,
-            UpdatedAt = appointment.UpdatedAt
-        };
-
         // Cache the appointment for 5 minutes
-        await _cacheService.SetAsync(cacheKey, appointmentDto, CacheService.CacheDuration.Medium);
+        var dto = MapAppointmentToDto(appointment);
+        await _cacheService.SetAsync(cacheKey, dto, CacheService.CacheDuration.Medium);
 
-        return Ok(appointmentDto);
+        return Ok(dto);
     }
 
     /// <summary>
@@ -395,24 +338,7 @@ public class AppointmentsController : ControllerBase
             .Reference(a => a.Provider)
             .LoadAsync();
 
-        return CreatedAtAction(nameof(GetAppointment), new { id = appointment.Id }, new AppointmentDto
-        {
-            Id = appointment.Id,
-            PatientId = appointment.PatientId,
-            PatientName = appointment.Patient != null ? $"{appointment.Patient.FirstName} {appointment.Patient.LastName}" : null,
-            ProviderId = appointment.ProviderId,
-            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" : null,
-            EvaluationId = appointment.EvaluationId,
-            AppointmentType = appointment.AppointmentType,
-            Status = appointment.Status,
-            ScheduledStart = appointment.ScheduledStart,
-            ScheduledEnd = appointment.ScheduledEnd,
-            LocationType = appointment.LocationType,
-            LocationDetails = appointment.LocationDetails,
-            Notes = appointment.Notes,
-            CreatedAt = appointment.CreatedAt,
-            UpdatedAt = appointment.UpdatedAt
-        });
+        return CreatedAtAction(nameof(GetAppointment), new { id = appointment.Id }, MapAppointmentToDto(appointment));
     }
 
     [HttpPut("{id}")]
@@ -505,6 +431,58 @@ public class AppointmentsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id}/send-reminder")]
+    public async Task<IActionResult> SendReminder(Guid id, CancellationToken cancellationToken)
+    {
+        var tenantId = GetTenantId();
+
+        var appointment = await _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Provider)
+            .Where(a => a.TenantId == tenantId && a.Id == id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (appointment == null)
+            return NotFound();
+
+        var tenantTimezone = await _context.Tenants
+            .Where(t => t.Id == tenantId)
+            .Select(t => t.Timezone ?? "Australia/Sydney")
+            .FirstOrDefaultAsync(cancellationToken) ?? "Australia/Sydney";
+
+        var (canSendEmail, emailReason) = await _notificationGate.CanSendEmailAsync(tenantId, appointment.PatientId, cancellationToken);
+
+        var reminder = new AppointmentReminderDto
+        {
+            AppointmentId = appointment.Id,
+            ProviderId = appointment.ProviderId,
+            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}".Trim() : "Clinician",
+            AppointmentTime = appointment.ScheduledStart,
+            Location = appointment.Location ?? appointment.LocationDetails.GetValueOrDefault("address")?.ToString()
+        };
+
+        await _realTimeNotificationService.SendAppointmentReminderAsync(appointment.PatientId, reminder);
+
+        appointment.ReminderSentAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Appointment reminder sent for appointment {AppointmentId}", appointment.Id);
+
+        return Accepted(new
+        {
+            appointmentId = appointment.Id,
+            status = "sent",
+            requestedAt = DateTime.UtcNow,
+            channels = new
+            {
+                inApp = true,
+                email = canSendEmail,
+                emailGateReason = canSendEmail ? null : emailReason
+            },
+            timezone = tenantTimezone
+        });
+    }
+
     [HttpPost("{id}/confirm")]
     public async Task<IActionResult> ConfirmAppointment(Guid id)
     {
@@ -563,6 +541,40 @@ public class AppointmentsController : ControllerBase
         _logger.LogInformation("Appointment completed: {AppointmentId}", appointment.Id);
 
         return NoContent();
+    }
+
+    [HttpGet("waitlist")]
+    public async Task<ActionResult<IEnumerable<WaitlistEntryDto>>> GetWaitlist(CancellationToken cancellationToken)
+    {
+        var tenantId = GetTenantId();
+        Guid? patientFilter = null;
+        if (User.IsInRole("Patient"))
+        {
+            patientFilter = GetUserId();
+        }
+
+        var entries = await _waitlistService.GetEntriesAsync(tenantId, patientFilter, cancellationToken);
+        return Ok(entries.Select(MapWaitlistEntryToDto));
+    }
+
+    [HttpPost("waitlist")]
+    public async Task<ActionResult<WaitlistEntryDto>> AddToWaitlist([FromBody] WaitlistRequest request, CancellationToken cancellationToken)
+    {
+        var tenantId = GetTenantId();
+        var userId = GetUserId();
+
+        var patientId = request.PatientId == Guid.Empty ? userId : request.PatientId;
+
+        if (!await _authorizationService.UserCanAccessPatientDataAsync(userId, patientId))
+        {
+            return Forbid();
+        }
+
+        request.PatientId = patientId;
+
+        var entry = await _waitlistService.AddEntryAsync(tenantId, userId, request, cancellationToken);
+
+        return Accepted(MapWaitlistEntryToDto(entry));
     }
 
     [HttpGet("availability")]
@@ -634,20 +646,7 @@ public class AppointmentsController : ControllerBase
             return StatusCode(500, "Appointment was created but could not be retrieved");
         }
         
-        return Ok(new AppointmentDto
-        {
-            Id = appointment.Id,
-            PatientId = appointment.PatientId,
-            PatientName = appointment.Patient != null ? $"{appointment.Patient.FirstName} {appointment.Patient.LastName}" : null,
-            ProviderId = appointment.ProviderId,
-            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" : null,
-            AppointmentType = appointment.AppointmentType,
-            Status = appointment.Status,
-            ScheduledStart = appointment.ScheduledStart,
-            ScheduledEnd = appointment.ScheduledEnd,
-            CreatedAt = appointment.CreatedAt,
-            UpdatedAt = appointment.UpdatedAt
-        });
+        return Ok(MapAppointmentToDto(appointment));
     }
 
     [HttpGet("upcoming")]
@@ -676,24 +675,9 @@ public class AppointmentsController : ControllerBase
         var appointments = await query
             .OrderBy(a => a.ScheduledStart)
             .Take(10)
-            .Select(a => new AppointmentDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : null,
-                ProviderId = a.ProviderId,
-                ProviderName = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : null,
-                AppointmentType = a.AppointmentType,
-                Status = a.Status,
-                ScheduledStart = a.ScheduledStart,
-                ScheduledEnd = a.ScheduledEnd,
-                LocationType = a.LocationType,
-                LocationDetails = a.LocationDetails,
-                Notes = a.Notes
-            })
             .ToListAsync();
 
-        return Ok(appointments);
+        return Ok(appointments.Select(MapAppointmentToDto));
     }
 
     [HttpGet("history")]
@@ -726,30 +710,11 @@ public class AppointmentsController : ControllerBase
             .OrderByDescending(a => a.ScheduledStart)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(a => new AppointmentDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : null,
-                ProviderId = a.ProviderId,
-                ProviderName = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : null,
-                AppointmentType = a.AppointmentType,
-                Status = a.Status,
-                ScheduledStart = a.ScheduledStart,
-                ScheduledEnd = a.ScheduledEnd,
-                ActualStart = a.ActualStart,
-                ActualEnd = a.ActualEnd,
-                LocationType = a.LocationType,
-                LocationDetails = a.LocationDetails,
-                Notes = a.Notes,
-                CancellationReason = a.CancellationReason,
-                CancelledAt = a.CancelledAt
-            })
             .ToListAsync();
 
         return Ok(new
         {
-            items = appointments,
+            items = appointments.Select(MapAppointmentToDto).ToList(),
             page,
             pageSize,
             totalCount,
@@ -809,6 +774,171 @@ public class AppointmentsController : ControllerBase
         return NoContent();
     }
 
+    private static AppointmentDto MapAppointmentToDto(Appointment appointment)
+    {
+        var locationDetails = appointment.LocationDetails ?? new Dictionary<string, object>();
+        var patientPreferences = appointment.Patient?.Preferences ?? new Dictionary<string, object>();
+
+        var videoLink = ExtractStringValue(locationDetails, "meetingUrl")
+                        ?? ExtractStringValue(locationDetails, "videoLink");
+
+        var dto = new AppointmentDto
+        {
+            Id = appointment.Id,
+            PatientId = appointment.PatientId,
+            PatientName = appointment.Patient != null ? $"{appointment.Patient.FirstName} {appointment.Patient.LastName}" : null,
+            PatientEmail = appointment.Patient?.Email,
+            PatientPhone = appointment.Patient?.Phone,
+            ProviderId = appointment.ProviderId,
+            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" : null,
+            ProviderEmail = appointment.Provider?.Email,
+            ProviderPhone = appointment.Provider?.Phone,
+            EvaluationId = appointment.EvaluationId,
+            AppointmentType = appointment.AppointmentType,
+            Status = appointment.Status,
+            ScheduledStart = appointment.ScheduledStart,
+            ScheduledEnd = appointment.ScheduledEnd,
+            ActualStart = appointment.ActualStart,
+            ActualEnd = appointment.ActualEnd,
+            LocationType = appointment.LocationType,
+            LocationDetails = CloneDictionary(locationDetails),
+            Location = appointment.Location,
+            VideoLink = videoLink,
+            Notes = appointment.Notes,
+            ReasonForVisit = ExtractStringValue(locationDetails, "reason") ?? appointment.Notes,
+            InsuranceVerified = ExtractBoolValue(locationDetails, "insuranceVerified")
+                                 ?? ExtractBoolValue(patientPreferences, "insuranceVerified"),
+            CopayAmount = appointment.PaymentAmount,
+            FollowUpRequired = ExtractBoolValue(locationDetails, "followUpRequired"),
+            InsuranceProvider = ExtractStringValue(patientPreferences, "insuranceProvider"),
+            ExternalCalendarId = appointment.ExternalCalendarId,
+            CancellationReason = appointment.CancellationReason,
+            CancelledAt = appointment.CancelledAt,
+            ReminderSentAt = appointment.ReminderSentAt,
+            CreatedAt = appointment.CreatedAt,
+            UpdatedAt = appointment.UpdatedAt
+        };
+
+        return dto;
+    }
+
+    private static Dictionary<string, object> CloneDictionary(Dictionary<string, object> source)
+    {
+        var clone = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kvp in source)
+        {
+            var normalized = NormalizeJsonValue(kvp.Value);
+            if (normalized != null)
+            {
+                clone[kvp.Key] = normalized;
+            }
+        }
+
+        return clone;
+    }
+
+    private static string? ExtractStringValue(Dictionary<string, object> source, string key)
+    {
+        if (!source.TryGetValue(key, out var raw) || raw is null)
+        {
+            return null;
+        }
+
+        var normalized = NormalizeJsonValue(raw);
+        return normalized switch
+        {
+            null => null,
+            string s when string.IsNullOrWhiteSpace(s) => null,
+            string s => s,
+            bool b => b.ToString(),
+            int i => i.ToString(CultureInfo.InvariantCulture),
+            long l => l.ToString(CultureInfo.InvariantCulture),
+            double d => d.ToString(CultureInfo.InvariantCulture),
+            decimal m => m.ToString(CultureInfo.InvariantCulture),
+            JsonElement json => json.ValueKind == JsonValueKind.String ? json.GetString() : json.ToString(),
+            _ => normalized.ToString()
+        };
+    }
+
+    private static bool? ExtractBoolValue(Dictionary<string, object> source, string key)
+    {
+        if (!source.TryGetValue(key, out var raw) || raw is null)
+        {
+            return null;
+        }
+
+        var normalized = NormalizeJsonValue(raw);
+        return normalized switch
+        {
+            bool b => b,
+            string s when bool.TryParse(s, out var parsed) => parsed,
+            JsonElement json when json.ValueKind == JsonValueKind.True => true,
+            JsonElement json when json.ValueKind == JsonValueKind.False => false,
+            _ => null
+        };
+    }
+
+    private static object? NormalizeJsonValue(object? value)
+    {
+        if (value is JsonElement json)
+        {
+            switch (json.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    return JsonSerializer.Deserialize<Dictionary<string, object>>(json.GetRawText()) ?? new Dictionary<string, object>();
+                case JsonValueKind.Array:
+                    return JsonSerializer.Deserialize<List<object>>(json.GetRawText()) ?? new List<object>();
+                case JsonValueKind.String:
+                    return json.GetString();
+                case JsonValueKind.Number:
+                    if (json.TryGetInt64(out var longValue))
+                        return longValue;
+                    if (json.TryGetDecimal(out var decimalValue))
+                        return decimalValue;
+                    if (json.TryGetDouble(out var doubleValue))
+                        return doubleValue;
+                    return json.GetRawText();
+                case JsonValueKind.True:
+                    return true;
+                case JsonValueKind.False:
+                    return false;
+                case JsonValueKind.Null:
+                    return null;
+                default:
+                    return json.GetRawText();
+            }
+        }
+
+        return value;
+    }
+
+    private static WaitlistEntryDto MapWaitlistEntryToDto(AppointmentWaitlistEntry entry)
+    {
+        var preferredDates = entry.PreferredDates
+            .Select(date => date.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(date, DateTimeKind.Utc) : date.ToUniversalTime())
+            .ToList();
+
+        var patientName = entry.Patient != null ? entry.Patient.FullName.Trim() : string.Empty;
+        var providerName = entry.Provider != null ? entry.Provider.FullName.Trim() : null;
+
+        return new WaitlistEntryDto
+        {
+            Id = entry.Id,
+            PatientId = entry.PatientId,
+            PatientName = patientName,
+            PatientEmail = entry.Patient?.Email ?? string.Empty,
+            ProviderId = entry.ProviderId,
+            ProviderName = providerName,
+            AppointmentType = entry.AppointmentType,
+            Status = entry.Status.ToString().ToLowerInvariant(),
+            Notes = entry.Notes,
+            PreferredDates = preferredDates,
+            CreatedAt = entry.CreatedAt,
+            UpdatedAt = entry.UpdatedAt
+        };
+    }
+
     private Guid GetTenantId()
     {
         var tenantClaim = User.FindFirst("tenant_id")?.Value;
@@ -832,8 +962,12 @@ public class AppointmentDto
     public Guid Id { get; set; }
     public Guid PatientId { get; set; }
     public string? PatientName { get; set; }
+    public string? PatientEmail { get; set; }
+    public string? PatientPhone { get; set; }
     public Guid ProviderId { get; set; }
     public string? ProviderName { get; set; }
+    public string? ProviderEmail { get; set; }
+    public string? ProviderPhone { get; set; }
     public Guid? EvaluationId { get; set; }
     public string AppointmentType { get; set; } = string.Empty;
     public AppointmentStatus Status { get; set; }
@@ -843,7 +977,14 @@ public class AppointmentDto
     public DateTime? ActualEnd { get; set; }
     public LocationType LocationType { get; set; }
     public Dictionary<string, object> LocationDetails { get; set; } = new();
+    public string? Location { get; set; }
+    public string? VideoLink { get; set; }
     public string? Notes { get; set; }
+    public string? ReasonForVisit { get; set; }
+    public bool? InsuranceVerified { get; set; }
+    public decimal? CopayAmount { get; set; }
+    public bool? FollowUpRequired { get; set; }
+    public string? InsuranceProvider { get; set; }
     public string? ExternalCalendarId { get; set; }
     public string? CancellationReason { get; set; }
     public DateTime? CancelledAt { get; set; }
@@ -892,6 +1033,22 @@ public class RescheduleAppointmentRequest
     public DateTime NewStartTime { get; set; }
     public DateTime NewEndTime { get; set; }
     public string? Reason { get; set; }
+}
+
+public class WaitlistEntryDto
+{
+    public Guid Id { get; set; }
+    public Guid PatientId { get; set; }
+    public string PatientName { get; set; } = string.Empty;
+    public string PatientEmail { get; set; } = string.Empty;
+    public Guid? ProviderId { get; set; }
+    public string? ProviderName { get; set; }
+    public string AppointmentType { get; set; } = string.Empty;
+    public string Status { get; set; } = WaitlistStatus.Requested.ToString().ToLowerInvariant();
+    public string? Notes { get; set; }
+    public IEnumerable<DateTime> PreferredDates { get; set; } = Array.Empty<DateTime>();
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
 
 public class AvailableSlotDto
