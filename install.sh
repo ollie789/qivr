@@ -112,6 +112,15 @@ else
     echo "  To install: brew install awscli"
 fi
 
+# Check jq (required for sync scripts)
+if command_exists jq; then
+    JQ_VERSION=$(jq --version)
+    print_status 0 "jq is installed ($JQ_VERSION)"
+else
+    print_status 1 "jq is not installed (needed for Cognito sync script)"
+    echo "  To install: brew install jq"
+fi
+
 echo ""
 echo "=================================="
 echo ""
@@ -160,6 +169,12 @@ if [[ "$response" == "y" || "$response" == "Y" ]]; then
             brew install postgresql
         fi
     fi
+
+    # Install jq if missing
+    if ! command_exists jq; then
+        echo "Installing jq (required for Cognito sync script)..."
+        brew install jq
+    fi
     
     echo ""
     echo "Installation complete!"
@@ -203,6 +218,22 @@ echo ""
 echo "   # Terminal 2: Widget"
 echo "   npm run widget:dev"
 echo ""
+echo "Optional: sync Cognito users into Postgres (after creating users in Cognito)"
+echo "   ./scripts/sync-dev-users.sh"
+echo "   # Set CLINIC_DOCTOR_SUB / PATIENT_SUB env vars to override subs"
+echo ""
+
+if command_exists dotnet; then
+    echo ""
+    echo "Would you like to run the Cognito user sync now? (y/n)"
+    read -r sync_response
+    if [[ "$sync_response" == "y" || "$sync_response" == "Y" ]]; then
+        if [ -z "${CLINIC_DOCTOR_SUB:-}" ] || [ -z "${PATIENT_SUB:-}" ]; then
+            echo "⚠️  Set CLINIC_DOCTOR_SUB and PATIENT_SUB environment variables before running the sync for accurate Cognito linkage." >&2
+        fi
+        ./scripts/sync-dev-users.sh || true
+    fi
+fi
 
 echo "=================================="
 echo "Service URLs (when running):"

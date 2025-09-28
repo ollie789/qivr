@@ -34,13 +34,15 @@ The command honours the connection string defined in `appsettings.Development.js
 
 ## 🌱 Seeding development data
 
-Use the Super Admin seed endpoint while running the API locally:
+Create clinic + patient accounts in Cognito first, then sync them into Postgres with either the helper script or the tooling CLI:
 
 ```bash
-curl -X POST http://localhost:5001/api/superadmin/seed-test-data
+./scripts/sync-dev-users.sh
+# or
+dotnet run --project backend/Qivr.Tools -- --config backend/Qivr.Tools/dev-users.json
 ```
 
-This seeds tenants, users, and baseline PROM templates/responses using EF Core.
+Set `CLINIC_DOCTOR_SUB` and `PATIENT_SUB` environment variables (or edit the JSON config) so the sync tool can align Cognito `sub` identifiers with the database. The CLI now enforces EF’s snake-case naming, applies the tenant context expected by row-level security, and can reconcile tenants by slug if IDs differ. Pass `--dry-run` to preview changes.
 
 ## 🔍 Helpful commands
 
@@ -58,4 +60,3 @@ This seeds tenants, users, and baseline PROM templates/responses using EF Core.
 - Always generate migrations from the root of the solution to ensure references resolve correctly.
 - Never edit generated migration files after they have been applied to a shared environment.
 - Production deployments should run `dotnet ef database update` as part of the release process.
-

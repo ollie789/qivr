@@ -36,6 +36,13 @@ echo "  AWS Region: $AWS_REGION"
 echo "  Cognito User Pool: ${COGNITO_USER_POOL_ID:-Not set}"
 echo "  Cognito Client ID: ${COGNITO_CLIENT_ID:-Not set}"
 
+if [ "${SYNC_DEV_USERS_ON_START:-false}" = "true" ]; then
+    echo -e "${GREEN}Syncing Cognito users into Postgres before startup...${NC}"
+    pushd ../.. >/dev/null
+    ./scripts/sync-dev-users.sh || echo -e "${YELLOW}User sync failed (continuing).${NC}"
+    popd >/dev/null
+fi
+
 # Check if database is running
 if ! nc -z localhost 5432 2>/dev/null; then
     echo -e "${YELLOW}Warning: PostgreSQL doesn't appear to be running on port 5432${NC}"

@@ -174,6 +174,143 @@ namespace Qivr.Infrastructure.Migrations
                     b.ToTable("appointments", "qivr");
                 });
 
+            modelBuilder.Entity("Qivr.Core.Entities.AppointmentWaitlistEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AppointmentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("appointment_type");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("FulfilledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fulfilled_at");
+
+                    b.Property<Guid?>("MatchedAppointmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("matched_appointment_id");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("metadata");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("PreferredDates")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("preferred_dates");
+
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_appointment_waitlist_entries");
+
+                    b.HasIndex("MatchedAppointmentId")
+                        .HasDatabaseName("ix_appointment_waitlist_entries_matched_appointment_id");
+
+                    b.HasIndex("PatientId")
+                        .HasDatabaseName("ix_appointment_waitlist_entries_patient_id");
+
+                    b.HasIndex("ProviderId")
+                        .HasDatabaseName("ix_appointment_waitlist_entries_provider_id");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_appointment_waitlist_entries_tenant_status");
+
+                    b.HasIndex("TenantId", "PatientId", "Status")
+                        .HasDatabaseName("ix_appointment_waitlist_entries_tenant_patient_status");
+
+                    b.HasOne("Qivr.Core.Entities.Appointment", "MatchedAppointment")
+                        .WithMany()
+                        .HasForeignKey("MatchedAppointmentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_waitlist_entries_appointments_matched_appointment_id");
+
+                    b.HasOne("Qivr.Core.Entities.User", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_waitlist_entries_users_patient_id");
+
+                    b.HasOne("Qivr.Core.Entities.User", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_waitlist_entries_users_provider_id");
+
+                    b.ToTable("appointment_waitlist_entries", "qivr");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalCondition", b =>
+                {
+                    b.ToTable("medical_conditions", "qivr");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalVital", b =>
+                {
+                    b.ToTable("medical_vitals", "qivr");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalLabResult", b =>
+                {
+                    b.ToTable("medical_lab_results", "qivr");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalMedication", b =>
+                {
+                    b.ToTable("medical_medications", "qivr");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalAllergy", b =>
+                {
+                    b.ToTable("medical_allergies", "qivr");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.MedicalImmunization", b =>
+                {
+                    b.ToTable("medical_immunizations", "qivr");
+                });
+
             modelBuilder.Entity("Qivr.Core.Entities.BrandTheme", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1934,6 +2071,15 @@ namespace Qivr.Infrastructure.Migrations
                         .HasConstraintName("fk_users_tenants_tenant_id");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.AppointmentWaitlistEntry", b =>
+                {
+                    b.Navigation("MatchedAppointment");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Provider");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Clinic", b =>
