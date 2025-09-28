@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -16,13 +18,16 @@ public class AuthController : ControllerBase
 {
     private readonly ICognitoAuthService _authService;
     private readonly ILogger<AuthController> _logger;
+    private readonly IConfiguration _configuration;
 
     public AuthController(
         ICognitoAuthService authService,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        IConfiguration configuration)
     {
         _authService = authService;
         _logger = logger;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -211,6 +216,54 @@ public class AuthController : ControllerBase
             _logger.LogWarning("Backend sign-out failed but cookies cleared");
 
         return Ok(new { message = "Signed out successfully" });
+    }
+
+    [HttpGet("debug")]
+    [Authorize]
+    public IActionResult Debug()
+    {
+        var tenantClaim = User.FindFirst("tenant_id")?.Value
+            ?? User.FindFirst("custom:tenant_id")?.Value;
+        var headerTenantId = Request.Headers["X-Tenant-Id"].FirstOrDefault();
+
+        HttpContext.Items.TryGetValue("TenantId", out var tenantContext);
+        HttpContext.Items.TryGetValue("ValidatedTenant", out var validatedTenant);
+
+        var defaultTenant = _configuration["Security:DefaultTenantId"];
+
+        var response = new
+        {
+            authenticated = User.Identity?.IsAuthenticated ?? false,
+            user = new
+            {
+                subject = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value,
+                email = User.FindFirst(ClaimTypes.Email)?.Value,
+                name = User.FindFirst(ClaimTypes.Name)?.Value,
+                givenName = User.FindFirst(ClaimTypes.GivenName)?.Value,
+                familyName = User.FindFirst(ClaimTypes.Surname)?.Value,
+                roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value)
+                    .Concat(User.FindAll("cognito:groups").Select(c => c.Value))
+                    .Distinct()
+            },
+            tenant = new
+            {
+                fromClaim = tenantClaim,
+                fromHeader = headerTenantId,
+                fromContext = tenantContext?.ToString(),
+                contextValidated = validatedTenant as bool? ?? tenantContext is not null,
+                defaultTenantId = defaultTenant
+            },
+            claims = User.Claims
+                .Select(claim => new { claim.Type, claim.Value })
+                .ToArray(),
+            diagnostics = new
+            {
+                traceId = HttpContext.TraceIdentifier,
+                issuedAt = DateTimeOffset.UtcNow
+            }
+        };
+
+        return Ok(response);
     }
 
     [HttpPost("mfa/setup")]

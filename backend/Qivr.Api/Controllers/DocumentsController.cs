@@ -1,3 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -60,6 +67,67 @@ public class DocumentsController : ControllerBase
         _auditService = auditService;
     }
 
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<DocumentResponseDto>), 200)]
+    public async Task<ActionResult<IEnumerable<DocumentResponseDto>>> GetDocuments([FromQuery] DocumentListQuery request, CancellationToken cancellationToken)
+    {
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest("Tenant information is missing");
+        }
+
+        var currentUserId = _authorizationService.GetCurrentUserId(User);
+
+        var query = _context.Documents
+            .Include(d => d.Patient)
+            .Where(d => d.TenantId == tenantId && !d.IsArchived);
+
+        if (request.PatientId.HasValue)
+        {
+            if (!await _authorizationService.UserCanAccessPatientDataAsync(currentUserId, request.PatientId.Value))
+            {
+                return Forbid();
+            }
+
+            query = query.Where(d => d.PatientId == request.PatientId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Category))
+        {
+            query = query.Where(d => d.DocumentType == request.Category);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var searchTerm = $"%{request.Search.Trim()}%";
+            query = query.Where(d =>
+                EF.Functions.ILike(d.FileName, searchTerm) ||
+                EF.Functions.ILike(d.Description ?? string.Empty, searchTerm));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ProviderId))
+        {
+            query = query.Where(d => d.Metadata.Contains(request.ProviderId));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var page = Math.Max(1, request.Page);
+        var pageSize = request.PageSize;
+
+        var documents = await query
+            .OrderByDescending(d => d.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var dtos = await MapDocumentsWithUrlsAsync(documents, cancellationToken);
+
+        Response.Headers["X-Total-Count"] = totalCount.ToString();
+        return Ok(dtos);
+    }
+
     /// <summary>
     /// Upload a document for a patient
     /// </summary>
@@ -106,56 +174,28 @@ public class DocumentsController : ControllerBase
 
         try
         {
-            // Generate unique file name
-            var fileExtension = Path.GetExtension(file.FileName);
-            var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
-            var storageKey = $"documents/patients/{patientId}/{uniqueFileName}";
+            var uploadedByGuid = _authorizationService.GetCurrentUserId(User);
 
-            // Upload to storage
-            string fileUrl;
-            using (var stream = file.OpenReadStream())
-            {
-                var metadata = new Dictionary<string, string>
-                {
-                    { "patientId", patientId.ToString() },
-                    { "documentType", documentType },
-                    { "uploadedBy", User.Identity?.Name ?? "Unknown" }
-                };
-                fileUrl = await _storageService.UploadAsync(stream, storageKey, file.ContentType, metadata);
-            }
+            _auditService.TrackEntityChanges(_context);
 
-            // Get current user ID from claims
-            var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("user_id")?.Value;
-            Guid? uploadedByGuid = null;
-            if (Guid.TryParse(userId, out var parsedUserId))
+            var metadata = new Dictionary<string, object>
             {
-                uploadedByGuid = parsedUserId;
-            }
-
-            // Save document metadata to database
-            var document = new Document
-            {
-                Id = Guid.NewGuid(),
-                TenantId = tenantId,
-                PatientId = patientId,
-                FileName = file.FileName,
-                FileSizeBytes = file.Length,
-                ContentType = file.ContentType,
-                StoragePath = storageKey,
-                DocumentType = documentType,
-                Description = description ?? string.Empty,
-                UploadedBy = uploadedByGuid,
-                Tags = "[]", // Empty JSON array
-                Metadata = "{}" // Empty JSON object
+                ["category"] = documentType,
+                ["source"] = "patient-upload"
             };
 
-            _context.Documents.Add(document);
-            
-            // Track entity changes for audit
-            _auditService.TrackEntityChanges(_context);
-            await _context.SaveChangesAsync();
-            
-            // Log the document upload
+            var (document, downloadUrl) = await SaveDocumentAsync(
+                tenantId,
+                patientId,
+                uploadedByGuid,
+                $"documents/patients/{patientId}",
+                file,
+                documentType,
+                description,
+                null,
+                metadata,
+                HttpContext.RequestAborted);
+
             await _auditService.SaveTrackedChangesAsync(_context, tenantId, uploadedByGuid);
             await _auditService.LogEntityChangeAsync(
                 tenantId,
@@ -175,17 +215,7 @@ public class DocumentsController : ControllerBase
             return CreatedAtAction(
                 nameof(GetDocument),
                 new { documentId = document.Id },
-                new DocumentResponseDto
-                {
-                    Id = document.Id,
-                    FileName = document.FileName,
-                    FileSize = FormatFileSize(document.FileSizeBytes),
-                    DocumentType = document.DocumentType,
-                    Description = document.Description,
-                    UploadedBy = document.UploadedBy?.ToString() ?? "Unknown",
-                    UploadedAt = document.CreatedAt,
-                    DownloadUrl = fileUrl
-                });
+                MapDocumentToDto(document, downloadUrl));
         }
         catch (Exception ex)
         {
@@ -238,75 +268,137 @@ public class DocumentsController : ControllerBase
 
         try
         {
-            // Generate unique file name
-            var fileExtension = Path.GetExtension(file.FileName);
-            var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
-            var storageKey = $"documents/appointments/{appointmentId}/{uniqueFileName}";
+            var uploadedByGuid = _authorizationService.GetCurrentUserId(User);
 
-            // Upload to storage
-            string fileUrl;
-            using (var stream = file.OpenReadStream())
+            var metadata = new Dictionary<string, object>
             {
-                var metadata = new Dictionary<string, string>
-                {
-                    { "appointmentId", appointmentId.ToString() },
-                    { "patientId", appointment.PatientId.ToString() },
-                    { "documentType", documentType },
-                    { "uploadedBy", User.Identity?.Name ?? "Unknown" }
-                };
-                fileUrl = await _storageService.UploadAsync(stream, storageKey, file.ContentType, metadata);
-            }
-
-            // Get current user ID from claims
-            var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("user_id")?.Value;
-            Guid? uploadedByGuid = null;
-            if (Guid.TryParse(userId, out var parsedUserId))
-            {
-                uploadedByGuid = parsedUserId;
-            }
-
-            // Save document metadata to database
-            var document = new Document
-            {
-                Id = Guid.NewGuid(),
-                TenantId = tenantId,
-                PatientId = appointment.PatientId,
-                FileName = file.FileName,
-                FileSizeBytes = file.Length,
-                ContentType = file.ContentType,
-                StoragePath = storageKey,
-                DocumentType = documentType,
-                Description = description ?? string.Empty,
-                UploadedBy = uploadedByGuid,
-                Tags = "[]", // Empty JSON array
-                Metadata = $"{{\"appointmentId\":\"{appointmentId}\"}}" // Store appointment ID in metadata
+                ["appointmentId"] = appointmentId,
+                ["providerId"] = appointment.ProviderId,
+                ["source"] = "appointment-upload"
             };
 
-            _context.Documents.Add(document);
-            await _context.SaveChangesAsync();
+            var (document, downloadUrl) = await SaveDocumentAsync(
+                tenantId,
+                appointment.PatientId,
+                uploadedByGuid,
+                $"documents/appointments/{appointmentId}",
+                file,
+                documentType,
+                description,
+                null,
+                metadata,
+                HttpContext.RequestAborted);
 
             _logger.LogInformation("Document {DocumentId} uploaded for appointment {AppointmentId}", document.Id, appointmentId);
 
             return CreatedAtAction(
                 nameof(GetDocument),
                 new { documentId = document.Id },
-                new DocumentResponseDto
-                {
-                    Id = document.Id,
-                    FileName = document.FileName,
-                    FileSize = FormatFileSize(document.FileSizeBytes),
-                    DocumentType = document.DocumentType,
-                    Description = document.Description,
-                    UploadedBy = document.UploadedBy?.ToString() ?? "Unknown",
-                    UploadedAt = document.CreatedAt,
-                    DownloadUrl = fileUrl
-                });
+                MapDocumentToDto(document, downloadUrl));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error uploading document for appointment {AppointmentId}", appointmentId);
             return StatusCode(500, "An error occurred while uploading the document");
         }
+    }
+
+    /// <summary>
+    /// Upload a document to the current tenant (optionally scoped to a patient).
+    /// </summary>
+    [HttpPost("upload")]
+    [RequestSizeLimit(10_485_760)]
+    [ProducesResponseType(typeof(DocumentResponseDto), 201)]
+    public async Task<ActionResult<DocumentResponseDto>> UploadDocument(
+        [FromForm] GeneralDocumentUploadRequest request,
+        CancellationToken cancellationToken)
+    {
+        var validationResult = ValidateFile(request.File);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(validationResult.ErrorMessage);
+        }
+
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest("Tenant information is missing");
+        }
+
+        var currentUserId = _authorizationService.GetCurrentUserId(User);
+
+        Guid patientId;
+        if (request.PatientId.HasValue && request.PatientId.Value != Guid.Empty)
+        {
+            if (!await _authorizationService.UserCanAccessPatientDataAsync(currentUserId, request.PatientId.Value))
+            {
+                return Forbid();
+            }
+
+            patientId = request.PatientId.Value;
+        }
+        else if (User.IsInRole("Patient"))
+        {
+            patientId = currentUserId;
+        }
+        else
+        {
+            return BadRequest("patientId is required when uploading on behalf of a patient");
+        }
+
+        var tags = ParseTags(request.Tags);
+        var metadata = new Dictionary<string, object>
+        {
+            ["category"] = request.Category,
+            ["source"] = "manual-upload"
+        };
+
+        if (request.ProviderId.HasValue && request.ProviderId.Value != Guid.Empty)
+        {
+            metadata["providerId"] = request.ProviderId.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ProviderName))
+        {
+            metadata["providerName"] = request.ProviderName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Description))
+        {
+            metadata["description"] = request.Description;
+        }
+
+        _auditService.TrackEntityChanges(_context);
+
+        var (document, downloadUrl) = await SaveDocumentAsync(
+            tenantId,
+            patientId,
+            currentUserId,
+            $"documents/patients/{patientId}",
+            request.File,
+            request.Category,
+            request.Description,
+            tags,
+            metadata,
+            cancellationToken);
+
+        await _auditService.SaveTrackedChangesAsync(_context, tenantId, currentUserId);
+        await _auditService.LogEntityChangeAsync(
+            tenantId,
+            currentUserId,
+            "UPLOAD",
+            document,
+            additionalMetadata: new Dictionary<string, object>
+            {
+                ["documentType"] = request.Category,
+                ["patientId"] = patientId,
+                ["fileSize"] = request.File.Length,
+                ["fileName"] = request.File.FileName
+            });
+
+        _logger.LogInformation("Document {DocumentId} uploaded via general endpoint", document.Id);
+
+        return CreatedAtAction(nameof(GetDocument), new { documentId = document.Id }, MapDocumentToDto(document, downloadUrl));
     }
 
     /// <summary>
@@ -319,6 +411,7 @@ public class DocumentsController : ControllerBase
     public async Task<IActionResult> GetDocument(Guid documentId)
     {
         var document = await _context.Documents
+            .Include(d => d.Patient)
             .FirstOrDefaultAsync(d => d.Id == documentId && !d.IsArchived);
 
         if (document == null)
@@ -333,20 +426,9 @@ public class DocumentsController : ControllerBase
             return Forbid("You do not have access to this document");
         }
 
-        // Generate download URL with 1 hour expiry
         var downloadUrl = await _storageService.GetPresignedUrlAsync(document.StoragePath, TimeSpan.FromHours(1));
 
-        return Ok(new DocumentResponseDto
-        {
-            Id = document.Id,
-            FileName = document.FileName,
-            FileSize = FormatFileSize(document.FileSizeBytes),
-            DocumentType = document.DocumentType,
-            Description = document.Description,
-            UploadedBy = document.UploadedBy?.ToString() ?? "Unknown",
-            UploadedAt = document.CreatedAt,
-            DownloadUrl = downloadUrl
-        });
+        return Ok(MapDocumentToDto(document, downloadUrl));
     }
 
     /// <summary>
@@ -408,6 +490,7 @@ public class DocumentsController : ControllerBase
         }
 
         var query = _context.Documents
+            .Include(d => d.Patient)
             .Where(d => d.PatientId == patientId && !d.IsArchived);
 
         if (!string.IsNullOrEmpty(documentType))
@@ -416,36 +499,55 @@ public class DocumentsController : ControllerBase
         }
 
         var totalCount = await query.CountAsync();
-        
         var documents = await query
             .OrderByDescending(d => d.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(d => new DocumentResponseDto
-            {
-                Id = d.Id,
-                FileName = d.FileName,
-                FileSize = FormatFileSize(d.FileSizeBytes),
-                DocumentType = d.DocumentType,
-                Description = d.Description,
-                UploadedBy = d.UploadedBy != null ? d.UploadedBy.ToString() : "Unknown",
-                UploadedAt = d.CreatedAt
-            })
             .ToListAsync();
 
-        // Add download URLs
-        foreach (var doc in documents)
-        {
-            var document = await _context.Documents.FindAsync(doc.Id);
-            if (document != null)
-            {
-                doc.DownloadUrl = await _storageService.GetPresignedUrlAsync(document.StoragePath, TimeSpan.FromHours(1));
-            }
-        }
+        var result = await MapDocumentsWithUrlsAsync(documents, HttpContext.RequestAborted);
 
         Response.Headers.Add("X-Total-Count", totalCount.ToString());
-        
-        return Ok(documents);
+        return Ok(result);
+    }
+
+    [HttpGet("categories")]
+    [ProducesResponseType(typeof(IEnumerable<string>), 200)]
+    public async Task<ActionResult<IEnumerable<string>>> GetCategories(CancellationToken cancellationToken)
+    {
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest("Tenant information is missing");
+        }
+
+        var defaults = new[]
+        {
+            "intake",
+            "imaging",
+            "lab-report",
+            "insurance",
+            "treatment-plan",
+            "billing",
+            "consent",
+            "other"
+        };
+
+        var categories = await _context.Documents
+            .Where(d => d.TenantId == tenantId && !d.IsArchived)
+            .Select(d => d.DocumentType)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var merged = defaults
+            .Concat(categories)
+            .Select(c => c.Trim())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c)
+            .ToArray();
+
+        return Ok(merged);
     }
 
     /// <summary>
@@ -558,6 +660,44 @@ public class DocumentsController : ControllerBase
         }
     }
 
+    private DocumentResponseDto MapDocumentToDto(Document document, string? downloadUrl = null)
+    {
+        var tags = ParseTags(document.Tags);
+        var metadata = ParseMetadata(document.Metadata);
+
+        var patientName = document.Patient != null ? document.Patient.FullName.Trim() : string.Empty;
+        var uploadedById = document.UploadedBy;
+        var uploadedByDisplay = metadata.TryGetValue("uploadedByDisplay", out var display) && display is string name && !string.IsNullOrWhiteSpace(name)
+            ? name
+            : uploadedById?.ToString() ?? "Unknown";
+
+        var dto = new DocumentResponseDto
+        {
+            Id = document.Id,
+            PatientId = document.PatientId,
+            PatientName = patientName,
+            ProviderId = metadata.TryGetValue("providerId", out var provider) && Guid.TryParse(provider?.ToString(), out var providerId)
+                ? providerId
+                : null,
+            ProviderName = metadata.TryGetValue("providerName", out var providerName) ? providerName?.ToString() : null,
+            FileName = document.FileName,
+            MimeType = document.ContentType ?? "application/octet-stream",
+            Category = document.DocumentType,
+            Description = document.Description,
+            FileSize = document.FileSizeBytes,
+            FileSizeFormatted = FormatFileSize(document.FileSizeBytes),
+            UploadedById = uploadedById,
+            UploadedBy = uploadedByDisplay,
+            UploadedAt = document.CreatedAt,
+            Tags = tags,
+            Metadata = new Dictionary<string, object>(metadata, StringComparer.OrdinalIgnoreCase),
+            Url = downloadUrl,
+            ThumbnailUrl = metadata.TryGetValue("thumbnailUrl", out var thumbnail) ? thumbnail?.ToString() : null
+        };
+
+        return dto;
+    }
+
     private static string FormatFileSize(long bytes)
     {
         string[] sizes = { "B", "KB", "MB", "GB" };
@@ -576,28 +716,197 @@ public class DocumentsController : ControllerBase
         public bool IsValid { get; set; }
         public string? ErrorMessage { get; set; }
     }
+
+    private static IReadOnlyList<string> ParseTags(string? tagsJson)
+    {
+        if (string.IsNullOrWhiteSpace(tagsJson))
+        {
+            return Array.Empty<string>();
+        }
+
+        try
+        {
+            var tags = JsonSerializer.Deserialize<List<string>>(tagsJson);
+            return tags?.Where(t => !string.IsNullOrWhiteSpace(t)).ToArray() ?? Array.Empty<string>();
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    private static IDictionary<string, object> ParseMetadata(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return new Dictionary<string, object>();
+        }
+
+        try
+        {
+            var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(metadataJson);
+            return metadata ?? new Dictionary<string, object>();
+        }
+        catch
+        {
+            return new Dictionary<string, object>();
+        }
+    }
+
+    private static string SerializeTags(IEnumerable<string>? tags)
+    {
+        return JsonSerializer.Serialize(tags ?? Enumerable.Empty<string>());
+    }
+
+    private static string SerializeMetadata(IDictionary<string, object>? metadata)
+    {
+        return JsonSerializer.Serialize(metadata ?? new Dictionary<string, object>());
+    }
+
+    private async Task<(Document document, string downloadUrl)> SaveDocumentAsync(
+        Guid tenantId,
+        Guid patientId,
+        Guid? uploadedBy,
+        string storageFolder,
+        IFormFile file,
+        string category,
+        string? description,
+        IEnumerable<string>? tags,
+        IDictionary<string, object>? metadata,
+        CancellationToken cancellationToken)
+    {
+        var fileExtension = Path.GetExtension(file.FileName);
+        var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+        var storageKey = Path.Combine(storageFolder, uniqueFileName).Replace('\\', '/');
+
+        var storageMetadata = new Dictionary<string, string>
+        {
+            ["patientId"] = patientId.ToString(),
+            ["documentType"] = category,
+            ["uploadedBy"] = uploadedBy?.ToString() ?? "unknown"
+        };
+
+        if (metadata != null)
+        {
+            foreach (var kv in metadata)
+            {
+                if (kv.Value != null)
+                {
+                    storageMetadata[kv.Key] = kv.Value.ToString() ?? string.Empty;
+                }
+            }
+        }
+
+        string fileUrl;
+        await using (var stream = file.OpenReadStream())
+        {
+            fileUrl = await _storageService.UploadAsync(stream, storageKey, file.ContentType, storageMetadata);
+        }
+
+        var documentMetadata = metadata != null
+            ? new Dictionary<string, object>(metadata)
+            : new Dictionary<string, object>();
+
+        if (!documentMetadata.ContainsKey("source"))
+        {
+            documentMetadata["source"] = "manual-upload";
+        }
+
+        if (!documentMetadata.ContainsKey("uploadedByDisplay"))
+        {
+            documentMetadata["uploadedByDisplay"] = User.Identity?.Name ?? "Unknown";
+        }
+
+        var document = new Document
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            FileName = file.FileName,
+            DocumentType = category,
+            ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+            FileSizeBytes = file.Length,
+            StoragePath = storageKey,
+            Description = description ?? string.Empty,
+            UploadedBy = uploadedBy,
+            Tags = SerializeTags(tags),
+            Metadata = SerializeMetadata(documentMetadata)
+        };
+
+        _context.Documents.Add(document);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await _context.Entry(document).Reference(d => d.Patient).LoadAsync(cancellationToken);
+
+        return (document, fileUrl);
+    }
+
+    private async Task<IReadOnlyList<DocumentResponseDto>> MapDocumentsWithUrlsAsync(IEnumerable<Document> documents, CancellationToken cancellationToken)
+    {
+        var results = new List<DocumentResponseDto>();
+
+        foreach (var document in documents)
+        {
+            var downloadUrl = await _storageService.GetPresignedUrlAsync(document.StoragePath, TimeSpan.FromHours(1));
+            results.Add(MapDocumentToDto(document, downloadUrl));
+        }
+
+        return results;
+    }
 }
 
 // DTOs
 public class DocumentResponseDto
 {
     public Guid Id { get; set; }
+    public Guid PatientId { get; set; }
+    public string PatientName { get; set; } = string.Empty;
+    public Guid? ProviderId { get; set; }
+    public string? ProviderName { get; set; }
     public string FileName { get; set; } = string.Empty;
-    public string FileSize { get; set; } = string.Empty;
-    public string DocumentType { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string FileSizeFormatted { get; set; } = string.Empty;
+    public string MimeType { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public Guid? UploadedById { get; set; }
     public string UploadedBy { get; set; } = string.Empty;
     public DateTime UploadedAt { get; set; }
-    public string? DownloadUrl { get; set; }
+    public IReadOnlyList<string> Tags { get; set; } = Array.Empty<string>();
+    public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+    public string? Url { get; set; }
+    public string? ThumbnailUrl { get; set; }
 }
 
-public class DocumentUploadDto
+public class DocumentListQuery
+{
+    private const int MaxPageSize = 100;
+    private int _pageSize = 20;
+
+    public Guid? PatientId { get; set; }
+    public string? Category { get; set; }
+    public string? ProviderId { get; set; }
+    public string? Search { get; set; }
+    public int Page { get; set; } = 1;
+
+    public int PageSize
+    {
+        get => _pageSize;
+        set => _pageSize = Math.Clamp(value, 1, MaxPageSize);
+    }
+}
+
+public class GeneralDocumentUploadRequest
 {
     [Required]
     public IFormFile File { get; set; } = null!;
-    
+
     [Required]
-    public string DocumentType { get; set; } = string.Empty;
-    
+    public string Category { get; set; } = string.Empty;
+
+    public Guid? PatientId { get; set; }
+    public Guid? ProviderId { get; set; }
+    public string? ProviderName { get; set; }
     public string? Description { get; set; }
+    public string? Tags { get; set; }
 }
