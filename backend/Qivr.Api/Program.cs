@@ -210,6 +210,7 @@ builder.Services.AddScoped<IEnhancedAuditService, EnhancedAuditService>();
 builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
 builder.Services.AddScoped<INotificationGate, NotificationGate>();
 builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
+builder.Services.AddScoped<IAppointmentWaitlistService, AppointmentWaitlistService>();
 
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR(options =>
@@ -499,7 +500,7 @@ app.Use(async (ctx, next) =>
 });
 
 
-// Serve static files (including admin.html)
+// Serve static files (swagger assets, health probes, etc.)
 app.UseStaticFiles();
 
 // Custom middleware
