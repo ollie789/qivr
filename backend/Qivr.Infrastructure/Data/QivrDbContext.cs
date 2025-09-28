@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Qivr.Core.Common;
 using Qivr.Core.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 
 namespace Qivr.Infrastructure.Data;
@@ -39,12 +42,54 @@ public class QivrDbContext : DbContext
     public DbSet<PromBookingRequest> PromBookingRequests => Set<PromBookingRequest>();
     public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<MedicalCondition> MedicalConditions => Set<MedicalCondition>();
+    public DbSet<MedicalVital> MedicalVitals => Set<MedicalVital>();
+    public DbSet<MedicalLabResult> MedicalLabResults => Set<MedicalLabResult>();
+    public DbSet<MedicalMedication> MedicalMedications => Set<MedicalMedication>();
+    public DbSet<MedicalAllergy> MedicalAllergies => Set<MedicalAllergy>();
+    public DbSet<MedicalImmunization> MedicalImmunizations => Set<MedicalImmunization>();
+    public DbSet<AppointmentWaitlistEntry> AppointmentWaitlistEntries => Set<AppointmentWaitlistEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         
-        // Set default schema
+        modelBuilder.HasDefaultSchema("qivr");
+        
+        // Configure snake_case naming convention for PostgreSQL
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            // Convert table names to snake_case
+            var tableName = entity.GetTableName();
+            if (!string.IsNullOrEmpty(tableName))
+            {
+                entity.SetTableName(ToSnakeCase(tableName));
+            }
+            
+            // Convert column names to snake_case
+            foreach (var property in entity.GetProperties())
+            {
+                property.SetColumnName(ToSnakeCase(property.GetColumnName()));
+            }
+            
+            // Convert key names to snake_case
+            foreach (var key in entity.GetKeys())
+            {
+                key.SetName(ToSnakeCase(key.GetName()));
+            }
+            
+            // Convert index names to snake_case
+            foreach (var index in entity.GetIndexes())
+            {
+                index.SetDatabaseName(ToSnakeCase(index.GetDatabaseName()));
+            }
+            
+            // Convert foreign key names to snake_case
+            foreach (var foreignKey in entity.GetForeignKeys())
+            {
+                foreignKey.SetConstraintName(ToSnakeCase(foreignKey.GetConstraintName()));
+            }
+        }
         modelBuilder.HasDefaultSchema("qivr");
         
         // Configure value converters for complex types
@@ -58,15 +103,27 @@ public class QivrDbContext : DbContext
             v => v.ToList()
         );
 
+        var dateTimeListConverter = new ValueConverter<List<DateTime>, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<List<DateTime>>(v, (JsonSerializerOptions?)null) ?? new List<DateTime>()
+        );
+
         // Tenant configuration
         modelBuilder.Entity<Tenant>(entity =>
         {
             entity.ToTable("tenants");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Slug).IsUnique();
-            entity.Property(e => e.Settings).HasConversion(jsonConverter);
-            entity.Property(e => e.Metadata).HasConversion(jsonConverter);
-            entity.HasQueryFilter(e => e.DeletedAt == null);
+            entity.Property(e => e.Settings)
+                .HasConversion(jsonConverter)
+                .HasColumnType("jsonb");
+            entity.Ignore(e => e.Metadata); // Database doesn't have metadata column
+            entity.Ignore(e => e.DeletedAt); // Database uses is_active instead
+            entity.Ignore(e => e.Status); // Database doesn't have status column
+            entity.Ignore(e => e.Plan); // Database doesn't have plan column
+            entity.Ignore(e => e.Timezone); // Database doesn't have timezone column
+            entity.Ignore(e => e.Locale); // Database doesn't have locale column
+            // No query filter since DeletedAt doesn't exist in database
         });
 
         // User configuration
@@ -76,17 +133,31 @@ public class QivrDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
             entity.HasIndex(e => e.CognitoSub).IsUnique();
-            entity.Property(e => e.Roles).HasConversion(stringListConverter);
-            entity.Property(e => e.Preferences).HasConversion(jsonConverter);
-            entity.Property(e => e.Consent).HasConversion(jsonConverter);
-            entity.Property(e => e.UserType).HasConversion<string>();
+            entity.Property(e => e.CognitoSub).HasColumnName("cognito_id");
+            entity.Property(e => e.UserType).HasConversion<string>().HasColumnName("role");
+            entity.Ignore(e => e.Roles); // Roles are stored in a separate table or derived from UserType
+            entity.Property(e => e.Preferences).HasConversion(jsonConverter).HasColumnName("metadata");
+            entity.Ignore(e => e.Consent); // Database doesn't have consent column
+            entity.Ignore(e => e.AvatarUrl); // Database doesn't have avatar_url column
+            entity.Ignore(e => e.DateOfBirth); // Database doesn't have date_of_birth column
+            entity.Ignore(e => e.Gender); // Database doesn't have gender column
+            entity.Ignore(e => e.EmailVerified); // Database doesn't have email_verified column
+            entity.Ignore(e => e.PhoneVerified); // Database doesn't have phone_verified column
+            entity.Ignore(e => e.LastLoginAt); // Database doesn't have last_login_at column
+            entity.Ignore(e => e.CreatedBy); // Database doesn't have created_by column
+            entity.Ignore(e => e.UpdatedBy); // Database doesn't have updated_by column
+            entity.Ignore(e => e.DeletedAt); // Database uses is_active instead
             
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Users)
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasQueryFilter(e => e.DeletedAt == null && e.TenantId == _tenantId);
+            // Modified query filter - no DeletedAt check, optionally filter by tenant
+            if (_tenantId.HasValue)
+            {
+                entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            }
         });
 
         // Evaluation configuration
@@ -443,6 +514,52 @@ public class QivrDbContext : DbContext
                 
             entity.HasQueryFilter(e => e.TenantId == _tenantId);
         });
+
+        modelBuilder.Entity<AppointmentWaitlistEntry>(entity =>
+        {
+            entity.ToTable("appointment_waitlist_entries");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.AppointmentType)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Status)
+                .HasConversion<string>();
+
+            entity.Property(e => e.Notes)
+                .HasColumnType("text");
+
+            entity.Property(e => e.PreferredDates)
+                .HasConversion(dateTimeListConverter);
+
+            entity.Property(e => e.Metadata)
+                .HasConversion(jsonConverter);
+
+            entity.HasIndex(e => new { e.TenantId, e.Status })
+                .HasDatabaseName("ix_appointment_waitlist_entries_tenant_status");
+
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.Status })
+                .HasDatabaseName("ix_appointment_waitlist_entries_patient_status");
+
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Provider)
+                .WithMany()
+                .HasForeignKey(e => e.ProviderId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.MatchedAppointment)
+                .WithMany()
+                .HasForeignKey(e => e.MatchedAppointmentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        ConfigureMedicalRecords(modelBuilder);
     }
 
     public override int SaveChanges()
@@ -515,5 +632,106 @@ public class QivrDbContext : DbContext
                     break;
             }
         }
+    }
+    
+    private void ConfigureMedicalRecords(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<MedicalCondition>(entity =>
+        {
+            entity.ToTable("medical_conditions");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.Condition });
+            entity.Property(e => e.Condition).HasMaxLength(200);
+            entity.Property(e => e.Icd10Code).HasMaxLength(20);
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.ManagedBy).HasMaxLength(200);
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        modelBuilder.Entity<MedicalVital>(entity =>
+        {
+            entity.ToTable("medical_vitals");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.RecordedAt });
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        modelBuilder.Entity<MedicalLabResult>(entity =>
+        {
+            entity.ToTable("medical_lab_results");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.Category, e.ResultDate });
+            entity.Property(e => e.Category).HasMaxLength(200);
+            entity.Property(e => e.TestName).HasMaxLength(200);
+            entity.Property(e => e.Unit).HasMaxLength(50);
+            entity.Property(e => e.ReferenceRange).HasMaxLength(100);
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.OrderedBy).HasMaxLength(200);
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        modelBuilder.Entity<MedicalMedication>(entity =>
+        {
+            entity.ToTable("medical_medications");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.Status });
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.Dosage).HasMaxLength(100);
+            entity.Property(e => e.Frequency).HasMaxLength(100);
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.PrescribedBy).HasMaxLength(200);
+            entity.Property(e => e.Pharmacy).HasMaxLength(200);
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        modelBuilder.Entity<MedicalAllergy>(entity =>
+        {
+            entity.ToTable("medical_allergies");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.Allergen });
+            entity.Property(e => e.Allergen).HasMaxLength(200);
+            entity.Property(e => e.Type).HasMaxLength(50);
+            entity.Property(e => e.Severity).HasMaxLength(50);
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        modelBuilder.Entity<MedicalImmunization>(entity =>
+        {
+            entity.ToTable("medical_immunizations");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.Date });
+            entity.Property(e => e.Vaccine).HasMaxLength(200);
+            entity.Property(e => e.Provider).HasMaxLength(200);
+            entity.Property(e => e.Facility).HasMaxLength(200);
+            entity.Property(e => e.Series).HasMaxLength(100);
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+    }
+
+    private static string ToSnakeCase(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return input ?? string.Empty;
+        }
+        
+        var result = new System.Text.StringBuilder();
+        for (int i = 0; i < input.Length; i++)
+        {
+            var ch = input[i];
+            if (char.IsUpper(ch))
+            {
+                if (i > 0 && (char.IsLower(input[i - 1]) || (i < input.Length - 1 && char.IsLower(input[i + 1]))))
+                {
+                    result.Append('_');
+                }
+                result.Append(char.ToLower(ch));
+            }
+            else
+            {
+                result.Append(ch);
+            }
+        }
+        return result.ToString();
     }
 }
