@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
 
@@ -19,9 +20,17 @@ public class TenantMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Allow CORS preflight requests to pass through without tenant validation
+        if (HttpMethods.IsOptions(context.Request.Method))
+        {
+            await _next(context);
+            return;
+        }
+
         // Extract tenant from various sources
         string? tenantId = null;
         string? userTenantId = null;
+        Guid? tenantGuid = null;
         
         // 1. Try from JWT claim (most authoritative)
         if (context.User.Identity?.IsAuthenticated == true)
@@ -75,7 +84,7 @@ public class TenantMiddleware
         // Validate tenant ID format
         if (!string.IsNullOrEmpty(tenantId))
         {
-            if (!Guid.TryParse(tenantId, out var tenantGuid))
+            if (!Guid.TryParse(tenantId, out var parsedTenantGuid))
             {
                 _logger.LogWarning("Invalid tenant ID format: {TenantId}", tenantId);
                 context.Response.StatusCode = 400;
@@ -83,14 +92,15 @@ public class TenantMiddleware
                 await context.Response.WriteAsync("{\"error\":\"Invalid tenant ID format\"}");
                 return;
             }
-            
-            context.Items["TenantId"] = tenantId;
+
+            tenantGuid = parsedTenantGuid;
+            context.Items["TenantId"] = parsedTenantGuid; // Store as Guid, not string
             context.Items["ValidatedTenant"] = true;
-            
+
             // Set RLS context in database for this request
-            await SetDatabaseTenantContext(tenantId);
-            
-            _logger.LogDebug("Tenant context set: {TenantId} (RLS enabled)", tenantId);
+            await SetDatabaseTenantContext(parsedTenantGuid);
+
+            _logger.LogDebug("Tenant context set: {TenantId} (RLS enabled)", tenantGuid);
         }
         else if (RequiresTenant(context.Request.Path))
         {
@@ -105,7 +115,7 @@ public class TenantMiddleware
         await _next(context);
     }
     
-    private async Task SetDatabaseTenantContext(string tenantId)
+    private async Task SetDatabaseTenantContext(Guid tenantId)
     {
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
@@ -125,11 +135,7 @@ public class TenantMiddleware
 
             var parameter = command.CreateParameter();
             parameter.ParameterName = "@tenant_id";
-            if (!Guid.TryParse(tenantId, out var tenantGuid))
-            {
-                throw new InvalidOperationException("Invalid tenant id format");
-            }
-            parameter.Value = tenantGuid.ToString();
+            parameter.Value = tenantId.ToString();
             command.Parameters.Add(parameter);
 
             await command.ExecuteNonQueryAsync();
@@ -152,6 +158,8 @@ public class TenantMiddleware
             "/api/auth/signup",
             "/api/auth/forgot-password",
             "/api/auth/refresh",
+            "/api/auth/refresh-token",
+            "/api/tenants",
             "/webhooks",
             "/api/v1/intake",  // Public intake submission endpoint
             "/api/v1/proms/instances" // Base path for public PROM instances endpoints

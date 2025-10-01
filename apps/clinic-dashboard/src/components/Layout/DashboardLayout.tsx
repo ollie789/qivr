@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import { useAuthActions, useAuthUser } from '../../stores/authStore';
 import NotificationBell from '../NotificationBell';
+import TenantSelector from '../TenantSelector';
 
 const drawerWidth = 280;
 const drawerWidthCollapsed = 64;
@@ -237,6 +238,10 @@ const DashboardLayout: React.FC = () => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
+
+          <Box sx={{ mr: 2 }}>
+            <TenantSelector />
+          </Box>
 
           <NotificationBell />
 

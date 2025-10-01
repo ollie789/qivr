@@ -1,4 +1,4 @@
-import { uploadWithProgress, getWithAuth, delWithAuth } from '@qivr/http';
+import { uploadWithProgress, getWithAuth, delWithAuth, getTenantId } from '@qivr/http';
 
 export interface DocumentUploadOptions {
   patientId?: string;
@@ -94,12 +94,14 @@ class DocumentService {
         token = parsed.state?.token;
       } catch {}
     }
+    const tenantId = getTenantId();
     
     const response = await fetch(
       `${import.meta.env.VITE_API_URL || ''}/documents/${documentId}/download`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
+          ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
         },
       }
     );
@@ -151,11 +153,13 @@ class DocumentService {
         token = parsed.state?.token;
       } catch {}
     }
+    const tenantId = getTenantId();
     
     const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
       },
     });
 

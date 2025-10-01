@@ -7,8 +7,11 @@ export * from './documentsApi';
 export * from './intakeApi';
 export * from './medicalRecordsApi';
 export * from './messagesApi';
+export * from './authApi';
 export * from './notificationsApi';
 export * from './patientApi';
+export * from './providerApi';
+export * from './messageTemplatesApi';
 // Note: Skipping promApi due to duplicate PromResponse export
 // export * from './promApi';
 export * from './proms';
@@ -27,8 +30,11 @@ import { medicalRecordsApi } from './medicalRecordsApi';
 import { messagesApi } from './messagesApi';
 import { notificationsApi } from './notificationsApi';
 import { patientApi } from './patientApi';
+import { providerApi } from './providerApi';
+import { messageTemplatesApi } from './messageTemplatesApi';
 import { promApi } from './promApi';
 import { promsApi } from './proms';
+import { authApi } from './authApi';
 
 const api = {
   analytics: analyticsApi,
@@ -38,8 +44,11 @@ const api = {
   intake: intakeApi,
   medicalRecords: medicalRecordsApi,
   messages: messagesApi,
+  auth: authApi,
   notifications: notificationsApi,
   patients: patientApi,
+  providers: providerApi,
+  messageTemplates: messageTemplatesApi,
   prom: promApi,
   proms: promsApi,
 };

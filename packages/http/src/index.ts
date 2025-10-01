@@ -25,6 +25,7 @@ export type FetchOptions = {
   headers?: Record<string, string>;
   body?: unknown;        // JSON serialised when provided
   clinicId?: string;     // adds X-Clinic-Id
+  tenantId?: string;     // adds X-Tenant-Id
   signal?: AbortSignal;
   timeoutMs?: number;    // default 15000
   baseUrl?: string;      // default from global/env
@@ -54,6 +55,7 @@ export async function http<T = unknown>(path: string, opts: FetchOptions = {}): 
   const headers: Record<string, string> = { 'Accept': 'application/json' };
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
   if (opts.clinicId) headers['X-Clinic-Id'] = opts.clinicId;
+  if (opts.tenantId) headers['X-Tenant-Id'] = opts.tenantId;
   if (opts.token) headers['Authorization'] = `Bearer ${opts.token}`;
   headers['X-Request-ID'] = rid;
   Object.assign(headers, opts.headers);
@@ -65,7 +67,7 @@ export async function http<T = unknown>(path: string, opts: FetchOptions = {}): 
       headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal: opts.signal ?? controller.signal,
-      credentials: opts.credentials,
+      credentials: opts.credentials ?? 'include', // Default to 'include' for cookie support
     });
   } catch (err: any) {
     clearTimeout(timeout);
@@ -158,15 +160,37 @@ export function getClinicId(): string | null {
   return null;
 }
 
+export function getTenantId(): string | null {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+  try {
+    const authStorage = localStorage.getItem('clinic-auth-storage');
+    if (authStorage) {
+      const { state } = JSON.parse(authStorage);
+      return state?.activeTenantId || state?.user?.tenantId || null;
+    }
+    const patientTenant = localStorage.getItem('patient-active-tenant');
+    if (patientTenant && patientTenant.length > 0) {
+      return patientTenant;
+    }
+  } catch (e) {
+    console.warn('Failed to get tenant ID from localStorage:', e);
+  }
+  return null;
+}
+
 // Convenience wrapper with auth
 export async function httpWithAuth<T>(path: string, opts: FetchOptions = {}): Promise<T> {
   const token = getAuthToken();
   const clinicId = getClinicId();
+  const tenantId = getTenantId();
   
   return http<T>(path, {
     ...opts,
     token: token || opts.token,
-    clinicId: clinicId || opts.clinicId
+    clinicId: clinicId || opts.clinicId,
+    tenantId: tenantId || opts.tenantId
   });
 }
 
@@ -191,6 +215,7 @@ export interface UploadOptions {
   onUploadProgress?: (percent: number, loaded: number, total: number) => void;
   token?: string;
   clinicId?: string;
+  tenantId?: string;
 }
 
 // HttpError export for compatibility
@@ -246,7 +271,8 @@ export function createHttpClient(config: HttpClientConfig = {}): HttpClient {
         body: options.data,
         headers,
         timeoutMs: config.timeout,
-        baseUrl: '' // URL is already complete
+        baseUrl: '', // URL is already complete
+        credentials: 'include' // Always include credentials for cookie support
       });
     }
   };
@@ -268,10 +294,15 @@ export function uploadWithProgress(
     if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     }
-    
+
     const clinicId = options.clinicId || getClinicId();
     if (clinicId) {
       xhr.setRequestHeader('X-Clinic-Id', clinicId);
+    }
+
+    const tenantId = options.tenantId || getTenantId();
+    if (tenantId) {
+      xhr.setRequestHeader('X-Tenant-Id', tenantId);
     }
     
     const rid = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : uuidv4();

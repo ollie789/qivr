@@ -184,6 +184,19 @@ public class AppointmentService : IAppointmentService
         var demoTenant = await _context.Tenants.FirstAsync(t => t.Slug == "demo-clinic", cancellationToken);
         appointment.TenantId = demoTenant.Id;
 
+        var providerProfileId = await _context.Providers
+            .IgnoreQueryFilters()
+            .Where(p => p.TenantId == demoTenant.Id && p.UserId == dto.ProviderId)
+            .Select(p => (Guid?)p.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!providerProfileId.HasValue)
+        {
+            throw new InvalidOperationException("Provider profile not found for the specified provider.");
+        }
+
+        appointment.ProviderProfileId = providerProfileId.Value;
+
         await _context.Appointments.AddAsync(appointment, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -205,6 +218,7 @@ public class AppointmentService : IAppointmentService
             appointment.PatientId,
             appointment.Patient?.FullName ?? "Unknown",
             appointment.ProviderId,
+            appointment.ProviderProfileId,
             appointment.Provider?.FullName ?? "Unknown",
             appointment.ScheduledStart,
             appointment.ScheduledEnd,
@@ -241,6 +255,7 @@ public class AppointmentService : IAppointmentService
             a.PatientId,
             a.Patient?.FullName ?? "Unknown",
             a.ProviderId,
+            a.ProviderProfileId,
             a.Provider?.FullName ?? "Unknown",
             a.ScheduledStart,
             a.ScheduledEnd,

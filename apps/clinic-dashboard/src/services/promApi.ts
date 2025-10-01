@@ -343,9 +343,9 @@ class PromApi {
     notificationMethod?: NotificationMethod;
     tags?: string[];
     notes?: string;
-  }) {
+  }): Promise<PromResponse> {
     const scheduledFor = data.scheduledFor ?? new Date().toISOString();
-    return await apiClient.post("/api/v1/proms/schedule", {
+    const response = await apiClient.post<ApiPromInstance>("/api/v1/proms/schedule", {
       templateKey: data.templateKey,
       version: data.version,
       patientId: data.patientId,
@@ -355,6 +355,8 @@ class PromApi {
       tags: data.tags,
       notes: data.notes,
     });
+
+    return mapPromInstance(response);
   }
 
   async getResponses(params?: {

@@ -3,8 +3,8 @@
 # QIVR Services Startup Script - STANDARDIZED PORTS
 # ================================================
 # Backend API:      5050 (Avoids macOS AirPlay on 5000)
-# Patient Portal:   3000 (DO NOT CHANGE)  
-# Clinic Dashboard: 3001 (DO NOT CHANGE)
+# Patient Portal:   3005 (User preferred port)  
+# Clinic Dashboard: 3010 (User preferred port)
 # ================================================
 
 # Colors for output
@@ -37,14 +37,14 @@ mkdir -p .pids
 
 # Kill any existing processes on our STANDARDIZED ports
 echo -e "${YELLOW}Checking for existing processes...${NC}"
-kill_port 5050  # Backend API (new port)
-kill_port 3000  # Patient Portal
-kill_port 3001  # Clinic Dashboard
+kill_port 5050  # Backend API
+kill_port 3005  # Patient Portal
+kill_port 3010  # Clinic Dashboard
 # Also kill any old ports that might be in use
+kill_port 3000  # Old patient portal port
+kill_port 3001  # Old clinic dashboard port
 kill_port 5000  # Old backend port (macOS AirPlay)
 kill_port 5001  # Old backend port
-kill_port 3002  # Old patient portal port
-kill_port 5173  # Default Vite port
 
 # Get the project root directory
 PROJECT_ROOT="$(pwd)"
@@ -68,16 +68,16 @@ else
 fi
 
 # Start Clinic Dashboard
-echo -e "\n${GREEN}2. Starting Clinic Dashboard (port 3001)...${NC}"
+echo -e "\n${GREEN}2. Starting Clinic Dashboard (port 3010)...${NC}"
 cd "$PROJECT_ROOT/apps/clinic-dashboard"
 npm run dev > "$PROJECT_ROOT/logs/clinic-dashboard.log" 2>&1 &
 CLINIC_PID=$!
 echo "   Clinic Dashboard PID: $CLINIC_PID"
 
 # Start Patient Portal
-echo -e "\n${GREEN}3. Starting Patient Portal (port 3000)...${NC}"
+echo -e "\n${GREEN}3. Starting Patient Portal (port 3005)...${NC}"
 cd "$PROJECT_ROOT/apps/patient-portal"
-PORT=3000 npm run dev > "$PROJECT_ROOT/logs/patient-portal.log" 2>&1 &
+npm run dev > "$PROJECT_ROOT/logs/patient-portal.log" 2>&1 &
 PATIENT_PID=$!
 echo "   Patient Portal PID: $PATIENT_PID"
 
@@ -103,14 +103,14 @@ else
     echo -e "✗ Backend API:      ${RED}Not running${NC}"
 fi
 
-if check_port 3001; then
-    echo -e "✓ Clinic Dashboard: ${GREEN}http://localhost:3001${NC}"
+if check_port 3010; then
+    echo -e "✓ Clinic Dashboard: ${GREEN}http://localhost:3010${NC}"
 else
     echo -e "✗ Clinic Dashboard: ${RED}Not running${NC}"
 fi
 
-if check_port 3000; then
-    echo -e "✓ Patient Portal:   ${GREEN}http://localhost:3000${NC}"
+if check_port 3005; then
+    echo -e "✓ Patient Portal:   ${GREEN}http://localhost:3005${NC}"
 else
     echo -e "✗ Patient Portal:   ${RED}Not running${NC}"
 fi

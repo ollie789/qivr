@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   IconButton,
   Badge,
@@ -23,55 +23,66 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
-import api from "../lib/api-client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Notification as NotificationType } from '../types';
-
-interface Notification extends Omit<NotificationType, 'isRead' | 'type'> {
-  type: 'email' | 'sms' | 'appointment' | 'prom' | 'system';
-  read: boolean;
-  createdAt: Date;
-  data?: unknown;
-}
+import {
+  notificationsApi,
+  type NotificationListItem,
+} from '../services/notificationsApi';
 
 const NotificationBell: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const queryClient = useQueryClient();
 
-  // Fetch notifications
-  const { data: notifications = [], isLoading, refetch } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: async () => {
-      const response = await api.get('/api/Notifications');
-      return response.data.map((n: Notification) => ({
-        ...n,
-        createdAt: new Date(n.createdAt),
-      }));
-    },
-    refetchInterval: 30000, // Refresh every 30 seconds
+  const {
+    data: notificationPage,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ['notifications', { limit: 20 }],
+    queryFn: () => notificationsApi.list({ limit: 20, sortDescending: true }),
+    refetchInterval: 30000,
   });
 
-  // Mark as read mutation
+  const notifications = useMemo<NotificationListItem[]>(
+    () => notificationPage?.items ?? [],
+    [notificationPage],
+  );
+
+  const {
+    data: unreadCountData,
+    refetch: refetchUnread,
+  } = useQuery({
+    queryKey: ['notifications-unread-count'],
+    queryFn: notificationsApi.unreadCount,
+    staleTime: 15000,
+  });
+
+  const unreadCount = unreadCountData ?? notifications.filter((item) => !item.readAt).length;
+
   const markAsReadMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      await api.put(`/api/Notifications/${notificationId}/mark-read`);
-    },
+    mutationFn: (notificationId: string) => notificationsApi.markAsRead(notificationId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', { limit: 20 }] });
+      refetchUnread();
     },
   });
 
-  // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
-    mutationFn: async () => {
-      await api.put('/api/Notifications/mark-all-read');
-    },
+    mutationFn: () => notificationsApi.markAllAsRead(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', { limit: 20 }] });
+      refetchUnread();
     },
   });
 
-  const unreadCount = notifications.filter((n: Notification) => !n.read).length;
+  useEffect(() => {
+    const unsubscribe = notificationsApi.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', { limit: 20 }] });
+      refetchUnread();
+    });
+
+    return unsubscribe;
+  }, [queryClient, refetchUnread]);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -81,8 +92,8 @@ const NotificationBell: React.FC = () => {
     setAnchorEl(null);
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    if (!notification.read) {
+  const handleNotificationClick = (notification: NotificationListItem) => {
+    if (!notification.readAt) {
       markAsReadMutation.mutate(notification.id);
     }
     // Navigate based on notification type
@@ -100,7 +111,7 @@ const NotificationBell: React.FC = () => {
   };
 
   const getNotificationIcon = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'email':
         return <EmailIcon fontSize="small" />;
       case 'sms':
@@ -165,13 +176,13 @@ const NotificationBell: React.FC = () => {
           </Box>
         ) : (
           <List sx={{ p: 0 }}>
-            {notifications.slice(0, 10).map((notification: Notification) => (
+            {notifications.slice(0, 10).map((notification) => (
               <ListItem
                 key={notification.id}
                 button
                 onClick={() => handleNotificationClick(notification)}
                 sx={{
-                  backgroundColor: notification.read ? 'transparent' : 'action.hover',
+                  backgroundColor: notification.readAt ? 'transparent' : 'action.hover',
                   '&:hover': {
                     backgroundColor: 'action.selected',
                   },
@@ -182,7 +193,7 @@ const NotificationBell: React.FC = () => {
                     sx={{
                       width: 32,
                       height: 32,
-                      bgcolor: notification.read ? 'grey.300' : 'primary.main',
+                      bgcolor: notification.readAt ? 'grey.300' : 'primary.main',
                     }}
                   >
                     {getNotificationIcon(notification.type)}
@@ -193,7 +204,7 @@ const NotificationBell: React.FC = () => {
                     <Typography
                       variant="body2"
                       sx={{
-                        fontWeight: notification.read ? 400 : 600,
+                        fontWeight: notification.readAt ? 400 : 600,
                       }}
                     >
                       {notification.title}
@@ -212,7 +223,7 @@ const NotificationBell: React.FC = () => {
                         variant="caption"
                         color="text.secondary"
                       >
-                        {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
+                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                       </Typography>
                     </>
                   }

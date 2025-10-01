@@ -1397,7 +1397,7 @@ public class GeneralDocumentUploadRequest
     public string? Description { get; set; }
     public string? Tags { get; set; }
 }
-private sealed class DocumentShareMetadata
+internal sealed class DocumentShareMetadata
 {
     public Guid ShareId { get; set; }
     public Guid SharedWithUserId { get; set; }
@@ -1412,7 +1412,7 @@ private sealed class DocumentShareMetadata
     public DateTime? RevokedAt { get; set; }
 }
 
-private sealed class DocumentReviewMetadata
+internal sealed class DocumentReviewMetadata
 {
     public string Status { get; set; } = "pending";
     public Guid RequestedByUserId { get; set; }

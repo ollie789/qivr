@@ -8,7 +8,7 @@ namespace Qivr.Api.Controllers;
 [ApiController]
 [Route("api/profile")]
 [Authorize]
-public class ProfileController : ControllerBase
+public class ProfileController : BaseApiController
 {
     private readonly ILogger<ProfileController> _logger;
     private readonly IProfileService _profileService;
@@ -32,7 +32,7 @@ public class ProfileController : ControllerBase
         }
         
         // Get tenant ID
-        var tenantId = GetTenantId();
+        var tenantId = RequireTenantId();
         if (!Guid.TryParse(userId, out var userGuid))
         {
             return BadRequest("Invalid user ID");
@@ -42,7 +42,18 @@ public class ProfileController : ControllerBase
         var profile = await _profileService.GetUserProfileAsync(tenantId, userGuid);
         if (profile == null)
         {
-            return NotFound("User profile not found");
+            var fallbackProfile = new UserProfileDto
+            {
+                Id = userGuid.ToString(),
+                Email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value,
+                FirstName = User.FindFirst("given_name")?.Value ?? string.Empty,
+                LastName = User.FindFirst("family_name")?.Value ?? string.Empty,
+                Phone = User.FindFirst("phone_number")?.Value,
+                EmailVerified = string.Equals(User.FindFirst("email_verified")?.Value, "true", StringComparison.OrdinalIgnoreCase),
+                PhoneVerified = string.Equals(User.FindFirst("phone_number_verified")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+            };
+
+            return Ok(fallbackProfile);
         }
         
         // Convert to DTO
@@ -109,7 +120,7 @@ public class ProfileController : ControllerBase
         try
         {
             // Get tenant ID
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             if (!Guid.TryParse(userId, out var userGuid))
             {
                 return BadRequest("Invalid user ID");
@@ -202,7 +213,7 @@ public class ProfileController : ControllerBase
         try
         {
             // Get tenant ID
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             if (!Guid.TryParse(userId, out var userGuid))
             {
                 return BadRequest("Invalid user ID");
@@ -285,7 +296,7 @@ public class ProfileController : ControllerBase
         try
         {
             // Get tenant ID
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             if (!Guid.TryParse(userId, out var userGuid))
             {
                 return BadRequest("Invalid user ID");
@@ -352,7 +363,7 @@ public class ProfileController : ControllerBase
         try
         {
             // Get tenant ID
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             if (!Guid.TryParse(userId, out var userGuid))
             {
                 return BadRequest("Invalid user ID");
@@ -394,7 +405,7 @@ public class ProfileController : ControllerBase
         try
         {
             // Get tenant ID
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             if (!Guid.TryParse(userId, out var userGuid))
             {
                 return BadRequest("Invalid user ID");
@@ -417,17 +428,7 @@ public class ProfileController : ControllerBase
         }
     }
     
-    // Helper method to get tenant ID from claims
-    private Guid GetTenantId()
-    {
-        var tenantClaim = User.FindFirst("tenant_id")?.Value;
-        if (Guid.TryParse(tenantClaim, out var tenantId))
-        {
-            return tenantId;
-        }
-        // For dev/testing, return a default tenant ID
-        return Guid.Parse("00000000-0000-0000-0000-000000000001");
-    }
+    // CurrentTenantId removed - using BaseApiController property
 }
 
 // DTOs

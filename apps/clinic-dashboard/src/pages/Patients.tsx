@@ -53,7 +53,6 @@ import {
   FilterList as FilterIcon,
   Message as MessageIcon,
   UploadFile as UploadFileIcon,
-  Send as SendIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -103,6 +102,21 @@ const Patients: React.FC = () => {
   const [detailsTab, setDetailsTab] = useState(0);
   const [messageOpen, setMessageOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const patientDetailQuery = useQuery<PatientType | undefined>({
+    queryKey: ['patient-detail', selectedPatient?.id],
+    queryFn: () => (selectedPatient?.id ? patientApi.getPatient(selectedPatient.id) : Promise.resolve(undefined)),
+    enabled: detailsOpen && Boolean(selectedPatient?.id),
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (patientDetailQuery.data && patientDetailQuery.data.id === selectedPatient?.id) {
+      setSelectedPatient(patientDetailQuery.data);
+    }
+  }, [patientDetailQuery.data, selectedPatient?.id]);
+
+  const detail = patientDetailQuery.data ?? selectedPatient;
+  const detailLoading = patientDetailQuery.isLoading || patientDetailQuery.isFetching;
 
   const queryClient = useQueryClient();
   const patientsQueryKey = useMemo(
@@ -566,9 +580,16 @@ const Patients: React.FC = () => {
       <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            Patient Details
             <Box>
-              <IconButton onClick={() => handleEdit(selectedPatient!)}>
+              <Typography variant="h6">Patient Details</Typography>
+              {detail && (
+                <Typography variant="caption" color="text.secondary">
+                  {detail.firstName} {detail.lastName}
+                </Typography>
+              )}
+            </Box>
+            <Box>
+              <IconButton disabled={!detail} onClick={() => detail && handleEdit(detail)}>
                 <EditIcon />
               </IconButton>
               <IconButton onClick={() => setDetailsOpen(false)}>
@@ -578,14 +599,20 @@ const Patients: React.FC = () => {
           </Box>
         </DialogTitle>
         <DialogContent>
-          {selectedPatient && (
+          {detailLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : !detail ? (
+            <Typography color="text.secondary">Select a patient to view details.</Typography>
+          ) : (
             <Box>
               <Tabs value={detailsTab} onChange={(e, v) => setDetailsTab(v)} sx={{ mb: 2 }}>
                 <Tab label="Overview" />
                 <Tab label="Medical History" />
                 <Tab label="Appointments" />
                 <Tab label="Documents" />
-                <Tab label="Messages" />
+                <Tab label="PROMs" />
               </Tabs>
               
               {detailsTab === 0 && (
@@ -596,28 +623,35 @@ const Patients: React.FC = () => {
                         <ListItemIcon><PersonIcon /></ListItemIcon>
                         <ListItemText
                           primary="Full Name"
-                          secondary={`${selectedPatient.firstName} ${selectedPatient.lastName}`}
+                          secondary={`${detail.firstName} ${detail.lastName}`}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon><CalendarIcon /></ListItemIcon>
                         <ListItemText
                           primary="Date of Birth"
-                          secondary={format(new Date(selectedPatient.dateOfBirth), 'MMMM d, yyyy')}
+                          secondary={detail.dateOfBirth ? format(new Date(detail.dateOfBirth), 'MMMM d, yyyy') : 'Not provided'}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon><EmailIcon /></ListItemIcon>
                         <ListItemText
                           primary="Email"
-                          secondary={selectedPatient.email}
+                          secondary={detail.email}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon><PhoneIcon /></ListItemIcon>
                         <ListItemText
                           primary="Phone"
-                          secondary={selectedPatient.phone}
+                          secondary={detail.phone ?? 'Not provided'}
+                        />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemIcon><PersonIcon /></ListItemIcon>
+                        <ListItemText
+                          primary="Emergency Contact"
+                          secondary={detail.emergencyContact ? `${detail.emergencyContact} • ${detail.emergencyPhone ?? 'No phone on file'}` : 'Not provided'}
                         />
                       </ListItem>
                     </List>
@@ -628,30 +662,43 @@ const Patients: React.FC = () => {
                         <ListItemIcon><LocationIcon /></ListItemIcon>
                         <ListItemText
                           primary="Address"
-                          secondary={`${selectedPatient.address.street}, ${selectedPatient.address.city}, ${selectedPatient.address.state} ${selectedPatient.address.postcode}`}
+                          secondary={detail.address
+                            ? ([detail.address.street, detail.address.city, detail.address.state, detail.address.postcode]
+                                .filter(Boolean)
+                                .join(', ') || 'Not provided')
+                            : 'Not provided'}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon><MedicalIcon /></ListItemIcon>
                         <ListItemText
                           primary="MRN"
-                          secondary={selectedPatient.medicalRecordNumber}
+                          secondary={detail.medicalRecordNumber ?? 'Not assigned'}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon><PersonIcon /></ListItemIcon>
                         <ListItemText
                           primary="Primary Provider"
-                          secondary={selectedPatient.provider || 'Not assigned'}
+                          secondary={detail.provider || 'Not assigned'}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon><AssignmentIcon /></ListItemIcon>
                         <ListItemText
                           primary="Insurance"
-                          secondary={selectedPatient.insuranceProvider || 'Not provided'}
+                          secondary={detail.insuranceProvider || 'Not provided'}
                         />
                       </ListItem>
+                      {detail.insuranceNumber && (
+                        <ListItem>
+                          <ListItemIcon><AssignmentIcon /></ListItemIcon>
+                          <ListItemText
+                            primary="Insurance Number"
+                            secondary={detail.insuranceNumber}
+                          />
+                        </ListItem>
+                      )}
                     </List>
                   </Grid>
                   <Grid item xs={12}>
@@ -659,20 +706,63 @@ const Patients: React.FC = () => {
                       Active Conditions
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {selectedPatient.conditions.map((condition) => (
+                      {(detail.conditions ?? []).map((condition) => (
                         <Chip key={condition} label={condition} />
                       ))}
+                      {(detail.conditions ?? []).length === 0 && (
+                        <Typography variant="body2" color="text.secondary">No conditions on record</Typography>
+                      )}
                     </Box>
+                    {detail.notes && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>Notes</Typography>
+                        <Typography variant="body2" color="text.secondary">{detail.notes}</Typography>
+                      </Box>
+                    )}
                   </Grid>
                 </Grid>
               )}
 
               {detailsTab === 1 && (
-                <Typography>Medical history will be displayed here</Typography>
+                <Typography color="text.secondary">Medical history coming soon.</Typography>
               )}
 
               {detailsTab === 2 && (
-                <Typography>Appointment history will be displayed here</Typography>
+                <Box>
+                  <Typography variant="h6" gutterBottom>Recent Appointments</Typography>
+                  {detail.recentAppointments && detail.recentAppointments.length > 0 ? (
+                    <List>
+                      {detail.recentAppointments.map((appointment) => (
+                        <React.Fragment key={appointment.id}>
+                          <ListItem alignItems="flex-start">
+                            <ListItemIcon><ScheduleIcon /></ListItemIcon>
+                            <ListItemText
+                              primary={`${appointment.type} with ${appointment.provider}`}
+                              secondary={
+                                <Box>
+                                  <Typography variant="body2">
+                                    {format(new Date(appointment.date), 'MMM d, yyyy • h:mm a')}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Status: {appointment.status}
+                                  </Typography>
+                                  {appointment.notes && (
+                                    <Typography variant="caption" display="block" color="text.secondary">
+                                      Notes: {appointment.notes}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              }
+                            />
+                          </ListItem>
+                          <Divider component="li" />
+                        </React.Fragment>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography color="text.secondary">No recent appointments recorded.</Typography>
+                  )}
+                </Box>
               )}
 
               {detailsTab === 3 && (
@@ -682,8 +772,8 @@ const Patients: React.FC = () => {
                     <Button
                       variant="outlined"
                       startIcon={<UploadFileIcon />}
-                      onClick={() => handleUploadFile(selectedPatient!)}
-                    >
+                      onClick={() => detail && handleUploadFile(detail)}
+                      >
                       Upload Document
                     </Button>
                   </Box>
@@ -695,19 +785,39 @@ const Patients: React.FC = () => {
 
               {detailsTab === 4 && (
                 <Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="h6">Message History</Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<SendIcon />}
-                      onClick={() => handleSendMessage(selectedPatient!)}
-                    >
-                      Send Message
-                    </Button>
-                  </Box>
-                  <Typography color="text.secondary">
-                    Message history with this patient will be displayed here
-                  </Typography>
+                  <Typography variant="h6" gutterBottom>Recent PROMs</Typography>
+                  {detail.recentProms && detail.recentProms.length > 0 ? (
+                    <List>
+                      {detail.recentProms.map((prom) => (
+                        <React.Fragment key={prom.id}>
+                          <ListItem>
+                            <ListItemIcon><AssignmentIcon /></ListItemIcon>
+                            <ListItemText
+                              primary={prom.templateName}
+                              secondary={
+                                <Box>
+                                  <Typography variant="body2">Status: {prom.status}</Typography>
+                                  {prom.score !== undefined && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      Score: {prom.score}
+                                    </Typography>
+                                  )}
+                                  {prom.completedAt && (
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                      Completed: {format(new Date(prom.completedAt), 'MMM d, yyyy')}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              }
+                            />
+                          </ListItem>
+                          <Divider component="li" />
+                        </React.Fragment>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography color="text.secondary">No PROMs completed yet.</Typography>
+                  )}
                 </Box>
               )}
             </Box>
@@ -715,14 +825,19 @@ const Patients: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             startIcon={<MessageIcon />}
-            onClick={() => handleSendMessage(selectedPatient!)}
+            onClick={() => detail && handleSendMessage(detail)}
+            disabled={!detail}
           >
             Send Message
           </Button>
-          <Button variant="contained" onClick={() => handleScheduleAppointment(selectedPatient!)}>
+          <Button
+            variant="contained"
+            onClick={() => detail && handleScheduleAppointment(detail)}
+            disabled={!detail}
+          >
             Schedule Appointment
           </Button>
         </DialogActions>

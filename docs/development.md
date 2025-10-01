@@ -13,6 +13,7 @@ Use this guide for the routines and conventions we expect on day-to-day feature 
 | Apply database migrations | `npm run db:migrate` |
 | Run lint across workspaces | `npm run lint` |
 | Format staged files | `npx lint-staged` (runs pre-commit) |
+| Toggle mock auth | Set `DevAuth:Enabled` / `VITE_ENABLE_DEV_AUTH` (see [authentication.md](./authentication.md)) |
 
 Turbo handles workspaces; the scripts above fan out to each app/service as needed.
 
@@ -35,7 +36,7 @@ Turbo handles workspaces; the scripts above fan out to each app/service as neede
 
 - `start-all.sh` / `stop-all.sh` – Manage API + frontends together; useful for demos.
 - `apps/check-status.sh` – Lightweight smoke tests (lint + basic unit tests) used before pushes.
-- `test-auth-flow.mjs` – Exercises a browser-based Cognito login; handy for diagnosing auth regressions.
+- `test-auth-flow.mjs` – Exercises the Cognito login flow (only needed when `VITE_ENABLE_DEV_AUTH=false`).
 - `test-api-migration.ts` – Validates API migrations before touching production data.
 
 ## Documentation touchpoints

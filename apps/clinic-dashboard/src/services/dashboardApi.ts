@@ -1,5 +1,5 @@
-import api from '../lib/api-client';
-import type { Appointment } from '../types';
+import apiClient from '../lib/api-client';
+import type { Appointment, CursorPaginationResponse } from '../types';
 
 export interface DashboardStats {
   todayAppointments: number;
@@ -32,7 +32,7 @@ export const dashboardApi = {
   // Get dashboard statistics from clinic dashboard overview
   async getStats(): Promise<DashboardStats> {
     try {
-      const data = await api.get<{
+      const data = await apiClient.get<{
         statistics?: {
           totalAppointmentsToday?: number;
           pendingAppointments?: number;
@@ -68,7 +68,7 @@ export const dashboardApi = {
   // Get recent activity from PROM submissions and appointments
   async getRecentActivity(): Promise<RecentActivity[]> {
     try {
-      const data = await api.get<{
+      const data = await apiClient.get<{
         recentPromSubmissions?: Array<{
           id: string;
           patientName: string;
@@ -132,12 +132,20 @@ export const dashboardApi = {
       start.setHours(0, 0, 0, 0);
       const end = new Date();
       end.setHours(23, 59, 59, 999);
-      const params = new URLSearchParams({
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
-      });
-      const response = await api.get<Appointment[]>(`/api/Appointments?${params}`);
-      const appts = Array.isArray(response) ? response : [];
+      const response = await apiClient.get<CursorPaginationResponse<Appointment> | Appointment[]>(
+        '/api/appointments',
+        {
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          limit: 50,
+          status: 'Scheduled',
+        },
+      );
+
+      const appts = Array.isArray(response)
+        ? response
+        : (response?.items ?? (response as { Items?: Appointment[] })?.Items ?? []);
+
       return appts.map((a) => ({
         id: a.id,
         patientName: a.patientName || '',

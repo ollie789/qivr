@@ -22,7 +22,7 @@ npm run patient:dev   # http://localhost:3005
 npm run widget:dev    # http://localhost:3000
 ```
 
-Copy the `.env.example` files in `backend/` and each app workspace, then drop in your Cognito pool IDs, client IDs, and API URL (`http://localhost:5050` for local dev). More detail lives in [docs/setup.md](docs/setup.md).
+Create `.env` files only if you need to override the defaults. For local work you can simply set `VITE_ENABLE_DEV_AUTH=true` (already the default) and the API will issue mock credentials. When you want to exercise Cognito, flip the flags described in [docs/authentication.md](docs/authentication.md). A full walkthrough lives in [docs/setup.md](docs/setup.md).
 
 ## 📍 Services & ports
 
@@ -71,13 +71,14 @@ See [docs/architecture.md](docs/architecture.md) for a deeper walkthrough of eac
 | Run lint | `npm run lint` |
 | Run tests | `npm run test` (fan-outs via Turbo) |
 | Apply migrations | `npm run db:migrate` |
+| Toggle mock auth | `DevAuth:Enabled` / `VITE_ENABLE_DEV_AUTH` (see [docs/authentication.md](docs/authentication.md)) |
 
 Refer to [docs/development.md](docs/development.md) for branching conventions, coding standards, and helper scripts.
 
 ## ✅ Testing
 
 - Backend: `cd backend && dotnet test`
-  - The suite connects to the shared AWS RDS instance. Set `TEST_CONNECTION_STRING` (or copy credentials into `backend/.env.aws-dev`) before running locally.
+  - Defaults to a local `qivr_test` database; override `TEST_CONNECTION_STRING` when pointing at another instance.
 - React workspaces: `npm run test --workspace=@qivr/<app>`
 - Smoke check before pushing: `apps/check-status.sh`
 - Extra flows: `test-auth-flow.mjs`, `test-api-migration.ts`

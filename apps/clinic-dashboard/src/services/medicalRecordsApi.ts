@@ -1,212 +1,370 @@
 import apiClient from '../lib/api-client';
-import { MedicalRecordMetadata } from '../types/api';
 
-export interface MedicalRecord {
+export type MedicalSummary = {
+  conditions: MedicalCondition[];
+  upcomingAppointments: UpcomingAppointment[];
+  recentVisits: RecentVisit[];
+};
+
+export type MedicalCondition = {
   id: string;
-  patientId: string;
-  type: 'diagnosis' | 'prescription' | 'lab-result' | 'imaging' | 'procedure' | 'immunization' | 'allergy' | 'vitals';
-  title: string;
-  description: string;
-  date: string;
-  providerId: string;
-  providerName: string;
-  attachments?: string[];
-  metadata?: MedicalRecordMetadata;
-  createdAt: string;
-  updatedAt: string;
-}
+  condition: string;
+  icd10Code?: string | null;
+  diagnosedDate: string;
+  status: string;
+  managedBy: string;
+  lastReviewed: string;
+  notes?: string | null;
+};
 
-export interface Vitals {
+export type UpcomingAppointment = {
+  id: string;
+  date: string;
+  provider: string;
+  type: string;
+  status: string;
+};
+
+export type RecentVisit = {
+  id: string;
+  date: string;
+  provider: string;
+  facility: string;
+  notes?: string | null;
+};
+
+export type VitalSign = {
   id: string;
   patientId: string;
   recordedAt: string;
-  bloodPressureSystolic?: number;
-  bloodPressureDiastolic?: number;
-  heartRate?: number;
-  temperature?: number;
-  respiratoryRate?: number;
-  oxygenSaturation?: number;
-  weight?: number;
-  height?: number;
-  bmi?: number;
-  notes?: string;
-}
+  recordedBy: string;
+  bloodPressure: {
+    systolic: number;
+    diastolic: number;
+  };
+  heartRate: number;
+  respiratoryRate: number;
+  temperature: number;
+  weight: number;
+  height: number;
+  bmi: number;
+  oxygenSaturation: number;
+  notes?: string | null;
+};
 
-export interface Prescription {
+export type LabResult = {
   id: string;
-  patientId: string;
-  medicationName: string;
+  testName: string;
+  value: string;
+  unit: string;
+  referenceRange?: string | null;
+  status: string;
+  provider: string;
+  notes?: string | null;
+};
+
+export type LabResultGroup = {
+  category: string;
+  date: string;
+  tests: LabResult[];
+};
+
+export type Medication = {
+  id: string;
+  name: string;
   dosage: string;
   frequency: string;
-  duration: string;
-  prescribedBy: string;
-  prescribedDate: string;
   startDate: string;
-  endDate?: string;
-  refills?: number;
-  instructions?: string;
-  status: 'active' | 'completed' | 'cancelled' | 'on-hold';
-}
+  endDate?: string | null;
+  status: string;
+  prescribedBy: string;
+  instructions?: string | null;
+  refillsRemaining?: number | null;
+  lastFilled?: string | null;
+  pharmacy?: string | null;
+};
 
-export interface LabResult {
+export type Allergy = {
   id: string;
-  patientId: string;
-  testName: string;
-  testDate: string;
-  orderedBy: string;
-  performedBy?: string;
-  results: Array<{
-    parameter: string;
+  allergen: string;
+  type: string;
+  severity: string;
+  reaction: string;
+  diagnosedDate?: string | null;
+  notes?: string | null;
+};
+
+export type Immunization = {
+  id: string;
+  vaccine: string;
+  date: string;
+  provider: string;
+  facility: string;
+  nextDue?: string | null;
+  series?: string | null;
+  lotNumber?: string | null;
+};
+
+type ApiEnvelope<T> = {
+  data: T;
+};
+
+type MedicalSummaryDto = {
+  conditions: Array<{
+    id: string;
+    condition: string;
+    icd10Code?: string | null;
+    diagnosedDate: string;
+    status: string;
+    managedBy: string;
+    lastReviewed: string;
+    notes?: string | null;
+  }>;
+  upcomingAppointments: Array<{
+    id: string;
+    date: string;
+    provider: string;
+    type: string;
+    status: string;
+  }>;
+  recentVisits: Array<{
+    id: string;
+    date: string;
+    provider: string;
+    facility: string;
+    notes?: string | null;
+  }>;
+};
+
+type VitalSignDto = {
+  id: string;
+  date: string;
+  bloodPressure: { systolic: number; diastolic: number };
+  heartRate: number;
+  temperature: number;
+  weight: number;
+  height: number;
+  bmi: number;
+  oxygenSaturation: number;
+  respiratoryRate: number;
+};
+
+type LabResultGroupDto = {
+  category: string;
+  date: string;
+  tests: Array<{
+    id: string;
+    testName: string;
     value: string;
     unit: string;
-    referenceRange?: string;
-    flag?: 'normal' | 'high' | 'low' | 'critical';
+    referenceRange?: string | null;
+    status: string;
+    provider: string;
+    notes?: string | null;
   }>;
-  interpretation?: string;
-  attachments?: string[];
-}
+};
+
+type MedicationDto = {
+  id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  startDate: string;
+  endDate?: string | null;
+  status: string;
+  prescribedBy: string;
+  instructions?: string | null;
+  refillsRemaining?: number | null;
+  lastFilled?: string | null;
+  pharmacy?: string | null;
+};
+
+type AllergyDto = {
+  id: string;
+  allergen: string;
+  type: string;
+  severity: string;
+  reaction: string;
+  diagnosedDate?: string | null;
+  notes?: string | null;
+};
+
+type ImmunizationDto = {
+  id: string;
+  vaccine: string;
+  date: string;
+  provider: string;
+  facility: string;
+  nextDue?: string | null;
+  series?: string | null;
+  lotNumber?: string | null;
+};
+
+const unwrapEnvelope = <T>(payload: T | ApiEnvelope<T>): T => {
+  if (payload && typeof payload === 'object' && 'data' in (payload as ApiEnvelope<T>)) {
+    return (payload as ApiEnvelope<T>).data;
+  }
+  return payload as T;
+};
+
+const toIsoString = (value: string): string => new Date(value).toISOString();
+
+const mapSummary = (dto: MedicalSummaryDto | null): MedicalSummary | null => {
+  if (!dto) {
+    return null;
+  }
+
+  return {
+    conditions: dto.conditions.map((condition) => ({
+      id: condition.id,
+      condition: condition.condition,
+      icd10Code: condition.icd10Code ?? null,
+      diagnosedDate: toIsoString(condition.diagnosedDate),
+      status: condition.status,
+      managedBy: condition.managedBy,
+      lastReviewed: toIsoString(condition.lastReviewed),
+      notes: condition.notes ?? null,
+    })),
+    upcomingAppointments: dto.upcomingAppointments.map((appointment) => ({
+      id: appointment.id,
+      date: toIsoString(appointment.date),
+      provider: appointment.provider,
+      type: appointment.type,
+      status: appointment.status,
+    })),
+    recentVisits: dto.recentVisits.map((visit) => ({
+      id: visit.id,
+      date: toIsoString(visit.date),
+      provider: visit.provider,
+      facility: visit.facility,
+      notes: visit.notes ?? null,
+    })),
+  };
+};
+
+const mapVital = (patientId: string) => (dto: VitalSignDto): VitalSign => ({
+  id: dto.id,
+  patientId,
+  recordedAt: toIsoString(dto.date),
+  recordedBy: 'Care Team',
+  bloodPressure: {
+    systolic: dto.bloodPressure.systolic,
+    diastolic: dto.bloodPressure.diastolic,
+  },
+  heartRate: dto.heartRate,
+  respiratoryRate: dto.respiratoryRate,
+  temperature: Number(dto.temperature),
+  weight: Number(dto.weight),
+  height: Number(dto.height),
+  bmi: Number(dto.bmi),
+  oxygenSaturation: dto.oxygenSaturation,
+  notes: null,
+});
+
+const mapLabGroup = (dto: LabResultGroupDto): LabResultGroup => ({
+  category: dto.category,
+  date: toIsoString(dto.date),
+  tests: dto.tests.map((test) => ({
+    id: test.id,
+    testName: test.testName,
+    value: test.value,
+    unit: test.unit,
+    referenceRange: test.referenceRange ?? null,
+    status: test.status,
+    provider: test.provider,
+    notes: test.notes ?? null,
+  })),
+});
+
+const mapMedication = (dto: MedicationDto): Medication => ({
+  id: dto.id,
+  name: dto.name,
+  dosage: dto.dosage,
+  frequency: dto.frequency,
+  startDate: toIsoString(dto.startDate),
+  endDate: dto.endDate ? toIsoString(dto.endDate) : null,
+  status: dto.status,
+  prescribedBy: dto.prescribedBy,
+  instructions: dto.instructions ?? null,
+  refillsRemaining: dto.refillsRemaining ?? null,
+  lastFilled: dto.lastFilled ? toIsoString(dto.lastFilled) : null,
+  pharmacy: dto.pharmacy ?? null,
+});
+
+const mapAllergy = (dto: AllergyDto): Allergy => ({
+  id: dto.id,
+  allergen: dto.allergen,
+  type: dto.type,
+  severity: dto.severity,
+  reaction: dto.reaction,
+  diagnosedDate: dto.diagnosedDate ? toIsoString(dto.diagnosedDate) : null,
+  notes: dto.notes ?? null,
+});
+
+const mapImmunization = (dto: ImmunizationDto): Immunization => ({
+  id: dto.id,
+  vaccine: dto.vaccine,
+  date: toIsoString(dto.date),
+  provider: dto.provider,
+  facility: dto.facility,
+  nextDue: dto.nextDue ? toIsoString(dto.nextDue) : null,
+  series: dto.series ?? null,
+  lotNumber: dto.lotNumber ?? null,
+});
 
 class MedicalRecordsApi {
-  async getMedicalRecords(patientId: string, params?: {
-    type?: string;
-    startDate?: string;
-    endDate?: string;
-    providerId?: string;
-    page?: number;
-    limit?: number;
-  }) {
-    const response = await apiClient.get(`/api/medical-records/patient/${patientId}`, { params });
-    return response.data;
+  async getSummary(patientId: string): Promise<MedicalSummary | null> {
+    const response = await apiClient.get<ApiEnvelope<MedicalSummaryDto | null> | MedicalSummaryDto | null>(
+      '/api/medical-records',
+      { patientId },
+    );
+    const dto = unwrapEnvelope(response);
+    return mapSummary(dto);
   }
 
-  async getMedicalRecord(id: string) {
-    const response = await apiClient.get(`/api/medical-records/${id}`);
-    return response.data;
+  async getVitals(patientId: string): Promise<VitalSign[]> {
+    const response = await apiClient.get<VitalSignDto[]>(
+      '/api/medical-records/vitals',
+      { patientId },
+    );
+
+    return (response ?? []).map(mapVital(patientId));
   }
 
-  async createMedicalRecord(data: Omit<MedicalRecord, 'id' | 'createdAt' | 'updatedAt'>) {
-    const response = await apiClient.post('/api/medical-records', data);
-    return response.data;
+  async getLabResults(patientId: string): Promise<LabResultGroup[]> {
+    const response = await apiClient.get<LabResultGroupDto[]>(
+      '/api/medical-records/lab-results',
+      { patientId },
+    );
+
+    return (response ?? []).map(mapLabGroup);
   }
 
-  async updateMedicalRecord(id: string, data: Partial<MedicalRecord>) {
-    const response = await apiClient.put(`/api/medical-records/${id}`, data);
-    return response.data;
+  async getMedications(patientId: string): Promise<Medication[]> {
+    const response = await apiClient.get<MedicationDto[]>(
+      '/api/medical-records/medications',
+      { patientId },
+    );
+
+    return (response ?? []).map(mapMedication);
   }
 
-  async deleteMedicalRecord(id: string) {
-    const response = await apiClient.delete(`/api/medical-records/${id}`);
-    return response.data;
+  async getAllergies(patientId: string): Promise<Allergy[]> {
+    const response = await apiClient.get<AllergyDto[]>(
+      '/api/medical-records/allergies',
+      { patientId },
+    );
+
+    return (response ?? []).map(mapAllergy);
   }
 
-  // Vitals
-  async getVitals(patientId: string, params?: {
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-  }) {
-    const response = await apiClient.get(`/api/medical-records/vitals/${patientId}`, { params });
-    return response.data;
-  }
+  async getImmunizations(patientId: string): Promise<Immunization[]> {
+    const response = await apiClient.get<ImmunizationDto[]>(
+      '/api/medical-records/immunizations',
+      { patientId },
+    );
 
-  async recordVitals(data: Omit<Vitals, 'id'>) {
-    const response = await apiClient.post('/api/medical-records/vitals', data);
-    return response.data;
-  }
-
-  async getLatestVitals(patientId: string) {
-    const response = await apiClient.get(`/api/medical-records/vitals/${patientId}/latest`);
-    return response.data;
-  }
-
-  // Prescriptions
-  async getPrescriptions(patientId: string, params?: {
-    status?: string;
-    providerId?: string;
-  }) {
-    const response = await apiClient.get(`/api/medical-records/prescriptions/${patientId}`, { params });
-    return response.data;
-  }
-
-  async createPrescription(data: Omit<Prescription, 'id'>) {
-    const response = await apiClient.post('/api/medical-records/prescriptions', data);
-    return response.data;
-  }
-
-  async updatePrescription(id: string, data: Partial<Prescription>) {
-    const response = await apiClient.put(`/api/medical-records/prescriptions/${id}`, data);
-    return response.data;
-  }
-
-  async refillPrescription(id: string) {
-    const response = await apiClient.post(`/api/medical-records/prescriptions/${id}/refill`);
-    return response.data;
-  }
-
-  // Lab Results
-  async getLabResults(patientId: string, params?: {
-    startDate?: string;
-    endDate?: string;
-    testType?: string;
-  }) {
-    const response = await apiClient.get(`/api/medical-records/lab-results/${patientId}`, { params });
-    return response.data;
-  }
-
-  async createLabResult(data: Omit<LabResult, 'id'>) {
-    const response = await apiClient.post('/api/medical-records/lab-results', data);
-    return response.data;
-  }
-
-  // Medical History
-  async getMedicalHistory(patientId: string) {
-    const response = await apiClient.get(`/api/medical-records/history/${patientId}`);
-    return response.data;
-  }
-
-  async getAllergies(patientId: string) {
-    const response = await apiClient.get(`/api/medical-records/allergies/${patientId}`);
-    return response.data;
-  }
-
-  async addAllergy(patientId: string, data: {
-    allergen: string;
-    reaction: string;
-    severity: 'mild' | 'moderate' | 'severe';
-    onsetDate?: string;
-  }) {
-    const response = await apiClient.post(`/api/medical-records/allergies/${patientId}`, data);
-    return response.data;
-  }
-
-  async getImmunizations(patientId: string) {
-    const response = await apiClient.get(`/api/medical-records/immunizations/${patientId}`);
-    return response.data;
-  }
-
-  async addImmunization(patientId: string, data: {
-    vaccine: string;
-    dateAdministered: string;
-    administeredBy: string;
-    nextDoseDate?: string;
-    lotNumber?: string;
-  }) {
-    const response = await apiClient.post(`/api/medical-records/immunizations/${patientId}`, data);
-    return response.data;
-  }
-
-  // Reports
-  async generateHealthSummary(patientId: string) {
-    const response = await apiClient.get(`/api/medical-records/summary/${patientId}`);
-    return response.data;
-  }
-
-  async exportRecords(patientId: string, format: 'pdf' | 'csv' | 'json' = 'pdf') {
-    const response = await apiClient.get(`/api/medical-records/export/${patientId}`, {
-      params: { format },
-      responseType: 'blob',
-    });
-    return response.data;
+    return (response ?? []).map(mapImmunization);
   }
 }
 

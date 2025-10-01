@@ -189,6 +189,16 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
                 return false;
             }
 
+            var providerProfile = await _context.Providers
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(p => p.UserId == providerId && p.TenantId == provider.TenantId);
+
+            if (providerProfile == null)
+            {
+                _logger.LogError("Provider profile for provider {ProviderId} not found", providerId);
+                return false;
+            }
+
             // Create the appointment
             var appointment = new Appointment
             {
@@ -196,6 +206,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
                 TenantId = provider.TenantId,
                 PatientId = patientId,
                 ProviderId = providerId,
+                ClinicId = providerProfile.ClinicId,
+                ProviderProfileId = providerProfile.Id,
                 ScheduledStart = startTime,
                 ScheduledEnd = endTime,
                 AppointmentType = appointmentType,

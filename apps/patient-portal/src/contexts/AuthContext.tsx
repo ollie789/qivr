@@ -1,5 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import authService from '../services/cognitoAuthService';
+import {
+  getActiveTenantId as getStoredTenantId,
+  setActiveTenantId as storeActiveTenantId,
+  clearActiveTenantId,
+} from '../state/tenantState';
 
 interface User {
   username: string;
@@ -40,7 +45,23 @@ interface AuthContextType {
     firstName?: string,
     lastName?: string
   ) => Promise<RegisterResponse>;
+  activeTenantId: string | null;
+  setActiveTenantId: (tenantId: string | null) => void;
 }
+
+const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'true') === 'true';
+
+const DEV_USER: User = {
+  username: 'dev.patient@qivr.local',
+  email: 'dev.patient@qivr.local',
+  firstName: 'Dev',
+  lastName: 'Patient',
+  phoneNumber: '+15551112222',
+  tenantId: 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11',
+  role: 'patient',
+  emailVerified: true,
+  phoneVerified: true,
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -48,16 +69,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeTenantId, setActiveTenantIdState] = useState<string | null>(() => getStoredTenantId());
+
+  const setActiveTenant = useCallback((tenantId: string | null) => {
+    setActiveTenantIdState(tenantId);
+    storeActiveTenantId(tenantId);
+  }, []);
 
   useEffect(() => {
     // Check for existing session on mount
     const checkAuth = async () => {
+      if (DEV_AUTH_ENABLED) {
+        setUser(DEV_USER);
+        setIsAuthenticated(true);
+        setActiveTenant(DEV_USER.tenantId ?? null);
+        setLoading(false);
+        return;
+      }
+
       try {
         // Skip auth check for now - just check if token exists
         const hasToken = await authService.isAuthenticated();
         if (hasToken) {
           // Don't make API call during initial load
           setIsAuthenticated(true);
+          if (!activeTenantId) {
+            setActiveTenant(getStoredTenantId());
+          }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -67,10 +105,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
     checkAuth();
-  }, []);
+  }, [setActiveTenant]);
 
   const login = async (email: string, password: string) => {
     try {
+      if (DEV_AUTH_ENABLED) {
+        const derivedUser: User = {
+          ...DEV_USER,
+          email,
+          username: email,
+          firstName: DEV_USER.firstName,
+          lastName: DEV_USER.lastName,
+        };
+        setUser(derivedUser);
+        setIsAuthenticated(true);
+        setActiveTenant(derivedUser.tenantId ?? null);
+        return { success: true, data: { isSignedIn: true } as SignInResponse };
+      }
+
       console.log('Attempting login for:', email);
       const response = await authService.signIn(email, password);
       console.log('Sign in response:', response);
@@ -81,17 +133,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         setIsAuthenticated(true);
         if (userInfo) {
+          const tenantIdFromAttributes =
+            userInfo['custom:tenant_id'] || userInfo['custom:clinic_id'] || null;
+          const role = typeof userInfo['custom:role'] === 'string'
+            ? userInfo['custom:role'].toLowerCase()
+            : undefined;
+
           setUser({
             username: userInfo.email || '',
             email: userInfo.email,
             firstName: userInfo.given_name,
             lastName: userInfo.family_name,
             phoneNumber: userInfo.phone_number,
-            tenantId: userInfo['custom:tenant_id'],
-            role: userInfo['custom:role'],
+            tenantId: tenantIdFromAttributes ?? undefined,
+            role,
             emailVerified: userInfo.email_verified || false,
             phoneVerified: userInfo.phone_number_verified || false
           });
+
+          setActiveTenant(tenantIdFromAttributes ?? getStoredTenantId());
         }
         return { success: true, data: response };
       } else {
@@ -118,9 +178,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      await authService.signOut();
+      if (!DEV_AUTH_ENABLED) {
+        await authService.signOut();
+      }
       setIsAuthenticated(false);
       setUser(null);
+      setActiveTenant(null);
+      clearActiveTenantId();
     } catch (error: unknown) {
       console.error('Logout error:', error);
     }
@@ -167,7 +231,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signInWithFacebook,
         signOut,
         loading,
-        register
+        register,
+        activeTenantId,
+        setActiveTenantId: setActiveTenant,
       }}
     >
       {children}

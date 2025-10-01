@@ -31,6 +31,7 @@ import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import TenantSelector from '../components/TenantSelector';
 
 const drawerWidth = 280;
 
@@ -147,6 +148,9 @@ export const MainLayout: React.FC = () => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {menuItems.find(item => item.path === location.pathname)?.title || 'Patient Portal'}
           </Typography>
+          <Box sx={{ mr: 2 }}>
+            <TenantSelector />
+          </Box>
           <Button color="inherit" onClick={() => window.open('https://widget.qivr.health', '_blank')}>
             New Evaluation
           </Button>

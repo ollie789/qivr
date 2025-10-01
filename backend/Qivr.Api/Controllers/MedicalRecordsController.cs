@@ -16,7 +16,7 @@ namespace Qivr.Api.Controllers;
 [ApiController]
 [Route("api/medical-records")]
 [Authorize]
-public class MedicalRecordsController : ControllerBase
+public class MedicalRecordsController : BaseApiController
 {
     private readonly QivrDbContext _context;
     private readonly ILogger<MedicalRecordsController> _logger;
@@ -36,8 +36,8 @@ public class MedicalRecordsController : ControllerBase
     [ProducesResponseType(typeof(ApiEnvelope<MedicalSummaryDto?>), 200)]
     public async Task<ActionResult<ApiEnvelope<MedicalSummaryDto?>>> GetSummary([FromQuery] Guid? patientId, CancellationToken cancellationToken)
     {
-        var currentUserId = GetCurrentUserId();
-        var tenantId = GetTenantId();
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
 
         var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
         if (effectivePatientId == Guid.Empty)
@@ -53,8 +53,8 @@ public class MedicalRecordsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<VitalSignDto>), 200)]
     public async Task<ActionResult<IEnumerable<VitalSignDto>>> GetVitalSigns([FromQuery] Guid? patientId, CancellationToken cancellationToken)
     {
-        var currentUserId = GetCurrentUserId();
-        var tenantId = GetTenantId();
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
         var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
         if (effectivePatientId == Guid.Empty)
         {
@@ -69,8 +69,8 @@ public class MedicalRecordsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<LabResultGroupDto>), 200)]
     public async Task<ActionResult<IEnumerable<LabResultGroupDto>>> GetLabResults([FromQuery] Guid? patientId, CancellationToken cancellationToken)
     {
-        var currentUserId = GetCurrentUserId();
-        var tenantId = GetTenantId();
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
         var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
         if (effectivePatientId == Guid.Empty)
         {
@@ -85,8 +85,8 @@ public class MedicalRecordsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<MedicationDto>), 200)]
     public async Task<ActionResult<IEnumerable<MedicationDto>>> GetMedications([FromQuery] Guid? patientId, CancellationToken cancellationToken)
     {
-        var currentUserId = GetCurrentUserId();
-        var tenantId = GetTenantId();
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
         var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
         if (effectivePatientId == Guid.Empty)
         {
@@ -101,8 +101,8 @@ public class MedicalRecordsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<AllergyDto>), 200)]
     public async Task<ActionResult<IEnumerable<AllergyDto>>> GetAllergies([FromQuery] Guid? patientId, CancellationToken cancellationToken)
     {
-        var currentUserId = GetCurrentUserId();
-        var tenantId = GetTenantId();
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
         var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
         if (effectivePatientId == Guid.Empty)
         {
@@ -117,8 +117,8 @@ public class MedicalRecordsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ImmunizationDto>), 200)]
     public async Task<ActionResult<IEnumerable<ImmunizationDto>>> GetImmunizations([FromQuery] Guid? patientId, CancellationToken cancellationToken)
     {
-        var currentUserId = GetCurrentUserId();
-        var tenantId = GetTenantId();
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
         var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
         if (effectivePatientId == Guid.Empty)
         {
@@ -366,27 +366,9 @@ public class MedicalRecordsController : ControllerBase
         return Guid.Empty;
     }
 
-    private Guid GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (Guid.TryParse(userIdClaim, out var userId))
-        {
-            return userId;
-        }
+    // GetCurrentUserId method removed - using BaseApiController.CurrentUserId instead
 
-        throw new UnauthorizedAccessException("User ID not found");
-    }
-
-    private Guid GetTenantId()
-    {
-        var tenantClaim = User.FindFirst("tenant_id")?.Value;
-        if (Guid.TryParse(tenantClaim, out var tenantId))
-        {
-            return tenantId;
-        }
-
-        throw new UnauthorizedAccessException("Tenant ID not found");
-    }
+    // GetTenantId method removed - using BaseApiController.CurrentTenantId instead
 
     private static List<MedicalConditionDto> GenerateSampleConditions(string? patientName)
     {

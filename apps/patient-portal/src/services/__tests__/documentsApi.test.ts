@@ -79,7 +79,7 @@ describe('documentsApi', () => {
 
     const result = await fetchDocuments({ category: 'medical', search: 'intake', requiresReview: true });
 
-    expect(mockClient.get).toHaveBeenCalledWith('/api/Documents', {
+    expect(mockClient.get).toHaveBeenCalledWith('/api/documents', {
       category: 'medical',
       search: 'intake',
       requiresReview: 'true',
@@ -99,7 +99,7 @@ describe('documentsApi', () => {
 
     const result = await fetchFolders();
 
-    expect(mockClient.get).toHaveBeenCalledWith('/api/Documents/folders');
+    expect(mockClient.get).toHaveBeenCalledWith('/api/documents/folders');
     expect(result).toEqual(folders);
   });
 
@@ -112,7 +112,7 @@ describe('documentsApi', () => {
 
     expect(uploadWithProgressMock).toHaveBeenCalledTimes(1);
     const [path, formData, options] = uploadWithProgressMock.mock.calls[0];
-    expect(path).toBe('/api/Documents/upload');
+    expect(path).toBe('/api/documents/upload');
     expect(formData).toBeInstanceOf(FormData);
     expect(typeof options.onUploadProgress).toBe('function');
     expect(formData.get('category')).toBe('medical');
@@ -130,7 +130,7 @@ describe('documentsApi', () => {
 
     await toggleStar('doc-2', true);
 
-    expect(mockClient.patch).toHaveBeenCalledWith('/api/Documents/doc-2/star', { starred: true });
+    expect(mockClient.patch).toHaveBeenCalledWith('/api/documents/doc-2/star', { starred: true });
   });
 
   it('deleteDocument calls delete endpoint', async () => {
@@ -138,6 +138,6 @@ describe('documentsApi', () => {
 
     await deleteDocument('doc-3');
 
-    expect(mockClient.delete).toHaveBeenCalledWith('/api/Documents/doc-3');
+    expect(mockClient.delete).toHaveBeenCalledWith('/api/documents/doc-3');
   });
 });

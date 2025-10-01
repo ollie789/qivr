@@ -48,7 +48,15 @@ public class NotificationService : INotificationService
 
         // Initialize SendGrid
         var sendGridApiKey = _configuration["SendGrid:ApiKey"];
-        _sendGridClient = new SendGridClient(sendGridApiKey);
+        if (!string.IsNullOrEmpty(sendGridApiKey))
+        {
+            _sendGridClient = new SendGridClient(sendGridApiKey);
+        }
+        else
+        {
+            _logger.LogWarning("SendGrid API key not configured. Email sending will be disabled.");
+            _sendGridClient = null!;
+        }
         _sendGridFromEmail = _configuration["SendGrid:FromEmail"] ?? "noreply@qivr.com";
         _sendGridFromName = _configuration["SendGrid:FromName"] ?? "Qivr Health";
 
@@ -72,6 +80,12 @@ public class NotificationService : INotificationService
     {
         try
         {
+            if (_sendGridClient == null)
+            {
+                _logger.LogWarning("SendGrid not configured, skipping email to {Email}", to);
+                return;
+            }
+
             var from = new EmailAddress(_sendGridFromEmail, _sendGridFromName);
             var toEmail = new EmailAddress(to);
             var msg = MailHelper.CreateSingleEmail(from, toEmail, subject, plainTextContent ?? "", htmlContent);

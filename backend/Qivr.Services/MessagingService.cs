@@ -34,6 +34,7 @@ public class MessagingService : IMessagingService
         var conversations = await _context.Messages
             .Include(m => m.Sender)
             .Include(m => m.Recipient)
+            .Include(m => m.ProviderProfile)
             .Where(m => m.TenantId == tenantId && (m.SenderId == userId || m.RecipientId == userId))
             .GroupBy(m => m.SenderId == userId ? m.RecipientId : m.SenderId)
             .Select(g => new
@@ -89,6 +90,7 @@ public class MessagingService : IMessagingService
         var query = _context.Messages
             .Include(m => m.Sender)
             .Include(m => m.Recipient)
+            .Include(m => m.ProviderProfile)
             .Where(m => m.TenantId == tenantId &&
                        ((m.SenderId == userId && m.RecipientId == otherUserId) ||
                         (m.SenderId == otherUserId && m.RecipientId == userId)))
@@ -172,6 +174,9 @@ public class MessagingService : IMessagingService
             }
         }
 
+        var providerProfileId = parentMessage?.ProviderProfileId ??
+            await ResolveProviderProfileIdAsync(tenantId, senderId, messageDto.RecipientId);
+
         var message = new Message
         {
             Id = Guid.NewGuid(),
@@ -184,6 +189,7 @@ public class MessagingService : IMessagingService
             Priority = messageDto.Priority ?? "Normal",
             ParentMessageId = messageDto.ParentMessageId,
             RelatedAppointmentId = messageDto.RelatedAppointmentId,
+            ProviderProfileId = providerProfileId,
             // HasAttachments is now a computed property based on AttachmentId
             IsRead = false,
             CreatedAt = DateTime.UtcNow,
@@ -209,6 +215,12 @@ public class MessagingService : IMessagingService
         await _context.Entry(message)
             .Reference(m => m.Recipient)
             .LoadAsync();
+        if (message.ProviderProfileId.HasValue)
+        {
+            await _context.Entry(message)
+                .Reference(m => m.ProviderProfile)
+                .LoadAsync();
+        }
 
         _logger.LogInformation("Message {MessageId} sent from {SenderId} to {RecipientId}", 
             message.Id, senderId, messageDto.RecipientId);
@@ -225,6 +237,7 @@ public class MessagingService : IMessagingService
         var query = _context.Messages
             .Include(m => m.Sender)
             .Include(m => m.Recipient)
+            .Include(m => m.ProviderProfile)
             .Where(m => m.TenantId == tenantId && 
                        (m.SenderId == userId || m.RecipientId == userId));
 
@@ -281,6 +294,7 @@ public class MessagingService : IMessagingService
         var message = await _context.Messages
             .Include(m => m.Sender)
             .Include(m => m.Recipient)
+            .Include(m => m.ProviderProfile)
             .FirstOrDefaultAsync(m => m.Id == messageId && m.TenantId == tenantId);
 
         return message;
@@ -350,6 +364,7 @@ public class MessagingService : IMessagingService
             ParentMessageId = parentMessageId,
             RelatedAppointmentId = parentMessage.RelatedAppointmentId,
             IsRead = false,
+            ProviderProfileId = parentMessage.ProviderProfileId ?? await ResolveProviderProfileIdAsync(tenantId, senderId, recipientId),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -364,8 +379,25 @@ public class MessagingService : IMessagingService
         await _context.Entry(reply)
             .Reference(m => m.Recipient)
             .LoadAsync();
+        if (reply.ProviderProfileId.HasValue)
+        {
+            await _context.Entry(reply)
+                .Reference(m => m.ProviderProfile)
+                .LoadAsync();
+        }
 
         return reply;
+    }
+
+    private async Task<Guid?> ResolveProviderProfileIdAsync(Guid tenantId, Guid senderId, Guid recipientId)
+    {
+        var candidateUserIds = new[] { senderId, recipientId };
+
+        return await _context.Providers
+            .IgnoreQueryFilters()
+            .Where(p => p.TenantId == tenantId && candidateUserIds.Contains(p.UserId))
+            .Select(p => (Guid?)p.Id)
+            .FirstOrDefaultAsync();
     }
 }
 

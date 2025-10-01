@@ -1,36 +1,60 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  fetchDashboardStats,
+  deriveDashboardStats,
+  fetchDashboardOverview,
+  fetchHealthSummary,
   fetchPendingProms,
-  fetchUpcomingAppointments,
+  mapUpcomingAppointments,
 } from '../../../services/dashboardApi';
-import type {
-  DashboardAppointment,
-  DashboardStats,
-  PendingProm,
-} from '../../../types';
+import type { DashboardAppointment, DashboardStats, PendingProm } from '../../../types';
 
 export function useDashboardData(limit = 3) {
-  const statsQuery = useQuery<DashboardStats>({
-    queryKey: ['dashboard', 'stats'],
-    queryFn: fetchDashboardStats,
+  const overviewQuery = useQuery({
+    queryKey: ['dashboard', 'overview'],
+    queryFn: fetchDashboardOverview,
   });
 
-  const appointmentsQuery = useQuery<DashboardAppointment[]>({
-    queryKey: ['dashboard', 'appointments', limit],
-    queryFn: () => fetchUpcomingAppointments(limit),
+  const healthSummaryQuery = useQuery({
+    queryKey: ['dashboard', 'health-summary'],
+    queryFn: fetchHealthSummary,
   });
 
-  const pendingPromsQuery = useQuery<PendingProm[]>({
+  const pendingPromsQuery = useQuery({
     queryKey: ['dashboard', 'pending-proms', limit],
     queryFn: () => fetchPendingProms(limit),
   });
 
+  const stats = useMemo<DashboardStats | undefined>(() => {
+    if (!overviewQuery.data) {
+      return undefined;
+    }
+
+    return deriveDashboardStats(
+      overviewQuery.data,
+      pendingPromsQuery.data ?? [],
+      healthSummaryQuery.data,
+    );
+  }, [overviewQuery.data, pendingPromsQuery.data, healthSummaryQuery.data]);
+
+  const upcomingAppointments = useMemo<DashboardAppointment[]>(() => {
+    if (!overviewQuery.data) {
+      return [];
+    }
+
+    return mapUpcomingAppointments(overviewQuery.data, limit);
+  }, [overviewQuery.data, limit]);
+
+  const error = overviewQuery.error ?? pendingPromsQuery.error;
+
   return {
-    stats: statsQuery.data,
-    upcomingAppointments: appointmentsQuery.data ?? [],
+    stats,
+    upcomingAppointments,
     pendingProms: pendingPromsQuery.data ?? [],
-    isLoading: statsQuery.isLoading || appointmentsQuery.isLoading || pendingPromsQuery.isLoading,
-    error: statsQuery.error ?? appointmentsQuery.error ?? pendingPromsQuery.error,
+    isLoading:
+      overviewQuery.isLoading ||
+      pendingPromsQuery.isLoading ||
+      healthSummaryQuery.isLoading,
+    error,
   };
 }

@@ -51,7 +51,7 @@ describe('medicalRecordsApi', () => {
 
     const result = await fetchMedicalSummary();
 
-    expect(mockClient.get).toHaveBeenCalledWith('/api/MedicalRecords');
+    expect(mockClient.get).toHaveBeenCalledWith('/api/medical-records');
     expect(result).toBeNull();
   });
 
@@ -60,7 +60,7 @@ describe('medicalRecordsApi', () => {
 
     const result = await fetchVitalSigns();
 
-    expect(mockClient.get).toHaveBeenCalledWith('/api/MedicalRecords/vitals');
+    expect(mockClient.get).toHaveBeenCalledWith('/api/medical-records/vitals');
     expect(result).toEqual(vitalSigns);
   });
 
@@ -111,9 +111,9 @@ describe('medicalRecordsApi', () => {
     expect(await fetchAllergies()).toEqual(allergies);
     expect(await fetchImmunizations()).toEqual(immunizations);
 
-    expect(mockClient.get).toHaveBeenNthCalledWith(1, '/api/MedicalRecords/lab-results');
-    expect(mockClient.get).toHaveBeenNthCalledWith(2, '/api/MedicalRecords/medications');
-    expect(mockClient.get).toHaveBeenNthCalledWith(3, '/api/MedicalRecords/allergies');
-    expect(mockClient.get).toHaveBeenNthCalledWith(4, '/api/MedicalRecords/immunizations');
+    expect(mockClient.get).toHaveBeenNthCalledWith(1, '/api/medical-records/lab-results');
+    expect(mockClient.get).toHaveBeenNthCalledWith(2, '/api/medical-records/medications');
+    expect(mockClient.get).toHaveBeenNthCalledWith(3, '/api/medical-records/allergies');
+    expect(mockClient.get).toHaveBeenNthCalledWith(4, '/api/medical-records/immunizations');
   });
 });

@@ -23,7 +23,7 @@ namespace Qivr.Api.Controllers;
 [Route("api/appointments")] // Maintain backward compatibility
 [Authorize]
 [EnableRateLimiting("api")]
-public class AppointmentsController : ControllerBase
+public class AppointmentsController : BaseApiController
 {
     private readonly QivrDbContext _context;
     private readonly ILogger<AppointmentsController> _logger;
@@ -82,8 +82,8 @@ public class AppointmentsController : ControllerBase
         [FromQuery] AppointmentStatus? status = null,
         [FromQuery] bool sortDescending = false)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var query = _context.Appointments
             .Include(a => a.Patient)
@@ -149,8 +149,8 @@ public class AppointmentsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var query = _context.Appointments
             .Include(a => a.Patient)
@@ -198,7 +198,7 @@ public class AppointmentsController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<AppointmentDto>> GetAppointment(Guid id)
     {
-        var tenantId = GetTenantId();
+        var tenantId = RequireTenantId();
         var userId = _authorizationService.GetCurrentUserId(User);
 
         // IDOR Protection: Check if user can access this appointment
@@ -249,8 +249,8 @@ public class AppointmentsController : ControllerBase
     [ProducesResponseType(409)]
     public async Task<ActionResult<AppointmentDto>> CreateAppointment(CreateAppointmentRequest request)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         // Validate provider exists
         var provider = await _context.Users
@@ -259,6 +259,14 @@ public class AppointmentsController : ControllerBase
         
         if (provider == null)
             return BadRequest(new { message = "Provider not found" });
+
+        var providerProfileId = await _context.Providers
+            .Where(p => p.TenantId == tenantId && p.UserId == request.ProviderId)
+            .Select(p => (Guid?)p.Id)
+            .FirstOrDefaultAsync();
+
+        if (!providerProfileId.HasValue)
+            return BadRequest(new { message = "Provider profile not found" });
 
         // Check for double booking
         var conflictingAppointment = await _context.Appointments
@@ -286,6 +294,7 @@ public class AppointmentsController : ControllerBase
             LocationType = request.LocationType,
             LocationDetails = request.LocationDetails ?? new Dictionary<string, object>(),
             Notes = request.Notes,
+            ProviderProfileId = providerProfileId.Value,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -344,8 +353,8 @@ public class AppointmentsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateAppointment(Guid id, UpdateAppointmentRequest request)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var appointment = await _context.Appointments
             .Where(a => a.TenantId == tenantId && a.Id == id)
@@ -404,8 +413,8 @@ public class AppointmentsController : ControllerBase
     [HttpPost("{id}/cancel")]
     public async Task<IActionResult> CancelAppointment(Guid id, [FromBody] CancelAppointmentRequest request)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var appointment = await _context.Appointments
             .Where(a => a.TenantId == tenantId && a.Id == id)
@@ -434,7 +443,7 @@ public class AppointmentsController : ControllerBase
     [HttpPost("{id}/send-reminder")]
     public async Task<IActionResult> SendReminder(Guid id, CancellationToken cancellationToken)
     {
-        var tenantId = GetTenantId();
+        var tenantId = RequireTenantId();
 
         var appointment = await _context.Appointments
             .Include(a => a.Patient)
@@ -486,8 +495,8 @@ public class AppointmentsController : ControllerBase
     [HttpPost("{id}/confirm")]
     public async Task<IActionResult> ConfirmAppointment(Guid id)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var appointment = await _context.Appointments
             .Where(a => a.TenantId == tenantId && a.Id == id)
@@ -516,8 +525,8 @@ public class AppointmentsController : ControllerBase
     [HttpPost("{id}/complete")]
     public async Task<IActionResult> CompleteAppointment(Guid id, [FromBody] CompleteAppointmentRequest request)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var appointment = await _context.Appointments
             .Where(a => a.TenantId == tenantId && a.Id == id)
@@ -546,11 +555,11 @@ public class AppointmentsController : ControllerBase
     [HttpGet("waitlist")]
     public async Task<ActionResult<IEnumerable<WaitlistEntryDto>>> GetWaitlist(CancellationToken cancellationToken)
     {
-        var tenantId = GetTenantId();
+        var tenantId = RequireTenantId();
         Guid? patientFilter = null;
         if (User.IsInRole("Patient"))
         {
-            patientFilter = GetUserId();
+            patientFilter = CurrentUserId;
         }
 
         var entries = await _waitlistService.GetEntriesAsync(tenantId, patientFilter, cancellationToken);
@@ -560,8 +569,8 @@ public class AppointmentsController : ControllerBase
     [HttpPost("waitlist")]
     public async Task<ActionResult<WaitlistEntryDto>> AddToWaitlist([FromBody] WaitlistRequest request, CancellationToken cancellationToken)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var patientId = request.PatientId == Guid.Empty ? userId : request.PatientId;
 
@@ -652,8 +661,8 @@ public class AppointmentsController : ControllerBase
     [HttpGet("upcoming")]
     public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetUpcomingAppointments()
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var query = _context.Appointments
             .Include(a => a.Patient)
@@ -685,8 +694,8 @@ public class AppointmentsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var query = _context.Appointments
             .Include(a => a.Patient)
@@ -725,8 +734,8 @@ public class AppointmentsController : ControllerBase
     [HttpPost("{id}/reschedule")]
     public async Task<IActionResult> RescheduleAppointment(Guid id, [FromBody] RescheduleAppointmentRequest request)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var appointment = await _context.Appointments
             .Where(a => a.TenantId == tenantId && a.Id == id)
@@ -790,6 +799,7 @@ public class AppointmentsController : ControllerBase
             PatientEmail = appointment.Patient?.Email,
             PatientPhone = appointment.Patient?.Phone,
             ProviderId = appointment.ProviderId,
+            ProviderProfileId = appointment.ProviderProfileId,
             ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" : null,
             ProviderEmail = appointment.Provider?.Email,
             ProviderPhone = appointment.Provider?.Phone,
@@ -939,21 +949,7 @@ public class AppointmentsController : ControllerBase
         };
     }
 
-    private Guid GetTenantId()
-    {
-        var tenantClaim = User.FindFirst("tenant_id")?.Value;
-        if (Guid.TryParse(tenantClaim, out var tenantId))
-            return tenantId;
-        throw new UnauthorizedAccessException("Tenant ID not found");
-    }
-
-    private Guid GetUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (Guid.TryParse(userIdClaim, out var userId))
-            return userId;
-        throw new UnauthorizedAccessException("User ID not found");
-    }
+    // GetTenantId and GetUserId methods removed - using BaseApiController properties instead
 }
 
 // DTOs
@@ -965,6 +961,7 @@ public class AppointmentDto
     public string? PatientEmail { get; set; }
     public string? PatientPhone { get; set; }
     public Guid ProviderId { get; set; }
+    public Guid ProviderProfileId { get; set; }
     public string? ProviderName { get; set; }
     public string? ProviderEmail { get; set; }
     public string? ProviderPhone { get; set; }

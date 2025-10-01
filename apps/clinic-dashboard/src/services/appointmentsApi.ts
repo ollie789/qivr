@@ -1,5 +1,36 @@
 import apiClient from '../lib/api-client';
 
+interface CursorPaginationResponse<T> {
+  items: T[];
+  nextCursor?: string | null;
+  previousCursor?: string | null;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  count: number;
+}
+
+interface AppointmentDto {
+  id: string;
+  patientId: string;
+  patientName?: string | null;
+  patientEmail?: string | null;
+  patientPhone?: string | null;
+  providerId: string;
+  providerName?: string | null;
+  appointmentType: string;
+  status: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  notes?: string | null;
+  location?: string | null;
+  reasonForVisit?: string | null;
+  insuranceVerified?: boolean;
+  copayAmount?: number;
+  followUpRequired?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Appointment {
   id: string;
   patientId: string;
@@ -13,7 +44,6 @@ export interface Appointment {
   appointmentType: string;
   status: 'scheduled' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'no-show';
   notes?: string;
-  videoLink?: string;
   location?: string;
   reasonForVisit?: string;
   insuranceVerified?: boolean;
@@ -42,6 +72,28 @@ export interface AppointmentSlot {
   providerId: string;
 }
 
+const mapAppointment = (dto: AppointmentDto): Appointment => ({
+  id: dto.id,
+  patientId: dto.patientId,
+  patientName: dto.patientName ?? 'Unknown patient',
+  patientEmail: dto.patientEmail ?? '',
+  patientPhone: dto.patientPhone ?? '',
+  providerId: dto.providerId,
+  providerName: dto.providerName ?? 'Assigned provider',
+  scheduledStart: dto.scheduledStart,
+  scheduledEnd: dto.scheduledEnd,
+  appointmentType: dto.appointmentType,
+  status: (dto.status || '').toLowerCase() as Appointment['status'],
+  notes: dto.notes ?? undefined,
+  location: dto.location ?? undefined,
+  reasonForVisit: dto.reasonForVisit ?? undefined,
+  insuranceVerified: dto.insuranceVerified,
+  copayAmount: dto.copayAmount,
+  followUpRequired: dto.followUpRequired,
+  createdAt: dto.createdAt,
+  updatedAt: dto.updatedAt,
+});
+
 class AppointmentsApi {
   async getAppointments(params?: {
     startDate?: string;
@@ -49,37 +101,48 @@ class AppointmentsApi {
     patientId?: string;
     providerId?: string;
     status?: string;
-    type?: string;
-    page?: number;
     limit?: number;
-  }) {
-    const response = await apiClient.get('/api/Appointments', { params });
-    return response.data;
+    cursor?: string;
+    sortDescending?: boolean;
+  }): Promise<{ items: Appointment[]; nextCursor?: string | null; hasNext: boolean; }>
+  {
+    const payload = await apiClient.get<CursorPaginationResponse<AppointmentDto> | AppointmentDto[]>(
+      '/api/appointments',
+      { params },
+    );
+
+    const items = Array.isArray(payload)
+      ? payload
+      : payload?.items ?? (payload as any)?.Items ?? [];
+
+    return {
+      items: (items as AppointmentDto[]).map(mapAppointment),
+      nextCursor: Array.isArray(payload) ? undefined : payload?.nextCursor ?? (payload as any)?.NextCursor,
+      hasNext: Array.isArray(payload) ? false : Boolean(payload?.hasNext ?? (payload as any)?.HasNext),
+    };
   }
 
-  async getAppointment(id: string) {
-    const response = await apiClient.get(`/api/Appointments/${id}`);
-    return response.data;
+  async getAppointment(id: string): Promise<Appointment> {
+    const response = await apiClient.get<AppointmentDto>(`/api/appointments/${id}`);
+    return mapAppointment(response);
   }
 
-  async createAppointment(data: CreateAppointmentRequest) {
-    const response = await apiClient.post('/api/Appointments/book', data);
-    return response.data;
+  async createAppointment(data: CreateAppointmentRequest): Promise<Appointment> {
+    const response = await apiClient.post<AppointmentDto>('/api/appointments', data);
+    return mapAppointment(response);
   }
 
-  async updateAppointment(id: string, data: Partial<CreateAppointmentRequest>) {
-    const response = await apiClient.put(`/api/Appointments/${id}`, data);
-    return response.data;
+  async updateAppointment(id: string, data: Partial<CreateAppointmentRequest>): Promise<Appointment> {
+    const response = await apiClient.put<AppointmentDto>(`/api/appointments/${id}`, data);
+    return mapAppointment(response);
   }
 
   async cancelAppointment(id: string, reason?: string) {
-    const response = await apiClient.post(`/api/Appointments/${id}/cancel`, { reason });
-    return response.data;
+    return apiClient.post(`/api/appointments/${id}/cancel`, { reason });
   }
 
   async confirmAppointment(id: string) {
-    const response = await apiClient.post(`/api/Appointments/${id}/confirm`);
-    return response.data;
+    return apiClient.post(`/api/appointments/${id}/confirm`);
   }
 
   async rescheduleAppointment(id: string, data: {
@@ -87,13 +150,11 @@ class AppointmentsApi {
     scheduledEnd: string;
     reason?: string;
   }) {
-    const response = await apiClient.post(`/api/Appointments/${id}/reschedule`, data);
-    return response.data;
+    return apiClient.post(`/api/appointments/${id}/reschedule`, data);
   }
 
   async markAsNoShow(id: string) {
-    const response = await apiClient.post(`/api/Appointments/${id}/no-show`);
-    return response.data;
+    return apiClient.post(`/api/appointments/${id}/no-show`);
   }
 
   async completeAppointment(id: string, data?: {
@@ -101,34 +162,27 @@ class AppointmentsApi {
     followUpRequired?: boolean;
     followUpDate?: string;
   }) {
-    const response = await apiClient.post(`/api/Appointments/${id}/complete`, data);
-    return response.data;
+    return apiClient.post(`/api/appointments/${id}/complete`, data);
   }
 
   async getAvailableSlots(params: {
     providerId: string;
     date: string;
     duration: number;
-  }) {
-    const response = await apiClient.get('/api/Appointments/availability', { params });
-    return response.data;
+  }): Promise<AppointmentSlot[]> {
+    return apiClient.get('/api/appointments/availability', { params });
   }
 
   async sendReminder(id: string) {
-    const response = await apiClient.post(`/api/Appointments/${id}/send-reminder`);
-    return response.data;
+    return apiClient.post(`/api/appointments/${id}/send-reminder`);
   }
 
   async getUpcoming(days: number = 7) {
-    const response = await apiClient.get('/api/Appointments/upcoming', { 
-      params: { days } 
-    });
-    return response.data;
+    return apiClient.get('/api/appointments/upcoming', { params: { days } });
   }
 
   async getWaitlist() {
-    const response = await apiClient.get('/api/Appointments/waitlist');
-    return response.data;
+    return apiClient.get('/api/appointments/waitlist');
   }
 
   async addToWaitlist(data: {
@@ -138,8 +192,7 @@ class AppointmentsApi {
     appointmentType: string;
     notes?: string;
   }) {
-    const response = await apiClient.post('/api/Appointments/waitlist', data);
-    return response.data;
+    return apiClient.post('/api/appointments/waitlist', data);
   }
 }
 

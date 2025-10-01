@@ -6,7 +6,7 @@ This document captures the current expectations for automated and manual testing
 
 | Layer | Command | Notes |
 | --- | --- | --- |
-| Backend unit/integration | `cd backend && dotnet test` | Pass `--collect:"XPlat Code Coverage"` when you need coverage reports (covers appointments + documents controller flows) |
+| Backend unit/integration | `cd backend && dotnet test` | Falls back to a local `qivr_test` database unless `TEST_CONNECTION_STRING` is provided |
 | Patient portal | `npm run test --workspace=@qivr/patient-portal` | Uses Vitest + React Testing Library |
 | Clinic dashboard | `npm run test --workspace=@qivr/clinic-dashboard` | Vitest suite covers PROM API stat mapping (`src/services/__tests__/promApi.test.ts`) |
 | Widget | `npm run test --workspace=@qivr/widget` | Smaller footprint but keep parity |
@@ -15,13 +15,20 @@ This document captures the current expectations for automated and manual testing
 
 ### Backend database dependency
 
-Backend tests run against the AWS RDS PostgreSQL instance. Export `TEST_CONNECTION_STRING` (or provide `CONNECTION_STRING` in `backend/.env.aws-dev`) before calling `dotnet test`. The `Qivr.Tests` harness pulls the connection string from those sources and applies EF's snake_case naming convention automatically.
+`Qivr.Tests` resolves the connection string in the following order:
+
+1. `TEST_CONNECTION_STRING` environment variable (use this for CI or pointing at disposable databases)
+2. Values inside `backend/.env.aws-dev` if present
+3. `backend/Qivr.Api/appsettings.Development.json`
+4. Fallback: `Host=localhost;Port=5432;Database=qivr_test;Username=qivr_user;Password=QivrDevPassword2024!`
+
+Ensure the target database has the latest migrations before running the suite.
 
 ## End-to-end and flows
 
 | Scenario | Script | Purpose |
 | --- | --- | --- |
-| Cognito login | `node test-auth-flow.mjs` | Validates hosted UI login + the SPA token exchange |
+| Cognito login | `node test-auth-flow.mjs` | Validates hosted UI login + the SPA token exchange (set `VITE_ENABLE_DEV_AUTH=false` first) |
 | API migrations | `ts-node test-api-migration.ts` | Ensures EF migrations apply cleanly before release |
 
 Cypress-based UI flows are still on the backlog. Until they exist, exercise critical workflows manually (clinic login, booking, PROM completion) before releases.
@@ -39,7 +46,7 @@ The pipeline runs `npm run lint`, workspace tests, and `dotnet test` on every pu
 
 ## Troubleshooting
 
-- If `dotnet test` fails with a connection error, verify `TEST_CONNECTION_STRING` is set (or `.env.aws-dev` exists) and that your IP is allowed against the AWS security group.
+- If `dotnet test` fails with a connection error, verify Postgres is running locally or that `TEST_CONNECTION_STRING` points at an accessible instance.
 - Frontend tests require a modern Node environment (20+). Delete `node_modules` and reinstall if you see binary build errors.
 - Snapshot updates belong in a dedicated commit unless they accompany code changes.
 

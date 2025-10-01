@@ -6,16 +6,17 @@ Welcome to the central hub for product, engineering, and operations references. 
 
 | Area | Start Here | Highlights |
 | --- | --- | --- |
-| New machine or clean workspace | [setup.md](./setup.md) | Prerequisites, environment files, service ports, quick start commands |
+| New machine or clean workspace | [setup.md](./setup.md) | Prerequisites, environment flags, service ports, quick start commands |
 | Understand the system | [architecture.md](./architecture.md) | Backend solution layout, React app structure, shared packages, data flow |
 | Day-to-day development | [development.md](./development.md) | Turbo/NPM scripts, coding conventions, branching, useful tooling |
+| Authentication choices | [authentication.md](./authentication.md) | Dev auth defaults, Cognito integration, switching modes |
 | Running tests | [testing.md](./testing.md) | .NET, React, end-to-end scripts, recommended coverage cadence |
 | Operating in local/hosted envs | [operations.md](./operations.md) | Docker helpers, migrations, logs, deployment outline, break/fix playbooks |
 | Security expectations | [security.md](./security.md) | Secrets management, auth configuration, review cadence |
 
 Additional references:
 - **Root** – [README.md](../README.md), [AGENTS.md](../AGENTS.md), [CHANGELOG.md](../CHANGELOG.md)
-- **Auth specifics** – [AWS Cognito setup](./AWS_COGNITO_SETUP.md)
+- **Cognito appendix** – [AWS_COGNITO_SETUP.md](./AWS_COGNITO_SETUP.md)
 - **Historical context** – archival notes live under [docs/archive/](./archive)
 
 ## Contributing to the docs

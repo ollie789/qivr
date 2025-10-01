@@ -199,8 +199,8 @@ echo "   cd backend && dotnet restore && cd .."
 echo ""
 
 echo "3. Copy and configure environment variables:"
-echo "   cp .env.example .env"
-echo "   # Edit .env with your settings"
+echo "   touch .env"
+echo "   # Populate only if you need to override defaults (see docs/authentication.md)"
 echo ""
 
 echo "4. Start the development environment:"

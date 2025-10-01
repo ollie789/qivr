@@ -356,6 +356,18 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
 
     private async Task ProcessGoogleCalendarItem(Guid providerId, GoogleCalendarEvent item, DeltaSyncResult result)
     {
+        var providerProfile = await _dbContext.Set<Qivr.Core.Entities.Provider>()
+            .IgnoreQueryFilters()
+            .Include(p => p.User)
+            .Include(p => p.Clinic)
+            .FirstOrDefaultAsync(p => p.User != null && p.User.Id == providerId);
+
+        if (providerProfile == null)
+        {
+            _logger.LogWarning("Skipping Google calendar sync for provider {ProviderId}: provider profile missing", providerId);
+            return;
+        }
+
         // Check if this is a deletion
         if (item.Status == "cancelled")
         {
@@ -405,9 +417,20 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
             existingAppointment.Notes = item.Description;
             existingAppointment.Status = MapGoogleStatusToEnum(item.Status);
             existingAppointment.UpdatedAt = DateTime.UtcNow;
+            existingAppointment.ProviderProfileId = providerProfile.Id;
+            if (existingAppointment.TenantId == Guid.Empty)
+            {
+                existingAppointment.TenantId = providerProfile.TenantId;
+            }
+            if (!existingAppointment.ClinicId.HasValue)
+            {
+                existingAppointment.ClinicId = providerProfile.ClinicId;
+            }
             // Store external update time in LocationDetails
             if (item.Updated.HasValue)
+            {
                 existingAppointment.LocationDetails["ExternalLastModified"] = item.Updated.Value;
+            }
             
             result.ItemsUpdated++;
         }
@@ -445,7 +468,10 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
             var newAppointment = new Appointment
             {
                 Id = Guid.NewGuid(),
+                TenantId = providerProfile.TenantId,
                 ProviderId = providerId,
+                ProviderProfileId = providerProfile.Id,
+                ClinicId = providerProfile.ClinicId,
                 ExternalCalendarId = item.Id,
                 ScheduledStart = scheduledStart,
                 ScheduledEnd = scheduledEnd,
@@ -467,6 +493,18 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
 
     private async Task ProcessMicrosoftCalendarItem(Guid providerId, MicrosoftCalendarEvent item, DeltaSyncResult result)
     {
+        var providerProfile = await _dbContext.Set<Qivr.Core.Entities.Provider>()
+            .IgnoreQueryFilters()
+            .Include(p => p.User)
+            .Include(p => p.Clinic)
+            .FirstOrDefaultAsync(p => p.User != null && p.User.Id == providerId);
+
+        if (providerProfile == null)
+        {
+            _logger.LogWarning("Skipping Microsoft calendar sync for provider {ProviderId}: provider profile missing", providerId);
+            return;
+        }
+
         // Check if this is a deletion
         if (item.Deleted)
         {
@@ -488,9 +526,20 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
             existingAppointment.Notes = item.BodyPreview;
             existingAppointment.Status = MapMicrosoftStatusToEnum(item);
             existingAppointment.UpdatedAt = DateTime.UtcNow;
+            existingAppointment.ProviderProfileId = providerProfile.Id;
+            if (existingAppointment.TenantId == Guid.Empty)
+            {
+                existingAppointment.TenantId = providerProfile.TenantId;
+            }
+            if (!existingAppointment.ClinicId.HasValue)
+            {
+                existingAppointment.ClinicId = providerProfile.ClinicId;
+            }
             // Store external update time in LocationDetails
             if (item.LastModifiedDateTime.HasValue)
+            {
                 existingAppointment.LocationDetails["ExternalLastModified"] = item.LastModifiedDateTime.Value;
+            }
             
             result.ItemsUpdated++;
         }
@@ -500,7 +549,10 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
             var newAppointment = new Appointment
             {
                 Id = Guid.NewGuid(),
+                TenantId = providerProfile.TenantId,
                 ProviderId = providerId,
+                ProviderProfileId = providerProfile.Id,
+                ClinicId = providerProfile.ClinicId,
                 ExternalCalendarId = item.Id,
                 ScheduledStart = item.Start.DateTime,
                 ScheduledEnd = item.End.DateTime,

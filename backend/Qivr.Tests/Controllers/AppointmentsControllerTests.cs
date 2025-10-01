@@ -44,7 +44,7 @@ public class AppointmentsControllerTests : DatabaseTestBase
         // Arrange
         var patientId = TestUserId;
         var providerUser = await CreateUserAsync(UserType.Staff, email: "dr.smith@test.local", firstName: "Ada", lastName: "Lovelace");
-        await CreateProviderAsync(providerUser);
+        var providerProfile = await CreateProviderAsync(providerUser);
 
         var startTime = DateTime.UtcNow.AddDays(1).Date.AddHours(10);
 
@@ -65,6 +65,7 @@ public class AppointmentsControllerTests : DatabaseTestBase
                     TenantId = TenantId,
                     PatientId = patientId,
                     ProviderId = providerUser.Id,
+                    ProviderProfileId = providerProfile.Id,
                     ScheduledStart = startTime,
                     ScheduledEnd = startTime.AddMinutes(duration),
                     AppointmentType = type,

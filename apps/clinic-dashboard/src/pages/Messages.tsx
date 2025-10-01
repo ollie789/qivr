@@ -1,122 +1,153 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Paper,
   Typography,
   Button,
+  TextField,
+  InputAdornment,
+  Tabs,
+  Tab,
   List,
   ListItem,
   ListItemText,
   ListItemAvatar,
   Avatar,
   Chip,
-  IconButton,
-  TextField,
-  InputAdornment,
-  Tabs,
-  Tab,
-  Divider,
   CircularProgress,
   Alert,
+  Divider,
+  IconButton,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
   Email as EmailIcon,
   Sms as SmsIcon,
-  Reply as ReplyIcon,
-  Forward as ForwardIcon,
   Delete as DeleteIcon,
-  CheckCircle as DeliveredIcon,
-  Error as FailedIcon,
-  Schedule as PendingIcon,
 } from '@mui/icons-material';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
-import apiClient from '../lib/api-client';
 import MessageComposer from '../components/MessageComposer';
-
-interface Message {
-  id: string;
-  type: 'sms' | 'email';
-  direction: 'sent' | 'received';
-  recipient: {
-    id: string;
-    name: string;
-    type: 'patient' | 'staff';
-  };
-  subject?: string;
-  content: string;
-  status: 'sent' | 'delivered' | 'failed' | 'pending';
-  sentAt: Date;
-  deliveredAt?: Date;
-  readAt?: Date;
-}
-
-// API response type for messages
-interface MessageApiResponse {
-  id: string;
-  type: 'sms' | 'email';
-  direction: 'sent' | 'received';
-  recipient: {
-    id: string;
-    name: string;
-    type: 'patient' | 'staff';
-  };
-  subject?: string;
-  content: string;
-  status: 'sent' | 'delivered' | 'failed' | 'pending';
-  sentAt: string; // comes as string from API
-  deliveredAt?: string;
-  readAt?: string;
-}
+import {
+  messagesApi,
+  type ConversationSummary,
+  type MessageDetail,
+} from '../services/messagesApi';
 
 const Messages: React.FC = () => {
+  const queryClient = useQueryClient();
   const [selectedTab, setSelectedTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
 
-  // Fetch messages
-  const { data: messages = [], isLoading, error } = useQuery({
-    queryKey: ['messages', selectedTab],
-    queryFn: async () => {
-      const type = selectedTab === 1 ? 'sms' : selectedTab === 2 ? 'email' : 'all';
-      const response = await apiClient.get('/api/Messages', {
-        params: { type, limit: 100 }
-      });
-      return response.data.map((m: MessageApiResponse): Message => ({
-        ...m,
-        sentAt: new Date(m.sentAt),
-        deliveredAt: m.deliveredAt ? new Date(m.deliveredAt) : undefined,
-        readAt: m.readAt ? new Date(m.readAt) : undefined,
-      }));
-    },
+  const categoryFilter = selectedTab === 1 ? 'Sms' : selectedTab === 2 ? 'Email' : undefined;
+
+  const {
+    data: conversationsData,
+    isLoading: conversationsLoading,
+    error: conversationsError,
+  } = useQuery({
+    queryKey: ['message-conversations'],
+    queryFn: messagesApi.getConversations,
   });
 
-  const filteredMessages = messages.filter((m: Message) =>
-    m.recipient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (m.subject && m.subject.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'delivered':
-        return <DeliveredIcon fontSize="small" color="success" />;
-      case 'failed':
-        return <FailedIcon fontSize="small" color="error" />;
-      case 'pending':
-        return <PendingIcon fontSize="small" color="warning" />;
-      default:
-        return null;
+  const conversations = useMemo(() => {
+    const all = conversationsData ?? [];
+    if (!searchQuery.trim()) {
+      return all;
     }
+    const needle = searchQuery.toLowerCase();
+    return all.filter((conversation) =>
+      conversation.participantName.toLowerCase().includes(needle) ||
+      conversation.lastMessage.toLowerCase().includes(needle),
+    );
+  }, [conversationsData, searchQuery]);
+
+  useEffect(() => {
+    if (!selectedConversationId && conversationsData && conversationsData.length > 0) {
+      setSelectedConversationId(conversationsData[0].participantId);
+    }
+  }, [conversationsData, selectedConversationId]);
+
+  const selectedConversation: ConversationSummary | null = useMemo(() => {
+    if (!selectedConversationId) {
+      return null;
+    }
+    const source = conversationsData ?? [];
+    return source.find((conversation) => conversation.participantId === selectedConversationId) ?? null;
+  }, [conversationsData, selectedConversationId]);
+
+  const {
+    data: conversationPages,
+    isLoading: conversationLoading,
+    error: conversationError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['conversation', selectedConversationId, categoryFilter],
+    queryFn: ({ pageParam }) => {
+      if (!selectedConversationId) {
+        return Promise.resolve({ items: [], nextCursor: null, hasNext: false, hasPrevious: false, count: 0 });
+      }
+      return messagesApi.getConversationMessages(selectedConversationId, {
+        cursor: pageParam,
+        limit: 25,
+        sortDescending: false,
+      });
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: Boolean(selectedConversationId),
+  });
+
+  const conversationMessages: MessageDetail[] = useMemo(() => {
+    if (!conversationPages?.pages) {
+      return [];
+    }
+    return conversationPages.pages.flatMap((page) => page.items);
+  }, [conversationPages]);
+
+  const visibleMessages: MessageDetail[] = useMemo(() => {
+    if (!categoryFilter) {
+      return conversationMessages;
+    }
+    const needle = categoryFilter.toLowerCase();
+    return conversationMessages.filter((message) => message.messageType.toLowerCase() === needle);
+  }, [conversationMessages, categoryFilter]);
+
+  const latestMessageType = useMemo(() => {
+    const lastMessage = visibleMessages.length > 0
+      ? visibleMessages[visibleMessages.length - 1]
+      : conversationMessages[conversationMessages.length - 1];
+    return lastMessage?.messageType?.toLowerCase() === 'email' ? 'email' : 'sms';
+  }, [visibleMessages, conversationMessages]);
+
+  const renderCategoryIcon = (messageType?: string) => {
+    const type = messageType?.toLowerCase();
+    if (type === 'sms') {
+      return <SmsIcon />;
+    }
+    if (type === 'email') {
+      return <EmailIcon />;
+    }
+    return <EmailIcon />;
   };
 
-  const handleReply = (message: Message) => {
-    setReplyTo(message);
-    setComposeOpen(true);
+  const handleOpenComposer = () => {
+    if (!selectedConversation) {
+      return;
+    }
+    setComposerOpen(true);
+  };
+
+  const handleMessageSent = () => {
+    setComposerOpen(false);
+    if (selectedConversationId) {
+      queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId, categoryFilter] });
+    }
+    queryClient.invalidateQueries({ queryKey: ['message-conversations'] });
   };
 
   return (
@@ -128,19 +159,17 @@ const Messages: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => {
-            setReplyTo(null);
-            setComposeOpen(true);
-          }}
+          disabled={!selectedConversation}
+          onClick={handleOpenComposer}
         >
-          Compose Message
+          Reply
         </Button>
       </Box>
 
       <Paper sx={{ mb: 3 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={selectedTab} onChange={(e, v) => setSelectedTab(v)}>
-            <Tab label="All Messages" />
+          <Tabs value={selectedTab} onChange={(event, value) => setSelectedTab(value)}>
+            <Tab label="All Conversations" />
             <Tab label="SMS" icon={<SmsIcon />} iconPosition="start" />
             <Tab label="Email" icon={<EmailIcon />} iconPosition="start" />
           </Tabs>
@@ -149,9 +178,9 @@ const Messages: React.FC = () => {
         <Box sx={{ p: 2 }}>
           <TextField
             fullWidth
-            placeholder="Search messages..."
+            placeholder="Search conversations..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(event) => setSearchQuery(event.target.value)}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -164,179 +193,180 @@ const Messages: React.FC = () => {
       </Paper>
 
       <Box sx={{ display: 'flex', gap: 3 }}>
-        {/* Message List */}
-        <Paper sx={{ flex: 1, minHeight: 600 }}>
-          {isLoading ? (
+        <Paper sx={{ width: 320, minHeight: 620, flexShrink: 0 }}>
+          {conversationsLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress />
+              <CircularProgress size={32} />
             </Box>
-          ) : error ? (
+          ) : conversationsError ? (
             <Alert severity="error" sx={{ m: 2 }}>
-              Failed to load messages
+              Failed to load conversations
             </Alert>
-          ) : filteredMessages.length === 0 ? (
+          ) : conversations.length === 0 ? (
             <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography color="text.secondary">
-                No messages found
-              </Typography>
+              <Typography color="text.secondary">No conversations yet</Typography>
             </Box>
           ) : (
             <List sx={{ p: 0 }}>
-              {filteredMessages.map((message: Message) => (
-                <ListItem
-                  key={message.id}
-                  button
-                  onClick={() => setSelectedMessage(message)}
-                  selected={selectedMessage?.id === message.id}
-                  sx={{
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    '&.Mui-selected': {
-                      backgroundColor: 'action.selected',
-                    },
-                  }}
-                >
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: message.type === 'sms' ? 'primary.main' : 'secondary.main' }}>
-                      {message.type === 'sms' ? <SmsIcon /> : <EmailIcon />}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body1" fontWeight={500}>
-                          {message.recipient.name}
-                        </Typography>
-                        <Chip
-                          label={message.recipient.type}
-                          size="small"
-                          variant="outlined"
-                        />
-                        {getStatusIcon(message.status)}
-                      </Box>
-                    }
-                    secondary={
-                      <>
-                        {message.subject && (
-                          <Typography variant="body2" fontWeight={500}>
-                            {message.subject}
+              {conversations.map((conversation) => {
+                const isSelected = conversation.participantId === selectedConversationId;
+                const avatarColor = conversation.participantRole.toLowerCase().includes('patient')
+                  ? 'primary.main'
+                  : 'secondary.main';
+                const lastMessageTime = formatDistanceToNow(new Date(conversation.lastMessageTime), {
+                  addSuffix: true,
+                });
+
+                return (
+                  <ListItem
+                    key={conversation.participantId}
+                    button
+                    selected={isSelected}
+                    onClick={() => setSelectedConversationId(conversation.participantId)}
+                    sx={{
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      '&.Mui-selected': {
+                        backgroundColor: 'action.selected',
+                      },
+                    }}
+                  >
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: avatarColor }}>
+                        {conversation.participantName.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body1" fontWeight={500}>
+                            {conversation.participantName}
                           </Typography>
-                        )}
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {message.content}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDistanceToNow(message.sentAt, { addSuffix: true })}
-                        </Typography>
-                      </>
-                    }
-                  />
-                </ListItem>
-              ))}
+                          {conversation.unreadCount > 0 && (
+                            <Chip label={`${conversation.unreadCount}`} size="small" color="primary" />
+                          )}
+                          {conversation.isUrgent && <Chip label="Urgent" size="small" color="error" />}
+                        </Box>
+                      }
+                      secondary={
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          >
+                            {conversation.lastMessage}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {lastMessageTime}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                );
+              })}
             </List>
           )}
         </Paper>
 
-        {/* Message Detail */}
-        {selectedMessage && (
-          <Paper sx={{ flex: 1, p: 3 }}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: selectedMessage.type === 'sms' ? 'primary.main' : 'secondary.main' }}>
-                  {selectedMessage.type === 'sms' ? <SmsIcon /> : <EmailIcon />}
-                </Avatar>
+        <Paper sx={{ flex: 1, minHeight: 620, p: 3, display: 'flex', flexDirection: 'column' }}>
+          {!selectedConversation ? (
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography color="text.secondary">Select a conversation to view messages</Typography>
+            </Box>
+          ) : conversationLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : conversationError ? (
+            <Alert severity="error">Unable to load conversation</Alert>
+          ) : visibleMessages.length === 0 ? (
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography color="text.secondary">No messages yet. Start the conversation.</Typography>
+            </Box>
+          ) : (
+            <>
+              <List sx={{ flex: 1, overflowY: 'auto', p: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {visibleMessages.map((message) => {
+                  const isOwnMessage = message.isFromCurrentUser;
+                  const sentTime = formatDistanceToNow(new Date(message.createdAt), { addSuffix: true });
+                  return (
+                    <ListItem
+                      key={message.id}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          maxWidth: '70%',
+                          backgroundColor: isOwnMessage ? 'primary.light' : 'grey.100',
+                          color: isOwnMessage ? 'primary.contrastText' : 'text.primary',
+                          borderRadius: 2,
+                          p: 2,
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+                          <Typography variant="subtitle2">
+                            {isOwnMessage ? 'You' : message.sender.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {sentTime}
+                          </Typography>
+                        </Box>
+                        {message.subject && (
+                          <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                            {message.subject}
+                          </Typography>
+                        )}
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {message.content}
+                        </Typography>
+                      </Box>
+                    </ListItem>
+                  );
+                })}
+                {hasNextPage && (
+                  <ListItem sx={{ justifyContent: 'center' }}>
+                    <Button variant="text" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                      {isFetchingNextPage ? 'Loading…' : 'Load older messages'}
+                    </Button>
+                  </ListItem>
+                )}
+              </List>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
-                  <Typography variant="h6">
-                    {selectedMessage.recipient.name}
+                  <Typography variant="h6" gutterBottom>
+                    {selectedConversation.participantName}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {selectedMessage.type === 'sms' ? 'SMS Message' : 'Email'}
+                    {selectedConversation.participantRole}
                   </Typography>
                 </Box>
-              </Box>
-              <Box>
-                <IconButton onClick={() => handleReply(selectedMessage)}>
-                  <ReplyIcon />
-                </IconButton>
-                <IconButton>
-                  <ForwardIcon />
-                </IconButton>
-                <IconButton>
+                <IconButton disabled>
                   <DeleteIcon />
                 </IconButton>
               </Box>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            {selectedMessage.subject && (
-              <Typography variant="h6" gutterBottom>
-                {selectedMessage.subject}
-              </Typography>
-            )}
-
-            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 2 }}>
-              {selectedMessage.content}
-            </Typography>
-
-            <Divider sx={{ my: 2 }} />
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Sent:
-                </Typography>
-                <Typography variant="body2">
-                  {selectedMessage.sentAt.toLocaleString()}
-                </Typography>
-              </Box>
-              {selectedMessage.deliveredAt && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Delivered:
-                  </Typography>
-                  <Typography variant="body2">
-                    {selectedMessage.deliveredAt.toLocaleString()}
-                  </Typography>
-                </Box>
-              )}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Status:
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  {getStatusIcon(selectedMessage.status)}
-                  <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                    {selectedMessage.status}
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          </Paper>
-        )}
+            </>
+          )}
+        </Paper>
       </Box>
 
-      {/* Message Composer Dialog */}
       <MessageComposer
-        open={composeOpen}
-        onClose={() => {
-          setComposeOpen(false);
-          setReplyTo(null);
-        }}
-        recipients={replyTo ? [{
-          id: replyTo.recipient.id,
-          name: replyTo.recipient.name,
-          type: replyTo.recipient.type,
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        recipients={selectedConversation ? [{
+          id: selectedConversation.participantId,
+          name: selectedConversation.participantName,
+          type: selectedConversation.participantRole.toLowerCase().includes('patient') ? 'patient' : 'staff',
         }] : []}
-        defaultType={replyTo?.type || 'sms'}
+        defaultType={latestMessageType}
+        onSent={handleMessageSent}
       />
     </Box>
   );

@@ -155,7 +155,7 @@ function mapDocument(dto: DocumentApiResponse): DocumentSummary {
 
 export async function fetchDocuments(filters: DocumentFilters = {}): Promise<DocumentSummary[]> {
   const response = await apiClient.get<EnvelopeOrValue<DocumentApiResponse[]>>(
-    '/api/Documents',
+    '/api/documents',
     toQueryParams(filters),
   );
   return unwrapEnvelope(response).map(mapDocument);
@@ -163,7 +163,7 @@ export async function fetchDocuments(filters: DocumentFilters = {}): Promise<Doc
 
 export async function fetchFolders(): Promise<DocumentFolder[]> {
   const response = await apiClient.get<EnvelopeOrValue<DocumentFolder[]>>(
-    '/api/Documents/folders',
+    '/api/documents/folders',
   );
   return unwrapEnvelope(response);
 }
@@ -177,29 +177,29 @@ export async function uploadDocument(
   formData.append('category', input.category);
   formData.append('tags', JSON.stringify(input.tags));
 
-  return uploadWithProgress('/api/Documents/upload', formData, {
+  return uploadWithProgress('/api/documents/upload', formData, {
     onUploadProgress: (percent) => onProgress?.(percent),
   });
 }
 
 export async function deleteDocument(documentId: string): Promise<void> {
-  await apiClient.delete(`/api/Documents/${documentId}`);
+  await apiClient.delete(`/api/documents/${documentId}`);
 }
 
 export async function toggleStar(documentId: string, starred: boolean): Promise<void> {
-  await apiClient.patch(`/api/Documents/${documentId}/star`, { starred });
+  await apiClient.patch(`/api/documents/${documentId}/star`, { starred });
 }
 
 export async function listDocumentShares(documentId: string): Promise<DocumentShare[]> {
   const response = await apiClient.get<EnvelopeOrValue<DocumentShareApi[]>>(
-    `/api/Documents/${documentId}/shares`,
+    `/api/documents/${documentId}/shares`,
   );
   return unwrapEnvelope(response).map(mapShare);
 }
 
 export async function createDocumentShare(documentId: string, payload: DocumentSharePayload): Promise<DocumentShare> {
   const response = await apiClient.post<DocumentShareApi>(
-    `/api/Documents/${documentId}/share`,
+    `/api/documents/${documentId}/share`,
     {
       userId: payload.userId,
       expiresAt: payload.expiresAt,
@@ -211,13 +211,13 @@ export async function createDocumentShare(documentId: string, payload: DocumentS
 }
 
 export async function revokeDocumentShare(documentId: string, shareId: string): Promise<void> {
-  await apiClient.delete(`/api/Documents/${documentId}/shares/${shareId}`);
+  await apiClient.delete(`/api/documents/${documentId}/shares/${shareId}`);
 }
 
 export async function requestDocumentReview(documentId: string, payload: DocumentReviewRequestPayload): Promise<void> {
-  await apiClient.post(`/api/Documents/${documentId}/review/request`, payload);
+  await apiClient.post(`/api/documents/${documentId}/review/request`, payload);
 }
 
 export async function completeDocumentReview(documentId: string, payload: DocumentReviewCompletePayload): Promise<void> {
-  await apiClient.post(`/api/Documents/${documentId}/review/complete`, payload);
+  await apiClient.post(`/api/documents/${documentId}/review/complete`, payload);
 }

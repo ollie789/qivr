@@ -34,10 +34,10 @@ public class ClinicDashboardController : ControllerBase
     [ProducesResponseType(typeof(ClinicDashboardDto), 200)]
     public async Task<IActionResult> GetDashboardOverview([FromQuery] DateTime? date = null)
     {
-        var providerId = _authorizationService.GetCurrentUserId(User);
+        var providerUserId = _authorizationService.GetCurrentUserId(User);
         var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
         
-        if (providerId == Guid.Empty || tenantId == Guid.Empty)
+        if (providerUserId == Guid.Empty || tenantId == Guid.Empty)
         {
             return Unauthorized("Provider not authenticated");
         }
@@ -50,7 +50,7 @@ public class ClinicDashboardController : ControllerBase
             // Get today's appointments for this provider
             var todaysAppointments = await _context.Appointments
                 .Include(a => a.Patient)
-                .Where(a => a.ProviderId == providerId
+                .Where(a => a.ProviderId == providerUserId
                     && a.ScheduledStart >= targetDate
                     && a.ScheduledStart < endDate
                     && a.Status != AppointmentStatus.Cancelled)
@@ -72,7 +72,7 @@ public class ClinicDashboardController : ControllerBase
             // Get patient queue (checked-in patients)
             var patientQueue = await _context.Appointments
                 .Include(a => a.Patient)
-                .Where(a => a.ProviderId == providerId
+                .Where(a => a.ProviderId == providerUserId
                     && a.ScheduledStart.Date == targetDate
                     && a.Status == AppointmentStatus.CheckedIn)
                 .OrderBy(a => a.ScheduledStart)
@@ -91,26 +91,26 @@ public class ClinicDashboardController : ControllerBase
             // Get clinic statistics
             var stats = new ClinicStatisticsDto
             {
-                TotalAppointmentsToday = todaysAppointments.Count,
+                TotalAppointmentsToday = todaysAppointments.Count(),
                 CompletedAppointments = await _context.Appointments
-                    .CountAsync(a => a.ProviderId == providerId
+                    .CountAsync(a => a.ProviderId == providerUserId
                         && a.ScheduledStart >= targetDate
                         && a.ScheduledStart < endDate
                         && a.Status == AppointmentStatus.Completed),
                 PendingAppointments = await _context.Appointments
-                    .CountAsync(a => a.ProviderId == providerId
+                    .CountAsync(a => a.ProviderId == providerUserId
                         && a.ScheduledStart >= targetDate
                         && a.ScheduledStart < endDate
                         && (a.Status == AppointmentStatus.Scheduled || a.Status == AppointmentStatus.Confirmed)),
                 AverageWaitTime = patientQueue.Any() ? (int)patientQueue.Average(p => p.WaitTime) : 0,
                 TotalPatientsThisWeek = await _context.Appointments
-                    .Where(a => a.ProviderId == providerId
+                    .Where(a => a.ProviderId == providerUserId
                         && a.ScheduledStart >= targetDate.AddDays(-7)
                         && a.ScheduledStart < endDate)
                     .Select(a => a.PatientId)
                     .Distinct()
                     .CountAsync(),
-                NoShowRate = await CalculateNoShowRate(providerId, targetDate.AddDays(-30), targetDate)
+                NoShowRate = await CalculateNoShowRate(providerUserId, targetDate.AddDays(-30), targetDate)
             };
 
             // Get recent PROM submissions for provider's patients
@@ -120,7 +120,7 @@ public class ClinicDashboardController : ControllerBase
                 .Include(r => r.PromInstance.Template)
                 .Where(r => _context.Appointments
                     .Any(a => a.PatientId == r.PromInstance.PatientId 
-                        && a.ProviderId == providerId))
+                        && a.ProviderId == providerUserId))
                 .OrderByDescending(r => r.CreatedAt)
                 .Take(10)
                 .Select(r => new PromSubmissionDto
@@ -136,7 +136,7 @@ public class ClinicDashboardController : ControllerBase
 
             var dashboard = new ClinicDashboardDto
             {
-                ProviderId = providerId,
+                ProviderId = providerUserId,
                 Date = targetDate,
                 TodaysAppointments = todaysAppointments,
                 PatientQueue = patientQueue,
@@ -150,7 +150,7 @@ public class ClinicDashboardController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting clinic dashboard for provider {ProviderId}", providerId);
+            _logger.LogError(ex, "Error getting clinic dashboard for provider {ProviderId}", providerUserId);
             return StatusCode(500, "An error occurred while loading the dashboard");
         }
     }
@@ -231,6 +231,43 @@ public class ClinicDashboardController : ControllerBase
         var startDate = DateTime.UtcNow.AddDays(-days);
         var endDate = DateTime.UtcNow;
 
+        var totalAppointmentsQuery = _context.Appointments
+            .Where(a => a.ProviderId == providerId && a.ScheduledStart >= startDate);
+
+        var totalAppointments = await totalAppointmentsQuery.CountAsync();
+
+        double averageAppointmentsPerDay = 0;
+        if (totalAppointments > 0)
+        {
+            var dailyCounts = await totalAppointmentsQuery
+                .GroupBy(a => a.ScheduledStart.Date)
+                .Select(g => g.Count())
+                .ToListAsync();
+
+            if (dailyCounts.Count > 0)
+            {
+                averageAppointmentsPerDay = dailyCounts.Average();
+            }
+        }
+
+        var appointmentTypeBreakdown = new List<AppointmentTypeMetricDto>();
+        if (totalAppointments > 0)
+        {
+            var typeCounts = await totalAppointmentsQuery
+                .GroupBy(a => a.AppointmentType)
+                .Select(g => new { Type = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            appointmentTypeBreakdown = typeCounts
+                .Select(t => new AppointmentTypeMetricDto
+                {
+                    Type = string.IsNullOrWhiteSpace(t.Type) ? "Unspecified" : t.Type,
+                    Count = t.Count,
+                    Percentage = (decimal)t.Count * 100 / totalAppointments
+                })
+                .ToList();
+        }
+
         var metrics = new ClinicMetricsDto
         {
             TotalPatientsSeen = await _context.Appointments
@@ -240,36 +277,18 @@ public class ClinicDashboardController : ControllerBase
                 .Select(a => a.PatientId)
                 .Distinct()
                 .CountAsync(),
-                
-            TotalAppointments = await _context.Appointments
-                .CountAsync(a => a.ProviderId == providerId
-                    && a.ScheduledStart >= startDate),
-                    
-            AverageAppointmentsPerDay = await _context.Appointments
-                .Where(a => a.ProviderId == providerId
-                    && a.ScheduledStart >= startDate)
-                .GroupBy(a => a.ScheduledStart.Date)
-                .Select(g => g.Count())
-                .AverageAsync(),
-                
+
+            TotalAppointments = totalAppointments,
+
+            AverageAppointmentsPerDay = averageAppointmentsPerDay,
+
             PromCompletionRate = await CalculatePromCompletionRate(providerId, startDate, endDate),
-            
+
             PatientSatisfactionScore = await CalculatePatientSatisfactionScore(providerId, startDate, endDate),
-            
+
             NoShowRate = await CalculateNoShowRate(providerId, startDate, endDate),
-            
-            AppointmentTypeBreakdown = await _context.Appointments
-                .Where(a => a.ProviderId == providerId
-                    && a.ScheduledStart >= startDate)
-                .GroupBy(a => a.AppointmentType)
-                .Select(g => new AppointmentTypeMetricDto
-                {
-                    Type = g.Key,
-                    Count = g.Count(),
-                    Percentage = (decimal)g.Count() * 100 / _context.Appointments
-                        .Count(a => a.ProviderId == providerId && a.ScheduledStart >= startDate)
-                })
-                .ToListAsync()
+
+            AppointmentTypeBreakdown = appointmentTypeBreakdown
         };
 
         return Ok(metrics);

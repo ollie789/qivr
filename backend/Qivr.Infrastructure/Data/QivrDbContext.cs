@@ -57,6 +57,10 @@ public class QivrDbContext : DbContext
     public DbSet<MedicalAllergy> MedicalAllergies => Set<MedicalAllergy>();
     public DbSet<MedicalImmunization> MedicalImmunizations => Set<MedicalImmunization>();
     public DbSet<AppointmentWaitlistEntry> AppointmentWaitlistEntries => Set<AppointmentWaitlistEntry>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -237,6 +241,11 @@ public class QivrDbContext : DbContext
                 .WithMany()  // No ProviderAppointments collection on User anymore
                 .HasForeignKey(e => e.ProviderId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ProviderProfile)
+                .WithMany()
+                .HasForeignKey(e => e.ProviderProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
                 
             entity.HasOne(e => e.Clinic)
                 .WithMany()
@@ -318,6 +327,7 @@ public class QivrDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.ConversationId, e.SentAt });
             entity.HasIndex(e => new { e.SenderId, e.DirectRecipientId });
+            entity.HasIndex(e => e.ProviderProfileId);
             
             // Support both conversation-based and direct messaging
             entity.HasOne(e => e.Conversation)
@@ -336,6 +346,11 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.DirectRecipientId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ProviderProfile)
+                .WithMany()
+                .HasForeignKey(e => e.ProviderProfileId)
+                .OnDelete(DeleteBehavior.SetNull);
                 
             entity.HasOne(e => e.Attachment)
                 .WithMany()
@@ -487,6 +502,68 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.ClinicId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
+            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+        });
+
+        // Role configuration
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.ToTable("roles");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+
+            entity.HasQueryFilter(e => e.TenantId == _tenantId || e.IsSystem);
+        });
+
+        // Permission configuration
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.ToTable("permissions");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Key).IsUnique();
+
+            entity.Property(e => e.Key).HasMaxLength(150);
+            entity.Property(e => e.Description).HasMaxLength(500);
+        });
+
+        // RolePermission configuration
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.ToTable("role_permissions");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.RoleId, e.PermissionId }).IsUnique();
+
+            entity.HasOne(e => e.Role)
+                .WithMany(r => r.RolePermissions)
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Permission)
+                .WithMany(p => p.RolePermissions)
+                .HasForeignKey(e => e.PermissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // UserRole configuration
+        modelBuilder.Entity<UserRole>(entity =>
+        {
+            entity.ToTable("user_roles");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.RoleId }).IsUnique();
+
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasQueryFilter(e => e.TenantId == _tenantId);
         });
         

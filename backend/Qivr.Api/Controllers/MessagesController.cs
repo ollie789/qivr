@@ -207,6 +207,7 @@ public class MessagesController : BaseApiController
         var query = _context.Messages
             .Include(m => m.Sender)
             .Include(m => m.Recipient)
+            .Include(m => m.ProviderProfile)
             .Where(m => m.TenantId == tenantId &&
                        ((m.SenderId == userId && m.RecipientId == otherUserId) ||
                         (m.SenderId == otherUserId && m.RecipientId == userId)));
@@ -235,6 +236,7 @@ public class MessagesController : BaseApiController
                 SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
                 RecipientId = m.RecipientId,
                 RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                ProviderProfileId = m.ProviderProfileId,
                 Subject = m.Subject ?? string.Empty,
                 Content = m.Content,
                 IsRead = m.IsRead,
@@ -282,6 +284,7 @@ public class MessagesController : BaseApiController
                 SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
                 RecipientId = m.RecipientId,
                 RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                ProviderProfileId = m.ProviderProfileId,
                 Subject = m.Subject ?? string.Empty,
                 Content = m.Content,
                 IsRead = m.IsRead,
@@ -377,6 +380,7 @@ public class MessagesController : BaseApiController
                 SenderName = $"{message.Sender?.FirstName} {message.Sender?.LastName}".Trim(),
                 RecipientId = message.RecipientId,
                 RecipientName = $"{message.Recipient?.FirstName} {message.Recipient?.LastName}".Trim(),
+                ProviderProfileId = message.ProviderProfileId,
                 Subject = message.Subject,
                 Content = message.Content,
                 IsRead = message.IsRead,
@@ -423,6 +427,7 @@ public class MessagesController : BaseApiController
                 SenderName = $"{message.Sender?.FirstName} {message.Sender?.LastName}".Trim(),
                 RecipientId = message.RecipientId,
                 RecipientName = $"{message.Recipient?.FirstName} {message.Recipient?.LastName}".Trim(),
+                ProviderProfileId = message.ProviderProfileId,
                 Subject = message.Subject,
                 Content = message.Content,
                 IsRead = message.IsRead,
@@ -547,6 +552,7 @@ public class MessagesController : BaseApiController
                 SenderName = $"{reply.Sender?.FirstName} {reply.Sender?.LastName}".Trim(),
                 RecipientId = reply.RecipientId,
                 RecipientName = $"{reply.Recipient?.FirstName} {reply.Recipient?.LastName}".Trim(),
+                ProviderProfileId = reply.ProviderProfileId,
                 Subject = reply.Subject,
                 Content = reply.Content,
                 IsRead = reply.IsRead,
@@ -586,6 +592,7 @@ public class MessageDto
     public string SenderName { get; set; } = string.Empty;
     public Guid RecipientId { get; set; }
     public string RecipientName { get; set; } = string.Empty;
+    public Guid? ProviderProfileId { get; set; }
     public string Subject { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public bool IsRead { get; set; }

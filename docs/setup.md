@@ -32,23 +32,38 @@ cd ..
 
 ## 3. Environment files
 
-Create per-app configuration by copying the provided examples:
+Each workspace reads configuration from `.env` if it exists. Create the files you need and paste the variables below—anything you omit falls back to the defaults baked into the codebase.
 
-```bash
-cp backend/.env.example backend/.env
-cp apps/clinic-dashboard/.env.example apps/clinic-dashboard/.env
-cp apps/patient-portal/.env.example apps/patient-portal/.env
-cp apps/widget/.env.example apps/widget/.env
+### Backend (`backend/.env`)
+
+```env
+# Optional when using the local dev auth provider
+DevAuth__Enabled=true
+DevAuth__DefaultTenantId=b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11
+
+# Only required when talking to Cognito
+COGNITO_REGION=ap-southeast-2
+COGNITO_USER_POOL_ID=
+COGNITO_CLIENT_ID=
 ```
 
-Populate the Cognito IDs and API URL once you have access. For day-to-day development the typical values are:
+Secrets should stay outside git. Use shell exports, `.env.local`, or your preferred secrets manager when pointing at shared environments.
+
+### Frontends (`apps/*/.env`)
 
 ```env
 VITE_API_URL=http://localhost:5050
+VITE_ENABLE_DEV_AUTH=true            # Switch to false when exercising Cognito
 VITE_DEFAULT_TENANT_ID=b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11
+VITE_DEFAULT_PATIENT_ID=33333333-3333-3333-3333-333333333333
+
+# Only needed for Cognito-backed sessions
+VITE_COGNITO_REGION=
+VITE_COGNITO_USER_POOL_ID=
+VITE_COGNITO_CLIENT_ID=
 ```
 
-Backend secrets should stay outside the repository. Export them in your shell (`.env.local`) or rely on the values injected by Docker Compose for local runs.
+When `VITE_ENABLE_DEV_AUTH=true`, the React apps rely on the API’s mock auth provider and no Cognito configuration is required.
 
 ## 4. Start infrastructure and services
 
@@ -71,21 +86,20 @@ npm run widget:dev
 
 Use separate terminals or a multiplexer (tmux/zellij). The scripts stream logs and restart on file changes.
 
+To stop everything, run `npm run docker:down` and `Ctrl+C` any watch processes. `./stop-all.sh` is available if you opted into `start-all.sh` above.
+
 ### Ports at a glance
 
 | Service | Port | Notes |
 | --- | --- | --- |
 | Backend API | 5050 | Swagger UI served at `/swagger` |
 | Clinic Dashboard | 3010 | Vite dev server, opens automatically |
-| Patient Portal | 3005 | Auth flow relies on Cognito env vars |
+| Patient Portal | 3005 | Uses dev auth by default, Cognito when configured |
 | Widget | 3000 | Embeddable booking widget |
 | PostgreSQL | 5432 | User: `qivr_user`, Database: `qivr` |
-| Redis | 6379 | Session/cache experiments |
+| Redis | 6379 | Ephemeral cache |
 | MinIO | 9000 (API), 9001 (console) | Credentials default to `minioadmin/minioadmin` |
 | Mailhog | 1025 (SMTP), 8025 (UI) | Useful for email testing |
-| pgAdmin | 8081 | Optional GUI for Postgres |
-
-To stop everything, run `npm run docker:down` and `Ctrl+C` any watch processes.
 
 ## 5. Database helpers
 

@@ -1,50 +1,103 @@
-import api from '../lib/api-client';
-import type { Appointment, ApiResponse } from '../types';
+import apiClient from '../lib/api-client';
+import type { Appointment } from '../types';
+
+interface CursorPaginationResponse<T> {
+  items: T[];
+  nextCursor?: string | null;
+  previousCursor?: string | null;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  count: number;
+}
+
+interface PatientListItemDto {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  medicalRecordNumber?: string | null;
+  isActive?: boolean;
+  createdAt?: string | null;
+  lastUpdated?: string | null;
+}
+
+interface PatientDetailsDto extends PatientListItemDto {
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  notes?: string | null;
+}
+
+export interface PatientAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+}
 
 export interface Patient {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
-  dateOfBirth: string;
-  gender: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    postcode: string;
-  };
-  medicalRecordNumber: string;
+  phone?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: PatientAddress | null;
+  medicalRecordNumber?: string;
   status: 'active' | 'inactive' | 'pending';
   lastVisit?: string;
   nextAppointment?: string;
-  conditions: string[];
+  conditions?: string[];
   provider?: string;
   insuranceProvider?: string;
-  registeredDate: string;
+  insuranceNumber?: string;
+  registeredDate?: string;
   tags: string[];
   createdAt?: string;
   updatedAt?: string;
+  notes?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  recentAppointments?: PatientAppointmentSummary[];
+  recentProms?: PatientPromSummary[];
+}
+
+export interface PatientAppointmentSummary {
+  id: string;
+  date: string;
+  provider: string;
+  type: string;
+  status: string;
+  notes?: string;
+}
+
+export interface PatientPromSummary {
+  id: string;
+  templateName: string;
+  status: string;
+  createdAt?: string;
+  completedAt?: string;
+  score?: number;
 }
 
 export interface CreatePatientDto {
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
-  dateOfBirth: string;
-  gender: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    postcode: string;
-  };
+  phone?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: PatientAddress;
   insuranceProvider?: string;
   medicareNumber?: string;
   initialConditions?: string[];
-  intakeId?: string; // Link to intake submission
+  intakeId?: string;
 }
 
 export interface UpdatePatientDto extends Partial<CreatePatientDto> {
@@ -58,296 +111,222 @@ export interface PatientSearchParams {
   status?: string;
   provider?: string;
   condition?: string;
-  page?: number;
-  pageSize?: number;
+  limit?: number;
+  cursor?: string;
 }
 
 export interface PatientListResponse {
   data: Patient[];
-  total: number;
-  page: number;
-  pageSize: number;
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  nextCursor?: string | null;
 }
 
-type PatientRecord = Partial<Patient> & {
-  patientId?: string;
-  mrn?: string;
+const toSafeString = (value: unknown, fallback = ''): string =>
+  typeof value === 'string' && value.trim().length > 0 ? value : fallback;
+
+const toIsoString = (value: unknown): string => {
+  if (!value) {
+    return new Date().toISOString();
+  }
+  const candidate = typeof value === 'string' ? value : String(value);
+  const parsed = new Date(candidate);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 };
 
-class PatientApi {
-  private basePath = '/api/v1';
+const generateId = () =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `patient-${Date.now()}`;
 
-  // Get all patients with optional filters
-  async getPatients(_params?: PatientSearchParams): Promise<PatientListResponse> {
-    // NOTE: Backend doesn't have a generic patients list endpoint
-    // Return mock data for now
-    console.log('Note: Backend does not have /api/v1/patients endpoint - using mock data');
+class PatientApi {
+  async getPatients(params: PatientSearchParams = {}): Promise<PatientListResponse> {
+    const payload = await apiClient.get<CursorPaginationResponse<PatientListItemDto> | PatientListItemDto[]>(
+      '/api/patients',
+      {
+        limit: params.limit ?? 200,
+        cursor: params.cursor,
+        search: params.search,
+        status: params.status,
+        providerId: params.provider,
+      },
+    );
+
+    const items = Array.isArray(payload)
+      ? payload
+      : payload?.items ?? (payload as any)?.Items ?? [];
+
+    const patients = (items as PatientListItemDto[]).map(this.mapPatientDto);
+
     return {
-      data: this.getMockPatients(),
-      total: 2,
+      data: patients,
+      total: Array.isArray(payload) ? patients.length : payload?.count ?? patients.length,
       page: 1,
-      pageSize: 10,
+      pageSize: patients.length,
+      nextCursor: Array.isArray(payload) ? undefined : payload?.nextCursor ?? (payload as any)?.NextCursor,
     };
   }
 
-  // Get a single patient by ID
   async getPatient(id: string): Promise<Patient | undefined> {
     try {
-      // Use patient-records endpoint
-      const data = await api.get<Patient>(`/api/patient-records/${id}`);
-      return data;
+      const dto = await apiClient.get<PatientDetailsDto>(`/api/patients/${id}`);
+      return this.mapPatientDto(dto);
     } catch (error) {
       console.error('Error fetching patient:', error);
-      // Return mock data for development
-      return this.getMockPatients().find(p => p.id === id);
+      return undefined;
     }
   }
 
-  // Create a new patient
   async createPatient(patient: CreatePatientDto): Promise<Patient> {
-    try {
-      return await api.post<Patient>(`${this.basePath}/patients`, patient);
-    } catch (error) {
-      console.error('Error creating patient:', error);
-      // Return mock response for development
-      return {
-        id: `patient-${Date.now()}`,
-        ...patient,
-        medicalRecordNumber: `MRN${Date.now()}`,
-        status: 'active' as const,
-        registeredDate: new Date().toISOString(),
-        conditions: patient.initialConditions || [],
-        tags: [],
-        createdAt: new Date().toISOString(),
-      };
-    }
-  }
-
-  // Update an existing patient
-  async updatePatient(id: string, updates: UpdatePatientDto): Promise<Patient | undefined> {
-    try {
-      return await api.patch<Patient>(`${this.basePath}/patients/${id}`, updates);
-    } catch (error) {
-      console.error('Error updating patient:', error);
-      // Return mock response for development
-      const existing = this.getMockPatients().find(p => p.id === id);
-      return { ...existing, ...updates, updatedAt: new Date().toISOString() };
-    }
-  }
-
-  // Delete a patient (soft delete)
-  async deletePatient(id: string) {
-    try {
-      return await api.delete<ApiResponse<void>>(`${this.basePath}/patients/${id}`);
-    } catch (error) {
-      console.error('Error deleting patient:', error);
-      return { success: true };
-    }
-  }
-
-  // Get patient's medical history
-  async getPatientHistory(id: string) {
-    try {
-      return await api.get<{
-        appointments: Appointment[];
-        evaluations: unknown[];
-        proms: unknown[];
-        documents: unknown[];
-      }>(`${this.basePath}/patients/${id}/history`);
-    } catch (error) {
-      console.error('Error fetching patient history:', error);
-      return {
-        appointments: [],
-        evaluations: [],
-        proms: [],
-        documents: [],
-      };
-    }
-  }
-
-  // Get patient's appointments
-  async getPatientAppointments(id: string) {
-    try {
-      return await api.get<Appointment[]>(`${this.basePath}/patients/${id}/appointments`);
-    } catch (error) {
-      console.error('Error fetching patient appointments:', error);
-      return [];
-    }
-  }
-
-  // Get patient's evaluations
-  async getPatientEvaluations(id: string) {
-    try {
-      return await api.get<unknown[]>(`${this.basePath}/patients/${id}/evaluations`);
-    } catch (error) {
-      console.error('Error fetching patient evaluations:', error);
-      return [];
-    }
-  }
-
-  // Link patient to intake submission
-  async linkPatientToIntake(patientId: string, intakeId: string) {
-    try {
-      return await api.post<ApiResponse<{ success: boolean }>>(`${this.basePath}/patients/${patientId}/link-intake`, { intakeId });
-    } catch (error) {
-      console.error('Error linking patient to intake:', error);
-      return { success: true };
-    }
-  }
-
-  // Create patient from intake submission
-  async createPatientFromIntake(intakeId: string, patientData: CreatePatientDto) {
-    try {
-      return await api.post<Patient>(`${this.basePath}/patients/from-intake`, {
-        intakeId,
-        ...patientData,
-      });
-    } catch (error) {
-      console.error('Error creating patient from intake:', error);
-      // Return mock response for development
-      return this.createPatient({ ...patientData, intakeId });
-    }
-  }
-
-  // Export patients data
-  async exportPatients(format: 'csv' | 'pdf' | 'excel' = 'csv', filters?: PatientSearchParams) {
-    try {
-      const queryParams = new URLSearchParams({ format });
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined) queryParams.append(key, String(value));
-        });
-      }
-      // Note: For blob responses, we need to use native fetch with auth
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/patients/export?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
-        },
-      });
-      const blob = await response.blob();
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `patients_${Date.now()}.${format}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error exporting patients:', error);
-      throw error;
-    }
-  }
-
-  // Helper to map patient record from backend to Patient interface
-  private mapPatientRecord(record: PatientRecord): Patient {
+    console.warn('createPatient is not yet backed by an API endpoint; returning local echo value');
     return {
-      id: record.id || record.patientId,
-      firstName: record.firstName || '',
-      lastName: record.lastName || '',
-      email: record.email || '',
-      phone: record.phone || '',
-      dateOfBirth: record.dateOfBirth || '',
-      gender: record.gender || '',
-      address: record.address || {
-        street: '',
-        city: '',
-        state: '',
-        postcode: '',
-      },
-      medicalRecordNumber: record.medicalRecordNumber || record.mrn || '',
-      status: record.status || 'active',
-      lastVisit: record.lastVisit,
-      nextAppointment: record.nextAppointment,
-      conditions: record.conditions || [],
-      provider: record.provider,
-      insuranceProvider: record.insuranceProvider,
-      registeredDate: record.registeredDate || record.createdAt,
-      tags: record.tags || [],
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
+      id: `patient-${Date.now()}`,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      email: patient.email,
+      phone: patient.phone,
+      dateOfBirth: patient.dateOfBirth,
+      gender: patient.gender,
+      address: patient.address ?? null,
+      medicalRecordNumber: undefined,
+      status: 'active',
+      registeredDate: new Date().toISOString(),
+      conditions: patient.initialConditions ?? [],
+      tags: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      insuranceProvider: patient.insuranceProvider,
     };
   }
 
-  // Mock data for development
-  private getMockPatients(): Patient[] {
-    return [
-      {
-        id: '1',
-        firstName: 'Sarah',
-        lastName: 'Johnson',
-        email: 'sarah.johnson@email.com',
-        phone: '+61 432 123 456',
-        dateOfBirth: '1985-03-15',
-        gender: 'Female',
-        address: {
-          street: '123 Collins St',
-          city: 'Melbourne',
-          state: 'VIC',
-          postcode: '3000',
-        },
-        medicalRecordNumber: 'MRN001234',
-        status: 'active',
-        lastVisit: '2024-01-10',
-        nextAppointment: '2024-02-15',
-        conditions: ['Lower Back Pain', 'Sciatica'],
-        provider: 'Dr. Emily Chen',
-        insuranceProvider: 'Medibank Private',
-        registeredDate: '2023-06-15',
-        tags: ['Regular', 'Chronic Pain'],
-      },
-      {
-        id: '2',
-        firstName: 'Michael',
-        lastName: 'Thompson',
-        email: 'michael.t@email.com',
-        phone: '+61 412 987 654',
-        dateOfBirth: '1972-11-22',
-        gender: 'Male',
-        address: {
-          street: '456 George St',
-          city: 'Sydney',
-          state: 'NSW',
-          postcode: '2000',
-        },
-        medicalRecordNumber: 'MRN001235',
-        status: 'active',
-        lastVisit: '2024-01-12',
-        conditions: ['Knee Injury', 'Post-Surgery Rehab'],
-        provider: 'Dr. James Williams',
-        insuranceProvider: 'BUPA',
-        registeredDate: '2023-09-20',
-        tags: ['Post-Op'],
-      },
-      {
-        id: '3',
-        firstName: 'Lisa',
-        lastName: 'Chen',
-        email: 'lisa.chen@email.com',
-        phone: '+61 423 456 789',
-        dateOfBirth: '1990-07-08',
-        gender: 'Female',
-        address: {
-          street: '789 Queen St',
-          city: 'Brisbane',
-          state: 'QLD',
-          postcode: '4000',
-        },
-        medicalRecordNumber: 'MRN001236',
-        status: 'active',
-        lastVisit: '2024-01-15',
-        nextAppointment: '2024-01-25',
-        conditions: ['Shoulder Impingement', 'Neck Pain'],
-        provider: 'Dr. Priya Patel',
-        insuranceProvider: 'HCF',
-        registeredDate: '2023-11-10',
-        tags: ['Regular'],
-      },
-    ];
+  async updatePatient(id: string, updates: UpdatePatientDto): Promise<Patient | undefined> {
+    console.warn('updatePatient is not yet backed by an API endpoint; returning merged value');
+    const existing = await this.getPatient(id);
+    if (!existing) {
+      return undefined;
+    }
+    return {
+      ...existing,
+      ...updates,
+      address: updates.address ?? existing.address,
+      tags: updates.tags ?? existing.tags,
+      updatedAt: new Date().toISOString(),
+    };
   }
+
+  async deletePatient(id: string) {
+    console.warn('deletePatient is not yet backed by an API endpoint');
+    return { success: true };
+  }
+
+  async getPatientHistory(id: string) {
+    console.warn('getPatientHistory is not yet backed by an API endpoint');
+    return {
+      appointments: [] as Appointment[],
+      evaluations: [],
+      proms: [],
+      documents: [],
+    };
+  }
+
+  async getPatientAppointments(id: string) {
+    const payload = await apiClient.get<CursorPaginationResponse<Appointment> | Appointment[]>(
+      '/api/appointments',
+      { patientId: id, limit: 50, sortDescending: true },
+    );
+
+    const items = Array.isArray(payload)
+      ? payload
+      : payload?.items ?? (payload as any)?.Items ?? [];
+
+    return items as Appointment[];
+  }
+
+  async getPatientEvaluations(id: string) {
+    console.warn('getPatientEvaluations is not yet backed by an API endpoint');
+    return [];
+  }
+
+  async linkPatientToIntake(patientId: string, intakeId: string) {
+    console.warn('linkPatientToIntake is not yet backed by an API endpoint');
+    return { success: true };
+  }
+
+  async createPatientFromIntake(_intakeId: string, patientData: CreatePatientDto) {
+    return this.createPatient(patientData);
+  }
+
+  private mapPatientDto = (dto: PatientListItemDto | PatientDetailsDto): Patient => {
+    const firstName = dto.firstName ?? '';
+    const lastName = dto.lastName ?? '';
+    const email = dto.email ?? '';
+    const status: Patient['status'] = dto.isActive === false ? 'inactive' : 'active';
+
+    const address: PatientAddress | null = dto.address || dto.city || dto.state || dto.postalCode
+      ? {
+          street: dto.address ?? undefined,
+          city: (dto as PatientDetailsDto).city ?? undefined,
+          state: (dto as PatientDetailsDto).state ?? undefined,
+          postcode: (dto as PatientDetailsDto).postalCode ?? undefined,
+        }
+      : null;
+
+    const details = dto as PatientDetailsDto;
+
+    const rawAppointments = (details as any).recentAppointments ?? (details as any).RecentAppointments;
+    const recentAppointments: PatientAppointmentSummary[] | undefined = Array.isArray(rawAppointments)
+      ? rawAppointments.map((appointment: any) => ({
+          id: String(appointment.id ?? appointment.Id ?? generateId()),
+          date: toIsoString(appointment.date ?? appointment.Date ?? new Date().toISOString()),
+          provider: toSafeString(appointment.provider ?? appointment.Provider, 'Clinician'),
+          type: toSafeString(appointment.type ?? appointment.Type, 'consultation'),
+          status: toSafeString(appointment.status ?? appointment.Status, 'unknown'),
+          notes: appointment.notes ?? appointment.Notes ?? undefined,
+        }))
+      : undefined;
+
+    const rawProms = (details as any).recentProms ?? (details as any).RecentProms;
+    const recentProms: PatientPromSummary[] | undefined = Array.isArray(rawProms)
+      ? rawProms.map((prom: any) => ({
+          id: String(prom.id ?? prom.Id ?? generateId()),
+          templateName: toSafeString(prom.templateName ?? prom.TemplateName, 'PROM'),
+          status: toSafeString(prom.status ?? prom.Status, 'pending'),
+          createdAt: prom.createdAt ?? prom.CreatedAt ? toIsoString(prom.createdAt ?? prom.CreatedAt) : undefined,
+          completedAt: prom.completedAt ?? prom.CompletedAt ? toIsoString(prom.completedAt ?? prom.CompletedAt) : undefined,
+          score: typeof prom.score === 'number' ? prom.score : (typeof prom.Score === 'number' ? prom.Score : undefined),
+        }))
+      : undefined;
+
+    return {
+      id: dto.id,
+      firstName,
+      lastName,
+      email,
+      phone: dto.phoneNumber ?? undefined,
+      dateOfBirth: dto.dateOfBirth ?? undefined,
+      gender: dto.gender ?? details.gender ?? undefined,
+      address,
+      medicalRecordNumber: dto.medicalRecordNumber ?? undefined,
+      status,
+      lastVisit: recentAppointments?.[0]?.date,
+      nextAppointment: undefined,
+      conditions: [],
+      provider: undefined,
+      insuranceProvider: details.insuranceProvider ?? undefined,
+      insuranceNumber: details.insuranceNumber ?? undefined,
+      registeredDate: dto.createdAt ?? undefined,
+      tags: [],
+      createdAt: dto.createdAt ?? undefined,
+      updatedAt: dto.lastUpdated ?? undefined,
+      notes: details.notes ?? undefined,
+      emergencyContact: details.emergencyContact ?? undefined,
+      emergencyPhone: details.emergencyPhone ?? undefined,
+      recentAppointments,
+      recentProms,
+    };
+  };
 }
 
 export const patientApi = new PatientApi();
+export type { Patient, PatientListResponse };

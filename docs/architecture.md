@@ -32,7 +32,7 @@ qivr/
 Key middleware:
 - `TenantMiddleware` resolves the tenant from headers/subdomains.
 - `ExceptionHandlingMiddleware` ensures consistent API error envelopes.
-- `Authentication` integrates AWS Cognito JWT validation.
+- `Authentication` wires either the DevAuth mock provider (local default) or Cognito JWT validation depending on configuration.
 
 ## Frontend (React + Vite)
 
@@ -56,7 +56,7 @@ All three apps share the same tooling stack: TypeScript, React Router, React Que
 ## Shared packages
 
 - `packages/http` is a lightweight wrapper around `fetch` that:
-  - Adds Cognito tokens and request IDs to every call
+  - Attaches auth headers (or relies on http-only cookies) consistently across apps
   - Standardises error handling through `HttpError`
   - Provides convenience helpers (`getJson`, `postJson`, retry logic)
 

@@ -19,6 +19,16 @@ export interface PaginatedResponse<T> {
   hasMore: boolean;
 }
 
+// Cursor-based pagination wrapper matching API responses
+export interface CursorPaginationResponse<T> {
+  items: T[];
+  nextCursor?: string | null;
+  previousCursor?: string | null;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  count: number;
+}
+
 // Common error response
 export interface ApiError {
   message: string;

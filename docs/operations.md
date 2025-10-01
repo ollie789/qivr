@@ -52,15 +52,17 @@ Backend variables (set via environment or user secrets):
 
 - `CONNECTION_STRING` – Postgres connection
 - `ASPNETCORE_ENVIRONMENT` – `Development`, `Staging`, `Production`
-- `COGNITO_*` – User pool IDs, client IDs, domain, region
+- `DevAuth__Enabled` – keep `true` for local mock auth, force `false` in shared/prod environments
+- `COGNITO_*` – User pool IDs, client IDs, domain, region (required when using Cognito)
 - `MESSAGE_MEDIA_*` – Optional SMS integration
 - `OTEL_EXPORTER_OTLP_ENDPOINT` – Jaeger/OpenTelemetry collector
 
 Frontend variables (per app `.env`):
 
 - `VITE_API_URL` – Base URL for the API (http://localhost:5050 in dev)
+- `VITE_ENABLE_DEV_AUTH` – `true` uses the mock provider, `false` integrates with Cognito
 - `VITE_DEFAULT_TENANT_ID` / `VITE_DEFAULT_PATIENT_ID` – Convenience IDs for local fixtures
-- `VITE_COGNITO_*` – Region, user pool, client IDs matched to the environment
+- `VITE_COGNITO_*` – Region, user pool, client IDs matched to the environment (only needed when dev auth is disabled)
 
 ## Deployment outline
 
@@ -83,12 +85,12 @@ The detailed AWS checklist previously lived in `docs/checklist.md`; it now resid
 
 | Symptom | Quick checks |
 | --- | --- |
-| API 404/401 responses | Verify `ASPNETCORE_ENVIRONMENT` and Cognito IDs, inspect `backend/logs` output |
+| API 404/401 responses | Verify `ASPNETCORE_ENVIRONMENT` and auth mode (`DevAuth__Enabled` vs Cognito IDs), inspect `backend/logs` output |
 | Frontend cannot reach API | Confirm `VITE_API_URL` matches the running backend and CORS allows the origin |
 | Tenant mismatch errors | Ensure the `X-Tenant-Id` header matches the authenticated user’s tenant GUID |
 | Database migration failures | Confirm the `dotnet-ef` CLI is installed and Postgres is running (`docker compose ps`) |
 | MinIO upload failures | Regenerate credentials or clear buckets via the MinIO console |
-| Cognito login loop | Clear `localStorage` and `sessionStorage`; run `node test-auth-flow.mjs` to debug |
+| Auth mode not switching | Stop the API, clear browser storage, update `DevAuth__Enabled` / `VITE_ENABLE_DEV_AUTH`, then restart |
 
 ## Incident basics
 

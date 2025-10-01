@@ -1,11 +1,11 @@
 import apiClient from '../lib/api-client';
-import type {
-  CreatePromTemplateRequest,
-  PromTemplateDetail,
-  PromTemplateSummary,
+import {
+  promApi,
+  NotificationMethod,
+  type CreatePromTemplateRequest,
+  type PromTemplateDetail,
+  type PromTemplateSummary,
 } from "./promApi";
-
-import { NotificationMethod } from "./promApi";
 
 export interface SchedulePromPayload {
   templateKey: string;
@@ -38,7 +38,7 @@ export const promsApi = {
     );
   },
   schedule: async (payload: SchedulePromPayload) => {
-    return await apiClient.post("/api/v1/proms/schedule", payload);
+    return promApi.sendProm(payload);
   },
   submitAnswers: async (
     instanceId: string,

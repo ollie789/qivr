@@ -26,6 +26,6 @@
 - Flag database or Cognito changes in the PR body and link the relevant issue or ticket.
 
 ## Environment & Access Tips
-- Copy `.env.example` into each app (e.g., `apps/clinic-dashboard/.env`) and fill Cognito IDs, API URLs, and tenant values.
+- Create `.env` files only when you need overrides. Dev auth defaults are wired in (`DevAuth:Enabled=true`, `VITE_ENABLE_DEV_AUTH=true`); supply Cognito IDs when working against shared pools.
 - Local services (Postgres, Redis, MinIO, Mailhog) ship via `docker-compose.yml`; `npm run docker:logs` helps diagnose infra issues.
 - Support matrix: Node 20+, .NET 8; run `install.sh` on first setup and keep secrets out of source control.

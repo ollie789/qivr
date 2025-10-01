@@ -39,6 +39,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import type { ChipProps } from '@mui/material/Chip';
+import apiClient from '../lib/api-client';
 
 interface Evaluation {
   id: string;
@@ -113,18 +114,7 @@ export const Evaluations = () => {
   const fetchEvaluations = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/v1/evaluations', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch evaluations');
-      }
-      
-      const data = await response.json();
+      const data = await apiClient.get<Evaluation[]>('/api/v1/evaluations');
       setEvaluations(data);
     } catch (error) {
       console.error('Error fetching evaluations:', error);

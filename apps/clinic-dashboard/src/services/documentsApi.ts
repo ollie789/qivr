@@ -1,137 +1,257 @@
+import { uploadWithProgress } from '@qivr/http';
 import apiClient from '../lib/api-client';
+
+export type DocumentCategory =
+  | 'intake'
+  | 'imaging'
+  | 'lab-report'
+  | 'insurance'
+  | 'treatment-plan'
+  | 'billing'
+  | 'consent'
+  | 'other'
+  | string;
 
 export interface Document {
   id: string;
   fileName: string;
   fileSize: number;
+  fileSizeFormatted: string;
   mimeType: string;
   category: string;
-  patientId?: string;
+  patientId: string;
+  patientName?: string;
   providerId?: string;
+  providerName?: string;
+  uploadedById?: string;
   uploadedBy: string;
   uploadedAt: string;
-  description?: string;
-  tags?: string[];
+  description?: string | null;
+  tags: string[];
   url?: string;
   thumbnailUrl?: string;
+  requiresReview: boolean;
+  reviewStatus: string;
+  reviewNotes?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+}
+
+export interface DocumentShare {
+  shareId: string;
+  sharedWithUserId: string;
+  sharedWithName: string;
+  sharedByUserId: string;
+  sharedByName: string;
+  sharedAt: string;
+  expiresAt?: string | null;
+  accessLevel: string;
+  message?: string | null;
+  revoked: boolean;
+  revokedAt?: string | null;
 }
 
 export interface UploadDocumentRequest {
   file: File;
   category: string;
   patientId?: string;
+  providerId?: string;
+  providerName?: string;
   description?: string;
   tags?: string[];
 }
 
+type DocumentListParams = {
+  patientId?: string;
+  category?: string;
+  providerId?: string;
+  search?: string;
+  requiresReview?: boolean;
+  page?: number;
+  pageSize?: number;
+};
+
+interface DocumentResponseDto {
+  id: string;
+  patientId: string;
+  patientName?: string;
+  providerId?: string | null;
+  providerName?: string | null;
+  fileName: string;
+  fileSize: number;
+  fileSizeFormatted: string;
+  mimeType: string;
+  category: string;
+  description?: string | null;
+  uploadedById?: string | null;
+  uploadedBy: string;
+  uploadedAt: string;
+  tags?: string[];
+  url?: string | null;
+  thumbnailUrl?: string | null;
+  requiresReview: boolean;
+  reviewStatus: string;
+  reviewNotes?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  shares?: DocumentShare[];
+}
+
+const mapDocument = (dto: DocumentResponseDto): Document => ({
+  id: dto.id,
+  patientId: dto.patientId,
+  patientName: dto.patientName,
+  providerId: dto.providerId ?? undefined,
+  providerName: dto.providerName ?? undefined,
+  fileName: dto.fileName,
+  fileSize: dto.fileSize,
+  fileSizeFormatted: dto.fileSizeFormatted,
+  mimeType: dto.mimeType,
+  category: dto.category,
+  description: dto.description,
+  uploadedById: dto.uploadedById ?? undefined,
+  uploadedBy: dto.uploadedBy,
+  uploadedAt: dto.uploadedAt,
+  tags: dto.tags ?? [],
+  url: dto.url ?? undefined,
+  thumbnailUrl: dto.thumbnailUrl ?? undefined,
+  requiresReview: dto.requiresReview,
+  reviewStatus: dto.reviewStatus,
+  reviewNotes: dto.reviewNotes,
+  reviewedBy: dto.reviewedBy,
+  reviewedAt: dto.reviewedAt,
+});
+
 class DocumentsApi {
-  async getDocuments(params?: {
-    category?: string;
-    patientId?: string;
-    providerId?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }) {
-    try {
-      // If patientId is provided, use the patient-specific endpoint
-      if (params?.patientId) {
-        const response = await apiClient.get(`/api/Documents/patient/${params.patientId}`);
-        return response.data;
-      }
-      // No generic documents endpoint exists, return mock data
-      console.log('Note: Backend does not have generic /api/Documents endpoint - using mock data');
-      return this.getMockDocuments();
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      return this.getMockDocuments();
-    }
+  async list(params: DocumentListParams = {}): Promise<Document[]> {
+    const payload = await apiClient.get<DocumentResponseDto[]>(
+      '/api/documents',
+      {
+        patientId: params.patientId,
+        category: params.category,
+        providerId: params.providerId,
+        search: params.search,
+        requiresReview: params.requiresReview,
+        page: params.page,
+        pageSize: params.pageSize,
+      },
+    );
+
+    return payload.map(mapDocument);
   }
 
-  async getDocument(id: string) {
-    const response = await apiClient.get(`/api/Documents/${id}`);
-    return response.data;
+  async listForPatient(patientId: string, params: Omit<DocumentListParams, 'patientId'> = {}): Promise<Document[]> {
+    const payload = await apiClient.get<DocumentResponseDto[]>(
+      `/api/documents/patient/${patientId}`,
+      {
+        category: params.category,
+        page: params.page,
+        pageSize: params.pageSize,
+      },
+    );
+
+    return payload.map(mapDocument);
   }
 
-  async uploadDocument(data: UploadDocumentRequest) {
+  async get(documentId: string): Promise<Document> {
+    const payload = await apiClient.get<DocumentResponseDto>(`/api/documents/${documentId}`);
+    return mapDocument(payload);
+  }
+
+  async upload(request: UploadDocumentRequest, onProgress?: (percent: number) => void): Promise<Document> {
     const formData = new FormData();
-    formData.append('file', data.file);
-    formData.append('category', data.category);
-    if (data.patientId) formData.append('patientId', data.patientId);
-    if (data.description) formData.append('description', data.description);
-    if (data.tags) formData.append('tags', JSON.stringify(data.tags));
+    formData.append('file', request.file);
+    formData.append('category', request.category);
 
-    const response = await apiClient.post('/api/Documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    if (request.patientId) {
+      formData.append('patientId', request.patientId);
+    }
+
+    if (request.providerId) {
+      formData.append('providerId', request.providerId);
+    }
+
+    if (request.providerName) {
+      formData.append('providerName', request.providerName);
+    }
+
+    if (request.description) {
+      formData.append('description', request.description);
+    }
+
+    if (request.tags?.length) {
+      formData.append('tags', JSON.stringify(request.tags));
+    }
+
+    const payload = await uploadWithProgress('/api/documents/upload', formData, {
+      onUploadProgress: (percent) => onProgress?.(percent),
     });
-    return response.data;
+
+    return mapDocument(payload as DocumentResponseDto);
   }
 
-  async updateDocument(id: string, data: {
-    category?: string;
-    description?: string;
-    tags?: string[];
-  }) {
-    const response = await apiClient.put(`/api/Documents/${id}`, data);
-    return response.data;
+  async delete(documentId: string): Promise<void> {
+    await apiClient.delete(`/api/documents/${documentId}`);
   }
 
-  async deleteDocument(id: string) {
-    const response = await apiClient.delete(`/api/Documents/${id}`);
-    return response.data;
+  async download(documentId: string): Promise<Blob> {
+    return apiClient.get(`/api/documents/${documentId}/download`);
   }
 
-  async downloadDocument(id: string) {
-    const response = await apiClient.get(`/api/Documents/${id}/download`, {
-      responseType: 'blob',
-    });
-    return response.data;
-  }
-
-  async shareDocument(id: string, data: {
-    recipientEmail: string;
+  async share(documentId: string, payload: {
+    userId: string;
+    expiresAt?: string;
     message?: string;
-    expiresIn?: number;
-  }) {
-    const response = await apiClient.post(`/api/Documents/${id}/share`, data);
-    return response.data;
+    accessLevel?: string;
+  }): Promise<DocumentShare> {
+    return apiClient.post(`/api/documents/${documentId}/share`, payload);
   }
 
-  async getCategories() {
-    const response = await apiClient.get('/api/Documents/categories');
-    return response.data;
+  async listShares(documentId: string): Promise<DocumentShare[]> {
+    return apiClient.get(`/api/documents/${documentId}/shares`);
   }
 
-  private getMockDocuments() {
-    return [
-      {
-        id: '1',
-        fileName: 'patient-intake-form.pdf',
-        fileSize: 245000,
-        mimeType: 'application/pdf',
-        category: 'intake',
-        patientId: '1',
-        uploadedBy: 'Sarah Johnson',
-        uploadedAt: new Date('2024-01-15').toISOString(),
-        description: 'Initial intake form',
-        tags: ['intake', 'new-patient'],
-      },
-      {
-        id: '2',
-        fileName: 'x-ray-results.jpg',
-        fileSize: 1850000,
-        mimeType: 'image/jpeg',
-        category: 'imaging',
-        patientId: '2',
-        uploadedBy: 'Dr. James Williams',
-        uploadedAt: new Date('2024-01-12').toISOString(),
-        description: 'Knee X-ray',
-        tags: ['x-ray', 'knee'],
-      },
-    ];
+  async revokeShare(documentId: string, shareId: string): Promise<void> {
+    await apiClient.delete(`/api/documents/${documentId}/shares/${shareId}`);
+  }
+
+  async requestReview(documentId: string, payload: {
+    assignedToUserId?: string;
+    notes?: string;
+  }): Promise<Document> {
+    const response = await apiClient.post<DocumentResponseDto>(
+      `/api/documents/${documentId}/review/request`,
+      payload,
+    );
+    return mapDocument(response);
+  }
+
+  async completeReview(documentId: string, payload: {
+    status?: string;
+    notes?: string;
+    agreesWithAssessment?: boolean;
+    recommendations?: string;
+  }): Promise<Document> {
+    const response = await apiClient.post<DocumentResponseDto>(
+      `/api/documents/${documentId}/review/complete`,
+      payload,
+    );
+    return mapDocument(response);
+  }
+
+  async categories(): Promise<string[]> {
+    return apiClient.get('/api/documents/categories');
   }
 }
 
 export const documentsApi = new DocumentsApi();
+export const {
+  list: getDocuments,
+  get: getDocument,
+  upload,
+  delete: deleteDocument,
+  download,
+  share,
+  categories: getCategories,
+} = documentsApi;
+

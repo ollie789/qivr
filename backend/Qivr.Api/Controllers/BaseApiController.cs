@@ -21,14 +21,26 @@ public abstract class BaseApiController : ControllerBase
         get
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("sub")?.Value;
+                ?? User.FindFirst("sub")?.Value
+                ?? User.FindFirst("username")?.Value
+                ?? User.FindFirst("cognito:username")?.Value;
 
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            if (!string.IsNullOrEmpty(userIdClaim))
             {
-                throw new UnauthorizedException("User ID not found in token");
+                // If it's a GUID, return it
+                if (Guid.TryParse(userIdClaim, out var userId))
+                    return userId;
+                
+                // Otherwise, create a deterministic GUID from the string
+                // This ensures the same user always gets the same GUID
+                using (var md5 = System.Security.Cryptography.MD5.Create())
+                {
+                    byte[] hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(userIdClaim));
+                    return new Guid(hash);
+                }
             }
 
-            return userId;
+            throw new UnauthorizedException("User ID not found in token");
         }
     }
 
@@ -39,10 +51,32 @@ public abstract class BaseApiController : ControllerBase
     {
         get
         {
-            if (HttpContext.Items.TryGetValue("TenantId", out var tenantId) && tenantId is Guid guid)
+            // Try to get from claim first (custom claims from Cognito)
+            var tenantClaim = User.FindFirst("tenant_id")?.Value 
+                ?? User.FindFirst("custom:tenant_id")?.Value
+                ?? User.FindFirst("custom:custom:tenant_id")?.Value;
+                
+            if (Guid.TryParse(tenantClaim, out var tenantId))
+                return tenantId;
+            
+            // Try to get from header (frontend sends this)
+            var tenantHeader = Request.Headers["X-Tenant-Id"].FirstOrDefault();
+            if (Guid.TryParse(tenantHeader, out tenantId))
+                return tenantId;
+            
+            // Try to get from HttpContext items (set by middleware)
+            if (HttpContext.Items.TryGetValue("TenantId", out var contextTenantId))
             {
-                return guid;
+                switch (contextTenantId)
+                {
+                    case Guid guidValue:
+                        return guidValue;
+                    case string tenantString when Guid.TryParse(tenantString, out var parsedGuid):
+                        return parsedGuid;
+                }
             }
+            
+            // Return null if not found (let RequireTenantId handle the error)
             return null;
         }
     }
@@ -140,7 +174,7 @@ public abstract class BaseApiController : ControllerBase
         var tenantId = CurrentTenantId;
         if (!tenantId.HasValue)
         {
-            throw new ForbiddenException("Tenant context is required for this operation");
+            throw new UnauthorizedException("Tenant context required for this operation");
         }
         return tenantId.Value;
     }

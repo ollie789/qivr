@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Paper,
@@ -68,35 +68,20 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO, differenceInYears } from 'date-fns';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import apiClient from '../lib/api-client';
+import {
+  medicalRecordsApi,
+  type VitalSign,
+} from '../services/medicalRecordsApi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import type { ChipProps } from '@mui/material/Chip';
 import type { SelectChangeEvent } from '@mui/material/Select';
 
-interface VitalSign {
-  id: string;
-  recordedAt: string;
-  recordedBy: string;
-  bloodPressure: {
-    systolic: number;
-    diastolic: number;
-  };
-  heartRate: number;
-  respiratoryRate: number;
-  temperature: number;
-  weight: number;
-  height: number;
-  bmi: number;
-  oxygenSaturation?: number;
-  painLevel?: number;
-  notes?: string;
-}
-
 interface MedicalHistory {
   id: string;
-  category: 'condition' | 'surgery' | 'allergy' | 'medication' | 'immunization' | 'family';
+  category: 'condition' | 'surgery' | 'allergy' | 'medication' | 'immunization' | 'family' | 'visit';
   title: string;
   description: string;
   date?: string;
@@ -117,7 +102,6 @@ type TimelineEvent = {
 type TimelineFilter = 'all' | 'vital' | MedicalHistory['category'];
 
 const MedicalRecords: React.FC = () => {
-  const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
@@ -139,26 +123,138 @@ const MedicalRecords: React.FC = () => {
   });
 
   // Fetch vital signs
-  const { data: vitalSigns = [] } = useQuery({
-    queryKey: ['vitalSigns', selectedPatientId],
+  const { data: medicalSummary } = useQuery({
+    queryKey: ['medicalSummary', selectedPatientId],
     queryFn: async () => {
-      if (!selectedPatientId) return [];
-      const response = await apiClient.get(`/api/MedicalRecords/${selectedPatientId}/vitals`);
-      return response.data;
+      if (!selectedPatientId) return null;
+      return medicalRecordsApi.getSummary(selectedPatientId);
     },
     enabled: !!selectedPatientId,
   });
 
-  // Fetch medical history
-  const { data: medicalHistory = [] } = useQuery({
-    queryKey: ['medicalHistory', selectedPatientId],
+  const { data: vitalSigns = [] } = useQuery({
+    queryKey: ['vitalSigns', selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return [];
-      const response = await apiClient.get(`/api/MedicalRecords/${selectedPatientId}/history`);
-      return response.data;
+      return medicalRecordsApi.getVitals(selectedPatientId);
     },
     enabled: !!selectedPatientId,
   });
+
+  const { data: labResults = [] } = useQuery({
+    queryKey: ['labResults', selectedPatientId],
+    queryFn: async () => {
+      if (!selectedPatientId) return [];
+      return medicalRecordsApi.getLabResults(selectedPatientId);
+    },
+    enabled: !!selectedPatientId,
+  });
+
+  const { data: medications = [] } = useQuery({
+    queryKey: ['medications', selectedPatientId],
+    queryFn: async () => {
+      if (!selectedPatientId) return [];
+      return medicalRecordsApi.getMedications(selectedPatientId);
+    },
+    enabled: !!selectedPatientId,
+  });
+
+  const { data: allergies = [] } = useQuery({
+    queryKey: ['allergies', selectedPatientId],
+    queryFn: async () => {
+      if (!selectedPatientId) return [];
+      return medicalRecordsApi.getAllergies(selectedPatientId);
+    },
+    enabled: !!selectedPatientId,
+  });
+
+  const { data: immunizations = [] } = useQuery({
+    queryKey: ['immunizations', selectedPatientId],
+    queryFn: async () => {
+      if (!selectedPatientId) return [];
+      return medicalRecordsApi.getImmunizations(selectedPatientId);
+    },
+    enabled: !!selectedPatientId,
+  });
+
+  const medicalHistory: MedicalHistory[] = useMemo(() => {
+    if (!selectedPatientId) {
+      return [];
+    }
+
+    const entries: MedicalHistory[] = [];
+
+    medicalSummary?.conditions.forEach((condition) => {
+      entries.push({
+        id: condition.id,
+        category: 'condition',
+        title: condition.condition,
+        description: condition.managedBy,
+        date: condition.diagnosedDate,
+        status: condition.status === 'resolved' ? 'resolved' : 'active',
+        severity: undefined,
+        notes: condition.notes ?? undefined,
+      });
+    });
+
+    medications.forEach((medication) => {
+      entries.push({
+        id: medication.id,
+        category: 'medication',
+        title: medication.name,
+        description: medication.instructions ?? medication.frequency,
+        date: medication.startDate,
+        status: medication.status === 'completed' ? 'resolved' : 'active',
+        severity: undefined,
+        notes: medication.instructions ?? undefined,
+      });
+    });
+
+    allergies.forEach((allergy) => {
+      entries.push({
+        id: allergy.id,
+        category: 'allergy',
+        title: allergy.allergen,
+        description: allergy.reaction,
+        date: allergy.diagnosedDate ?? undefined,
+        status: 'active',
+        severity: (allergy.severity?.toLowerCase() as MedicalHistory['severity']) ?? undefined,
+        notes: allergy.notes ?? undefined,
+      });
+    });
+
+    immunizations.forEach((immunization) => {
+      entries.push({
+        id: immunization.id,
+        category: 'immunization',
+        title: immunization.vaccine,
+        description: immunization.provider,
+        date: immunization.date,
+        status: 'resolved',
+        severity: undefined,
+        notes: immunization.facility,
+      });
+    });
+
+    medicalSummary?.recentVisits.forEach((visit) => {
+      entries.push({
+        id: visit.id,
+        category: 'visit',
+        title: visit.provider,
+        description: visit.facility,
+        date: visit.date,
+        status: 'resolved',
+        severity: undefined,
+        notes: visit.notes ?? undefined,
+      });
+    });
+
+    return entries.sort((a, b) => {
+      const aDate = a.date ? new Date(a.date).getTime() : 0;
+      const bDate = b.date ? new Date(b.date).getTime() : 0;
+      return bDate - aDate;
+    });
+  }, [selectedPatientId, medicalSummary, medications, allergies, immunizations]);
 
   // New vital sign state
   const [newVital, setNewVital] = useState<Partial<VitalSign>>({
@@ -182,39 +278,25 @@ const MedicalRecords: React.FC = () => {
 
   // Add vital sign mutation
   const addVitalMutation = useMutation({
-    mutationFn: async (data: Partial<VitalSign>) => {
-      const response = await apiClient.post(
-        `/api/MedicalRecords/${selectedPatientId}/vitals`,
-        data
-      );
-      return response.data;
+    mutationFn: async () => {
+      throw new Error('Recording vitals is now handled by the clinical workflow service.');
     },
-    onSuccess: () => {
-      enqueueSnackbar('Vital signs recorded successfully', { variant: 'success' });
-      queryClient.invalidateQueries({ queryKey: ['vitalSigns', selectedPatientId] });
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Recording vitals is not available yet.';
+      enqueueSnackbar(message, { variant: 'info' });
       setVitalDialogOpen(false);
-    },
-    onError: () => {
-      enqueueSnackbar('Failed to record vital signs', { variant: 'error' });
     },
   });
 
   // Add medical history mutation
   const addHistoryMutation = useMutation({
-    mutationFn: async (data: Partial<MedicalHistory>) => {
-      const response = await apiClient.post(
-        `/api/MedicalRecords/${selectedPatientId}/history`,
-        data
-      );
-      return response.data;
+    mutationFn: async () => {
+      throw new Error('Manual medical history edits will return once the new audit pipeline is wired up.');
     },
-    onSuccess: () => {
-      enqueueSnackbar('Medical history added successfully', { variant: 'success' });
-      queryClient.invalidateQueries({ queryKey: ['medicalHistory', selectedPatientId] });
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Adding history is not available yet.';
+      enqueueSnackbar(message, { variant: 'info' });
       setHistoryDialogOpen(false);
-    },
-    onError: () => {
-      enqueueSnackbar('Failed to add medical history', { variant: 'error' });
     },
   });
 
@@ -247,6 +329,7 @@ const MedicalRecords: React.FC = () => {
       case 'medication': return <MedicationIcon />;
       case 'immunization': return <VaccineIcon />;
       case 'family': return <PersonIcon />;
+      case 'visit': return <TimelineIcon />;
       default: return <InfoIcon />;
     }
   };
@@ -276,6 +359,20 @@ const MedicalRecords: React.FC = () => {
       });
     });
 
+    // Add lab results
+    labResults.forEach((group) => {
+      group.tests.forEach((test) => {
+        events.push({
+          type: 'surgery',
+          date: group.date,
+          title: `${test.testName} (${group.category})`,
+          description: `${test.value} ${test.unit ?? ''}`.trim(),
+          icon: <MedicalIcon />,
+          color: 'info',
+        });
+      });
+    });
+
     // Add medical history to timeline
     medicalHistory.forEach((history: MedicalHistory) => {
         if (history.date) {
@@ -300,6 +397,14 @@ const MedicalRecords: React.FC = () => {
 
     return events.slice(0, 20); // Show last 20 events
   };
+
+  const lastVisitDisplay = useMemo(() => {
+    const mostRecentVisit = medicalSummary?.recentVisits?.[0];
+    if (!mostRecentVisit?.date) {
+      return 'N/A';
+    }
+    return format(parseISO(mostRecentVisit.date), 'MMM d, yyyy');
+  }, [medicalSummary]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -389,7 +494,7 @@ const MedicalRecords: React.FC = () => {
                   <Grid item xs={6} md={3}>
                     <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                       <Typography variant="caption" color="text.secondary">Last Visit</Typography>
-                      <Typography variant="h6">Oct 15, 2024</Typography>
+                      <Typography variant="h6">{lastVisitDisplay}</Typography>
                     </Box>
                   </Grid>
                 </Grid>
@@ -727,13 +832,17 @@ const MedicalRecords: React.FC = () => {
                       </Button>
                     </Box>
 
-                    {['condition', 'allergy', 'medication', 'surgery', 'immunization', 'family'].map((category) => (
+                    {['condition', 'allergy', 'medication', 'surgery', 'immunization', 'family', 'visit'].map((category) => (
                       <Accordion key={category}>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             {getCategoryIcon(category)}
                             <Typography variant="h6" sx={{ textTransform: 'capitalize' }}>
-                              {category === 'family' ? 'Family History' : `${category}s`}
+                              {category === 'family'
+                                ? 'Family History'
+                                : category === 'visit'
+                                ? 'Visits'
+                                : `${category}s`}
                             </Typography>
                             <Chip 
                               label={medicalHistory.filter((h: MedicalHistory) => h.category === category).length}

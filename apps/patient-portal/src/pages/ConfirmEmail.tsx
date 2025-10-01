@@ -15,6 +15,8 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import authService from '../services/cognitoAuthService';
 
+const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'true') === 'true';
+
 const confirmSchema = z.object({
   email: z.string().email('Invalid email address'),
   code: z.string().length(6, 'Confirmation code must be 6 digits'),
@@ -52,7 +54,9 @@ export const ConfirmEmail: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await authService.confirmSignUp(data.email, data.code);
+      if (!DEV_AUTH_ENABLED) {
+        await authService.confirmSignUp(data.email, data.code);
+      }
 
       setSuccess('Email verified successfully! Redirecting to login...');
       
@@ -93,7 +97,9 @@ export const ConfirmEmail: React.FC = () => {
     setIsResending(true);
 
     try {
-      await authService.resendConfirmationCode(email);
+      if (!DEV_AUTH_ENABLED) {
+        await authService.resendConfirmationCode(email);
+      }
       setSuccess('Verification code sent! Please check your email.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to resend verification code');

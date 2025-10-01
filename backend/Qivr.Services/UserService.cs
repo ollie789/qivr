@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -52,6 +56,10 @@ public class UserService : IUserService
     public async Task<UserDto?> GetUserByCognitoSubAsync(string cognitoSub, CancellationToken cancellationToken = default)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.CognitoSub == cognitoSub, cancellationToken);
+        if (user != null)
+        {
+            _logger.LogInformation("Found user {Email} with UserType: {UserType}", user.Email, user.UserType);
+        }
         return _mapper.Map<UserDto>(user);
     }
 }
@@ -77,5 +85,215 @@ public class TenantService : ITenantService
     {
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Slug == slug, cancellationToken);
         return _mapper.Map<TenantDto>(tenant);
+    }
+
+    public async Task<IReadOnlyList<TenantAccessDto>> GetTenantsForUserAsync(Guid userId, string? cognitoSub, CancellationToken cancellationToken = default)
+    {
+        var tenantIds = new HashSet<Guid>();
+
+        var primaryUser = await _context.Users
+            .Include(u => u.Tenant)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (primaryUser == null && !string.IsNullOrWhiteSpace(cognitoSub))
+        {
+            primaryUser = await _context.Users
+                .Include(u => u.Tenant)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.CognitoSub == cognitoSub, cancellationToken);
+        }
+
+        Guid? primaryTenantId = primaryUser?.TenantId;
+
+        if (primaryUser != null && primaryUser.TenantId != Guid.Empty)
+        {
+            tenantIds.Add(primaryUser.TenantId);
+        }
+
+        if (primaryUser != null)
+        {
+            foreach (var linkedTenantId in ExtractLinkedTenantIds(primaryUser))
+            {
+                if (linkedTenantId != Guid.Empty)
+                {
+                    tenantIds.Add(linkedTenantId);
+                }
+            }
+        }
+
+        if (!tenantIds.Any() && primaryTenantId.HasValue)
+        {
+            tenantIds.Add(primaryTenantId.Value);
+        }
+
+        if (!tenantIds.Any() && !string.IsNullOrWhiteSpace(cognitoSub))
+        {
+            var tenantIdFromSub = await _context.Users.AsNoTracking()
+                .Where(u => u.CognitoSub == cognitoSub)
+                .Select(u => u.TenantId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (tenantIdFromSub != Guid.Empty)
+            {
+                tenantIds.Add(tenantIdFromSub);
+                primaryTenantId ??= tenantIdFromSub;
+            }
+        }
+
+        if (!tenantIds.Any())
+        {
+            return Array.Empty<TenantAccessDto>();
+        }
+
+        var tenantRecords = await _context.Tenants
+            .AsNoTracking()
+            .Where(t => tenantIds.Contains(t.Id))
+            .Select(t => new { t.Id, t.Name, t.Slug })
+            .ToListAsync(cancellationToken);
+
+        var dto = tenantRecords
+            .Select(t => new TenantAccessDto(
+                t.Id,
+                string.IsNullOrWhiteSpace(t.Name) ? t.Id.ToString() : t.Name,
+                t.Slug,
+                primaryTenantId.HasValue && t.Id == primaryTenantId.Value))
+            .OrderByDescending(t => t.IsDefault)
+            .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return dto;
+    }
+
+    private static IEnumerable<Guid> ExtractLinkedTenantIds(User user)
+    {
+        if (user.Preferences == null)
+        {
+            yield break;
+        }
+
+        if (user.Preferences.TryGetValue("linkedTenants", out var rawValue) && rawValue is not null)
+        {
+            foreach (var tenantId in ParseTenantIdentifiers(rawValue))
+            {
+                yield return tenantId;
+            }
+        }
+
+        if (user.Preferences.TryGetValue("additionalTenants", out var extraValue) && extraValue is not null)
+        {
+            foreach (var tenantId in ParseTenantIdentifiers(extraValue))
+            {
+                yield return tenantId;
+            }
+        }
+    }
+
+    private static IEnumerable<Guid> ParseTenantIdentifiers(object value)
+    {
+        switch (value)
+        {
+            case Guid guidValue:
+                yield return guidValue;
+                yield break;
+            case string stringValue:
+                foreach (var parsed in ParseTenantIdentifiersFromString(stringValue))
+                {
+                    yield return parsed;
+                }
+                yield break;
+            case JsonElement jsonElement:
+                foreach (var parsed in ParseTenantIdentifiersFromJson(jsonElement))
+                {
+                    yield return parsed;
+                }
+                yield break;
+            case IEnumerable<object> enumerable:
+                foreach (var item in enumerable)
+                {
+                    foreach (var parsed in ParseTenantIdentifiers(item))
+                    {
+                        yield return parsed;
+                    }
+                }
+                yield break;
+        }
+
+        yield break;
+    }
+
+    private static IEnumerable<Guid> ParseTenantIdentifiersFromJson(JsonElement jsonElement)
+    {
+        if (jsonElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in jsonElement.EnumerateArray())
+            {
+                foreach (var parsed in ParseTenantIdentifiersFromJson(item))
+                {
+                    yield return parsed;
+                }
+            }
+        }
+        else if (jsonElement.ValueKind == JsonValueKind.String)
+        {
+            foreach (var parsed in ParseTenantIdentifiersFromString(jsonElement.GetString()))
+            {
+                yield return parsed;
+            }
+        }
+        else if (jsonElement.ValueKind == JsonValueKind.Object &&
+                 jsonElement.TryGetProperty("id", out var idProperty) &&
+                 idProperty.ValueKind == JsonValueKind.String &&
+                 Guid.TryParse(idProperty.GetString(), out var guid))
+        {
+            yield return guid;
+        }
+    }
+
+    private static IEnumerable<Guid> ParseTenantIdentifiersFromString(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) yield break;
+
+        var trimmed = value.Trim();
+
+        if (Guid.TryParse(trimmed, out var directGuid))
+        {
+            yield return directGuid;
+            yield break;
+        }
+
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]", StringComparison.Ordinal))
+        {
+            List<string>? array = null;
+            try
+            {
+                array = JsonSerializer.Deserialize<List<string>>(trimmed);
+            }
+            catch
+            {
+                // Ignore deserialization errors and fall through to delimiter parsing
+            }
+            
+            if (array != null)
+            {
+                foreach (var item in array)
+                {
+                    foreach (var parsed in ParseTenantIdentifiersFromString(item))
+                    {
+                        yield return parsed;
+                    }
+                }
+                yield break;
+            }
+        }
+
+        var parts = trimmed.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var part in parts)
+        {
+            if (Guid.TryParse(part, out var guid))
+            {
+                yield return guid;
+            }
+        }
     }
 }

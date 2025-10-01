@@ -16,7 +16,8 @@ public class MappingProfiles : Profile
 
         CreateMap<User, UserDto>()
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
-            .ForMember(dest => dest.UserType, opt => opt.MapFrom(src => src.UserType.ToString()));
+            .ForMember(dest => dest.UserType, opt => opt.MapFrom(src => src.UserType.ToString()))
+            .ForMember(dest => dest.Roles, opt => opt.MapFrom(src => new List<string> { src.UserType == UserType.Admin ? "Admin" : src.UserType == UserType.Staff ? "Staff" : "Patient" }));
 
         // Tenant mappings
         CreateMap<Tenant, TenantDto>()

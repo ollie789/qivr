@@ -11,7 +11,7 @@ namespace Qivr.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class NotificationsController : ControllerBase
+public class NotificationsController : BaseApiController
 {
     private readonly QivrDbContext _context;
     private readonly ILogger<NotificationsController> _logger;
@@ -34,8 +34,8 @@ public class NotificationsController : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] int page = 1)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var query = _context.Set<Notification>()
             .Where(n => n.TenantId == tenantId && n.RecipientId == userId);
@@ -79,8 +79,8 @@ public class NotificationsController : ControllerBase
         [FromQuery] NotificationChannel? channel = null,
         [FromQuery] bool sortDescending = true)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var query = _context.Set<Notification>()
             .Where(n => n.TenantId == tenantId && n.RecipientId == userId);
@@ -134,8 +134,8 @@ public class NotificationsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<NotificationDto>> GetNotification(Guid id)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var notification = await _context.Set<Notification>()
             .Where(n => n.TenantId == tenantId && n.Id == id && n.RecipientId == userId)
@@ -163,8 +163,8 @@ public class NotificationsController : ControllerBase
     [Authorize(Roles = "Admin,Clinician")]
     public async Task<ActionResult<NotificationDto>> CreateNotification(CreateNotificationRequest request)
     {
-        var tenantId = GetTenantId();
-        var senderId = GetUserId();
+        var tenantId = RequireTenantId();
+        var senderId = CurrentUserId;
 
         // Validate recipient exists
         var recipient = await _context.Users
@@ -219,8 +219,8 @@ public class NotificationsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<BulkNotificationResult>> SendBulkNotification(BulkNotificationRequest request)
     {
-        var tenantId = GetTenantId();
-        var senderId = GetUserId();
+        var tenantId = RequireTenantId();
+        var senderId = CurrentUserId;
 
         var recipients = await _context.Users
             .Where(u => request.RecipientIds.Contains(u.Id) && u.TenantId == tenantId)
@@ -275,8 +275,8 @@ public class NotificationsController : ControllerBase
     [HttpPut("{id}/mark-read")]
     public async Task<IActionResult> MarkAsRead(Guid id)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var notification = await _context.Set<Notification>()
             .Where(n => n.TenantId == tenantId && n.Id == id && n.RecipientId == userId)
@@ -298,8 +298,8 @@ public class NotificationsController : ControllerBase
     [HttpPut("mark-all-read")]
     public async Task<IActionResult> MarkAllAsRead()
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var unreadNotifications = await _context.Set<Notification>()
             .Where(n => n.TenantId == tenantId && n.RecipientId == userId && n.ReadAt == null)
@@ -319,8 +319,8 @@ public class NotificationsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteNotification(Guid id)
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var notification = await _context.Set<Notification>()
             .Where(n => n.TenantId == tenantId && n.Id == id && n.RecipientId == userId)
@@ -338,7 +338,7 @@ public class NotificationsController : ControllerBase
     [HttpGet("preferences")]
     public async Task<ActionResult<NotificationPreferencesDto>> GetPreferences()
     {
-        var userId = GetUserId();
+        var userId = CurrentUserId;
 
         var user = await _context.Users
             .Where(u => u.Id == userId)
@@ -369,7 +369,7 @@ public class NotificationsController : ControllerBase
     [HttpPut("preferences")]
     public async Task<IActionResult> UpdatePreferences(UpdateNotificationPreferencesRequest request)
     {
-        var userId = GetUserId();
+        var userId = CurrentUserId;
 
         var user = await _context.Users
             .Where(u => u.Id == userId)
@@ -403,8 +403,8 @@ public class NotificationsController : ControllerBase
     [HttpGet("unread-count")]
     public async Task<ActionResult<UnreadCountDto>> GetUnreadCount()
     {
-        var tenantId = GetTenantId();
-        var userId = GetUserId();
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
 
         var count = await _context.Set<Notification>()
             .Where(n => n.TenantId == tenantId && n.RecipientId == userId && n.ReadAt == null)
@@ -435,21 +435,7 @@ public class NotificationsController : ControllerBase
         }
     }
 
-    private Guid GetTenantId()
-    {
-        var tenantClaim = User.FindFirst("tenant_id")?.Value;
-        if (Guid.TryParse(tenantClaim, out var tenantId))
-            return tenantId;
-        throw new UnauthorizedAccessException("Tenant ID not found");
-    }
-
-    private Guid GetUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (Guid.TryParse(userIdClaim, out var userId))
-            return userId;
-        throw new UnauthorizedAccessException("User ID not found");
-    }
+    // CurrentTenantId and CurrentUserId removed - using BaseApiController properties
 }
 
 // DTOs

@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Security.Claims;
+using Amazon.CognitoIdentityProvider.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -57,7 +58,8 @@ public class AuthController : ControllerBase
                 return Ok(new
                 {
                     requiresMfa = true,
-                    session = result.Session
+                    session = result.Session,
+                    challengeName = result.ChallengeName?.ToString()
                 });
             }
             
@@ -77,7 +79,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("signup")]
     [EnableRateLimiting("auth")]
-    public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
+    public async Task<IActionResult> SignUp([FromBody] Qivr.Api.Services.SignUpRequest request)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -107,15 +109,21 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh-token")]
-    public async Task<IActionResult> RefreshToken()
+    [HttpPost("refresh")]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest? request = null)
     {
         // Get refresh token from cookie
         var refreshToken = Request.Cookies["refreshToken"];
         if (string.IsNullOrEmpty(refreshToken))
+        {
+            refreshToken = request?.RefreshToken;
+        }
+
+        if (string.IsNullOrEmpty(refreshToken))
             return Unauthorized(new { message = "No refresh token provided" });
 
         var result = await _authService.RefreshTokenAsync(refreshToken);
-        
+
         if (!result.Success)
         {
             // Clear invalid cookies
@@ -282,21 +290,51 @@ public class AuthController : ControllerBase
     [HttpPost("mfa/verify")]
     public async Task<IActionResult> VerifyMfa([FromBody] VerifyMfaRequest request)
     {
-        var success = await _authService.VerifyMfaAsync(request.Session, request.MfaCode);
+        // Pass SMS_MFA as default challenge type
+        var result = await _authService.VerifyMfaAsync(request.Session, request.MfaCode, Amazon.CognitoIdentityProvider.ChallengeNameType.SMS_MFA);
         
-        if (!success)
-            return BadRequest(new { message = "Invalid MFA code" });
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.ErrorMessage ?? "Invalid MFA code" });
+        }
 
-        return Ok(new { message = "MFA verified successfully" });
+        var refreshToken = result.RefreshToken;
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            refreshToken = Request.Cookies["refreshToken"];
+        }
+
+        SetAuthCookies(result.AccessToken!, refreshToken, result.ExpiresIn ?? 0);
+
+        return Ok(new
+        {
+            expiresIn = result.ExpiresIn,
+            userInfo = result.UserInfo
+        });
     }
 
     [HttpGet("user-info")]
     [Authorize]
     public async Task<IActionResult> GetUserInfo()
     {
-        var accessToken = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-        var userInfo = await _authService.GetUserInfoAsync(accessToken);
+        // Try to get token from cookie first, fallback to header
+        var accessToken = Request.Cookies["accessToken"] ?? 
+                         Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
         
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            // If no token in cookies or header, return user info from claims
+            return Ok(new
+            {
+                sub = User.FindFirst("sub")?.Value,
+                email = User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value,
+                given_name = User.FindFirst("given_name")?.Value ?? User.FindFirst(ClaimTypes.GivenName)?.Value,
+                family_name = User.FindFirst("family_name")?.Value ?? User.FindFirst(ClaimTypes.Surname)?.Value,
+                username = User.FindFirst("cognito:username")?.Value ?? User.FindFirst("username")?.Value
+            });
+        }
+        
+        var userInfo = await _authService.GetUserInfoAsync(accessToken);
         return Ok(userInfo);
     }
 
@@ -331,14 +369,17 @@ public class AuthController : ControllerBase
     }
     
     // Helper methods for cookie management
-    private void SetAuthCookies(string accessToken, string refreshToken, int expiresInSeconds)
+    private void SetAuthCookies(string accessToken, string? refreshToken, int expiresInSeconds)
     {
+        var isSecureRequest = HttpContext.Request.IsHttps ||
+            string.Equals(HttpContext.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+
         // Access token cookie
         var accessTokenOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = !HttpContext.Request.Host.Host.Contains("localhost"), // Allow non-secure for localhost
-            SameSite = SameSiteMode.Lax, // Lax to support OAuth redirects
+            Secure = isSecureRequest,
+            SameSite = SameSiteMode.Lax, // Lax to support OAuth redirects while working over HTTP in dev
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddSeconds(expiresInSeconds)
         };
@@ -348,12 +389,15 @@ public class AuthController : ControllerBase
         var refreshTokenOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = !HttpContext.Request.Host.Host.Contains("localhost"),
+            Secure = isSecureRequest,
             SameSite = SameSiteMode.Lax,
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddDays(30) // 30 days
         };
-        Response.Cookies.Append("refreshToken", refreshToken, refreshTokenOptions);
+        if (!string.IsNullOrEmpty(refreshToken))
+        {
+            Response.Cookies.Append("refreshToken", refreshToken, refreshTokenOptions);
+        }
     }
 
     private void ClearAuthCookies()
@@ -361,7 +405,8 @@ public class AuthController : ControllerBase
         var clearOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = !HttpContext.Request.Host.Host.Contains("localhost"),
+            Secure = HttpContext.Request.IsHttps ||
+                     string.Equals(HttpContext.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase),
             SameSite = SameSiteMode.Lax,
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddDays(-1)
@@ -420,6 +465,7 @@ public class VerifyMfaRequest
 {
     public string Session { get; set; } = string.Empty;
     public string MfaCode { get; set; } = string.Empty;
+    public string? ChallengeName { get; set; }
 }
 
 public class SocialCallbackRequest

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -61,7 +61,9 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
+import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -174,11 +176,13 @@ const TabPanel = (props: TabPanelProps) => {
 
 export default function Settings() {
   const { enqueueSnackbar } = useSnackbar();
+  const queryClient = useQueryClient();
   const [tabValue, setTabValue] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [addStaffDialog, setAddStaffDialog] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [newApiKeyDialog, setNewApiKeyDialog] = useState(false);
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences | null>(null);
   
   const [settings, setSettings] = useState<ClinicSettings>({
     clinic: {
@@ -297,6 +301,61 @@ export default function Settings() {
       lastLogin: '2024-01-15T08:00:00',
     },
   ]);
+
+  const {
+    data: preferencesData,
+    isLoading: preferencesLoading,
+  } = useQuery({
+    queryKey: ['notification-preferences'],
+    queryFn: notificationsApi.getPreferences,
+  });
+
+  useEffect(() => {
+    if (preferencesData) {
+      setNotificationPreferences(preferencesData);
+      setSettings((prev) => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          emailEnabled: preferencesData.emailEnabled,
+          smsEnabled: preferencesData.smsEnabled,
+        },
+      }));
+    }
+  }, [preferencesData]);
+
+  const updatePreferencesMutation = useMutation({
+    mutationFn: (prefs: NotificationPreferences) => notificationsApi.updatePreferences(prefs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+      enqueueSnackbar('Notification preferences updated', { variant: 'success' });
+    },
+    onError: () => {
+      enqueueSnackbar('Failed to update notification preferences', { variant: 'error' });
+    },
+  });
+
+  const handleNotificationPreferenceToggle = (key: 'emailEnabled' | 'smsEnabled', value: boolean) => {
+    setSettings((prev) => ({
+      ...prev,
+      notifications: {
+        ...prev.notifications,
+        [key]: value,
+      },
+    }));
+
+    if (!notificationPreferences) {
+      return;
+    }
+
+    const updated: NotificationPreferences = {
+      ...notificationPreferences,
+      [key]: value,
+    };
+
+    setNotificationPreferences(updated);
+    updatePreferencesMutation.mutate(updated);
+  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -630,13 +689,8 @@ export default function Settings() {
                     <ListItemSecondaryAction>
                       <Switch
                         checked={settings.notifications.emailEnabled}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          notifications: {
-                            ...settings.notifications,
-                            emailEnabled: e.target.checked
-                          }
-                        })}
+                        onChange={(e) => handleNotificationPreferenceToggle('emailEnabled', e.target.checked)}
+                        disabled={preferencesLoading || updatePreferencesMutation.isPending}
                       />
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -651,13 +705,8 @@ export default function Settings() {
                     <ListItemSecondaryAction>
                       <Switch
                         checked={settings.notifications.smsEnabled}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          notifications: {
-                            ...settings.notifications,
-                            smsEnabled: e.target.checked
-                          }
-                        })}
+                        onChange={(e) => handleNotificationPreferenceToggle('smsEnabled', e.target.checked)}
+                        disabled={preferencesLoading || updatePreferencesMutation.isPending}
                       />
                     </ListItemSecondaryAction>
                   </ListItem>

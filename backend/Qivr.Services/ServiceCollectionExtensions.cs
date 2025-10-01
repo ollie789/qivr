@@ -88,6 +88,7 @@ public interface ITenantService
 {
     Task<TenantDto?> GetTenantAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TenantDto?> GetTenantBySlugAsync(string slug, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TenantAccessDto>> GetTenantsForUserAsync(Guid userId, string? cognitoSub, CancellationToken cancellationToken = default);
 }
 
 public interface IEmailService
@@ -155,6 +156,7 @@ public record AppointmentDto(
     Guid PatientId,
     string PatientName,
     Guid ProviderId,
+    Guid ProviderProfileId,
     string ProviderName,
     DateTime ScheduledStart,
     DateTime ScheduledEnd,
@@ -191,3 +193,5 @@ public record TenantDto(
     string Timezone,
     string Locale
 );
+
+public record TenantAccessDto(Guid Id, string Name, string? Slug, bool IsDefault);

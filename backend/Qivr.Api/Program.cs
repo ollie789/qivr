@@ -263,7 +263,19 @@ builder.Services.AddCsrfProtection();
 builder.Services.AddSecretsManager();
 
 // Configure Authentication - Always use Cognito for production
-builder.Services.AddCognitoAuthentication(builder.Configuration);
+var useDevelopmentAuth = builder.Environment.IsDevelopment() &&
+    (builder.Configuration.GetValue<bool?>("DevAuth:Enabled")
+        ?? builder.Configuration.GetValue<bool?>("UseMockAuth")
+        ?? true);
+
+if (useDevelopmentAuth)
+{
+    builder.Services.AddDevelopmentAuthentication(builder.Configuration);
+}
+else
+{
+    builder.Services.AddCognitoAuthentication(builder.Configuration);
+}
 
 // Configure Swagger/OpenAPI with versioning support
 builder.Services.AddVersionedSwagger(builder.Configuration);
@@ -504,13 +516,15 @@ app.Use(async (ctx, next) =>
 app.UseStaticFiles();
 
 // Custom middleware
-app.UseMiddleware<TenantMiddleware>();
 app.UseMiddleware<GlobalErrorHandlingMiddleware>();
+
+// Authentication must run before tenant resolution so JWT claims are available
+app.UseAuthentication();
+
+app.UseMiddleware<TenantMiddleware>();
 // Idempotency for mutating requests
 app.UseMiddleware<IdempotencyMiddleware>();
 
-// Authentication and Authorization
-app.UseAuthentication();
 app.UseAuthorization();
 
 // CSRF Protection (must come after authentication)

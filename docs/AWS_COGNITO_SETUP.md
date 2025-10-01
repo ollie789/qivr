@@ -1,5 +1,7 @@
 # AWS Cognito Configuration
 
+> This reference is only required when you disable the local mock provider. See [authentication.md](./authentication.md) for switching between DevAuth and Cognito.
+
 ## User Pools
 
 ### Patient Portal

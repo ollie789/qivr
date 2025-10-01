@@ -20,7 +20,7 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import apiClient from '../lib/api-client';
+import { documentsApi, type Document } from '../services/documentsApi';
 
 interface FileUploadProps {
   patientId?: string;
@@ -65,11 +65,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [files, setFiles] = useState<FileWithProgress[]>([]);
 
   const uploadFile = useCallback(async (file: FileWithProgress) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (patientId) formData.append('patientId', patientId);
-    formData.append('category', category);
-
     try {
       // Update file status to uploading
       setFiles(prev =>
@@ -80,15 +75,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
         )
       );
 
-      const response = await apiClient.post('/api/Documents/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      const document: Document = await documentsApi.upload(
+        {
+          file,
+          category,
+          patientId,
         },
-        onUploadProgress: (progressEvent) => {
-          const progress = progressEvent.total
-            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            : 0;
-          
+        (progress) => {
           setFiles(prev =>
             prev.map(f =>
               f.name === file.name
@@ -97,15 +90,15 @@ const FileUpload: React.FC<FileUploadProps> = ({
             )
           );
         },
-      });
+      );
 
       const uploadedFile: UploadedFile = {
-        id: response.data.id,
-        name: response.data.name,
-        size: response.data.size,
-        type: response.data.contentType,
-        url: response.data.url,
-        uploadedAt: new Date(response.data.uploadedAt),
+        id: document.id,
+        name: document.fileName,
+        size: document.fileSize,
+        type: document.mimeType,
+        url: document.url ?? '',
+        uploadedAt: new Date(document.uploadedAt),
       };
 
       // Update file status to success
@@ -120,9 +113,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
       return uploadedFile;
     } catch (error) {
       // Update file status to error
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed';
+      let errorMessage = 'Upload failed';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const maybe = error as { problem?: { detail?: string; title?: string }; message?: string };
+        errorMessage = maybe.problem?.detail || maybe.problem?.title || maybe.message || errorMessage;
+      }
       setFiles(prev =>
         prev.map(f =>
           f.name === file.name

@@ -10,7 +10,8 @@ Security is everyone’s responsibility. The points below summarise what we enfo
 
 ## Authentication & authorisation
 
-- We rely on **AWS Cognito** for identity. The API validates JWTs through `AddAuthentication().AddJwtBearer(...)`; keep the issuer/audience aligned with the user pools configured in [AWS_COGNITO_SETUP.md](./AWS_COGNITO_SETUP.md).
+- Local machines default to the **DevAuth** mock provider. Keep `DevAuth:Enabled=true` only in development – all shared and production environments must disable it and rely on Cognito.
+- Cognito-backed environments validate JWTs via `AddAuthentication().AddJwtBearer(...)`. Ensure issuer/audience values line up with the pools documented in [AWS_COGNITO_SETUP.md](./AWS_COGNITO_SETUP.md).
 - Tenancy is enforced through `TenantMiddleware`. Always require an `X-Tenant-Id` header (or subdomain) and validate it against the authenticated user before running queries.
 - New endpoints must decorate actions with `[Authorize]` attributes (or explicit `[AllowAnonymous]` if they truly are public).
 
@@ -19,7 +20,7 @@ Security is everyone’s responsibility. The points below summarise what we enfo
 - Use parameterised EF Core queries; avoid string interpolation inside raw SQL commands.
 - When exposing identifiers externally, prefer GUIDs over sequential IDs to reduce enumeration risk.
 - Audit-sensitive entities (appointments, messages, documents) should update `UpdatedBy`/`UpdatedAt` fields.
-- Frontend apps must treat tokens as opaque. We store Cognito tokens in memory or `sessionStorage`; never write them to cookies without `Secure`/`HttpOnly` flags.
+- Session cookies issued by `/api/auth/login` are `HttpOnly` by design. Do not expose them to client-side scripts and always serve them over HTTPS outside local development.
 
 ## Dependencies & patching
 

@@ -1,36 +1,37 @@
 import React, { useState, useCallback } from 'react';
 // MUI Components
 import {
+  Autocomplete,
+  Avatar,
   Box,
+  Button,
   Card,
   CardContent,
-  Typography,
-  Grid,
-  Button,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Chip,
-  Avatar,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  Grid,
+  IconButton,
+  InputLabel,
   List,
   ListItem,
-  ListItemText,
   ListItemAvatar,
+  ListItemText,
+  MenuItem,
   Paper,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-  Divider,
+  Select,
   Stack,
   Tab,
   Tabs,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
 } from '../components/mui';
 // Icons
 import {
@@ -73,6 +74,51 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import apiClient from '../lib/api-client';
+import { useAuthStore } from '../stores/authStore';
+import { patientApi, type Patient, type PatientListResponse } from '../services/patientApi';
+import { providerApi, type Provider } from '../services/providerApi';
+
+interface AppointmentDto {
+  id: string;
+  patientId: string;
+  patientName?: string | null;
+  patientEmail?: string | null;
+  patientPhone?: string | null;
+  providerId: string;
+  providerName?: string | null;
+  appointmentType: string;
+  status: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  location?: string | null;
+  notes?: string | null;
+}
+
+interface CursorPaginationResponse<T> {
+  items: T[];
+  nextCursor?: string | null;
+  previousCursor?: string | null;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  count: number;
+}
+
+const mapAppointmentDto = (dto: AppointmentDto): Appointment => ({
+  id: dto.id,
+  patientId: dto.patientId,
+  patientName: dto.patientName ?? 'Unknown patient',
+  patientEmail: dto.patientEmail ?? '',
+  patientPhone: dto.patientPhone ?? '',
+  providerId: dto.providerId,
+  providerName: dto.providerName ?? 'Assigned provider',
+  scheduledStart: dto.scheduledStart,
+  scheduledEnd: dto.scheduledEnd,
+  appointmentType: dto.appointmentType,
+  status: (dto.status || '').toLowerCase() as Appointment['status'],
+  notes: dto.notes ?? undefined,
+  videoLink: undefined,
+  location: dto.location ?? undefined,
+});
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -104,19 +150,13 @@ const appointmentTypes = [
   { value: 'review', label: 'Review', duration: 20, color: '#f57c00' },
 ];
 
-const providers = [
-  { id: '1', name: 'Dr. Sarah Smith', specialty: 'Physiotherapy' },
-  { id: '2', name: 'Dr. John Brown', specialty: 'Chiropractic' },
-  { id: '3', name: 'Dr. Emily Chen', specialty: 'Massage Therapy' },
-];
-
 const Appointments: React.FC = () => {
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedProvider, setSelectedProvider] = useState<string>('all');
+  const [selectedProviderFilter, setSelectedProviderFilter] = useState<string>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [viewTab, setViewTab] = useState(0); // 0 = calendar, 1 = list
@@ -124,6 +164,7 @@ const Appointments: React.FC = () => {
 
   // Form state for new appointment
   const [newAppointment, setNewAppointment] = useState({
+    patientId: '',
     patientName: '',
     patientEmail: '',
     patientPhone: '',
@@ -134,10 +175,50 @@ const Appointments: React.FC = () => {
     appointmentType: 'initial-consultation',
     notes: '',
   });
+  const [selectedPatientOption, setSelectedPatientOption] = useState<Patient | null>(null);
+  const [selectedProviderOption, setSelectedProviderOption] = useState<Provider | null>(null);
+
+  const { user } = useAuthStore();
+  const fallbackClinicId = (import.meta.env.VITE_DEFAULT_CLINIC_ID as string | undefined) ?? '22222222-2222-2222-2222-222222222222';
+  const clinicId = user?.clinicId ?? fallbackClinicId;
+
+  const { data: patientsData, isLoading: isPatientsLoading } = useQuery<PatientListResponse>({
+    queryKey: ['appointments', 'patients'],
+    queryFn: () => patientApi.getPatients({ limit: 200 }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const patients = patientsData?.data ?? [];
+
+  const { data: providersData, isLoading: isProvidersLoading } = useQuery<Provider[]>({
+    queryKey: ['appointments', 'providers', clinicId],
+    queryFn: () => providerApi.getClinicProviders(clinicId),
+    enabled: Boolean(clinicId),
+    staleTime: 5 * 60 * 1000,
+  });
+  const providerOptions = providersData ?? [];
+
+  const handlePatientSelect = (_: unknown, patient: Patient | null) => {
+    setSelectedPatientOption(patient);
+    setNewAppointment((prev) => ({
+      ...prev,
+      patientId: patient?.id ?? '',
+      patientName: patient ? `${patient.firstName} ${patient.lastName}`.trim() || patient.email : '',
+      patientEmail: patient?.email ?? '',
+      patientPhone: patient?.phone ?? '',
+    }));
+  };
+
+  const handleProviderSelect = (_: unknown, provider: Provider | null) => {
+    setSelectedProviderOption(provider);
+    setNewAppointment((prev) => ({
+      ...prev,
+      providerId: provider?.id ?? '',
+    }));
+  };
 
   // Fetch appointments
   const { data: appointments = [], isLoading } = useQuery({
-    queryKey: ['appointments', selectedDate, viewMode, selectedProvider],
+    queryKey: ['appointments', selectedDate, viewMode, selectedProviderFilter],
     queryFn: async () => {
       try {
         // Calculate date range based on view mode
@@ -153,14 +234,24 @@ const Appointments: React.FC = () => {
           endDate = format(endOfMonth(selectedDate), 'yyyy-MM-dd');
         }
 
-        const response = await apiClient.get('/api/Appointments', {
-          params: {
-            startDate,
-            endDate,
-            providerId: selectedProvider !== 'all' ? selectedProvider : undefined,
+        const payload = await api.get<CursorPaginationResponse<AppointmentDto> | AppointmentDto[]>(
+          '/api/appointments',
+          {
+            params: {
+              startDate,
+              endDate,
+              limit: 200,
+              sortDescending: false,
+              providerId: selectedProviderFilter !== 'all' ? selectedProviderFilter : undefined,
+            },
           },
-        });
-        return response.data;
+        );
+
+        const items = Array.isArray(payload)
+          ? payload
+          : payload?.items ?? (payload as any)?.Items ?? [];
+
+        return (items as AppointmentDto[]).map(mapAppointmentDto);
       } catch (error) {
         console.error('Error fetching appointments:', error);
         return [] as Appointment[];
@@ -171,29 +262,50 @@ const Appointments: React.FC = () => {
   // Create appointment mutation
   // Type for appointment creation
   interface CreateAppointmentData {
-    patientName: string;
-    patientEmail: string;
-    patientPhone: string;
+    patientId: string;
     providerId: string;
     scheduledStart: string;
     scheduledEnd: string;
     appointmentType: string;
     notes?: string;
-    status: string;
   }
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: CreateAppointmentData) => {
-      const response = await apiClient.post('/api/Appointments/book', data);
-      return response.data;
+      if (!data.patientId || !data.providerId) {
+        throw new Error('A patient and provider must be selected.');
+      }
+
+      const response = await api.post('/api/appointments', {
+        patientId: data.patientId,
+        providerId: data.providerId,
+        appointmentType: data.appointmentType ?? 'consultation',
+        scheduledStart: data.scheduledStart,
+        scheduledEnd: data.scheduledEnd,
+        notes: data.notes,
+      });
+
+      return response;
     },
     onSuccess: () => {
       enqueueSnackbar('Appointment created successfully', { variant: 'success' });
       setCreateDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      setSelectedPatientOption(null);
+      setSelectedProviderOption(null);
+      setNewAppointment((prev) => ({
+        ...prev,
+        patientId: '',
+        patientName: '',
+        patientEmail: '',
+        patientPhone: '',
+        providerId: '',
+        notes: '',
+      }));
     },
-    onError: () => {
-      enqueueSnackbar('Failed to create appointment', { variant: 'error' });
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to create appointment';
+      enqueueSnackbar(message, { variant: 'error' });
     },
   });
 
@@ -207,15 +319,12 @@ const Appointments: React.FC = () => {
     endDateTime.setMinutes(newAppointment.endTime.getMinutes());
 
     createAppointmentMutation.mutate({
-      patientName: newAppointment.patientName,
-      patientEmail: newAppointment.patientEmail,
-      patientPhone: newAppointment.patientPhone,
+      patientId: newAppointment.patientId,
       providerId: newAppointment.providerId,
       scheduledStart: startDateTime.toISOString(),
       scheduledEnd: endDateTime.toISOString(),
       appointmentType: newAppointment.appointmentType,
       notes: newAppointment.notes,
-      status: 'scheduled',
     });
   }, [newAppointment, createAppointmentMutation]);
 
@@ -521,14 +630,14 @@ const Appointments: React.FC = () => {
                 <FormControl fullWidth size="small">
                   <InputLabel>Provider</InputLabel>
                   <Select
-                    value={selectedProvider}
+                    value={selectedProviderFilter}
                     label="Provider"
-                    onChange={(e) => setSelectedProvider(e.target.value)}
+                    onChange={(e) => setSelectedProviderFilter(e.target.value)}
                   >
                     <MenuItem value="all">All Providers</MenuItem>
-                    {providers.map((provider) => (
+                    {providerOptions.map((provider) => (
                       <MenuItem key={provider.id} value={provider.id}>
-                        {provider.name}
+                        {provider.fullName || provider.email || 'Provider'}
                       </MenuItem>
                     ))}
                   </Select>
@@ -854,12 +963,29 @@ const Appointments: React.FC = () => {
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12}>
+                <Autocomplete
+                  options={patients}
+                  value={selectedPatientOption}
+                  onChange={handlePatientSelect}
+                  getOptionLabel={(option) => `${option.firstName} ${option.lastName}`.trim() || option.email || 'Patient'}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  loading={isPatientsLoading}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Patient"
+                      placeholder="Search patients"
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Patient Name"
                   value={newAppointment.patientName}
                   onChange={(e) => setNewAppointment({ ...newAppointment, patientName: e.target.value })}
-                  required
+                  placeholder="Patient name"
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -869,6 +995,7 @@ const Appointments: React.FC = () => {
                   type="email"
                   value={newAppointment.patientEmail}
                   onChange={(e) => setNewAppointment({ ...newAppointment, patientEmail: e.target.value })}
+                  placeholder="email@example.com"
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -877,24 +1004,25 @@ const Appointments: React.FC = () => {
                   label="Phone"
                   value={newAppointment.patientPhone}
                   onChange={(e) => setNewAppointment({ ...newAppointment, patientPhone: e.target.value })}
+                  placeholder="(555) 123-4567"
                 />
               </Grid>
               <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Provider</InputLabel>
-                  <Select
-                    value={newAppointment.providerId}
-                    label="Provider"
-                    onChange={(e) => setNewAppointment({ ...newAppointment, providerId: e.target.value })}
-                    required
-                  >
-                    {providers.map((provider) => (
-                      <MenuItem key={provider.id} value={provider.id}>
-                        {provider.name} - {provider.specialty}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Autocomplete
+                  options={providerOptions}
+                  value={selectedProviderOption}
+                  onChange={handleProviderSelect}
+                  getOptionLabel={(option) => option.fullName || option.email || 'Provider'}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  loading={isProvidersLoading}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Provider"
+                      placeholder="Select provider"
+                    />
+                  )}
+                />
               </Grid>
               <Grid item xs={12}>
                 <FormControl fullWidth>
@@ -972,9 +1100,9 @@ const Appointments: React.FC = () => {
             <Button 
               variant="contained" 
               onClick={handleCreateAppointment}
-              disabled={!newAppointment.patientName || !newAppointment.providerId}
+              disabled={!newAppointment.patientId || !newAppointment.providerId || createAppointmentMutation.isPending}
             >
-              Create Appointment
+              {createAppointmentMutation.isPending ? 'Creating…' : 'Create Appointment'}
             </Button>
           </DialogActions>
         </Dialog>

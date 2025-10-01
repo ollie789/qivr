@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-09-29T05:22:40Z",
+  "summary": {
+    "total": 74,
+    "passed": 12,
+    "failed": 62,
+    "skipped": 0,
+    "passRate": 16.21
+  },
+  "authentication": {
+    "poolId": "ap-southeast-2_b48ZBE35F",
+    "tenantId": "b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11",
+    "userId": "b96ee4f8-7051-7098-213f-dafccafb06f9"
+  }
+}

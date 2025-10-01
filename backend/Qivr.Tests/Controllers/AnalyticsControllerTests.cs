@@ -202,6 +202,7 @@ public class AnalyticsControllerTests : DatabaseTestBase
             TenantId = TenantId,
             PatientId = patientId,
             ProviderId = provider.UserId,
+            ProviderProfileId = provider.Id,
             AppointmentType = "follow-up",
             Status = AppointmentStatus.Scheduled,
             ScheduledStart = now.AddDays(4),

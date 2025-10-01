@@ -6,6 +6,7 @@ public class Appointment : TenantEntity
 {
     public Guid PatientId { get; set; }
     public Guid ProviderId { get; set; }
+    public Guid ProviderProfileId { get; set; }
     public Guid? ClinicId { get; set; }  // Added ClinicId
     public Guid? EvaluationId { get; set; }
     public string? ExternalCalendarId { get; set; }
@@ -34,7 +35,8 @@ public class Appointment : TenantEntity
     
     // Navigation properties
     public virtual User? Patient { get; set; }
-    public virtual User? Provider { get; set; }  // Temporarily keeping as User to match database schema
+    public virtual User? Provider { get; set; }
+    public virtual Provider? ProviderProfile { get; set; }
     public virtual Clinic? Clinic { get; set; }
     public virtual Evaluation? Evaluation { get; set; }
     public virtual User? CancelledByUser { get; set; }

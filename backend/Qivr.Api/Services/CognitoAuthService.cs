@@ -21,7 +21,7 @@ public interface ICognitoAuthService
     Task<bool> SignOutAsync(string accessToken);
     Task<AuthenticationResult> SocialSignInAsync(string provider, string authorizationCode);
     Task<bool> SetupMfaAsync(string accessToken);
-    Task<bool> VerifyMfaAsync(string session, string mfaCode);
+    Task<AuthenticationResult> VerifyMfaAsync(string session, string mfaCode, ChallengeNameType challengeName);
     Task<UserInfo> GetUserInfoAsync(string accessToken);
     Task<bool> UpdateUserAttributesAsync(string accessToken, Dictionary<string, string> attributes);
     Task<List<string>> GetUserGroupsAsync(string username);
@@ -76,18 +76,34 @@ public class CognitoAuthService : ICognitoAuthService
                 {
                     Success = false,
                     RequiresMfa = true,
-                    Session = response.Session
+                    Session = response.Session,
+                    ChallengeName = response.ChallengeName
                 };
             }
             
-            if (response.ChallengeName == ChallengeNameType.SMS_MFA)
+            if (response.ChallengeName == ChallengeNameType.SMS_MFA ||
+                response.ChallengeName == ChallengeNameType.SOFTWARE_TOKEN_MFA)
             {
                 return new AuthenticationResult
                 {
                     Success = false,
                     RequiresMfa = true,
-                    Session = response.Session
+                    Session = response.Session,
+                    ChallengeName = response.ChallengeName
                 };
+            }
+
+            UserInfo? userInfo = null;
+            try
+            {
+                if (!string.IsNullOrEmpty(response.AuthenticationResult.AccessToken))
+                {
+                    userInfo = await GetUserInfoAsync(response.AuthenticationResult.AccessToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load user info after authentication for {Username}", username);
             }
 
             return new AuthenticationResult
@@ -96,7 +112,8 @@ public class CognitoAuthService : ICognitoAuthService
                 AccessToken = response.AuthenticationResult.AccessToken,
                 RefreshToken = response.AuthenticationResult.RefreshToken,
                 IdToken = response.AuthenticationResult.IdToken,
-                ExpiresIn = response.AuthenticationResult.ExpiresIn
+                ExpiresIn = response.AuthenticationResult.ExpiresIn,
+                UserInfo = userInfo
             };
         }
         catch (Exception ex)
@@ -335,13 +352,18 @@ public class CognitoAuthService : ICognitoAuthService
         }
     }
 
-    public async Task<bool> VerifyMfaAsync(string session, string mfaCode)
+    public async Task<AuthenticationResult> VerifyMfaAsync(string session, string mfaCode, ChallengeNameType challengeName)
     {
         try
         {
             var challengeResponses = new Dictionary<string, string>
             {
-                {"SMS_MFA_CODE", mfaCode}
+                {
+                    challengeName == ChallengeNameType.SOFTWARE_TOKEN_MFA
+                        ? "SOFTWARE_TOKEN_MFA_CODE"
+                        : "SMS_MFA_CODE",
+                    mfaCode
+                }
             };
             
             // Only add SECRET_HASH if client secret is configured
@@ -353,18 +375,52 @@ public class CognitoAuthService : ICognitoAuthService
             var request = new RespondToAuthChallengeRequest
             {
                 ClientId = _settings.UserPoolClientId,
-                ChallengeName = ChallengeNameType.SMS_MFA,
+                ChallengeName = challengeName,
                 Session = session,
                 ChallengeResponses = challengeResponses
             };
 
             var response = await _cognitoClient.RespondToAuthChallengeAsync(request);
-            return response.AuthenticationResult != null;
+            if (response.AuthenticationResult == null)
+            {
+                return new AuthenticationResult
+                {
+                    Success = false,
+                    ErrorMessage = "MFA challenge did not return tokens"
+                };
+            }
+
+            UserInfo? userInfo = null;
+            try
+            {
+                if (!string.IsNullOrEmpty(response.AuthenticationResult.AccessToken))
+                {
+                    userInfo = await GetUserInfoAsync(response.AuthenticationResult.AccessToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load user info after MFA verification");
+            }
+
+            return new AuthenticationResult
+            {
+                Success = true,
+                AccessToken = response.AuthenticationResult.AccessToken,
+                RefreshToken = response.AuthenticationResult.RefreshToken,
+                IdToken = response.AuthenticationResult.IdToken,
+                ExpiresIn = response.AuthenticationResult.ExpiresIn,
+                UserInfo = userInfo
+            };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "MFA verification failed");
-            return false;
+            return new AuthenticationResult
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
         }
     }
 
@@ -510,6 +566,7 @@ public class AuthenticationResult
     public string? Session { get; set; }
     public string? ErrorMessage { get; set; }
     public UserInfo? UserInfo { get; set; }  // Added UserInfo property
+    public ChallengeNameType? ChallengeName { get; set; }
 }
 
 public class SignUpRequest

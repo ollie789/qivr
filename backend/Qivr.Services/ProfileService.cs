@@ -28,12 +28,14 @@ public class ProfileService : IProfileService
     }
 
     public async Task<UserProfile?> GetUserProfileAsync(Guid tenantId, Guid userId)
-    {
-        var user = await _db.Users
-            .Where(u => u.TenantId == tenantId && u.Id == userId)
-            .FirstOrDefaultAsync();
+        {
+            var user = await _db.Users
+                .Where(u => u.TenantId == tenantId && u.Id == userId)
+                .FirstOrDefaultAsync();
 
         if (user == null) return null;
+
+        user.Preferences ??= new Dictionary<string, object>();
 
         // Get emergency contact from preferences or separate table
         var emergencyContact = user.Preferences?.ContainsKey("emergencyContact") == true
@@ -41,33 +43,42 @@ public class ProfileService : IProfileService
             : null;
 
         // Get medical info from patient record
-        var medicalInfoSql = @"
-            SELECT medical_history FROM qivr.patient_records 
-            WHERE tenant_id = {0} AND patient_id = {1}
-            LIMIT 1";
-        
-        var historyJson = await _db.Database.SqlQueryRaw<string>(medicalInfoSql, tenantId, userId).FirstOrDefaultAsync();
         MedicalInfo? medicalInfo = null;
-        
-        if (!string.IsNullOrEmpty(historyJson))
+        try
         {
-            try
+            var medicalInfoSql = @"
+                SELECT medical_history FROM patient_records 
+                WHERE tenant_id = {0} AND patient_id = {1}
+                LIMIT 1";
+
+            var historyJson = await _db.Database
+                .SqlQueryRaw<string>(medicalInfoSql, tenantId, userId)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrEmpty(historyJson))
             {
-                var history = JsonSerializer.Deserialize<MedicalHistory>(historyJson);
-                medicalInfo = new MedicalInfo
+                try
                 {
-                    BloodType = user.Preferences?.ContainsKey("bloodType") == true 
-                        ? user.Preferences["bloodType"].ToString() 
-                        : null,
-                    Allergies = history?.Allergies ?? new List<string>(),
-                    Medications = history?.CurrentMedications?.Select(m => $"{m.Name} {m.Dosage}").ToList() ?? new List<string>(),
-                    Conditions = history?.ChronicConditions ?? new List<string>()
-                };
+                    var history = JsonSerializer.Deserialize<MedicalHistory>(historyJson);
+                    medicalInfo = new MedicalInfo
+                    {
+                        BloodType = user.Preferences?.ContainsKey("bloodType") == true
+                            ? user.Preferences["bloodType"].ToString()
+                            : null,
+                        Allergies = history?.Allergies ?? new List<string>(),
+                        Medications = history?.CurrentMedications?.Select(m => $"{m.Name} {m.Dosage}").ToList() ?? new List<string>(),
+                        Conditions = history?.ChronicConditions ?? new List<string>()
+                    };
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize medical history for user {UserId}", userId);
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to deserialize medical history for user {UserId}", userId);
-            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load medical history for user {UserId}", userId);
         }
 
         // Get preferences

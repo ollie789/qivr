@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import cognitoAuthService from '../services/cognitoAuthService';
+import cognitoAuthService, { type ClinicUserAttributes } from '../services/cognitoAuthService';
+import authApi, { type AuthUserInfo } from '../services/authApi';
 
 interface User {
   id: string;
@@ -22,6 +23,10 @@ interface AuthState {
   isLoading: boolean;
   mfaRequired: boolean;
   mfaSetupRequired: boolean;
+  mfaSession: string | null;
+  mfaChallenge: string | null;
+  activeTenantId: string | null;
+  usingAuthProxy: boolean;
   login: (email: string, password: string) => Promise<void>;
   confirmMFA: (code: string) => Promise<void>;
   setupMFA: () => Promise<{ qrCode: string; secretKey: string }>;
@@ -29,22 +34,92 @@ interface AuthState {
   logout: () => Promise<void>;
   setUser: (user: User) => void;
   setToken: (token: string | null) => void;
+  setActiveTenantId: (tenantId: string | null) => void;
   checkAuth: () => Promise<void>;
   refreshToken: () => Promise<void>;
 }
 
-// Development mode - set to false to use real authentication
-const DEV_MODE = false;
+// Development mode flag controlled via environment variable
+const DEV_MODE = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'true') === 'true';
 const DEV_USER: User = {
-  id: 'dev-user-123',
-  name: 'Dr. Sarah Johnson',
-  email: 'sarah.johnson@clinic.com',
-  clinicId: '11111111-1111-1111-1111-111111111111',
-  clinicName: 'Springfield Medical Center',
-  role: 'admin',
-  employeeId: 'EMP001',
-  licenseNumber: 'LIC123456',
-  specialization: 'General Practice',
+  id: '11111111-1111-4111-8111-111111111111',
+  name: 'Dev Clinician',
+  email: 'dev.clinician@clinic.local',
+  clinicId: '22222222-2222-2222-2222-222222222222',
+  tenantId: 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11',
+  clinicName: 'Development Clinic',
+  role: 'practitioner',
+  employeeId: 'DEV-EMP-001',
+  licenseNumber: 'DEV-LIC-001',
+  specialization: 'Primary Care',
+};
+
+const USE_AUTH_PROXY = import.meta.env.VITE_USE_AUTH_PROXY === 'true';
+
+const mapAttributesToUser = (attributes: ClinicUserAttributes): User => {
+  const attr = attributes as Record<string, string | undefined>;
+
+  const getAttribute = (primary: string, legacy?: string) => {
+    const value = attr[primary];
+    if (value && value.length > 0) {
+      return value;
+    }
+    return legacy ? attr[legacy] : undefined;
+  };
+
+  const clinicId = getAttribute('custom:clinic_id', 'custom:custom:clinic_id');
+  const tenantId = getAttribute('custom:tenant_id', 'custom:custom:tenant_id') ?? clinicId;
+
+  const rawRole = (getAttribute('custom:role', 'custom:custom:role') ?? 'practitioner').toLowerCase();
+  const allowedRoles: User['role'][] = ['admin', 'practitioner', 'receptionist', 'manager'];
+  const role = (allowedRoles.includes(rawRole as User['role'])
+    ? rawRole
+    : 'practitioner') as User['role'];
+
+  const givenName = attr['given_name'] ?? '';
+  const familyName = attr['family_name'] ?? '';
+  const fullName = `${givenName} ${familyName}`.trim();
+  const email = attr['email'] ?? '';
+
+  return {
+    id: attr['sub'] ?? '',
+    name: fullName || email,
+    email,
+    clinicId: clinicId,
+    tenantId: tenantId,
+    clinicName: getAttribute('custom:clinic_name', 'custom:custom:clinic_name'),
+    role,
+    employeeId: getAttribute('custom:employee_id', 'custom:custom:employee_id'),
+    licenseNumber: getAttribute('custom:license_number', 'custom:custom:license_num'),
+    specialization: getAttribute('custom:specialization', 'custom:custom:specialty'),
+  };
+};
+
+const mapProxyUserToUser = (info?: AuthUserInfo | null): User | null => {
+  if (!info) {
+    return null;
+  }
+
+  const email = info.email ?? '';
+  const firstName = info.firstName ?? '';
+  const lastName = info.lastName ?? '';
+  const fullName = `${firstName} ${lastName}`.trim() || email;
+  const tenantId = info.tenantId ?? undefined;
+  const role = (info.role ?? 'practitioner').toLowerCase() as User['role'];
+  const allowedRoles: User['role'][] = ['admin', 'practitioner', 'receptionist', 'manager'];
+
+  return {
+    id: info.username,
+    name: fullName,
+    email,
+    clinicId: undefined,
+    tenantId,
+    clinicName: undefined,
+    role: allowedRoles.includes(role) ? role : 'practitioner',
+    employeeId: undefined,
+    licenseNumber: undefined,
+    specialization: undefined,
+  };
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -56,9 +131,13 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       mfaRequired: false,
       mfaSetupRequired: false,
+      mfaSession: null,
+      mfaChallenge: null,
+      activeTenantId: null,
+      usingAuthProxy: USE_AUTH_PROXY,
 
       login: async (email: string, password: string) => {
-        set({ isLoading: true });
+        set({ isLoading: true, mfaRequired: false, mfaSetupRequired: false });
         try {
           // Use mock authentication in development
           if (DEV_MODE) {
@@ -70,38 +149,74 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               mfaRequired: false,
               mfaSetupRequired: false,
+              mfaSession: null,
+              activeTenantId: DEV_USER.tenantId ?? null,
             });
             localStorage.setItem('mockToken', mockToken);
             localStorage.setItem('mockUser', JSON.stringify(DEV_USER));
             set({ isLoading: false });
             return;
           }
-          
+
+          if (USE_AUTH_PROXY) {
+            const response = await authApi.login(email, password);
+
+            if ('requiresMfa' in response && response.requiresMfa) {
+              set({
+                mfaRequired: true,
+                mfaSession: response.session ?? null,
+                mfaChallenge: response.challengeName ?? null,
+              });
+              return;
+            }
+
+            let user = mapProxyUserToUser(response.userInfo);
+            if (!user) {
+              try {
+                const freshInfo = await authApi.getUserInfo();
+                user = mapProxyUserToUser(freshInfo);
+              } catch (err) {
+                console.warn('Failed to load user info after login:', err);
+              }
+            }
+
+            if (!user) {
+              throw new Error('Unable to load user profile after login');
+            }
+
+            set({
+              user,
+              token: null,
+              isAuthenticated: true,
+              mfaRequired: false,
+              mfaSetupRequired: false,
+              mfaSession: null,
+              mfaChallenge: null,
+              activeTenantId: user.tenantId ?? null,
+            });
+            return;
+          }
+
           const result = await cognitoAuthService.signIn(email, password);
-          
+
           if (result.isSignedIn) {
-            const userAttributes = await cognitoAuthService.getCurrentUser();
-            const session = await cognitoAuthService.getSession();
-            
-            if (userAttributes && session) {
-              const user: User = {
-                id: userAttributes.sub || '',
-                name: `${userAttributes.given_name} ${userAttributes.family_name}`,
-                email: userAttributes.email || '',
-                clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-                tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-                role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
-                employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
-                licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
-                specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
-              };
-              
+            const [userAttributes, session] = await Promise.all([
+              cognitoAuthService.getCurrentUser(),
+              cognitoAuthService.getSession(),
+            ]);
+
+            if (userAttributes && session?.accessToken) {
+              const user = mapAttributesToUser(userAttributes);
+
               set({
                 user,
                 token: session.accessToken,
                 isAuthenticated: true,
                 mfaRequired: false,
                 mfaSetupRequired: false,
+                mfaSession: null,
+                mfaChallenge: null,
+                activeTenantId: user.tenantId ?? null,
               });
             }
           }
@@ -122,29 +237,59 @@ export const useAuthStore = create<AuthState>()(
       confirmMFA: async (code: string) => {
         set({ isLoading: true });
         try {
+          if (USE_AUTH_PROXY) {
+            const session = get().mfaSession;
+            if (!session) {
+              throw new Error('MFA session expired. Please sign in again.');
+            }
+
+            const challengeName = get().mfaChallenge ?? undefined;
+            const response = await authApi.verifyMfa(session, code, challengeName);
+            let user = mapProxyUserToUser(response.userInfo);
+            if (!user) {
+              try {
+                const info = await authApi.getUserInfo();
+                user = mapProxyUserToUser(info);
+              } catch (err) {
+                console.warn('Failed to fetch user info after MFA verification:', err);
+              }
+            }
+
+            if (!user) {
+              throw new Error('Unable to load user profile after MFA verification');
+            }
+
+            set({
+              user,
+              token: null,
+              isAuthenticated: true,
+              mfaRequired: false,
+              mfaSetupRequired: false,
+              mfaSession: null,
+              mfaChallenge: null,
+              activeTenantId: user.tenantId ?? null,
+            });
+            return;
+          }
+
           await cognitoAuthService.confirmMFACode(code);
-          
-          const userAttributes = await cognitoAuthService.getCurrentUser();
-          const session = await cognitoAuthService.getSession();
-          
-          if (userAttributes && session) {
-            const user: User = {
-              id: userAttributes.sub || '',
-              name: `${userAttributes.given_name} ${userAttributes.family_name}`,
-              email: userAttributes.email || '',
-              clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-              tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-              role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
-              employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
-              licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
-              specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
-            };
-            
+
+          const [userAttributes, session] = await Promise.all([
+            cognitoAuthService.getCurrentUser(),
+            cognitoAuthService.getSession(),
+          ]);
+
+          if (userAttributes && session?.accessToken) {
+            const user = mapAttributesToUser(userAttributes);
+
             set({
               user,
               token: session.accessToken,
               isAuthenticated: true,
               mfaRequired: false,
+              mfaSession: null,
+              mfaChallenge: null,
+              activeTenantId: user.tenantId ?? null,
             });
           }
         } finally {
@@ -153,13 +298,18 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setupMFA: async () => {
-        const result = await cognitoAuthService.setupMFA();
-        return result;
+        if (USE_AUTH_PROXY) {
+          throw new Error('MFA setup via auth proxy is not yet implemented');
+        }
+        return cognitoAuthService.setupMFA();
       },
 
       verifyMFASetup: async (code: string) => {
         set({ isLoading: true });
         try {
+          if (USE_AUTH_PROXY) {
+            throw new Error('MFA setup verification via auth proxy is not yet implemented');
+          }
           await cognitoAuthService.verifyMFASetup(code);
           set({ mfaSetupRequired: false });
           
@@ -176,6 +326,8 @@ export const useAuthStore = create<AuthState>()(
           if (DEV_MODE) {
             localStorage.removeItem('mockToken');
             localStorage.removeItem('mockUser');
+          } else if (USE_AUTH_PROXY) {
+            await authApi.logout();
           } else {
             await cognitoAuthService.signOut();
           }
@@ -187,16 +339,26 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             mfaRequired: false,
             mfaSetupRequired: false,
+            mfaSession: null,
+            mfaChallenge: null,
+            activeTenantId: null,
           });
         }
       },
 
       setUser: (user: User) => {
-        set({ user });
+        set((state) => ({
+          user,
+          activeTenantId: state.activeTenantId ?? user.tenantId ?? null,
+        }));
       },
 
       setToken: (token: string | null) => {
         set({ token });
+      },
+
+      setActiveTenantId: (tenantId: string | null) => {
+        set({ activeTenantId: tenantId });
       },
 
       checkAuth: async () => {
@@ -211,56 +373,92 @@ export const useAuthStore = create<AuthState>()(
                 user: JSON.parse(mockUser),
                 token: mockToken,
                 isAuthenticated: true,
+                mfaRequired: false,
+                mfaSetupRequired: false,
+                mfaSession: null,
+                mfaChallenge: null,
               });
             } else {
               set({
                 user: null,
                 token: null,
                 isAuthenticated: false,
+                mfaRequired: false,
+                mfaSetupRequired: false,
+                mfaSession: null,
+                mfaChallenge: null,
               });
             }
             set({ isLoading: false });
             return;
           }
-          
-          const isAuth = await cognitoAuthService.isAuthenticated();
-          
-          if (isAuth) {
-            const userAttributes = await cognitoAuthService.getCurrentUser();
-            const session = await cognitoAuthService.getSession();
-            
-            if (userAttributes && session) {
-              const user: User = {
-                id: userAttributes.sub || '',
-                name: `${userAttributes.given_name} ${userAttributes.family_name}`,
-                email: userAttributes.email || '',
-                clinicId: userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-                tenantId: userAttributes['custom:custom:tenant_id'] || userAttributes['custom:tenant_id'] || userAttributes['custom:custom:clinic_id'] || userAttributes['custom:clinic_id'],
-                role: userAttributes['custom:custom:role'] || userAttributes['custom:role'] || 'practitioner',
-                employeeId: userAttributes['custom:custom:employee_id'] || userAttributes['custom:employee_id'],
-                licenseNumber: userAttributes['custom:custom:license_num'] || userAttributes['custom:license_number'],
-                specialization: userAttributes['custom:custom:specialty'] || userAttributes['custom:specialization'],
-              };
-              
-              set({
-                user,
-                token: session.accessToken,
-                isAuthenticated: true,
-              });
+
+          if (USE_AUTH_PROXY) {
+            try {
+              const info = await authApi.getUserInfo();
+              const user = mapProxyUserToUser(info);
+              if (user) {
+                set({
+                  user,
+                  token: null,
+                  isAuthenticated: true,
+                  mfaRequired: false,
+                  mfaSetupRequired: false,
+                  mfaSession: null,
+                  activeTenantId: get().activeTenantId ?? user.tenantId ?? null,
+                });
+                return;
+              }
+            } catch (error) {
+              console.warn('Auth check via proxy failed:', error);
             }
-          } else {
+
             set({
               user: null,
               token: null,
               isAuthenticated: false,
+              mfaRequired: false,
+              mfaSetupRequired: false,
+              mfaSession: null,
+              activeTenantId: null,
+              mfaChallenge: null,
             });
+            return;
           }
-        } catch (error) {
-          console.error('Auth check failed:', error);
+
+          try {
+            const [session, userAttributes] = await Promise.all([
+              cognitoAuthService.getSession(),
+              cognitoAuthService.getCurrentUser(),
+            ]);
+
+            if (session?.accessToken && userAttributes) {
+              const user = mapAttributesToUser(userAttributes);
+
+              set({
+                user,
+                token: session.accessToken,
+                isAuthenticated: true,
+                mfaRequired: false,
+                mfaSetupRequired: false,
+                mfaSession: null,
+                mfaChallenge: null,
+                activeTenantId: user.tenantId ?? null,
+              });
+              return;
+            }
+          } catch (error) {
+            console.error('Auth check failed:', error);
+          }
+
           set({
             user: null,
             token: null,
             isAuthenticated: false,
+            mfaRequired: false,
+            mfaSetupRequired: false,
+            mfaSession: null,
+            activeTenantId: null,
           });
         } finally {
           set({ isLoading: false });
@@ -269,9 +467,17 @@ export const useAuthStore = create<AuthState>()(
 
       refreshToken: async () => {
         try {
+          if (USE_AUTH_PROXY) {
+            await authApi.refresh();
+            set({ isAuthenticated: true, token: null });
+            return;
+          }
+
           const session = await cognitoAuthService.getSession();
-          if (session) {
-            set({ token: session.accessToken });
+          if (session?.accessToken) {
+            set({ token: session.accessToken, isAuthenticated: true });
+          } else {
+            set({ token: null, isAuthenticated: false });
           }
         } catch (error) {
           console.error('Token refresh failed:', error);
@@ -281,7 +487,17 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'clinic-auth-storage',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+        activeTenantId: state.activeTenantId,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.usingAuthProxy = USE_AUTH_PROXY;
+        }
+      },
     }
   )
 );
@@ -294,6 +510,8 @@ export const useAuth = () =>
     isLoading: state.isLoading,
     mfaRequired: state.mfaRequired,
     mfaSetupRequired: state.mfaSetupRequired,
+    activeTenantId: state.activeTenantId,
+    usingAuthProxy: state.usingAuthProxy,
   }));
 
 export const useAuthUser = () => useAuthStore((state) => state.user);
@@ -304,6 +522,7 @@ export const useAuthStatus = () =>
     isLoading: state.isLoading,
     mfaRequired: state.mfaRequired,
     mfaSetupRequired: state.mfaSetupRequired,
+    usingAuthProxy: state.usingAuthProxy,
   }));
 
 export const useAuthActions = () =>
@@ -317,4 +536,5 @@ export const useAuthActions = () =>
     refreshToken: state.refreshToken,
     setUser: state.setUser,
     setToken: state.setToken,
+    setActiveTenantId: state.setActiveTenantId,
   }));

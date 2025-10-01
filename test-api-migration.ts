@@ -28,6 +28,16 @@ const colors = {
   cyan: '\x1b[36m'
 };
 
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+interface EndpointDefinition {
+  path: string;
+  method: HttpMethod;
+  params?: Record<string, unknown>;
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
 // Test result tracking
 interface TestResult {
   service: string;
@@ -69,25 +79,23 @@ const httpClient = createHttpClient({
 async function testAnalyticsApi() {
   console.log(`\n${colors.cyan}${colors.bright}Testing Analytics API${colors.reset}`);
   
-  const endpoints = [
-    { path: '/api/analytics/dashboard', method: 'GET' as const },
-    { path: '/api/analytics/metrics', method: 'GET' as const },
-    { path: '/api/analytics/patient-flow', method: 'GET' as const },
-    { path: '/api/analytics/revenue', method: 'GET' as const },
-    { path: '/api/analytics/appointment-stats', method: 'GET' as const }
+  const endpoints: EndpointDefinition[] = [
+    { path: '/api/analytics/health-metrics', method: 'GET', params: { timeRange: '30days' } },
+    { path: '/api/analytics/prom-analytics', method: 'GET' },
+    { path: '/api/analytics/health-goals', method: 'GET' },
+    { path: '/api/analytics/correlations', method: 'GET' },
+    { path: '/api/analytics/patient-trends', method: 'GET' }
   ];
 
   for (const endpoint of endpoints) {
     const startTime = Date.now();
     try {
-      const response = await httpClient.request({
+      await httpClient.request({
         url: endpoint.path,
         method: endpoint.method,
-        params: {
-          clinicId: config.testClinicId,
-          startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          endDate: new Date().toISOString()
-        }
+        params: endpoint.params,
+        data: endpoint.body,
+        headers: endpoint.headers
       });
       
       logTest({
@@ -109,29 +117,29 @@ async function testAnalyticsApi() {
   }
 }
 
-// Test Dashboard API Service
-async function testDashboardApi() {
-  console.log(`\n${colors.cyan}${colors.bright}Testing Dashboard API${colors.reset}`);
+// Test Clinic Dashboard API Service
+async function testClinicDashboardApi() {
+  console.log(`\n${colors.cyan}${colors.bright}Testing Clinic Dashboard API${colors.reset}`);
   
-  const endpoints = [
-    { path: '/api/dashboard/overview', method: 'GET' as const },
-    { path: '/api/dashboard/appointments/today', method: 'GET' as const },
-    { path: '/api/dashboard/notifications', method: 'GET' as const },
-    { path: '/api/dashboard/tasks', method: 'GET' as const },
-    { path: '/api/dashboard/quick-stats', method: 'GET' as const }
+  const endpoints: EndpointDefinition[] = [
+    { path: '/api/clinic-dashboard/overview', method: 'GET' },
+    { path: '/api/clinic-dashboard/schedule/weekly', method: 'GET' },
+    { path: '/api/clinic-dashboard/metrics', method: 'GET' }
   ];
 
   for (const endpoint of endpoints) {
     const startTime = Date.now();
     try {
-      const response = await httpClient.request({
+      await httpClient.request({
         url: endpoint.path,
         method: endpoint.method,
-        params: { clinicId: config.testClinicId }
+        params: endpoint.params,
+        data: endpoint.body,
+        headers: endpoint.headers
       });
       
       logTest({
-        service: 'Dashboard API',
+        service: 'Clinic Dashboard API',
         endpoint: endpoint.path,
         method: endpoint.method,
         status: 'PASS',
@@ -139,7 +147,7 @@ async function testDashboardApi() {
       });
     } catch (error) {
       logTest({
-        service: 'Dashboard API',
+        service: 'Clinic Dashboard API',
         endpoint: endpoint.path,
         method: endpoint.method,
         status: 'FAIL',
@@ -153,23 +161,24 @@ async function testDashboardApi() {
 async function testPatientApi() {
   console.log(`\n${colors.cyan}${colors.bright}Testing Patient API${colors.reset}`);
   
-  const endpoints = [
-    { path: '/api/patients', method: 'GET' as const },
-    { path: `/api/patients/${config.testPatientId}`, method: 'GET' as const },
-    { path: `/api/patients/${config.testPatientId}/medical-history`, method: 'GET' as const },
-    { path: `/api/patients/${config.testPatientId}/appointments`, method: 'GET' as const },
-    { path: `/api/patients/${config.testPatientId}/documents`, method: 'GET' as const },
-    { path: '/api/patients/search', method: 'POST' as const, body: { query: 'test' } }
+  const endpoints: EndpointDefinition[] = [
+    { path: '/api/patients', method: 'GET' },
+    { path: `/api/patients/${config.testPatientId}`, method: 'GET' },
+    { path: `/api/patients/${config.testPatientId}/medical-history`, method: 'GET' },
+    { path: `/api/patients/${config.testPatientId}/appointments`, method: 'GET' },
+    { path: `/api/patients/${config.testPatientId}/documents`, method: 'GET' },
+    { path: '/api/patients/search', method: 'GET', params: { query: 'test', limit: 5 } }
   ];
 
   for (const endpoint of endpoints) {
     const startTime = Date.now();
     try {
-      const response = await httpClient.request({
+      await httpClient.request({
         url: endpoint.path,
         method: endpoint.method,
-        params: endpoint.method === 'GET' ? { clinicId: config.testClinicId } : undefined,
-        data: endpoint.body
+        params: endpoint.params,
+        data: endpoint.body,
+        headers: endpoint.headers
       });
       
       logTest({
@@ -195,20 +204,38 @@ async function testPatientApi() {
 async function testAuthService() {
   console.log(`\n${colors.cyan}${colors.bright}Testing Auth Service${colors.reset}`);
   
-  const endpoints = [
-    { path: '/api/auth/validate', method: 'GET' as const },
-    { path: '/api/auth/refresh', method: 'POST' as const, body: { refreshToken: 'test-refresh' } },
-    { path: '/api/auth/user-info', method: 'GET' as const },
-    { path: '/api/auth/permissions', method: 'GET' as const }
+  const refreshToken = process.env.AUTH_REFRESH_TOKEN;
+
+  const endpoints: EndpointDefinition[] = [
+    { path: '/api/auth/debug', method: 'GET' },
+    { path: '/api/auth/user-info', method: 'GET' }
   ];
+
+  if (refreshToken) {
+    endpoints.push({
+      path: '/api/auth/refresh-token',
+      method: 'POST',
+      body: { refreshToken }
+    });
+  } else {
+    logTest({
+      service: 'Auth Service',
+      endpoint: '/api/auth/refresh-token',
+      method: 'POST',
+      status: 'SKIP',
+      error: 'Set AUTH_REFRESH_TOKEN to exercise refresh flow'
+    });
+  }
 
   for (const endpoint of endpoints) {
     const startTime = Date.now();
     try {
-      const response = await httpClient.request({
+      await httpClient.request({
         url: endpoint.path,
         method: endpoint.method,
-        data: endpoint.body
+        params: endpoint.params,
+        data: endpoint.body,
+        headers: endpoint.headers
       });
       
       logTest({
@@ -234,21 +261,21 @@ async function testAuthService() {
 async function testPromInstanceApi() {
   console.log(`\n${colors.cyan}${colors.bright}Testing PROM Instance API${colors.reset}`);
   
-  const endpoints = [
-    { path: '/api/prom/instances', method: 'GET' as const },
-    { path: '/api/prom/instances/active', method: 'GET' as const },
-    { path: '/api/prom/templates', method: 'GET' as const },
-    { path: '/api/prom/responses', method: 'POST' as const, body: { instanceId: 'test-123', responses: [] } }
+  const endpoints: EndpointDefinition[] = [
+    { path: '/api/v1/proms/templates', method: 'GET' },
+    { path: '/api/v1/proms/instances', method: 'GET' },
+    { path: '/api/v1/proms/stats', method: 'GET' }
   ];
 
   for (const endpoint of endpoints) {
     const startTime = Date.now();
     try {
-      const response = await httpClient.request({
+      await httpClient.request({
         url: endpoint.path,
         method: endpoint.method,
-        params: endpoint.method === 'GET' ? { patientId: config.testPatientId } : undefined,
-        data: endpoint.body
+        params: endpoint.params,
+        data: endpoint.body,
+        headers: endpoint.headers
       });
       
       logTest({
@@ -270,32 +297,29 @@ async function testPromInstanceApi() {
   }
 }
 
-// Test Patient Portal APIs
-async function testPatientPortalApis() {
-  console.log(`\n${colors.cyan}${colors.bright}Testing Patient Portal APIs${colors.reset}`);
+// Test Patient Dashboard APIs
+async function testPatientDashboardApis() {
+  console.log(`\n${colors.cyan}${colors.bright}Testing Patient Dashboard APIs${colors.reset}`);
   
-  const endpoints = [
-    { path: '/api/patient-portal/profile', method: 'GET' as const },
-    { path: '/api/patient-portal/appointments', method: 'GET' as const },
-    { path: '/api/patient-portal/messages', method: 'GET' as const },
-    { path: '/api/patient-portal/documents', method: 'GET' as const },
-    { path: '/api/patient-portal/prescriptions', method: 'GET' as const },
-    { path: '/api/patient-portal/insurance', method: 'GET' as const }
+  const endpoints: EndpointDefinition[] = [
+    { path: '/api/patient-dashboard/overview', method: 'GET' },
+    { path: '/api/patient-dashboard/appointments/history', method: 'GET', params: { page: 1, pageSize: 10 } },
+    { path: '/api/patient-dashboard/health-summary', method: 'GET' }
   ];
 
   for (const endpoint of endpoints) {
     const startTime = Date.now();
     try {
-      const response = await httpClient.request({
+      await httpClient.request({
         url: endpoint.path,
         method: endpoint.method,
-        headers: {
-          'X-Patient-Id': config.testPatientId
-        }
+        params: endpoint.params,
+        data: endpoint.body,
+        headers: endpoint.headers
       });
       
       logTest({
-        service: 'Patient Portal API',
+        service: 'Patient Dashboard API',
         endpoint: endpoint.path,
         method: endpoint.method,
         status: 'PASS',
@@ -303,47 +327,7 @@ async function testPatientPortalApis() {
       });
     } catch (error) {
       logTest({
-        service: 'Patient Portal API',
-        endpoint: endpoint.path,
-        method: endpoint.method,
-        status: 'FAIL',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-}
-
-// Test Widget APIs
-async function testWidgetApis() {
-  console.log(`\n${colors.cyan}${colors.bright}Testing Widget APIs${colors.reset}`);
-  
-  const endpoints = [
-    { path: '/api/widget/availability', method: 'GET' as const },
-    { path: '/api/widget/book-appointment', method: 'POST' as const, body: { slot: '2024-01-01T10:00:00Z' } },
-    { path: '/api/widget/confirm-appointment', method: 'POST' as const, body: { appointmentId: 'test-123' } },
-    { path: '/api/widget/clinic-info', method: 'GET' as const }
-  ];
-
-  for (const endpoint of endpoints) {
-    const startTime = Date.now();
-    try {
-      const response = await httpClient.request({
-        url: endpoint.path,
-        method: endpoint.method,
-        params: endpoint.method === 'GET' ? { clinicId: config.testClinicId } : undefined,
-        data: endpoint.body
-      });
-      
-      logTest({
-        service: 'Widget API',
-        endpoint: endpoint.path,
-        method: endpoint.method,
-        status: 'PASS',
-        responseTime: Date.now() - startTime
-      });
-    } catch (error) {
-      logTest({
-        service: 'Widget API',
+        service: 'Patient Dashboard API',
         endpoint: endpoint.path,
         method: endpoint.method,
         status: 'FAIL',
@@ -484,12 +468,11 @@ async function runAllTests() {
 
     // Run all test suites
     await testAnalyticsApi();
-    await testDashboardApi();
+    await testClinicDashboardApi();
     await testPatientApi();
     await testAuthService();
     await testPromInstanceApi();
-    await testPatientPortalApis();
-    await testWidgetApis();
+    await testPatientDashboardApis();
     await testErrorHandling();
 
     // Generate and display report

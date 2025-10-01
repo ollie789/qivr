@@ -40,14 +40,16 @@ import {
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import apiClient from '../lib/api-client';
+import { useSnackbar } from 'notistack';
+import { documentsApi } from '../services/documentsApi';
 import FileUpload from '../components/FileUpload';
 
-interface Document {
+interface DocumentItem {
   id: string;
   name: string;
   type: string;
   size: number;
+  sizeLabel: string;
   category: string;
   patientId?: string;
   patientName?: string;
@@ -57,59 +59,59 @@ interface Document {
   thumbnailUrl?: string;
 }
 
-// API response type for documents
-interface DocumentApiResponse {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  category: string;
-  patientId?: string;
-  patientName?: string;
-  uploadedBy: string;
-  uploadedAt: string; // comes as string from API
-  url: string;
-  thumbnailUrl?: string;
-}
-
 const Documents: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
 
   // Fetch documents
   const { data: documents = [], isLoading, error } = useQuery({
     queryKey: ['documents', selectedCategory],
     queryFn: async () => {
-      const response = await apiClient.get('/api/Documents', {
-        params: {
-          category: selectedCategory === 'all' ? undefined : selectedCategory,
-          limit: 100,
-        }
+      const items = await documentsApi.list({
+        category: selectedCategory === 'all' ? undefined : selectedCategory,
+        pageSize: 100,
       });
-      return response.data.map((d: DocumentApiResponse): Document => ({
-        ...d,
-        uploadedAt: new Date(d.uploadedAt),
-      }));
+
+      return items.map((doc) => ({
+        id: doc.id,
+        name: doc.fileName,
+        type: doc.mimeType,
+        size: doc.fileSize,
+        sizeLabel: doc.fileSizeFormatted,
+        category: doc.category,
+        patientId: doc.patientId,
+        patientName: doc.patientName,
+        uploadedBy: doc.uploadedBy,
+        uploadedAt: new Date(doc.uploadedAt),
+        url: doc.url ?? '',
+        thumbnailUrl: doc.thumbnailUrl ?? undefined,
+      } satisfies DocumentItem));
     },
   });
 
   // Delete document mutation
   const deleteMutation = useMutation({
     mutationFn: async (documentId: string) => {
-      await apiClient.delete(`/api/Documents/${documentId}`);
+      await documentsApi.delete(documentId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       handleMenuClose();
+      enqueueSnackbar('Document deleted', { variant: 'success' });
+    },
+    onError: (mutationError) => {
+      const message = mutationError instanceof Error ? mutationError.message : 'Failed to delete document';
+      enqueueSnackbar(message, { variant: 'error' });
     },
   });
 
-  const filteredDocuments = documents.filter((d: Document) =>
+  const filteredDocuments = documents.filter((d: DocumentItem) =>
     d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (d.patientName && d.patientName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -125,22 +127,14 @@ const Documents: React.FC = () => {
     { value: 'other', label: 'Other' },
   ];
 
-  const getFileIcon = (type: string) => {
-    if (type.includes('pdf')) return <PdfIcon />;
-    if (type.includes('image')) return <ImageIcon />;
-    if (type.includes('doc')) return <DocIcon />;
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.includes('pdf')) return <PdfIcon />;
+    if (mimeType.includes('image')) return <ImageIcon />;
+    if (mimeType.includes('word') || mimeType.includes('text')) return <DocIcon />;
     return <FileIcon />;
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, doc: Document) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, doc: DocumentItem) => {
     setAnchorEl(event.currentTarget);
     setSelectedDocument(doc);
   };
@@ -155,8 +149,12 @@ const Documents: React.FC = () => {
   };
 
   const handleDownload = async () => {
-    if (selectedDocument) {
+    if (selectedDocument?.url) {
       window.open(selectedDocument.url, '_blank');
+    } else {
+      enqueueSnackbar('Download link is not available yet. Please refresh and try again.', {
+        variant: 'warning',
+      });
     }
     handleMenuClose();
   };
@@ -242,7 +240,7 @@ const Documents: React.FC = () => {
         </Paper>
       ) : (
         <Grid container spacing={3}>
-          {filteredDocuments.map((doc: Document) => (
+          {filteredDocuments.map((doc: DocumentItem) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={doc.id}>
               <Card>
                 <CardContent>
@@ -263,7 +261,7 @@ const Documents: React.FC = () => {
                         {doc.name}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {formatFileSize(doc.size)}
+                        {doc.sizeLabel}
                       </Typography>
                     </Box>
                     <IconButton

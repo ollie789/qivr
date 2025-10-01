@@ -1,8 +1,8 @@
-import { fetchAuthSession } from '@aws-amplify/auth';
 import { createHttpClient, HttpError, type HttpRequestOptions } from '@qivr/http';
+import { useAuthStore } from '../stores/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-const DEFAULT_TENANT_ID = import.meta.env.VITE_DEFAULT_TENANT_ID || '11111111-1111-1111-1111-111111111111';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+const DEFAULT_TENANT_ID = import.meta.env.VITE_DEFAULT_TENANT_ID || 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
 const DEFAULT_CLINIC_ID = import.meta.env.VITE_DEFAULT_CLINIC_ID || '22222222-2222-2222-2222-222222222222';
 
 // Type for API request parameters
@@ -21,24 +21,29 @@ const baseClient = createHttpClient({
 
 export async function apiRequest<T extends ApiResponse = ApiResponse>(options: HttpRequestOptions): Promise<T> {
   try {
-    // Try to get auth token, but allow unauthenticated requests
-    let accessToken: string | undefined;
-    try {
-      const session = await fetchAuthSession();
-      accessToken = session.tokens?.accessToken?.toString();
-    } catch (e) {
-      console.log('No auth session, proceeding without token');
-    }
+    const { token, user, activeTenantId } = useAuthStore.getState();
+    const isFormData = typeof FormData !== 'undefined' && options.data instanceof FormData;
 
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'X-Tenant-Id': DEFAULT_TENANT_ID,
-      'X-Clinic-Id': DEFAULT_CLINIC_ID,
       ...options.headers,
     };
 
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
+    if (!isFormData && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    if (token && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const tenantId = activeTenantId ?? user?.tenantId ?? DEFAULT_TENANT_ID;
+    if (tenantId && !headers['X-Tenant-Id']) {
+      headers['X-Tenant-Id'] = tenantId;
+    }
+
+    const clinicId = user?.clinicId ?? DEFAULT_CLINIC_ID;
+    if (clinicId && !headers['X-Clinic-Id']) {
+      headers['X-Clinic-Id'] = clinicId;
     }
 
     return await baseClient.request<T>({

@@ -11,7 +11,7 @@ namespace Qivr.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/proms")]
-public class PromsController : ControllerBase
+public class PromsController : BaseApiController
 {
 	private readonly IPromService _promService;
 	private readonly IPromInstanceService _promInstanceService;
@@ -29,7 +29,7 @@ public class PromsController : ControllerBase
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<ActionResult<PromTemplateDto>> CreateOrVersionTemplate([FromBody] CreatePromTemplateDto request, CancellationToken ct)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var result = await _promService.CreateOrVersionTemplateAsync(tenantId, request, ct);
 		return CreatedAtAction(nameof(GetTemplate), new { key = result.Key, version = result.Version }, result);
 	}
@@ -39,7 +39,7 @@ public class PromsController : ControllerBase
 	[Authorize]
 	public async Task<ActionResult<PromTemplateDto>> GetTemplate([FromRoute] string key, [FromRoute] int? version, CancellationToken ct)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var result = await _promService.GetTemplateAsync(tenantId, key, version, ct);
 		if (result == null) return NotFound();
 		return Ok(result);
@@ -50,7 +50,7 @@ public class PromsController : ControllerBase
 	[Authorize]
 	public async Task<ActionResult<PromTemplateDto>> GetTemplateById([FromRoute] Guid templateId, CancellationToken ct)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var result = await _promService.GetTemplateByIdAsync(tenantId, templateId, ct);
 		if (result == null) return NotFound();
 		return Ok(result);
@@ -61,7 +61,7 @@ public class PromsController : ControllerBase
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<ActionResult<PromTemplateDto>> UpdateTemplate([FromRoute] Guid templateId, [FromBody] UpdatePromTemplateDto request, CancellationToken ct)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var result = await _promService.UpdateTemplateAsync(tenantId, templateId, request, ct);
 		if (result == null) return NotFound();
 		return Ok(result);
@@ -72,7 +72,7 @@ public class PromsController : ControllerBase
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<IActionResult> DeleteTemplate([FromRoute] Guid templateId, CancellationToken ct)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var removed = await _promService.DeleteTemplateAsync(tenantId, templateId, ct);
 		if (!removed) return NotFound();
 		return NoContent();
@@ -83,7 +83,7 @@ public class PromsController : ControllerBase
 	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<PromTemplateSummaryDto>>> ListTemplates([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var list = await _promService.ListTemplatesAsync(tenantId, page, Math.Clamp(pageSize, 1, 100), ct);
 		return Ok(list);
 	}
@@ -107,7 +107,7 @@ public class PromsController : ControllerBase
 			ScheduledAt = request.ScheduledFor == default ? DateTime.UtcNow : request.ScheduledFor,
 			DueDate = request.DueAt,
 			NotificationMethod = request.NotificationMethod ?? NotificationMethod.Email,
-			SentBy = GetUserId().ToString(),
+			SentBy = CurrentUserId.ToString(),
 			Tags = request.Tags?.ToList(),
 			Notes = request.Notes
 		};
@@ -121,7 +121,7 @@ public class PromsController : ControllerBase
 	[Authorize]
 	public async Task<ActionResult<PromInstanceDto>> GetInstance([FromRoute] Guid id, CancellationToken ct)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var result = await _promInstanceService.GetPromInstanceAsync(tenantId, id, ct);
 		if (result == null) return NotFound();
 		return Ok(result);
@@ -132,8 +132,8 @@ public class PromsController : ControllerBase
 	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<PromInstanceDto>>> ListMyInstances([FromQuery] string? status, CancellationToken ct)
 	{
-		var tenantId = GetTenantId();
-		var userId = GetUserId();
+		var tenantId = RequireTenantId();
+		var userId = CurrentUserId;
 		var list = await _promInstanceService.GetPatientPromInstancesAsync(tenantId, userId, status, ct);
 		return Ok(list);
 	}
@@ -151,7 +151,7 @@ public class PromsController : ControllerBase
 		[FromQuery] int limit = 25,
 		CancellationToken ct = default)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var instances = await _promInstanceService.GetPromInstancesAsync(tenantId, templateId, status, patientId, startDate, endDate, ct);
 		var stats = CalculateAggregateStats(instances);
 		var safeLimit = Math.Clamp(limit, 1, 100);
@@ -162,7 +162,7 @@ public class PromsController : ControllerBase
 		var response = new PromResponseListDto
 		{
 			Data = data,
-			Total = instances.Count,
+			Total = instances.Count(),
 			Stats = stats
 		};
 
@@ -174,7 +174,7 @@ public class PromsController : ControllerBase
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<ActionResult<PromInstanceStats>> GetStats([FromQuery] Guid? templateId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
 	{
-		var tenantId = GetTenantId();
+		var tenantId = RequireTenantId();
 		var stats = await _promInstanceService.GetPromStatsAsync(tenantId, templateId, startDate, endDate, ct);
 		return Ok(stats);
 	}
@@ -362,17 +362,16 @@ public class PromsController : ControllerBase
 		return streak;
 	}
 
-	private Guid GetTenantId()
-	{
-		var claim = User.FindFirst("tenant_id")?.Value;
-		if (Guid.TryParse(claim, out var tid)) return tid;
-		throw new UnauthorizedAccessException("Tenant ID not found");
-	}
+	// CurrentTenantId removed - using BaseApiController property
 
 	// When anonymous/public: allow default tenant fallback from header or config pattern
 	private Guid GetTenantIdOrDefault()
 	{
-		if (User?.Identity?.IsAuthenticated == true) return GetTenantId();
+		if (User?.Identity?.IsAuthenticated == true) 
+		{
+			var tenantId = CurrentTenantId;
+			if (tenantId.HasValue) return tenantId.Value;
+		}
 		var header = HttpContext.Request.Headers["X-Clinic-Id"].FirstOrDefault();
 		if (Guid.TryParse(header, out var tidFromHeader)) return tidFromHeader;
 		// fallback default public tenant
@@ -380,13 +379,7 @@ public class PromsController : ControllerBase
 			["DefaultTenantId"] ?? "00000000-0000-0000-0000-000000000001");
 	}
 
-	private Guid GetUserId()
-	{
-		var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-			?? User.FindFirst("sub")?.Value;
-		if (Guid.TryParse(userIdClaim, out var uid)) return uid;
-		throw new UnauthorizedAccessException("User ID not found");
-	}
+	// CurrentUserId removed - using BaseApiController property
 
 	private static readonly JsonSerializerOptions SubmissionSerializerOptions = new()
 	{

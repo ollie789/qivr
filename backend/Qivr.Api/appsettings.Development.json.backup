@@ -1,0 +1,36 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=qivr-dev-db.ctueyqyqmqmz.ap-southeast-2.rds.amazonaws.com;Port=5432;Database=qivr;Username=qivr_user;Password=Sp06Ylqn5Wv8rHWjWmR4ttnzB3jDe+sG7pEuDF2+7hY=;SslMode=Require"
+  },
+  "Cognito": {
+    "Region": "ap-southeast-2",
+    "UserPoolId": "ap-southeast-2_jbutB4tj1",
+    "UserPoolClientId": "4l510mm689hhpgr12prbuch2og"
+  },
+  "Intake": {
+    "ConnectionString": "Host=localhost;Port=5432;Database=qivr;Username=qivr_user;Password=qivr_dev_password"
+  },
+  "Security": {
+    "DefaultTenantId": "b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11"
+  },
+  "SendGrid": {
+    "ApiKey": "dummy-key-for-dev",
+    "FromEmail": "noreply@qivr.health",
+    "FromName": "Qivr Health"
+  },
+  "AWS": {
+    "Cognito": {
+      "PatientPool": {
+        "Region": "ap-southeast-2",
+        "UserPoolId": "ap-southeast-2_ZMcriKNGJ",
+        "ClientId": "4kugfmvk56o3otd0grc4gddi8r"
+      },
+      "ClinicPool": {
+        "Region": "ap-southeast-2",
+        "UserPoolId": "ap-southeast-2_jbutB4tj1",
+        "ClientId": "4l510mm689hhpgr12prbuch2og"
+      }
+    }
+  }
+}
+

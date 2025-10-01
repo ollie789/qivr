@@ -47,7 +47,10 @@ public class Message : TenantEntity
     // For direct messaging (when not using conversation model)
     public Guid DirectRecipientId { get; set; }
     public virtual User? Recipient { get; set; }
-    
+
+    public Guid? ProviderProfileId { get; set; }
+    public virtual Provider? ProviderProfile { get; set; }
+
     public string? SenderName { get; set; }
     public string? SenderRole { get; set; } // Patient, Provider, Admin
     

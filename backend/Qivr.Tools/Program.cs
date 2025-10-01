@@ -592,6 +592,7 @@ internal static class SeedRunner
                     TenantId = tenantSeed.Id,
                     PatientId = patient.Id,
                     ProviderId = providerUser.Id,
+                    ProviderProfileId = providerProfile.Id,
                     ClinicId = providerProfile.ClinicId,
                     ScheduledStart = startTime,
                     ScheduledEnd = endTime,
@@ -614,6 +615,7 @@ internal static class SeedRunner
 
             updated |= UpdateIfChanged(appointment, a => a.PatientId, patient.Id, v => appointment.PatientId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ProviderId, providerUser.Id, v => appointment.ProviderId = v, !dryRun);
+            updated |= UpdateIfChanged(appointment, a => a.ProviderProfileId, providerProfile.Id, v => appointment.ProviderProfileId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ClinicId, providerProfile.ClinicId, v => appointment.ClinicId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ScheduledStart, startTime, v => appointment.ScheduledStart = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ScheduledEnd, endTime, v => appointment.ScheduledEnd = v, !dryRun);
