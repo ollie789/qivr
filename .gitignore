@@ -175,3 +175,18 @@ $RECYCLE.BIN/
 # Local environment variables
 .env.local
 .env.*.local
+
+# Archive folder
+archive/
+
+# Build artifacts
+*.zip
+backend/publish/
+
+# Temporary files and reports
+lint-report.json
+updated-secrets.json
+test-frontend-config.js
+*.backup
+deployment-status.md
+DEPLOYMENT_STATUS.md
