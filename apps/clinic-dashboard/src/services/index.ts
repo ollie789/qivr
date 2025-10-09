@@ -6,7 +6,7 @@ export * from './appointmentsApi';
 export * from './documentsApi';
 export * from './intakeApi';
 export * from './medicalRecordsApi';
-export * from './messagesApi';
+export { messagesApi } from './messagesApi';
 export * from './authApi';
 export * from './notificationsApi';
 export * from './patientApi';

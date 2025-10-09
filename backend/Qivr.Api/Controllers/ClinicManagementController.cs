@@ -390,7 +390,7 @@ public class ClinicManagementController : ControllerBase
     
     // GET: api/clinic-management/clinics/{clinicId}/analytics
     [HttpGet("clinics/{clinicId}/analytics")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
+    [Authorize(Roles = "SystemAdmin,ClinicAdmin,practitioner,admin,manager")]
     [ProducesResponseType(typeof(ClinicAnalyticsDto), 200)]
     public async Task<IActionResult> GetClinicAnalytics(Guid clinicId, [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct = default)
     {

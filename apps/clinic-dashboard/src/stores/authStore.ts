@@ -39,14 +39,14 @@ interface AuthState {
   refreshToken: () => Promise<void>;
 }
 
-// Development mode flag controlled via environment variable
-const DEV_MODE = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'true') === 'true';
+// Development mode flag controlled via environment variable (defaults to Cognito integration)
+const DEV_MODE = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'false') === 'true';
 const DEV_USER: User = {
   id: '11111111-1111-4111-8111-111111111111',
   name: 'Dev Clinician',
   email: 'dev.clinician@clinic.local',
-  clinicId: '22222222-2222-2222-2222-222222222222',
-  tenantId: 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11',
+  clinicId: null,
+  tenantId: null,
   clinicName: 'Development Clinic',
   role: 'practitioner',
   employeeId: 'DEV-EMP-001',
@@ -60,6 +60,14 @@ const mapAttributesToUser = (attributes: ClinicUserAttributes): User => {
   const attr = attributes as Record<string, string | undefined>;
 
   const getAttribute = (primary: string, legacy?: string) => {
+    // Check double-prefixed first (what actually exists in Cognito)
+    const doublePrefix = `custom:custom:${primary.replace('custom:', '')}`;
+    const doublePrefixValue = attr[doublePrefix];
+    if (doublePrefixValue && doublePrefixValue.length > 0) {
+      return doublePrefixValue;
+    }
+    
+    // Fallback to single prefix
     const value = attr[primary];
     if (value && value.length > 0) {
       return value;
@@ -67,10 +75,10 @@ const mapAttributesToUser = (attributes: ClinicUserAttributes): User => {
     return legacy ? attr[legacy] : undefined;
   };
 
-  const clinicId = getAttribute('custom:clinic_id', 'custom:custom:clinic_id');
-  const tenantId = getAttribute('custom:tenant_id', 'custom:custom:tenant_id') ?? clinicId;
+  const clinicId = getAttribute('custom:clinic_id');
+  const tenantId = getAttribute('custom:tenant_id') ?? clinicId ?? 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
 
-  const rawRole = (getAttribute('custom:role', 'custom:custom:role') ?? 'practitioner').toLowerCase();
+  const rawRole = (getAttribute('custom:role') ?? 'practitioner').toLowerCase();
   const allowedRoles: User['role'][] = ['admin', 'practitioner', 'receptionist', 'manager'];
   const role = (allowedRoles.includes(rawRole as User['role'])
     ? rawRole
@@ -170,7 +178,7 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
 
-            let user = mapProxyUserToUser(response.userInfo);
+            let user = mapProxyUserToUser('userInfo' in response ? response.userInfo : null);
             if (!user) {
               try {
                 const freshInfo = await authApi.getUserInfo();
@@ -184,9 +192,11 @@ export const useAuthStore = create<AuthState>()(
               throw new Error('Unable to load user profile after login');
             }
 
+            // Get session tokens for API requests
+            const cognitoSession = await cognitoAuthService.getSession();
             set({
               user,
-              token: null,
+              token: cognitoSession?.accessToken || null,
               isAuthenticated: true,
               mfaRequired: false,
               mfaSetupRequired: false,
@@ -259,9 +269,11 @@ export const useAuthStore = create<AuthState>()(
               throw new Error('Unable to load user profile after MFA verification');
             }
 
+            // Get session tokens for API requests
+            const cognitoSession = await cognitoAuthService.getSession();
             set({
               user,
-              token: null,
+              token: cognitoSession?.accessToken || null,
               isAuthenticated: true,
               mfaRequired: false,
               mfaSetupRequired: false,
@@ -398,9 +410,11 @@ export const useAuthStore = create<AuthState>()(
               const info = await authApi.getUserInfo();
               const user = mapProxyUserToUser(info);
               if (user) {
+                // Get session tokens for API requests
+                const cognitoSession = await cognitoAuthService.getSession();
                 set({
                   user,
-                  token: null,
+                  token: cognitoSession?.accessToken || null,
                   isAuthenticated: true,
                   mfaRequired: false,
                   mfaSetupRequired: false,
@@ -469,7 +483,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           if (USE_AUTH_PROXY) {
             await authApi.refresh();
-            set({ isAuthenticated: true, token: null });
+            // Don't set token to null for auth proxy
+            set({ isAuthenticated: true });
             return;
           }
 

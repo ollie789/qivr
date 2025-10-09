@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import authService from '../services/cognitoAuthService';
 
-const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'true') === 'true';
+const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'false') === 'true';
 
 const confirmSchema = z.object({
   email: z.string().email('Invalid email address'),

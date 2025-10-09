@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "region": "ap-southeast-2",
+  "userPoolId": "ap-southeast-2_jbutB4tj1",
+  "userName": "c2e3fe17-fb75-40fc-a30b-714517fae0dc",
+  "triggerSource": "PostConfirmation_ConfirmSignUp",
+  "request": {
+    "userAttributes": {
+      "sub": "c2e3fe17-fb75-40fc-a30b-714517fae0dc",
+      "email": "lambda.test@clinic.com",
+      "given_name": "Lambda",
+      "family_name": "Test",
+      "custom:custom:tenant_id": "b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11",
+      "custom:custom:clinic_id": "b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11",
+      "custom:custom:role": "Clinician"
+    }
+  },
+  "response": {}
+}

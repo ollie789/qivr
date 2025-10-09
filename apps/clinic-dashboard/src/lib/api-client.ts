@@ -1,18 +1,32 @@
 import { createHttpClient, HttpError, type HttpRequestOptions } from '@qivr/http';
 import { useAuthStore } from '../stores/authStore';
+import { fetchAuthSession } from '@aws-amplify/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
-const DEFAULT_TENANT_ID = import.meta.env.VITE_DEFAULT_TENANT_ID || 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
-const DEFAULT_CLINIC_ID = import.meta.env.VITE_DEFAULT_CLINIC_ID || '22222222-2222-2222-2222-222222222222';
+const USE_AUTH_PROXY = import.meta.env.VITE_USE_AUTH_PROXY === 'true';
+
+const claimFromPayload = (
+  payload: Record<string, unknown> | undefined,
+  keys: string[],
+): string | undefined => {
+  if (!payload) return undefined;
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return undefined;
+};
 
 // Type for API request parameters
-type ApiParams = Record<string, string | number | boolean | undefined | null>;
+type ApiParams = any;
 
 // Type for API request body
-type ApiRequestBody = Record<string, unknown> | FormData | string | null | undefined;
+type ApiRequestBody = any;
 
 // Generic response type constraint
-type ApiResponse = Record<string, unknown> | unknown[] | string | number | boolean | null;
+type ApiResponse = any;
 
 const baseClient = createHttpClient({
   baseURL: API_BASE_URL,
@@ -32,16 +46,60 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
       headers['Content-Type'] = 'application/json';
     }
 
-    if (token && !headers['Authorization']) {
-      headers['Authorization'] = `Bearer ${token}`;
+    let session: Awaited<ReturnType<typeof fetchAuthSession>> | undefined;
+    const ensureSession = async () => {
+      if (USE_AUTH_PROXY) {
+        return undefined;
+      }
+      if (!session) {
+        session = await fetchAuthSession();
+      }
+      return session;
+    };
+
+    // Handle authentication tokens
+    if (!headers['Authorization']) {
+      if (!USE_AUTH_PROXY) {
+        try {
+          const currentSession = await ensureSession();
+          const cognitoToken = currentSession?.tokens?.accessToken?.toString();
+          if (cognitoToken) {
+            headers['Authorization'] = `Bearer ${cognitoToken}`;
+          }
+        } catch (sessionError) {
+          console.warn('Unable to fetch Cognito session for API request', sessionError);
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+        }
+      }
     }
 
-    const tenantId = activeTenantId ?? user?.tenantId ?? DEFAULT_TENANT_ID;
+    const idTokenPayload = !USE_AUTH_PROXY
+      ? (await ensureSession())?.tokens?.idToken?.payload
+      : undefined;
+
+    const tenantId = activeTenantId
+      ?? user?.tenantId
+      ?? claimFromPayload(idTokenPayload, [
+        'custom:custom:tenant_id',
+        'custom:tenant_id',
+        'tenant_id',
+      ])
+      ?? 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11'; // Default tenant ID
+
     if (tenantId && !headers['X-Tenant-Id']) {
       headers['X-Tenant-Id'] = tenantId;
     }
 
-    const clinicId = user?.clinicId ?? DEFAULT_CLINIC_ID;
+    const clinicId = user?.clinicId
+      ?? claimFromPayload(idTokenPayload, [
+        'custom:custom:clinic_id',
+        'custom:clinic_id',
+        'clinic_id',
+      ])
+      ?? 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11'; // Default clinic ID (same as tenant for now)
+
     if (clinicId && !headers['X-Clinic-Id']) {
       headers['X-Clinic-Id'] = clinicId;
     }

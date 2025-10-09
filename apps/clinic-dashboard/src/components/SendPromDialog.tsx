@@ -70,7 +70,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
 
   const loadPatients = useCallback(async () => {
     try {
-      const response = await patientApi.getPatients({ page: 1, limit: 100 });
+      const response = await patientApi.getPatients({ limit: 100 });
       setPatients(response.data);
     } catch (error) {
       console.error('Failed to load patients:', error);
@@ -139,14 +139,14 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
       } as const;
 
       if (selectedPatients.length === 1) {
-        await promsApi.sendProm({
+        await promsApi.schedule({
           ...schedulePayload,
           patientId: selectedPatients[0].id,
         });
       } else {
         await Promise.all(
           selectedPatients.map((patient) =>
-            promsApi.sendProm({
+            promsApi.schedule({
               ...schedulePayload,
               patientId: patient.id,
             }),

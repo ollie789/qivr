@@ -104,7 +104,8 @@ export interface DashboardStats {
 
 type Maybe<T> = T | null | undefined;
 
-type PeriodDto = {
+// Internal Period DTO for handling different API response formats
+type PeriodDtoInternal = {
   from?: Maybe<string>;
   to?: Maybe<string>;
   From?: Maybe<string>;
@@ -224,7 +225,7 @@ type ProviderPerformanceDto = {
 };
 
 type ClinicAnalyticsResponse = {
-  period: PeriodDto;
+  period: PeriodDtoInternal;
   appointmentMetrics: AppointmentMetricsDto;
   patientMetrics: PatientMetricsDto;
   promMetrics: PromMetricsDto;
@@ -235,7 +236,7 @@ type ClinicAnalyticsResponse = {
   promCompletionBreakdown: PromCompletionBreakdownDto[];
   providerPerformance: ProviderPerformanceDto[];
 } | {
-  Period: PeriodDto;
+  Period: PeriodDtoInternal;
   AppointmentMetrics: AppointmentMetricsDto;
   PatientMetrics: PatientMetricsDto;
   PromMetrics: PromMetricsDto;
@@ -255,7 +256,15 @@ const toDecimal = (value: Maybe<number>): number =>
 const toString = (value: Maybe<string>, fallback = ''): string =>
   value != null ? String(value) : fallback;
 
-const normalizePeriod = (dto: PeriodDto): { from: ISODateString; to: ISODateString } => ({
+// Add unwrap helper function
+const unwrap = <T>(payload: T | { data: T }): T => {
+  if (payload && typeof payload === 'object' && 'data' in (payload as any)) {
+    return (payload as any).data as T;
+  }
+  return payload as T;
+};
+
+const normalizePeriod = (dto: PeriodDtoInternal): { from: ISODateString; to: ISODateString } => ({
   from: new Date(dto.from ?? dto.From ?? new Date().toISOString()).toISOString(),
   to: new Date(dto.to ?? dto.To ?? new Date().toISOString()).toISOString(),
 });

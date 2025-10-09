@@ -1,0 +1,756 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Qivr.Api</name>
+    </assembly>
+    <members>
+        <member name="T:Qivr.Api.Contracts.MessageMediaWebhook">
+            <summary>
+            MessageMedia inbound webhook payload
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AnalyticsController.GetHealthMetrics(System.String)">
+            <summary>
+            Get health metrics for a patient
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AnalyticsController.GetPromAnalytics(System.String)">
+            <summary>
+            Get PROM analytics for a patient
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AnalyticsController.GetHealthGoals">
+            <summary>
+            Get patient health goals
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AnalyticsController.GetCorrelations">
+            <summary>
+            Get health metric correlations
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AnalyticsController.GetPatientTrends(System.Int32)">
+            <summary>
+            Get patient trends over time
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AppointmentsController.GetAppointments(System.String,System.Int32,System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.Nullable{Qivr.Core.Entities.AppointmentStatus},System.Boolean)">
+            <summary>
+            Get appointments with cursor-based pagination
+            </summary>
+            <param name="cursor">Pagination cursor for next/previous page</param>
+            <param name="limit">Number of items per page (max 100)</param>
+            <param name="startDate">Filter appointments starting from this date</param>
+            <param name="endDate">Filter appointments ending before this date</param>
+            <param name="status">Filter by appointment status</param>
+            <param name="sortDescending">Sort in descending order (newest first)</param>
+            <returns>Paginated list of appointments</returns>
+            <response code="200">Returns the list of appointments</response>
+            <response code="401">Unauthorized - Authentication required</response>
+            <response code="429">Too many requests - Rate limit exceeded</response>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AppointmentsController.GetAppointmentsPaged(System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.Nullable{Qivr.Core.Entities.AppointmentStatus},System.Int32,System.Int32)">
+            <summary>
+            Get appointments with traditional pagination (legacy endpoint)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AppointmentsController.GetAppointment(System.Guid)">
+            <summary>
+            Get a specific appointment by ID
+            </summary>
+            <param name="id">The appointment ID</param>
+            <returns>The appointment details</returns>
+            <response code="200">Returns the appointment</response>
+            <response code="404">Appointment not found or access denied</response>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AppointmentsController.CreateAppointment(Qivr.Api.Controllers.CreateAppointmentRequest)">
+            <summary>
+            Create a new appointment
+            </summary>
+            <param name="request">Appointment creation request</param>
+            <returns>The created appointment</returns>
+            <response code="201">Appointment created successfully</response>
+            <response code="400">Invalid request or time slot not available</response>
+            <response code="409">Time slot conflict - double booking detected</response>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AppointmentsController.GetAvailableProviders(System.DateTime,System.String)">
+            <summary>
+            Get available providers for a given date
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AppointmentsController.BookAppointment(Qivr.Api.Controllers.BookAppointmentRequest)">
+            <summary>
+            Book an appointment using the availability service
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Controllers.AuthController">
+            <summary>
+            Authentication and authorization endpoints
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.AuthController.Login(Qivr.Api.Controllers.LoginRequest)">
+            <summary>
+            Authenticate user with username and password
+            </summary>
+            <param name="request">Login credentials</param>
+            <returns>Authentication tokens and user information</returns>
+            <response code="200">Login successful</response>
+            <response code="401">Invalid credentials</response>
+            <response code="429">Too many login attempts</response>
+        </member>
+        <member name="T:Qivr.Api.Controllers.BaseApiController">
+            <summary>
+            Base controller providing common functionality for all API controllers
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Controllers.BaseApiController.CurrentUserId">
+            <summary>
+            Gets the current authenticated user ID
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Controllers.BaseApiController.CurrentTenantId">
+            <summary>
+            Gets the current tenant ID from the HTTP context
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Controllers.BaseApiController.CurrentUserEmail">
+            <summary>
+            Gets the user's email from claims
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Controllers.BaseApiController.CurrentUserRole">
+            <summary>
+            Gets the user's role from claims
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.IsInRole(System.String)">
+            <summary>
+            Checks if the current user has a specific role
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Controllers.BaseApiController.IsAdmin">
+            <summary>
+            Checks if the current user is an admin
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Controllers.BaseApiController.IsProvider">
+            <summary>
+            Checks if the current user is a provider
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Controllers.BaseApiController.IsPatient">
+            <summary>
+            Checks if the current user is a patient
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.Success``1(``0,System.String)">
+            <summary>
+            Creates a standard success response
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.SuccessPaginated``1(System.Collections.Generic.IEnumerable{``0},System.Int32,System.Int32,System.Int32,System.String)">
+            <summary>
+            Creates a paginated success response
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.Created``1(``0,System.String)">
+            <summary>
+            Creates a Created (201) response with location header
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.NoContent">
+            <summary>
+            Creates a No Content (204) response
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.RequireTenantId">
+            <summary>
+            Validates that a required tenant ID is present
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.RequireResourceOwnership(System.Guid,System.String)">
+            <summary>
+            Validates that the current user has permission to access a specific resource
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.ValidateModel">
+            <summary>
+            Validates model state and throws ValidationException if invalid
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.GetClientIpAddress">
+            <summary>
+            Gets the client IP address
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.GetHeader(System.String)">
+            <summary>
+            Gets a request header value
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.BaseApiController.LogAudit(System.String,System.Object)">
+            <summary>
+            Logs an action for audit purposes
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.ClinicDashboardController.GetDashboardOverview(System.Nullable{System.DateTime})">
+            <summary>
+            Get clinic dashboard overview
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.ClinicDashboardController.GetWeeklySchedule(System.Nullable{System.DateTime})">
+            <summary>
+            Get provider's weekly schedule
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.ClinicDashboardController.GetClinicMetrics(System.Int32)">
+            <summary>
+            Get clinic performance metrics
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.UploadPatientDocument(System.Guid,Microsoft.AspNetCore.Http.IFormFile,System.String,System.String)">
+            <summary>
+            Upload a document for a patient
+            </summary>
+            <param name="patientId">The patient ID</param>
+            <param name="file">The file to upload (max 10MB)</param>
+            <param name="documentType">Type of document</param>
+            <param name="description">Optional description</param>
+            <returns>The uploaded document information</returns>
+            <response code="201">Document uploaded successfully</response>
+            <response code="400">Invalid file or request</response>
+            <response code="403">Access denied</response>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.UploadAppointmentDocument(System.Guid,Microsoft.AspNetCore.Http.IFormFile,System.String,System.String)">
+            <summary>
+            Upload a document for an appointment
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.UploadDocument(Qivr.Api.Controllers.GeneralDocumentUploadRequest,System.Threading.CancellationToken)">
+            <summary>
+            Upload a document to the current tenant (optionally scoped to a patient).
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.GetDocument(System.Guid)">
+            <summary>
+            Get a specific document
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.DownloadDocument(System.Guid)">
+            <summary>
+            Download a document
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.ShareDocument(System.Guid,Qivr.Api.Controllers.DocumentShareRequest,System.Threading.CancellationToken)">
+            <summary>
+            Share a document with another user in the tenant
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.GetDocumentShares(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            List document shares
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.RevokeDocumentShare(System.Guid,System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Revoke a document share link
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.ListPatientDocuments(System.Guid,System.String,System.Int32,System.Int32)">
+            <summary>
+            List documents for a patient
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.RequestDocumentReview(System.Guid,Qivr.Api.Controllers.DocumentReviewRequest,System.Threading.CancellationToken)">
+            <summary>
+            Request a clinician review for a document
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.CompleteDocumentReview(System.Guid,Qivr.Api.Controllers.DocumentReviewCompleteRequest,System.Threading.CancellationToken)">
+            <summary>
+            Complete a document review
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.DocumentsController.DeleteDocument(System.Guid)">
+            <summary>
+            Delete a document (soft delete)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.EmailVerificationController.VerifyEmail(Qivr.Api.Controllers.EmailVerificationController.VerifyEmailRequest)">
+            <summary>
+            Verify email address with token
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.EmailVerificationController.ResendVerificationEmail(Qivr.Api.Controllers.EmailVerificationController.ResendVerificationRequest)">
+            <summary>
+            Resend verification email
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.EmailVerificationController.TestVerificationEmail(Qivr.Api.Controllers.EmailVerificationController.TestEmailRequest)">
+            <summary>
+            Send test verification email (Development only)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.EvaluationsController.CreateEvaluation(Qivr.Api.Controllers.CreateEvaluationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Create a new evaluation (patient intake)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.EvaluationsController.GetEvaluation(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Get evaluation by ID
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.EvaluationsController.GetEvaluations(System.Nullable{System.Guid},System.Threading.CancellationToken)">
+            <summary>
+            Get all evaluations (with optional patient filter)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.EvaluationsController.UpdateEvaluationStatus(System.Guid,Qivr.Api.Controllers.UpdateStatusRequest,System.Threading.CancellationToken)">
+            <summary>
+            Update evaluation status
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.EvaluationsController.AnalyzeEvaluation(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Submit AI analysis for evaluation
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.IntakeController.SubmitIntake(Qivr.Api.Controllers.IntakeSubmissionRequest,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Public endpoint for widget intake submissions
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.IntakeController.GetIntakeStatus(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Check status of an intake submission (public)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.GetMessages(System.String,System.Int32,System.String,System.Nullable{System.Boolean},System.Boolean)">
+            <summary>
+            Get all messages for the current user with cursor pagination
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.GetMessagesPaged(System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Get all messages for the current user (Legacy endpoint with traditional pagination)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.GetConversations">
+            <summary>
+            Get all conversations for the current user
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.GetConversation(System.Guid,System.String,System.Int32,System.Boolean)">
+            <summary>
+            Get messages in a conversation with a specific user (with cursor pagination)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.GetConversationPaged(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Get messages in a conversation with a specific user (Legacy with traditional pagination)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.SendMessage(Qivr.Api.Controllers.SendMessageRequest)">
+            <summary>
+            Send a new message
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.GetMessage(System.Guid)">
+            <summary>
+            Get a specific message
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.MarkAsRead(System.Guid)">
+            <summary>
+            Mark a message as read
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.MarkMultipleAsRead(System.Collections.Generic.List{System.Guid})">
+            <summary>
+            Mark multiple messages as read
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.DeleteMessage(System.Guid)">
+            <summary>
+            Delete a message (soft delete)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.MessagesController.GetUnreadCount">
+            <summary>
+            Get unread message count
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.NotificationsController.GetNotificationsPaged(System.Nullable{System.Boolean},System.Nullable{Qivr.Core.Entities.NotificationChannel},System.Int32,System.Int32)">
+            <summary>
+            Get notifications with traditional pagination (for backward compatibility)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.NotificationsController.GetNotifications(System.String,System.Int32,System.Nullable{System.Boolean},System.Nullable{Qivr.Core.Entities.NotificationChannel},System.Boolean)">
+            <summary>
+            Get notifications with cursor-based pagination (new, more efficient)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PatientDashboardController.GetDashboardOverview">
+            <summary>
+            Get dashboard overview for patient
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PatientDashboardController.GetAppointmentHistory(System.Int32,System.Int32)">
+            <summary>
+            Get patient's appointment history
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PatientDashboardController.GetHealthSummary">
+            <summary>
+            Get patient's health summary
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PatientsController.SearchPatients(System.String,System.Int32)">
+            <summary>
+            Search for patients by name, email, or phone
+            </summary>
+            <param name="query">Search query (minimum 3 characters)</param>
+            <param name="limit">Maximum number of results to return</param>
+            <returns>List of matching patients</returns>
+            <response code="200">Returns matching patients</response>
+            <response code="400">Search query too short</response>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PatientsController.GetPatients(System.String,System.Int32,System.String,System.Boolean,System.Boolean)">
+            <summary>
+            Get all patients with cursor-based pagination
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PatientsController.GetPatientsPaged(System.Int32,System.Int32,System.String,System.Boolean)">
+            <summary>
+            Get all patients with traditional pagination (legacy endpoint)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PatientsController.GetPatientDetails(System.Guid)">
+            <summary>
+            Get patient details by ID
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.SendPromToPatient(Qivr.Services.SendPromRequest,System.Threading.CancellationToken)">
+            <summary>
+            Send a PROM to a single patient
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.SendPromToMultiplePatients(Qivr.Services.SendBulkPromRequest,System.Threading.CancellationToken)">
+            <summary>
+            Send a PROM to multiple patients
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.GetPromInstance(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Get a specific PROM instance by ID
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.GetPatientPromInstances(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Get all PROM instances for a patient
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.GetPromInstances(System.Nullable{System.Guid},System.String,System.Nullable{System.Guid},System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.Threading.CancellationToken)">
+            <summary>
+            Get PROM instances filtered by template, status, patient, or date range
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.SubmitPromResponse(System.Guid,Qivr.Services.PromSubmissionRequest,System.Threading.CancellationToken)">
+            <summary>
+            Submit responses for a PROM instance (patient portal endpoint)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.SendReminder(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Send a reminder for a pending PROM
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.GetPendingProms(System.Nullable{System.DateTime},System.Threading.CancellationToken)">
+            <summary>
+            Get pending PROMs, optionally filtered by due date
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.GetPromStats(System.Nullable{System.Guid},System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.Threading.CancellationToken)">
+            <summary>
+            Get PROM statistics
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.CancelPromInstance(System.Guid,Qivr.Services.CancelPromRequest,System.Threading.CancellationToken)">
+            <summary>
+            Cancel a PROM instance
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.RequestBooking(System.Guid,Qivr.Services.BookingRequest,System.Threading.CancellationToken)">
+            <summary>
+            Request a booking appointment from a PROM instance
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.PromInstanceController.PreviewPromTemplate(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Preview a PROM template (returns the questions without creating an instance)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.SettingsController.GetSettings">
+            <summary>
+            Get user settings
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.SettingsController.UpdateSettings(Qivr.Api.Controllers.UserSettingsDto)">
+            <summary>
+            Update user settings
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.SettingsController.UpdateSettingCategory(System.String,System.Object)">
+            <summary>
+            Update specific setting category
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.SettingsController.ChangePassword(Qivr.Api.Controllers.ChangePasswordSettingsRequest)">
+            <summary>
+            Change password
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.SettingsController.ToggleTwoFactor(Qivr.Api.Controllers.TwoFactorRequest)">
+            <summary>
+            Enable/disable two-factor authentication
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.SettingsController.ExportData(Qivr.Api.Controllers.ExportDataRequest)">
+            <summary>
+            Export user data
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Controllers.SettingsController.DeleteAccount(Qivr.Api.Controllers.DeleteAccountRequest)">
+            <summary>
+            Delete account
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.ApiException">
+            <summary>
+            Base exception class for all API exceptions
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.NotFoundException">
+            <summary>
+            Exception thrown when a requested resource is not found
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.ValidationException">
+            <summary>
+            Exception thrown when a request contains invalid data
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.UnauthorizedException">
+            <summary>
+            Exception thrown when a user is not authorized to perform an action
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.ForbiddenException">
+            <summary>
+            Exception thrown when a user doesn't have permission to access a resource
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.ConflictException">
+            <summary>
+            Exception thrown when there's a conflict with the current state
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.BusinessRuleException">
+            <summary>
+            Exception thrown when a business rule is violated
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.ExternalServiceException">
+            <summary>
+            Exception thrown when an external service fails
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Exceptions.RateLimitException">
+            <summary>
+            Exception thrown when rate limit is exceeded
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Hubs.NotificationHub">
+            <summary>
+            SignalR hub for real-time notifications
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Hubs.NotificationHub.SubscribeToNotifications(System.String[])">
+            <summary>
+            Subscribe to specific notification types
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Hubs.NotificationHub.UnsubscribeFromNotifications(System.String[])">
+            <summary>
+            Unsubscribe from specific notification types
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Hubs.NotificationHub.MarkNotificationAsRead(System.Guid)">
+            <summary>
+            Mark notification as read
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Hubs.NotificationHub.GetOnlineStatus(System.String[])">
+            <summary>
+            Get online status for a list of users
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Hubs.NotificationHub.SendTypingIndicator(System.String,System.Boolean)">
+            <summary>
+            Send typing indicator for messaging
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Hubs.NotificationHub.GetUserConnections(System.String)">
+            <summary>
+            Get all active connections for a user (static method for service use)
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Hubs.NotificationHub.IsUserOnline(System.String)">
+            <summary>
+            Check if a user is online (static method for service use)
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Middleware.CsrfProtectionMiddleware">
+            <summary>
+            Middleware for CSRF (Cross-Site Request Forgery) protection
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Middleware.CsrfProtectionExtensions">
+            <summary>
+            Extension methods for CSRF protection
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Middleware.SecurityHeadersMiddleware">
+            <summary>
+            Middleware to add security headers including CSP, X-Frame-Options, and other security headers.
+            Critical for preventing XSS, clickjacking, and other attacks.
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Middleware.SecurityHeadersMiddlewareExtensions">
+            <summary>
+            Extension methods for registering the security headers middleware
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Middleware.CspNonceService">
+            <summary>
+            Helper class for CSP nonce in Razor views (if needed)
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Middleware.TenantContextMiddleware">
+            <summary>
+            Middleware to set tenant context for Row-Level Security (RLS).
+            This is CRITICAL for preventing cross-tenant data exposure.
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Middleware.TenantContextMiddlewareExtensions">
+            <summary>
+            Extension method to register the middleware
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Models.CursorPaginationRequest">
+            <summary>
+            Request model for cursor-based pagination
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Models.CursorPaginationResponse`1">
+            <summary>
+            Response model for cursor-based pagination
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Models.CursorInfo">
+            <summary>
+            Cursor information for encoding/decoding
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Models.CursorPaginationHelper">
+            <summary>
+            Helper class for cursor-based pagination
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Models.CursorPaginationHelper.EncodeCursor(Qivr.Api.Models.CursorInfo)">
+            <summary>
+            Encode cursor information to base64 string
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Models.CursorPaginationHelper.DecodeCursor(System.String)">
+            <summary>
+            Decode base64 cursor string to cursor information
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Models.CursorPaginationHelper.PaginateAsync``2(System.Linq.IQueryable{``0},System.Linq.Expressions.Expression{System.Func{``0,``1}},System.Linq.Expressions.Expression{System.Func{``0,System.Guid}},Qivr.Api.Models.CursorPaginationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Apply cursor-based pagination to a queryable
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Models.CursorPaginationHelper.PaginateByCreatedAtAsync``1(System.Linq.IQueryable{``0},System.Linq.Expressions.Expression{System.Func{``0,System.DateTime}},System.Linq.Expressions.Expression{System.Func{``0,System.Guid}},Qivr.Api.Models.CursorPaginationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Simplified pagination for common scenarios (sorting by CreatedAt)
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Models.CursorPaginationExtensions">
+            <summary>
+            Extension methods for IQueryable to support cursor pagination
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Options.NotificationsOptions.BusinessHoursStartLocal">
+            <summary>
+            Business hours start time in local clinic timezone (24-hour format)
+            Default: 9 (09:00 AM)
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Options.NotificationsOptions.BusinessHoursEndLocal">
+            <summary>
+            Business hours end time in local clinic timezone (24-hour format)
+            Default: 18 (06:00 PM)
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Options.NotificationsOptions.EnforceQuietHours">
+            <summary>
+            Enable quiet hours enforcement
+            </summary>
+        </member>
+        <member name="P:Qivr.Api.Options.NotificationsOptions.DefaultTimeZone">
+            <summary>
+            Default timezone for clinics without specific timezone setting
+            </summary>
+        </member>
+        <member name="T:Qivr.Api.Services.ISecurityEventService">
+            <summary>
+            Service for tracking and monitoring security events
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Utilities.PhoneUtil.ToE164Loose(System.String)">
+            <summary>
+            Normalize phone number to E.164 format (loose validation)
+            Keeps '+' and digits only
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Utilities.PhoneUtil.ToE164Australia(System.String)">
+            <summary>
+            Format Australian mobile number to E.164
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Utilities.PhoneUtil.CheckOptOutKeywords(System.String)">
+            <summary>
+            Check if content matches STOP/START/UNSTOP keywords
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Utils.PasswordHasher.HashPassword(System.String)">
+            <summary>
+            Generate BCrypt hash for a password
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Utils.PasswordHasher.VerifyPassword(System.String,System.String)">
+            <summary>
+            Verify a password against a hash
+            </summary>
+        </member>
+        <member name="M:Qivr.Api.Utils.PasswordHasher.GenerateDemoHashes">
+            <summary>
+            Generate hashes for demo passwords
+            Run this to get hashes for seed data
+            </summary>
+        </member>
+    </members>
+</doc>

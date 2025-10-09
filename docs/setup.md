@@ -53,9 +53,7 @@ Secrets should stay outside git. Use shell exports, `.env.local`, or your prefer
 
 ```env
 VITE_API_URL=http://localhost:5050
-VITE_ENABLE_DEV_AUTH=true            # Switch to false when exercising Cognito
-VITE_DEFAULT_TENANT_ID=b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11
-VITE_DEFAULT_PATIENT_ID=33333333-3333-3333-3333-333333333333
+VITE_ENABLE_DEV_AUTH=false           # Switch to true for the mock dev provider
 
 # Only needed for Cognito-backed sessions
 VITE_COGNITO_REGION=
@@ -94,7 +92,7 @@ To stop everything, run `npm run docker:down` and `Ctrl+C` any watch processes. 
 | --- | --- | --- |
 | Backend API | 5050 | Swagger UI served at `/swagger` |
 | Clinic Dashboard | 3010 | Vite dev server, opens automatically |
-| Patient Portal | 3005 | Uses dev auth by default, Cognito when configured |
+| Patient Portal | 3005 | Cognito by default; enable dev auth via env flag |
 | Widget | 3000 | Embeddable booking widget |
 | PostgreSQL | 5432 | User: `qivr_user`, Database: `qivr` |
 | Redis | 6379 | Ephemeral cache |

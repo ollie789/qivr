@@ -22,7 +22,11 @@ npm run patient:dev   # http://localhost:3005
 npm run widget:dev    # http://localhost:3000
 ```
 
-Create `.env` files only if you need to override the defaults. For local work you can simply set `VITE_ENABLE_DEV_AUTH=true` (already the default) and the API will issue mock credentials. When you want to exercise Cognito, flip the flags described in [docs/authentication.md](docs/authentication.md). A full walkthrough lives in [docs/setup.md](docs/setup.md).
+Create `.env` files only if you need to override the defaults. The workspace now points at Cognito out of the box; flip `DevAuth:Enabled` / `VITE_ENABLE_DEV_AUTH` to `true` only when you explicitly want the mock provider. A full walkthrough lives in [docs/authentication.md](docs/authentication.md) and [docs/setup.md](docs/setup.md).
+
+For hosted environments, either:
+- Set environment variables such as `DEFAULT_CONNECTION`, `INTAKE_CONNECTION`, `EMAIL_SMTP_HOST`, `S3_BUCKET_NAME`, etc., **or**
+- Provide an AWS Secrets Manager entry (see `AWS_SECRET_NAME`) with those key/value pairs so the API can resolve them at runtime.
 
 ## 📍 Services & ports
 
@@ -36,6 +40,7 @@ Create `.env` files only if you need to override the defaults. For local work yo
 | Redis | 6379 | — | Ephemeral cache |
 | MinIO | 9000 / 9001 | http://localhost:9001 | S3-compatible storage |
 | Mailhog | 1025 / 8025 | http://localhost:8025 | Email catcher for dev |
+| API container (ECS) | 8080 | — | Health check path `/health` |
 
 Seed data creates `test.doctor@clinic.com` (`ClinicTest123!`) and `patient@qivr.health` (`Patient123!`) after running `database/seed-data.sql`.
 

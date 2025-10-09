@@ -264,7 +264,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       // TODO: Replace with actual API call
       const response = await postWithAuth<{ appointment?: ScheduledAppointment }>('/api/calendar/appointments', appointmentData);
       
-      onScheduled?.(response.appointment || response);
+      onScheduled?.(response.appointment || response as ScheduledAppointment);
       onClose();
     } catch (err) {
       setError('Failed to schedule appointment');
@@ -406,10 +406,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
               {proposedSlots.slice(0, 3).map((slot, index) => (
                 <Chip
                   key={index}
-                  label={format(new Date(slot.start), 'MMM d, h:mm a')}
+                  label={`${slot.date} ${slot.time}`}
                   onClick={() => {
-                    setSelectedDate(new Date(slot.start));
-                    setSelectedTime(format(new Date(slot.start), 'HH:mm'));
+                    setSelectedDate(new Date(slot.date));
+                    setSelectedTime(slot.time);
                   }}
                   sx={{ mr: 1, mt: 1 }}
                 />

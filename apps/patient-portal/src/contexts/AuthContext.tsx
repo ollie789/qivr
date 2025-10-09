@@ -49,7 +49,7 @@ interface AuthContextType {
   setActiveTenantId: (tenantId: string | null) => void;
 }
 
-const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'true') === 'true';
+const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'false') === 'true';
 
 const DEV_USER: User = {
   username: 'dev.patient@qivr.local',
@@ -57,7 +57,7 @@ const DEV_USER: User = {
   firstName: 'Dev',
   lastName: 'Patient',
   phoneNumber: '+15551112222',
-  tenantId: 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11',
+  tenantId: null,
   role: 'patient',
   emailVerified: true,
   phoneVerified: true,
@@ -134,9 +134,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsAuthenticated(true);
         if (userInfo) {
           const tenantIdFromAttributes =
-            userInfo['custom:tenant_id'] || userInfo['custom:clinic_id'] || null;
-          const role = typeof userInfo['custom:role'] === 'string'
-            ? userInfo['custom:role'].toLowerCase()
+            (userInfo['custom:custom:tenant_id'] as string | undefined)
+            ?? (userInfo['custom:tenant_id'] as string | undefined)
+            ?? (userInfo['tenant_id'] as string | undefined)
+            ?? (userInfo['custom:custom:clinic_id'] as string | undefined)
+            ?? (userInfo['custom:clinic_id'] as string | undefined)
+            ?? (userInfo['clinic_id'] as string | undefined)
+            ?? null;
+          const roleClaim =
+            (userInfo['custom:custom:role'] as string | undefined)
+            ?? (userInfo['custom:role'] as string | undefined)
+            ?? (userInfo['role'] as string | undefined);
+          const role = typeof roleClaim === 'string'
+            ? roleClaim.toLowerCase()
             : undefined;
 
           setUser({

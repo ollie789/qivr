@@ -93,11 +93,12 @@ const Messages: React.FC = () => {
         return Promise.resolve({ items: [], nextCursor: null, hasNext: false, hasPrevious: false, count: 0 });
       }
       return messagesApi.getConversationMessages(selectedConversationId, {
-        cursor: pageParam,
+        cursor: pageParam as string | undefined,
         limit: 25,
         sortDescending: false,
       });
     },
+    initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: Boolean(selectedConversationId),
   });

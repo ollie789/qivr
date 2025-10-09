@@ -3,14 +3,25 @@ import { getActiveTenantId } from '../state/tenantState';
 import { fetchAuthSession } from '@aws-amplify/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
-const DEFAULT_TENANT_ID =
-  import.meta.env.VITE_DEFAULT_TENANT_ID || 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
-const DEFAULT_PATIENT_ID = import.meta.env.VITE_DEFAULT_PATIENT_ID || '33333333-3333-3333-3333-333333333333';
-const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'true') === 'true';
+const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'false') === 'true';
 
 type ApiParams = Record<string, string | number | boolean | undefined | null>;
 type ApiRequestBody = unknown;
 type ApiResponse = unknown;
+
+const claimFromPayload = (
+  payload: Record<string, unknown> | undefined,
+  keys: string[],
+): string | undefined => {
+  if (!payload) return undefined;
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return undefined;
+};
 
 const baseClient = createHttpClient({
   baseURL: API_BASE_URL,
@@ -35,20 +46,31 @@ export async function apiRequest<T = ApiResponse>(options: HttpRequestOptions): 
       headers['X-Tenant-Id'] = activeTenantId;
     }
 
+    let session: Awaited<ReturnType<typeof fetchAuthSession>> | undefined;
+    const ensureSession = async () => {
+      if (DEV_AUTH_ENABLED) {
+        return undefined;
+      }
+      if (!session) {
+        session = await fetchAuthSession();
+      }
+      return session;
+    };
+
     const needsSession =
       !DEV_AUTH_ENABLED && (!headers['Authorization'] || !headers['X-Tenant-Id'] || !headers['X-Patient-Id']);
 
-    let session: Awaited<ReturnType<typeof fetchAuthSession>> | undefined;
-
     if (needsSession) {
       try {
-        session = await fetchAuthSession();
+        await ensureSession();
       } catch (sessionError) {
-        if (!headers['Authorization']) {
-          console.warn('Unable to fetch Cognito session for API request', sessionError);
-        }
+        console.warn('Unable to fetch Cognito session for API request', sessionError);
       }
     }
+
+    const idTokenPayload = !DEV_AUTH_ENABLED
+      ? (await ensureSession())?.tokens?.idToken?.payload
+      : undefined;
 
     if (!headers['Authorization'] && !DEV_AUTH_ENABLED) {
       const token = session?.tokens?.accessToken?.toString();
@@ -58,20 +80,34 @@ export async function apiRequest<T = ApiResponse>(options: HttpRequestOptions): 
     }
 
     if (!headers['X-Tenant-Id']) {
-      const tenantFromSession = DEV_AUTH_ENABLED
-        ? undefined
-        : (session?.tokens?.idToken?.payload?.['custom:tenant_id'] as string | undefined) ??
-          (session?.tokens?.idToken?.payload?.tenant_id as string | undefined) ??
-          (session?.tokens?.idToken?.payload?.['custom:clinic_id'] as string | undefined);
-
-      headers['X-Tenant-Id'] = tenantFromSession || activeTenantId || DEFAULT_TENANT_ID;
+      const tenantFromSession = claimFromPayload(idTokenPayload, [
+        'custom:custom:tenant_id',
+        'custom:tenant_id',
+        'tenant_id',
+      ]);
+      if (tenantFromSession) {
+        headers['X-Tenant-Id'] = tenantFromSession;
+      }
     }
 
     if (!headers['X-Patient-Id']) {
-      const patientIdFromSession = DEV_AUTH_ENABLED
-        ? undefined
-        : (session?.tokens?.idToken?.payload?.sub as string | undefined);
-      headers['X-Patient-Id'] = patientIdFromSession || DEFAULT_PATIENT_ID;
+      const patientIdFromSession = typeof idTokenPayload?.sub === 'string'
+        ? (idTokenPayload.sub as string)
+        : undefined;
+      if (patientIdFromSession) {
+        headers['X-Patient-Id'] = patientIdFromSession;
+      }
+    }
+
+    if (!headers['X-Clinic-Id']) {
+      const clinicIdFromSession = claimFromPayload(idTokenPayload, [
+        'custom:custom:clinic_id',
+        'custom:clinic_id',
+        'clinic_id',
+      ]);
+      if (clinicIdFromSession) {
+        headers['X-Clinic-Id'] = clinicIdFromSession;
+      }
     }
 
     return await baseClient.request<T>({

@@ -162,9 +162,9 @@ const PROM: React.FC = () => {
         ? Math.round((statistics.completed / statistics.total) * 1000) / 10
         : 0);
 
-  const nextDueDate = aggregateStats?.nextDue ?? statistics.nextDue;
-  const lastCompletedDate = aggregateStats?.lastCompleted ?? statistics.lastCompleted;
-  const streak = aggregateStats?.streak ?? statistics.streak ?? 0;
+  const nextDueDate = aggregateStats?.nextDue;
+  const lastCompletedDate = aggregateStats?.lastCompleted;
+  const streak = aggregateStats?.streak ?? 0;
 
   const formatDate = (value?: string) => {
     if (!value) return '—';
@@ -640,8 +640,8 @@ const PROM: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            {response.startedAt
-                              ? format(parseISO(response.startedAt), 'MMM dd, yyyy')
+                            {response.assignedAt
+                              ? format(parseISO(response.assignedAt), 'MMM dd, yyyy')
                               : '-'}
                           </TableCell>
                           <TableCell>

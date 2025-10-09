@@ -3,6 +3,8 @@ import {
   Box,
   Card,
   CardContent,
+  CircularProgress,
+  Divider,
   Typography,
   Grid,
   Table,
@@ -855,23 +857,21 @@ const Patients: React.FC = () => {
       />
 
       {/* Message Composer Dialog */}
-      <Dialog open={messageOpen} onClose={() => setMessageOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Send Message to {selectedPatient?.firstName} {selectedPatient?.lastName}
-        </DialogTitle>
-        <DialogContent>
-          <MessageComposer
-            recipientType="patient"
-            recipientId={selectedPatient?.id}
-            recipientEmail={selectedPatient?.email}
-            recipientPhone={selectedPatient?.phone}
-            onSend={() => {
-              enqueueSnackbar('Message sent successfully', { variant: 'success' });
-              setMessageOpen(false);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      <MessageComposer
+        open={messageOpen}
+        onClose={() => setMessageOpen(false)}
+        recipients={selectedPatient ? [{
+          id: selectedPatient.id,
+          name: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
+          email: selectedPatient.email,
+          phone: selectedPatient.phone || undefined,
+          type: 'patient' as const
+        }] : []}
+        onSent={() => {
+          enqueueSnackbar('Message sent successfully', { variant: 'success' });
+          setMessageOpen(false);
+        }}
+      />
 
       {/* File Upload Dialog */}
       <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)} maxWidth="sm" fullWidth>

@@ -21,14 +21,14 @@ const colors = {
 };
 
 // Configuration
-const CLIENT_ID = '3u1j21aero8u8c7a4gh52g9qhb';
+const CLIENT_ID = '4l510mm689hhpgr12prbuch2og';
 const CLIENT_SECRET = '1sfitrb0486vqg0gqve60q7neqnhkkrfkulkkptnvfkgv1v74amm';
 
 // Configure Amplify (same as clinic-dashboard config)
 Amplify.configure({
   Auth: {
     Cognito: {
-      userPoolId: 'ap-southeast-2_b48ZBE35F',
+      userPoolId: 'ap-southeast-2_jbutB4tj1',
       userPoolClientId: CLIENT_ID,
       userPoolClientSecret: CLIENT_SECRET,
       signUpVerificationMethod: 'code',

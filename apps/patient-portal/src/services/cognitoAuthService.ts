@@ -37,6 +37,10 @@ export interface UserAttributes {
   'custom:tenant_id'?: string;
   'custom:role'?: string;
   'custom:clinic_id'?: string;
+  'custom:custom:tenant_id'?: string;
+  'custom:custom:role'?: string;
+  'custom:custom:clinic_id'?: string;
+  [key: string]: unknown;
 }
 
 export interface AuthTokens {

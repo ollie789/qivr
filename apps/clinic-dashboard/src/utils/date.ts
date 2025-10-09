@@ -3,6 +3,70 @@
  * Re-exports commonly used date-fns functions and provides custom utilities
  */
 
+import {
+  format,
+  formatDistance,
+  formatDistanceToNow,
+  formatRelative,
+  formatISO,
+  parseISO,
+  addDays,
+  addWeeks,
+  addMonths,
+  addYears,
+  addHours,
+  addMinutes,
+  subDays,
+  subWeeks,
+  subMonths,
+  subYears,
+  subHours,
+  subMinutes,
+  isAfter,
+  isBefore,
+  isEqual,
+  isSameDay,
+  isSameMonth,
+  isSameYear,
+  isToday,
+  isTomorrow,
+  isYesterday,
+  isPast,
+  isFuture,
+  isWithinInterval,
+  startOfDay,
+  startOfWeek,
+  startOfMonth,
+  startOfYear,
+  endOfDay,
+  endOfWeek,
+  endOfMonth,
+  endOfYear,
+  getDay,
+  getDate,
+  getMonth,
+  getYear,
+  getHours,
+  getMinutes,
+  getSeconds,
+  getDaysInMonth,
+  setDate,
+  setMonth,
+  setYear,
+  setHours,
+  setMinutes,
+  setSeconds,
+  differenceInDays,
+  differenceInMonths,
+  differenceInYears,
+  differenceInHours,
+  differenceInMinutes,
+  eachDayOfInterval,
+  isValid,
+} from 'date-fns';
+
+import { enAU } from 'date-fns/locale';
+
 // Re-export commonly used date-fns functions
 export {
   // Formatting
@@ -80,7 +144,7 @@ export {
 } from 'date-fns';
 
 // Re-export locale if needed
-export { enAU } from 'date-fns/locale';
+export { enAU };
 
 // Custom date utilities
 export const formatAppointmentTime = (date: Date | string): string => {

@@ -152,7 +152,9 @@ export const dashboardApi = {
         time: new Date(a.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         type: a.appointmentType,
         provider: a.providerName || '',
-        status: (typeof a.status === 'string' ? a.status : (a.status?.toString?.() || 'scheduled')).toLowerCase(),
+        status: (['scheduled', 'in-progress', 'completed', 'cancelled'].includes(
+          (typeof a.status === 'string' ? a.status : String(a.status || 'scheduled')).toLowerCase()
+        ) ? (typeof a.status === 'string' ? a.status : String(a.status || 'scheduled')).toLowerCase() : 'scheduled') as AppointmentSummary['status'],
       }));
     } catch (error) {
       console.error('Error fetching today appointments:', error);

@@ -110,7 +110,17 @@ builder.Host.UseSerilog();
 // Add API Versioning
 builder.Services.AddApiVersioningConfiguration();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Use camelCase for JSON property names to match frontend conventions
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        // Allow reading of numbers from strings for flexibility
+        options.JsonSerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString;
+        // Include fields in serialization if needed
+        options.JsonSerializerOptions.IncludeFields = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 
@@ -266,7 +276,7 @@ builder.Services.AddSecretsManager();
 var useDevelopmentAuth = builder.Environment.IsDevelopment() &&
     (builder.Configuration.GetValue<bool?>("DevAuth:Enabled")
         ?? builder.Configuration.GetValue<bool?>("UseMockAuth")
-        ?? true);
+        ?? false);
 
 if (useDevelopmentAuth)
 {

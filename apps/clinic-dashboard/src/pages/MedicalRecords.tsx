@@ -368,7 +368,7 @@ const MedicalRecords: React.FC = () => {
           title: `${test.testName} (${group.category})`,
           description: `${test.value} ${test.unit ?? ''}`.trim(),
           icon: <MedicalIcon />,
-          color: 'info',
+          color: 'primary',
         });
       });
     });
@@ -1062,7 +1062,7 @@ const MedicalRecords: React.FC = () => {
             <Button onClick={() => setVitalDialogOpen(false)}>Cancel</Button>
             <Button 
               variant="contained" 
-              onClick={() => addVitalMutation.mutate(newVital)}
+              onClick={() => addVitalMutation.mutate()}
               disabled={addVitalMutation.isPending}
             >
               Record
@@ -1177,7 +1177,7 @@ const MedicalRecords: React.FC = () => {
             <Button onClick={() => setHistoryDialogOpen(false)}>Cancel</Button>
             <Button 
               variant="contained" 
-              onClick={() => addHistoryMutation.mutate(newHistory)}
+              onClick={() => addHistoryMutation.mutate()}
               disabled={addHistoryMutation.isPending || !newHistory.title || !newHistory.description}
             >
               Add Entry

@@ -1,0 +1,46 @@
+{
+  "tenants": [
+    {
+      "id": "b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11",
+      "name": "Test Tenant",
+      "slug": "test-tenant",
+      "plan": "professional",
+      "timezone": "Australia/Sydney",
+      "locale": "en-AU",
+      "users": [
+        {
+          "email": "doctor@test.com",
+          "cognitoSub": "a0c05a9f-a1ec-489d-aef0-c4f7e7a7787c",
+          "firstName": "Test",
+          "lastName": "Doctor",
+          "userType": "Staff",
+          "roles": ["admin"],
+          "emailVerified": true
+        },
+        {
+          "email": "nurse@test.com",
+          "cognitoSub": "27f20e6c-d4a8-4d82-a576-d726038def7e",
+          "firstName": "Test",
+          "lastName": "Nurse",
+          "userType": "Staff",
+          "roles": ["staff"],
+          "emailVerified": true
+        }
+      ],
+      "clinics": [
+        {
+          "id": "22222222-2222-2222-2222-222222222222",
+          "name": "Test Clinic",
+          "address": "123 Test Street",
+          "city": "Sydney",
+          "state": "NSW",
+          "zipCode": "2000",
+          "country": "Australia",
+          "phone": "+61 2 5555 1234",
+          "email": "hello@testclinic.com",
+          "isActive": true
+        }
+      ]
+    }
+  ]
+}

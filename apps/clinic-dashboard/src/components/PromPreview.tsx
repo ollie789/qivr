@@ -139,7 +139,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
           />
         );
 
-      case 'single-choice':
+      case 'radio':
         return (
           <FormControl component="fieldset">
             <RadioGroup
@@ -240,7 +240,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
         }
       }
 
-      case 'boolean':
+      case 'checkbox':
         return (
           <RadioGroup
             value={value || ''}

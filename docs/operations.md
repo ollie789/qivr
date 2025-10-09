@@ -50,18 +50,66 @@ Seed helpers:
 
 Backend variables (set via environment or user secrets):
 
-- `CONNECTION_STRING` – Postgres connection
+- `DEFAULT_CONNECTION` (or `DATABASE_URL`) – primary Postgres connection string
+- `INTAKE_CONNECTION` – optional override for the intake database connection
 - `ASPNETCORE_ENVIRONMENT` – `Development`, `Staging`, `Production`
 - `DevAuth__Enabled` – keep `true` for local mock auth, force `false` in shared/prod environments
 - `COGNITO_*` – User pool IDs, client IDs, domain, region (required when using Cognito)
+- `EMAIL_SMTP_*`, `EMAIL_FROM_*`, `EMAIL_ENABLED` – SMTP configuration for outbound mail
+- `S3_ENDPOINT`, `S3_BUCKET_NAME`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` – object storage details
 - `MESSAGE_MEDIA_*` – Optional SMS integration
 - `OTEL_EXPORTER_OTLP_ENDPOINT` – Jaeger/OpenTelemetry collector
+
+> Configuration precedence follows the standard .NET order: `appsettings.json` → `appsettings.{Environment}.json` → environment variables → command-line arguments. The project excludes `appsettings.Development.json` from publish so cloud deployments cannot accidentally pick up localhost defaults.
+
+### Secrets Manager
+
+- Set `AWS_SECRET_NAME` (default `qivr/api/production`) and `AWS_REGION` on the environment when you want the API to pull configuration from AWS Secrets Manager.
+- The secret should be a JSON object whose keys match the environment properties the API expects. Example:
+
+```json
+{
+  "DEFAULT_CONNECTION": "Host=qivr-prod.corp123.ap-southeast-2.rds.amazonaws.com;Port=5432;Database=qivr;Username=qivr_user;Password=...;SslMode=Require",
+  "INTAKE_CONNECTION": "Host=qivr-prod-intake.corp123.ap-southeast-2.rds.amazonaws.com;Port=5432;Database=qivr_intake;Username=qivr_intake;Password=...;SslMode=Require",
+  "EMAIL_SMTP_HOST": "email-smtp.ap-southeast-2.amazonaws.com",
+  "EMAIL_SMTP_PORT": "465",
+  "EMAIL_SMTP_USERNAME": "AKIA...",
+  "EMAIL_SMTP_PASSWORD": "...",
+  "EMAIL_FROM_EMAIL": "noreply@qivr.health",
+  "EMAIL_FROM_NAME": "QIVR Health",
+  "EMAIL_ENABLED": "true",
+  "S3_ENDPOINT": "https://s3.ap-southeast-2.amazonaws.com",
+  "S3_BUCKET_NAME": "qivr-production-uploads",
+  "S3_ACCESS_KEY": "...",
+  "S3_SECRET_KEY": "..."
+}
+```
+
+Values stored in the secret override `appsettings.json` but can themselves be overridden by environment variables or command-line arguments if you need to test overrides.
+
+### Running on ECS/Fargate
+
+- Build the API image with the provided Dockerfile (`docker build -t qivr-api .`). The container exposes port **8080** and publishes `/health` for ALB/ELB health checks. Keep `ASPNETCORE_URLS=http://+:8080` in the task definition to match the container.
+- In your task definition, map the required configuration via **environment** or **secrets**:
+  ```json
+  {
+    "name": "DEFAULT_CONNECTION",
+    "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:123:secret:qivr/api/production:DEFAULT_CONNECTION::"
+  },
+  {
+    "name": "COGNITO_REGION",
+    "value": "ap-southeast-2"
+  }
+  ```
+  Repeat for `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`, `EMAIL_SMTP_*`, `S3_*`, etc., either pointing to Secrets Manager or supplying literal values.
+- Ensure the task IAM role can read the secret (`secretsmanager:GetSecretValue`) and access S3/RDS as needed. The execution role must pull from ECR.
+- Configure your load balancer target group with path `/health` and port `8080`. The container’s `HEALTHCHECK` already probes this endpoint internally.
+- Frontend tasks/services only need `VITE_API_URL`, `VITE_ENABLE_DEV_AUTH=false`, and the relevant Cognito env vars; these can also leverage Secrets Manager or Parameter Store.
 
 Frontend variables (per app `.env`):
 
 - `VITE_API_URL` – Base URL for the API (http://localhost:5050 in dev)
 - `VITE_ENABLE_DEV_AUTH` – `true` uses the mock provider, `false` integrates with Cognito
-- `VITE_DEFAULT_TENANT_ID` / `VITE_DEFAULT_PATIENT_ID` – Convenience IDs for local fixtures
 - `VITE_COGNITO_*` – Region, user pool, client IDs matched to the environment (only needed when dev auth is disabled)
 
 ## Deployment outline

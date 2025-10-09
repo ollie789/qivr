@@ -175,16 +175,29 @@ class NotificationsApi {
   }
 
   async getPreferences(): Promise<NotificationPreferences> {
-    const response = await apiClient.get<any>('/api/notifications/preferences');
-    const data = unwrap(response);
-    return {
-      emailEnabled: Boolean(data?.emailEnabled ?? data?.EmailEnabled ?? true),
-      smsEnabled: Boolean(data?.smsEnabled ?? data?.SmsEnabled ?? true),
-      pushEnabled: Boolean(data?.pushEnabled ?? data?.PushEnabled ?? true),
-      quietHoursStart: data?.quietHoursStart ?? data?.QuietHoursStart ?? null,
-      quietHoursEnd: data?.quietHoursEnd ?? data?.QuietHoursEnd ?? null,
-      preferredChannel: mapChannel(data?.preferredChannel ?? data?.PreferredChannel),
-    };
+    try {
+      const response = await apiClient.get<any>('/api/notifications/preferences');
+      const data = unwrap(response);
+      return {
+        emailEnabled: Boolean(data?.emailEnabled ?? data?.EmailEnabled ?? true),
+        smsEnabled: Boolean(data?.smsEnabled ?? data?.SmsEnabled ?? true),
+        pushEnabled: Boolean(data?.pushEnabled ?? data?.PushEnabled ?? true),
+        quietHoursStart: data?.quietHoursStart ?? data?.QuietHoursStart ?? null,
+        quietHoursEnd: data?.quietHoursEnd ?? data?.QuietHoursEnd ?? null,
+        preferredChannel: mapChannel(data?.preferredChannel ?? data?.PreferredChannel),
+      };
+    } catch (error) {
+      // Return default preferences if endpoint doesn't exist
+      console.warn('Notification preferences endpoint not available, using defaults');
+      return {
+        emailEnabled: true,
+        smsEnabled: true,
+        pushEnabled: true,
+        quietHoursStart: null,
+        quietHoursEnd: null,
+        preferredChannel: 'Email',
+      };
+    }
   }
 
   async updatePreferences(preferences: Partial<NotificationPreferences>): Promise<void> {

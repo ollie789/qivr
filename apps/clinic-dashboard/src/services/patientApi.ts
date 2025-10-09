@@ -262,17 +262,16 @@ class PatientApi {
     const lastName = dto.lastName ?? '';
     const email = dto.email ?? '';
     const status: Patient['status'] = dto.isActive === false ? 'inactive' : 'active';
+    const details = dto as PatientDetailsDto;
 
-    const address: PatientAddress | null = dto.address || dto.city || dto.state || dto.postalCode
+    const address: PatientAddress | null = details.address || details.city || details.state || details.postalCode
       ? {
-          street: dto.address ?? undefined,
-          city: (dto as PatientDetailsDto).city ?? undefined,
-          state: (dto as PatientDetailsDto).state ?? undefined,
-          postcode: (dto as PatientDetailsDto).postalCode ?? undefined,
+          street: details.address ?? undefined,
+          city: details.city ?? undefined,
+          state: details.state ?? undefined,
+          postcode: details.postalCode ?? undefined,
         }
       : null;
-
-    const details = dto as PatientDetailsDto;
 
     const rawAppointments = (details as any).recentAppointments ?? (details as any).RecentAppointments;
     const recentAppointments: PatientAppointmentSummary[] | undefined = Array.isArray(rawAppointments)
@@ -313,15 +312,15 @@ class PatientApi {
       nextAppointment: undefined,
       conditions: [],
       provider: undefined,
-      insuranceProvider: details.insuranceProvider ?? undefined,
-      insuranceNumber: details.insuranceNumber ?? undefined,
+      insuranceProvider: (details as any).insuranceProvider ?? undefined,
+      insuranceNumber: (details as any).insuranceNumber ?? undefined,
       registeredDate: dto.createdAt ?? undefined,
       tags: [],
       createdAt: dto.createdAt ?? undefined,
       updatedAt: dto.lastUpdated ?? undefined,
       notes: details.notes ?? undefined,
-      emergencyContact: details.emergencyContact ?? undefined,
-      emergencyPhone: details.emergencyPhone ?? undefined,
+      emergencyContact: (details as any).emergencyContact ?? undefined,
+      emergencyPhone: (details as any).emergencyPhone ?? undefined,
       recentAppointments,
       recentProms,
     };
@@ -329,4 +328,3 @@ class PatientApi {
 }
 
 export const patientApi = new PatientApi();
-export type { Patient, PatientListResponse };

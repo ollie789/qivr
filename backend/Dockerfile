@@ -19,12 +19,12 @@ RUN dotnet build "Qivr.Api.csproj" -c Release -o /app/build
 FROM build AS publish
 RUN dotnet publish "Qivr.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Stage 3: Runtime (using distroless for security)
+# Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
 WORKDIR /app
 
-# Install required packages for health checks
-RUN apk add --no-cache curl
+# Install required packages
+RUN apk add --no-cache curl icu-libs icu-data-full
 
 # Create non-root user
 RUN addgroup -g 1000 -S qivr && \

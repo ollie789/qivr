@@ -26,8 +26,14 @@ const unwrapItems = <T>(payload: CursorResponse<T> | T[] | { data: CursorRespons
     return raw;
   }
 
-  const items = raw.items ?? raw.Items ?? [];
-  return Array.isArray(items) ? items : [];
+  // Type guard to ensure raw is CursorResponse<T>
+  if (raw && typeof raw === 'object') {
+    const cursorResponse = raw as CursorResponse<T>;
+    const items = cursorResponse.items ?? cursorResponse.Items ?? [];
+    return Array.isArray(items) ? items : [];
+  }
+  
+  return [];
 };
 
 const toIsoString = (value: Maybe<string | Date>): string => {

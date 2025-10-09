@@ -596,7 +596,10 @@ const IntakeManagement: React.FC = () => {
       {selectedIntake && (
         <>
           <IntakeDetailsDialog
-            intake={selectedIntake}
+            intake={{
+              ...selectedIntake,
+              chiefComplaint: selectedIntake.conditionType || 'Not specified'
+            }}
             open={detailsOpen}
             onClose={() => {
               setDetailsOpen(false);
@@ -604,7 +607,7 @@ const IntakeManagement: React.FC = () => {
             }}
           />
           <ScheduleAppointmentDialog
-            intake={selectedIntake}
+            intakeId={selectedIntake.id}
             open={scheduleOpen}
             onClose={() => {
               setScheduleOpen(false);

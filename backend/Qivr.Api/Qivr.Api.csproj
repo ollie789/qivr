@@ -47,4 +47,8 @@
     <ProjectReference Include="..\Qivr.Services\Qivr.Services.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Remove="appsettings.Development.json" />
+  </ItemGroup>
+
 </Project>

@@ -20,7 +20,8 @@ This document captures the current expectations for automated and manual testing
 1. `TEST_CONNECTION_STRING` environment variable (use this for CI or pointing at disposable databases)
 2. Values inside `backend/.env.aws-dev` if present
 3. `backend/Qivr.Api/appsettings.Development.json`
-4. Fallback: `Host=localhost;Port=5432;Database=qivr_test;Username=qivr_user;Password=QivrDevPassword2024!`
+4. `DEFAULT_CONNECTION` (if set in the environment)
+5. Fallback: `Host=localhost;Port=5432;Database=qivr_test;Username=qivr_user;Password=QivrDevPassword2024!`
 
 Ensure the target database has the latest migrations before running the suite.
 

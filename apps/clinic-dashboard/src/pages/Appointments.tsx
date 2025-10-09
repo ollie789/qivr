@@ -179,8 +179,12 @@ const Appointments: React.FC = () => {
   const [selectedProviderOption, setSelectedProviderOption] = useState<Provider | null>(null);
 
   const { user } = useAuthStore();
-  const fallbackClinicId = (import.meta.env.VITE_DEFAULT_CLINIC_ID as string | undefined) ?? '22222222-2222-2222-2222-222222222222';
-  const clinicId = user?.clinicId ?? fallbackClinicId;
+  const clinicId = user?.clinicId;
+
+  // Don't render if no clinic ID available
+  if (!clinicId) {
+    return <div>Loading clinic information...</div>;
+  }
 
   const { data: patientsData, isLoading: isPatientsLoading } = useQuery<PatientListResponse>({
     queryKey: ['appointments', 'patients'],
@@ -234,16 +238,14 @@ const Appointments: React.FC = () => {
           endDate = format(endOfMonth(selectedDate), 'yyyy-MM-dd');
         }
 
-        const payload = await api.get<CursorPaginationResponse<AppointmentDto> | AppointmentDto[]>(
+        const payload = await apiClient.get<CursorPaginationResponse<AppointmentDto> | AppointmentDto[]>(
           '/api/appointments',
           {
-            params: {
-              startDate,
-              endDate,
-              limit: 200,
-              sortDescending: false,
-              providerId: selectedProviderFilter !== 'all' ? selectedProviderFilter : undefined,
-            },
+            startDate,
+            endDate,
+            limit: 200,
+            sortDescending: false,
+            providerId: selectedProviderFilter !== 'all' ? selectedProviderFilter : undefined,
           },
         );
 
@@ -276,7 +278,7 @@ const Appointments: React.FC = () => {
         throw new Error('A patient and provider must be selected.');
       }
 
-      const response = await api.post('/api/appointments', {
+      const response = await apiClient.post('/api/appointments', {
         patientId: data.patientId,
         providerId: data.providerId,
         appointmentType: data.appointmentType ?? 'consultation',
