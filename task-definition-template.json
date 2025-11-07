@@ -1,0 +1,112 @@
+{
+  "family": "qivr-api",
+  "taskRoleArn": "arn:aws:iam::818084701597:role/qivr-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::818084701597:role/qivr-ecs-task-execution-role",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "qivr-api",
+      "image": "IMAGE_URI_PLACEHOLDER",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT",
+          "value": "true"
+        },
+        {
+          "name": "Storage__Region",
+          "value": "ap-southeast-2"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "ap-southeast-2"
+        },
+        {
+          "name": "SQS_QUEUE_URL",
+          "value": "https://sqs.ap-southeast-2.amazonaws.com/818084701597/qivr-intake-queue"
+        },
+        {
+          "name": "ASPNETCORE_ENVIRONMENT",
+          "value": "Production"
+        },
+        {
+          "name": "Features__EnableRedisCache",
+          "value": "true"
+        },
+        {
+          "name": "Storage__BucketName",
+          "value": "qivr-static-assets-production-818084701597"
+        },
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "REDIS_CONNECTION_STRING",
+          "value": "qivr-redis.chdmyr.0001.apse2.cache.amazonaws.com:6379"
+        },
+        {
+          "name": "Storage__Provider",
+          "value": "S3"
+        },
+        {
+          "name": "S3_BUCKET_NAME",
+          "value": "qivr-static-assets-production-818084701597"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DB_HOST",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:host::"
+        },
+        {
+          "name": "DB_PORT",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:port::"
+        },
+        {
+          "name": "DB_NAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:database::"
+        },
+        {
+          "name": "DB_USERNAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:username::"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:password::"
+        },
+        {
+          "name": "JWT_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/api/production-Zwv3kY:JWT_SECRET_KEY::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/qivr-api",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8080/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

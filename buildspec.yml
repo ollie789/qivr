@@ -51,24 +51,18 @@ phases:
       - aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
       - aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*"
       
-      # Create new task definition with ICU fix
-      - echo Creating new task definition with ICU fix...
-      - echo '{"family":"qivr-api","taskRoleArn":"arn:aws:iam::818084701597:role/qivr-ecs-task-role","executionRoleArn":"arn:aws:iam::818084701597:role/qivr-ecs-task-execution-role","networkMode":"awsvpc","requiresCompatibilities":["FARGATE"],"cpu":"512","memory":"1024","containerDefinitions":[{"name":"qivr-api","image":"'$REPOSITORY_URI':'$IMAGE_TAG'","portMappings":[{"containerPort":8080,"protocol":"tcp"}],"essential":true,"environment":[{"name":"DOTNET_SYSTEM_GLOBALIZATION_INVARIANT","value":"true"},{"name":"Storage__Region","value":"ap-southeast-2"},{"name":"AWS_REGION","value":"ap-southeast-2"},{"name":"SQS_QUEUE_URL","value":"https://sqs.ap-southeast-2.amazonaws.com/818084701597/qivr-intake-queue"},{"name":"ASPNETCORE_ENVIRONMENT","value":"Production"},{"name":"Features__EnableRedisCache","value":"true"},{"name":"Storage__BucketName","value":"qivr-static-assets-production-818084701597"},{"name":"ENVIRONMENT","value":"production"},{"name":"REDIS_CONNECTION_STRING","value":"qivr-redis.chdmyr.0001.apse2.cache.amazonaws.com:6379"},{"name":"Storage__Provider","value":"S3"},{"name":"S3_BUCKET_NAME","value":"qivr-static-assets-production-818084701597"}],"secrets":[{"name":"DB_HOST","valueFrom":"arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:host::"},{"name":"DB_PORT","valueFrom":"arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:port::"},{"name":"DB_NAME","valueFrom":"arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:database::"},{"name":"DB_USERNAME","valueFrom":"arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:username::"},{"name":"DB_PASSWORD","valueFrom":"arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:password::"},{"name":"JWT_SECRET_KEY","valueFrom":"arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/api/production-Zwv3kY:JWT_SECRET_KEY::"}],"logConfiguration":{"logDriver":"awslogs","options":{"awslogs-group":"/ecs/qivr-api","awslogs-region":"ap-southeast-2","awslogs-stream-prefix":"ecs"}},"healthCheck":{"command":["CMD-SHELL","curl -f http://localhost:8080/health || exit 1"],"interval":30,"timeout":5,"retries":3,"startPeriod":60}}]}' > task-definition-new.json
+      # Create new task definition
+      - echo Creating new task definition...
+      - sed "s|IMAGE_URI_PLACEHOLDER|$REPOSITORY_URI:$IMAGE_TAG|g" task-definition-template.json > task-definition-new.json
       
       # Register new task definition
       - echo Registering new task definition...
       - NEW_TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://task-definition-new.json --query 'taskDefinition.taskDefinitionArn' --output text)
       - echo "New task definition:" $NEW_TASK_DEF
       
-      # Scale service to 0 first (nuclear option)
-      - echo Scaling service to 0 for clean restart...
-      - aws ecs update-service --cluster qivr_cluster --service qivr-api --desired-count 0
-      - echo Waiting for service to scale down...
-      - aws ecs wait services-stable --cluster qivr_cluster --services qivr-api
-      
-      # Update service with new task definition and scale back up
-      - echo Updating service with new task definition and scaling to 2...
-      - aws ecs update-service --cluster qivr_cluster --service qivr-api --task-definition $NEW_TASK_DEF --desired-count 2 --force-new-deployment
+      # Update service with new task definition
+      - echo Updating ECS service...
+      - aws ecs update-service --cluster qivr_cluster --service qivr-api --task-definition $NEW_TASK_DEF --force-new-deployment
       
       - echo Writing image definitions file...
       - printf '[{"name":"qivr-api","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
