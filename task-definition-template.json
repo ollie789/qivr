@@ -19,10 +19,6 @@
       "essential": true,
       "environment": [
         {
-          "name": "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT",
-          "value": "true"
-        },
-        {
           "name": "Storage__Region",
           "value": "ap-southeast-2"
         },
