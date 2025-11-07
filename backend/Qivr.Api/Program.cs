@@ -39,10 +39,11 @@ static string ExpandEnvPlaceholders(string? value)
 }
 
 // Load secrets from AWS Secrets Manager in production
-if (Environment.GetEnvironmentVariable("ENVIRONMENT") == "production")
-{
-    await builder.Configuration.AddSecretsManagerConfiguration();
-}
+// TODO: Implement AWS Secrets Manager integration
+// if (Environment.GetEnvironmentVariable("ENVIRONMENT") == "production")
+// {
+//     await builder.Configuration.AddSecretsManagerConfiguration();
+// }
 
 // Ensure environment variables override JSON and include post-secrets values
 builder.Configuration.AddEnvironmentVariables();
@@ -295,7 +296,8 @@ builder.Services.AddStorageServices(builder.Configuration);
 builder.Services.AddCsrfProtection();
 
 // Add Secrets Manager service
-builder.Services.AddSecretsManager();
+// TODO: Implement Secrets Manager service
+// builder.Services.AddSecretsManager();
 
 // Configure Authentication - Always use Cognito for production
 var useDevelopmentAuth = builder.Environment.IsDevelopment() &&
