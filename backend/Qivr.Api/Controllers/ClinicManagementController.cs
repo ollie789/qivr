@@ -214,13 +214,14 @@ public class ClinicManagementController : ControllerBase
     
     // GET: api/clinic-management/clinics/{clinicId}/providers
     [HttpGet("clinics/{clinicId}/providers")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin,Provider")]
+    [Authorize(Roles = "Admin,SystemAdmin,ClinicAdmin,Provider,Staff")]
     [ProducesResponseType(typeof(IEnumerable<ProviderDto>), 200)]
     public async Task<IActionResult> GetClinicProviders(Guid clinicId, [FromQuery] bool activeOnly = true)
     {
         var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
         if (tenantId == Guid.Empty)
         {
+            _logger.LogWarning("GetClinicProviders request missing tenant context for clinic {ClinicId}", clinicId);
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
@@ -390,7 +391,7 @@ public class ClinicManagementController : ControllerBase
     
     // GET: api/clinic-management/clinics/{clinicId}/analytics
     [HttpGet("clinics/{clinicId}/analytics")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin,practitioner,admin,manager")]
+    [Authorize(Roles = "Admin,SystemAdmin,ClinicAdmin,practitioner,admin,manager,Staff")]
     [ProducesResponseType(typeof(ClinicAnalyticsDto), 200)]
     public async Task<IActionResult> GetClinicAnalytics(Guid clinicId, [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct = default)
     {

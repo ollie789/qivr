@@ -45,7 +45,7 @@ public class ProfileController : BaseApiController
             var fallbackProfile = new UserProfileDto
             {
                 Id = userGuid.ToString(),
-                Email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value,
+                Email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? string.Empty,
                 FirstName = User.FindFirst("given_name")?.Value ?? string.Empty,
                 LastName = User.FindFirst("family_name")?.Value ?? string.Empty,
                 Phone = User.FindFirst("phone_number")?.Value,

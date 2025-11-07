@@ -69,7 +69,7 @@ public class GlobalErrorHandlingMiddleware
                 // Add retry-after header for rate limit exceptions
                 if (apiException is RateLimitException rateLimitException)
                 {
-                    context.Response.Headers.Add("Retry-After", rateLimitException.RetryAfterSeconds.ToString());
+                    context.Response.Headers["Retry-After"] = rateLimitException.RetryAfterSeconds.ToString();
                 }
                 break;
 

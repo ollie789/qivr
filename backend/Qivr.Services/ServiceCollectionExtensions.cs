@@ -82,6 +82,7 @@ public interface IUserService
     Task<UserDto?> GetUserAsync(Guid id, CancellationToken cancellationToken = default);
     Task<UserDto?> GetUserByCognitoSubAsync(string cognitoSub, CancellationToken cancellationToken = default);
     Task<Guid> CreateUserAsync(CreateUserDto dto, CancellationToken cancellationToken = default);
+    Task<UserDto> GetOrCreateUserFromCognitoAsync(string cognitoSub, string email, string? givenName, string? familyName, string? phone, CancellationToken cancellationToken = default);
 }
 
 public interface ITenantService
@@ -176,6 +177,7 @@ public record CreateUserDto(
 
 public record UserDto(
     Guid Id,
+    Guid TenantId,
     string Email,
     string? FirstName,
     string? LastName,

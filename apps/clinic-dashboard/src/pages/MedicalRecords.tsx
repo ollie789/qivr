@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Paper,
@@ -75,6 +75,11 @@ import {
   medicalRecordsApi,
   type VitalSign,
 } from '../services/medicalRecordsApi';
+import {
+  patientApi,
+  type PatientListResponse,
+  type Patient,
+} from '../services/patientApi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import type { ChipProps } from '@mui/material/Chip';
 import type { SelectChangeEvent } from '@mui/material/Select';
@@ -111,16 +116,25 @@ const MedicalRecords: React.FC = () => {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('all');
 
-  // Fetch patient data
-  const { data: patient } = useQuery({
-    queryKey: ['patient', selectedPatientId],
-    queryFn: async () => {
-      if (!selectedPatientId) return null;
-      const response = await apiClient.get(`/api/PatientRecords/${selectedPatientId}`);
-      return response.data;
-    },
-    enabled: !!selectedPatientId,
+  const {
+    data: patientList,
+    isLoading: isPatientsLoading,
+  } = useQuery<PatientListResponse>({
+    queryKey: ['medicalRecords', 'patients'],
+    queryFn: () => patientApi.getPatients({ limit: 200 }),
+    staleTime: 5 * 60 * 1000,
   });
+
+  const patients: Patient[] = patientList?.data ?? [];
+
+  useEffect(() => {
+    if (!selectedPatientId && patients.length > 0) {
+      setSelectedPatientId(patients[0].id);
+    }
+  }, [patients, selectedPatientId]);
+
+  // Get patient from the list
+  const patient = patients?.find(p => p.id === selectedPatientId);
 
   // Fetch vital signs
   const { data: medicalSummary } = useQuery({
@@ -427,10 +441,20 @@ const MedicalRecords: React.FC = () => {
               value={selectedPatientId}
               label="Select Patient"
               onChange={(e) => setSelectedPatientId(e.target.value)}
+              displayEmpty
             >
-              <MenuItem value="1">John Doe</MenuItem>
-              <MenuItem value="2">Jane Smith</MenuItem>
-              <MenuItem value="3">Robert Johnson</MenuItem>
+              <MenuItem value="" disabled>
+                {isPatientsLoading ? 'Loading patients...' : 'Select a patient'}
+              </MenuItem>
+              {patients.map((patientOption) => {
+                const name = `${patientOption.firstName ?? ''} ${patientOption.lastName ?? ''}`.trim();
+                const label = name.length > 0 ? name : patientOption.email;
+                return (
+                  <MenuItem key={patientOption.id} value={patientOption.id}>
+                    {label || 'Unknown patient'}
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
         </Paper>
@@ -595,7 +619,7 @@ const MedicalRecords: React.FC = () => {
                           <Grid item xs={3}>
                             <TextField
                               label="Zip"
-                              value={patient?.address?.zipCode || ''}
+                              value={(patient?.address as any)?.zipCode || ''}
                               disabled={!editMode}
                               fullWidth
                             />
@@ -610,19 +634,19 @@ const MedicalRecords: React.FC = () => {
                       <Stack spacing={2}>
                         <TextField
                           label="Name"
-                          value={patient?.emergencyContact?.name || ''}
+                          value={(patient?.emergencyContact as any)?.name || ''}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Relationship"
-                          value={patient?.emergencyContact?.relationship || ''}
+                          value={(patient?.emergencyContact as any)?.relationship || ''}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Phone"
-                          value={patient?.emergencyContact?.phone || ''}
+                          value={(patient?.emergencyContact as any)?.phone || ''}
                           disabled={!editMode}
                           fullWidth
                         />
@@ -635,19 +659,19 @@ const MedicalRecords: React.FC = () => {
                       <Stack spacing={2}>
                         <TextField
                           label="Provider"
-                          value={patient?.insurance?.provider || ''}
+                          value={(patient as any)?.insurance?.provider || ''}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Policy Number"
-                          value={patient?.insurance?.policyNumber || ''}
+                          value={(patient as any)?.insurance?.policyNumber || ''}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Group Number"
-                          value={patient?.insurance?.groupNumber || ''}
+                          value={(patient as any)?.insurance?.groupNumber || ''}
                           disabled={!editMode}
                           fullWidth
                         />

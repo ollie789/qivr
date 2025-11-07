@@ -1,4 +1,9 @@
-import { createHttpClient, HttpError, type HttpRequestOptions } from '@qivr/http';
+import {
+  createHttpClient,
+  HttpError,
+  getTenantId as getPersistedTenantId,
+  type HttpRequestOptions,
+} from '@qivr/http';
 import { getActiveTenantId } from '../state/tenantState';
 import { fetchAuthSession } from '@aws-amplify/auth';
 
@@ -23,6 +28,32 @@ const claimFromPayload = (
   return undefined;
 };
 
+const decodeJwtPayload = (token: string | null | undefined): Record<string, unknown> | undefined => {
+  if (!token) return undefined;
+  const parts = token.split('.');
+  if (parts.length < 2) return undefined;
+
+  const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+  try {
+    const decoder: ((value: string) => string) | null =
+      typeof atob === 'function'
+        ? atob
+        : typeof globalThis !== 'undefined' && typeof (globalThis as any).Buffer !== 'undefined'
+          ? (value: string) => (globalThis as any).Buffer.from(value, 'base64').toString('utf-8')
+          : null;
+
+    if (!decoder) {
+      return undefined;
+    }
+
+    const json = decoder(base64);
+    return JSON.parse(json);
+  } catch (error) {
+    console.warn('Unable to decode JWT payload', error);
+    return undefined;
+  }
+};
+
 const baseClient = createHttpClient({
   baseURL: API_BASE_URL,
   timeout: 30000,
@@ -41,73 +72,99 @@ export async function apiRequest<T = ApiResponse>(options: HttpRequestOptions): 
       headers['Content-Type'] = 'application/json';
     }
 
-    const activeTenantId = getActiveTenantId();
-    if (activeTenantId && !headers['X-Tenant-Id']) {
-      headers['X-Tenant-Id'] = activeTenantId;
-    }
-
     let session: Awaited<ReturnType<typeof fetchAuthSession>> | undefined;
-    const ensureSession = async () => {
+    const loadSession = async (): Promise<Awaited<ReturnType<typeof fetchAuthSession>> | undefined> => {
       if (DEV_AUTH_ENABLED) {
         return undefined;
       }
-      if (!session) {
-        session = await fetchAuthSession();
+      if (session) {
+        return session;
       }
+
+      try {
+        session = await fetchAuthSession();
+      } catch (sessionError) {
+        console.warn('Unable to fetch Cognito session for API request', sessionError);
+        session = undefined;
+      }
+
       return session;
     };
 
-    const needsSession =
-      !DEV_AUTH_ENABLED && (!headers['Authorization'] || !headers['X-Tenant-Id'] || !headers['X-Patient-Id']);
-
-    if (needsSession) {
-      try {
-        await ensureSession();
-      } catch (sessionError) {
-        console.warn('Unable to fetch Cognito session for API request', sessionError);
-      }
-    }
-
-    const idTokenPayload = !DEV_AUTH_ENABLED
-      ? (await ensureSession())?.tokens?.idToken?.payload
-      : undefined;
-
     if (!headers['Authorization'] && !DEV_AUTH_ENABLED) {
-      const token = session?.tokens?.accessToken?.toString();
+      const currentSession = await loadSession();
+      const token = currentSession?.tokens?.accessToken?.toString();
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
     }
 
-    if (!headers['X-Tenant-Id']) {
-      const tenantFromSession = claimFromPayload(idTokenPayload, [
+    const sessionTokens = !DEV_AUTH_ENABLED ? (await loadSession())?.tokens : undefined;
+    const idTokenPayload = sessionTokens?.idToken?.payload as Record<string, unknown> | undefined;
+    const accessTokenPayload = sessionTokens?.accessToken?.payload as Record<string, unknown> | undefined;
+
+    const activeTenantId = getActiveTenantId();
+    const persistedTenantId = typeof window !== 'undefined' ? getPersistedTenantId() : null;
+    const authHeaderToken = headers['Authorization']?.startsWith('Bearer ')
+      ? headers['Authorization'].slice(7)
+      : undefined;
+    const decodedHeaderPayload = decodeJwtPayload(authHeaderToken);
+
+    const tenantId = activeTenantId
+      ?? claimFromPayload(idTokenPayload, [
         'custom:custom:tenant_id',
         'custom:tenant_id',
         'tenant_id',
-      ]);
-      if (tenantFromSession) {
-        headers['X-Tenant-Id'] = tenantFromSession;
-      }
+      ])
+      ?? claimFromPayload(accessTokenPayload, [
+        'custom:custom:tenant_id',
+        'custom:tenant_id',
+        'tenant_id',
+      ])
+      ?? claimFromPayload(decodedHeaderPayload, [
+        'custom:custom:tenant_id',
+        'custom:tenant_id',
+        'tenant_id',
+      ])
+      ?? persistedTenantId
+      ?? undefined;
+
+    if (tenantId && !headers['X-Tenant-Id']) {
+      headers['X-Tenant-Id'] = tenantId;
     }
 
-    if (!headers['X-Patient-Id']) {
-      const patientIdFromSession = typeof idTokenPayload?.sub === 'string'
-        ? (idTokenPayload.sub as string)
-        : undefined;
-      if (patientIdFromSession) {
-        headers['X-Patient-Id'] = patientIdFromSession;
-      }
-    }
-
-    if (!headers['X-Clinic-Id']) {
-      const clinicIdFromSession = claimFromPayload(idTokenPayload, [
+    const clinicId = claimFromPayload(idTokenPayload, [
+      'custom:custom:clinic_id',
+      'custom:clinic_id',
+      'clinic_id',
+    ])
+      ?? claimFromPayload(accessTokenPayload, [
         'custom:custom:clinic_id',
         'custom:clinic_id',
         'clinic_id',
-      ]);
-      if (clinicIdFromSession) {
-        headers['X-Clinic-Id'] = clinicIdFromSession;
+      ])
+      ?? claimFromPayload(decodedHeaderPayload, [
+        'custom:custom:clinic_id',
+        'custom:clinic_id',
+        'clinic_id',
+      ])
+      ?? undefined;
+
+    if (clinicId && !headers['X-Clinic-Id']) {
+      headers['X-Clinic-Id'] = clinicId;
+    }
+
+    const patientIdFromClaims = ((): string | undefined => {
+      if (typeof idTokenPayload?.sub === 'string' && idTokenPayload.sub.trim().length > 0) {
+        return idTokenPayload.sub as string;
       }
+      return claimFromPayload(accessTokenPayload, ['sub', 'custom:patient_id', 'patient_id'])
+        ?? claimFromPayload(decodedHeaderPayload, ['sub', 'custom:patient_id', 'patient_id'])
+        ?? undefined;
+    })();
+
+    if (patientIdFromClaims && !headers['X-Patient-Id']) {
+      headers['X-Patient-Id'] = patientIdFromClaims;
     }
 
     return await baseClient.request<T>({

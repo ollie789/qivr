@@ -22,7 +22,11 @@
     "backend:dev": "cd backend && dotnet watch run --project Qivr.Api",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "deploy": "./deploy.sh",
+    "deploy:backend": "./deploy.sh --backend-only",
+    "deploy:frontend": "./deploy.sh --frontend-only",
+    "status": "./status.sh"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

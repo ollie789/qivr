@@ -76,7 +76,7 @@ const mapAttributesToUser = (attributes: ClinicUserAttributes): User => {
   };
 
   const clinicId = getAttribute('custom:clinic_id');
-  const tenantId = getAttribute('custom:tenant_id') ?? clinicId ?? 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
+  const tenantId = getAttribute('custom:tenant_id') ?? clinicId ?? undefined;
 
   const rawRole = (getAttribute('custom:role') ?? 'practitioner').toLowerCase();
   const allowedRoles: User['role'][] = ['admin', 'practitioner', 'receptionist', 'manager'];

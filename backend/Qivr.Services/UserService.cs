@@ -62,6 +62,90 @@ public class UserService : IUserService
         }
         return _mapper.Map<UserDto>(user);
     }
+
+    public async Task<UserDto> GetOrCreateUserFromCognitoAsync(string cognitoSub, string email, string? givenName, string? familyName, string? phone, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.CognitoSub == cognitoSub, cancellationToken);
+        
+        if (user == null)
+        {
+            _logger.LogInformation("Auto-creating user from Cognito: {Email} (sub: {CognitoSub})", email, cognitoSub);
+            
+            // Get or create default tenant
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(cancellationToken);
+            if (tenant == null)
+            {
+                _logger.LogInformation("Creating default tenant");
+                tenant = new Tenant
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Default Clinic",
+                    Slug = "default-clinic",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await _context.Tenants.AddAsync(tenant, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            // Get or create default clinic
+            var clinic = await _context.Clinics.FirstOrDefaultAsync(c => c.TenantId == tenant.Id, cancellationToken);
+            if (clinic == null)
+            {
+                _logger.LogInformation("Creating default clinic for tenant {TenantId}", tenant.Id);
+                clinic = new Clinic
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = tenant.Name,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await _context.Clinics.AddAsync(clinic, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            user = new User
+            {
+                Id = Guid.NewGuid(),
+                CognitoSub = cognitoSub,
+                Email = email,
+                FirstName = givenName ?? email.Split('@')[0],
+                LastName = familyName ?? "",
+                Phone = phone,
+                UserType = UserType.Admin,
+                TenantId = tenant.Id,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _context.Users.AddAsync(user, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+            
+            // Create provider profile for admin users
+            var existingProvider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == user.Id, cancellationToken);
+            if (existingProvider == null)
+            {
+                _logger.LogInformation("Creating provider profile for user {UserId}", user.Id);
+                var provider = new Core.Entities.Provider
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    TenantId = tenant.Id,
+                    ClinicId = clinic.Id,
+                    Specialty = "General Practice",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await _context.Providers.AddAsync(provider, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            
+            _logger.LogInformation("Auto-created user {Email} with ID {UserId}", email, user.Id);
+        }
+
+        return _mapper.Map<UserDto>(user);
+    }
 }
 
 public class TenantService : ITenantService

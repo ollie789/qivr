@@ -1,4 +1,9 @@
-import { createHttpClient, HttpError, type HttpRequestOptions } from '@qivr/http';
+import {
+  createHttpClient,
+  HttpError,
+  getTenantId as getStoredTenantId,
+  type HttpRequestOptions,
+} from '@qivr/http';
 import { useAuthStore } from '../stores/authStore';
 import { fetchAuthSession } from '@aws-amplify/auth';
 
@@ -17,6 +22,32 @@ const claimFromPayload = (
     }
   }
   return undefined;
+};
+
+const decodeJwtPayload = (token: string | null | undefined): Record<string, unknown> | undefined => {
+  if (!token) return undefined;
+  const parts = token.split('.');
+  if (parts.length < 2) return undefined;
+
+  const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+  try {
+    const decoder: ((value: string) => string) | null =
+      typeof atob === 'function'
+        ? atob
+        : typeof globalThis !== 'undefined' && typeof (globalThis as any).Buffer !== 'undefined'
+          ? (value: string) => (globalThis as any).Buffer.from(value, 'base64').toString('utf-8')
+          : null;
+
+    if (!decoder) {
+      return undefined;
+    }
+
+    const json = decoder(base64);
+    return JSON.parse(json);
+  } catch (error) {
+    console.warn('Unable to decode JWT payload', error);
+    return undefined;
+  }
 };
 
 // Type for API request parameters
@@ -47,37 +78,43 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
     }
 
     let session: Awaited<ReturnType<typeof fetchAuthSession>> | undefined;
-    const ensureSession = async () => {
+    const loadSession = async (): Promise<Awaited<ReturnType<typeof fetchAuthSession>> | undefined> => {
       if (USE_AUTH_PROXY) {
         return undefined;
       }
-      if (!session) {
-        session = await fetchAuthSession();
+      if (session) {
+        return session;
       }
+
+      try {
+        session = await fetchAuthSession();
+      } catch (sessionError) {
+        console.warn('Unable to fetch Cognito session for API request', sessionError);
+        session = undefined;
+      }
+
       return session;
     };
 
     // Handle authentication tokens
     if (!headers['Authorization']) {
       if (!USE_AUTH_PROXY) {
-        try {
-          const currentSession = await ensureSession();
-          const cognitoToken = currentSession?.tokens?.accessToken?.toString();
-          if (cognitoToken) {
-            headers['Authorization'] = `Bearer ${cognitoToken}`;
-          }
-        } catch (sessionError) {
-          console.warn('Unable to fetch Cognito session for API request', sessionError);
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
+        const currentSession = await loadSession();
+        const cognitoToken = currentSession?.tokens?.accessToken?.toString();
+        if (cognitoToken) {
+          headers['Authorization'] = `Bearer ${cognitoToken}`;
+        } else if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
         }
+      } else if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
     }
 
-    const idTokenPayload = !USE_AUTH_PROXY
-      ? (await ensureSession())?.tokens?.idToken?.payload
-      : undefined;
+    const sessionTokens = !USE_AUTH_PROXY ? (await loadSession())?.tokens : undefined;
+    const idTokenPayload = sessionTokens?.idToken?.payload as Record<string, unknown> | undefined;
+    const accessTokenPayload = sessionTokens?.accessToken?.payload as Record<string, unknown> | undefined;
+    const storedTenantId = typeof window !== 'undefined' ? getStoredTenantId() : null;
 
     const tenantId = activeTenantId
       ?? user?.tenantId
@@ -86,7 +123,18 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
         'custom:tenant_id',
         'tenant_id',
       ])
-      ?? 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11'; // Default tenant ID
+      ?? claimFromPayload(accessTokenPayload, [
+        'custom:custom:tenant_id',
+        'custom:tenant_id',
+        'tenant_id',
+      ])
+      ?? claimFromPayload(decodeJwtPayload(token), [
+        'custom:custom:tenant_id',
+        'custom:tenant_id',
+        'tenant_id',
+      ])
+      ?? storedTenantId
+      ?? undefined;
 
     if (tenantId && !headers['X-Tenant-Id']) {
       headers['X-Tenant-Id'] = tenantId;
@@ -98,7 +146,12 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
         'custom:clinic_id',
         'clinic_id',
       ])
-      ?? 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11'; // Default clinic ID (same as tenant for now)
+      ?? claimFromPayload(accessTokenPayload, [
+        'custom:custom:clinic_id',
+        'custom:clinic_id',
+        'clinic_id',
+      ])
+      ?? undefined;
 
     if (clinicId && !headers['X-Clinic-Id']) {
       headers['X-Clinic-Id'] = clinicId;

@@ -48,12 +48,12 @@ if (Environment.GetEnvironmentVariable("ENVIRONMENT") == "production")
 builder.Configuration.AddEnvironmentVariables();
 
 // Back-compat: map legacy env var names to Cognito config keys
-var cognitoAliasMap = new Dictionary<string, string>();
+var cognitoAliasMap = new Dictionary<string, string?>();
 void MapIfSet(string key, string? value)
 {
     if (!string.IsNullOrWhiteSpace(value))
     {
-        cognitoAliasMap[key] = value!;
+        cognitoAliasMap[key] = value;
     }
 }
 
@@ -71,7 +71,7 @@ if (cognitoAliasMap.Count > 0)
 
 // Expand ${VAR} placeholders from JSON for Cognito section if present
 var cognitoSectionRaw = builder.Configuration.GetSection("Cognito");
-var expandedCognito = new Dictionary<string, string>();
+var expandedCognito = new Dictionary<string, string?>();
 foreach (var child in cognitoSectionRaw.GetChildren())
 {
     var rawVal = child.Value;
@@ -93,16 +93,22 @@ if (expandedCognito.Count > 0)
 builder.Services.AddProblemDetails();
 
 // Configure Serilog
-Log.Logger = new LoggerConfiguration()
+var loggerConfig = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-    .WriteTo.OpenTelemetry(options =>
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
+
+var otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
+if (!string.IsNullOrWhiteSpace(otlpEndpoint) && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out _))
+{
+    loggerConfig.WriteTo.OpenTelemetry(options =>
     {
-        options.Endpoint = builder.Configuration["OpenTelemetry:Endpoint"] ?? "http://localhost:4317";
-    })
-    .CreateLogger();
+        options.Endpoint = otlpEndpoint;
+    });
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 builder.Host.UseSerilog();
 
@@ -127,9 +133,27 @@ builder.Services.AddHttpContextAccessor();
 // Resolve connection strings securely (supports DATABASE_URL/INTAKE_DATABASE_URL and ${ENV_VAR} placeholders)
 var defaultConnectionRaw = builder.Configuration.GetConnectionString("DefaultConnection");
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-var defaultConnection = !string.IsNullOrWhiteSpace(databaseUrl)
-    ? BuildPgConnectionStringFromUrl(databaseUrl, builder.Environment.IsDevelopment())
-    : ExpandEnvPlaceholders(defaultConnectionRaw);
+
+// Support individual DB_* environment variables from Secrets Manager
+var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
+var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+var dbUsername = Environment.GetEnvironmentVariable("DB_USERNAME");
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+string? defaultConnection;
+if (!string.IsNullOrWhiteSpace(dbHost) && !string.IsNullOrWhiteSpace(dbPassword))
+{
+    defaultConnection = $"Host={dbHost};Port={dbPort ?? "5432"};Database={dbName ?? "qivr"};Username={dbUsername ?? "qivr_user"};Password={dbPassword};SslMode=Require";
+}
+else if (!string.IsNullOrWhiteSpace(databaseUrl))
+{
+    defaultConnection = BuildPgConnectionStringFromUrl(databaseUrl, builder.Environment.IsDevelopment());
+}
+else
+{
+    defaultConnection = ExpandEnvPlaceholders(defaultConnectionRaw);
+}
 
 var intakeConnectionRaw = builder.Configuration["Intake:ConnectionString"];
 var intakeDatabaseUrl = Environment.GetEnvironmentVariable("INTAKE_DATABASE_URL");
@@ -221,6 +245,7 @@ builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
 builder.Services.AddScoped<INotificationGate, NotificationGate>();
 builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
 builder.Services.AddScoped<IAppointmentWaitlistService, AppointmentWaitlistService>();
+builder.Services.AddScoped<IMessagingService, MessagingService>();
 
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR(options =>
@@ -330,30 +355,62 @@ builder.Services.AddVersionedSwagger(builder.Configuration);
     });
 });*/
 
-// Configure OpenTelemetry
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource
-        .AddService(serviceName: "qivr-api", serviceVersion: "1.0.0"))
-    .WithTracing(tracing =>
-    {
-        tracing
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddOtlpExporter(options =>
+// Configure OpenTelemetry (only if endpoint is configured)
+if (!string.IsNullOrWhiteSpace(otlpEndpoint) && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var validOtlpUri))
+{
+    var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "qivr-api";
+    var serviceVersion = builder.Configuration["OpenTelemetry:ServiceVersion"] ?? "1.0.0";
+    
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource
+            .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+            .AddAttributes(new Dictionary<string, object>
             {
-                options.Endpoint = new Uri(builder.Configuration["OpenTelemetry:Endpoint"] ?? "http://localhost:4317");
-            });
-    })
-    .WithMetrics(metrics =>
-    {
-        metrics
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddOtlpExporter(options =>
-            {
-                options.Endpoint = new Uri(builder.Configuration["OpenTelemetry:Endpoint"] ?? "http://localhost:4317");
-            });
-    });
+                ["deployment.environment"] = builder.Environment.EnvironmentName,
+                ["service.instance.id"] = Environment.MachineName,
+                ["cloud.provider"] = "aws",
+                ["cloud.platform"] = "aws_ecs",
+                ["cloud.region"] = Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-southeast-2"
+            }))
+        .WithTracing(tracing =>
+        {
+            tracing
+                .AddAspNetCoreInstrumentation(options =>
+                {
+                    options.Filter = (httpContext) =>
+                    {
+                        // Don't trace health checks
+                        return !httpContext.Request.Path.StartsWithSegments("/health");
+                    };
+                })
+                .AddHttpClientInstrumentation()
+                .AddOtlpExporter(options =>
+                {
+                    options.Endpoint = validOtlpUri;
+                });
+        })
+        .WithMetrics(metrics =>
+        {
+            metrics
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddOtlpExporter(options =>
+                {
+                    options.Endpoint = validOtlpUri;
+                });
+        });
+    
+    Log.Information("OpenTelemetry enabled - Service: {ServiceName}, Version: {ServiceVersion}, Endpoint: {Endpoint}, Environment: {Environment}", 
+        serviceName, serviceVersion, otlpEndpoint, builder.Environment.EnvironmentName);
+}
+else if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+{
+    Log.Warning("OpenTelemetry disabled: Invalid endpoint format '{Endpoint}'", otlpEndpoint);
+}
+else
+{
+    Log.Information("OpenTelemetry disabled: No endpoint configured");
+}
 
 // Add Health Checks
 builder.Services.AddHealthChecks()
@@ -531,6 +588,9 @@ app.UseMiddleware<GlobalErrorHandlingMiddleware>();
 // Authentication must run before tenant resolution so JWT claims are available
 app.UseAuthentication();
 
+// Auto-create users from Cognito claims
+app.UseMiddleware<AutoCreateUserMiddleware>();
+
 app.UseMiddleware<TenantMiddleware>();
 // Idempotency for mutating requests
 app.UseMiddleware<IdempotencyMiddleware>();
@@ -557,13 +617,12 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 // Apply migrations when flagged via configuration
-// TEMPORARILY DISABLED - Database already exists
-/*if (builder.Configuration.GetValue<bool>("ApplyMigrations"))
+if (builder.Configuration.GetValue<bool>("ApplyMigrations", true)) // Default to true
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
     await dbContext.Database.MigrateAsync();
-}*/
+}
 
 Log.Information("Qivr API starting on {Environment} environment", app.Environment.EnvironmentName);
 

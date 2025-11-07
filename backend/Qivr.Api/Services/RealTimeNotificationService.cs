@@ -121,7 +121,7 @@ public class RealTimeNotificationService : IRealTimeNotificationService
         {
             // Get all users with this role
             var users = await _context.Users
-                .Where(u => u.Roles.Contains(role))
+                .Where(u => u.UserRoles.Any(ur => ur.Role.Name == role))
                 .Select(u => u.Id)
                 .ToListAsync();
 

@@ -102,10 +102,10 @@ public class AppointmentsController : BaseApiController
         }
 
         if (startDate.HasValue)
-            query = query.Where(a => a.ScheduledStart >= startDate.Value);
+            query = query.Where(a => a.ScheduledStart >= ToUtc(startDate.Value));
 
         if (endDate.HasValue)
-            query = query.Where(a => a.ScheduledStart <= endDate.Value);
+            query = query.Where(a => a.ScheduledStart <= ToUtc(endDate.Value));
 
         if (status.HasValue)
             query = query.Where(a => a.Status == status.Value);
@@ -169,10 +169,10 @@ public class AppointmentsController : BaseApiController
         }
 
         if (startDate.HasValue)
-            query = query.Where(a => a.ScheduledStart >= startDate.Value);
+            query = query.Where(a => a.ScheduledStart >= ToUtc(startDate.Value));
 
         if (endDate.HasValue)
-            query = query.Where(a => a.ScheduledStart <= endDate.Value);
+            query = query.Where(a => a.ScheduledStart <= ToUtc(endDate.Value));
 
         if (status.HasValue)
             query = query.Where(a => a.Status == status.Value);
@@ -947,6 +947,13 @@ public class AppointmentsController : BaseApiController
             CreatedAt = entry.CreatedAt,
             UpdatedAt = entry.UpdatedAt
         };
+    }
+
+    private DateTime ToUtc(DateTime dateTime)
+    {
+        return dateTime.Kind == DateTimeKind.Unspecified 
+            ? DateTime.SpecifyKind(dateTime, DateTimeKind.Utc) 
+            : dateTime.ToUniversalTime();
     }
 
     // GetTenantId and GetUserId methods removed - using BaseApiController properties instead

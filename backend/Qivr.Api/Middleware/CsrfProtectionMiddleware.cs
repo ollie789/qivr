@@ -23,6 +23,7 @@ public class CsrfProtectionMiddleware
     {
         "/api/webhooks",
         "/api/health",
+        "/api/migration",
         "/api/auth/login", // Login needs to work without existing CSRF token
         "/api/auth/signup",
         "/api/auth/refresh-token" // Refresh uses cookie auth

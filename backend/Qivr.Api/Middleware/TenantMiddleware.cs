@@ -160,6 +160,7 @@ public class TenantMiddleware
             "/api/auth/refresh",
             "/api/auth/refresh-token",
             "/api/tenants",
+            "/api/migration",
             "/webhooks",
             "/api/v1/intake",  // Public intake submission endpoint
             "/api/v1/proms/instances" // Base path for public PROM instances endpoints

@@ -452,7 +452,7 @@ const Patients: React.FC = () => {
                           {patient.firstName} {patient.lastName}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {format(new Date(patient.dateOfBirth), 'MMM d, yyyy')} • {patient.gender}
+                          {patient.dateOfBirth && !isNaN(new Date(patient.dateOfBirth).getTime()) ? format(new Date(patient.dateOfBirth), 'MMM d, yyyy') : 'DOB not set'} • {patient.gender || 'N/A'}
                         </Typography>
                       </Box>
                     </Box>

@@ -15,12 +15,12 @@ public class QivrDbContext : DbContext
     private readonly IHttpContextAccessor? _httpContextAccessor;
     private Guid? _tenantId;
     private string? _userId;
+    private bool _tenantExtracted = false;
 
     public QivrDbContext(DbContextOptions<QivrDbContext> options, IHttpContextAccessor? httpContextAccessor = null) 
         : base(options)
     {
         _httpContextAccessor = httpContextAccessor;
-        ExtractTenantAndUser();
     }
     
     /// <summary>
@@ -29,6 +29,17 @@ public class QivrDbContext : DbContext
     public void SetTenantId(Guid tenantId)
     {
         _tenantId = tenantId;
+        _tenantExtracted = true;
+    }
+    
+    private Guid? GetTenantId()
+    {
+        if (!_tenantExtracted)
+        {
+            ExtractTenantAndUser();
+            _tenantExtracted = true;
+        }
+        return _tenantId;
     }
 
     // DbSets
@@ -169,7 +180,7 @@ public class QivrDbContext : DbContext
             // Modified query filter - no DeletedAt check, optionally filter by tenant
             if (_tenantId.HasValue)
             {
-                entity.HasQueryFilter(e => e.TenantId == _tenantId);
+                entity.HasQueryFilter(e => e.TenantId == GetTenantId());
             }
         });
 
@@ -196,7 +207,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.ReviewedBy)
                 .OnDelete(DeleteBehavior.SetNull);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // PainMap configuration
@@ -217,7 +228,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.EvaluationId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // Appointment configuration
@@ -262,7 +273,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.CancelledBy)
                 .OnDelete(DeleteBehavior.SetNull);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // BrandTheme configuration
@@ -279,7 +290,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // Document configuration
@@ -294,7 +305,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.PatientId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // Conversation configuration
@@ -317,7 +328,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.ProviderId)
                 .OnDelete(DeleteBehavior.SetNull);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // Message configuration
@@ -368,7 +379,7 @@ public class QivrDbContext : DbContext
             entity.Ignore(e => e.MessageType);
             entity.Ignore(e => e.Priority);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // ConversationParticipant configuration
@@ -383,7 +394,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // PromTemplate configuration
@@ -406,7 +417,7 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.ScoringMethod).HasConversion(jsonConverter);
             entity.Property(e => e.ScoringRules).HasConversion(jsonConverter).HasColumnName("scoring_rules");
             
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // PromInstance configuration
@@ -428,7 +439,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.TemplateId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // PromResponse configuration
@@ -454,7 +465,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.AppointmentId)
                 .OnDelete(DeleteBehavior.SetNull);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // PromBookingRequest configuration
@@ -471,7 +482,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.PromInstanceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
         
         // Clinic configuration
@@ -482,7 +493,7 @@ public class QivrDbContext : DbContext
             entity.HasIndex(e => new { e.TenantId, e.Name });
             entity.Property(e => e.Metadata).HasConversion(jsonConverter);
             
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
         
         // Provider configuration
@@ -502,7 +513,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.ClinicId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         // Role configuration
@@ -564,7 +575,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.RoleId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
         
         // NotificationPreferences configuration
@@ -579,7 +590,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
         
         // Notification configuration
@@ -603,7 +614,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.SenderId)
                 .OnDelete(DeleteBehavior.SetNull);
                 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         modelBuilder.Entity<AppointmentWaitlistEntry>(entity =>
@@ -647,7 +658,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.MatchedAppointmentId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         ConfigureMedicalRecords(modelBuilder);
@@ -736,7 +747,7 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Icd10Code).HasMaxLength(20);
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.ManagedBy).HasMaxLength(200);
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         modelBuilder.Entity<MedicalVital>(entity =>
@@ -744,7 +755,7 @@ public class QivrDbContext : DbContext
             entity.ToTable("medical_vitals");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.PatientId, e.RecordedAt });
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         modelBuilder.Entity<MedicalLabResult>(entity =>
@@ -758,7 +769,7 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.ReferenceRange).HasMaxLength(100);
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.OrderedBy).HasMaxLength(200);
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         modelBuilder.Entity<MedicalMedication>(entity =>
@@ -772,7 +783,7 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.PrescribedBy).HasMaxLength(200);
             entity.Property(e => e.Pharmacy).HasMaxLength(200);
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         modelBuilder.Entity<MedicalAllergy>(entity =>
@@ -783,7 +794,7 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Allergen).HasMaxLength(200);
             entity.Property(e => e.Type).HasMaxLength(50);
             entity.Property(e => e.Severity).HasMaxLength(50);
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
         modelBuilder.Entity<MedicalImmunization>(entity =>
@@ -795,7 +806,7 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Provider).HasMaxLength(200);
             entity.Property(e => e.Facility).HasMaxLength(200);
             entity.Property(e => e.Series).HasMaxLength(100);
-            entity.HasQueryFilter(e => e.TenantId == _tenantId);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
     }
 

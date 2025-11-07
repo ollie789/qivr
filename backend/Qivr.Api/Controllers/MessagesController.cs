@@ -524,6 +524,77 @@ public class MessagesController : BaseApiController
         return Success(new MessageUnreadCountDto { Count = count });
     }
 
+    /// <summary>
+    /// Get message templates for the current tenant
+    /// </summary>
+    [HttpGet("templates")]
+    [ProducesResponseType(typeof(List<MessageTemplateDto>), 200)]
+    public async Task<IActionResult> GetMessageTemplates()
+    {
+        var tenantId = RequireTenantId();
+
+        // For now, return default templates. In the future, this could be stored in the database
+        var templates = new List<MessageTemplateDto>
+        {
+            new MessageTemplateDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Appointment Reminder",
+                Subject = "Appointment Reminder - {AppointmentDate}",
+                Content = "Hi {PatientName}, this is a reminder that you have an appointment scheduled for {AppointmentDate} at {AppointmentTime} with {ProviderName}. Please arrive 15 minutes early.",
+                Category = "Appointment",
+                Variables = new List<string> { "PatientName", "AppointmentDate", "AppointmentTime", "ProviderName" }
+            },
+            new MessageTemplateDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Appointment Confirmation",
+                Subject = "Appointment Confirmed - {AppointmentDate}",
+                Content = "Dear {PatientName}, your appointment has been confirmed for {AppointmentDate} at {AppointmentTime} with {ProviderName}. If you need to reschedule, please contact us at least 24 hours in advance.",
+                Category = "Appointment",
+                Variables = new List<string> { "PatientName", "AppointmentDate", "AppointmentTime", "ProviderName" }
+            },
+            new MessageTemplateDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Follow-up Required",
+                Subject = "Follow-up Appointment Required",
+                Content = "Hi {PatientName}, based on your recent visit, we recommend scheduling a follow-up appointment. Please contact our office to book your next visit.",
+                Category = "FollowUp",
+                Variables = new List<string> { "PatientName" }
+            },
+            new MessageTemplateDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Lab Results Available",
+                Subject = "Lab Results Available",
+                Content = "Dear {PatientName}, your lab results are now available. Please log into your patient portal to view them or contact our office if you have any questions.",
+                Category = "LabResult",
+                Variables = new List<string> { "PatientName" }
+            },
+            new MessageTemplateDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Prescription Ready",
+                Subject = "Prescription Ready for Pickup",
+                Content = "Hi {PatientName}, your prescription is ready for pickup at {PharmacyName}. Please bring a valid ID when collecting your medication.",
+                Category = "Prescription",
+                Variables = new List<string> { "PatientName", "PharmacyName" }
+            },
+            new MessageTemplateDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Welcome Message",
+                Subject = "Welcome to {ClinicName}",
+                Content = "Dear {PatientName}, welcome to {ClinicName}! We're excited to be part of your healthcare journey. If you have any questions, please don't hesitate to contact us.",
+                Category = "General",
+                Variables = new List<string> { "PatientName", "ClinicName" }
+            }
+        };
+
+        return Success(templates);
+    }
+
     // Reply to a message
     [HttpPost("{id}/reply")]
     [ProducesResponseType(typeof(MessageDto), 200)]
@@ -650,6 +721,16 @@ public class MessageAttachmentDto
 public class MessageUnreadCountDto
 {
     public int Count { get; set; }
+}
+
+public class MessageTemplateDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Subject { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public List<string> Variables { get; set; } = new();
 }
 
 public class ReplyMessageRequest

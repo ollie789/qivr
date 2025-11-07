@@ -30,6 +30,7 @@ public class TenantsController : BaseApiController
 
         if (tenants.Count == 0)
         {
+            // Don't require tenant ID for this endpoint - it's used to select a tenant
             var currentTenantId = CurrentTenantId;
             if (currentTenantId.HasValue)
             {
@@ -47,7 +48,7 @@ public class TenantsController : BaseApiController
         var response = tenants
             .Select(t => new TenantSummaryDto
             {
-                Id = t.Id,
+                Id = t.Id.ToString(),
                 Name = t.Name,
                 Slug = t.Slug,
                 IsDefault = t.IsDefault
@@ -77,7 +78,7 @@ public class TenantsController : BaseApiController
 
         return Ok(new TenantSummaryDto
         {
-            Id = tenant.Id,
+            Id = tenant.Id.ToString(),
             Name = tenant.Name,
             Slug = tenant.Slug,
             IsDefault = false
@@ -87,7 +88,7 @@ public class TenantsController : BaseApiController
 
 public class TenantSummaryDto
 {
-    public Guid Id { get; set; }
+    public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Slug { get; set; }
     public bool IsDefault { get; set; }

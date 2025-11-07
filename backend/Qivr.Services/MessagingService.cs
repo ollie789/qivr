@@ -35,8 +35,8 @@ public class MessagingService : IMessagingService
             .Include(m => m.Sender)
             .Include(m => m.Recipient)
             .Include(m => m.ProviderProfile)
-            .Where(m => m.TenantId == tenantId && (m.SenderId == userId || m.RecipientId == userId))
-            .GroupBy(m => m.SenderId == userId ? m.RecipientId : m.SenderId)
+            .Where(m => m.TenantId == tenantId && (m.SenderId == userId || m.DirectRecipientId == userId))
+            .GroupBy(m => m.SenderId == userId ? m.DirectRecipientId : m.SenderId)
             .Select(g => new
             {
                 ParticipantId = g.Key,
@@ -59,7 +59,7 @@ public class MessagingService : IMessagingService
 
             var lastMessage = orderedMessages.FirstOrDefault();
             var unreadCount = conversation.Messages
-                .Count(m => m.RecipientId == userId && !m.IsRead);
+                .Count(m => m.DirectRecipientId == userId && !m.IsRead);
 
             summaries.Add(new ConversationSummary
             {
@@ -92,8 +92,8 @@ public class MessagingService : IMessagingService
             .Include(m => m.Recipient)
             .Include(m => m.ProviderProfile)
             .Where(m => m.TenantId == tenantId &&
-                       ((m.SenderId == userId && m.RecipientId == otherUserId) ||
-                        (m.SenderId == otherUserId && m.RecipientId == userId)))
+                       ((m.SenderId == userId && m.DirectRecipientId == otherUserId) ||
+                        (m.SenderId == otherUserId && m.DirectRecipientId == userId)))
             .OrderByDescending(m => m.CreatedAt);
 
         var totalCount = await query.CountAsync();
@@ -105,7 +105,7 @@ public class MessagingService : IMessagingService
             .ToListAsync();
 
         // Mark unread messages as read
-        var unreadMessages = messages.Where(m => m.RecipientId == userId && !m.IsRead);
+        var unreadMessages = messages.Where(m => m.DirectRecipientId == userId && !m.IsRead);
         foreach (var message in unreadMessages)
         {
             message.IsRead = true;
@@ -152,7 +152,7 @@ public class MessagingService : IMessagingService
             parentMessage = await _context.Messages
                 .FirstOrDefaultAsync(m => m.Id == messageDto.ParentMessageId.Value &&
                                          m.TenantId == tenantId &&
-                                         (m.SenderId == senderId || m.RecipientId == senderId));
+                                         (m.SenderId == senderId || m.DirectRecipientId == senderId));
 
             if (parentMessage == null)
             {
@@ -182,7 +182,7 @@ public class MessagingService : IMessagingService
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             SenderId = senderId,
-            RecipientId = messageDto.RecipientId,
+            DirectRecipientId = messageDto.RecipientId,
             Subject = messageDto.Subject,
             Content = messageDto.Content,
             MessageType = messageDto.MessageType ?? "General",
@@ -239,14 +239,14 @@ public class MessagingService : IMessagingService
             .Include(m => m.Recipient)
             .Include(m => m.ProviderProfile)
             .Where(m => m.TenantId == tenantId && 
-                       (m.SenderId == userId || m.RecipientId == userId));
+                       (m.SenderId == userId || m.DirectRecipientId == userId));
 
         // Apply category filter
         if (!string.IsNullOrEmpty(category) && category != "all")
         {
             query = category.ToLower() switch
             {
-                "inbox" => query.Where(m => m.RecipientId == userId),
+                "inbox" => query.Where(m => m.DirectRecipientId == userId),
                 "sent" => query.Where(m => m.SenderId == userId),
                 "urgent" => query.Where(m => m.Priority == "High" || m.Priority == "Urgent"),
                 "appointments" => query.Where(m => m.RelatedAppointmentId != null),
@@ -257,7 +257,7 @@ public class MessagingService : IMessagingService
         // Apply unread filter
         if (unreadOnly == true)
         {
-            query = query.Where(m => m.RecipientId == userId && !m.IsRead);
+            query = query.Where(m => m.DirectRecipientId == userId && !m.IsRead);
         }
 
         return await query
@@ -270,7 +270,7 @@ public class MessagingService : IMessagingService
     {
         var messages = await _context.Messages
             .Where(m => m.TenantId == tenantId &&
-                       m.RecipientId == userId &&
+                       m.DirectRecipientId == userId &&
                        messageIds.Contains(m.Id) &&
                        !m.IsRead)
             .ToListAsync();
@@ -305,7 +305,7 @@ public class MessagingService : IMessagingService
         var message = await _context.Messages
             .FirstOrDefaultAsync(m => m.Id == messageId && 
                                      m.TenantId == tenantId &&
-                                     (m.SenderId == userId || m.RecipientId == userId));
+                                     (m.SenderId == userId || m.DirectRecipientId == userId));
 
         if (message == null)
         {
@@ -317,7 +317,7 @@ public class MessagingService : IMessagingService
         {
             message.DeletedBySender = true;
         }
-        if (message.RecipientId == userId)
+        if (message.DirectRecipientId == userId)
         {
             message.DeletedByRecipient = true;
         }
@@ -339,7 +339,7 @@ public class MessagingService : IMessagingService
         var parentMessage = await _context.Messages
             .FirstOrDefaultAsync(m => m.Id == parentMessageId &&
                                      m.TenantId == tenantId &&
-                                     (m.SenderId == senderId || m.RecipientId == senderId));
+                                     (m.SenderId == senderId || m.DirectRecipientId == senderId));
 
         if (parentMessage == null)
         {
@@ -348,7 +348,7 @@ public class MessagingService : IMessagingService
 
         // Determine the recipient (reply to the other party in the conversation)
         var recipientId = parentMessage.SenderId == senderId 
-            ? parentMessage.RecipientId 
+            ? parentMessage.DirectRecipientId 
             : parentMessage.SenderId;
 
         var reply = new Message
@@ -356,7 +356,7 @@ public class MessagingService : IMessagingService
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             SenderId = senderId,
-            RecipientId = recipientId,
+            DirectRecipientId = recipientId,
             Subject = $"Re: {parentMessage.Subject ?? "No Subject"}",
             Content = content,
             MessageType = parentMessage.MessageType,

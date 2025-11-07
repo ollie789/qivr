@@ -77,6 +77,7 @@ public class DocumentsController : ControllerBase
         var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
         if (tenantId == Guid.Empty)
         {
+            _logger.LogWarning("Documents request missing tenant context");
             return BadRequest("Tenant information is missing");
         }
 
@@ -675,7 +676,7 @@ public class DocumentsController : ControllerBase
 
         var result = await MapDocumentsWithUrlsAsync(documents, HttpContext.RequestAborted);
 
-        Response.Headers.Add("X-Total-Count", totalCount.ToString());
+        Response.Headers["X-Total-Count"] = totalCount.ToString();
         return Ok(result);
     }
 

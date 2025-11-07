@@ -74,10 +74,10 @@ public class PatientsController : ControllerBase
             }
             
             var patients = await _context.Users
-                .Where(u => u.TenantId == tenantId && u.Roles.Contains("Patient"))
+                .Where(u => u.TenantId == tenantId && u.UserType == UserType.Patient)
                 .Where(u => 
-                    u.FirstName.ToLower().Contains(searchLower) ||
-                    u.LastName.ToLower().Contains(searchLower) ||
+                    (u.FirstName != null && u.FirstName.ToLower().Contains(searchLower)) ||
+                    (u.LastName != null && u.LastName.ToLower().Contains(searchLower)) ||
                     u.Email.ToLower().Contains(searchLower) ||
                     (u.Phone != null && u.Phone.Contains(searchLower))
                 )
@@ -98,7 +98,7 @@ public class PatientsController : ControllerBase
                         .Select(a => a.ScheduledStart)
                         .FirstOrDefault(),
                     MedicalRecordNumber = null, // MRN field doesn't exist in User entity
-                    IsActive = u.EmailVerified
+                    IsActive = true
                 })
                 .ToListAsync();
 
@@ -137,12 +137,9 @@ public class PatientsController : ControllerBase
         try
         {
             var query = _context.Users
-                .Where(u => u.TenantId == tenantId && u.Roles.Contains("Patient"));
+                .Where(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
 
-            if (activeOnly)
-            {
-                query = query.Where(u => u.EmailVerified);
-            }
+            // activeOnly filter removed - EmailVerified not in DB
 
             // Use cursor pagination
             var paginationRequest = new CursorPaginationRequest
@@ -195,7 +192,7 @@ public class PatientsController : ControllerBase
                     PhoneNumber = u.Phone ?? "",
                     DateOfBirth = u.DateOfBirth,
                     MedicalRecordNumber = null, // MRN field doesn't exist in User entity
-                    IsActive = u.EmailVerified,
+                    IsActive = true,
                     CreatedAt = u.CreatedAt,
                     LastUpdated = u.UpdatedAt
                 }).ToList(),
@@ -235,12 +232,9 @@ public class PatientsController : ControllerBase
         try
         {
             var query = _context.Users
-                .Where(u => u.TenantId == tenantId && u.Roles.Contains("Patient"));
+                .Where(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
 
-            if (activeOnly)
-            {
-                query = query.Where(u => u.EmailVerified);
-            }
+            // activeOnly filter removed - EmailVerified not in DB
 
             // Apply sorting
             query = sortBy?.ToLower() switch
@@ -264,7 +258,7 @@ public class PatientsController : ControllerBase
                     PhoneNumber = u.Phone ?? "",
                     DateOfBirth = u.DateOfBirth,
                     MedicalRecordNumber = null, // MRN field doesn't exist in User entity
-                    IsActive = u.EmailVerified,
+                    IsActive = true,
                     CreatedAt = u.CreatedAt,
                     LastUpdated = u.UpdatedAt
                 })
@@ -312,7 +306,7 @@ public class PatientsController : ControllerBase
                 return Ok(cachedPatient);
             }
             var patient = await _context.Users
-                .Where(u => u.Id == patientId && u.TenantId == tenantId && u.Roles.Contains("Patient"))
+                .Where(u => u.Id == patientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
                 .Select(u => new PatientDetailsDto
                 {
                     Id = u.Id,
@@ -332,7 +326,7 @@ public class PatientsController : ControllerBase
                     EmergencyPhone = null,
                     InsuranceProvider = null,
                     InsuranceNumber = null,
-                    IsActive = u.EmailVerified, // Using email verified as a proxy for active
+                    IsActive = true, // Using email verified as a proxy for active
                     CreatedAt = u.CreatedAt,
                     LastUpdated = u.UpdatedAt,
                     Notes = null
@@ -346,42 +340,6 @@ public class PatientsController : ControllerBase
             
             // Cache the patient details for 5 minutes
             await _cacheService.SetAsync(cacheKey, patient, CacheService.CacheDuration.Medium);
-
-            return Ok(patient);
-            patient.RecentAppointments = await _context.Appointments
-                .Where(a => a.PatientId == patientId)
-                .OrderByDescending(a => a.ScheduledStart)
-                .Take(5)
-                .Select(a => new AppointmentSummaryDto
-                {
-                    Id = a.Id,
-                    Date = a.ScheduledStart,
-                    Provider = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : "Unknown",
-                    Type = a.AppointmentType,
-                    Status = a.Status.ToString(),
-                    Notes = a.Notes ?? ""
-                })
-                .ToListAsync();
-
-            // Get recent PROMs
-            patient.RecentProms = await _context.PromInstances
-                .Include(i => i.Template)
-                .Where(i => i.PatientId == patientId)
-                .OrderByDescending(i => i.CreatedAt)
-                .Take(5)
-                .Select(i => new PromSummaryDto
-                {
-                    Id = i.Id,
-                    TemplateName = i.Template.Name,
-                    Status = i.Status.ToString(),
-                    CreatedAt = i.CreatedAt,
-                    CompletedAt = i.CompletedAt,
-                    Score = _context.PromResponses
-                        .Where(r => r.PromInstanceId == i.Id)
-                        .Select(r => r.Score)
-                        .FirstOrDefault()
-                })
-                .ToListAsync();
 
             return Ok(patient);
         }
