@@ -1,3 +1,7 @@
+# DISABLED - Replaced with AWS CodeBuild
+# This workflow has been replaced with AWS-native CI/CD using CodeBuild
+# Original file renamed to .disabled to preserve history
+
 name: Deploy QIVR
 
 on:
