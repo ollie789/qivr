@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import {
   notificationsApi,
   type NotificationListItem,
@@ -32,6 +33,7 @@ import {
 const NotificationBell: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const queryClient = useQueryClient();
+  const { canMakeApiCalls } = useAuthGuard();
 
   const {
     data: notificationPage,
@@ -40,6 +42,7 @@ const NotificationBell: React.FC = () => {
   } = useQuery({
     queryKey: ['notifications', { limit: 20 }],
     queryFn: () => notificationsApi.list({ limit: 20, sortDescending: true }),
+    enabled: canMakeApiCalls,
     refetchInterval: 30000,
   });
 
@@ -54,6 +57,7 @@ const NotificationBell: React.FC = () => {
   } = useQuery({
     queryKey: ['notifications-unread-count'],
     queryFn: notificationsApi.unreadCount,
+    enabled: canMakeApiCalls,
     staleTime: 15000,
   });
 

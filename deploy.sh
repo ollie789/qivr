@@ -50,7 +50,7 @@ if [ "$DEPLOY_BACKEND" = true ]; then
   # Build Docker image
   echo "Building Docker image..."
   IMAGE_TAG=$(date +%Y%m%d%H%M%S)
-  docker build -t $ECR_REGISTRY/qivr-api:$IMAGE_TAG .
+  docker build --platform linux/amd64 -t $ECR_REGISTRY/qivr-api:$IMAGE_TAG .
   docker tag $ECR_REGISTRY/qivr-api:$IMAGE_TAG $ECR_REGISTRY/qivr-api:latest
   
   # Push to ECR

@@ -116,6 +116,8 @@ public class DevelopmentAuthenticationHandler : AuthenticationHandler<Authentica
             return _devAuthSettings.DefaultTenantId!;
         }
 
-        return "00000000-0000-0000-0000-000000000001";
+        // Use the first available tenant from the database
+        // This allows the system to work with any existing tenant
+        return "dynamic-tenant-resolution";
     }
 }

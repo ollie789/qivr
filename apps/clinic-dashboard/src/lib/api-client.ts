@@ -66,7 +66,16 @@ const baseClient = createHttpClient({
 
 export async function apiRequest<T extends ApiResponse = ApiResponse>(options: HttpRequestOptions): Promise<T> {
   try {
-    const { token, user, activeTenantId } = useAuthStore.getState();
+    const { token, user, activeTenantId, isLoading, isAuthenticated } = useAuthStore.getState();
+    
+    // Don't make API calls if auth is still loading or user is not authenticated
+    if (isLoading) {
+      throw new Error('Authentication is still loading');
+    }
+    
+    if (!isAuthenticated && !USE_AUTH_PROXY) {
+      throw new Error('User is not authenticated');
+    }
     const isFormData = typeof FormData !== 'undefined' && options.data instanceof FormData;
 
     const headers: Record<string, string> = {
@@ -163,6 +172,18 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
     });
   } catch (error) {
     console.error('API request error:', error);
+    
+    // Handle 403 Forbidden errors by triggering complete auth reset
+    if (error instanceof HttpError && error.status === 403) {
+      const { resetAuth } = useAuthStore.getState();
+      console.warn('403 Forbidden - clearing all authentication data and forcing re-login');
+      resetAuth();
+      // Redirect to login page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
+    
     throw error;
   }
 }

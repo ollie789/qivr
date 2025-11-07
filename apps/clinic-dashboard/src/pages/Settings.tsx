@@ -63,6 +63,7 @@ import {
 } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
 
 interface TabPanelProps {
@@ -177,6 +178,7 @@ const TabPanel = (props: TabPanelProps) => {
 export default function Settings() {
   const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
+  const { canMakeApiCalls } = useAuthGuard();
   const [tabValue, setTabValue] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [addStaffDialog, setAddStaffDialog] = useState(false);
@@ -308,6 +310,7 @@ export default function Settings() {
   } = useQuery({
     queryKey: ['notification-preferences'],
     queryFn: notificationsApi.getPreferences,
+    enabled: canMakeApiCalls,
   });
 
   useEffect(() => {

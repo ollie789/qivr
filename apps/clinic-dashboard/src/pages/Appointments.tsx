@@ -73,6 +73,7 @@ import {
 } from '../utils/date';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import apiClient from '../lib/api-client';
 import { useAuthStore } from '../stores/authStore';
 import { patientApi, type Patient, type PatientListResponse } from '../services/patientApi';
@@ -153,6 +154,7 @@ const appointmentTypes = [
 const Appointments: React.FC = () => {
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
+  const { canMakeApiCalls } = useAuthGuard();
   
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -190,13 +192,14 @@ const Appointments: React.FC = () => {
     queryKey: ['appointments', 'patients'],
     queryFn: () => patientApi.getPatients({ limit: 200 }),
     staleTime: 5 * 60 * 1000,
+    enabled: canMakeApiCalls,
   });
   const patients = patientsData?.data ?? [];
 
   const { data: providersData, isLoading: isProvidersLoading } = useQuery<Provider[]>({
     queryKey: ['appointments', 'providers', clinicId],
     queryFn: () => providerApi.getClinicProviders(clinicId),
-    enabled: Boolean(clinicId),
+    enabled: canMakeApiCalls && Boolean(clinicId),
     staleTime: 5 * 60 * 1000,
   });
   const providerOptions = providersData ?? [];
@@ -259,6 +262,7 @@ const Appointments: React.FC = () => {
         return [] as Appointment[];
       }
     },
+    enabled: canMakeApiCalls,
   });
 
   // Create appointment mutation

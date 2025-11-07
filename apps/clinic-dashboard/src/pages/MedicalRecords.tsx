@@ -70,6 +70,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO, differenceInYears } from 'date-fns';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import apiClient from '../lib/api-client';
 import {
   medicalRecordsApi,
@@ -108,6 +109,7 @@ type TimelineFilter = 'all' | 'vital' | MedicalHistory['category'];
 
 const MedicalRecords: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
+  const { canMakeApiCalls } = useAuthGuard();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [activeTab, setActiveTab] = useState(0);
@@ -123,6 +125,7 @@ const MedicalRecords: React.FC = () => {
     queryKey: ['medicalRecords', 'patients'],
     queryFn: () => patientApi.getPatients({ limit: 200 }),
     staleTime: 5 * 60 * 1000,
+    enabled: canMakeApiCalls,
   });
 
   const patients: Patient[] = patientList?.data ?? [];
@@ -143,7 +146,7 @@ const MedicalRecords: React.FC = () => {
       if (!selectedPatientId) return null;
       return medicalRecordsApi.getSummary(selectedPatientId);
     },
-    enabled: !!selectedPatientId,
+    enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
   const { data: vitalSigns = [] } = useQuery({
@@ -152,7 +155,7 @@ const MedicalRecords: React.FC = () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getVitals(selectedPatientId);
     },
-    enabled: !!selectedPatientId,
+    enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
   const { data: labResults = [] } = useQuery({
@@ -161,7 +164,7 @@ const MedicalRecords: React.FC = () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getLabResults(selectedPatientId);
     },
-    enabled: !!selectedPatientId,
+    enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
   const { data: medications = [] } = useQuery({
@@ -170,7 +173,7 @@ const MedicalRecords: React.FC = () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getMedications(selectedPatientId);
     },
-    enabled: !!selectedPatientId,
+    enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
   const { data: allergies = [] } = useQuery({
@@ -179,7 +182,7 @@ const MedicalRecords: React.FC = () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getAllergies(selectedPatientId);
     },
-    enabled: !!selectedPatientId,
+    enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
   const { data: immunizations = [] } = useQuery({
@@ -188,7 +191,7 @@ const MedicalRecords: React.FC = () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getImmunizations(selectedPatientId);
     },
-    enabled: !!selectedPatientId,
+    enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
   const medicalHistory: MedicalHistory[] = useMemo(() => {

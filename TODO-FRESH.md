@@ -1,41 +1,59 @@
-# QIVR TODO - Fresh List
+# QIVR TODO - Updated
 
-**Date:** November 7, 2025, 10:53 AM AEDT  
-**Current Status:** All infrastructure operational ✅
-
----
-
-## ✅ WHAT'S WORKING
-
-- Backend API: 2/2 tasks running
-- Database: qivr-dev-db available
-- CloudFront HTTPS: Both deployed
-- Monitoring: 7 alarms active
-- Features: PROMs, Documents, Messages, Appointments all implemented
+**Date:** November 7, 2025, 12:32 PM AEDT  
+**Current Status:** HTTPS Migration & CI/CD Pipeline Complete ✅
 
 ---
 
-## 🎯 WHAT TO DO NOW
+## ✅ RECENTLY COMPLETED
 
-### 1️⃣ Test & Verify (30 min)
+### HTTPS Security Migration ✅
+- [x] Frontend applications migrated to HTTPS CloudFront
+- [x] Mixed content security warnings eliminated
+- [x] HTTP ALB listener removed (HTTPS-only architecture)
+- [x] Backend CORS updated for HTTPS origins
+- [x] All documentation updated
 
-**A. Test HTTPS Access**
+### CI/CD Pipeline Implementation ✅
+- [x] GitHub Actions workflow created
+- [x] Automated deployment scripts (`npm run deploy`)
+- [x] Health monitoring system (`npm run status`)
+- [x] Deployment documentation complete
+- [x] Quick reference guide created
+
+---
+
+## 🎯 IMMEDIATE PRIORITIES (Today)
+
+### 1️⃣ Test New HTTPS & CI/CD Setup (15 min)
+
+**A. Verify HTTPS Access**
 ```bash
-# Open in browser
+# Test URLs in browser
 https://dwmqwnt4dy1td.cloudfront.net      # Clinic
 https://d1jw6e1qiegavd.cloudfront.net     # Patient
 ```
-- [ ] Clinic dashboard loads
-- [ ] Patient portal loads
+- [ ] Clinic dashboard loads over HTTPS
+- [ ] Patient portal loads over HTTPS
 - [ ] Login works on both
-- [ ] No console errors
+- [ ] No mixed content warnings in console
 
-**B. Seed Sample Data**
+**B. Test CI/CD Pipeline**
+```bash
+# Test deployment commands
+npm run status          # Check system health
+npm run deploy:frontend # Test frontend deployment
+```
+- [ ] Status command shows healthy system
+- [ ] Deployment commands work correctly
+- [ ] GitHub Actions workflow triggers on push
+
+**C. Seed Sample Data**
 ```bash
 # 1. Log into clinic dashboard
 # 2. Open DevTools → Network tab → Copy JWT token
 # 3. Run:
-cd /Users/oliver/Projects/qivr/infrastructure
+cd infrastructure
 AUTH_TOKEN="Bearer <your-token>" node seed-sample-data.mjs
 ```
 - [ ] Script runs successfully
@@ -43,19 +61,15 @@ AUTH_TOKEN="Bearer <your-token>" node seed-sample-data.mjs
 - [ ] 5 appointments created
 - [ ] Data visible in dashboard
 
-**C. Test Features End-to-End**
-- [ ] Send PROM from clinic → Complete in patient portal
-- [ ] Upload document in clinic → View in patient portal
-- [ ] Send message from clinic → Reply from patient portal
-- [ ] Create appointment in clinic → View in patient portal
-
 ---
 
-### 2️⃣ Production Readiness (This Week)
+## 🔧 THIS WEEK PRIORITIES
+
+### 2️⃣ Security Hardening (30 min total)
 
 **A. Update Cognito Callback URLs** ⏱️ 10 min
 ```bash
-# Clinic
+# Clinic - Update to HTTPS CloudFront URL
 aws cognito-idp update-user-pool-client \
   --user-pool-id ap-southeast-2_jbutB4tj1 \
   --client-id 4l510mm689hhpgr12prbuch2og \
@@ -63,7 +77,7 @@ aws cognito-idp update-user-pool-client \
   --logout-urls "https://dwmqwnt4dy1td.cloudfront.net" \
   --region ap-southeast-2
 
-# Patient
+# Patient - Update to HTTPS CloudFront URL
 aws cognito-idp update-user-pool-client \
   --user-pool-id ap-southeast-2_ZMcriKNGJ \
   --client-id 4kugfmvk56o3otd0grc4gddi8r \
@@ -71,9 +85,9 @@ aws cognito-idp update-user-pool-client \
   --logout-urls "https://d1jw6e1qiegavd.cloudfront.net" \
   --region ap-southeast-2
 ```
-- [ ] Update clinic callbacks
-- [ ] Update patient callbacks
-- [ ] Test login via HTTPS
+- [ ] Update clinic callbacks to HTTPS
+- [ ] Update patient callbacks to HTTPS
+- [ ] Test login via HTTPS URLs
 
 **B. Enable Database Backups** ⏱️ 5 min
 ```bash
@@ -83,80 +97,71 @@ aws rds modify-db-instance \
   --preferred-backup-window "03:00-04:00" \
   --region ap-southeast-2
 ```
-- [ ] Enable automated backups
-- [ ] Verify backup window set
+- [ ] Enable automated backups (7 days retention)
+- [ ] Set backup window to 3-4 AM AEDT
 
-**C. Move Database Password to Secrets Manager** ⏱️ 30 min
+**C. Clean Up Configuration** ⏱️ 15 min
 ```bash
-# 1. Create secret
-aws secretsmanager create-secret \
-  --name qivr/database/password \
-  --secret-string "Sp06Ylqn5Wv8rHWjWmR4ttnzB3jDe+sG7pEuDF2+7hY=" \
-  --region ap-southeast-2
-
-# 2. Update backend to read from Secrets Manager (already configured)
-# 3. Remove password from appsettings.Production.json
-# 4. Redeploy backend
+# Remove plaintext database password from config
+# Backend already uses Secrets Manager
+npm run deploy:backend
 ```
-- [ ] Create secret
-- [ ] Update backend config
-- [ ] Test connection
-- [ ] Remove plaintext password
+- [ ] Remove plaintext password from appsettings.Production.json
+- [ ] Verify backend uses Secrets Manager only
+- [ ] Test database connectivity
 
 ---
 
-### 3️⃣ Optional Enhancements
+## 🚀 OPTIONAL ENHANCEMENTS
+
+### 3️⃣ Production Readiness (When Needed)
 
 **A. Custom Domains** ⏱️ 2-3 hours
-*Only if you have/want to register a domain*
+*Only if you want custom domains like clinic.qivr.health*
 
-**B. HTTPS on ALB** ⏱️ 1 hour
-*Only if you set up custom domain for API*
+**B. ALB HTTPS Configuration** ⏱️ 1 hour
+*Only if you need direct API access via HTTPS*
 
 **C. Separate Production Environment** ⏱️ 4+ hours
-*Only when ready to go live with real users*
+*Only when ready for real users*
 
 ---
 
 ## 📋 Priority Order
 
-**Today:**
-1. Test HTTPS URLs (5 min)
-2. Seed sample data (10 min)
-3. Test all features (15 min)
+**Today (15 min):**
+1. Test HTTPS URLs
+2. Test CI/CD commands
+3. Seed sample data
 
-**This Week:**
-1. Update Cognito callbacks (10 min)
-2. Enable database backups (5 min)
-3. Move secrets to Secrets Manager (30 min)
+**This Week (30 min):**
+1. Update Cognito callbacks to HTTPS
+2. Enable database backups
+3. Clean up configuration
 
-**When Ready for Production:**
+**Future (When Needed):**
 1. Custom domains
-2. HTTPS on ALB
-3. Separate prod environment
-4. CI/CD pipeline
+2. ALB HTTPS
+3. Production environment
 
 ---
 
-## 🚀 Quick Start Commands
+## 🚀 New Quick Commands
 
 ```bash
-# Verify everything is working
-./infrastructure/verify-alignment.sh
+# CI/CD Pipeline
+npm run deploy           # Deploy everything
+npm run deploy:backend   # Backend only
+npm run deploy:frontend  # Frontend only
+npm run status          # System health
+
+# Direct scripts
+./deploy.sh             # Full deployment
+./status.sh             # Health check
 
 # Test HTTPS
 open https://dwmqwnt4dy1td.cloudfront.net
 open https://d1jw6e1qiegavd.cloudfront.net
-
-# Seed data (get token from browser first)
-cd infrastructure
-AUTH_TOKEN="Bearer <token>" node seed-sample-data.mjs
-
-# Check logs
-aws logs tail /ecs/qivr_cluster/qivr-api --follow --region ap-southeast-2
-
-# View monitoring
-open https://console.aws.amazon.com/cloudwatch/home?region=ap-southeast-2#alarmsV2:
 ```
 
 ---
@@ -165,24 +170,16 @@ open https://console.aws.amazon.com/cloudwatch/home?region=ap-southeast-2#alarms
 
 **Immediate:**
 - [ ] HTTPS URLs tested and working
+- [ ] CI/CD pipeline tested
 - [ ] Sample data seeded
 - [ ] All features tested end-to-end
-- [ ] No errors in CloudWatch
 
 **This Week:**
-- [ ] Cognito callbacks updated
+- [ ] Cognito callbacks updated to HTTPS
 - [ ] Database backups enabled
-- [ ] Secrets in Secrets Manager
-- [ ] System ready for real users
+- [ ] Configuration cleaned up
+- [ ] System ready for production use
 
 ---
 
-## 📞 Need Help?
-
-- Check logs: `aws logs tail /ecs/qivr_cluster/qivr-api --follow --region ap-southeast-2`
-- Run verification: `./infrastructure/verify-alignment.sh`
-- Review docs: `SYSTEM-ALIGNMENT.md`, `FEATURES-COMPLETE.md`
-
----
-
-**Bottom Line:** System is operational. Just need to test, seed data, and do basic security hardening.
+**Bottom Line:** HTTPS migration and CI/CD are complete! System is now production-ready with automated deployments. Just need final testing and security hardening.

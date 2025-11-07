@@ -113,6 +113,169 @@ public class MedicalRecordsController : BaseApiController
         return Ok(allergies);
     }
 
+    [HttpPost("vitals")]
+    [ProducesResponseType(typeof(VitalSignDto), 201)]
+    public async Task<ActionResult<VitalSignDto>> CreateVitalSigns([FromBody] CreateVitalSignRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+        
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        // Validate patient exists
+        var patient = await _context.Users
+            .Where(u => u.Id == patientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
+            .FirstOrDefaultAsync();
+            
+        if (patient == null)
+            return BadRequest(new { message = "Patient not found" });
+
+        var vital = new MedicalVital
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            RecordedAt = request.RecordedAt ?? DateTime.UtcNow,
+            Systolic = request.BloodPressure?.Systolic,
+            Diastolic = request.BloodPressure?.Diastolic,
+            HeartRate = request.HeartRate,
+            TemperatureCelsius = request.Temperature,
+            WeightKilograms = request.Weight,
+            HeightCentimetres = request.Height,
+            OxygenSaturation = request.OxygenSaturation,
+            RespiratoryRate = request.RespiratoryRate,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.MedicalVitals.Add(vital);
+        await _context.SaveChangesAsync();
+
+        var dto = new VitalSignDto
+        {
+            Id = vital.Id,
+            Date = vital.RecordedAt,
+            BloodPressure = new BloodPressureDto { Systolic = vital.Systolic ?? 0, Diastolic = vital.Diastolic ?? 0 },
+            HeartRate = vital.HeartRate ?? 0,
+            Temperature = vital.TemperatureCelsius ?? 0,
+            Weight = vital.WeightKilograms ?? 0,
+            Height = vital.HeightCentimetres ?? 0,
+            Bmi = CalculateBmi(vital.HeightCentimetres ?? 0, vital.WeightKilograms ?? 0),
+            OxygenSaturation = vital.OxygenSaturation ?? 0,
+            RespiratoryRate = vital.RespiratoryRate ?? 0
+        };
+
+        return CreatedAtAction(nameof(GetVitalSigns), new { patientId }, dto);
+    }
+
+    [HttpPost("medications")]
+    [ProducesResponseType(typeof(MedicationDto), 201)]
+    public async Task<ActionResult<MedicationDto>> CreateMedication([FromBody] CreateMedicationRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+        
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        // Validate patient exists
+        var patient = await _context.Users
+            .Where(u => u.Id == patientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
+            .FirstOrDefaultAsync();
+            
+        if (patient == null)
+            return BadRequest(new { message = "Patient not found" });
+
+        var medication = new MedicalMedication
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            Name = request.Name,
+            Dosage = request.Dosage,
+            Frequency = request.Frequency,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
+            Status = request.Status ?? "active",
+            PrescribedBy = request.PrescribedBy,
+            Instructions = request.Instructions,
+            RefillsRemaining = request.RefillsRemaining,
+            LastFilled = request.LastFilled,
+            Pharmacy = request.Pharmacy,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.MedicalMedications.Add(medication);
+        await _context.SaveChangesAsync();
+
+        var dto = new MedicationDto
+        {
+            Id = medication.Id,
+            Name = medication.Name,
+            Dosage = medication.Dosage,
+            Frequency = medication.Frequency,
+            StartDate = medication.StartDate,
+            EndDate = medication.EndDate,
+            Status = medication.Status,
+            PrescribedBy = medication.PrescribedBy,
+            Instructions = medication.Instructions,
+            RefillsRemaining = medication.RefillsRemaining,
+            LastFilled = medication.LastFilled,
+            Pharmacy = medication.Pharmacy
+        };
+
+        return CreatedAtAction(nameof(GetMedications), new { patientId }, dto);
+    }
+
+    [HttpPost("allergies")]
+    [ProducesResponseType(typeof(AllergyDto), 201)]
+    public async Task<ActionResult<AllergyDto>> CreateAllergy([FromBody] CreateAllergyRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+        
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        // Validate patient exists
+        var patient = await _context.Users
+            .Where(u => u.Id == patientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
+            .FirstOrDefaultAsync();
+            
+        if (patient == null)
+            return BadRequest(new { message = "Patient not found" });
+
+        var allergy = new MedicalAllergy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            Allergen = request.Allergen,
+            Type = request.Type ?? "other",
+            Severity = request.Severity ?? "mild",
+            Reaction = request.Reaction,
+            DiagnosedDate = request.DiagnosedDate,
+            Notes = request.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.MedicalAllergies.Add(allergy);
+        await _context.SaveChangesAsync();
+
+        var dto = new AllergyDto
+        {
+            Id = allergy.Id,
+            Allergen = allergy.Allergen,
+            Type = allergy.Type,
+            Severity = allergy.Severity,
+            Reaction = allergy.Reaction,
+            DiagnosedDate = allergy.DiagnosedDate,
+            Notes = allergy.Notes
+        };
+
+        return CreatedAtAction(nameof(GetAllergies), new { patientId }, dto);
+    }
+
     [HttpGet("immunizations")]
     [ProducesResponseType(typeof(IEnumerable<ImmunizationDto>), 200)]
     public async Task<ActionResult<IEnumerable<ImmunizationDto>>> GetImmunizations([FromQuery] Guid? patientId, CancellationToken cancellationToken)
@@ -222,14 +385,14 @@ public class MedicalRecordsController : BaseApiController
         {
             Id = v.Id,
             Date = v.RecordedAt,
-            BloodPressure = new BloodPressureDto { Systolic = v.Systolic, Diastolic = v.Diastolic },
-            HeartRate = v.HeartRate,
-            Temperature = v.TemperatureCelsius,
-            Weight = v.WeightKilograms,
-            Height = v.HeightCentimetres,
-            Bmi = CalculateBmi(v.HeightCentimetres, v.WeightKilograms),
-            OxygenSaturation = v.OxygenSaturation,
-            RespiratoryRate = v.RespiratoryRate
+            BloodPressure = new BloodPressureDto { Systolic = v.Systolic ?? 0, Diastolic = v.Diastolic ?? 0 },
+            HeartRate = v.HeartRate ?? 0,
+            Temperature = v.TemperatureCelsius ?? 0,
+            Weight = v.WeightKilograms ?? 0,
+            Height = v.HeightCentimetres ?? 0,
+            Bmi = CalculateBmi(v.HeightCentimetres ?? 0, v.WeightKilograms ?? 0),
+            OxygenSaturation = v.OxygenSaturation ?? 0,
+            RespiratoryRate = v.RespiratoryRate ?? 0
         }).ToList();
     }
 
@@ -727,4 +890,44 @@ public sealed class ImmunizationDto
     public DateTime? NextDue { get; set; }
     public string? Series { get; set; }
     public string? LotNumber { get; set; }
+}
+
+public sealed class CreateVitalSignRequest
+{
+    public Guid PatientId { get; set; }
+    public DateTime? RecordedAt { get; set; }
+    public BloodPressureDto? BloodPressure { get; set; }
+    public int? HeartRate { get; set; }
+    public decimal? Temperature { get; set; }
+    public decimal? Weight { get; set; }
+    public decimal? Height { get; set; }
+    public int? OxygenSaturation { get; set; }
+    public int? RespiratoryRate { get; set; }
+}
+
+public sealed class CreateMedicationRequest
+{
+    public Guid PatientId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Dosage { get; set; } = string.Empty;
+    public string Frequency { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? Status { get; set; }
+    public string PrescribedBy { get; set; } = string.Empty;
+    public string? Instructions { get; set; }
+    public int? RefillsRemaining { get; set; }
+    public DateTime? LastFilled { get; set; }
+    public string? Pharmacy { get; set; }
+}
+
+public sealed class CreateAllergyRequest
+{
+    public Guid PatientId { get; set; }
+    public string Allergen { get; set; } = string.Empty;
+    public string? Type { get; set; }
+    public string? Severity { get; set; }
+    public string Reaction { get; set; } = string.Empty;
+    public DateTime? DiagnosedDate { get; set; }
+    public string? Notes { get; set; }
 }

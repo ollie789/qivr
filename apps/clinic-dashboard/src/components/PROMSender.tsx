@@ -36,6 +36,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import {
   Send as SendIcon,
   Schedule as ScheduleIcon,
@@ -72,6 +73,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   preSelectedPatientId,
   preSelectedTemplateId,
 }) => {
+  const { canMakeApiCalls } = useAuthGuard();
   const [activeStep, setActiveStep] = useState(0);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
     preSelectedTemplateId || ''

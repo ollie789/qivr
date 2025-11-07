@@ -59,6 +59,7 @@ import {
 import { format } from 'date-fns';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import {
   patientApi,
   type Patient as PatientType,
@@ -93,6 +94,7 @@ const STATE_OPTIONS: SelectOption[] = [
 
 const Patients: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
+  const { canMakeApiCalls } = useAuthGuard();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,7 +109,7 @@ const Patients: React.FC = () => {
   const patientDetailQuery = useQuery<PatientType | undefined>({
     queryKey: ['patient-detail', selectedPatient?.id],
     queryFn: () => (selectedPatient?.id ? patientApi.getPatient(selectedPatient.id) : Promise.resolve(undefined)),
-    enabled: detailsOpen && Boolean(selectedPatient?.id),
+    enabled: canMakeApiCalls && detailsOpen && Boolean(selectedPatient?.id),
     staleTime: 60_000,
   });
 
@@ -146,6 +148,7 @@ const Patients: React.FC = () => {
       search: searchQuery || undefined,
       status: filterStatus !== 'all' ? filterStatus : undefined,
     }),
+    enabled: canMakeApiCalls,
   });
 
   const patients = useMemo(
@@ -579,7 +582,13 @@ const Patients: React.FC = () => {
       </Card>
 
       {/* Patient Details Dialog */}
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
+      <Dialog 
+        open={detailsOpen} 
+        onClose={() => setDetailsOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        disableRestoreFocus
+      >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box>
@@ -874,7 +883,13 @@ const Patients: React.FC = () => {
       />
 
       {/* File Upload Dialog */}
-      <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={uploadOpen} 
+        onClose={() => setUploadOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        disableRestoreFocus
+      >
         <DialogTitle>
           Upload Document for {selectedPatient?.firstName} {selectedPatient?.lastName}
         </DialogTitle>
@@ -998,7 +1013,13 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      disableRestoreFocus
+    >
       <DialogTitle>{patient ? 'Edit Patient' : 'New Patient'}</DialogTitle>
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 1 }}>

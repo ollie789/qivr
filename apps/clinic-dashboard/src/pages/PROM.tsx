@@ -55,6 +55,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO } from 'date-fns';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useSnackbar } from 'notistack';
 import { promApi, PromTemplateSummary, PromResponse, PromResponsesResult, PromAnswerValue } from '../services/promApi';
 import PROMSender from '../components/PROMSender';
@@ -84,6 +85,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const PROM: React.FC = () => {
+  const { canMakeApiCalls } = useAuthGuard();
   const { enqueueSnackbar } = useSnackbar();
   
   const [currentTab, setCurrentTab] = useState(0);

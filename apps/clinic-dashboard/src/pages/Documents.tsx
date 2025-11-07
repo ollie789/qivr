@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useSnackbar } from 'notistack';
 import { documentsApi } from '../services/documentsApi';
 import FileUpload from '../components/FileUpload';
@@ -60,6 +61,7 @@ interface DocumentItem {
 }
 
 const Documents: React.FC = () => {
+  const { canMakeApiCalls } = useAuthGuard();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);

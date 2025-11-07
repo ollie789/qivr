@@ -6,11 +6,18 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Qivr.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class CleanRebuild : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Drop all existing tables to clean the database
+            migrationBuilder.Sql("DROP SCHEMA IF EXISTS public CASCADE;");
+            migrationBuilder.Sql("CREATE SCHEMA public;");
+            migrationBuilder.Sql("GRANT ALL ON SCHEMA public TO qivr_user;");
+            migrationBuilder.Sql("GRANT ALL ON SCHEMA public TO public;");
+            
+            // Now create all tables fresh
             migrationBuilder.CreateTable(
                 name: "clinics",
                 columns: table => new
@@ -176,6 +183,21 @@ namespace Qivr.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "permissions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    key = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_permissions", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "prom_templates",
                 columns: table => new
                 {
@@ -200,6 +222,23 @@ namespace Qivr.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "roles",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    is_system = table.Column<bool>(type: "boolean", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_roles", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "tenants",
                 columns: table => new
                 {
@@ -213,6 +252,33 @@ namespace Qivr.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_tenants", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "role_permissions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    role_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    permission_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_role_permissions", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_role_permissions_permissions_permission_id",
+                        column: x => x.permission_id,
+                        principalTable: "permissions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_role_permissions_roles_role_id",
+                        column: x => x.role_id,
+                        principalTable: "roles",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -483,6 +549,36 @@ namespace Qivr.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "user_roles",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    role_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    assigned_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    assigned_by = table.Column<string>(type: "text", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_user_roles", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_user_roles_roles_role_id",
+                        column: x => x.role_id,
+                        principalTable: "roles",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_user_roles_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "conversation_participants",
                 columns: table => new
                 {
@@ -509,70 +605,6 @@ namespace Qivr.Infrastructure.Migrations
                         principalTable: "conversations",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "messages",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    conversation_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    sender_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    direct_recipient_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    sender_name = table.Column<string>(type: "text", nullable: true),
-                    sender_role = table.Column<string>(type: "text", nullable: true),
-                    direct_subject = table.Column<string>(type: "text", nullable: true),
-                    direct_message_type = table.Column<string>(type: "text", nullable: true),
-                    direct_priority = table.Column<string>(type: "text", nullable: true),
-                    content = table.Column<string>(type: "text", nullable: false),
-                    sent_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    read_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    is_read = table.Column<bool>(type: "boolean", nullable: false),
-                    edited_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
-                    attachment_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    is_system_message = table.Column<bool>(type: "boolean", nullable: false),
-                    parent_message_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    related_appointment_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    deleted_by_recipient = table.Column<bool>(type: "boolean", nullable: false),
-                    deleted_by_sender = table.Column<bool>(type: "boolean", nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_messages", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_messages_conversations_conversation_id",
-                        column: x => x.conversation_id,
-                        principalTable: "conversations",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_messages_documents_attachment_id",
-                        column: x => x.attachment_id,
-                        principalTable: "documents",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "fk_messages_messages_parent_message_id",
-                        column: x => x.parent_message_id,
-                        principalTable: "messages",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "fk_messages_users_recipient_id",
-                        column: x => x.direct_recipient_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "fk_messages_users_sender_id",
-                        column: x => x.sender_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -657,12 +689,84 @@ namespace Qivr.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "messages",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    conversation_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    sender_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    direct_recipient_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    provider_profile_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    sender_name = table.Column<string>(type: "text", nullable: true),
+                    sender_role = table.Column<string>(type: "text", nullable: true),
+                    direct_subject = table.Column<string>(type: "text", nullable: true),
+                    direct_message_type = table.Column<string>(type: "text", nullable: true),
+                    direct_priority = table.Column<string>(type: "text", nullable: true),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    sent_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    read_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    is_read = table.Column<bool>(type: "boolean", nullable: false),
+                    edited_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
+                    attachment_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    is_system_message = table.Column<bool>(type: "boolean", nullable: false),
+                    parent_message_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    related_appointment_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    deleted_by_recipient = table.Column<bool>(type: "boolean", nullable: false),
+                    deleted_by_sender = table.Column<bool>(type: "boolean", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_messages", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_messages_conversations_conversation_id",
+                        column: x => x.conversation_id,
+                        principalTable: "conversations",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_messages_documents_attachment_id",
+                        column: x => x.attachment_id,
+                        principalTable: "documents",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_messages_messages_parent_message_id",
+                        column: x => x.parent_message_id,
+                        principalTable: "messages",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_messages_providers_provider_profile_id",
+                        column: x => x.provider_profile_id,
+                        principalTable: "providers",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_messages_users_recipient_id",
+                        column: x => x.direct_recipient_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_messages_users_sender_id",
+                        column: x => x.sender_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "appointments",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     patient_id = table.Column<Guid>(type: "uuid", nullable: false),
                     provider_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    provider_profile_id = table.Column<Guid>(type: "uuid", nullable: false),
                     clinic_id = table.Column<Guid>(type: "uuid", nullable: true),
                     evaluation_id = table.Column<Guid>(type: "uuid", nullable: true),
                     external_calendar_id = table.Column<string>(type: "text", nullable: true),
@@ -685,7 +789,7 @@ namespace Qivr.Infrastructure.Migrations
                     payment_reference = table.Column<string>(type: "text", nullable: true),
                     payment_amount = table.Column<decimal>(type: "numeric", nullable: true),
                     payment_notes = table.Column<string>(type: "text", nullable: true),
-                    provider_id1 = table.Column<Guid>(type: "uuid", nullable: false),
+                    clinic_id1 = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
@@ -697,6 +801,12 @@ namespace Qivr.Infrastructure.Migrations
                         name: "fk_appointments_clinics_clinic_id",
                         column: x => x.clinic_id,
                         principalTable: "clinics",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_appointments_clinics_clinic_id1",
+                        column: x => x.clinic_id1,
+                        principalTable: "clinics",
                         principalColumn: "id");
                     table.ForeignKey(
                         name: "fk_appointments_evaluations_evaluation_id",
@@ -705,11 +815,11 @@ namespace Qivr.Infrastructure.Migrations
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "fk_appointments_providers_provider_id",
-                        column: x => x.provider_id1,
+                        name: "fk_appointments_providers_provider_profile_id",
+                        column: x => x.provider_profile_id,
                         principalTable: "providers",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "fk_appointments_tenants_tenant_id",
                         column: x => x.tenant_id,
@@ -904,6 +1014,11 @@ namespace Qivr.Infrastructure.Migrations
                 column: "clinic_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_appointments_clinic_id1",
+                table: "appointments",
+                column: "clinic_id1");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_appointments_evaluation_id",
                 table: "appointments",
                 column: "evaluation_id");
@@ -914,9 +1029,9 @@ namespace Qivr.Infrastructure.Migrations
                 column: "patient_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_appointments_provider_id1",
+                name: "ix_appointments_provider_profile_id",
                 table: "appointments",
-                column: "provider_id1");
+                column: "provider_profile_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_appointments_tenant_id",
@@ -1043,6 +1158,11 @@ namespace Qivr.Infrastructure.Migrations
                 column: "parent_message_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_messages_provider_profile_id",
+                table: "messages",
+                column: "provider_profile_id");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_messages_sender_id_direct_recipient_id",
                 table: "messages",
                 columns: new[] { "sender_id", "direct_recipient_id" });
@@ -1077,6 +1197,12 @@ namespace Qivr.Infrastructure.Migrations
                 name: "ix_pain_maps_evaluation_id",
                 table: "pain_maps",
                 column: "evaluation_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_permissions_key",
+                table: "permissions",
+                column: "key",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_prom_booking_requests_prom_instance_id",
@@ -1151,10 +1277,43 @@ namespace Qivr.Infrastructure.Migrations
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_role_permissions_permission_id",
+                table: "role_permissions",
+                column: "permission_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_role_permissions_role_id_permission_id",
+                table: "role_permissions",
+                columns: new[] { "role_id", "permission_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_roles_tenant_id_name",
+                table: "roles",
+                columns: new[] { "tenant_id", "name" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "ix_tenants_slug",
                 table: "tenants",
                 column: "slug",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_roles_role_id",
+                table: "user_roles",
+                column: "role_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_roles_tenant_id_user_id_role_id",
+                table: "user_roles",
+                columns: new[] { "tenant_id", "user_id", "role_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_roles_user_id",
+                table: "user_roles",
+                column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_users_cognito_sub",
@@ -1218,6 +1377,12 @@ namespace Qivr.Infrastructure.Migrations
                 name: "prom_responses");
 
             migrationBuilder.DropTable(
+                name: "role_permissions");
+
+            migrationBuilder.DropTable(
+                name: "user_roles");
+
+            migrationBuilder.DropTable(
                 name: "conversations");
 
             migrationBuilder.DropTable(
@@ -1231,6 +1396,12 @@ namespace Qivr.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "prom_instances");
+
+            migrationBuilder.DropTable(
+                name: "permissions");
+
+            migrationBuilder.DropTable(
+                name: "roles");
 
             migrationBuilder.DropTable(
                 name: "evaluations");

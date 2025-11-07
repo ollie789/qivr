@@ -11,17 +11,20 @@ import {
 } from '@mui/material';
 import { Apartment as ApartmentIcon, ArrowDropDown as ArrowDropDownIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import { fetchTenantOptions, type TenantOption } from '../services/tenantService';
 import { useAuth, useAuthActions } from '../stores/authStore';
 
 const TenantSelector = () => {
   const { activeTenantId, user } = useAuth();
   const { setActiveTenantId } = useAuthActions();
+  const { canMakeApiCalls } = useAuthGuard();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const { data: tenants = [], isLoading } = useQuery({
     queryKey: ['tenants', user?.id],
     queryFn: fetchTenantOptions,
+    enabled: canMakeApiCalls,
     staleTime: 5 * 60 * 1000,
   });
 

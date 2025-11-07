@@ -12,8 +12,8 @@ using Qivr.Infrastructure.Data;
 namespace Qivr.Infrastructure.Migrations
 {
     [DbContext(typeof(QivrDbContext))]
-    [Migration("20250928025608_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251107030009_AddIntakeDedupeTable")]
+    partial class AddIntakeDedupeTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -60,6 +60,10 @@ namespace Qivr.Infrastructure.Migrations
                     b.Property<Guid?>("ClinicId")
                         .HasColumnType("uuid")
                         .HasColumnName("clinic_id");
+
+                    b.Property<Guid?>("ClinicId1")
+                        .HasColumnType("uuid")
+                        .HasColumnName("clinic_id1");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -119,9 +123,9 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("provider_id");
 
-                    b.Property<Guid>("ProviderId1")
+                    b.Property<Guid>("ProviderProfileId")
                         .HasColumnType("uuid")
-                        .HasColumnName("provider_id1");
+                        .HasColumnName("provider_profile_id");
 
                     b.Property<DateTime?>("ReminderSentAt")
                         .HasColumnType("timestamp with time zone")
@@ -157,14 +161,17 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("ClinicId")
                         .HasDatabaseName("ix_appointments_clinic_id");
 
+                    b.HasIndex("ClinicId1")
+                        .HasDatabaseName("ix_appointments_clinic_id1");
+
                     b.HasIndex("EvaluationId")
                         .HasDatabaseName("ix_appointments_evaluation_id");
 
                     b.HasIndex("PatientId")
                         .HasDatabaseName("ix_appointments_patient_id");
 
-                    b.HasIndex("ProviderId1")
-                        .HasDatabaseName("ix_appointments_provider_id1");
+                    b.HasIndex("ProviderProfileId")
+                        .HasDatabaseName("ix_appointments_provider_profile_id");
 
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_appointments_tenant_id");
@@ -1269,6 +1276,10 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("parent_message_id");
 
+                    b.Property<Guid?>("ProviderProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_profile_id");
+
                     b.Property<DateTime?>("ReadAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("read_at");
@@ -1312,6 +1323,9 @@ namespace Qivr.Infrastructure.Migrations
 
                     b.HasIndex("ParentMessageId")
                         .HasDatabaseName("ix_messages_parent_message_id");
+
+                    b.HasIndex("ProviderProfileId")
+                        .HasDatabaseName("ix_messages_provider_profile_id");
 
                     b.HasIndex("ConversationId", "SentAt")
                         .HasDatabaseName("ix_messages_conversation_id_sent_at");
@@ -1559,6 +1573,42 @@ namespace Qivr.Infrastructure.Migrations
                         .HasDatabaseName("ix_pain_maps_evaluation_id");
 
                     b.ToTable("pain_maps", (string)null);
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.Permission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_permissions");
+
+                    b.HasIndex("Key")
+                        .IsUnique()
+                        .HasDatabaseName("ix_permissions_key");
+
+                    b.ToTable("permissions", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PromBookingRequest", b =>
@@ -1924,6 +1974,86 @@ namespace Qivr.Infrastructure.Migrations
                     b.ToTable("providers", (string)null);
                 });
 
+            modelBuilder.Entity("Qivr.Core.Entities.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_system");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_roles");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_roles_tenant_id_name");
+
+                    b.ToTable("roles", (string)null);
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.RolePermission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("permission_id");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("role_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_role_permissions");
+
+                    b.HasIndex("PermissionId")
+                        .HasDatabaseName("ix_role_permissions_permission_id");
+
+                    b.HasIndex("RoleId", "PermissionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_role_permissions_role_id_permission_id");
+
+                    b.ToTable("role_permissions", (string)null);
+                });
+
             modelBuilder.Entity("Qivr.Core.Entities.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2029,6 +2159,57 @@ namespace Qivr.Infrastructure.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("Qivr.Core.Entities.UserRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at");
+
+                    b.Property<string>("AssignedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("assigned_by");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("role_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_roles");
+
+                    b.HasIndex("RoleId")
+                        .HasDatabaseName("ix_user_roles_role_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_user_roles_user_id");
+
+                    b.HasIndex("TenantId", "UserId", "RoleId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_roles_tenant_id_user_id_role_id");
+
+                    b.ToTable("user_roles", (string)null);
+                });
+
             modelBuilder.Entity("Qivr.Core.Entities.Appointment", b =>
                 {
                     b.HasOne("Qivr.Core.Entities.User", "CancelledByUser")
@@ -2037,10 +2218,16 @@ namespace Qivr.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_appointments_users_cancelled_by");
 
+                    b.HasOne("Qivr.Core.Entities.Clinic", "Clinic")
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_appointments_clinics_clinic_id");
+
                     b.HasOne("Qivr.Core.Entities.Clinic", null)
                         .WithMany("Appointments")
-                        .HasForeignKey("ClinicId")
-                        .HasConstraintName("fk_appointments_clinics_clinic_id");
+                        .HasForeignKey("ClinicId1")
+                        .HasConstraintName("fk_appointments_clinics_clinic_id1");
 
                     b.HasOne("Qivr.Core.Entities.Evaluation", "Evaluation")
                         .WithMany("Appointments")
@@ -2056,18 +2243,18 @@ namespace Qivr.Infrastructure.Migrations
                         .HasConstraintName("fk_appointments_users_patient_id");
 
                     b.HasOne("Qivr.Core.Entities.User", "Provider")
-                        .WithMany("ProviderAppointments")
+                        .WithMany()
                         .HasForeignKey("ProviderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_appointments_users_provider_id");
 
-                    b.HasOne("Qivr.Core.Entities.Provider", null)
-                        .WithMany("Appointments")
-                        .HasForeignKey("ProviderId1")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("Qivr.Core.Entities.Provider", "ProviderProfile")
+                        .WithMany()
+                        .HasForeignKey("ProviderProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_appointments_providers_provider_id");
+                        .HasConstraintName("fk_appointments_providers_provider_profile_id");
 
                     b.HasOne("Qivr.Core.Entities.Tenant", null)
                         .WithMany("Appointments")
@@ -2078,11 +2265,15 @@ namespace Qivr.Infrastructure.Migrations
 
                     b.Navigation("CancelledByUser");
 
+                    b.Navigation("Clinic");
+
                     b.Navigation("Evaluation");
 
                     b.Navigation("Patient");
 
                     b.Navigation("Provider");
+
+                    b.Navigation("ProviderProfile");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.AppointmentWaitlistEntry", b =>
@@ -2227,6 +2418,12 @@ namespace Qivr.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_messages_messages_parent_message_id");
 
+                    b.HasOne("Qivr.Core.Entities.Provider", "ProviderProfile")
+                        .WithMany()
+                        .HasForeignKey("ProviderProfileId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_messages_providers_provider_profile_id");
+
                     b.HasOne("Qivr.Core.Entities.User", "Sender")
                         .WithMany()
                         .HasForeignKey("SenderId")
@@ -2239,6 +2436,8 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("Conversation");
 
                     b.Navigation("ParentMessage");
+
+                    b.Navigation("ProviderProfile");
 
                     b.Navigation("Recipient");
 
@@ -2403,6 +2602,27 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Qivr.Core.Entities.RolePermission", b =>
+                {
+                    b.HasOne("Qivr.Core.Entities.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_role_permissions_permissions_permission_id");
+
+                    b.HasOne("Qivr.Core.Entities.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_role_permissions_roles_role_id");
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("Qivr.Core.Entities.User", b =>
                 {
                     b.HasOne("Qivr.Core.Entities.Tenant", "Tenant")
@@ -2413,6 +2633,27 @@ namespace Qivr.Infrastructure.Migrations
                         .HasConstraintName("fk_users_tenants_tenant_id");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.UserRole", b =>
+                {
+                    b.HasOne("Qivr.Core.Entities.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_roles_roles_role_id");
+
+                    b.HasOne("Qivr.Core.Entities.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_roles_users_user_id");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Clinic", b =>
@@ -2441,6 +2682,11 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("Replies");
                 });
 
+            modelBuilder.Entity("Qivr.Core.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("Qivr.Core.Entities.PromInstance", b =>
                 {
                     b.Navigation("BookingRequests");
@@ -2455,9 +2701,14 @@ namespace Qivr.Infrastructure.Migrations
 
             modelBuilder.Entity("Qivr.Core.Entities.Provider", b =>
                 {
-                    b.Navigation("Appointments");
-
                     b.Navigation("Evaluations");
+                });
+
+            modelBuilder.Entity("Qivr.Core.Entities.Role", b =>
+                {
+                    b.Navigation("RolePermissions");
+
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Tenant", b =>
@@ -2477,7 +2728,7 @@ namespace Qivr.Infrastructure.Migrations
 
                     b.Navigation("PatientAppointments");
 
-                    b.Navigation("ProviderAppointments");
+                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }

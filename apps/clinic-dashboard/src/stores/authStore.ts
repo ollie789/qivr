@@ -37,6 +37,7 @@ interface AuthState {
   setActiveTenantId: (tenantId: string | null) => void;
   checkAuth: () => Promise<void>;
   refreshToken: () => Promise<void>;
+  resetAuth: () => void;
 }
 
 // Development mode flag controlled via environment variable (defaults to Cognito integration)
@@ -376,6 +377,10 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         set({ isLoading: true });
         try {
+          // Clean up any mock authentication data first
+          localStorage.removeItem('mockToken');
+          localStorage.removeItem('mockUser');
+          
           // Use mock authentication in development
           if (DEV_MODE) {
             const mockToken = localStorage.getItem('mockToken');
@@ -499,6 +504,33 @@ export const useAuthStore = create<AuthState>()(
           set({ isAuthenticated: false, token: null });
         }
       },
+
+      resetAuth: () => {
+        // Clear all localStorage authentication data
+        localStorage.removeItem('mockToken');
+        localStorage.removeItem('mockUser');
+        localStorage.removeItem('clinic-auth-storage');
+        
+        // Clear any Amplify/Cognito data
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('amplify') || key.includes('cognito') || key.includes('auth')) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        // Reset state
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+          mfaRequired: false,
+          mfaSetupRequired: false,
+          mfaSession: null,
+          mfaChallenge: null,
+          activeTenantId: null,
+        });
+      },
     }),
     {
       name: 'clinic-auth-storage',
@@ -552,4 +584,5 @@ export const useAuthActions = () =>
     setUser: state.setUser,
     setToken: state.setToken,
     setActiveTenantId: state.setActiveTenantId,
+    resetAuth: state.resetAuth,
   }));

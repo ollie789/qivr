@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import MessageComposer from '../components/MessageComposer';
 import {
   messagesApi,
@@ -37,6 +38,7 @@ import {
 
 const Messages: React.FC = () => {
   const queryClient = useQueryClient();
+  const { canMakeApiCalls } = useAuthGuard();
   const [selectedTab, setSelectedTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -51,6 +53,7 @@ const Messages: React.FC = () => {
   } = useQuery({
     queryKey: ['message-conversations'],
     queryFn: messagesApi.getConversations,
+    enabled: canMakeApiCalls,
   });
 
   const conversations = useMemo(() => {

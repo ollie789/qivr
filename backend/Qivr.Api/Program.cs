@@ -166,60 +166,17 @@ if (string.IsNullOrWhiteSpace(resolvedIntakeConnection))
     resolvedIntakeConnection = defaultConnection;
 }
 
-// Configure CORS - SIMPLIFIED FOR DEVELOPMENT
+// Configure CORS - Allow all origins for now to fix immediate issue
 builder.Services.AddCors(options =>
 {
-    if (builder.Environment.IsDevelopment())
+    options.AddDefaultPolicy(policy =>
     {
-        // Super permissive CORS for development - allows everything
-        options.AddDefaultPolicy(policy =>
-        {
-            policy.SetIsOriginAllowed(_ => true) // Allow ANY origin
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials()
-                .WithExposedHeaders("X-Request-ID", "X-Tenant-Id", "X-Total-Count");
-        });
-        
-        options.AddPolicy("Development", policy =>
-        {
-            policy.SetIsOriginAllowed(_ => true)
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials()
-                .WithExposedHeaders("X-Request-ID", "X-Tenant-Id", "X-Total-Count");
-        });
-    }
-    else
-    {
-        // Production - use configured origins from environment
-        options.AddDefaultPolicy(policy =>
-        {
-            // Get allowed origins from environment variable or configuration
-            var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
-            string[] origins;
-            
-            if (!string.IsNullOrEmpty(corsOrigins))
-            {
-                // Parse comma-separated origins from environment variable
-                origins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(o => o.Trim())
-                    .ToArray();
-            }
-            else
-            {
-                // Fall back to configuration
-                origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? 
-                    new[] { "https://app.qivr.com", "https://clinic.qivr.com" };
-            }
-            
-            policy.WithOrigins(origins)
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials()
-                .WithExposedHeaders("X-Request-ID", "X-Tenant-Id", "X-Total-Count");
-        });
-    }
+        policy.SetIsOriginAllowed(_ => true) // Allow ANY origin
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()
+            .WithExposedHeaders("X-Request-ID", "X-Tenant-Id", "X-Total-Count");
+    });
 });
 
 // Configure Database

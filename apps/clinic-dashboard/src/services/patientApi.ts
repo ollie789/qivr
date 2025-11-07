@@ -179,45 +179,24 @@ class PatientApi {
   }
 
   async createPatient(patient: CreatePatientDto): Promise<Patient> {
-    console.warn('createPatient is not yet backed by an API endpoint; returning local echo value');
-    return {
-      id: `patient-${Date.now()}`,
+    const response = await apiClient.post<any>('/api/patients', {
       firstName: patient.firstName,
       lastName: patient.lastName,
       email: patient.email,
       phone: patient.phone,
       dateOfBirth: patient.dateOfBirth,
       gender: patient.gender,
-      address: patient.address ?? null,
-      medicalRecordNumber: undefined,
-      status: 'active',
-      registeredDate: new Date().toISOString(),
-      conditions: patient.initialConditions ?? [],
-      tags: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      insuranceProvider: patient.insuranceProvider,
-    };
+    });
+    return this.mapPatientDto(response);
   }
 
   async updatePatient(id: string, updates: UpdatePatientDto): Promise<Patient | undefined> {
-    console.warn('updatePatient is not yet backed by an API endpoint; returning merged value');
-    const existing = await this.getPatient(id);
-    if (!existing) {
-      return undefined;
-    }
-    return {
-      ...existing,
-      ...updates,
-      address: updates.address ?? existing.address,
-      tags: updates.tags ?? existing.tags,
-      updatedAt: new Date().toISOString(),
-    };
+    const response = await apiClient.put<any>(`/api/patients/${id}`, updates);
+    return this.mapPatientDto(response);
   }
 
   async deletePatient(id: string) {
-    console.warn('deletePatient is not yet backed by an API endpoint');
-    return { success: true };
+    return apiClient.delete(`/api/patients/${id}`);
   }
 
   async getPatientHistory(id: string) {

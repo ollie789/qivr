@@ -41,6 +41,7 @@ import {
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import analyticsApi, {
   ClinicAnalytics,
   AppointmentTrend,
@@ -88,6 +89,7 @@ const buildDashboardStats = (analytics?: ClinicAnalytics | null) => {
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
   const user = useAuthUser();
+  const { canMakeApiCalls } = useAuthGuard();
   const clinicId = user?.clinicId;
 
   const getDateRange = () => {
@@ -106,7 +108,7 @@ const Analytics: React.FC = () => {
       const { from, to } = getDateRange();
       return analyticsApi.getClinicAnalytics(clinicId, { from, to });
     },
-    enabled: Boolean(clinicId),
+    enabled: canMakeApiCalls && Boolean(clinicId),
   });
 
   const dashboardStats = useMemo(() => buildDashboardStats(clinicAnalytics ?? undefined), [clinicAnalytics]);

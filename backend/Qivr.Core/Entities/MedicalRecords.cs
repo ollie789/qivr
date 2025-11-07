@@ -19,14 +19,14 @@ public class MedicalVital : TenantEntity
 {
     public Guid PatientId { get; set; }
     public DateTime RecordedAt { get; set; }
-    public int Systolic { get; set; }
-    public int Diastolic { get; set; }
-    public int HeartRate { get; set; }
-    public decimal TemperatureCelsius { get; set; }
-    public decimal WeightKilograms { get; set; }
-    public decimal HeightCentimetres { get; set; }
-    public int OxygenSaturation { get; set; }
-    public int RespiratoryRate { get; set; }
+    public int? Systolic { get; set; }
+    public int? Diastolic { get; set; }
+    public int? HeartRate { get; set; }
+    public decimal? TemperatureCelsius { get; set; }
+    public decimal? WeightKilograms { get; set; }
+    public decimal? HeightCentimetres { get; set; }
+    public int? OxygenSaturation { get; set; }
+    public int? RespiratoryRate { get; set; }
 }
 
 public class MedicalLabResult : TenantEntity

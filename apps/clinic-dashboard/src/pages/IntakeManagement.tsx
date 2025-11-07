@@ -44,6 +44,7 @@ import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import { format } from 'date-fns';
 import { useSnackbar } from 'notistack';
 import { intakeApi, type IntakeSubmission } from '../services/intakeApi';
@@ -74,6 +75,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const IntakeManagement: React.FC = () => {
+  const { canMakeApiCalls } = useAuthGuard();
   const { enqueueSnackbar } = useSnackbar();
   
   // State Management
@@ -98,6 +100,7 @@ const IntakeManagement: React.FC = () => {
         throw err;
       }
     },
+    enabled: canMakeApiCalls,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
   

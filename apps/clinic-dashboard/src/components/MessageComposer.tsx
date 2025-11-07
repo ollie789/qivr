@@ -28,6 +28,7 @@ import {
   Sms as SmsIcon,
 } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useSnackbar } from 'notistack';
 import { messagesApi } from '../services/messagesApi';
 import type { MessageDetail } from '../services/messagesApi';
@@ -114,6 +115,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   defaultType = 'sms',
   onSent,
 }) => {
+  const { canMakeApiCalls } = useAuthGuard();
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   const [messageType, setMessageType] = useState<'sms' | 'email'>(defaultType);

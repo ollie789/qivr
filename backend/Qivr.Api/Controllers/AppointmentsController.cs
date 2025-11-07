@@ -260,6 +260,17 @@ public class AppointmentsController : BaseApiController
         if (provider == null)
             return BadRequest(new { message = "Provider not found" });
 
+        // Validate patient exists and is actually a patient
+        if (!User.IsInRole("Patient"))
+        {
+            var patient = await _context.Users
+                .Where(u => u.Id == request.PatientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
+                .FirstOrDefaultAsync();
+            
+            if (patient == null)
+                return BadRequest(new { message = "Patient not found" });
+        }
+
         var providerProfileId = await _context.Providers
             .Where(p => p.TenantId == tenantId && p.UserId == request.ProviderId)
             .Select(p => (Guid?)p.Id)

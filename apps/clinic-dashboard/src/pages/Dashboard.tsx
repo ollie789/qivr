@@ -45,6 +45,7 @@ import {
   Radar,
 } from "recharts";
 import { useAuthUser } from "../stores/authStore";
+import { useAuthGuard } from "../hooks/useAuthGuard";
 import dashboardApi from "../services/dashboardApi";
 import analyticsApi, { ClinicAnalytics } from "../services/analyticsApi";
 import {
@@ -63,12 +64,14 @@ import type {
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuthUser();
+  const { canMakeApiCalls } = useAuthGuard();
   const [chartPeriod, setChartPeriod] = React.useState("7d");
 
   // Fetch dashboard stats
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: dashboardApi.getStats,
+    enabled: canMakeApiCalls,
     refetchInterval: 60000, // Refresh every minute
   });
 
@@ -76,6 +79,7 @@ const Dashboard: React.FC = () => {
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ["recent-activity"],
     queryFn: dashboardApi.getRecentActivity,
+    enabled: canMakeApiCalls,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -83,6 +87,7 @@ const Dashboard: React.FC = () => {
   const { data: appointmentsData, isLoading: appointmentsLoading } = useQuery({
     queryKey: ["today-appointments"],
     queryFn: dashboardApi.getTodayAppointments,
+    enabled: canMakeApiCalls,
     refetchInterval: 60000,
   });
 
@@ -96,7 +101,7 @@ const Dashboard: React.FC = () => {
       const from = subDays(to, 30);
       return analyticsApi.getClinicAnalytics(user.clinicId, { from, to });
     },
-    enabled: Boolean(user?.clinicId),
+    enabled: Boolean(user?.clinicId) && canMakeApiCalls,
   });
 
   // Create stats array with real data

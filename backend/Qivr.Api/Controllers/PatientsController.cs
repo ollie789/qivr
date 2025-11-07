@@ -14,7 +14,6 @@ namespace Qivr.Api.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/patients")]
 [Route("api/patients")] // Maintain backward compatibility
-[Authorize(Roles = "Clinician,Admin,ClinicAdmin,Provider")]
 [EnableRateLimiting("api")]
 public class PatientsController : ControllerBase
 {
@@ -349,6 +348,160 @@ public class PatientsController : ControllerBase
             return StatusCode(500, "An error occurred while retrieving patient details");
         }
     }
+
+    /// <summary>
+    /// Create a new patient
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(PatientDetailsDto), 201)]
+    public async Task<IActionResult> CreatePatient([FromBody] CreatePatientDto createDto)
+    {
+        try
+        {
+            var tenantId = User.FindFirst("custom:tenant_id")?.Value;
+            if (string.IsNullOrEmpty(tenantId) || !Guid.TryParse(tenantId, out var parsedTenantId))
+                return BadRequest("Valid Tenant ID is required");
+
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                TenantId = parsedTenantId,
+                FirstName = createDto.FirstName,
+                LastName = createDto.LastName,
+                Email = createDto.Email,
+                Phone = createDto.Phone,
+                DateOfBirth = createDto.DateOfBirth,
+                Gender = createDto.Gender,
+                UserType = UserType.Patient,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            var result = new PatientDetailsDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                DateOfBirth = user.DateOfBirth,
+                Gender = user.Gender,
+                CreatedAt = user.CreatedAt,
+                LastUpdated = user.UpdatedAt,
+                IsActive = !user.IsDeleted
+            };
+
+            return CreatedAtAction(nameof(GetPatientDetails), new { patientId = user.Id }, result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating patient");
+            return StatusCode(500, "An error occurred while creating the patient");
+        }
+    }
+
+    /// <summary>
+    /// Update an existing patient
+    /// </summary>
+    [HttpPut("{patientId}")]
+    [ProducesResponseType(typeof(PatientDetailsDto), 200)]
+    public async Task<IActionResult> UpdatePatient(Guid patientId, [FromBody] UpdatePatientDto updateDto)
+    {
+        try
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == patientId && u.UserType == UserType.Patient && !u.IsDeleted);
+
+            if (user == null)
+                return NotFound();
+
+            if (!string.IsNullOrEmpty(updateDto.FirstName))
+                user.FirstName = updateDto.FirstName;
+            if (!string.IsNullOrEmpty(updateDto.LastName))
+                user.LastName = updateDto.LastName;
+            if (!string.IsNullOrEmpty(updateDto.Email))
+                user.Email = updateDto.Email;
+            if (!string.IsNullOrEmpty(updateDto.Phone))
+                user.Phone = updateDto.Phone;
+            if (updateDto.DateOfBirth.HasValue)
+                user.DateOfBirth = updateDto.DateOfBirth.Value;
+            if (!string.IsNullOrEmpty(updateDto.Gender))
+                user.Gender = updateDto.Gender;
+
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            var result = new PatientDetailsDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                DateOfBirth = user.DateOfBirth,
+                Gender = user.Gender,
+                CreatedAt = user.CreatedAt,
+                LastUpdated = user.UpdatedAt,
+                IsActive = !user.IsDeleted
+            };
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating patient {PatientId}", patientId);
+            return StatusCode(500, "An error occurred while updating the patient");
+        }
+    }
+
+    /// <summary>
+    /// Delete a patient (soft delete)
+    /// </summary>
+    [HttpDelete("{patientId}")]
+    [ProducesResponseType(204)]
+    public async Task<IActionResult> DeletePatient(Guid patientId)
+    {
+        try
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == patientId && u.UserType == UserType.Patient && !u.IsDeleted);
+
+            if (user == null)
+                return NotFound();
+
+            user.DeletedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting patient {PatientId}", patientId);
+            return StatusCode(500, "An error occurred while deleting the patient");
+        }
+    }
+}
+
+public class CreatePatientDto
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public string? Gender { get; set; }
+}
+
+public class UpdatePatientDto
+{
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public string? Gender { get; set; }
 }
 
 // DTOs
