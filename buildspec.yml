@@ -8,17 +8,24 @@ phases:
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/qivr-api
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
+      # Enable Buildx for multi-arch builds
+      - echo Enabling Docker Buildx...
+      - docker buildx version || true
+      - docker buildx create --name multi --use || docker buildx use multi
+      - docker buildx inspect --bootstrap
 
   build:
     commands:
       - echo Build started on `date`
       
-      # Build backend Docker image
-      - echo Building the Docker image...
-      - cd backend
-      - docker build -t $REPOSITORY_URI:latest .
-      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
-      - cd ..
+      # Build and push multi-arch backend image
+      - echo Building multi-arch Docker image and pushing to ECR...
+      - docker buildx build \
+          --platform linux/arm64 \
+          -t $REPOSITORY_URI:$IMAGE_TAG \
+          -t $REPOSITORY_URI:latest \
+          --push \
+          ./backend
       
       # Build frontend apps
       - echo Building frontend applications...
@@ -36,11 +43,6 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
-      
-      # Push backend image
-      - echo Pushing the Docker images...
-      - docker push $REPOSITORY_URI:latest
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
       
       # Deploy frontend to S3
       - echo Deploying frontend applications...
