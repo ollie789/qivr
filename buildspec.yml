@@ -21,7 +21,7 @@ phases:
       # Build and push multi-arch backend image
       - echo Building multi-arch Docker image and pushing to ECR...
       - docker buildx build \
-          --platform linux/arm64 \
+          --platform linux/amd64 \
           -t $REPOSITORY_URI:$IMAGE_TAG \
           -t $REPOSITORY_URI:latest \
           --push \
