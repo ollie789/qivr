@@ -321,11 +321,6 @@ builder.Services.AddVersionedSwagger(builder.Configuration);
 });*/
 
 // Configure OpenTelemetry (only if endpoint is configured and valid)
-var otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
-var isValidOtlpEndpoint = !string.IsNullOrWhiteSpace(otlpEndpoint) && 
-                         !otlpEndpoint.Contains("${") && // Skip placeholder values
-                         Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var validOtlpUri);
-
 if (isValidOtlpEndpoint)
 {
     var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "qivr-api";

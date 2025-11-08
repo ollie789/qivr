@@ -104,17 +104,17 @@ public static class AuthenticationExtensions
                                         }
                                         
                                         // Add role claim from UserType (normalize to Title Case)
-                                        var role = user.UserType?.Trim();
-                                        if (!string.IsNullOrEmpty(role))
+                                        var userRole = user.UserType?.Trim();
+                                        if (!string.IsNullOrEmpty(userRole))
                                         {
                                             // Convert to Title Case (patient → Patient, clinician → Clinician)
-                                            role = char.ToUpper(role[0]) + role.Substring(1).ToLower();
+                                            userRole = char.ToUpper(userRole[0]) + userRole.Substring(1).ToLower();
                                             
-                                            if (!claimsIdentity.HasClaim(System.Security.Claims.ClaimTypes.Role, role))
+                                            if (!claimsIdentity.HasClaim(System.Security.Claims.ClaimTypes.Role, userRole))
                                             {
                                                 claimsIdentity.AddClaim(new System.Security.Claims.Claim(
                                                     System.Security.Claims.ClaimTypes.Role, 
-                                                    role));
+                                                    userRole));
                                             }
                                         }
                                         
