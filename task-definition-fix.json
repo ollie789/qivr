@@ -9,7 +9,7 @@
   "containerDefinitions": [
     {
       "name": "qivr-api",
-      "image": "IMAGE_URI_PLACEHOLDER",
+      "image": "818084701597.dkr.ecr.ap-southeast-2.amazonaws.com/qivr-api:latest",
       "portMappings": [
         {
           "containerPort": 8080,
@@ -57,10 +57,6 @@
         {
           "name": "S3_BUCKET_NAME",
           "value": "qivr-static-assets-production-818084701597"
-        },
-        {
-          "name": "OPENTELEMETRY_ENDPOINT",
-          "value": ""
         }
       ],
       "secrets": [

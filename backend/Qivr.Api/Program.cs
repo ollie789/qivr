@@ -166,12 +166,14 @@ if (string.IsNullOrWhiteSpace(resolvedIntakeConnection))
     resolvedIntakeConnection = defaultConnection;
 }
 
-// Configure CORS - Allow all origins for now to fix immediate issue
+// Configure CORS - Use specific allowed origins from configuration
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.SetIsOriginAllowed(_ => true) // Allow ANY origin
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials()

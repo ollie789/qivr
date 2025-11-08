@@ -9,14 +9,15 @@
   "containerDefinitions": [
     {
       "name": "qivr-api",
-      "image": "IMAGE_URI_PLACEHOLDER",
+      "image": "818084701597.dkr.ecr.ap-southeast-2.amazonaws.com/qivr-api:latest",
+      "essential": true,
       "portMappings": [
         {
           "containerPort": 8080,
+          "hostPort": 8080,
           "protocol": "tcp"
         }
       ],
-      "essential": true,
       "environment": [
         {
           "name": "Storage__Region",
