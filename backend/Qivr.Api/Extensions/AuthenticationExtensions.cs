@@ -103,13 +103,19 @@ public static class AuthenticationExtensions
                                                 user.Id.ToString()));
                                         }
                                         
-                                        // Add role claim from UserType
-                                        if (!string.IsNullOrEmpty(role) &&
-                                            !claimsIdentity.HasClaim(System.Security.Claims.ClaimTypes.Role, role))
+                                        // Add role claim from UserType (normalize to Title Case)
+                                        var role = user.UserType?.Trim();
+                                        if (!string.IsNullOrEmpty(role))
                                         {
-                                            claimsIdentity.AddClaim(new System.Security.Claims.Claim(
-                                                System.Security.Claims.ClaimTypes.Role, 
-                                                role));
+                                            // Convert to Title Case (patient → Patient, clinician → Clinician)
+                                            role = char.ToUpper(role[0]) + role.Substring(1).ToLower();
+                                            
+                                            if (!claimsIdentity.HasClaim(System.Security.Claims.ClaimTypes.Role, role))
+                                            {
+                                                claimsIdentity.AddClaim(new System.Security.Claims.Claim(
+                                                    System.Security.Claims.ClaimTypes.Role, 
+                                                    role));
+                                            }
                                         }
                                         
                                         // For now, we'll fetch the tenant from the user's email domain
@@ -167,12 +173,22 @@ public static class AuthenticationExtensions
                         var roleClaim = context.Principal?.Claims
                             .FirstOrDefault(c => c.Type == "custom:role" || c.Type == "custom:custom:role");
                         
-                        if (roleClaim != null && !claimsIdentity.HasClaim(System.Security.Claims.ClaimTypes.Role, roleClaim.Value))
+                        if (roleClaim != null)
                         {
-                            claimsIdentity.AddClaim(new System.Security.Claims.Claim(
-                                System.Security.Claims.ClaimTypes.Role, 
-                                roleClaim.Value));
-                            logger.LogInformation("Added role from Cognito custom claim: {Role}", roleClaim.Value);
+                            var cognitoRole = roleClaim.Value?.Trim();
+                            if (!string.IsNullOrEmpty(cognitoRole))
+                            {
+                                // Convert to Title Case (patient → Patient, clinician → Clinician)
+                                cognitoRole = char.ToUpper(cognitoRole[0]) + cognitoRole.Substring(1).ToLower();
+                                
+                                if (!claimsIdentity.HasClaim(System.Security.Claims.ClaimTypes.Role, cognitoRole))
+                                {
+                                    claimsIdentity.AddClaim(new System.Security.Claims.Claim(
+                                        System.Security.Claims.ClaimTypes.Role, 
+                                        cognitoRole));
+                                    logger.LogInformation("Added normalized role from Cognito custom claim: {Role}", cognitoRole);
+                                }
+                            }
                         }
                     }
                 },
