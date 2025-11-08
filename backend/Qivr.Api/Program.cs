@@ -101,7 +101,11 @@ var loggerConfig = new LoggerConfiguration()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
 
 var otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
-if (!string.IsNullOrWhiteSpace(otlpEndpoint) && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out _))
+var isValidOtlpEndpoint = !string.IsNullOrWhiteSpace(otlpEndpoint) && 
+                         !otlpEndpoint.Contains("${") && // Skip placeholder values
+                         Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out _);
+
+if (isValidOtlpEndpoint)
 {
     loggerConfig.WriteTo.OpenTelemetry(options =>
     {
@@ -316,8 +320,13 @@ builder.Services.AddVersionedSwagger(builder.Configuration);
     });
 });*/
 
-// Configure OpenTelemetry (only if endpoint is configured)
-if (!string.IsNullOrWhiteSpace(otlpEndpoint) && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var validOtlpUri))
+// Configure OpenTelemetry (only if endpoint is configured and valid)
+var otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
+var isValidOtlpEndpoint = !string.IsNullOrWhiteSpace(otlpEndpoint) && 
+                         !otlpEndpoint.Contains("${") && // Skip placeholder values
+                         Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var validOtlpUri);
+
+if (isValidOtlpEndpoint)
 {
     var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "qivr-api";
     var serviceVersion = builder.Configuration["OpenTelemetry:ServiceVersion"] ?? "1.0.0";
