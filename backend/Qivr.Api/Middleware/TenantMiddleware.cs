@@ -154,6 +154,7 @@ public class TenantMiddleware
         {
             "/health",
             "/swagger",
+            "/api/auth/register",
             "/api/auth/login",
             "/api/auth/signup",
             "/api/auth/forgot-password",

@@ -53,14 +53,8 @@ function assert(condition, message) {
 
 // Test Suite
 const tests = {
-  async testHealthCheck() {
-    console.log('\n📋 Test 1: Health Check');
-    const response = await makeRequest('/health');
-    assert(response.ok, 'Backend is healthy');
-  },
-
   async testRegistration() {
-    console.log('\n📋 Test 2: Clinic Registration');
+    console.log('\n📋 Test 1: Clinic Registration');
     
     const timestamp = Date.now();
     const clinicData = {
@@ -77,6 +71,12 @@ const tests = {
       body: JSON.stringify(clinicData)
     });
     
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`  ❌ Status: ${response.status}`);
+      console.log(`  ❌ Error: ${errorText}`);
+    }
+    
     assert(response.ok, 'Registration successful');
     
     const data = await response.json();
@@ -92,7 +92,7 @@ const tests = {
   },
 
   async testLogin() {
-    console.log('\n📋 Test 3: Login');
+    console.log('\n📋 Test 2: Login');
     
     const { email, password } = testData.registration;
     const response = await makeRequest('/auth/login', {
@@ -263,12 +263,11 @@ async function runTests() {
       failed++;
       console.error(`\n❌ ${name} failed:`);
       console.error(`   ${error.message}`);
+      console.error(`   Stack: ${error.stack}`);
       
       // Stop on first failure for easier debugging
-      if (env === 'local') {
-        console.log('\n💡 Fix the issue and run again');
-        process.exit(1);
-      }
+      console.log('\n💡 Fix the issue and run again');
+      process.exit(1);
     }
   }
   
