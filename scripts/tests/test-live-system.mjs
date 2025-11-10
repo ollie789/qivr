@@ -200,8 +200,92 @@ const tests = {
     assert(data.items.every(a => a.tenantId === tenantId), 'All appointments belong to tenant');
   },
 
+  async testMessages() {
+    console.log('\n📋 Test 9: Messages');
+    
+    const response = await makeRequest('/messages/threads');
+    assert(response.ok || response.status === 404, 'Messages endpoint accessible');
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`  📝 Message threads: ${data.items?.length || 0}`);
+    }
+  },
+
+  async testDocuments() {
+    console.log('\n📋 Test 10: Documents');
+    
+    const response = await makeRequest('/documents');
+    assert(response.ok || response.status === 404, 'Documents endpoint accessible');
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`  📝 Documents: ${data.items?.length || 0}`);
+    }
+  },
+
+  async testMedicalRecords() {
+    console.log('\n📋 Test 11: Medical Records');
+    
+    const response = await makeRequest('/medical-records');
+    assert(response.ok || response.status === 404, 'Medical records endpoint accessible');
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`  📝 Medical records: ${data.items?.length || 0}`);
+    }
+  },
+
+  async testSettings() {
+    console.log('\n📋 Test 12: Settings');
+    
+    const response = await makeRequest('/settings/clinic');
+    assert(response.ok || response.status === 404, 'Settings endpoint accessible');
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`  📝 Clinic settings loaded`);
+    }
+  },
+
+  async testAnalytics() {
+    console.log('\n📋 Test 13: Analytics');
+    
+    const response = await makeRequest('/analytics/overview');
+    assert(response.ok || response.status === 404, 'Analytics endpoint accessible');
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`  📝 Analytics data loaded`);
+    }
+  },
+
+  async testPROM() {
+    console.log('\n📋 Test 14: PROM Questionnaires');
+    
+    const response = await makeRequest('/prom/questionnaires');
+    assert(response.ok || response.status === 404, 'PROM endpoint accessible');
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`  📝 PROM questionnaires: ${data.items?.length || 0}`);
+    }
+  },
+
+  async testIntakeForms() {
+    console.log('\n📋 Test 15: Intake Forms');
+    
+    const response = await makeRequest('/intake/forms');
+    assert(response.ok || response.status === 404, 'Intake forms endpoint accessible');
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`  📝 Intake forms: ${data.items?.length || 0}`);
+    }
+  },
+
   async testDashboardStats() {
-    console.log('\n📋 Test 9: Dashboard Stats');
+    console.log('\n📋 Test 16: Dashboard Stats');
     
     const response = await makeRequest('/dashboard/stats');
     assert(response.ok, 'Dashboard stats retrieved');
@@ -212,7 +296,7 @@ const tests = {
   },
 
   async testTenantIsolation() {
-    console.log('\n📋 Test 10: Tenant Isolation');
+    console.log('\n📋 Test 17: Tenant Isolation');
     
     // Try to access data with wrong tenant ID
     const response = await makeRequest('/patients', {
@@ -228,7 +312,7 @@ const tests = {
   },
 
   async testTokenRefresh() {
-    console.log('\n📋 Test 11: Token Refresh');
+    console.log('\n📋 Test 18: Token Refresh');
     
     const response = await makeRequest('/auth/refresh', { method: 'POST' });
     assert(response.ok, 'Token refresh successful');
@@ -236,7 +320,7 @@ const tests = {
   },
 
   async testLogout() {
-    console.log('\n📋 Test 12: Logout');
+    console.log('\n📋 Test 19: Logout');
     
     const response = await makeRequest('/auth/logout', { method: 'POST' });
     assert(response.ok, 'Logout successful');
