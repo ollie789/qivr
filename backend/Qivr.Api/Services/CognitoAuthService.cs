@@ -194,6 +194,21 @@ public class CognitoAuthService : ICognitoAuthService
 
             var response = await _cognitoClient.SignUpAsync(signUpRequest);
             
+            // Auto-confirm user for testing
+            try
+            {
+                await _cognitoClient.AdminConfirmSignUpAsync(new Amazon.CognitoIdentityProvider.Model.AdminConfirmSignUpRequest
+                {
+                    UserPoolId = _settings.UserPoolId,
+                    Username = request.Username
+                });
+                _logger.LogInformation("User {Username} auto-confirmed successfully", request.Username);
+            }
+            catch (Exception confirmEx)
+            {
+                _logger.LogError(confirmEx, "Failed to auto-confirm user {Username}", request.Username);
+            }
+            
             // Determine tenant - use provided tenantId or create new one
             Tenant tenant;
             if (request.TenantId != Guid.Empty)

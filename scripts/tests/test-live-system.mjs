@@ -102,6 +102,12 @@ const tests = {
       body: JSON.stringify({ email, password })
     });
     
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`  ❌ Status: ${response.status}`);
+      console.log(`  ❌ Error: ${errorText}`);
+    }
+    
     assert(response.ok, 'Login successful');
     
     const data = await response.json();
