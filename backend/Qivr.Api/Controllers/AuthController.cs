@@ -47,7 +47,10 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await _authService.AuthenticateAsync(request.Username, request.Password);
+        // Accept either username or email
+        var username = !string.IsNullOrEmpty(request.Username) ? request.Username : request.Email;
+        
+        var result = await _authService.AuthenticateAsync(username, request.Password);
         
         if (!result.Success)
         {
@@ -423,6 +426,7 @@ public class AuthController : ControllerBase
 public class LoginRequest
 {
     public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
 }
 
