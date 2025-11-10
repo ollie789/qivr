@@ -5,10 +5,8 @@ import {
   type HttpRequestOptions,
 } from '@qivr/http';
 import { useAuthStore } from '../stores/authStore';
-import { fetchAuthSession } from '@aws-amplify/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
-const USE_AUTH_PROXY = import.meta.env.VITE_USE_AUTH_PROXY === 'true';
 
 const claimFromPayload = (
   payload: Record<string, unknown> | undefined,
@@ -68,13 +66,9 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
   try {
     const { token, user, isLoading, isAuthenticated } = useAuthStore.getState();
     
-    // Don't make API calls if auth is still loading or user is not authenticated
+    // Don't make API calls if auth is still loading
     if (isLoading) {
       throw new Error('Authentication is still loading');
-    }
-    
-    if (!isAuthenticated && !USE_AUTH_PROXY) {
-      throw new Error('User is not authenticated');
     }
 
     const isFormData = typeof FormData !== 'undefined' && options.data instanceof FormData;
@@ -87,27 +81,8 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
       headers['Content-Type'] = 'application/json';
     }
 
-    // Handle authentication tokens
-    if (!headers['Authorization']) {
-      if (!USE_AUTH_PROXY) {
-        try {
-          const session = await fetchAuthSession();
-          const cognitoToken = session?.tokens?.accessToken?.toString();
-          if (cognitoToken) {
-            headers['Authorization'] = `Bearer ${cognitoToken}`;
-          } else if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-        } catch (sessionError) {
-          console.warn('Unable to fetch Cognito session for API request', sessionError);
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-        }
-      } else if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
+    // Auth proxy uses httpOnly cookies, no Authorization header needed
+    // Token is only for client-side state management
 
     // Simplified tenant handling - let the API handle tenant assignment
     // The API will automatically assign users to the correct tenant on first login
