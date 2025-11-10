@@ -1,6 +1,7 @@
 using Amazon;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Qivr.Api.Config;
 using Qivr.Core.Entities;
