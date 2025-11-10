@@ -172,10 +172,13 @@ public class CognitoAuthService : ICognitoAuthService
     {
         try
         {
+            // Default username to email if not provided
+            var username = string.IsNullOrEmpty(request.Username) ? request.Email : request.Username;
+            
             var signUpRequest = new Amazon.CognitoIdentityProvider.Model.SignUpRequest
             {
                 ClientId = _settings.UserPoolClientId,
-                Username = request.Username,
+                Username = username,
                 Password = request.Password,
                 UserAttributes = new List<AttributeType>
                 {
@@ -189,7 +192,7 @@ public class CognitoAuthService : ICognitoAuthService
             // Only add SECRET_HASH if client secret is configured
             if (!string.IsNullOrEmpty(_settings.UserPoolClientSecret))
             {
-                signUpRequest.SecretHash = CalculateSecretHash(request.Username);
+                signUpRequest.SecretHash = CalculateSecretHash(username);
             }
 
             var response = await _cognitoClient.SignUpAsync(signUpRequest);
@@ -200,13 +203,13 @@ public class CognitoAuthService : ICognitoAuthService
                 await _cognitoClient.AdminConfirmSignUpAsync(new Amazon.CognitoIdentityProvider.Model.AdminConfirmSignUpRequest
                 {
                     UserPoolId = _settings.UserPoolId,
-                    Username = request.Username
+                    Username = username
                 });
-                _logger.LogInformation("User {Username} auto-confirmed successfully", request.Username);
+                _logger.LogInformation("User {Username} auto-confirmed successfully", username);
             }
             catch (Exception confirmEx)
             {
-                _logger.LogError(confirmEx, "Failed to auto-confirm user {Username}", request.Username);
+                _logger.LogError(confirmEx, "Failed to auto-confirm user {Username}", username);
             }
             
             // Determine tenant - use provided tenantId or create new one
@@ -276,7 +279,7 @@ public class CognitoAuthService : ICognitoAuthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Sign up failed for user {Username}", request.Username);
+            _logger.LogError(ex, "Sign up failed for user {Email}", request.Email);
             return new SignUpResult { Success = false, ErrorMessage = ex.Message };
         }
     }
