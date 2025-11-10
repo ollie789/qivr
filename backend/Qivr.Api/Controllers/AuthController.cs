@@ -337,31 +337,6 @@ public class AuthController : ControllerBase
         });
     }
 
-    [HttpGet("user-info")]
-    [Authorize]
-    public async Task<IActionResult> GetUserInfo()
-    {
-        // Try to get token from cookie first, fallback to header
-        var accessToken = Request.Cookies["accessToken"] ?? 
-                         Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-        
-        if (string.IsNullOrEmpty(accessToken))
-        {
-            // If no token in cookies or header, return user info from claims
-            return Ok(new
-            {
-                sub = User.FindFirst("sub")?.Value,
-                email = User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value,
-                given_name = User.FindFirst("given_name")?.Value ?? User.FindFirst(ClaimTypes.GivenName)?.Value,
-                family_name = User.FindFirst("family_name")?.Value ?? User.FindFirst(ClaimTypes.Surname)?.Value,
-                username = User.FindFirst("cognito:username")?.Value ?? User.FindFirst("username")?.Value
-            });
-        }
-        
-        var userInfo = await _authService.GetUserInfoAsync(accessToken);
-        return Ok(userInfo);
-    }
-
     [HttpPut("user-attributes")]
     [Authorize]
     public async Task<IActionResult> UpdateUserAttributes([FromBody] Dictionary<string, string> attributes)
