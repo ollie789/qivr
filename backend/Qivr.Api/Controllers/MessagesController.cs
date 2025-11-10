@@ -55,13 +55,13 @@ public class MessagesController : BaseApiController
             .Include(m => m.Sender)
             .Include(m => m.Recipient)
             .Where(m => m.TenantId == tenantId && 
-                       (m.SenderId == userId || m.RecipientId == userId));
+                       (m.SenderId == userId || m.DirectRecipientId == userId));
         
         if (!string.IsNullOrEmpty(category))
             query = query.Where(m => m.MessageType == category);
         
         if (unreadOnly == true)
-            query = query.Where(m => m.RecipientId == userId && !m.IsRead);
+            query = query.Where(m => m.DirectRecipientId == userId && !m.IsRead);
         
         // Use cursor pagination
         var paginationRequest = new CursorPaginationRequest
@@ -88,12 +88,12 @@ public class MessagesController : BaseApiController
                 From = m.SenderId == userId 
                     ? "You" 
                     : $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
-                To = m.RecipientId == userId 
+                To = m.DirectRecipientId == userId 
                     ? "You" 
                     : $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
                 Date = m.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 Category = m.MessageType,
-                Read = m.RecipientId == userId ? m.IsRead : true,
+                Read = m.DirectRecipientId == userId ? m.IsRead : true,
                 Urgent = m.Priority == "High" || m.Priority == "Urgent",
                 HasAttachments = m.HasAttachments,
                 ParentMessageId = m.ParentMessageId?.ToString()
@@ -132,12 +132,12 @@ public class MessagesController : BaseApiController
                 From = m.SenderId == userId 
                     ? "You" 
                     : $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
-                To = m.RecipientId == userId 
+                To = m.DirectRecipientId == userId 
                     ? "You" 
                     : $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
                 Date = m.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 Category = m.MessageType,
-                Read = m.RecipientId == userId ? m.IsRead : true,
+                Read = m.DirectRecipientId == userId ? m.IsRead : true,
                 Urgent = m.Priority == "High" || m.Priority == "Urgent",
                 HasAttachments = m.HasAttachments,
                 ParentMessageId = m.ParentMessageId?.ToString()
@@ -209,8 +209,8 @@ public class MessagesController : BaseApiController
             .Include(m => m.Recipient)
             .Include(m => m.ProviderProfile)
             .Where(m => m.TenantId == tenantId &&
-                       ((m.SenderId == userId && m.RecipientId == otherUserId) ||
-                        (m.SenderId == otherUserId && m.RecipientId == userId)));
+                       ((m.SenderId == userId && m.DirectRecipientId == otherUserId) ||
+                        (m.SenderId == otherUserId && m.DirectRecipientId == userId)));
         
         // Use cursor pagination
         var paginationRequest = new CursorPaginationRequest
@@ -234,7 +234,7 @@ public class MessagesController : BaseApiController
                 Id = m.Id,
                 SenderId = m.SenderId,
                 SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
-                RecipientId = m.RecipientId,
+                RecipientId = m.DirectRecipientId,
                 RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
                 ProviderProfileId = m.ProviderProfileId,
                 Subject = m.Subject ?? string.Empty,
@@ -282,7 +282,7 @@ public class MessagesController : BaseApiController
                 Id = m.Id,
                 SenderId = m.SenderId,
                 SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
-                RecipientId = m.RecipientId,
+                RecipientId = m.DirectRecipientId,
                 RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
                 ProviderProfileId = m.ProviderProfileId,
                 Subject = m.Subject ?? string.Empty,
@@ -378,7 +378,7 @@ public class MessagesController : BaseApiController
                 Id = message.Id,
                 SenderId = message.SenderId,
                 SenderName = $"{message.Sender?.FirstName} {message.Sender?.LastName}".Trim(),
-                RecipientId = message.RecipientId,
+                RecipientId = message.DirectRecipientId,
                 RecipientName = $"{message.Recipient?.FirstName} {message.Recipient?.LastName}".Trim(),
                 ProviderProfileId = message.ProviderProfileId,
                 Subject = message.Subject,
@@ -409,13 +409,13 @@ public class MessagesController : BaseApiController
             
         var message = await _messagingService.GetMessageAsync(tenantId, id);
         
-        if (message == null || (message.SenderId != userId && message.RecipientId != userId))
+        if (message == null || (message.SenderId != userId && message.DirectRecipientId != userId))
         {
             throw new NotFoundException("Message", id);
         }
 
         // Mark as read if recipient
-        if (message.RecipientId == userId && !message.IsRead)
+        if (message.DirectRecipientId == userId && !message.IsRead)
         {
             await _messagingService.MarkMessagesAsReadAsync(tenantId, userId, new[] { id });
         }
@@ -425,7 +425,7 @@ public class MessagesController : BaseApiController
                 Id = message.Id,
                 SenderId = message.SenderId,
                 SenderName = $"{message.Sender?.FirstName} {message.Sender?.LastName}".Trim(),
-                RecipientId = message.RecipientId,
+                RecipientId = message.DirectRecipientId,
                 RecipientName = $"{message.Recipient?.FirstName} {message.Recipient?.LastName}".Trim(),
                 ProviderProfileId = message.ProviderProfileId,
                 Subject = message.Subject,
@@ -453,7 +453,7 @@ public class MessagesController : BaseApiController
         var userId = CurrentUserId;
         
         var message = await _context.Messages
-            .FirstOrDefaultAsync(m => m.Id == id && m.RecipientId == userId);
+            .FirstOrDefaultAsync(m => m.Id == id && m.DirectRecipientId == userId);
 
         if (message == null)
         {
@@ -621,7 +621,7 @@ public class MessagesController : BaseApiController
                 Id = reply.Id,
                 SenderId = reply.SenderId,
                 SenderName = $"{reply.Sender?.FirstName} {reply.Sender?.LastName}".Trim(),
-                RecipientId = reply.RecipientId,
+                RecipientId = reply.DirectRecipientId,
                 RecipientName = $"{reply.Recipient?.FirstName} {reply.Recipient?.LastName}".Trim(),
                 ProviderProfileId = reply.ProviderProfileId,
                 Subject = reply.Subject,
