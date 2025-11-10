@@ -34,7 +34,16 @@ export interface AuthResponse {
 
 class AuthApiService {
   async signUp(data: SignUpRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/signup', data);
+    const response = await apiClient.post<AuthResponse>('/auth/signup', {
+      username: data.email, // Use email as username
+      email: data.email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      phoneNumber: data.phoneNumber || '',
+      tenantId: data.tenantId,
+      role: 'Patient',
+    });
     return response.data;
   }
 
