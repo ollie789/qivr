@@ -144,6 +144,12 @@ public class QivrDbContext : DbContext
             entity.Ignore(e => e.Metadata); // Database doesn't have metadata column
             entity.Ignore(e => e.DeletedAt); // Database uses is_active instead
             entity.Ignore(e => e.Status); // Database doesn't have status column
+            entity.Ignore(e => e.CognitoUserPoolId); // Not stored in database
+            entity.Ignore(e => e.CognitoUserPoolClientId); // Not stored in database
+            entity.Ignore(e => e.CognitoUserPoolDomain); // Not stored in database
+            entity.Ignore(e => e.Plan); // Database doesn't have plan column
+            entity.Ignore(e => e.Timezone); // Database doesn't have timezone column
+            entity.Ignore(e => e.Locale); // Database doesn't have locale column
             entity.Ignore(e => e.Plan); // Database doesn't have plan column
             entity.Ignore(e => e.Timezone); // Database doesn't have timezone column
             entity.Ignore(e => e.Locale); // Database doesn't have locale column
