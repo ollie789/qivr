@@ -92,6 +92,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
+        set({ isLoading: true });
         try {
           const userInfo = await authApi.getUserInfo();
           if (userInfo) {
@@ -102,17 +103,25 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               activeTenantId: user.tenantId,
             });
-            return;
+          } else {
+            set({ 
+              user: null, 
+              token: null,
+              isAuthenticated: false,
+              activeTenantId: null,
+            });
           }
         } catch (error) {
           console.error('Auth check failed:', error);
+          set({ 
+            user: null, 
+            token: null,
+            isAuthenticated: false,
+            activeTenantId: null,
+          });
+        } finally {
+          set({ isLoading: false });
         }
-        set({ 
-          user: null, 
-          token: null,
-          isAuthenticated: false,
-          activeTenantId: null,
-        });
       },
 
       refreshToken: async () => {
