@@ -65,8 +65,11 @@ const baseClient = createHttpClient({
 export async function apiRequest<T extends ApiResponse = ApiResponse>(options: HttpRequestOptions): Promise<T> {
   const { token, user, isLoading, isAuthenticated } = useAuthStore.getState();
   
-  // Don't make API calls if auth is still loading
-  if (isLoading) {
+  // Don't block login/auth requests even if loading
+  const isAuthRequest = options.url?.includes('/api/auth/') || options.url?.includes('/login');
+  
+  // Don't make API calls if auth is still loading (except auth requests)
+  if (isLoading && !isAuthRequest) {
     throw new Error('Authentication is still loading');
   }
 

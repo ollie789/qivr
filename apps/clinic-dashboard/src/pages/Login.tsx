@@ -24,12 +24,13 @@ import { useAuth, useAuthActions } from '../stores/authStore';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { login } = useAuthActions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     // If already authenticated, redirect to dashboard
@@ -48,6 +49,7 @@ export default function Login() {
       return;
     }
 
+    setIsLoggingIn(true);
     try {
       await login(email, password);
       navigate('/dashboard');
@@ -63,6 +65,8 @@ export default function Login() {
       } else {
         setError(message || 'Login failed. Please try again.');
       }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -154,9 +158,9 @@ export default function Login() {
               variant="contained"
               size="large"
               sx={{ mt: 3, mb: 2 }}
-              disabled={isLoading}
+              disabled={isLoggingIn}
             >
-              {isLoading ? (
+              {isLoggingIn ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
                 'Sign In'

@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import authApi, { type AuthUserInfo } from '../services/authApi';
 
+// Force cache bust - auth loading fix applied
+const AUTH_FIX_VERSION = '1.0.1';
+
 interface User {
   id: string;
   name: string;

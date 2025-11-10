@@ -28,7 +28,7 @@ export type LoginResponse = LoginSuccessResponse | LoginChallengeResponse;
 export const authApi = {
   async login(email: string, password: string): Promise<LoginResponse> {
     return apiClient.post<LoginResponse>('/api/auth/login', {
-      username: email,
+      email,
       password,
     });
   },
