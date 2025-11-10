@@ -68,7 +68,7 @@
         },
         {
           "name": "ApplyMigrations",
-          "value": "false"
+          "value": "true"
         }
       ],
       "secrets": [

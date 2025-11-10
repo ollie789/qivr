@@ -26,6 +26,7 @@ public class CsrfProtectionMiddleware
         "/api/migration",
         "/api/auth/login", // Login needs to work without existing CSRF token
         "/api/auth/signup",
+        "/api/auth/register", // Registration endpoint
         "/api/auth/refresh-token" // Refresh uses cookie auth
     };
 
