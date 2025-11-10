@@ -65,6 +65,10 @@
         {
           "name": "OPENTELEMETRY_ENDPOINT",
           "value": ""
+        },
+        {
+          "name": "ApplyMigrations",
+          "value": "false"
         }
       ],
       "secrets": [
