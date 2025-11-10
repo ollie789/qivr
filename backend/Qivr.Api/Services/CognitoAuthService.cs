@@ -194,17 +194,44 @@ public class CognitoAuthService : ICognitoAuthService
 
             var response = await _cognitoClient.SignUpAsync(signUpRequest);
             
-            // Create tenant and user in database
-            var tenant = new Tenant
+            // Determine tenant - use provided tenantId or create new one
+            Tenant tenant;
+            if (request.TenantId != Guid.Empty)
             {
-                Id = Guid.NewGuid(),
-                Slug = $"{request.FirstName.ToLower()}-{request.LastName.ToLower()}-{Guid.NewGuid().ToString()[..8]}",
-                Name = $"{request.FirstName} {request.LastName} Clinic",
-                Status = TenantStatus.Active,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                // Patient joining existing clinic
+                tenant = await _dbContext.Tenants.FindAsync(request.TenantId);
+                if (tenant == null)
+                {
+                    return new SignUpResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Invalid tenant ID"
+                    };
+                }
+            }
+            else
+            {
+                // New clinic signup - create tenant
+                tenant = new Tenant
+                {
+                    Id = Guid.NewGuid(),
+                    Slug = $"{request.FirstName.ToLower()}-{request.LastName.ToLower()}-{Guid.NewGuid().ToString()[..8]}",
+                    Name = $"{request.FirstName} {request.LastName} Clinic",
+                    Status = TenantStatus.Active,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await _dbContext.Tenants.AddAsync(tenant);
+            }
+            
+            // Determine user type from role
+            var userType = request.Role.ToLower() switch
+            {
+                "patient" => Qivr.Core.Entities.UserType.Patient,
+                "staff" => Qivr.Core.Entities.UserType.Staff,
+                "admin" => Qivr.Core.Entities.UserType.Admin,
+                _ => Qivr.Core.Entities.UserType.Patient
             };
-            await _dbContext.Tenants.AddAsync(tenant);
             
             var user = new User
             {
@@ -214,7 +241,7 @@ public class CognitoAuthService : ICognitoAuthService
                 Email = request.Email,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                UserType = Qivr.Core.Entities.UserType.Admin,
+                UserType = userType,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };

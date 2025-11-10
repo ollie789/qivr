@@ -17,11 +17,14 @@ echo "1️⃣  Testing patient signup..."
 SIGNUP_RESPONSE=$(curl -s -c /tmp/patient-cookies.txt -X POST "${API_URL}/auth/signup" \
   -H "Content-Type: application/json" \
   -d "{
+    \"username\": \"$TEST_EMAIL\",
     \"email\": \"$TEST_EMAIL\",
     \"password\": \"$TEST_PASSWORD\",
     \"firstName\": \"Test\",
     \"lastName\": \"Patient\",
-    \"tenantId\": \"$TEST_TENANT\"
+    \"phoneNumber\": \"\",
+    \"tenantId\": \"$TEST_TENANT\",
+    \"role\": \"Patient\"
   }")
 
 if echo "$SIGNUP_RESPONSE" | jq -e '.userInfo.tenantId' > /dev/null 2>&1; then
