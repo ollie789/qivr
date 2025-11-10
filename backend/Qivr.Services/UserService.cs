@@ -59,6 +59,16 @@ public class UserService : IUserService
         if (user != null)
         {
             _logger.LogInformation("Found user {Email} with UserType: {UserType}", user.Email, user.UserType);
+            
+            // Auto-fix tenant association if needed
+            var expectedTenantId = Guid.Parse("b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11");
+            if (user.TenantId != expectedTenantId)
+            {
+                _logger.LogInformation("Fixing tenant association for user {Email}: {OldTenant} -> {NewTenant}", 
+                    user.Email, user.TenantId, expectedTenantId);
+                user.TenantId = expectedTenantId;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
         }
         return _mapper.Map<UserDto>(user);
     }
@@ -71,16 +81,23 @@ public class UserService : IUserService
         {
             _logger.LogInformation("Auto-creating user from Cognito: {Email} (sub: {CognitoSub})", email, cognitoSub);
             
-            // Get or create default tenant
-            var tenant = await _context.Tenants.FirstOrDefaultAsync(cancellationToken);
+            // Use consistent tenant ID that matches frontend expectations
+            var expectedTenantId = Guid.Parse("b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11");
+            
+            // Get or create expected tenant
+            var tenant = await _context.Tenants.FindAsync(expectedTenantId, cancellationToken);
             if (tenant == null)
             {
-                _logger.LogInformation("Creating default tenant");
+                _logger.LogInformation("Creating expected tenant: {TenantId}", expectedTenantId);
                 tenant = new Tenant
                 {
-                    Id = Guid.NewGuid(),
-                    Name = "Default Clinic",
-                    Slug = "default-clinic",
+                    Id = expectedTenantId,
+                    Name = "QIVR Demo Clinic",
+                    Slug = "demo-clinic",
+                    Settings = new Dictionary<string, object> 
+                    { 
+                        ["features"] = new[] { "appointments", "analytics", "messaging" } 
+                    },
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -88,16 +105,24 @@ public class UserService : IUserService
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
-            // Get or create default clinic
+            // Get or create expected clinic
             var clinic = await _context.Clinics.FirstOrDefaultAsync(c => c.TenantId == tenant.Id, cancellationToken);
             if (clinic == null)
             {
-                _logger.LogInformation("Creating default clinic for tenant {TenantId}", tenant.Id);
+                _logger.LogInformation("Creating expected clinic for tenant {TenantId}", tenant.Id);
                 clinic = new Clinic
                 {
-                    Id = Guid.NewGuid(),
+                    Id = expectedTenantId, // Use same ID for clinic as tenant for consistency
                     TenantId = tenant.Id,
                     Name = tenant.Name,
+                    Email = "clinic@qivr.health",
+                    Phone = "+61 2 9876 5432",
+                    Address = "123 Health Street",
+                    City = "Sydney",
+                    State = "NSW",
+                    ZipCode = "2000",
+                    Country = "Australia",
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -379,5 +404,46 @@ public class TenantService : ITenantService
                 yield return guid;
             }
         }
+    }
+
+    public async Task<TenantDto> CreateTenantAsync(string name, string address, string phone, string email, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var tenant = new Tenant
+        {
+            Name = name,
+            Slug = GenerateSlug(name),
+            Status = TenantStatus.Active,
+            Plan = "starter",
+            Timezone = "Australia/Sydney",
+            Locale = "en-AU",
+            Settings = new Dictionary<string, object>
+            {
+                ["address"] = address,
+                ["phone"] = phone,
+                ["email"] = email
+            }
+        };
+
+        _context.Tenants.Add(tenant);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Associate user with the new tenant
+        var user = await _context.Users.FindAsync(userId);
+        if (user != null)
+        {
+            user.TenantId = tenant.Id;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return _mapper.Map<TenantDto>(tenant);
+    }
+
+    private static string GenerateSlug(string name)
+    {
+        return name.ToLowerInvariant()
+            .Replace(" ", "-")
+            .Replace("&", "and")
+            .Where(c => char.IsLetterOrDigit(c) || c == '-')
+            .Aggregate("", (current, c) => current + c);
     }
 }

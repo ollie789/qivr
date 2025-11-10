@@ -38,6 +38,7 @@ import {
   Cancel as RejectIcon,
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
+  PersonAdd as PersonAddIcon,
   Download as DownloadIcon,
   Warning as WarningIcon,
   Queue as QueueIcon,
@@ -47,6 +48,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { format } from 'date-fns';
 import { useSnackbar } from 'notistack';
+import { PatientInviteDialog } from '../components/PatientInviteDialog';
 import { intakeApi, type IntakeSubmission } from '../services/intakeApi';
 import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDialog';
 import IntakeDetailsDialog from '../components/IntakeDetailsDialog';
@@ -76,6 +78,7 @@ function TabPanel(props: TabPanelProps) {
 
 const IntakeManagement: React.FC = () => {
   const { canMakeApiCalls } = useAuthGuard();
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
   
   // State Management
@@ -207,6 +210,23 @@ const IntakeManagement: React.FC = () => {
     downloadExcel(exportData, 'intake_management', intakeQueueColumns);
     enqueueSnackbar('Data exported as Excel', { variant: 'success' });
     setExportMenuAnchor(null);
+  };
+
+  const handleInvitePatient = async (email: string, firstName: string, lastName: string) => {
+    const response = await fetch('/api/patientinvitations/invite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, firstName, lastName }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send invitation');
+    }
+
+    const result = await response.json();
+    enqueueSnackbar(`Invitation sent! Link: ${result.invitationUrl}`, { variant: 'success' });
   };
 
   const renderIntakeRow = (intake: IntakeSubmission) => (
@@ -447,6 +467,14 @@ const IntakeManagement: React.FC = () => {
             </FormControl>
           </Grid>
           <Grid item xs={12} md={5} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button
+              startIcon={<PersonAddIcon />}
+              onClick={() => setInviteDialogOpen(true)}
+              variant="contained"
+              color="primary"
+            >
+              Invite Patient
+            </Button>
             <Button 
               startIcon={<RefreshIcon />} 
               onClick={() => refetch()}
@@ -620,8 +648,31 @@ const IntakeManagement: React.FC = () => {
           />
         </>
       )}
+
+      <PatientInviteDialog
+        open={inviteDialogOpen}
+        onClose={() => setInviteDialogOpen(false)}
+        onInvite={handleInvitePatient}
+      />
     </Box>
   );
+};
+
+const handleInvitePatient = async (email: string, firstName: string, lastName: string) => {
+  const response = await fetch('/api/patientinvitations/invite', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, firstName, lastName }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to send invitation');
+  }
+
+  const result = await response.json();
+  console.log('Invitation sent:', result.invitationUrl);
 };
 
 export default IntakeManagement;

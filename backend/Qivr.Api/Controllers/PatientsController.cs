@@ -15,7 +15,7 @@ namespace Qivr.Api.Controllers;
 [Route("api/v{version:apiVersion}/patients")]
 [Route("api/patients")] // Maintain backward compatibility
 [EnableRateLimiting("api")]
-public class PatientsController : ControllerBase
+public class PatientsController : TenantAwareController
 {
     private readonly QivrDbContext _context;
     private readonly IResourceAuthorizationService _authorizationService;
@@ -127,11 +127,14 @@ public class PatientsController : ControllerBase
         [FromQuery] bool activeOnly = true,
         [FromQuery] bool sortDescending = false)
     {
-        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
-        if (tenantId == Guid.Empty)
+        // Check tenant requirement using new base controller
+        var tenantCheck = RequireTenant();
+        if (tenantCheck is not OkResult)
         {
-            return Unauthorized("Tenant not identified");
+            return tenantCheck;
         }
+
+        var tenantId = GetCurrentTenantId()!.Value;
 
         try
         {

@@ -556,6 +556,9 @@ public class QivrDbContext : DbContext
                 .WithMany(p => p.RolePermissions)
                 .HasForeignKey(e => e.PermissionId)
                 .OnDelete(DeleteBehavior.Cascade);
+                
+            // Match Role entity filter to allow system role permissions
+            entity.HasQueryFilter(e => e.Role.TenantId == _tenantId || e.Role.IsSystem);
         });
 
         // UserRole configuration

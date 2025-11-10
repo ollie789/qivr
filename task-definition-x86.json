@@ -1,0 +1,51 @@
+{
+  "family": "qivr-api",
+  "taskRoleArn": "arn:aws:iam::818084701597:role/qivr-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::818084701597:role/qivr-ecs-task-execution-role",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "containerDefinitions": [
+    {
+      "name": "qivr-api",
+      "image": "818084701597.dkr.ecr.ap-southeast-2.amazonaws.com/qivr-api@sha256:0a2a1ac3df826adf1e091f4967423e99f8db11bb71fba65cac42c4b3fe4aa182",
+      "portMappings": [{"containerPort": 8080, "protocol": "tcp"}],
+      "essential": true,
+      "environment": [
+        {"name": "ASPNETCORE_ENVIRONMENT", "value": "Production"},
+        {"name": "ENVIRONMENT", "value": "production"},
+        {"name": "AWS_REGION", "value": "ap-southeast-2"},
+        {"name": "DOTNET_gcServer", "value": "1"},
+        {"name": "DOTNET_GCHeapHardLimit", "value": "1800000000"}
+      ],
+      "secrets": [
+        {"name": "DB_HOST", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:host::"},
+        {"name": "DB_PORT", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:port::"},
+        {"name": "DB_NAME", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:database::"},
+        {"name": "DB_USERNAME", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:username::"},
+        {"name": "DB_PASSWORD", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/production/database-tbzesq:password::"},
+        {"name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:818084701597:secret:qivr/api/production-Zwv3kY:JWT_SECRET_KEY::"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/qivr-api",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 120
+      }
+    }
+  ]
+}

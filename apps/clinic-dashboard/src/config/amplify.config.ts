@@ -3,8 +3,8 @@ import { Amplify } from 'aws-amplify';
 const amplifyConfig = {
   Auth: {
     Cognito: {
-      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || 'ap-southeast-2_jbutB4tj1',
-      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || '4l510mm689hhpgr12prbuch2og',
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || 'ap-southeast-2_VHnD5yZaA',
+      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || '2kaq4c3131us5vpevb21n8n30v',
       identityPoolId: import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID,
       loginWith: {
         oauth: {
@@ -24,16 +24,16 @@ const amplifyConfig = {
       },
       signUpVerificationMethod: 'code' as const,
       mfa: {
-        status: 'on' as const, // MFA required for clinic staff
-        totpEnabled: true,
-        smsEnabled: true,
+        status: 'off' as const, // MFA disabled to match User Pool settings
+        totpEnabled: false,
+        smsEnabled: false,
       },
       passwordFormat: {
-        minLength: 10, // Stronger password requirements for clinic staff
+        minLength: 8, // Match User Pool minimum length
         requireLowercase: true,
         requireUppercase: true,
         requireNumbers: true,
-        requireSpecialCharacters: true,
+        requireSpecialCharacters: false, // User Pool doesn't require symbols
       },
     },
   },

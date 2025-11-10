@@ -6,18 +6,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Qivr.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class CleanRebuild : Migration
+    public partial class InitialSaaSDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Drop all existing tables to clean the database
-            migrationBuilder.Sql("DROP SCHEMA IF EXISTS public CASCADE;");
-            migrationBuilder.Sql("CREATE SCHEMA public;");
-            migrationBuilder.Sql("GRANT ALL ON SCHEMA public TO qivr_user;");
-            migrationBuilder.Sql("GRANT ALL ON SCHEMA public TO public;");
-            
-            // Now create all tables fresh
             migrationBuilder.CreateTable(
                 name: "clinics",
                 columns: table => new
@@ -165,14 +158,14 @@ namespace Qivr.Infrastructure.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     patient_id = table.Column<Guid>(type: "uuid", nullable: false),
                     recorded_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    systolic = table.Column<int>(type: "integer", nullable: false),
-                    diastolic = table.Column<int>(type: "integer", nullable: false),
-                    heart_rate = table.Column<int>(type: "integer", nullable: false),
-                    temperature_celsius = table.Column<decimal>(type: "numeric", nullable: false),
-                    weight_kilograms = table.Column<decimal>(type: "numeric", nullable: false),
-                    height_centimetres = table.Column<decimal>(type: "numeric", nullable: false),
-                    oxygen_saturation = table.Column<int>(type: "integer", nullable: false),
-                    respiratory_rate = table.Column<int>(type: "integer", nullable: false),
+                    systolic = table.Column<int>(type: "integer", nullable: true),
+                    diastolic = table.Column<int>(type: "integer", nullable: true),
+                    heart_rate = table.Column<int>(type: "integer", nullable: true),
+                    temperature_celsius = table.Column<decimal>(type: "numeric", nullable: true),
+                    weight_kilograms = table.Column<decimal>(type: "numeric", nullable: true),
+                    height_centimetres = table.Column<decimal>(type: "numeric", nullable: true),
+                    oxygen_saturation = table.Column<int>(type: "integer", nullable: true),
+                    respiratory_rate = table.Column<int>(type: "integer", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     tenant_id = table.Column<Guid>(type: "uuid", nullable: false)
@@ -246,6 +239,9 @@ namespace Qivr.Infrastructure.Migrations
                     slug = table.Column<string>(type: "text", nullable: false),
                     name = table.Column<string>(type: "text", nullable: false),
                     settings = table.Column<string>(type: "jsonb", nullable: false),
+                    cognito_user_pool_id = table.Column<string>(type: "text", nullable: true),
+                    cognito_user_pool_client_id = table.Column<string>(type: "text", nullable: true),
+                    cognito_user_pool_domain = table.Column<string>(type: "text", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

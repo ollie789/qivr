@@ -321,7 +321,7 @@ builder.Services.AddVersionedSwagger(builder.Configuration);
 });*/
 
 // Configure OpenTelemetry (only if endpoint is configured and valid)
-if (isValidOtlpEndpoint)
+if (isValidOtlpEndpoint && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var validOtlpUri))
 {
     var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "qivr-api";
     var serviceVersion = builder.Configuration["OpenTelemetry:ServiceVersion"] ?? "1.0.0";
@@ -384,6 +384,9 @@ builder.Services.AddHealthChecks()
 
 // Register application services
 builder.Services.AddQivrServices(builder.Configuration);
+
+// Add AWS Cognito Identity Provider client for SaaS multi-tenant auth
+builder.Services.AddAWSService<Amazon.CognitoIdentityProvider.IAmazonCognitoIdentityProvider>();
 
 builder.Services.Configure<Qivr.Api.Options.IntakeDbOptions>(builder.Configuration.GetSection("Intake"));
 builder.Services.Configure<Qivr.Api.Options.SqsOptions>(builder.Configuration.GetSection("Sqs"));
@@ -587,6 +590,10 @@ if (builder.Configuration.GetValue<bool>("ApplyMigrations", true)) // Default to
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
     await dbContext.Database.MigrateAsync();
+    
+    // Seed test data
+    // var seeder = new DataSeeder(dbContext);
+    // await seeder.SeedAsync();
 }
 
 Log.Information("Qivr API starting on {Environment} environment", app.Environment.EnvironmentName);

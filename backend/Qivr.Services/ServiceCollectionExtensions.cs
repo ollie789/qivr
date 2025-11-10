@@ -28,6 +28,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAppointmentService, AppointmentService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ITenantService, TenantService>();
+        services.AddScoped<IEnhancedTenantService, EnhancedTenantService>();
+        services.AddScoped<ISaasTenantService, SaasTenantService>();
+        services.AddScoped<IPatientInvitationService, PatientInvitationService>();
         services.AddScoped<IProviderAvailabilityService, ProviderAvailabilityService>();
         services.AddScoped<IClinicManagementService, ClinicManagementService>();
         
@@ -90,6 +93,7 @@ public interface ITenantService
     Task<TenantDto?> GetTenantAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TenantDto?> GetTenantBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TenantAccessDto>> GetTenantsForUserAsync(Guid userId, string? cognitoSub, CancellationToken cancellationToken = default);
+    Task<TenantDto> CreateTenantAsync(string name, string address, string phone, string email, Guid userId, CancellationToken cancellationToken = default);
 }
 
 public interface IEmailService

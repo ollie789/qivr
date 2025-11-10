@@ -57,7 +57,7 @@ const DEV_USER: User = {
   firstName: 'Dev',
   lastName: 'Patient',
   phoneNumber: '+15551112222',
-  tenantId: null,
+  tenantId: 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11',
   role: 'patient',
   emailVerified: true,
   phoneVerified: true,

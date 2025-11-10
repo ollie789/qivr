@@ -1148,19 +1148,19 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<int>("Diastolic")
+                    b.Property<int?>("Diastolic")
                         .HasColumnType("integer")
                         .HasColumnName("diastolic");
 
-                    b.Property<int>("HeartRate")
+                    b.Property<int?>("HeartRate")
                         .HasColumnType("integer")
                         .HasColumnName("heart_rate");
 
-                    b.Property<decimal>("HeightCentimetres")
+                    b.Property<decimal?>("HeightCentimetres")
                         .HasColumnType("numeric")
                         .HasColumnName("height_centimetres");
 
-                    b.Property<int>("OxygenSaturation")
+                    b.Property<int?>("OxygenSaturation")
                         .HasColumnType("integer")
                         .HasColumnName("oxygen_saturation");
 
@@ -1172,15 +1172,15 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("recorded_at");
 
-                    b.Property<int>("RespiratoryRate")
+                    b.Property<int?>("RespiratoryRate")
                         .HasColumnType("integer")
                         .HasColumnName("respiratory_rate");
 
-                    b.Property<int>("Systolic")
+                    b.Property<int?>("Systolic")
                         .HasColumnType("integer")
                         .HasColumnName("systolic");
 
-                    b.Property<decimal>("TemperatureCelsius")
+                    b.Property<decimal?>("TemperatureCelsius")
                         .HasColumnType("numeric")
                         .HasColumnName("temperature_celsius");
 
@@ -1192,7 +1192,7 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<decimal>("WeightKilograms")
+                    b.Property<decimal?>("WeightKilograms")
                         .HasColumnType("numeric")
                         .HasColumnName("weight_kilograms");
 
@@ -2057,6 +2057,18 @@ namespace Qivr.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("CognitoUserPoolClientId")
+                        .HasColumnType("text")
+                        .HasColumnName("cognito_user_pool_client_id");
+
+                    b.Property<string>("CognitoUserPoolDomain")
+                        .HasColumnType("text")
+                        .HasColumnName("cognito_user_pool_domain");
+
+                    b.Property<string>("CognitoUserPoolId")
+                        .HasColumnType("text")
+                        .HasColumnName("cognito_user_pool_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")

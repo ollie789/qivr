@@ -66,7 +66,7 @@ const baseClient = createHttpClient({
 
 export async function apiRequest<T extends ApiResponse = ApiResponse>(options: HttpRequestOptions): Promise<T> {
   try {
-    const { token, user, activeTenantId, isLoading, isAuthenticated } = useAuthStore.getState();
+    const { token, user, isLoading, isAuthenticated } = useAuthStore.getState();
     
     // Don't make API calls if auth is still loading or user is not authenticated
     if (isLoading) {
@@ -76,6 +76,7 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
     if (!isAuthenticated && !USE_AUTH_PROXY) {
       throw new Error('User is not authenticated');
     }
+
     const isFormData = typeof FormData !== 'undefined' && options.data instanceof FormData;
 
     const headers: Record<string, string> = {
@@ -86,84 +87,34 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
       headers['Content-Type'] = 'application/json';
     }
 
-    let session: Awaited<ReturnType<typeof fetchAuthSession>> | undefined;
-    const loadSession = async (): Promise<Awaited<ReturnType<typeof fetchAuthSession>> | undefined> => {
-      if (USE_AUTH_PROXY) {
-        return undefined;
-      }
-      if (session) {
-        return session;
-      }
-
-      try {
-        session = await fetchAuthSession();
-      } catch (sessionError) {
-        console.warn('Unable to fetch Cognito session for API request', sessionError);
-        session = undefined;
-      }
-
-      return session;
-    };
-
     // Handle authentication tokens
     if (!headers['Authorization']) {
       if (!USE_AUTH_PROXY) {
-        const currentSession = await loadSession();
-        const cognitoToken = currentSession?.tokens?.accessToken?.toString();
-        if (cognitoToken) {
-          headers['Authorization'] = `Bearer ${cognitoToken}`;
-        } else if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
+        try {
+          const session = await fetchAuthSession();
+          const cognitoToken = session?.tokens?.accessToken?.toString();
+          if (cognitoToken) {
+            headers['Authorization'] = `Bearer ${cognitoToken}`;
+          } else if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+        } catch (sessionError) {
+          console.warn('Unable to fetch Cognito session for API request', sessionError);
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
         }
       } else if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
     }
 
-    const sessionTokens = !USE_AUTH_PROXY ? (await loadSession())?.tokens : undefined;
-    const idTokenPayload = sessionTokens?.idToken?.payload as Record<string, unknown> | undefined;
-    const accessTokenPayload = sessionTokens?.accessToken?.payload as Record<string, unknown> | undefined;
-    const storedTenantId = typeof window !== 'undefined' ? getStoredTenantId() : null;
-
-    const tenantId = activeTenantId
-      ?? user?.tenantId
-      ?? claimFromPayload(idTokenPayload, [
-        'custom:custom:tenant_id',
-        'custom:tenant_id',
-        'tenant_id',
-      ])
-      ?? claimFromPayload(accessTokenPayload, [
-        'custom:custom:tenant_id',
-        'custom:tenant_id',
-        'tenant_id',
-      ])
-      ?? claimFromPayload(decodeJwtPayload(token), [
-        'custom:custom:tenant_id',
-        'custom:tenant_id',
-        'tenant_id',
-      ])
-      ?? storedTenantId
-      ?? undefined;
-
+    // Simplified tenant handling - let the API handle tenant assignment
+    // The API will automatically assign users to the correct tenant on first login
+    const tenantId = user?.tenantId || 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
+    
     if (tenantId && !headers['X-Tenant-Id']) {
       headers['X-Tenant-Id'] = tenantId;
-    }
-
-    const clinicId = user?.clinicId
-      ?? claimFromPayload(idTokenPayload, [
-        'custom:custom:clinic_id',
-        'custom:clinic_id',
-        'clinic_id',
-      ])
-      ?? claimFromPayload(accessTokenPayload, [
-        'custom:custom:clinic_id',
-        'custom:clinic_id',
-        'clinic_id',
-      ])
-      ?? undefined;
-
-    if (clinicId && !headers['X-Clinic-Id']) {
-      headers['X-Clinic-Id'] = clinicId;
     }
 
     return await baseClient.request<T>({

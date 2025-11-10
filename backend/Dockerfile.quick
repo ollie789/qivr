@@ -1,0 +1,9 @@
+FROM 818084701597.dkr.ecr.ap-southeast-2.amazonaws.com/qivr-api@sha256:57d7cb33d15d7d78dd22866d2017409c9544fff466eb4598b395cc9fe63913e7
+
+# Copy the updated application files
+COPY publish/ /app/
+
+WORKDIR /app
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "Qivr.Api.dll"]

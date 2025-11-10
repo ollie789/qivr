@@ -32,6 +32,7 @@ const PROM = lazy(() => import('./pages/PROM'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Login = lazy(() => import('./pages/Login'));
+const ClinicRegistration = lazy(() => import('./pages/ClinicRegistration'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Documents = lazy(() => import('./pages/Documents'));
 const MedicalRecords = lazy(() => import('./pages/MedicalRecords'));
@@ -179,6 +180,7 @@ function App() {
                 <Routes>
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
+                  <Route path="/clinic-registration" element={<ClinicRegistration />} />
 
                   {/* Private routes */}
                   <Route

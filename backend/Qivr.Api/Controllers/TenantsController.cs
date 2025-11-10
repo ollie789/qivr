@@ -13,11 +13,13 @@ namespace Qivr.Api.Controllers;
 public class TenantsController : BaseApiController
 {
     private readonly ITenantService _tenantService;
+    private readonly IEnhancedTenantService _enhancedTenantService;
     private readonly ILogger<TenantsController> _logger;
 
-    public TenantsController(ITenantService tenantService, ILogger<TenantsController> logger)
+    public TenantsController(ITenantService tenantService, IEnhancedTenantService enhancedTenantService, ILogger<TenantsController> logger)
     {
         _tenantService = tenantService;
+        _enhancedTenantService = enhancedTenantService;
         _logger = logger;
     }
 
@@ -84,6 +86,47 @@ public class TenantsController : BaseApiController
             IsDefault = false
         });
     }
+
+    [HttpPost]
+    [ProducesResponseType(typeof(TenantSummaryDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateTenant([FromBody] CreateTenantRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("Clinic name is required");
+        }
+
+        try
+        {
+            // Use enhanced SaaS tenant service to create tenant with dedicated Cognito User Pool
+            var tenant = await _enhancedTenantService.CreateSaasTenantAsync(request.Name, request.Address, request.Phone, request.Email, CurrentUserId, cancellationToken);
+            
+            return CreatedAtAction(
+                nameof(GetTenant),
+                new { tenantId = tenant.Id },
+                new TenantSummaryDto
+                {
+                    Id = tenant.Id.ToString(),
+                    Name = tenant.Name,
+                    Slug = tenant.Slug,
+                    IsDefault = true
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create SaaS tenant for user {UserId}", CurrentUserId);
+            return BadRequest("Failed to create clinic");
+        }
+    }
+}
+
+public class CreateTenantRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
 }
 
 public class TenantSummaryDto

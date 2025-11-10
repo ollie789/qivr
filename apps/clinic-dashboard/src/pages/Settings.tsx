@@ -65,6 +65,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
+import TenantInfo from '../components/TenantInfo';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -732,6 +733,9 @@ export default function Settings() {
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>Integrations</Typography>
             <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TenantInfo />
+              </Grid>
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>

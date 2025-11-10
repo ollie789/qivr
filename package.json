@@ -23,9 +23,12 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "deploy": "./deploy.sh",
-    "deploy:backend": "./deploy.sh --backend-only",
-    "deploy:frontend": "./deploy.sh --frontend-only",
+    "deploy": "./deploy-codebuild.sh",
+    "deploy:backend": "./deploy-codebuild.sh --backend-only",
+    "deploy:frontend": "./deploy-codebuild.sh --frontend-only",
+    "deploy:docker": "./deploy.sh",
+    "deploy:docker:backend": "./deploy.sh --backend-only",
+    "deploy:docker:frontend": "./deploy.sh --frontend-only",
     "status": "./status.sh"
   },
   "devDependencies": {

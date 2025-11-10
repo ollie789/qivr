@@ -40,6 +40,11 @@ namespace Qivr.Core.Entities
         public string InsurancePolicyNumber { get; set; } = string.Empty;
         public string MedicareNumber { get; set; } = string.Empty;
         
+        // Patient Invitation (SaaS)
+        public string? InvitationToken { get; set; }
+        public DateTime? InvitationExpiresAt { get; set; }
+        public DateTime? ActivatedAt { get; set; }
+        
         // Navigation properties
         public virtual User User { get; set; } = null!;
         public virtual ICollection<Medication> CurrentMedications { get; set; } = new List<Medication>();
