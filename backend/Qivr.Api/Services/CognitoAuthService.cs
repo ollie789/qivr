@@ -3,6 +3,8 @@ using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Microsoft.Extensions.Options;
 using Qivr.Api.Config;
+using Qivr.Core.Entities;
+using Qivr.Infrastructure.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -34,13 +36,16 @@ public class CognitoAuthService : ICognitoAuthService
     private readonly IAmazonCognitoIdentityProvider _cognitoClient;
     private readonly CognitoSettings _settings;
     private readonly ILogger<CognitoAuthService> _logger;
+    private readonly QivrDbContext _dbContext;
 
     public CognitoAuthService(
         IOptions<CognitoSettings> settings,
-        ILogger<CognitoAuthService> logger)
+        ILogger<CognitoAuthService> logger,
+        QivrDbContext dbContext)
     {
         _settings = settings.Value;
         _logger = logger;
+        _dbContext = dbContext;
         _cognitoClient = new AmazonCognitoIdentityProviderClient(
             RegionEndpoint.GetBySystemName(_settings.Region));
     }
@@ -189,11 +194,30 @@ public class CognitoAuthService : ICognitoAuthService
             var response = await _cognitoClient.SignUpAsync(signUpRequest);
             
             // Create tenant and user in database
-            var tenantId = Guid.NewGuid();
-            var userId = Guid.NewGuid();
+            var tenant = new Tenant
+            {
+                Id = Guid.NewGuid(),
+                Name = request.ClinicName,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _dbContext.Tenants.AddAsync(tenant);
             
-            // TODO: Actually create tenant and user records in database
-            // For now, just return the IDs
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                CognitoSub = response.UserSub,
+                TenantId = tenant.Id,
+                Email = request.Email,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Role = "Admin", // First user is admin
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _dbContext.Users.AddAsync(user);
+            
+            await _dbContext.SaveChangesAsync();
             
             return new SignUpResult
             {
@@ -201,8 +225,8 @@ public class CognitoAuthService : ICognitoAuthService
                 UserSub = response.UserSub,
                 UserConfirmed = response.UserConfirmed,
                 CodeDeliveryDetails = response.CodeDeliveryDetails?.DeliveryMedium,
-                TenantId = tenantId,
-                UserId = userId
+                TenantId = tenant.Id,
+                UserId = user.Id
             };
         }
         catch (Exception ex)
