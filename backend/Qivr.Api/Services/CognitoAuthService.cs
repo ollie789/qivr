@@ -211,7 +211,7 @@ public class CognitoAuthService : ICognitoAuthService
                 Email = request.Email,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                UserType = UserType.Admin,
+                UserType = Qivr.Core.Entities.UserType.Admin,
                 Roles = new List<string> { "Admin" },
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
