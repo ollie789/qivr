@@ -52,11 +52,9 @@ public class TenantsController : BaseApiController
             {
                 Id = t.Id.ToString(),
                 Name = t.Name,
-                Slug = t.Slug,
-                IsDefault = t.IsDefault
+                Slug = t.Slug
             })
-            .OrderByDescending(t => t.IsDefault)
-            .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         if (response.Count == 0)
@@ -82,8 +80,7 @@ public class TenantsController : BaseApiController
         {
             Id = tenant.Id.ToString(),
             Name = tenant.Name,
-            Slug = tenant.Slug,
-            IsDefault = false
+            Slug = tenant.Slug
         });
     }
 
@@ -109,8 +106,7 @@ public class TenantsController : BaseApiController
                 {
                     Id = tenant.Id.ToString(),
                     Name = tenant.Name,
-                    Slug = tenant.Slug,
-                    IsDefault = true
+                    Slug = tenant.Slug
                 });
         }
         catch (Exception ex)
@@ -134,5 +130,4 @@ public class TenantSummaryDto
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Slug { get; set; }
-    public bool IsDefault { get; set; }
 }
