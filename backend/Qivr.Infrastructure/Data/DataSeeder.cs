@@ -38,8 +38,9 @@ public class DataSeeder
         {
             Id = Guid.NewGuid(),
             Name = name,
+            Slug = name.ToLower().Replace(" ", "-"),
+            Status = TenantStatus.Active,
             CreatedAt = DateTime.UtcNow,
-            IsActive = true,
             Settings = new Dictionary<string, object>
             {
                 ["theme"] = "default",
@@ -57,9 +58,9 @@ public class DataSeeder
     {
         var roles = new[]
         {
-            new Role { Id = Guid.NewGuid(), Name = "Admin", Description = "System Administrator", IsSystem = true, TenantId = null },
-            new Role { Id = Guid.NewGuid(), Name = "Clinician", Description = "Healthcare Provider", IsSystem = true, TenantId = null },
-            new Role { Id = Guid.NewGuid(), Name = "Receptionist", Description = "Front Desk Staff", IsSystem = true, TenantId = null }
+            new Role { Id = Guid.NewGuid(), Name = "Admin", Description = "System Administrator", IsSystem = true },
+            new Role { Id = Guid.NewGuid(), Name = "Clinician", Description = "Healthcare Provider", IsSystem = true },
+            new Role { Id = Guid.NewGuid(), Name = "Receptionist", Description = "Front Desk Staff", IsSystem = true }
         };
 
         _context.Roles.AddRange(roles);
@@ -76,13 +77,7 @@ public class DataSeeder
             Email = email,
             FirstName = "Test",
             LastName = "User",
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow,
-            Preferences = new Dictionary<string, object>
-            {
-                ["theme"] = "light",
-                ["notifications"] = true
-            }
+            CreatedAt = DateTime.UtcNow
         };
 
         _context.Users.Add(user);

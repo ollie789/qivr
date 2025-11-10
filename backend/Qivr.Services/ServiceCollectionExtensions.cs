@@ -30,7 +30,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITenantService, TenantService>();
         services.AddScoped<IEnhancedTenantService, EnhancedTenantService>();
         services.AddScoped<ISaasTenantService, SaasTenantService>();
-        services.AddScoped<IPatientInvitationService, PatientInvitationService>();
         services.AddScoped<IProviderAvailabilityService, ProviderAvailabilityService>();
         services.AddScoped<IClinicManagementService, ClinicManagementService>();
         
