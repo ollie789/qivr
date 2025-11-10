@@ -83,9 +83,8 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
   // Auth proxy uses httpOnly cookies, no Authorization header needed
   // Token is only for client-side state management
 
-  // Simplified tenant handling - let the API handle tenant assignment
-  // The API will automatically assign users to the correct tenant on first login
-  const tenantId = user?.tenantId || 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
+  // Only send tenant ID if user is authenticated and has a tenant
+  const tenantId = user?.tenantId;
   
   if (tenantId && !headers['X-Tenant-Id']) {
     headers['X-Tenant-Id'] = tenantId;
