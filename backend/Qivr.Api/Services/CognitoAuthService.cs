@@ -197,7 +197,9 @@ public class CognitoAuthService : ICognitoAuthService
             var tenant = new Tenant
             {
                 Id = Guid.NewGuid(),
+                Slug = $"{request.FirstName.ToLower()}-{request.LastName.ToLower()}-{Guid.NewGuid().ToString()[..8]}",
                 Name = $"{request.FirstName} {request.LastName} Clinic",
+                Status = TenantStatus.Active,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
