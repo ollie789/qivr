@@ -188,12 +188,21 @@ public class CognitoAuthService : ICognitoAuthService
 
             var response = await _cognitoClient.SignUpAsync(signUpRequest);
             
+            // Create tenant and user in database
+            var tenantId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+            
+            // TODO: Actually create tenant and user records in database
+            // For now, just return the IDs
+            
             return new SignUpResult
             {
                 Success = true,
                 UserSub = response.UserSub,
                 UserConfirmed = response.UserConfirmed,
-                CodeDeliveryDetails = response.CodeDeliveryDetails?.DeliveryMedium
+                CodeDeliveryDetails = response.CodeDeliveryDetails?.DeliveryMedium,
+                TenantId = tenantId,
+                UserId = userId
             };
         }
         catch (Exception ex)
@@ -586,6 +595,8 @@ public class SignUpResult
     public bool UserConfirmed { get; set; }
     public string? CodeDeliveryDetails { get; set; }
     public string? ErrorMessage { get; set; }
+    public Guid? TenantId { get; set; }
+    public Guid? UserId { get; set; }
 }
 
 public class UserInfo

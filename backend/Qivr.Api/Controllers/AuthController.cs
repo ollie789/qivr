@@ -91,6 +91,9 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             userSub = result.UserSub,
+            userId = result.UserId,
+            tenantId = result.TenantId,
+            cognitoPoolId = _configuration["AWS:Cognito:UserPoolId"],
             userConfirmed = result.UserConfirmed,
             codeDeliveryDetails = result.CodeDeliveryDetails
         });
