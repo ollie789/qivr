@@ -34,7 +34,7 @@ public class DebugController : ControllerBase
             user.FirstName,
             user.LastName,
             user.UserType,
-            user.Roles,
+            user.Role,
             Tenant = user.Tenant != null ? new
             {
                 user.Tenant.Id,
@@ -70,7 +70,7 @@ public class DebugController : ControllerBase
                 u.Email,
                 u.CognitoSub,
                 u.UserType,
-                u.Roles
+                u.Role
             })
         });
     }
