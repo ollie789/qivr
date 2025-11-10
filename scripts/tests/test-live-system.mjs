@@ -122,7 +122,12 @@ const tests = {
   async testCheckAuth() {
     console.log('\n📋 Test 4: Check Auth Status');
     
-    const response = await makeRequest('/auth/check');
+    const response = await makeRequest('/auth/user-info');
+    console.log(`  📝 Auth check status: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`  📝 Error response: ${errorText}`);
+    }
     assert(response.ok, 'Auth check successful');
     
     const data = await response.json();
@@ -335,7 +340,7 @@ const tests = {
     
     // Verify auth is cleared
     authCookie = null;
-    const checkResponse = await makeRequest('/auth/check');
+    const checkResponse = await makeRequest('/auth/user-info');
     const checkData = await checkResponse.json();
     assert(!checkData.authenticated, 'User is logged out');
   }
