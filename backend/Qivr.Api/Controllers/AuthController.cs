@@ -78,6 +78,25 @@ public class AuthController : ControllerBase
         });
     }
 
+    [HttpGet("user-info")]
+    public async Task<IActionResult> GetUserInfo()
+    {
+        // Get access token from cookie
+        var accessToken = Request.Cookies["accessToken"];
+        if (string.IsNullOrEmpty(accessToken))
+            return Unauthorized(new { message = "Not authenticated" });
+
+        try
+        {
+            var userInfo = await _authService.GetUserInfoAsync(accessToken);
+            return Ok(userInfo);
+        }
+        catch
+        {
+            return Unauthorized(new { message = "Invalid or expired token" });
+        }
+    }
+
     [HttpPost("signup")]
     [HttpPost("register")] // Alias for signup
     [EnableRateLimiting("auth")]
