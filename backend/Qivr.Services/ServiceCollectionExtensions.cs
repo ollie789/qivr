@@ -27,8 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEvaluationService, EvaluationService>();
         services.AddScoped<IAppointmentService, AppointmentService>();
         services.AddScoped<IUserService, UserService>();
-        services.AddScoped<ITenantService, TenantService>();
-        services.AddScoped<IEnhancedTenantService, EnhancedTenantService>();
+        services.AddScoped<ITenantService, EnhancedTenantService>(); // SaaS-enabled tenant service
         services.AddScoped<ISaasTenantService, SaasTenantService>();
         services.AddScoped<IProviderAvailabilityService, ProviderAvailabilityService>();
         services.AddScoped<IClinicManagementService, ClinicManagementService>();
@@ -93,6 +92,7 @@ public interface ITenantService
     Task<TenantDto?> GetTenantBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TenantAccessDto>> GetTenantsForUserAsync(Guid userId, string? cognitoSub, CancellationToken cancellationToken = default);
     Task<TenantDto> CreateTenantAsync(string name, string address, string phone, string email, Guid userId, CancellationToken cancellationToken = default);
+    Task<TenantDto> CreateSaasTenantAsync(string name, string address, string phone, string email, Guid userId, CancellationToken cancellationToken = default);
 }
 
 public interface IEmailService
