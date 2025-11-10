@@ -359,14 +359,17 @@ public class PatientsController : TenantAwareController
     {
         try
         {
-            var tenantId = User.FindFirst("custom:tenant_id")?.Value;
-            if (string.IsNullOrEmpty(tenantId) || !Guid.TryParse(tenantId, out var parsedTenantId))
-                return BadRequest("Valid Tenant ID is required");
+            // Use the same tenant ID approach as GET methods
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            if (tenantId == Guid.Empty)
+            {
+                return Unauthorized("Tenant not identified");
+            }
 
             var user = new User
             {
                 Id = Guid.NewGuid(),
-                TenantId = parsedTenantId,
+                TenantId = tenantId,
                 FirstName = createDto.FirstName,
                 LastName = createDto.LastName,
                 Email = createDto.Email,
