@@ -93,7 +93,7 @@ public class AuthController : ControllerBase
             userSub = result.UserSub,
             userId = result.UserId,
             tenantId = result.TenantId,
-            cognitoPoolId = _configuration["AWS:Cognito:UserPoolId"],
+            cognitoPoolId = _configuration["Cognito:UserPoolId"],
             userConfirmed = result.UserConfirmed,
             codeDeliveryDetails = result.CodeDeliveryDetails
         });
