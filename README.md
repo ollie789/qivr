@@ -1,94 +1,119 @@
-# QIVR Healthcare Platform
+# Qivr Clinic Dashboard
 
-QIVR connects allied health providers with patients through a multi-tenant platform built on ASP.NET Core 8 and React/TypeScript clients.
+Multi-tenant SaaS platform for clinic management with per-tenant Cognito authentication.
 
-## 🌐 Production URLs
-
-- **Clinic Dashboard:** https://dwmqwnt4dy1td.cloudfront.net
-- **Patient Portal:** https://d1jw6e1qiegavd.cloudfront.net
-- **API:** https://qivr-alb-1257648623.ap-southeast-2.elb.amazonaws.com (Note: HTTPS not yet configured)
-
-## 🚀 Local Development
+## 🚀 Quick Start
 
 ```bash
-# Clone & install
-git clone git@github.com:qivr-health/qivr.git
-cd qivr
+# Install dependencies
 npm install
 
-# Start infrastructure (Postgres, Redis, MinIO, Mailhog)
-npm run docker:up
-
-# Run the API (http://localhost:5050)
-npm run backend:dev
-
-# In separate terminals run the frontends
-npm run clinic:dev    # http://localhost:3010
-npm run patient:dev   # http://localhost:3005
-npm run widget:dev    # http://localhost:3000
+# Start development
+npm run dev
 ```
 
-**Note:** All environments (local, staging, production) connect to the same RDS database: `qivr-dev-db`
-
-## 📍 Local Services
-
-| Service | Port | URL |
-|---------|------|-----|
-| Backend API | 5050 | http://localhost:5050 |
-| Clinic Dashboard | 3010 | http://localhost:3010 |
-| Patient Portal | 3005 | http://localhost:3005 |
-| Widget | 3000 | http://localhost:3000 |
-| PostgreSQL | 5432 | localhost:5432 |
-| Mailhog | 8025 | http://localhost:8025 |
-
-## 🏗️ Project Structure
+## 📁 Project Structure
 
 ```
 qivr/
-├── apps/
-│   ├── clinic-dashboard/     # Staff-facing React app
-│   ├── patient-portal/       # Patient React app
-│   └── widget/               # Embeddable widget
-├── backend/
-│   ├── Qivr.Api/             # ASP.NET Core API
-│   ├── Qivr.Core/            # Domain contracts
-│   ├── Qivr.Infrastructure/  # EF Core + integrations
-│   └── Qivr.Services/        # Business logic
-├── packages/
-│   └── http/                 # Shared TS HTTP client
-└── infrastructure/           # Deployment scripts & Terraform
+├── apps/                   # Frontend applications
+│   └── clinic-dashboard/   # Main clinic dashboard app
+├── backend/                # .NET Core API
+│   ├── Qivr.Api/          # API controllers
+│   ├── Qivr.Services/     # Business logic
+│   └── Qivr.Infrastructure/ # Data access
+├── docs/                   # Documentation
+├── scripts/                # Utility scripts
+│   └── tests/             # Test suites
+├── database/               # SQL migrations
+├── aws/                    # AWS configurations
+└── infrastructure/         # Docker, Terraform
+
 ```
 
-## 🚀 Deployment
+## 🧪 Testing
 
 ```bash
-# Deploy everything
-npm run deploy
+# Run E2E tests (19 comprehensive tests)
+node scripts/tests/test-live-system.mjs
 
-# Deploy only backend
-npm run deploy:backend
-
-# Deploy only frontend  
-npm run deploy:frontend
-
-# Check system status
-npm run status
+# Test specific features
+node scripts/tests/test-api-endpoints.mjs user@clinic.com Password123!
+node scripts/tests/test-frontend-pages.mjs user@clinic.com Password123!
 ```
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment guide.
+## 🔐 Authentication
+
+- **Auth Proxy** with httpOnly cookies
+- **Per-tenant Cognito pools** (created on registration)
+- **Tenant isolation** via X-Tenant-Id header
+- **HTTPS only** in production
+
+## 🌐 Deployment
+
+**Production:** https://clinic.qivr.pro
+
+**Stack:**
+- Frontend: React + Vite → S3 + CloudFront
+- Backend: .NET 8 → ECS Fargate
+- Database: PostgreSQL RDS
+- Auth: AWS Cognito (per-tenant pools)
 
 ## 📚 Documentation
 
-- **[OPERATIONS.md](OPERATIONS.md)** - Deployment, monitoring, troubleshooting
-- **[TODO-FRESH.md](TODO-FRESH.md)** - Current action items
-- **[SYSTEM-AUDIT-2025-11-06.md](SYSTEM-AUDIT-2025-11-06.md)** - System audit
-- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** - Quick command reference
-- **[docs/](docs/)** - Detailed technical documentation
+- [Testing Guide](docs/TESTING.md)
+- [API Documentation](docs/API.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Quick Reference](docs/QUICK-REFERENCE.md)
 
-## 🤝 Contributing
+## 🛠️ Development
 
-See [AGENTS.md](AGENTS.md) for contributor guidelines.
+```bash
+# Backend
+cd backend
+dotnet run
+
+# Frontend
+cd apps/clinic-dashboard
+npm run dev
+```
+
+## 📊 Features
+
+✅ Multi-tenant architecture
+✅ Patient management
+✅ Appointment scheduling
+✅ Medical records
+✅ Document management
+✅ Messaging system
+✅ Analytics dashboard
+✅ PROM questionnaires
+✅ Intake forms
+✅ Settings management
+
+## 🔧 Tech Stack
+
+**Frontend:**
+- React 18
+- TypeScript
+- Vite
+- Zustand (state)
+- React Query
+- TailwindCSS
+
+**Backend:**
+- .NET 8
+- Entity Framework Core
+- PostgreSQL
+- Serilog
+
+**Infrastructure:**
+- AWS ECS Fargate
+- AWS RDS PostgreSQL
+- AWS Cognito
+- AWS S3 + CloudFront
+- AWS ALB
 
 ## 📝 License
 
-Proprietary – all rights reserved.
+Proprietary
