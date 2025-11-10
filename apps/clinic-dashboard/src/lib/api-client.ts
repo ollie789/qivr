@@ -63,41 +63,62 @@ const baseClient = createHttpClient({
 });
 
 export async function apiRequest<T extends ApiResponse = ApiResponse>(options: HttpRequestOptions): Promise<T> {
+  const { token, user, isLoading, isAuthenticated } = useAuthStore.getState();
+  
+  // Don't make API calls if auth is still loading
+  if (isLoading) {
+    throw new Error('Authentication is still loading');
+  }
+
+  const isFormData = typeof FormData !== 'undefined' && options.data instanceof FormData;
+
+  const headers: Record<string, string> = {
+    ...options.headers,
+  };
+
+  if (!isFormData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  // Auth proxy uses httpOnly cookies, no Authorization header needed
+  // Token is only for client-side state management
+
+  // Simplified tenant handling - let the API handle tenant assignment
+  // The API will automatically assign users to the correct tenant on first login
+  const tenantId = user?.tenantId || 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
+  
+  if (tenantId && !headers['X-Tenant-Id']) {
+    headers['X-Tenant-Id'] = tenantId;
+  }
+
   try {
-    const { token, user, isLoading, isAuthenticated } = useAuthStore.getState();
-    
-    // Don't make API calls if auth is still loading
-    if (isLoading) {
-      throw new Error('Authentication is still loading');
-    }
-
-    const isFormData = typeof FormData !== 'undefined' && options.data instanceof FormData;
-
-    const headers: Record<string, string> = {
-      ...options.headers,
-    };
-
-    if (!isFormData && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    // Auth proxy uses httpOnly cookies, no Authorization header needed
-    // Token is only for client-side state management
-
-    // Simplified tenant handling - let the API handle tenant assignment
-    // The API will automatically assign users to the correct tenant on first login
-    const tenantId = user?.tenantId || 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11';
-    
-    if (tenantId && !headers['X-Tenant-Id']) {
-      headers['X-Tenant-Id'] = tenantId;
-    }
-
     return await baseClient.request<T>({
       ...options,
       headers,
     });
   } catch (error) {
     console.error('API request error:', error);
+    
+    // Handle 401 Unauthorized - try to refresh token
+    if (error instanceof HttpError && error.status === 401) {
+      try {
+        console.log('401 Unauthorized - attempting token refresh');
+        await useAuthStore.getState().refreshToken();
+        // Retry the original request
+        return await baseClient.request<T>({
+          ...options,
+          headers,
+        });
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        const { resetAuth } = useAuthStore.getState();
+        resetAuth();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+        throw refreshError;
+      }
+    }
     
     // Handle 403 Forbidden errors by triggering complete auth reset
     if (error instanceof HttpError && error.status === 403) {

@@ -173,6 +173,8 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error('Logout error:', error);
         } finally {
+          // Clear persisted state from localStorage
+          localStorage.removeItem('auth-storage');
           set({
             user: null,
             token: null,

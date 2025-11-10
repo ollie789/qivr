@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -13,10 +13,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { SnackbarProvider } from 'notistack';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, CircularProgress } from '@mui/material';
-
-// Initialize Amplify
-import { configureAmplify } from './config/amplify';
-configureAmplify();
+import { useAuthActions } from './stores/authStore';
 
 // Layout components
 import DashboardLayout from './components/Layout/DashboardLayout';
@@ -162,6 +159,13 @@ const PageLoader: React.FC = () => (
 );
 
 function App() {
+  const { checkAuth } = useAuthActions();
+  
+  // Check auth status on app load
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+  
   console.log('App component rendering');
   return (
     <QueryClientProvider client={queryClient}>
