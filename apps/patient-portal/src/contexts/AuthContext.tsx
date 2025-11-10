@@ -154,8 +154,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const signIn = login; // Alias for compatibility
-
   const logout = async () => {
     try {
       await authApi.logout();
