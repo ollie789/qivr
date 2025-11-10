@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import authService from '../services/cognitoAuthService';
+import authApi, { type AuthResponse, type UserInfo } from '../services/authApi';
 import {
   getActiveTenantId as getStoredTenantId,
   setActiveTenantId as storeActiveTenantId,
@@ -18,9 +18,6 @@ interface User {
   phoneVerified: boolean;
 }
 
-type SignInResponse = Awaited<ReturnType<typeof authService.signIn>>;
-type RegisterResponse = Awaited<ReturnType<typeof authService.signUp>>;
-
 interface AuthResult<T = unknown> {
   success: boolean;
   data?: T;
@@ -29,10 +26,10 @@ interface AuthResult<T = unknown> {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<AuthResult<SignInResponse>>;
+  login: (email: string, password: string) => Promise<AuthResult<AuthResponse>>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<AuthResult<SignInResponse>>;
+  signIn: (email: string, password: string) => Promise<AuthResult<AuthResponse>>;
   signInWithGoogle: () => Promise<void>;
   signInWithFacebook: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -40,11 +37,11 @@ interface AuthContextType {
   register: (
     email: string,
     password: string,
-    emailAddr: string,
-    phoneNumber?: string,
-    firstName?: string,
-    lastName?: string
-  ) => Promise<RegisterResponse>;
+    firstName: string,
+    lastName: string,
+    tenantId: string,
+    phoneNumber?: string
+  ) => Promise<AuthResponse>;
   activeTenantId: string | null;
   setActiveTenantId: (tenantId: string | null) => void;
 }
@@ -88,20 +85,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       try {
-        // Skip auth check for now - just check if token exists
-        const hasToken = await authService.isAuthenticated();
-        if (hasToken) {
-          // Don't make API call during initial load
-          setIsAuthenticated(true);
-          if (!activeTenantId) {
-            setActiveTenant(getStoredTenantId());
-          }
-        }
+        // Try to get user info from backend (checks cookie)
+        const userInfo = await authApi.getUserInfo();
+        setUser({
+          username: userInfo.email,
+          email: userInfo.email,
+          firstName: userInfo.given_name,
+          lastName: userInfo.family_name,
+          phoneNumber: userInfo.phone_number,
+          tenantId: userInfo.tenantId,
+          role: userInfo.role,
+          emailVerified: true,
+          phoneVerified: false
+        });
+        setIsAuthenticated(true);
+        setActiveTenant(userInfo.tenantId);
       } catch (error) {
         console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
       } finally {
-        // Always set loading to false after a short delay
-        setTimeout(() => setLoading(false), 100);
+        setLoading(false);
       }
     };
     checkAuth();
@@ -120,66 +123,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(derivedUser);
         setIsAuthenticated(true);
         setActiveTenant(derivedUser.tenantId ?? null);
-        return { success: true, data: { isSignedIn: true } as SignInResponse };
+        return { success: true, data: {} as AuthResponse };
       }
 
       console.log('Attempting login for:', email);
-      const response = await authService.signIn(email, password);
-      console.log('Sign in response:', response);
+      const response = await authApi.login(email, password);
+      console.log('Login response:', response);
       
-      if (response.isSignedIn) {
-        const userInfo = await authService.getCurrentUser();
-        console.log('User info:', userInfo);
-        
-        setIsAuthenticated(true);
-        if (userInfo) {
-          const tenantIdFromAttributes =
-            (userInfo['custom:custom:tenant_id'] as string | undefined)
-            ?? (userInfo['custom:tenant_id'] as string | undefined)
-            ?? (userInfo['tenant_id'] as string | undefined)
-            ?? (userInfo['custom:custom:clinic_id'] as string | undefined)
-            ?? (userInfo['custom:clinic_id'] as string | undefined)
-            ?? (userInfo['clinic_id'] as string | undefined)
-            ?? null;
-          const roleClaim =
-            (userInfo['custom:custom:role'] as string | undefined)
-            ?? (userInfo['custom:role'] as string | undefined)
-            ?? (userInfo['role'] as string | undefined);
-          const role = typeof roleClaim === 'string'
-            ? roleClaim.toLowerCase()
-            : undefined;
+      const userInfo = response.userInfo;
+      setIsAuthenticated(true);
+      
+      setUser({
+        username: userInfo.email,
+        email: userInfo.email,
+        firstName: userInfo.given_name,
+        lastName: userInfo.family_name,
+        phoneNumber: userInfo.phone_number,
+        tenantId: userInfo.tenantId,
+        role: userInfo.role,
+        emailVerified: true,
+        phoneVerified: false
+      });
 
-          setUser({
-            username: userInfo.email || '',
-            email: userInfo.email,
-            firstName: userInfo.given_name,
-            lastName: userInfo.family_name,
-            phoneNumber: userInfo.phone_number,
-            tenantId: tenantIdFromAttributes ?? undefined,
-            role,
-            emailVerified: userInfo.email_verified || false,
-            phoneVerified: userInfo.phone_number_verified || false
-          });
-
-          setActiveTenant(tenantIdFromAttributes ?? getStoredTenantId());
-        }
-        return { success: true, data: response };
-      } else {
-        console.error('Sign in not completed:', response);
-        return { success: false, error: 'Sign in not completed' };
-      }
+      setActiveTenant(userInfo.tenantId);
+      return { success: true, data: response };
     } catch (error: unknown) {
       console.error('Login error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown authentication error';
-      
-      // Handle specific error cases
-      if (errorMessage.includes('CONFIRM_SIGNUP_REQUIRED')) {
-        return { success: false, error: 'Please verify your email address before signing in' };
-      }
-      if (errorMessage.includes('UserNotFoundException') || errorMessage.includes('NotAuthorizedException')) {
-        return { success: false, error: 'Invalid email or password' };
-      }
-      
       return { success: false, error: errorMessage };
     }
   };
@@ -188,18 +158,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      if (!DEV_AUTH_ENABLED) {
-        await authService.signOut();
-      }
-      setIsAuthenticated(false);
-      setUser(null);
-      setActiveTenant(null);
-      clearActiveTenantId();
-    } catch (error: unknown) {
+      await authApi.logout();
+    } catch (error) {
       console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
+      clearActiveTenantId();
+      setActiveTenant(null);
     }
   };
 
+  const signIn = login; // Alias for compatibility
   const signOut = logout; // Alias for compatibility
 
   const signInWithGoogle = async () => {
@@ -215,18 +185,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (
     email: string,
     password: string,
-    emailAddr: string,
+    firstName: string,
+    lastName: string,
+    tenantId: string,
     phoneNumber?: string,
-    firstName?: string,
-    lastName?: string,
-  ): Promise<RegisterResponse> => {
-    return authService.signUp({
+  ): Promise<AuthResponse> => {
+    const response = await authApi.signUp({
       email,
       password,
-      firstName: firstName || '',
-      lastName: lastName || '',
+      firstName,
+      lastName,
+      tenantId,
       phoneNumber,
     });
+    
+    // Auto-login after signup
+    const userInfo = response.userInfo;
+    setUser({
+      username: userInfo.email,
+      email: userInfo.email,
+      firstName: userInfo.given_name,
+      lastName: userInfo.family_name,
+      phoneNumber: userInfo.phone_number,
+      tenantId: userInfo.tenantId,
+      role: userInfo.role,
+      emailVerified: true,
+      phoneVerified: false
+    });
+    setIsAuthenticated(true);
+    setActiveTenant(userInfo.tenantId);
+    
+    return response;
   };
 
   return (
