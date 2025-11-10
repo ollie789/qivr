@@ -176,9 +176,7 @@ public class CognitoAuthService : ICognitoAuthService
                     new() { Name = "email", Value = request.Email },
                     new() { Name = "given_name", Value = request.FirstName },
                     new() { Name = "family_name", Value = request.LastName },
-                    new() { Name = "phone_number", Value = request.PhoneNumber },
-                    new() { Name = "custom:tenant_id", Value = request.TenantId.ToString() },
-                    new() { Name = "custom:role", Value = request.Role }
+                    new() { Name = "phone_number", Value = request.PhoneNumber }
                 }
             };
             

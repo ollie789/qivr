@@ -57,16 +57,18 @@ const tests = {
     console.log('\n📋 Test 1: Clinic Registration');
     
     const timestamp = Date.now();
+    const email = `test${timestamp}@clinic.test`;
     const clinicData = {
-      clinicName: `Test Clinic ${timestamp}`,
-      email: `test${timestamp}@clinic.test`,
+      username: email,
+      email: email,
       password: 'TestPass123!',
+      clinicName: `Test Clinic ${timestamp}`,
       firstName: 'Test',
       lastName: 'Doctor',
       phone: '+61400000000'
     };
     
-    const response = await makeRequest('/auth/register', {
+    const response = await makeRequest('/auth/signup', {
       method: 'POST',
       body: JSON.stringify(clinicData)
     });
