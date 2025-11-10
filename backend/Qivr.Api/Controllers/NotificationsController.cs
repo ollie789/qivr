@@ -9,7 +9,7 @@ using Qivr.Api.Models;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/notifications")]
 [Authorize]
 public class NotificationsController : BaseApiController
 {

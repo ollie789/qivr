@@ -303,14 +303,14 @@ class PromApi {
     limit?: number;
   }): Promise<PromTemplateSummary[]> {
     return await apiClient.get<PromTemplateSummary[]>(
-      "/api/v1/proms/templates",
+      "/api/proms/templates",
       params,
     );
   }
 
   async getTemplate(id: string): Promise<PromTemplateDetail> {
     return await apiClient.get<PromTemplateDetail>(
-      `/api/v1/proms/templates/by-id/${id}`,
+      `/api/proms/templates/by-id/${id}`,
     );
   }
 
@@ -318,20 +318,20 @@ class PromApi {
     data: CreatePromTemplateRequest,
   ): Promise<PromTemplateDetail> {
     return await apiClient.post<PromTemplateDetail>(
-      "/api/v1/proms/templates",
+      "/api/proms/templates",
       data,
     );
   }
 
   async updateTemplate(id: string, data: Partial<PromTemplateDetail>) {
     return await apiClient.put<PromTemplateDetail>(
-      `/api/v1/proms/templates/by-id/${id}`,
+      `/api/proms/templates/by-id/${id}`,
       data,
     );
   }
 
   async deleteTemplate(id: string) {
-    return await apiClient.delete<void>(`/api/v1/proms/templates/by-id/${id}`);
+    return await apiClient.delete<void>(`/api/proms/templates/by-id/${id}`);
   }
 
   async sendProm(data: {
@@ -345,7 +345,7 @@ class PromApi {
     notes?: string;
   }): Promise<PromResponse> {
     const scheduledFor = data.scheduledFor ?? new Date().toISOString();
-    const response = await apiClient.post<ApiPromInstance>("/api/v1/proms/schedule", {
+    const response = await apiClient.post<ApiPromInstance>("/api/proms/schedule", {
       templateKey: data.templateKey,
       version: data.version,
       patientId: data.patientId,
@@ -380,7 +380,7 @@ class PromApi {
     queryParams.append("page", String(page));
     queryParams.append("limit", String(limit));
 
-    const url = `/api/v1/proms/admin/instances${queryParams.toString() ? `?${queryParams}` : ''}`;
+    const url = `/api/proms/admin/instances${queryParams.toString() ? `?${queryParams}` : ''}`;
     const response = await apiClient.get<ApiPromResponsesResponse>(url);
     const mapped = response.data.map(mapPromInstance);
 
@@ -392,13 +392,13 @@ class PromApi {
   }
 
   async getResponse(id: string) {
-    const dto = await apiClient.get<ApiPromInstance>(`/api/v1/proms/instances/${id}`);
+    const dto = await apiClient.get<ApiPromInstance>(`/api/proms/instances/${id}`);
     return mapPromInstance(dto);
   }
 
   async submitResponse(id: string, responses: Record<string, PromAnswerValue>) {
     return await apiClient.post(
-      `/api/v1/proms/instances/${id}/answers`,
+      `/api/proms/instances/${id}/answers`,
       responses,
     );
   }
@@ -411,7 +411,7 @@ class PromApi {
     },
   ) {
     return await apiClient.get(
-      `/api/v1/proms/templates/by-id/${templateId}`,
+      `/api/proms/templates/by-id/${templateId}`,
       params,
     );
   }

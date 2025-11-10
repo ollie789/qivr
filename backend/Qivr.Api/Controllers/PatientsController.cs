@@ -11,8 +11,6 @@ using Qivr.Api.Middleware;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/patients")]
 [Route("api/patients")] // Maintain backward compatibility
 [EnableRateLimiting("api")]
 public class PatientsController : TenantAwareController

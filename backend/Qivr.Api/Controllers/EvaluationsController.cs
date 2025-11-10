@@ -5,7 +5,7 @@ using Qivr.Services;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/evaluations")]
 [Authorize]
 public class EvaluationsController : ControllerBase
 {

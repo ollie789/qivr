@@ -18,8 +18,6 @@ using Qivr.Services;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/appointments")]
 [Route("api/appointments")] // Maintain backward compatibility
 [Authorize]
 [EnableRateLimiting("api")]

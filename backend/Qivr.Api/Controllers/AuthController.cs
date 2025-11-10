@@ -12,9 +12,7 @@ namespace Qivr.Api.Controllers;
 /// Authentication and authorization endpoints
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/auth")]
-[Route("api/auth")] // Maintain backward compatibility
+[Route("api/auth")]
 public class AuthController : ControllerBase
 {
     private readonly ICognitoAuthService _authService;
@@ -78,6 +76,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("signup")]
+    [HttpPost("register")] // Alias for signup
     [EnableRateLimiting("auth")]
     public async Task<IActionResult> SignUp([FromBody] Qivr.Api.Services.SignUpRequest request)
     {

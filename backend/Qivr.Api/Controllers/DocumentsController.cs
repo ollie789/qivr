@@ -19,8 +19,6 @@ using Qivr.Api.Middleware;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/documents")]
 [Route("api/documents")] // Maintain backward compatibility
 [Authorize]
 [EnableRateLimiting("api")]

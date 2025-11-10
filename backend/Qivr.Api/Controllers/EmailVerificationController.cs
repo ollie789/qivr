@@ -5,7 +5,7 @@ using Qivr.Api.Services;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/email-verification")]
 public class EmailVerificationController : ControllerBase
 {
     private readonly IEmailVerificationService _verificationService;

@@ -7,7 +7,7 @@ using Qivr.Core.Entities;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/tenant-onboarding")]
 public class TenantOnboardingController : ControllerBase
 {
     private readonly QivrDbContext _context;

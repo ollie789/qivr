@@ -7,7 +7,7 @@ namespace Qivr.Api.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/prom-instances")]
 public class PromInstanceController : ControllerBase
 {
     private readonly IPromInstanceService _promInstanceService;

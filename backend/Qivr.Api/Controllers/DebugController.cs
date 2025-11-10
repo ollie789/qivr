@@ -5,7 +5,7 @@ using Qivr.Infrastructure.Data;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/debug")]
 public class DebugController : ControllerBase
 {
     private readonly QivrDbContext _context;

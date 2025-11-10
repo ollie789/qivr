@@ -10,7 +10,7 @@ using System.Text.Json;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/proms")]
+[Route("api/proms")]
 public class PromsController : BaseApiController
 {
 	private readonly IPromService _promService;

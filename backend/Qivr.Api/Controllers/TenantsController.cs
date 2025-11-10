@@ -8,7 +8,7 @@ using Qivr.Services;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/tenants")]
 [Authorize]
 public class TenantsController : BaseApiController
 {

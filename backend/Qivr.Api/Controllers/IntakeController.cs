@@ -13,7 +13,7 @@ using Qivr.Api.Workers;
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/intake")]
 public class IntakeController : ControllerBase
 {
     private readonly QivrDbContext _dbContext;
