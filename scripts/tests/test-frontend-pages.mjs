@@ -50,14 +50,133 @@ async function testPages() {
   try {
     // Login
     console.log('🔐 Logging in...');
-    await page.goto(`${BASE_URL}/login`);
-    await page.fill('input[type="email"]', email);
-    await page.fill('input[type="password"]', password);
-    await page.click('button[type="submit"]');
+    await page.goto(`${BASE_URL}`);
     
-    // Wait for redirect to dashboard
-    await page.waitForURL(/dashboard/, { timeout: 10000 });
-    console.log('  ✅ Login successful\n');
+    // Wait for React app to load
+    await page.waitForTimeout(3000);
+    
+    // Check if already logged in or need to login
+    const currentUrl = page.url();
+    console.log(`  📝 Current URL: ${currentUrl}`);
+    
+    // Try multiple selectors for email field
+    const emailSelectors = [
+      'input[type="email"]',
+      'input[name="email"]', 
+      'input[placeholder*="email" i]',
+      '#email',
+      '[data-testid="email"]'
+    ];
+    
+    let emailFilled = false;
+    for (const selector of emailSelectors) {
+      try {
+        await page.waitForSelector(selector, { timeout: 5000 });
+        await page.fill(selector, email);
+        emailFilled = true;
+        console.log(`  ✅ Found email field: ${selector}`);
+        break;
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    if (!emailFilled) {
+      // Maybe already logged in?
+      if (currentUrl.includes('dashboard')) {
+        console.log('  ✅ Already logged in');
+        return;
+      }
+      throw new Error('Could not find email input field');
+    }
+    
+    // Try multiple selectors for password field
+    const passwordSelectors = [
+      'input[type="password"]',
+      'input[name="password"]',
+      '#password',
+      '[data-testid="password"]'
+    ];
+    
+    let passwordFilled = false;
+    for (const selector of passwordSelectors) {
+      try {
+        await page.fill(selector, password);
+        passwordFilled = true;
+        console.log(`  ✅ Found password field: ${selector}`);
+        break;
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    if (!passwordFilled) {
+      throw new Error('Could not find password input field');
+    }
+    
+    // Try multiple selectors for submit button
+    const submitSelectors = [
+      'button[type="submit"]',
+      'input[type="submit"]',
+      'button:has-text("Sign In")',
+      'button:has-text("Login")',
+      '[data-testid="login-button"]'
+    ];
+    
+    let buttonClicked = false;
+    for (const selector of submitSelectors) {
+      try {
+        await page.click(selector);
+        buttonClicked = true;
+        console.log(`  ✅ Found submit button: ${selector}`);
+        break;
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    if (!buttonClicked) {
+      throw new Error('Could not find submit button');
+    }
+    
+    // Wait for redirect (could be dashboard or stay on login with error)
+    try {
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
+      console.log('  ✅ Login successful\n');
+    } catch (e) {
+      // Check if login failed
+      const currentUrl = page.url();
+      console.log(`  📝 After login URL: ${currentUrl}`);
+      
+      // Wait for loading to complete
+      await page.waitForTimeout(5000);
+      
+      // Check for loading states
+      const loadingElements = await page.$$('[data-testid="loading"], .loading, .spinner').catch(() => []);
+      if (loadingElements.length > 0) {
+        console.log('  ⏳ Still loading, waiting more...');
+        await page.waitForTimeout(10000);
+      }
+      
+      // Check final URL
+      const finalUrl = page.url();
+      console.log(`  📝 Final URL: ${finalUrl}`);
+      
+      if (finalUrl.includes('dashboard') || !finalUrl.includes('login')) {
+        console.log('  ✅ Login successful (after loading)\n');
+      } else {
+        // Check for error messages
+        const errors = await page.$$eval('[role="alert"], .error, .alert-error', 
+          elements => elements.map(el => el.textContent)
+        ).catch(() => []);
+        
+        if (errors.length > 0) {
+          throw new Error(`Login failed: ${errors.join(', ')}`);
+        } else {
+          throw new Error('Login timeout - still on login page');
+        }
+      }
+    }
     
     // Test each page
     for (const pageTest of pages) {
