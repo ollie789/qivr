@@ -37,7 +37,7 @@ async function makeRequest(endpoint, options = {}) {
   
   // Capture auth cookie from response
   const setCookie = response.headers.get('set-cookie');
-  if (setCookie && setCookie.includes('auth-token')) {
+  if (setCookie && (setCookie.includes('accessToken') || setCookie.includes('auth-token'))) {
     authCookie = setCookie.split(';')[0];
   }
   
@@ -111,12 +111,12 @@ const tests = {
     assert(response.ok, 'Login successful');
     
     const data = await response.json();
-    assert(data.user, 'User data returned');
-    assert(data.user.tenantId === tenantId, 'Correct tenant ID');
+    assert(data.userInfo, 'User data returned');
+    assert(data.userInfo.tenantId === tenantId, 'Correct tenant ID');
     assert(authCookie, 'Auth cookie set');
     
-    testData.user = data.user;
-    console.log(`  📝 User: ${data.user.email}`);
+    testData.user = data.userInfo;
+    console.log(`  📝 User: ${data.userInfo.email}`);
   },
 
   async testCheckAuth() {
