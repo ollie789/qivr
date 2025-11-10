@@ -19,19 +19,6 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-southeast-2
     
-    - name: Login to Amazon ECR
-      uses: aws-actions/amazon-ecr-login@v2
-    
-    - name: Build and push Docker image
+    - name: Trigger CodeBuild
       run: |
-        docker buildx create --use
-        docker buildx build --platform linux/amd64 \
-          -t 818084701597.dkr.ecr.ap-southeast-2.amazonaws.com/qivr-api:latest \
-          --push ./backend
-    
-    - name: Deploy to ECS
-      run: |
-        aws ecs update-service \
-          --cluster qivr_cluster \
-          --service qivr-api \
-          --force-new-deployment
+        aws codebuild start-build --project-name qivr-api-build
