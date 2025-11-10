@@ -197,7 +197,7 @@ public class CognitoAuthService : ICognitoAuthService
             var tenant = new Tenant
             {
                 Id = Guid.NewGuid(),
-                Name = request.ClinicName,
+                Name = $"{request.FirstName} {request.LastName} Clinic",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -211,7 +211,8 @@ public class CognitoAuthService : ICognitoAuthService
                 Email = request.Email,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                Role = "Admin", // First user is admin
+                UserType = UserType.Admin,
+                Roles = new List<string> { "Admin" },
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
