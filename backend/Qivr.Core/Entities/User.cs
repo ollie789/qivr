@@ -1,4 +1,5 @@
 using Qivr.Core.Common;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Qivr.Core.Entities;
 
@@ -13,10 +14,17 @@ public class User : DeletableEntity, IAuditable
     public string? LastName { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public string? Gender { get; set; }
+    public string Role { get; set; } = "Patient"; // Maps to database role column
+    public string? Metadata { get; set; } = "{}"; // Maps to database metadata column
+    
+    [NotMapped]
     public UserType UserType { get; set; }
+    [NotMapped]
     public List<string> Roles { get; set; } = new();
     public string? AvatarUrl { get; set; }
+    [NotMapped]
     public Dictionary<string, object> Preferences { get; set; } = new();
+    [NotMapped]
     public Dictionary<string, object> Consent { get; set; } = new();
     public DateTime? LastLoginAt { get; set; }
     public string? CreatedBy { get; set; }
