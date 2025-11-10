@@ -585,7 +585,8 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 // Apply migrations when flagged via configuration
-if (builder.Configuration.GetValue<bool>("ApplyMigrations", true)) // Default to true
+var applyMigrations = Environment.GetEnvironmentVariable("ApplyMigrations")?.ToLower() != "false";
+if (applyMigrations)
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
