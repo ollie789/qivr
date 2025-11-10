@@ -470,6 +470,10 @@ public class CognitoAuthService : ICognitoAuthService
             
             var attributes = response.UserAttributes.ToDictionary(a => a.Name, a => a.Value);
             
+            // Look up user from database by Cognito sub
+            var dbUser = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.CognitoSub == response.Username);
+            
             return new UserInfo
             {
                 Username = response.Username,
@@ -477,8 +481,8 @@ public class CognitoAuthService : ICognitoAuthService
                 FirstName = attributes.GetValueOrDefault("given_name"),
                 LastName = attributes.GetValueOrDefault("family_name"),
                 PhoneNumber = attributes.GetValueOrDefault("phone_number"),
-                TenantId = Guid.TryParse(attributes.GetValueOrDefault("custom:tenant_id"), out var tid) ? tid : null,
-                Role = attributes.GetValueOrDefault("custom:role"),
+                TenantId = dbUser?.TenantId,
+                Role = dbUser?.UserType.ToString(),
                 EmailVerified = bool.Parse(attributes.GetValueOrDefault("email_verified", "false")),
                 PhoneVerified = bool.Parse(attributes.GetValueOrDefault("phone_number_verified", "false"))
             };
