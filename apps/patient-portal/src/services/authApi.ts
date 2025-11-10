@@ -44,7 +44,7 @@ class AuthApiService {
       tenantId: data.tenantId,
       role: 'Patient',
     });
-    return response.data;
+    return response;
   }
 
   async login(email: string, password: string): Promise<AuthResponse> {
@@ -52,12 +52,12 @@ class AuthApiService {
       email,
       password,
     });
-    return response.data;
+    return response;
   }
 
   async getUserInfo(): Promise<UserInfo> {
     const response = await apiClient.get<UserInfo>('/auth/user-info');
-    return response.data;
+    return response;
   }
 
   async logout(): Promise<void> {
@@ -66,7 +66,7 @@ class AuthApiService {
 
   async refreshToken(): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/auth/refresh');
-    return response.data;
+    return response;
   }
 }
 
