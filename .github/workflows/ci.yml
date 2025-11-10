@@ -39,7 +39,6 @@ jobs:
 
       - name: Build back-end
         run: |
-          cd backend
           dotnet restore
           dotnet build --configuration Release
 
