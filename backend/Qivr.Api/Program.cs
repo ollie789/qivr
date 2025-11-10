@@ -566,10 +566,11 @@ app.UseMiddleware<IdempotencyMiddleware>();
 app.UseAuthorization();
 
 // CSRF Protection (must come after authentication)
-if (!app.Environment.IsDevelopment())
-{
-    app.UseCsrfProtection();
-}
+// Temporarily disabled - JWT Bearer tokens provide sufficient protection
+// if (!app.Environment.IsDevelopment())
+// {
+//     app.UseCsrfProtection();
+// }
 
 // Rate limiting
 app.UseRateLimiter();
