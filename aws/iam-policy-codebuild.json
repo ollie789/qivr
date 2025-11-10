@@ -1,0 +1,70 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:GetAuthorizationToken",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::qivr-clinic-dashboard-staging",
+        "arn:aws:s3:::qivr-clinic-dashboard-staging/*",
+        "arn:aws:s3:::qivr-patient-portal-staging",
+        "arn:aws:s3:::qivr-patient-portal-staging/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateInvalidation"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:RegisterTaskDefinition",
+        "ecs:DescribeTaskDefinition",
+        "ecs:UpdateService",
+        "ecs:DescribeServices"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::818084701597:role/qivr-ecs-task-role",
+        "arn:aws:iam::818084701597:role/qivr-ecs-task-execution-role"
+      ]
+    }
+  ]
+}
