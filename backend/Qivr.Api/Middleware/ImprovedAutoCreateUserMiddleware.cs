@@ -46,7 +46,7 @@ public class ImprovedAutoCreateUserMiddleware
                             }
                         }
                     }
-                    else if (existingUser.TenantId == null)
+                    else if (existingUser.TenantId == Guid.Empty)
                     {
                         _logger.LogInformation("User exists but no tenant: {Email}", existingUser.Email);
                         
