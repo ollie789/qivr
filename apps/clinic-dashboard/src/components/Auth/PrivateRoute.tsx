@@ -24,7 +24,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     const checkTenantStatus = async () => {
       if (isAuthenticated && !isLoading) {
         try {
-          const tenants = await api.get('/tenants');
+          const tenants = await api.get('/api/tenants');
           setHasTenant(tenants && tenants.length > 0);
         } catch (error) {
           console.error('Failed to check tenant status:', error);
