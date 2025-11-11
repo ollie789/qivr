@@ -299,6 +299,7 @@ public class ClinicManagementService : IClinicManagementService
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
+                CognitoSub = $"provider-{Guid.NewGuid()}", // Generate unique CognitoSub for providers
                 Email = request.Email,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
