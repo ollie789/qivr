@@ -38,7 +38,7 @@ public class ClinicManagementController : ControllerBase
 
     // GET: api/clinic-management/clinics
     [HttpGet("clinics")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
+    [Authorize(Roles = "SystemAdmin,ClinicAdmin,Admin")]
     [ProducesResponseType(typeof(IEnumerable<ClinicDto>), 200)]
     public async Task<IActionResult> GetClinics([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {

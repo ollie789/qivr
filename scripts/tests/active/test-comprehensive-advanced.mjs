@@ -10,6 +10,7 @@ const timestamp = Date.now();
 
 let cookies = '';
 let tenantId = '';
+let clinicId = '';
 
 // CloudWatch debugging function
 async function debugOnFailure(operation, error) {
@@ -38,26 +39,68 @@ async function makeRequest(endpoint, options = {}) {
   });
 }
 
-async function testLogin() {
-  console.log('\n📋 Test 1: Login with Admin User');
+async function testRegisterClinic() {
+  console.log('\n📋 Test 1: Register New Clinic');
+  
+  const email = `test${timestamp}@clinic.test`;
+  const registrationData = {
+    email: email,
+    password: 'TestPassword123!',
+    firstName: 'Test',
+    lastName: 'Admin',
+    clinicName: `Test Clinic ${timestamp}`,
+    role: 'admin'  // Clinic owner should be admin
+  };
+
+  const response = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(registrationData),
+    credentials: 'include'
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Clinic registration failed: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  tenantId = result.tenantId;
+  
+  console.log('  ✅ Clinic registered successfully');
+  console.log(`  📝 Tenant ID: ${tenantId}`);
+  console.log(`  📝 Email: ${email}`);
+  
+  return { email, password: 'TestPassword123!' };
+}
+
+async function testLogin(credentials) {
+  console.log('\n📋 Test 2: Login with Admin User');
   
   const loginResponse = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: 'test1762833623540@clinic.test',
-      password: 'TestPassword123!'
-    }),
+    body: JSON.stringify(credentials),
     credentials: 'include'
   });
 
   if (!loginResponse.ok) {
-    throw new Error(`Login failed: ${loginResponse.status}`);
+    const errorText = await loginResponse.text();
+    throw new Error(`Login failed: ${loginResponse.status} - ${errorText}`);
   }
 
   const loginData = await loginResponse.json();
-  tenantId = loginData.userInfo.tenantId;
   cookies = loginResponse.headers.get('set-cookie') || '';
+  
+  // Get clinic information
+  const clinicsResponse = await makeRequest('/clinic-management/clinics');
+  if (clinicsResponse.ok) {
+    const clinics = await clinicsResponse.json();
+    if (clinics && clinics.length > 0) {
+      clinicId = clinics[0].id;
+      console.log(`  📝 Clinic ID: ${clinicId}`);
+    }
+  }
   
   console.log('  ✅ Login successful');
   console.log(`  📝 Role: ${loginData.userInfo.role}`);
@@ -67,7 +110,7 @@ async function testLogin() {
 }
 
 async function testCreatePatient() {
-  console.log('\n📋 Test 2: Create Patient');
+  console.log('\n📋 Test 3: Create Patient');
   
   const randomId = Math.random().toString(36).substring(7);
   const patientData = {
@@ -100,22 +143,13 @@ async function testCreatePatient() {
 }
 
 async function testCreateProvider() {
-  console.log('\n📋 Test 3: Create Provider (Admin User)');
+  console.log('\n📋 Test 4: Create Provider');
   
-  // First get the clinic ID for this tenant
-  const clinicsResponse = await makeRequest('/clinic-management/clinics');
-  if (!clinicsResponse.ok) {
-    console.log(`  ⚠️  Could not fetch clinics: ${clinicsResponse.status}`);
-    return { id: '44444444-4444-4444-9444-444444444444' };
+  // If we don't have clinic ID, use tenant ID as fallback
+  if (!clinicId) {
+    clinicId = tenantId;
+    console.log(`  📝 Using tenant ID as clinic ID: ${clinicId}`);
   }
-  
-  const clinics = await clinicsResponse.json();
-  if (!clinics || clinics.length === 0) {
-    console.log('  ⚠️  No clinics found for tenant');
-    return { id: '44444444-4444-4444-9444-444444444444' };
-  }
-  
-  const clinicId = clinics[0].id;
   
   const providerData = {
     firstName: 'Dr. Jane',
@@ -134,45 +168,45 @@ async function testCreateProvider() {
   });
 
   if (!response.ok) {
-    console.log(`  ⚠️  Provider creation failed: ${response.status}, trying to get existing providers`);
+    const errorText = await response.text();
+    console.log(`  ⚠️  Provider creation failed: ${response.status} - ${errorText}`);
     
-    // Try to get existing providers
-    const existingResponse = await makeRequest(`/clinic-management/clinics/${clinicId}/providers`);
-    if (existingResponse.ok) {
-      const providers = await existingResponse.json();
-      if (providers && providers.length > 0) {
-        console.log(`  ✅ Using existing provider: ${providers[0].firstName} ${providers[0].lastName}`);
-        return { id: providers[0].id, clinicId };
-      }
+    // Try alternative approach - check if we can create via different endpoint
+    const altResponse = await makeRequest('/clinic-management/providers', {
+      method: 'POST',
+      body: JSON.stringify({...providerData, clinicId})
+    });
+    
+    if (!altResponse.ok) {
+      throw new Error(`Provider creation failed on both endpoints: ${response.status}`);
     }
     
-    return { id: '44444444-4444-4444-9444-444444444444', clinicId };
+    const provider = await altResponse.json();
+    console.log('  ✅ Provider created via alternative endpoint');
+    console.log(`  📝 Provider ID: ${provider.id}`);
+    return provider;
   }
 
   const provider = await response.json();
   console.log('  ✅ Provider created successfully');
   console.log(`  📝 Provider ID: ${provider.id}`);
+  console.log(`  📝 Provider: ${provider.firstName} ${provider.lastName}`);
   
-  return { ...provider, clinicId };
+  return provider;
 }
 
 async function testCreateAppointment(patient, provider) {
   console.log('\n📋 Test 5: Create Appointment');
   
-  if (!provider.id || provider.id === '44444444-4444-4444-9444-444444444444') {
-    console.log('  ⚠️  No valid provider available, skipping appointment test');
-    return null;
-  }
-  
   const appointmentData = {
     patientId: patient.id,
     providerId: provider.id,
-    clinicId: provider.clinicId || tenantId,
+    clinicId: clinicId,
     appointmentType: 'Consultation',
     startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
     status: 'Scheduled',
-    notes: 'Comprehensive test appointment'
+    notes: 'Advanced test appointment'
   };
 
   const response = await makeRequest('/appointments', {
@@ -182,8 +216,7 @@ async function testCreateAppointment(patient, provider) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.log(`  ⚠️  Appointment creation failed: ${response.status} - ${errorText}`);
-    return null;
+    throw new Error(`Appointment creation failed: ${response.status} - ${errorText}`);
   }
 
   const appointment = await response.json();
@@ -198,29 +231,19 @@ async function testMessages(patient) {
   
   const messageData = {
     recipientId: patient.id,
-    subject: 'Test Message',
-    content: 'This is a comprehensive test message.',
+    subject: 'Advanced Test Message',
+    content: 'This is an advanced test message to verify messaging functionality.',
     messageType: 'General'
   };
 
-  // Try the messages endpoint
-  let response = await makeRequest('/messages', {
+  const response = await makeRequest('/messages', {
     method: 'POST',
     body: JSON.stringify(messageData)
   });
 
   if (!response.ok) {
-    // Try alternative endpoint
-    response = await makeRequest('/messaging/send', {
-      method: 'POST',
-      body: JSON.stringify(messageData)
-    });
-  }
-
-  if (!response.ok) {
-    console.log(`  ⚠️  Message creation failed: ${response.status}, but messaging system exists`);
-    console.log('  ✅ Messaging endpoints are available (creation may need specific setup)');
-    return null;
+    const errorText = await response.text();
+    throw new Error(`Message creation failed: ${response.status} - ${errorText}`);
   }
 
   const message = await response.json();
@@ -233,58 +256,74 @@ async function testMessages(patient) {
 async function testPROMs(patient) {
   console.log('\n📋 Test 7: Test PROMs');
   
-  // Try to get existing PROM templates first
-  let response = await makeRequest('/proms');
-  
-  if (!response.ok) {
-    // Try alternative endpoints
-    response = await makeRequest('/prom-templates');
-  }
-  
-  if (!response.ok) {
-    response = await makeRequest('/questionnaires');
+  // First create a PROM template
+  const promTemplateData = {
+    title: 'Advanced Test PROM',
+    description: 'Test questionnaire for advanced testing',
+    questions: [
+      {
+        id: 'q1',
+        text: 'Rate your pain level (1-10)',
+        type: 'scale',
+        required: true,
+        options: { min: 1, max: 10 }
+      },
+      {
+        id: 'q2', 
+        text: 'How are you feeling today?',
+        type: 'choice',
+        required: true,
+        options: ['Excellent', 'Good', 'Fair', 'Poor']
+      }
+    ]
+  };
+
+  const templateResponse = await makeRequest('/proms', {
+    method: 'POST',
+    body: JSON.stringify(promTemplateData)
+  });
+
+  if (!templateResponse.ok) {
+    const errorText = await templateResponse.text();
+    throw new Error(`PROM template creation failed: ${templateResponse.status} - ${errorText}`);
   }
 
-  if (!response.ok) {
-    console.log(`  ⚠️  PROM endpoints not found: ${response.status}, but PROM system exists`);
-    console.log('  ✅ PROM functionality is available (may need template setup)');
-    return null;
-  }
-
-  const proms = await response.json();
-  console.log('  ✅ PROM system accessible');
-  console.log(`  📝 Available PROMs: ${Array.isArray(proms) ? proms.length : 'System ready'}`);
+  const promTemplate = await templateResponse.json();
+  console.log('  ✅ PROM template created successfully');
+  console.log(`  📝 PROM Template ID: ${promTemplate.id}`);
   
-  return proms;
+  return promTemplate;
 }
 
-async function runComprehensiveTest() {
+async function runAdvancedTest() {
   try {
-    console.log('\n🧪 COMPREHENSIVE FULL SYSTEM TEST');
-    console.log('Testing: Admin Login → Patients → Providers → Appointments → Messages → PROMs');
+    console.log('\n🧪 ADVANCED COMPREHENSIVE SYSTEM TEST');
+    console.log('Testing: Clinic Setup → Login → Patients → Providers → Appointments → Messages → PROMs');
     console.log(`API: ${API_URL}`);
     
-    await testLogin();
+    const credentials = await testRegisterClinic();
+    await testLogin(credentials);
     const patient = await testCreatePatient();
     const provider = await testCreateProvider();
     await testCreateAppointment(patient, provider);
     await testMessages(patient);
     await testPROMs(patient);
     
-    console.log('\n🎉🎉🎉 ALL COMPREHENSIVE TESTS PASSED! 🎉🎉🎉');
-    console.log('\n✅ Admin login works');
+    console.log('\n🎉🎉🎉 ALL ADVANCED TESTS PASSED! 🎉🎉🎉');
+    console.log('\n✅ Clinic registration works');
+    console.log('✅ Admin login works');
     console.log('✅ Patient creation works');
-    console.log('✅ Provider management works');
+    console.log('✅ Provider creation works');
     console.log('✅ Appointment creation works');
     console.log('✅ Messages system works');
     console.log('✅ PROMs system works');
-    console.log('\n🚀 QIVR COMPREHENSIVE SYSTEM IS FULLY OPERATIONAL! 🚀');
+    console.log('\n🚀 QIVR ADVANCED FEATURES FULLY OPERATIONAL! 🚀');
     
   } catch (error) {
-    console.error('\n❌ Test failed:', error.message);
-    await debugOnFailure('Comprehensive Test', error);
+    console.error('\n❌ Advanced test failed:', error.message);
+    await debugOnFailure('Advanced Test', error);
     process.exit(1);
   }
 }
 
-runComprehensiveTest();
+runAdvancedTest();
