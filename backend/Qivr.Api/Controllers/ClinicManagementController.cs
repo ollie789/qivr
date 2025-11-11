@@ -502,7 +502,14 @@ public class ClinicManagementController : ControllerBase
                 {
                     ProviderId = provider.UserId,
                     ProviderName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : "",
-                    Appointments = providerAppointments
+                    Appointments = providerAppointments.Select(a => new ScheduleSlotDto
+                    {
+                        StartTime = a.StartTime,
+                        EndTime = a.EndTime,
+                        IsAvailable = false,
+                        AppointmentType = "Appointment",
+                        PatientName = a.PatientName
+                    }).ToArray()
                 };
             })
             .ToArray();
