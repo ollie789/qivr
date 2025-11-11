@@ -102,7 +102,7 @@ const Providers: React.FC = () => {
       if (editingProvider) {
         await providerApi.updateProvider(editingProvider.id, formData as UpdateProviderData);
       } else {
-        await providerApi.createProvider(undefined, formData as CreateProviderData);
+        await providerApi.createProvider(formData as CreateProviderData);
       }
       
       handleCloseDialog();

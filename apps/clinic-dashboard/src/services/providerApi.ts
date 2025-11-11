@@ -88,7 +88,7 @@ class ProviderApi {
     return Array.isArray(providers) ? providers.map(mapProvider) : [];
   }
 
-  async createProvider(clinicId?: string, data: CreateProviderData): Promise<Provider> {
+  async createProvider(data: CreateProviderData, clinicId?: string): Promise<Provider> {
     const provider = await apiClient.post<ProviderDto>(
       `/api/clinic-management/providers`,
       data
