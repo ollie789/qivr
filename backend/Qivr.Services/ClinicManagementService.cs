@@ -16,6 +16,7 @@ public interface IClinicManagementService
     Task<Qivr.Core.Entities.Provider> AddProviderToClinicAsync(Guid tenantId, Guid clinicId, CreateProviderRequest request);
     Task<ProviderDetail?> GetProviderDetailsAsync(Guid tenantId, Guid providerId);
     Task<bool> UpdateProviderAsync(Guid tenantId, Guid providerId, UpdateProviderRequest request);
+    Task<bool> DeleteProviderAsync(Guid tenantId, Guid providerId);
     Task<IEnumerable<Department>> GetDepartmentsAsync(Guid tenantId, Guid clinicId);
     Task<Department> CreateDepartmentAsync(Guid tenantId, Guid clinicId, CreateDepartmentRequest request);
     Task<ClinicStatistics> GetClinicStatisticsAsync(Guid tenantId, Guid clinicId);
@@ -466,6 +467,33 @@ public class ClinicManagementService : IClinicManagementService
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Updated provider {ProviderId} in tenant {TenantId}", providerId, tenantId);
+
+        return true;
+    }
+
+    public async Task<bool> DeleteProviderAsync(Guid tenantId, Guid providerId)
+    {
+        var provider = await _context.Providers
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.UserId == providerId && p.TenantId == tenantId);
+
+        if (provider == null)
+        {
+            return false;
+        }
+
+        // Soft delete - mark as inactive instead of hard delete to preserve data integrity
+        provider.IsActive = false;
+        provider.UpdatedAt = DateTime.UtcNow;
+        
+        if (provider.User != null)
+        {
+            provider.User.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Deleted (deactivated) provider {ProviderId} in tenant {TenantId}", providerId, tenantId);
 
         return true;
     }

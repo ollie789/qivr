@@ -31,6 +31,28 @@ export interface Provider {
   nextAvailableSlot?: string | null;
 }
 
+export interface CreateProviderData {
+  firstName: string;
+  lastName: string;
+  title?: string;
+  specialty?: string;
+  email: string;
+  phone?: string;
+  licenseNumber?: string;
+  npiNumber?: string;
+}
+
+export interface UpdateProviderData {
+  firstName: string;
+  lastName: string;
+  title?: string;
+  specialty?: string;
+  email: string;
+  phone?: string;
+  licenseNumber?: string;
+  isActive: boolean;
+}
+
 const mapProvider = (dto: ProviderDto): Provider => {
   const firstName = (dto.firstName ?? '').trim();
   const lastName = (dto.lastName ?? '').trim();
@@ -67,6 +89,33 @@ class ProviderApi {
     );
 
     return Array.isArray(providers) ? providers.map(mapProvider) : [];
+  }
+
+  async createProvider(clinicId: string, data: CreateProviderData): Promise<Provider> {
+    const provider = await apiClient.post<ProviderDto>(
+      `/api/clinic-management/clinics/${clinicId}/providers`,
+      data
+    );
+    return mapProvider(provider);
+  }
+
+  async updateProvider(providerId: string, data: UpdateProviderData): Promise<Provider> {
+    const provider = await apiClient.put<ProviderDto>(
+      `/api/clinic-management/providers/${providerId}`,
+      data
+    );
+    return mapProvider(provider);
+  }
+
+  async deleteProvider(providerId: string): Promise<void> {
+    await apiClient.delete(`/api/clinic-management/providers/${providerId}`);
+  }
+
+  async getProvider(providerId: string): Promise<Provider> {
+    const provider = await apiClient.get<ProviderDto>(
+      `/api/clinic-management/providers/${providerId}`
+    );
+    return mapProvider(provider);
   }
 }
 

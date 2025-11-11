@@ -105,12 +105,12 @@ async function testDataFlow() {
   // Step 4: Create an appointment
   console.log('\n📋 Step 4: Create Appointment');
   
-  // Use the logged-in admin user's ID as the provider (they have Admin role)
-  const adminUserId = loginData.userInfo.username || loginData.userInfo.userId || loginData.userInfo.id;
+  // Use existing provider ID from the providers table
+  const providerId = '44444444-4444-4444-9444-444444444444';
   
   const appointmentData = {
     patientId: createdPatient.id,
-    providerId: adminUserId, // Use logged-in admin user ID as provider
+    providerId: providerId, // Use existing provider ID
     appointmentType: 'Consultation',
     startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
     endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(), // +30 mins

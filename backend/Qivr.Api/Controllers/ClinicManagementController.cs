@@ -321,6 +321,63 @@ public class ClinicManagementController : ControllerBase
         return Ok(dto);
     }
     
+    // PUT: api/clinic-management/providers/{providerId}
+    [HttpPut("providers/{providerId}")]
+    [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
+    [ProducesResponseType(typeof(ProviderDetailDto), 200)]
+    public async Task<IActionResult> UpdateProvider(Guid providerId, [FromBody] UpdateProviderDto dto)
+    {
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var request = new UpdateProviderRequest
+        {
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            Title = dto.Title,
+            Specialty = dto.Specialty,
+            Email = dto.Email,
+            Phone = dto.Phone,
+            LicenseNumber = dto.LicenseNumber,
+            IsActive = dto.IsActive
+        };
+
+        var updated = await _clinicService.UpdateProviderAsync(tenantId, providerId, request);
+        if (updated == null)
+        {
+            return NotFound(new { error = "Provider not found." });
+        }
+
+        var detail = await _clinicService.GetProviderDetailsAsync(tenantId, providerId);
+        var summary = await FindProviderSummary(detail?.ClinicId, providerId, tenantId);
+        var response = detail != null ? MapProviderDetail(detail, summary) : null;
+
+        return Ok(response);
+    }
+    
+    // DELETE: api/clinic-management/providers/{providerId}
+    [HttpDelete("providers/{providerId}")]
+    [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
+    public async Task<IActionResult> DeleteProvider(Guid providerId)
+    {
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        var success = await _clinicService.DeleteProviderAsync(tenantId, providerId);
+        if (!success)
+        {
+            return NotFound(new { error = "Provider not found." });
+        }
+
+        return NoContent();
+    }
+    
     // GET: api/clinic-management/clinics/{clinicId}/schedule
     [HttpGet("clinics/{clinicId}/schedule")]
     [Authorize]
@@ -952,6 +1009,18 @@ public class CreateProviderDto
     public string Phone { get; set; } = string.Empty;
     public string LicenseNumber { get; set; } = string.Empty;
     public string? NpiNumber { get; set; }
+}
+
+public class UpdateProviderDto
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Specialty { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string LicenseNumber { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
 }
 
 // ProviderScheduleDto is now in SharedDtos
