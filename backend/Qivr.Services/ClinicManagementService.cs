@@ -251,7 +251,7 @@ public class ClinicManagementService : IClinicManagementService
     {
         var query = _context.Providers
             .Include(p => p.User)
-            .Where(p => p.TenantId == tenantId && p.TenantId == clinicId);
+            .Where(p => p.TenantId == tenantId && p.ClinicId == clinicId);
 
         if (activeOnly)
             query = query.Where(p => p.IsActive);
@@ -336,7 +336,7 @@ public class ClinicManagementService : IClinicManagementService
         if (existingProvider != null)
         {
             // Update clinic association
-            existingProvider.TenantId = clinicId;
+            existingProvider.ClinicId = clinicId;
             existingProvider.IsActive = true;
             existingProvider.UpdatedAt = DateTime.UtcNow;
             
@@ -350,7 +350,7 @@ public class ClinicManagementService : IClinicManagementService
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             UserId = user.Id,
-            TenantId = clinicId,
+            ClinicId = clinicId,
             Title = request.Title,
             Specialty = request.Specialty,
             LicenseNumber = request.LicenseNumber,
@@ -408,7 +408,7 @@ public class ClinicManagementService : IClinicManagementService
             LicenseNumber = provider.LicenseNumber ?? "",
             NpiNumber = provider.NpiNumber ?? "",
             IsActive = provider.IsActive,
-            TenantId = provider.TenantId,
+            ClinicId = provider.ClinicId,
             ClinicName = "", // Will be populated from tenant if needed
             Biography = GetFromUserPreferences(provider.User.Preferences, "biography") ?? "",
             Education = GetEducation(provider.User.Preferences),
@@ -552,7 +552,7 @@ public class ClinicManagementService : IClinicManagementService
         var newDepartment = new Department
         {
             Id = Guid.NewGuid(),
-            TenantId = clinicId,
+            ClinicId = clinicId,
             Name = request.Name,
             Description = request.Description ?? "",
             HeadProviderId = request.HeadProviderId,
@@ -579,14 +579,14 @@ public class ClinicManagementService : IClinicManagementService
             .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
 
         var activePatients = await _context.Appointments
-            .Where(a => a.TenantId == tenantId && a.TenantId == clinicId)
+            .Where(a => a.TenantId == tenantId && a.ClinicId == clinicId)
             .Where(a => a.ScheduledStart >= DateTime.UtcNow.AddMonths(-6))
             .Select(a => a.PatientId)
             .Distinct()
             .CountAsync();
 
         var totalProviders = await _context.Providers
-            .CountAsync(p => p.TenantId == tenantId && p.TenantId == clinicId);
+            .CountAsync(p => p.TenantId == tenantId && p.ClinicId == clinicId);
 
         var totalStaff = await _context.Users
             .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Staff);
@@ -597,12 +597,12 @@ public class ClinicManagementService : IClinicManagementService
 
         var appointmentsThisMonth = await _context.Appointments
             .CountAsync(a => a.TenantId == tenantId && 
-                           a.TenantId == clinicId &&
+                           a.ClinicId == clinicId &&
                            a.ScheduledStart >= thisMonthStart);
 
         var appointmentsLastMonth = await _context.Appointments
             .CountAsync(a => a.TenantId == tenantId && 
-                           a.TenantId == clinicId &&
+                           a.ClinicId == clinicId &&
                            a.ScheduledStart >= lastMonthStart && 
                            a.ScheduledStart < lastMonthEnd);
 
@@ -864,8 +864,8 @@ public class ClinicManagementService : IClinicManagementService
     {
         return new List<Department>
         {
-            new() { Id = Guid.NewGuid(), TenantId = clinicId, Name = "General Practice", Description = "Primary care services", IsActive = true },
-            new() { Id = Guid.NewGuid(), TenantId = clinicId, Name = "Nursing", Description = "Nursing services", IsActive = true }
+            new() { Id = Guid.NewGuid(), ClinicId = clinicId, Name = "General Practice", Description = "Primary care services", IsActive = true },
+            new() { Id = Guid.NewGuid(), ClinicId = clinicId, Name = "Nursing", Description = "Nursing services", IsActive = true }
         };
     }
 }

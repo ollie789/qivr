@@ -8,7 +8,8 @@ public class Provider : TenantEntity
     [Required]
     public Guid UserId { get; set; }
     
-    // ClinicId removed - Provider belongs to Tenant directly via TenantEntity base class
+    [Required]
+    public Guid ClinicId { get; set; }
     
     [StringLength(50)]
     public string? Title { get; set; }  // MD, DO, NP, PA, etc.

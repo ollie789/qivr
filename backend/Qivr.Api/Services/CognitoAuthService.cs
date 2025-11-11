@@ -235,7 +235,7 @@ public class CognitoAuthService : ICognitoAuthService
                     Id = Guid.NewGuid(),
                     Slug = $"{request.FirstName.ToLower()}-{request.LastName.ToLower()}-{Guid.NewGuid().ToString()[..8]}",
                     Name = request.ClinicName ?? $"{request.FirstName} {request.LastName} Clinic",
-                    Settings = "{}",
+                    Settings = new Dictionary<string, object>(),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     Description = request.ClinicName ?? $"{request.FirstName} {request.LastName} Clinic",

@@ -147,7 +147,7 @@ public class IcsGeneratorService : IIcsGeneratorService
         
         // Custom properties
         icsBuilder.AppendLine($"X-QIVR-APPOINTMENT-ID:{appointment.Id}");
-        icsBuilder.AppendLine($"X-QIVR-CLINIC-ID:{appointment.TenantId}");
+        icsBuilder.AppendLine($"X-QIVR-CLINIC-ID:{appointment.ClinicId}");
         icsBuilder.AppendLine($"X-QIVR-PROVIDER-ID:{appointment.ProviderId}");
         icsBuilder.AppendLine($"X-QIVR-PATIENT-ID:{appointment.PatientId}");
         

@@ -206,7 +206,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
                 TenantId = provider.TenantId,
                 PatientId = patientId,
                 ProviderId = providerId,
-                TenantId = providerProfile.TenantId,
+                ClinicId = providerProfile.ClinicId,
                 ProviderProfileId = providerProfile.Id,
                 ScheduledStart = startTime,
                 ScheduledEnd = endTime,

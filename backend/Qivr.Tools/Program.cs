@@ -434,7 +434,7 @@ internal static class SeedRunner
 
             var updated = false;
 
-            updated |= UpdateIfChanged(provider, p => p.TenantId, tenantSeed.Id, v => provider.TenantId = v, !dryRun);
+            updated |= UpdateIfChanged(provider, p => p.ClinicId, tenantSeed.Id, v => provider.ClinicId = v, !dryRun);
             updated |= UpdateIfChanged(provider, p => p.Title, providerSeed.Title, v => provider.Title = v, !dryRun);
             updated |= UpdateIfChanged(provider, p => p.Specialty, providerSeed.Specialty, v => provider.Specialty = v, !dryRun);
             updated |= UpdateIfChanged(provider, p => p.LicenseNumber, providerSeed.LicenseNumber, v => provider.LicenseNumber = v, !dryRun);
@@ -576,7 +576,7 @@ internal static class SeedRunner
             updated |= UpdateIfChanged(appointment, a => a.PatientId, patient.Id, v => appointment.PatientId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ProviderId, providerUser.Id, v => appointment.ProviderId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ProviderProfileId, providerProfile.Id, v => appointment.ProviderProfileId = v, !dryRun);
-            updated |= UpdateIfChanged(appointment, a => a.TenantId, tenantSeed.Id, v => appointment.TenantId = v, !dryRun);
+            updated |= UpdateIfChanged(appointment, a => a.ClinicId, tenantSeed.Id, v => appointment.ClinicId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ScheduledStart, startTime, v => appointment.ScheduledStart = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ScheduledEnd, endTime, v => appointment.ScheduledEnd = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.AppointmentType, appointmentSeed.AppointmentType, v => appointment.AppointmentType = v, !dryRun);

@@ -7,7 +7,7 @@ public class Appointment : TenantEntity
     public Guid PatientId { get; set; }
     public Guid ProviderId { get; set; }
     public Guid ProviderProfileId { get; set; }
-    // ClinicId removed - Appointment belongs to Tenant directly via TenantEntity base class
+    public Guid? ClinicId { get; set; }  // Added ClinicId
     public Guid? EvaluationId { get; set; }
     public string? ExternalCalendarId { get; set; }
     public string AppointmentType { get; set; } = string.Empty;

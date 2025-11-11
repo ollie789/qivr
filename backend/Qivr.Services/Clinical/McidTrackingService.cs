@@ -208,7 +208,7 @@ public class McidTrackingService : IMcidTrackingService
     {
         var report = new McidReport
         {
-            TenantId = clinicId,
+            ClinicId = clinicId,
             StartDate = startDate,
             EndDate = endDate,
             GeneratedAt = DateTime.UtcNow
