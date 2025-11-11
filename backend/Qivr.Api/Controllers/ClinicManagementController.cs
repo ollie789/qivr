@@ -494,8 +494,7 @@ public class ClinicManagementController : ControllerBase
                         PatientName = "Patient", // Anonymized for schedule view
                         StartTime = a.ScheduledStart,
                         EndTime = a.ScheduledEnd,
-                        Status = a.Status,
-                        Type = a.AppointmentType
+                        Status = a.Status.ToString()
                     })
                     .ToArray();
 
