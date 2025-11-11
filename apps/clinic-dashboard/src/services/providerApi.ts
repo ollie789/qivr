@@ -40,6 +40,7 @@ export interface CreateProviderData {
   phone?: string;
   licenseNumber?: string;
   npiNumber?: string;
+  isActive?: boolean;
 }
 
 export interface UpdateProviderData {

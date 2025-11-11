@@ -273,8 +273,8 @@ const Providers: React.FC = () => {
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      checked={(formData as UpdateProviderData).isActive ?? true}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked } as UpdateProviderData)}
                     />
                   }
                   label="Active"
