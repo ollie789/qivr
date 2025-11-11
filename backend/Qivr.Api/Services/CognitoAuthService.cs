@@ -229,25 +229,24 @@ public class CognitoAuthService : ICognitoAuthService
             }
             else
             {
-                // New clinic signup - create tenant
+                // New clinic signup - create tenant and make user Admin
                 tenant = new Tenant
                 {
                     Id = Guid.NewGuid(),
                     Slug = $"{request.FirstName.ToLower()}-{request.LastName.ToLower()}-{Guid.NewGuid().ToString()[..8]}",
-                    Name = $"{request.FirstName} {request.LastName} Clinic",
-                    Status = TenantStatus.Active,
+                    Name = request.ClinicName ?? $"{request.FirstName} {request.LastName} Clinic",
+                    Settings = "{}",
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
+                    Description = request.ClinicName ?? $"{request.FirstName} {request.LastName} Clinic",
+                    Email = request.Email,
+                    IsActive = true
                 };
                 
-                // Phase 4.1: Set clinic properties directly on tenant
-                tenant.Description = $"{request.FirstName} {request.LastName} Clinic";
-                tenant.Email = request.Email;
-                tenant.Phone = string.Empty;
-                tenant.Address = string.Empty;
-                tenant.IsActive = true;
-                
                 await _dbContext.Tenants.AddAsync(tenant);
+                
+                // Override role to Admin for clinic owners
+                request.Role = "Admin";
             }
             
             // Determine user type from role
@@ -680,6 +679,7 @@ public class SignUpRequest
     public string PhoneNumber { get; set; } = string.Empty;
     public Guid TenantId { get; set; }
     public string Role { get; set; } = "Patient";
+    public string? ClinicName { get; set; }  // For new clinic creation
 }
 
 public class SignUpResult
