@@ -198,7 +198,7 @@ const Appointments: React.FC = () => {
 
   const { data: providersData, isLoading: isProvidersLoading } = useQuery<Provider[]>({
     queryKey: ['appointments', 'providers', clinicId],
-    queryFn: () => providerApi.getClinicProviders(clinicId),
+    queryFn: () => providerApi.getClinicProviders(),
     enabled: canMakeApiCalls && Boolean(clinicId),
     staleTime: 5 * 60 * 1000,
   });

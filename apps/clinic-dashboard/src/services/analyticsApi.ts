@@ -380,12 +380,12 @@ const buildSearchParams = (params?: { from?: Date; to?: Date }) => {
 };
 
 const getClinicAnalytics = async (
-  clinicId: string,
+  clinicId?: string,
   params?: { from?: Date; to?: Date }
 ): Promise<ClinicAnalytics> => {
   const search = buildSearchParams(params);
   const query = search.toString();
-  const url = `/api/clinic-management/clinics/${clinicId}/analytics${query ? `?${query}` : ''}`;
+  const url = `/api/clinic-management/analytics${query ? `?${query}` : ''}`;
   const response = await apiClient.get<ClinicAnalyticsResponse | { data: ClinicAnalyticsResponse }>(url);
   const payload = unwrap(response);
   return mapClinicAnalytics(payload);

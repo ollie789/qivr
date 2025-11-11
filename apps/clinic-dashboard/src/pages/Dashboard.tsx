@@ -99,7 +99,7 @@ const Dashboard: React.FC = () => {
       }
       const to = new Date();
       const from = subDays(to, 30);
-      return analyticsApi.getClinicAnalytics(user.clinicId, { from, to });
+      return analyticsApi.getClinicAnalytics(undefined, { from, to });
     },
     enabled: Boolean(user?.clinicId) && canMakeApiCalls,
   });

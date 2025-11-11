@@ -50,7 +50,7 @@ const Providers: React.FC = () => {
     
     try {
       setLoading(true);
-      const data = await providerApi.getClinicProviders(clinicId, { activeOnly: false });
+      const data = await providerApi.getClinicProviders(undefined, { activeOnly: false });
       setProviders(data);
     } catch (err) {
       setError('Failed to load providers');
@@ -102,7 +102,7 @@ const Providers: React.FC = () => {
       if (editingProvider) {
         await providerApi.updateProvider(editingProvider.id, formData as UpdateProviderData);
       } else {
-        await providerApi.createProvider(clinicId, formData as CreateProviderData);
+        await providerApi.createProvider(undefined, formData as CreateProviderData);
       }
       
       handleCloseDialog();

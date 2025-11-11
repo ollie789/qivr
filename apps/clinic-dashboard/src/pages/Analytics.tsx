@@ -106,7 +106,7 @@ const Analytics: React.FC = () => {
         return null;
       }
       const { from, to } = getDateRange();
-      return analyticsApi.getClinicAnalytics(clinicId, { from, to });
+      return analyticsApi.getClinicAnalytics(undefined, { from, to });
     },
     enabled: canMakeApiCalls && Boolean(clinicId),
   });
