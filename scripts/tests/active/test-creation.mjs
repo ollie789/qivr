@@ -1,9 +1,26 @@
 #!/usr/bin/env node
 
 import fetch from 'node-fetch';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
+const execAsync = promisify(exec);
 const API_URL = 'https://clinic.qivr.pro/api';
 const timestamp = Date.now();
+
+// CloudWatch debugging function
+async function debugOnFailure(operation, error) {
+  console.log(`\n🔍 DEBUGGING: ${operation} failed - ${error.message}`);
+  
+  try {
+    const { stdout } = await execAsync(
+      `aws logs get-log-events --log-group-name "/ecs/qivr-api" --log-stream-name $(aws logs describe-log-streams --log-group-name "/ecs/qivr-api" --order-by LastEventTime --descending --limit 1 --region ap-southeast-2 --query 'logStreams[0].logStreamName' --output text) --start-time ${Date.now() - 300000} --region ap-southeast-2 --query 'events[-3:].[timestamp,message]' --output text`
+    );
+    console.log('📝 Recent logs:', stdout.split('\n').slice(-3).join('\n'));
+  } catch (logError) {
+    console.log('⚠️  Could not fetch debug logs');
+  }
+}
 
 async function testRegistration() {
   console.log('\n📋 Test 1: Create New Clinic');
@@ -49,6 +66,7 @@ async function runTests() {
     
   } catch (error) {
     console.error('\n❌ Test failed:', error.message);
+    await debugOnFailure('Creation Test', error);
     process.exit(1);
   }
 }
