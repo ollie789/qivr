@@ -57,10 +57,10 @@ public class TenantOnboardingController : ControllerBase
 
             await _context.Tenants.AddAsync(tenant);
 
-            // Create clinic
+            // Create clinic with same ID as tenant (Phase 1.1: Eliminate ID confusion)
             var clinic = new Clinic
             {
-                Id = Guid.NewGuid(),
+                Id = tenant.Id,
                 TenantId = tenant.Id,
                 Name = request.ClinicName,
                 Email = request.Email,
