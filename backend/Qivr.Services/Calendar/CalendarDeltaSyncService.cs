@@ -421,9 +421,9 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
             {
                 existingAppointment.TenantId = providerProfile.TenantId;
             }
-            if (!existingAppointment.ClinicId.HasValue)
+            if (!existingAppointment.TenantId.HasValue)
             {
-                existingAppointment.ClinicId = providerProfile.ClinicId;
+                existingAppointment.TenantId = providerProfile.TenantId;
             }
             // Store external update time in LocationDetails
             if (item.Updated.HasValue)
@@ -470,7 +470,7 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
                 TenantId = providerProfile.TenantId,
                 ProviderId = providerId,
                 ProviderProfileId = providerProfile.Id,
-                ClinicId = providerProfile.ClinicId,
+                TenantId = providerProfile.TenantId,
                 ExternalCalendarId = item.Id,
                 ScheduledStart = scheduledStart,
                 ScheduledEnd = scheduledEnd,
@@ -529,9 +529,9 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
             {
                 existingAppointment.TenantId = providerProfile.TenantId;
             }
-            if (!existingAppointment.ClinicId.HasValue)
+            if (!existingAppointment.TenantId.HasValue)
             {
-                existingAppointment.ClinicId = providerProfile.ClinicId;
+                existingAppointment.TenantId = providerProfile.TenantId;
             }
             // Store external update time in LocationDetails
             if (item.LastModifiedDateTime.HasValue)
@@ -550,7 +550,7 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
                 TenantId = providerProfile.TenantId,
                 ProviderId = providerId,
                 ProviderProfileId = providerProfile.Id,
-                ClinicId = providerProfile.ClinicId,
+                TenantId = providerProfile.TenantId,
                 ExternalCalendarId = item.Id,
                 ScheduledStart = item.Start.DateTime,
                 ScheduledEnd = item.End.DateTime,
