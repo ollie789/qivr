@@ -1,122 +1,245 @@
-# API Routes Audit
+# Qivr API Routes Documentation
 
-## Authentication (`/api/auth`)
-- `POST /api/auth/login` - User login
-- `POST /api/auth/signup` - User signup (NOT `/register`)
-- `POST /api/auth/confirm-signup` - Confirm email
-- `POST /api/auth/refresh-token` - Refresh JWT
-- `POST /api/auth/refresh` - Refresh JWT (alias)
-- `POST /api/auth/forgot-password` - Password reset request
-- `POST /api/auth/confirm-forgot-password` - Confirm password reset
-- `POST /api/auth/change-password` - Change password
-- `POST /api/auth/logout` - Logout
-- `GET /api/auth/user-info` - Get user info
-- `PUT /api/auth/user-attributes` - Update user attributes
+**Base URL**: `https://clinic.qivr.pro/api`
 
-## Tenant Onboarding (`/api/TenantOnboarding`)
-- `POST /api/TenantOnboarding/register-clinic` - Register new clinic (requires auth)
-- `GET /api/TenantOnboarding/user-tenants` - Get user's tenants
+## 🔐 Authentication Routes
+**Base**: `/api/auth`
 
-## Clinic Dashboard (`/api/clinic-dashboard`)
-- `GET /api/clinic-dashboard/overview` - Dashboard overview
-- `GET /api/clinic-dashboard/schedule/weekly` - Weekly schedule
-- `GET /api/clinic-dashboard/metrics` - Clinic metrics
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/login` | User login | ❌ |
+| POST | `/register` | User registration | ❌ |
+| POST | `/signup` | Alias for register | ❌ |
+| GET | `/user-info` | Get current user info | ✅ |
+| POST | `/refresh` | Refresh auth token | ✅ |
+| POST | `/logout` | User logout | ✅ |
+| POST | `/confirm-signup` | Confirm email signup | ❌ |
+| POST | `/forgot-password` | Request password reset | ❌ |
+| POST | `/confirm-forgot-password` | Confirm password reset | ❌ |
+| POST | `/change-password` | Change user password | ✅ |
+| POST | `/mfa/setup` | Setup MFA | ✅ |
+| POST | `/mfa/verify` | Verify MFA | ✅ |
+| PUT | `/user-attributes` | Update user attributes | ✅ |
 
-## Patients (`/api/patients`)
-- `GET /api/patients` - List patients
-- `GET /api/patients/page` - Paginated list
-- `GET /api/patients/search` - Search patients
-- `GET /api/patients/{id}` - Get patient
-- `POST /api/patients` - Create patient
-- `PUT /api/patients/{id}` - Update patient
-- `DELETE /api/patients/{id}` - Delete patient
+## 👥 Patients Routes
+**Base**: `/api/patients`
 
-## Appointments (`/api/appointments`)
-- `GET /api/appointments` - List appointments
-- `GET /api/appointments/page` - Paginated list
-- `GET /api/appointments/{id}` - Get appointment
-- `POST /api/appointments` - Create appointment
-- `PUT /api/appointments/{id}` - Update appointment
-- `POST /api/appointments/{id}/cancel` - Cancel appointment
-- `POST /api/appointments/{id}/confirm` - Confirm appointment
-- `POST /api/appointments/{id}/complete` - Complete appointment
-- `GET /api/appointments/waitlist` - Get waitlist
-- `POST /api/appointments/waitlist` - Add to waitlist
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | List patients (cursor pagination) | ✅ |
+| GET | `/page` | List patients (traditional pagination) | ✅ |
+| GET | `/search?query={q}` | Search patients | ✅ |
+| GET | `/{patientId}` | Get patient details | ✅ |
+| POST | `/` | Create new patient | ✅ |
+| PUT | `/{patientId}` | Update patient | ✅ |
+| DELETE | `/{patientId}` | Delete patient (soft delete) | ✅ |
 
-## Messages (`/api/Messages`)
-- `GET /api/Messages` - List messages
-- `GET /api/Messages/page` - Paginated list
-- `GET /api/Messages/conversations` - List conversations
-- `GET /api/Messages/conversation/{userId}` - Get conversation
-- `POST /api/Messages` - Send message
-- `POST /api/Messages/{id}/read` - Mark as read
-- `DELETE /api/Messages/{id}` - Delete message
-- `GET /api/Messages/unread-count` - Get unread count
+## 📅 Appointments Routes
+**Base**: `/api/appointments`
 
-## Documents (`/api/documents`)
-- `GET /api/documents` - List documents
-- `POST /api/documents/upload` - Upload document
-- `POST /api/documents/patient/{patientId}` - Upload for patient
-- `GET /api/documents/{id}` - Get document
-- `GET /api/documents/{id}/download` - Download document
-- `GET /api/documents/patient/{patientId}` - Get patient documents
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | List appointments | ✅ |
+| GET | `/page` | List appointments (paginated) | ✅ |
+| GET | `/{id}` | Get appointment details | ✅ |
+| POST | `/` | Create appointment | ✅ |
+| PUT | `/{id}` | Update appointment | ✅ |
+| DELETE | `/{id}` | Cancel appointment | ✅ |
 
-## Medical Records (`/api/medical-records`)
-- `GET /api/medical-records` - List records
-- `GET /api/medical-records/vitals` - Get vitals
-- `GET /api/medical-records/medications` - Get medications
-- `GET /api/medical-records/allergies` - Get allergies
-- `POST /api/medical-records/vitals` - Add vitals
-- `POST /api/medical-records/medications` - Add medication
-- `POST /api/medical-records/allergies` - Add allergy
+## 💬 Messages Routes
+**Base**: `/api/messages`
 
-## Settings (`/api/Settings`)
-- `GET /api/Settings` - Get settings
-- `PUT /api/Settings` - Update settings
-- `PATCH /api/Settings/{category}` - Update category
-- `POST /api/Settings/change-password` - Change password
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/threads` | List message threads | ✅ |
+| GET | `/threads/{threadId}` | Get thread messages | ✅ |
+| POST | `/threads` | Create new thread | ✅ |
+| POST | `/threads/{threadId}/messages` | Send message | ✅ |
+| PUT | `/threads/{threadId}/read` | Mark thread as read | ✅ |
 
-## Analytics (`/api/Analytics`)
-- `GET /api/Analytics/health-metrics` - Health metrics
-- `GET /api/Analytics/prom-analytics` - PROM analytics
-- `GET /api/Analytics/patient-trends` - Patient trends
+## 📋 Medical Records Routes
+**Base**: `/api/medical-records`
 
-## PROMs (`/api/v1/proms`)
-- `POST /api/v1/proms/templates` - Create template
-- `GET /api/v1/proms/templates` - List templates
-- `GET /api/v1/proms/templates/{key}` - Get template
-- `GET /api/v1/proms/instances` - List instances
-- `GET /api/v1/proms/instances/{id}` - Get instance
-- `POST /api/v1/proms/instances/{id}/answers` - Submit answers
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/patient/{patientId}` | Get patient records | ✅ |
+| GET | `/{recordId}` | Get specific record | ✅ |
+| POST | `/` | Create medical record | ✅ |
+| PUT | `/{recordId}` | Update medical record | ✅ |
+| DELETE | `/{recordId}` | Delete medical record | ✅ |
 
-## Intake (`/api/v1/Intake`)
-- `POST /api/v1/Intake/submit` - Submit intake form
-- `GET /api/v1/Intake/{id}/status` - Get status
+## 📄 Documents Routes
+**Base**: `/api/documents`
 
-## Webhooks (`/webhooks`)
-- `POST /webhooks/sms/messagemedia` - MessageMedia SMS webhook
-- `POST /webhooks/calendar/google` - Google Calendar webhook
-- `POST /webhooks/calendar/microsoft` - Microsoft Calendar webhook
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | List documents | ✅ |
+| GET | `/{documentId}` | Get document details | ✅ |
+| POST | `/upload` | Upload document | ✅ |
+| GET | `/{documentId}/download` | Download document | ✅ |
+| DELETE | `/{documentId}` | Delete document | ✅ |
 
-## Health Check
-- `GET /health` - Health check endpoint
+## 📊 Analytics Routes
+**Base**: `/api/analytics`
 
-## Common Issues
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/overview` | Dashboard overview stats | ✅ |
+| GET | `/patients` | Patient analytics | ✅ |
+| GET | `/appointments` | Appointment analytics | ✅ |
+| GET | `/revenue` | Revenue analytics | ✅ |
 
-### 1. Wrong Endpoint Names
-- ❌ `/api/auth/register` - Does not exist
-- ✅ `/api/auth/signup` - Correct endpoint
+## 📝 PROM Routes
+**Base**: `/api/proms`
 
-### 2. CSRF Protection
-- Disabled in production (JWT provides security)
-- If re-enabled, Bearer tokens bypass CSRF
-- Exempt paths: `/api/auth/login`, `/api/auth/signup`, `/api/webhooks/*`
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | List PROM templates | ✅ |
+| GET | `/{templateId}` | Get PROM template | ✅ |
+| POST | `/` | Create PROM template | ✅ |
+| PUT | `/{templateId}` | Update PROM template | ✅ |
+| GET | `/instances/patient/{patientId}` | Get patient PROM instances | ✅ |
+| POST | `/instances` | Create PROM instance | ✅ |
+| POST | `/instances/{instanceId}/submit` | Submit PROM response | ✅ |
 
-### 3. Authentication
-- Most endpoints require JWT Bearer token
-- Public endpoints: `/api/auth/signup`, `/api/auth/login`, `/health`
-- Tenant context required via `X-Tenant-Id` header
+## 📥 Intake Routes
+**Base**: `/api/intake`
 
-### 4. Versioning
-- Some endpoints support versioning: `/api/v1/...`
-- Backward compatibility maintained: `/api/...`
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/forms` | List intake forms | ✅ |
+| GET | `/forms/{formId}` | Get intake form | ✅ |
+| POST | `/forms` | Create intake form | ✅ |
+| POST | `/submissions` | Submit intake form | ❌ |
+
+## ⚙️ Settings Routes
+**Base**: `/api/settings`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/clinic` | Get clinic settings | ✅ |
+| PUT | `/clinic` | Update clinic settings | ✅ |
+| GET | `/user` | Get user settings | ✅ |
+| PUT | `/user` | Update user settings | ✅ |
+
+## 🏢 Tenant Management Routes
+**Base**: `/api/tenants`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/{tenantId}` | Get tenant info | ✅ |
+| POST | `/` | Create tenant | ✅ |
+| PUT | `/{tenantId}` | Update tenant | ✅ |
+
+## 🎛️ Admin Routes
+**Base**: `/api/admin`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/tenants` | List all tenants | ✅ (Admin) |
+| GET | `/users` | List all users | ✅ (Admin) |
+| POST | `/users/{userId}/impersonate` | Impersonate user | ✅ (Admin) |
+
+## 🔔 Notifications Routes
+**Base**: `/api/notifications`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | List notifications | ✅ |
+| PUT | `/{notificationId}/read` | Mark as read | ✅ |
+| POST | `/send` | Send notification | ✅ |
+
+## 🪝 Webhooks Routes
+**Base**: `/api/webhooks`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/calendar` | Calendar webhook | ❌ (Webhook) |
+| POST | `/messages` | Message webhook | ❌ (Webhook) |
+| POST | `/payments` | Payment webhook | ❌ (Webhook) |
+
+## 🛠️ Debug Routes
+**Base**: `/api/debug`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/health` | Health check | ❌ |
+| GET | `/auth` | Auth debug info | ✅ |
+| GET | `/tenant` | Tenant debug info | ✅ |
+
+---
+
+## 📋 Request/Response Standards
+
+### Authentication Headers
+```
+Authorization: Bearer {token}  // For JWT (if used)
+Cookie: accessToken=...; refreshToken=...  // httpOnly cookies (preferred)
+X-Tenant-Id: {tenantId}  // Required for tenant-aware endpoints
+```
+
+### Standard Response Format
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Success message",
+  "errors": []
+}
+```
+
+### Error Response Format
+```json
+{
+  "success": false,
+  "data": null,
+  "message": "Error description",
+  "errors": ["Detailed error 1", "Detailed error 2"]
+}
+```
+
+### Pagination Response Format
+```json
+{
+  "items": [...],
+  "nextCursor": "cursor_string",
+  "previousCursor": "cursor_string", 
+  "hasNext": true,
+  "hasPrevious": false,
+  "count": 25
+}
+```
+
+---
+
+## 🔧 Testing Endpoints
+
+### Using curl
+```bash
+# Login
+curl -X POST https://clinic.qivr.pro/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@clinic.test","password":"Password123!"}'
+
+# Get patients (with auth cookies)
+curl -X GET https://clinic.qivr.pro/api/patients \
+  -H "X-Tenant-Id: your-tenant-id" \
+  --cookie "accessToken=your-token"
+```
+
+### Using Test Scripts
+```bash
+# Full system test
+node scripts/tests/test-live-system.mjs
+
+# Data flow test
+node scripts/tests/test-data-flow.mjs
+
+# Auth test
+node scripts/tests/test-auth-victory.mjs
+```
+
+---
+
+*Last Updated: November 11, 2025*
+*Total Endpoints: ~60+ across all controllers*
