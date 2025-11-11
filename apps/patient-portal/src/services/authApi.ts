@@ -6,7 +6,7 @@ export interface SignUpRequest {
   firstName: string;
   lastName: string;
   phoneNumber?: string;
-  tenantId: string;
+  tenantId: string; // Patient must specify which clinic they belong to
 }
 
 export interface LoginRequest {
@@ -15,33 +15,31 @@ export interface LoginRequest {
 }
 
 export interface UserInfo {
-  sub: string;
+  username: string;
   email: string;
-  given_name?: string;
-  family_name?: string;
-  phone_number?: string;
-  tenantId: string;
-  role: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  tenantId: string; // Which clinic this patient belongs to
+  role: string; // Should be "Patient"
+  emailVerified: boolean;
+  phoneVerified: boolean;
 }
 
 export interface AuthResponse {
-  accessToken: string;
-  idToken: string;
-  refreshToken: string;
   expiresIn: number;
   userInfo: UserInfo;
 }
 
 class AuthApiService {
   async signUp(data: SignUpRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/signup', {
-      username: data.email, // Use email as username
+    const response = await apiClient.post<AuthResponse>('/auth/register', {
       email: data.email,
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
       phoneNumber: data.phoneNumber || '',
-      tenantId: data.tenantId,
+      tenantId: data.tenantId, // Patient registers under specific clinic
       role: 'Patient',
     });
     return response;
