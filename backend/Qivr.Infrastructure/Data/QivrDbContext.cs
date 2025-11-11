@@ -45,7 +45,7 @@ public class QivrDbContext : DbContext
     // DbSets
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
-    public DbSet<Clinic> Clinics => Set<Clinic>();
+    // Phase 4.1: Removed Clinic DbSet - using Tenant properties instead
     public DbSet<Provider> Providers => Set<Provider>();
     public DbSet<Evaluation> Evaluations => Set<Evaluation>();
     public DbSet<PainMap> PainMaps => Set<PainMap>();
@@ -264,10 +264,7 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.ProviderProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
                 
-            entity.HasOne(e => e.Clinic)
-                .WithMany()
-                .HasForeignKey(e => e.ClinicId)
-                .OnDelete(DeleteBehavior.SetNull);
+            // Phase 4.1: Removed Clinic relationship - using TenantId only
                 
             entity.HasOne(e => e.Evaluation)
                 .WithMany(ev => ev.Appointments)
@@ -491,33 +488,21 @@ public class QivrDbContext : DbContext
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
         
-        // Clinic configuration
-        modelBuilder.Entity<Clinic>(entity =>
-        {
-            entity.ToTable("clinics");
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.TenantId, e.Name });
-            entity.Property(e => e.Metadata).HasConversion(jsonConverter);
-            
-            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
-        });
+        // Phase 4.1: Removed Clinic entity configuration - using Tenant properties instead
         
         // Provider configuration
         modelBuilder.Entity<Provider>(entity =>
         {
             entity.ToTable("providers");
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.TenantId, e.UserId, e.ClinicId });
+            entity.HasIndex(e => new { e.TenantId, e.UserId }); // Phase 4.1: Removed ClinicId from index
             
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            entity.HasOne(e => e.Clinic)
-                .WithMany(c => c.Providers)
-                .HasForeignKey(e => e.ClinicId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Phase 4.1: Removed Clinic relationship - using TenantId only
                 
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });

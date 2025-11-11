@@ -589,9 +589,9 @@ app.MapHub<NotificationHub>("/hubs/notifications");
 var applyMigrations = Environment.GetEnvironmentVariable("ApplyMigrations")?.ToLower() != "false";
 if (applyMigrations)
 {
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
-    await dbContext.Database.MigrateAsync();
+    // Database initialization disabled - schema already exists
+    // using var scope = app.Services.CreateScope();
+    // var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
     
     // Seed test data
     // var seeder = new DataSeeder(dbContext);

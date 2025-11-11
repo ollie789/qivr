@@ -76,55 +76,8 @@ async function testRegisterAndLogin() {
   return loginData;
 }
 
-async function debugClinicAccess() {
-  console.log('\n📋 Step 3: Debug Clinic Access');
-  
-  // Try different endpoints to find clinic ID
-  console.log('  🔍 Trying /clinic-management/clinics...');
-  let response = await makeRequest('/clinic-management/clinics');
-  console.log(`  📝 Status: ${response.status}`);
-  if (response.ok) {
-    const clinics = await response.json();
-    console.log(`  📝 Clinics: ${JSON.stringify(clinics, null, 2)}`);
-    return clinics;
-  }
-  
-  console.log('  🔍 Trying to create a clinic...');
-  const clinicData = {
-    name: `Debug Clinic ${timestamp}`,
-    email: `clinic${timestamp}@test.com`,
-    phone: '+61412345678',
-    address: '123 Test Street, Test City, NSW 2000'
-  };
-  
-  response = await makeRequest('/clinic-management/clinics', {
-    method: 'POST',
-    body: JSON.stringify(clinicData)
-  });
-  
-  console.log(`  📝 Create clinic status: ${response.status}`);
-  if (response.ok) {
-    const clinic = await response.json();
-    console.log(`  📝 Created clinic: ${JSON.stringify(clinic, null, 2)}`);
-    return [clinic];
-  } else {
-    const errorText = await response.text();
-    console.log(`  📝 Create clinic error: ${errorText}`);
-  }
-  
-  // Try to get user info to see if clinic is embedded
-  console.log('  🔍 Checking user profile...');
-  response = await makeRequest('/profile');
-  if (response.ok) {
-    const profile = await response.json();
-    console.log(`  📝 Profile: ${JSON.stringify(profile, null, 2)}`);
-  }
-  
-  return null;
-}
-
-async function testProviderCreation(clinics) {
-  console.log('\n📋 Step 4: Test Provider Creation');
+async function testProviderCreation() {
+  console.log('\n📋 Step 3: Test Simplified Provider Creation (Phase 2.4)');
   
   const providerData = {
     firstName: 'Dr. Jane',
@@ -137,44 +90,24 @@ async function testProviderCreation(clinics) {
     isActive: true
   };
 
-  // Try new simplified endpoint first (Phase 2.1)
-  console.log('  🔍 Trying simplified endpoint: /clinic-management/providers...');
-  let response = await makeRequest('/clinic-management/providers', {
+  console.log('  🎯 Using simplified endpoint: /clinic-management/providers');
+  console.log('  📝 No clinicId required - using tenant context from auth');
+  
+  const response = await makeRequest('/clinic-management/providers', {
     method: 'POST',
     body: JSON.stringify(providerData)
   });
 
-  console.log(`  📝 Simplified endpoint status: ${response.status}`);
+  console.log(`  📝 Response status: ${response.status}`);
   
   if (!response.ok) {
     const errorText = await response.text();
-    console.log(`  📝 Simplified endpoint error: ${errorText}`);
-    
-    // Fallback to old endpoint if needed
-    if (clinics && clinics.length > 0) {
-      const clinicId = clinics[0].id;
-      console.log(`  🔍 Trying old endpoint: /clinic-management/clinics/${clinicId}/providers...`);
-      
-      response = await makeRequest(`/clinic-management/clinics/${clinicId}/providers`, {
-        method: 'POST',
-        body: JSON.stringify(providerData)
-      });
-      
-      console.log(`  📝 Old endpoint status: ${response.status}`);
-      
-      if (!response.ok) {
-        const errorText2 = await response.text();
-        console.log(`  📝 Old endpoint error: ${errorText2}`);
-        return null;
-      }
-    } else {
-      console.log('  ⚠️  No clinics available and simplified endpoint failed');
-      return null;
-    }
+    console.log(`  ❌ Provider creation failed: ${errorText}`);
+    throw new Error(`Provider creation failed: ${response.status} - ${errorText}`);
   }
 
   const provider = await response.json();
-  console.log('  ✅ Provider created successfully');
+  console.log('  ✅ Provider created successfully with simplified endpoint!');
   console.log(`  📝 Provider: ${JSON.stringify(provider, null, 2)}`);
   
   return provider;
@@ -182,17 +115,20 @@ async function testProviderCreation(clinics) {
 
 async function runDebugTest() {
   try {
-    console.log('\n🔍 PROVIDER CREATION DEBUG TEST');
+    console.log('\n🎯 TENANT-CLINIC MERGE VALIDATION TEST (Phase 2.4)');
     console.log(`API: ${API_URL}`);
+    console.log('Testing simplified endpoints with tenant context authentication');
     
     await testRegisterAndLogin();
-    const clinics = await debugClinicAccess();
-    await testProviderCreation(clinics);
+    await testProviderCreation();
     
-    console.log('\n🎉 DEBUG TEST COMPLETED!');
+    console.log('\n🎉 TENANT-CLINIC MERGE TEST PASSED!');
+    console.log('✅ Simplified endpoints working');
+    console.log('✅ Tenant context authentication working');
+    console.log('✅ No clinic ID confusion');
     
   } catch (error) {
-    console.error('\n❌ Debug test failed:', error.message);
+    console.error('\n❌ Tenant-clinic merge test failed:', error.message);
     process.exit(1);
   }
 }

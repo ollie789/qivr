@@ -359,7 +359,6 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         var providerProfile = await _dbContext.Set<Qivr.Core.Entities.Provider>()
             .IgnoreQueryFilters()
             .Include(p => p.User)
-            .Include(p => p.Clinic)
             .FirstOrDefaultAsync(p => p.User != null && p.User.Id == providerId);
 
         if (providerProfile == null)
@@ -496,7 +495,6 @@ public class CalendarDeltaSyncService : ICalendarDeltaSyncService
         var providerProfile = await _dbContext.Set<Qivr.Core.Entities.Provider>()
             .IgnoreQueryFilters()
             .Include(p => p.User)
-            .Include(p => p.Clinic)
             .FirstOrDefaultAsync(p => p.User != null && p.User.Id == providerId);
 
         if (providerProfile == null)

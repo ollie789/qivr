@@ -37,7 +37,6 @@ public class Appointment : TenantEntity
     public virtual User? Patient { get; set; }
     public virtual User? Provider { get; set; }
     public virtual Provider? ProviderProfile { get; set; }
-    public virtual Clinic? Clinic { get; set; }
     public virtual Evaluation? Evaluation { get; set; }
     public virtual User? CancelledByUser { get; set; }
     

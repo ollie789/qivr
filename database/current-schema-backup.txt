@@ -1,0 +1,35 @@
+                                                 List of relations
+ Schema |             Name             | Type  |   Owner   | Persistence | Access method |    Size    | Description 
+--------+------------------------------+-------+-----------+-------------+---------------+------------+-------------
+ public | __EFMigrationsHistory        | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | appointment_waitlist_entries | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | appointments                 | table | qivr_user | permanent   | heap          | 16 kB      | 
+ public | brand_themes                 | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | conversation_participants    | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | conversations                | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | documents                    | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | evaluations                  | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | medical_allergies            | table | qivr_user | permanent   | heap          | 16 kB      | 
+ public | medical_conditions           | table | qivr_user | permanent   | heap          | 16 kB      | 
+ public | medical_immunizations        | table | qivr_user | permanent   | heap          | 16 kB      | 
+ public | medical_lab_results          | table | qivr_user | permanent   | heap          | 16 kB      | 
+ public | medical_medications          | table | qivr_user | permanent   | heap          | 16 kB      | 
+ public | medical_vitals               | table | qivr_user | permanent   | heap          | 16 kB      | 
+ public | messages                     | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | notification_preferences     | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | notifications                | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | pain_coordinates             | table | qivr_user | permanent   | heap          | 0 bytes    | 
+ public | pain_maps                    | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | permissions                  | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | prom_booking_requests        | table | qivr_user | permanent   | heap          | 16 kB      | 
+ public | prom_instances               | table | qivr_user | permanent   | heap          | 48 kB      | 
+ public | prom_responses               | table | qivr_user | permanent   | heap          | 32 kB      | 
+ public | prom_templates               | table | qivr_user | permanent   | heap          | 48 kB      | 
+ public | providers                    | table | qivr_user | permanent   | heap          | 24 kB      | 
+ public | role_permissions             | table | qivr_user | permanent   | heap          | 0 bytes    | 
+ public | roles                        | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | tenants                      | table | qivr_user | permanent   | heap          | 48 kB      | 
+ public | user_roles                   | table | qivr_user | permanent   | heap          | 8192 bytes | 
+ public | users                        | table | qivr_user | permanent   | heap          | 64 kB      | 
+(30 rows)
+

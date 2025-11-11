@@ -10,7 +10,7 @@ public interface IClinicManagementService
 {
     Task<IEnumerable<ClinicSummary>> GetClinicsAsync(Guid tenantId, int page = 1, int pageSize = 20);
     Task<ClinicDetail?> GetClinicDetailsAsync(Guid tenantId, Guid clinicId);
-    Task<Clinic> CreateClinicAsync(Guid tenantId, CreateClinicRequest request);
+    Task<ClinicDetail> CreateClinicAsync(Guid tenantId, CreateClinicRequest request);
     Task<bool> UpdateClinicAsync(Guid tenantId, Guid clinicId, UpdateClinicRequest request);
     Task<IEnumerable<ProviderSummary>> GetClinicProvidersAsync(Guid tenantId, Guid clinicId, bool activeOnly = true);
     Task<Qivr.Core.Entities.Provider> AddProviderToClinicAsync(Guid tenantId, Guid clinicId, CreateProviderRequest request);
@@ -35,100 +35,110 @@ public class ClinicManagementService : IClinicManagementService
 
     public async Task<IEnumerable<ClinicSummary>> GetClinicsAsync(Guid tenantId, int page = 1, int pageSize = 20)
     {
-        var query = _context.Clinics
-            .Where(c => c.TenantId == tenantId);
+        // Phase 3.3: Use Tenant instead of Clinic entity
+        // Since we have tenant-clinic merge, return the tenant as clinic
+        var tenant = await _context.Tenants
+            .Where(t => t.Id == tenantId)
+            .FirstOrDefaultAsync();
 
-        var totalCount = await query.CountAsync();
+        if (tenant == null)
+            return new List<ClinicSummary>();
 
-        var clinics = await query
-            .OrderBy(c => c.Name)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        // Get counts for the tenant (which represents the clinic)
+        var patientCount = await _context.Users
+            .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
 
-        var summaries = new List<ClinicSummary>();
+        var providerCount = await _context.Providers
+            .CountAsync(p => p.TenantId == tenantId && p.IsActive);
 
-        foreach (var clinic in clinics)
+        var todayStart = DateTime.UtcNow.Date;
+        var todayEnd = todayStart.AddDays(1);
+
+        var appointmentsToday = await _context.Appointments
+            .CountAsync(a => a.TenantId == tenantId && 
+                           a.ScheduledStart >= todayStart && 
+                           a.ScheduledStart < todayEnd &&
+                           a.Status != AppointmentStatus.Cancelled);
+
+        var pendingPROMs = await _context.PromInstances
+            .CountAsync(p => p.TenantId == tenantId && p.Status == PromStatus.Pending);
+
+        return new List<ClinicSummary>
         {
-            // Get counts for each clinic
-            var patientCount = await _context.Users
-                .CountAsync(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
-
-            var providerCount = await _context.Providers
-                .CountAsync(p => p.TenantId == tenantId && p.ClinicId == clinic.Id && p.IsActive);
-
-            var todayStart = DateTime.UtcNow.Date;
-            var todayEnd = todayStart.AddDays(1);
-
-            var appointmentsToday = await _context.Appointments
-                .CountAsync(a => a.TenantId == tenantId && 
-                               a.ClinicId == clinic.Id &&
-                               a.ScheduledStart >= todayStart && 
-                               a.ScheduledStart < todayEnd &&
-                               a.Status != AppointmentStatus.Cancelled);
-
-            var pendingPROMs = await _context.PromInstances
-                .CountAsync(p => p.TenantId == tenantId &&
-                               p.Status == PromStatus.Pending);
-
-            summaries.Add(new ClinicSummary
+            new ClinicSummary
             {
-                Id = clinic.Id,
-                Name = clinic.Name,
-                Address = FormatAddress(clinic),
-                Phone = clinic.Phone ?? "",
-                Email = clinic.Email ?? "",
-                IsActive = clinic.IsActive,
+                Id = tenant.Id,
+                Name = tenant.Name,
+                Address = FormatAddress(tenant),
+                Phone = tenant.Phone ?? "",
+                Email = tenant.Email ?? "",
+                IsActive = tenant.IsActive,
                 PatientCount = patientCount,
                 ProviderCount = providerCount,
                 AppointmentsToday = appointmentsToday,
                 PendingPROMs = pendingPROMs,
-                TotalCount = totalCount
-            });
-        }
+                TotalCount = 1 // Always 1 since tenant = clinic
+            }
+        };
+    }
 
-        return summaries;
+    private string FormatAddress(Tenant tenant)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(tenant.Address)) parts.Add(tenant.Address);
+        if (!string.IsNullOrEmpty(tenant.City)) parts.Add(tenant.City);
+        if (!string.IsNullOrEmpty(tenant.State)) parts.Add(tenant.State);
+        if (!string.IsNullOrEmpty(tenant.ZipCode)) parts.Add(tenant.ZipCode);
+        return string.Join(", ", parts);
     }
 
     public async Task<ClinicDetail?> GetClinicDetailsAsync(Guid tenantId, Guid clinicId)
     {
-        var clinic = await _context.Clinics
-            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Id == clinicId);
+        // Phase 3.3: Use Tenant properties instead of Clinic entity
+        // Since clinicId = tenantId, we get clinic details from tenant
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
 
-        if (clinic == null)
+        if (tenant == null)
             return null;
 
-        // Get statistics
+        // Get statistics (still using tenantId for provider/appointment counts)
         var stats = await GetClinicStatisticsAsync(tenantId, clinicId);
 
-        // Parse operating hours from metadata
-        var operatingHours = GetOperatingHours(clinic.Metadata);
-
-        // Parse services and insurance from metadata
-        var services = GetServices(clinic.Metadata);
-        var acceptedInsurance = GetAcceptedInsurance(clinic.Metadata);
+        // Extract metadata
+        var operatingHours = GetOperatingHours(tenant.Metadata);
+            
+        var servicesJson = GetFromMetadata(tenant.Metadata, "services");
+        var services = string.IsNullOrEmpty(servicesJson) 
+            ? Array.Empty<string>() 
+            : JsonSerializer.Deserialize<string[]>(servicesJson) ?? Array.Empty<string>();
+            
+        var acceptedInsuranceJson = GetFromMetadata(tenant.Metadata, "acceptedInsurance");
+        var acceptedInsurance = string.IsNullOrEmpty(acceptedInsuranceJson) 
+            ? Array.Empty<string>() 
+            : JsonSerializer.Deserialize<string[]>(acceptedInsuranceJson) ?? Array.Empty<string>();
 
         return new ClinicDetail
         {
-            Id = clinic.Id,
-            Name = clinic.Name,
-            Description = clinic.Description ?? "",
+            Id = tenant.Id,
+            Name = tenant.Name,
+            Description = tenant.Description ?? "",
             Address = new ClinicAddress
             {
-                Street = clinic.Address ?? "",
-                City = clinic.City ?? "",
-                State = clinic.State ?? "",
-                PostalCode = clinic.ZipCode ?? "",
-                Country = clinic.Country ?? "USA"
+                Street = tenant.Address ?? "",
+                City = tenant.City ?? "",
+                State = tenant.State ?? "",
+                PostalCode = tenant.ZipCode ?? "",
+                Country = tenant.Country ?? "USA"
             },
-            Phone = clinic.Phone ?? "",
-            Fax = GetFromMetadata(clinic.Metadata, "fax") ?? "",
-            Email = clinic.Email ?? "",
-            Website = GetFromMetadata(clinic.Metadata, "website") ?? "",
-            IsActive = clinic.IsActive,
-            EstablishedDate = clinic.CreatedAt,
-            LicenseNumber = GetFromMetadata(clinic.Metadata, "licenseNumber") ?? "",
-            TaxId = GetFromMetadata(clinic.Metadata, "taxId") ?? "",
+            Phone = tenant.Phone ?? "",
+            Fax = GetFromMetadata(tenant.Metadata, "fax") ?? "",
+            Email = tenant.Email ?? "",
+            Website = GetFromMetadata(tenant.Metadata, "website") ?? "",
+            IsActive = tenant.IsActive,
+            EstablishedDate = tenant.CreatedAt,
+            LicenseNumber = GetFromMetadata(tenant.Metadata, "licenseNumber") ?? "",
+            TaxId = GetFromMetadata(tenant.Metadata, "taxId") ?? "",
             OperatingHours = operatingHours,
             Services = services,
             AcceptedInsurance = acceptedInsurance,
@@ -136,97 +146,103 @@ public class ClinicManagementService : IClinicManagementService
         };
     }
 
-    public async Task<Clinic> CreateClinicAsync(Guid tenantId, CreateClinicRequest request)
+    public async Task<ClinicDetail> CreateClinicAsync(Guid tenantId, CreateClinicRequest request)
     {
-        var clinic = new Clinic
-        {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
-            Name = request.Name,
-            Description = request.Description,
-            Address = request.Street,
-            City = request.City,
-            State = request.State,
-            ZipCode = request.PostalCode,
-            Country = request.Country ?? "USA",
-            Phone = request.Phone,
-            Email = request.Email,
-            IsActive = true,
-            Metadata = new Dictionary<string, object>
-            {
-                ["fax"] = request.Fax ?? "",
-                ["website"] = request.Website ?? "",
-                ["licenseNumber"] = request.LicenseNumber ?? "",
-                ["taxId"] = request.TaxId ?? "",
-                ["services"] = request.Services ?? Array.Empty<string>(),
-                ["acceptedInsurance"] = request.AcceptedInsurance ?? Array.Empty<string>(),
-                ["operatingHours"] = request.OperatingHours ?? new Dictionary<string, object>()
-            },
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        // Phase 4.1: Update tenant properties instead of creating separate clinic
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
 
-        _context.Clinics.Add(clinic);
+        if (tenant == null)
+            throw new InvalidOperationException($"Tenant {tenantId} not found");
+
+        // Update tenant with clinic properties
+        tenant.Description = request.Description;
+        tenant.Address = request.Street;
+        tenant.City = request.City;
+        tenant.State = request.State;
+        tenant.ZipCode = request.PostalCode;
+        tenant.Country = request.Country ?? "USA";
+        tenant.Phone = request.Phone;
+        tenant.Email = request.Email;
+        tenant.IsActive = true;
+        tenant.UpdatedAt = DateTime.UtcNow;
+
+        // Store additional metadata in tenant metadata
+        var metadata = tenant.Metadata ?? new Dictionary<string, object>();
+        metadata["fax"] = request.Fax ?? "";
+        metadata["website"] = request.Website ?? "";
+        metadata["licenseNumber"] = request.LicenseNumber ?? "";
+        metadata["taxId"] = request.TaxId ?? "";
+        metadata["services"] = request.Services ?? Array.Empty<string>();
+        metadata["acceptedInsurance"] = request.AcceptedInsurance ?? Array.Empty<string>();
+        metadata["operatingHours"] = request.OperatingHours ?? new Dictionary<string, object>();
+        tenant.Metadata = metadata;
+
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Created clinic {ClinicId} in tenant {TenantId}", clinic.Id, tenantId);
+        _logger.LogInformation("Updated tenant clinic properties {TenantId}", tenantId);
 
-        return clinic;
+        // Return clinic details from tenant
+        return await GetClinicDetailsAsync(tenantId, tenantId) ?? throw new InvalidOperationException("Failed to retrieve updated clinic details");
     }
 
     public async Task<bool> UpdateClinicAsync(Guid tenantId, Guid clinicId, UpdateClinicRequest request)
     {
-        var clinic = await _context.Clinics
-            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Id == clinicId);
+        // Phase 4.1: Update tenant properties instead of clinic entity
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
 
-        if (clinic == null)
+        if (tenant == null)
             return false;
 
         // Update basic fields
         if (!string.IsNullOrEmpty(request.Name))
-            clinic.Name = request.Name;
+            tenant.Name = request.Name;
 
         if (!string.IsNullOrEmpty(request.Description))
-            clinic.Description = request.Description;
+            tenant.Description = request.Description;
 
         if (!string.IsNullOrEmpty(request.Phone))
-            clinic.Phone = request.Phone;
+            tenant.Phone = request.Phone;
 
         if (!string.IsNullOrEmpty(request.Email))
-            clinic.Email = request.Email;
+            tenant.Email = request.Email;
 
         if (!string.IsNullOrEmpty(request.Street))
-            clinic.Address = request.Street;
+            tenant.Address = request.Street;
 
         if (!string.IsNullOrEmpty(request.City))
-            clinic.City = request.City;
+            tenant.City = request.City;
 
         if (!string.IsNullOrEmpty(request.State))
-            clinic.State = request.State;
+            tenant.State = request.State;
 
         if (!string.IsNullOrEmpty(request.PostalCode))
-            clinic.ZipCode = request.PostalCode;
+            tenant.ZipCode = request.PostalCode;
 
         // Update metadata
+        var metadata = tenant.Metadata ?? new Dictionary<string, object>();
+        
         if (request.Fax != null)
-            clinic.Metadata["fax"] = request.Fax;
+            metadata["fax"] = request.Fax;
 
         if (request.Website != null)
-            clinic.Metadata["website"] = request.Website;
+            metadata["website"] = request.Website;
 
         if (request.Services != null)
-            clinic.Metadata["services"] = request.Services;
+            metadata["services"] = request.Services;
 
         if (request.AcceptedInsurance != null)
-            clinic.Metadata["acceptedInsurance"] = request.AcceptedInsurance;
+            metadata["acceptedInsurance"] = request.AcceptedInsurance;
 
         if (request.OperatingHours != null)
-            clinic.Metadata["operatingHours"] = request.OperatingHours;
+            metadata["operatingHours"] = request.OperatingHours;
 
-        clinic.UpdatedAt = DateTime.UtcNow;
+        tenant.Metadata = metadata;
+        tenant.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Updated clinic {ClinicId} in tenant {TenantId}", clinicId, tenantId);
+        _logger.LogInformation("Updated tenant clinic properties {TenantId}", tenantId);
 
         return true;
     }
@@ -356,7 +372,6 @@ public class ClinicManagementService : IClinicManagementService
     {
         var provider = await _context.Providers
             .Include(p => p.User)
-            .Include(p => p.Clinic)
             .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.UserId == providerId);
 
         if (provider == null || provider.User == null)
@@ -394,7 +409,7 @@ public class ClinicManagementService : IClinicManagementService
             NpiNumber = provider.NpiNumber ?? "",
             IsActive = provider.IsActive,
             ClinicId = provider.ClinicId,
-            ClinicName = provider.Clinic?.Name ?? "",
+            ClinicName = "", // Will be populated from tenant if needed
             Biography = GetFromUserPreferences(provider.User.Preferences, "biography") ?? "",
             Education = GetEducation(provider.User.Preferences),
             Certifications = GetCertifications(provider.User.Preferences),
@@ -501,14 +516,14 @@ public class ClinicManagementService : IClinicManagementService
 
     public async Task<IEnumerable<Department>> GetDepartmentsAsync(Guid tenantId, Guid clinicId)
     {
-        // Since we don't have a dedicated Department table, we'll extract from clinic metadata
-        var clinic = await _context.Clinics
-            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Id == clinicId);
+        // Phase 4.1: Get departments from tenant metadata
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
 
-        if (clinic == null)
+        if (tenant == null)
             return new List<Department>();
 
-        var departmentsJson = GetFromMetadata(clinic.Metadata, "departments");
+        var departmentsJson = GetFromMetadata(tenant.Metadata, "departments");
         if (string.IsNullOrEmpty(departmentsJson))
             return GetDefaultDepartments(clinicId);
 
@@ -525,11 +540,12 @@ public class ClinicManagementService : IClinicManagementService
 
     public async Task<Department> CreateDepartmentAsync(Guid tenantId, Guid clinicId, CreateDepartmentRequest request)
     {
-        var clinic = await _context.Clinics
-            .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Id == clinicId);
+        // Phase 4.1: Use tenant instead of clinic
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
 
-        if (clinic == null)
-            throw new InvalidOperationException($"Clinic {clinicId} not found");
+        if (tenant == null)
+            throw new InvalidOperationException($"Tenant {tenantId} not found");
 
         var departments = (await GetDepartmentsAsync(tenantId, clinicId)).ToList();
 
@@ -545,12 +561,14 @@ public class ClinicManagementService : IClinicManagementService
 
         departments.Add(newDepartment);
 
-        clinic.Metadata["departments"] = JsonSerializer.Serialize(departments);
-        clinic.UpdatedAt = DateTime.UtcNow;
+        var metadata = tenant.Metadata ?? new Dictionary<string, object>();
+        metadata["departments"] = JsonSerializer.Serialize(departments);
+        tenant.Metadata = metadata;
+        tenant.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Created department {DepartmentId} in clinic {ClinicId}", newDepartment.Id, clinicId);
+        _logger.LogInformation("Created department {DepartmentId} in tenant {TenantId}", newDepartment.Id, tenantId);
 
         return newDepartment;
     }
@@ -615,25 +633,6 @@ public class ClinicManagementService : IClinicManagementService
     }
 
     // Helper methods
-    private string FormatAddress(Clinic clinic)
-    {
-        var parts = new List<string>();
-        
-        if (!string.IsNullOrEmpty(clinic.Address))
-            parts.Add(clinic.Address);
-        
-        if (!string.IsNullOrEmpty(clinic.City))
-            parts.Add(clinic.City);
-        
-        if (!string.IsNullOrEmpty(clinic.State))
-            parts.Add(clinic.State);
-        
-        if (!string.IsNullOrEmpty(clinic.ZipCode))
-            parts.Add(clinic.ZipCode);
-
-        return string.Join(", ", parts);
-    }
-
     private string? GetFromMetadata(Dictionary<string, object>? metadata, string key)
     {
         if (metadata == null || !metadata.ContainsKey(key))

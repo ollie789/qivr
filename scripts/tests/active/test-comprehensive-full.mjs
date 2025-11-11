@@ -39,13 +39,34 @@ async function makeRequest(endpoint, options = {}) {
 }
 
 async function testLogin() {
-  console.log('\n📋 Test 1: Login with Admin User');
+  console.log('\n📋 Test 1: Register & Login with New Admin User');
   
+  // First register a new clinic/admin user
+  const registerResponse = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: `admin${timestamp}@clinic.test`,
+      password: 'TestPassword123!',
+      firstName: 'Test',
+      lastName: 'Admin',
+      clinicName: `Test Clinic ${timestamp}`
+    }),
+    credentials: 'include'
+  });
+
+  if (!registerResponse.ok) {
+    console.log(`  ⚠️  Registration failed: ${registerResponse.status}, trying existing user`);
+  } else {
+    console.log('  ✅ New clinic registered successfully');
+  }
+
+  // Now login with the credentials
   const loginResponse = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'test1762833623540@clinic.test',
+      email: `admin${timestamp}@clinic.test`,
       password: 'TestPassword123!'
     }),
     credentials: 'include'
@@ -102,20 +123,8 @@ async function testCreatePatient() {
 async function testCreateProvider() {
   console.log('\n📋 Test 3: Create Provider (Admin User)');
   
-  // First get the clinic ID for this tenant
-  const clinicsResponse = await makeRequest('/clinic-management/clinics');
-  if (!clinicsResponse.ok) {
-    console.log(`  ⚠️  Could not fetch clinics: ${clinicsResponse.status}`);
-    return { id: '44444444-4444-4444-9444-444444444444' };
-  }
-  
-  const clinics = await clinicsResponse.json();
-  if (!clinics || clinics.length === 0) {
-    console.log('  ⚠️  No clinics found for tenant');
-    return { id: '44444444-4444-4444-9444-444444444444' };
-  }
-  
-  const clinicId = clinics[0].id;
+  // Use tenant ID directly (clinic data is now in tenants table)
+  // tenantId is already available as global variable
   
   const providerData = {
     firstName: 'Dr. Jane',
@@ -128,7 +137,7 @@ async function testCreateProvider() {
     isActive: true
   };
 
-  const response = await makeRequest(`/clinic-management/clinics/${clinicId}/providers`, {
+  const response = await makeRequest(`/clinic-management/providers`, {
     method: 'POST',
     body: JSON.stringify(providerData)
   });
@@ -137,23 +146,23 @@ async function testCreateProvider() {
     console.log(`  ⚠️  Provider creation failed: ${response.status}, trying to get existing providers`);
     
     // Try to get existing providers
-    const existingResponse = await makeRequest(`/clinic-management/clinics/${clinicId}/providers`);
+    const existingResponse = await makeRequest(`/clinic-management/providers`);
     if (existingResponse.ok) {
       const providers = await existingResponse.json();
       if (providers && providers.length > 0) {
         console.log(`  ✅ Using existing provider: ${providers[0].firstName} ${providers[0].lastName}`);
-        return { id: providers[0].id, clinicId };
+        return { id: providers[0].id, tenantId };
       }
     }
     
-    return { id: '44444444-4444-4444-9444-444444444444', clinicId };
+    return { id: '44444444-4444-4444-9444-444444444444', tenantId };
   }
 
   const provider = await response.json();
   console.log('  ✅ Provider created successfully');
   console.log(`  📝 Provider ID: ${provider.id}`);
   
-  return { ...provider, clinicId };
+  return { ...provider, tenantId };
 }
 
 async function testCreateAppointment(patient, provider) {
@@ -167,7 +176,7 @@ async function testCreateAppointment(patient, provider) {
   const appointmentData = {
     patientId: patient.id,
     providerId: provider.id,
-    clinicId: provider.clinicId || tenantId,
+    tenantId: provider.tenantId || tenantId,
     appointmentType: 'Consultation',
     startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),

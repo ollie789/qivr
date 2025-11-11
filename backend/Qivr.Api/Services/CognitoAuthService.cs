@@ -239,21 +239,15 @@ public class CognitoAuthService : ICognitoAuthService
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                await _dbContext.Tenants.AddAsync(tenant);
                 
-                // Create clinic for new tenant
-                var clinic = new Clinic
-                {
-                    Id = tenant.Id,  // 🎯 PHASE 1.1: Make clinic ID = tenant ID
-                    TenantId = tenant.Id,
-                    Name = $"{request.FirstName} {request.LastName} Clinic",
-                    Email = request.Email,
-                    Phone = string.Empty,
-                    Address = string.Empty,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                await _dbContext.Clinics.AddAsync(clinic);
+                // Phase 4.1: Set clinic properties directly on tenant
+                tenant.Description = $"{request.FirstName} {request.LastName} Clinic";
+                tenant.Email = request.Email;
+                tenant.Phone = string.Empty;
+                tenant.Address = string.Empty;
+                tenant.IsActive = true;
+                
+                await _dbContext.Tenants.AddAsync(tenant);
             }
             
             // Determine user type from role

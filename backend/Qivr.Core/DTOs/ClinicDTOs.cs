@@ -3,7 +3,8 @@ using System.Collections.Generic;
 
 namespace Qivr.Core.DTOs
 {
-    // Clinic Management DTOs
+    // Phase 4.4: Clinic Management DTOs (now represent Tenant clinic properties)
+    // These DTOs are still valid as they represent clinic data that's now stored in Tenant entity
     public class OperatingHoursDto
     {
         public string Day { get; set; } = string.Empty;

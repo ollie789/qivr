@@ -309,93 +309,52 @@ internal static class SeedRunner
         {
             await ApplyTenantContextAsync(dbContext, tenantSeed.Id, logger);
 
-            var query = dbContext.Clinics
+            // Phase 4.1: Clinic data is now part of Tenant entity
+            var tenant = await dbContext.Tenants
                 .IgnoreQueryFilters()
                 .AsTracking()
-                .Where(c => c.TenantId == tenantSeed.Id);
+                .FirstOrDefaultAsync(t => t.Id == tenantSeed.Id);
 
-            Clinic? clinic = null;
-
-            if (clinicSeed.Id.HasValue)
+            if (tenant == null)
             {
-                clinic = await query.FirstOrDefaultAsync(c => c.Id == clinicSeed.Id.Value);
-            }
-
-            if (clinic == null)
-            {
-                clinic = await query.FirstOrDefaultAsync(c => c.Name == clinicSeed.Name);
-            }
-
-            if (clinic == null)
-            {
-                report.CreatedClinics++;
-                logger.LogInformation("{Prefix}Creating clinic {ClinicName}", dryRun ? "[dry-run] " : string.Empty, clinicSeed.Name);
-
-                if (dryRun)
-                {
-                    if (!clinicSeed.Id.HasValue)
-                    {
-                        clinicSeed.Id = Guid.NewGuid();
-                    }
-                    continue;
-                }
-
-                clinic = new Clinic
-                {
-                    Id = clinicSeed.Id ?? Guid.NewGuid(),
-                    TenantId = tenantSeed.Id,
-                    Name = clinicSeed.Name,
-                    Description = clinicSeed.Description,
-                    Address = clinicSeed.Address,
-                    City = clinicSeed.City,
-                    State = clinicSeed.State,
-                    ZipCode = clinicSeed.ZipCode,
-                    Country = clinicSeed.Country,
-                    Phone = clinicSeed.Phone,
-                    Email = clinicSeed.Email,
-                    IsActive = clinicSeed.IsActive,
-                    Metadata = new Dictionary<string, object>()
-                };
-
-                dbContext.Clinics.Add(clinic);
-                await dbContext.SaveChangesAsync();
-                clinicSeed.Id = clinic.Id;
+                logger.LogWarning("Tenant {TenantId} not found, skipping clinic seeding", tenantSeed.Id);
                 continue;
             }
 
+            // Check if clinic properties need to be updated
             var updated = false;
 
-            updated |= UpdateIfChanged(clinic, c => c.Name, clinicSeed.Name, v => clinic.Name = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.Description, clinicSeed.Description, v => clinic.Description = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.Address, clinicSeed.Address, v => clinic.Address = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.City, clinicSeed.City, v => clinic.City = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.State, clinicSeed.State, v => clinic.State = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.ZipCode, clinicSeed.ZipCode, v => clinic.ZipCode = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.Country, clinicSeed.Country, v => clinic.Country = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.Phone, clinicSeed.Phone, v => clinic.Phone = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.Email, clinicSeed.Email, v => clinic.Email = v, !dryRun);
-            updated |= UpdateIfChanged(clinic, c => c.IsActive, clinicSeed.IsActive, v => clinic.IsActive = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.Description, clinicSeed.Description, v => tenant.Description = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.Address, clinicSeed.Address, v => tenant.Address = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.City, clinicSeed.City, v => tenant.City = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.State, clinicSeed.State, v => tenant.State = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.ZipCode, clinicSeed.ZipCode, v => tenant.ZipCode = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.Country, clinicSeed.Country, v => tenant.Country = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.Phone, clinicSeed.Phone, v => tenant.Phone = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.Email, clinicSeed.Email, v => tenant.Email = v, !dryRun);
+            updated |= UpdateIfChanged(tenant, t => t.IsActive, clinicSeed.IsActive, v => tenant.IsActive = v, !dryRun);
 
             if (updated)
             {
                 report.UpdatedClinics++;
                 if (dryRun)
                 {
-                    logger.LogInformation("[dry-run] Would persist clinic updates for {ClinicId}", clinic.Id);
-                    dbContext.Entry(clinic).State = EntityState.Unchanged;
+                    logger.LogInformation("[dry-run] Would persist tenant clinic updates for {TenantId}", tenant.Id);
+                    dbContext.Entry(tenant).State = EntityState.Unchanged;
                 }
                 else
                 {
                     await dbContext.SaveChangesAsync();
-                    logger.LogInformation("Updated clinic {ClinicId}", clinic.Id);
+                    logger.LogInformation("Updated tenant clinic properties {TenantId}", tenant.Id);
                 }
             }
             else
             {
-                logger.LogDebug("Clinic {ClinicId} already up to date", clinic.Id);
+                logger.LogDebug("Tenant clinic properties {TenantId} already up to date", tenant.Id);
             }
 
-            clinicSeed.Id = clinic.Id;
+            // Set clinic ID to tenant ID (since they're the same now)
+            clinicSeed.Id = tenant.Id;
         }
     }
 
@@ -415,13 +374,14 @@ internal static class SeedRunner
                 continue;
             }
 
-            var clinic = await dbContext.Clinics
+            // Phase 4.1: Since clinic = tenant, use tenant ID directly
+            var tenant = await dbContext.Tenants
                 .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(c => c.TenantId == tenantSeed.Id && c.Name == providerSeed.ClinicName);
+                .FirstOrDefaultAsync(t => t.Id == tenantSeed.Id);
 
-            if (clinic == null)
+            if (tenant == null)
             {
-                logger.LogWarning("Skipping provider seed for {Email}: clinic {Clinic} not found", providerSeed.UserEmail, providerSeed.ClinicName);
+                logger.LogWarning("Skipping provider seed for {Email}: tenant {TenantId} not found", providerSeed.UserEmail, tenantSeed.Id);
                 continue;
             }
 
@@ -458,7 +418,7 @@ internal static class SeedRunner
                     Id = providerSeed.Id ?? Guid.NewGuid(),
                     TenantId = tenantSeed.Id,
                     UserId = user.Id,
-                    ClinicId = clinic.Id,
+                    ClinicId = tenantSeed.Id, // Phase 4.1: ClinicId = TenantId
                     Title = providerSeed.Title,
                     Specialty = providerSeed.Specialty,
                     LicenseNumber = providerSeed.LicenseNumber,
@@ -474,7 +434,7 @@ internal static class SeedRunner
 
             var updated = false;
 
-            updated |= UpdateIfChanged(provider, p => p.ClinicId, clinic.Id, v => provider.ClinicId = v, !dryRun);
+            updated |= UpdateIfChanged(provider, p => p.ClinicId, tenantSeed.Id, v => provider.ClinicId = v, !dryRun);
             updated |= UpdateIfChanged(provider, p => p.Title, providerSeed.Title, v => provider.Title = v, !dryRun);
             updated |= UpdateIfChanged(provider, p => p.Specialty, providerSeed.Specialty, v => provider.Specialty = v, !dryRun);
             updated |= UpdateIfChanged(provider, p => p.LicenseNumber, providerSeed.LicenseNumber, v => provider.LicenseNumber = v, !dryRun);
@@ -593,7 +553,7 @@ internal static class SeedRunner
                     PatientId = patient.Id,
                     ProviderId = providerUser.Id,
                     ProviderProfileId = providerProfile.Id,
-                    ClinicId = providerProfile.ClinicId,
+                    ClinicId = tenantSeed.Id, // Phase 4.1: ClinicId = TenantId
                     ScheduledStart = startTime,
                     ScheduledEnd = endTime,
                     AppointmentType = appointmentSeed.AppointmentType,
@@ -616,7 +576,7 @@ internal static class SeedRunner
             updated |= UpdateIfChanged(appointment, a => a.PatientId, patient.Id, v => appointment.PatientId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ProviderId, providerUser.Id, v => appointment.ProviderId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ProviderProfileId, providerProfile.Id, v => appointment.ProviderProfileId = v, !dryRun);
-            updated |= UpdateIfChanged(appointment, a => a.ClinicId, providerProfile.ClinicId, v => appointment.ClinicId = v, !dryRun);
+            updated |= UpdateIfChanged(appointment, a => a.ClinicId, tenantSeed.Id, v => appointment.ClinicId = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ScheduledStart, startTime, v => appointment.ScheduledStart = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.ScheduledEnd, endTime, v => appointment.ScheduledEnd = v, !dryRun);
             updated |= UpdateIfChanged(appointment, a => a.AppointmentType, appointmentSeed.AppointmentType, v => appointment.AppointmentType = v, !dryRun);

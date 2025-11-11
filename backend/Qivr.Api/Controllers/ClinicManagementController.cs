@@ -8,10 +8,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Qivr.Api.Services;
 using Qivr.Core.DTOs;
-using Qivr.Core.Entities;
+using Qivr.Api.Constants;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
-using Qivr.Api.Constants;
+using Qivr.Core.Entities;
 
 namespace Qivr.Api.Controllers;
 
@@ -39,7 +39,7 @@ public class ClinicManagementController : ControllerBase
 
     // GET: api/clinic-management/clinics
     [HttpGet("clinics")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin,Admin")]
+    [Authorize(Roles = AuthorizationRoles.Admin)]
     [ProducesResponseType(typeof(IEnumerable<ClinicDto>), 200)]
     public async Task<IActionResult> GetClinics([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
@@ -71,7 +71,7 @@ public class ClinicManagementController : ControllerBase
     
     // GET: api/clinic-management/clinics/{clinicId}
     [HttpGet("clinics/{clinicId}")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin,Provider")]
+    [Authorize(Roles = AuthorizationRoles.Admin)]
     [ProducesResponseType(typeof(ClinicDetailDto), 200)]
     public async Task<IActionResult> GetClinicDetails(Guid clinicId)
     {
@@ -95,7 +95,7 @@ public class ClinicManagementController : ControllerBase
     
     // POST: api/clinic-management/clinics
     [HttpPost("clinics")]
-    [Authorize(Roles = "SystemAdmin")]
+    [Authorize(Roles = AuthorizationRoles.Admin)] // TODO: Future - SystemAdmin only for multi-tenant creation
     [ProducesResponseType(typeof(ClinicDto), 201)]
     public async Task<IActionResult> CreateClinic([FromBody] CreateClinicDto dto)
     {
@@ -139,16 +139,9 @@ public class ClinicManagementController : ControllerBase
             {
                 Id = clinic.Id,
                 Name = clinic.Name,
-                Address = FormatAddress(new ClinicAddress
-                {
-                    Street = clinic.Address ?? string.Empty,
-                    City = clinic.City ?? string.Empty,
-                    State = clinic.State ?? string.Empty,
-                    PostalCode = clinic.ZipCode ?? string.Empty,
-                    Country = clinic.Country ?? "USA"
-                }),
-                Phone = clinic.Phone ?? string.Empty,
-                Email = clinic.Email ?? string.Empty,
+                Address = FormatAddress(clinic.Address),
+                Phone = clinic.Phone,
+                Email = clinic.Email,
                 IsActive = clinic.IsActive,
                 PatientCount = 0,
                 ProviderCount = 0,
@@ -202,10 +195,11 @@ public class ClinicManagementController : ControllerBase
 
         if (dto.IsActive.HasValue)
         {
-            var clinic = await _context.Clinics.FirstOrDefaultAsync(c => c.Id == clinicId);
-            if (clinic != null)
+            // Phase 4.1: Update tenant IsActive instead of clinic
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId);
+            if (tenant != null)
             {
-                clinic.IsActive = dto.IsActive.Value;
+                tenant.IsActive = dto.IsActive.Value;
                 await _context.SaveChangesAsync();
             }
         }
@@ -215,7 +209,7 @@ public class ClinicManagementController : ControllerBase
     
     // GET: api/clinic-management/providers (PHASE 2.1: Simplified endpoint)
     [HttpGet("providers")]
-    [Authorize(Roles = "Admin,SystemAdmin,ClinicAdmin,Provider,Staff")]
+    [Authorize(Roles = AuthorizationRoles.AllRoles)]
     [ProducesResponseType(typeof(IEnumerable<ProviderDto>), 200)]
     public async Task<IActionResult> GetProviders([FromQuery] bool activeOnly = true)
     {
@@ -229,8 +223,9 @@ public class ClinicManagementController : ControllerBase
         // Use tenantId as clinicId since they're now the same
         var clinicId = tenantId;
         
-        var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
-        if (!clinicExists)
+        // Phase 4.1: Check tenant existence instead of clinic
+        var tenantExists = await _context.Tenants.AsNoTracking().AnyAsync(t => t.Id == tenantId);
+        if (!tenantExists)
         {
             return NotFound();
         }
@@ -241,7 +236,7 @@ public class ClinicManagementController : ControllerBase
     
     // POST: api/clinic-management/providers (PHASE 2.1: Simplified endpoint)
     [HttpPost("providers")]
-    [Authorize(Roles = "SystemAdmin,Admin")]
+    [Authorize(Roles = AuthorizationRoles.Admin)] // TODO: Future expansion - add Staff, Clinician with specific permissions
     [ProducesResponseType(typeof(ProviderDto), 201)]
     public async Task<IActionResult> CreateProvider([FromBody] CreateProviderDto dto)
     {
@@ -259,10 +254,11 @@ public class ClinicManagementController : ControllerBase
         // Use tenantId as clinicId since they're now the same (PHASE 1 unification)
         var clinicId = tenantId;
 
-        var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
-        if (!clinicExists)
+        // Phase 4.1: Check tenant existence instead of clinic
+        var tenantExists = await _context.Tenants.AsNoTracking().AnyAsync(t => t.Id == tenantId);
+        if (!tenantExists)
         {
-            return NotFound(new { error = "Clinic not found for tenant" });
+            return NotFound(new { error = "Tenant not found" });
         }
 
         var request = new CreateProviderRequest
@@ -305,7 +301,7 @@ public class ClinicManagementController : ControllerBase
     
     // POST: api/clinic-management/clinics/{clinicId}/providers
     [HttpPost("clinics/{clinicId}/providers")]
-    [Authorize(Roles = "SystemAdmin,Admin")]
+    [Authorize(Roles = AuthorizationRoles.Admin)]
     [ProducesResponseType(typeof(ProviderDto), 201)]
     public async Task<IActionResult> AddProvider(Guid clinicId, [FromBody] CreateProviderDto dto)
     {
@@ -320,8 +316,9 @@ public class ClinicManagementController : ControllerBase
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
-        var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
-        if (!clinicExists)
+        // Phase 4.1: Check tenant existence instead of clinic
+        var tenantExists = await _context.Tenants.AsNoTracking().AnyAsync(t => t.Id == tenantId);
+        if (!tenantExists)
         {
             return NotFound();
         }
@@ -391,7 +388,7 @@ public class ClinicManagementController : ControllerBase
     
     // PUT: api/clinic-management/providers/{providerId}
     [HttpPut("providers/{providerId}")]
-    [Authorize(Roles = "SystemAdmin,Admin")]
+    [Authorize(Roles = AuthorizationRoles.Admin)] // TODO: Future - allow Clinician to update own profile
     [ProducesResponseType(typeof(ProviderDetailDto), 200)]
     public async Task<IActionResult> UpdateProvider(Guid providerId, [FromBody] UpdateProviderDto dto)
     {
@@ -428,7 +425,7 @@ public class ClinicManagementController : ControllerBase
     
     // DELETE: api/clinic-management/providers/{providerId}
     [HttpDelete("providers/{providerId}")]
-    [Authorize(Roles = "SystemAdmin,Admin")]
+    [Authorize(Roles = AuthorizationRoles.Admin)] // TODO: Future - restrict to Admin only, ClinicAdmin = soft delete
     public async Task<IActionResult> DeleteProvider(Guid providerId)
     {
         var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
@@ -536,8 +533,9 @@ public class ClinicManagementController : ControllerBase
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
-        var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
-        if (!clinicExists)
+        // Phase 4.1: Check tenant existence instead of clinic
+        var tenantExists = await _context.Tenants.AsNoTracking().AnyAsync(t => t.Id == tenantId);
+        if (!tenantExists)
         {
             return NotFound();
         }
@@ -594,7 +592,7 @@ public class ClinicManagementController : ControllerBase
     
     // GET: api/clinic-management/analytics (PHASE 2.1: Simplified endpoint)
     [HttpGet("analytics")]
-    [Authorize(Roles = "Admin,SystemAdmin,ClinicAdmin,practitioner,admin,manager,Staff")]
+    [Authorize(Roles = AuthorizationRoles.Staff)] // TODO: Future - refine analytics permissions
     [ProducesResponseType(typeof(ClinicAnalyticsDto), 200)]
     public async Task<IActionResult> GetAnalytics([FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct = default)
     {
@@ -641,7 +639,7 @@ public class ClinicManagementController : ControllerBase
     
     // GET: api/clinic-management/clinics/{clinicId}/analytics
     [HttpGet("clinics/{clinicId}/analytics")]
-    [Authorize(Roles = "Admin,SystemAdmin,ClinicAdmin,practitioner,admin,manager,Staff")]
+    [Authorize(Roles = AuthorizationRoles.Staff)] // TODO: Future - refine analytics permissions
     [ProducesResponseType(typeof(ClinicAnalyticsDto), 200)]
     public async Task<IActionResult> GetClinicAnalytics(Guid clinicId, [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct = default)
     {

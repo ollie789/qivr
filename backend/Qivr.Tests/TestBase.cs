@@ -167,41 +167,38 @@ public abstract class DatabaseTestBase : IAsyncLifetime
     }
 
     /// <summary>
-    /// Helper to create a clinic within the test tenant
+    /// Helper to create a clinic within the test tenant (Phase 4.3: Now uses Tenant properties)
     /// </summary>
-    protected async Task<Clinic> CreateClinicAsync(string? name = null)
+    protected async Task<Tenant> CreateClinicAsync(string? name = null)
     {
-        var clinic = new Clinic
-        {
-            Id = Guid.NewGuid(),
-            TenantId = TenantId,
-            Name = name ?? $"Test Clinic {Guid.NewGuid().ToString("N").Substring(0, 8)}",
-            Address = "123 Test Street",
-            Phone = "555-0100",
-            Email = $"clinic-{Guid.NewGuid():N}@test.local",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        // Phase 4.3: Use existing tenant and update its clinic properties
+        var tenant = await Context.Tenants.FirstAsync(t => t.Id == TenantId);
+        
+        tenant.Name = name ?? $"Test Clinic {Guid.NewGuid().ToString("N").Substring(0, 8)}";
+        tenant.Address = "123 Test Street";
+        tenant.Phone = "555-0100";
+        tenant.Email = $"clinic-{Guid.NewGuid():N}@test.local";
+        tenant.IsActive = true;
+        tenant.UpdatedAt = DateTime.UtcNow;
 
-        Context.Clinics.Add(clinic);
         await Context.SaveChangesAsync();
         
-        return clinic;
+        return tenant;
     }
 
     /// <summary>
     /// Helper to create a provider within the test tenant
     /// </summary>
-    protected async Task<Provider> CreateProviderAsync(User? user = null, Clinic? clinic = null)
+    protected async Task<Provider> CreateProviderAsync(User? user = null, Tenant? tenant = null)
     {
         if (user == null)
         {
             user = await CreateUserAsync(UserType.Staff);
         }
         
-        if (clinic == null)
+        if (tenant == null)
         {
-            clinic = await CreateClinicAsync();
+            tenant = await CreateClinicAsync();
         }
 
         var provider = new Provider
@@ -209,7 +206,7 @@ public abstract class DatabaseTestBase : IAsyncLifetime
             Id = Guid.NewGuid(),
             TenantId = TenantId,
             UserId = user.Id,
-            ClinicId = clinic.Id,
+            ClinicId = tenant.Id, // Phase 4.3: ClinicId = TenantId now
             Title = "Dr.",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

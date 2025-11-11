@@ -1,4 +1,5 @@
 using Qivr.Core.Common;
+using System.ComponentModel.DataAnnotations;
 
 namespace Qivr.Core.Entities;
 
@@ -18,6 +19,33 @@ public class Tenant : BaseEntity
     public string? CognitoUserPoolId { get; set; }
     public string? CognitoUserPoolClientId { get; set; }
     public string? CognitoUserPoolDomain { get; set; }
+    
+    // Clinic Properties (Phase 3.1: Replace Clinic entity)
+    [StringLength(1000)]
+    public string? Description { get; set; }
+    
+    [StringLength(500)]
+    public string? Address { get; set; }
+    
+    [StringLength(100)]
+    public string? City { get; set; }
+    
+    [StringLength(50)]
+    public string? State { get; set; }
+    
+    [StringLength(20)]
+    public string? ZipCode { get; set; }
+    
+    [StringLength(100)]
+    public string? Country { get; set; }
+    
+    [StringLength(20)]
+    public string? Phone { get; set; }
+    
+    [StringLength(255)]
+    public string? Email { get; set; }
+    
+    public bool IsActive { get; set; } = true;
     
     // Navigation properties
     public virtual ICollection<User> Users { get; set; } = new List<User>();

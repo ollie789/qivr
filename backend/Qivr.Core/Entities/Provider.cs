@@ -27,7 +27,6 @@ public class Provider : TenantEntity
     
     // Navigation properties
     public virtual User? User { get; set; }
-    public virtual Clinic? Clinic { get; set; }
     public virtual ICollection<Evaluation> Evaluations { get; set; } = new List<Evaluation>();
     
     // Computed properties from User

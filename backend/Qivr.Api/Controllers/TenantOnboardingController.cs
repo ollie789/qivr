@@ -55,27 +55,18 @@ public class TenantOnboardingController : ControllerBase
                 UpdatedAt = DateTime.UtcNow
             };
 
+            // Phase 4.1: Set clinic properties directly on tenant
+            tenant.Description = request.ClinicName;
+            tenant.Email = request.Email;
+            tenant.Phone = request.Phone;
+            tenant.Address = request.Address;
+            tenant.City = request.City;
+            tenant.State = request.State;
+            tenant.ZipCode = request.ZipCode;
+            tenant.Country = request.Country ?? "Australia";
+            tenant.IsActive = true;
+
             await _context.Tenants.AddAsync(tenant);
-
-            // Create clinic with same ID as tenant (Phase 1.1: Eliminate ID confusion)
-            var clinic = new Clinic
-            {
-                Id = tenant.Id,
-                TenantId = tenant.Id,
-                Name = request.ClinicName,
-                Email = request.Email,
-                Phone = request.Phone,
-                Address = request.Address,
-                City = request.City,
-                State = request.State,
-                ZipCode = request.ZipCode,
-                Country = request.Country ?? "Australia",
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            await _context.Clinics.AddAsync(clinic);
 
             // Create or update user
             if (existingUser == null)
@@ -108,7 +99,7 @@ public class TenantOnboardingController : ControllerBase
             {
                 message = "Clinic registered successfully",
                 tenantId = tenant.Id.ToString(),
-                clinicId = clinic.Id.ToString(),
+                clinicId = tenant.Id.ToString(), // Phase 4.1: clinicId = tenantId
                 redirectUrl = $"/dashboard?tenant={tenant.Id}"
             });
         }
