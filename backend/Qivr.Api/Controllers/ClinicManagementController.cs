@@ -285,7 +285,7 @@ public class ClinicManagementController : ControllerBase
             ? MapProviderDetail(detail, summary)
             : new ProviderDetailDto
             {
-                Id = provider.UserId.ToString(),
+                Id = provider.UserId,
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Email = dto.Email,
@@ -446,6 +446,79 @@ public class ClinicManagementController : ControllerBase
         return NoContent();
     }
     
+    // GET: api/clinic-management/schedule (PHASE 2.1: Simplified endpoint)
+    [HttpGet("schedule")]
+    [Authorize]
+    [ProducesResponseType(typeof(ClinicScheduleDto), 200)]
+    public async Task<IActionResult> GetSchedule([FromQuery] DateTime? date = null)
+    {
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        // Use tenantId as clinicId since they're now the same
+        var clinicId = tenantId;
+        
+        var targetDate = (date ?? DateTime.UtcNow).Date;
+        var nextDay = targetDate.AddDays(1);
+
+        var providers = await _context.Providers
+            .Include(p => p.User)
+            .Where(p => p.ClinicId == clinicId)
+            .ToListAsync();
+
+        if (!providers.Any())
+        {
+            return Ok(new ClinicScheduleDto
+            {
+                ClinicId = clinicId,
+                Date = targetDate,
+                Providers = Array.Empty<ProviderScheduleSlotDto>()
+            });
+        }
+
+        var appointments = await _context.Appointments
+            .Where(a => a.ClinicId == clinicId && a.ScheduledStart >= targetDate && a.ScheduledStart < nextDay)
+            .ToListAsync();
+
+        var providerSchedules = providers
+            .Select(provider =>
+            {
+                var providerAppointments = appointments
+                    .Where(a => a.ProviderId == provider.UserId)
+                    .Select(a => new AppointmentSlotDto
+                    {
+                        Id = a.Id,
+                        PatientName = "Patient", // Anonymized for schedule view
+                        StartTime = a.ScheduledStart,
+                        EndTime = a.ScheduledEnd,
+                        Status = a.Status,
+                        Type = a.AppointmentType
+                    })
+                    .ToArray();
+
+                return new ProviderScheduleSlotDto
+                {
+                    ProviderId = provider.UserId,
+                    ProviderName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : "",
+                    Specialty = provider.Specialty ?? "",
+                    Appointments = providerAppointments
+                };
+            })
+            .ToArray();
+
+        var response = new ClinicScheduleDto
+        {
+            ClinicId = clinicId,
+            Date = targetDate,
+            Providers = providerSchedules
+        };
+
+        return Ok(response);
+    }
+    
     // GET: api/clinic-management/clinics/{clinicId}/schedule
     [HttpGet("clinics/{clinicId}/schedule")]
     [Authorize]
@@ -512,6 +585,46 @@ public class ClinicManagementController : ControllerBase
         };
 
         return Ok(response);
+    }
+    
+    // GET: api/clinic-management/analytics (PHASE 2.1: Simplified endpoint)
+    [HttpGet("analytics")]
+    [Authorize(Roles = "Admin,SystemAdmin,ClinicAdmin,practitioner,admin,manager,Staff")]
+    [ProducesResponseType(typeof(ClinicAnalyticsDto), 200)]
+    public async Task<IActionResult> GetAnalytics([FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct = default)
+    {
+        try
+        {
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            if (tenantId == Guid.Empty)
+            {
+                return Unauthorized(new { error = "Tenant context is required." });
+            }
+
+            // Use tenantId as clinicId since they're now the same
+            var clinicId = tenantId;
+
+            // Validate date range
+            if (from > to)
+            {
+                return BadRequest(new { error = "From date cannot be after to date." });
+            }
+
+            if ((to - from).TotalDays > 365)
+            {
+                return BadRequest(new { error = "Date range cannot exceed 365 days." });
+            }
+
+            // Get analytics data
+            var analytics = await GetClinicAnalyticsData(clinicId, from, to, ct);
+            
+            return Ok(analytics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving analytics for tenant {TenantId}", _authorizationService.GetCurrentTenantId(HttpContext));
+            return StatusCode(500, new { error = "An error occurred while retrieving analytics data." });
+        }
     }
     
     // GET: api/clinic-management/clinics/{clinicId}/analytics

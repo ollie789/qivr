@@ -246,7 +246,7 @@ public class CognitoAuthService : ICognitoAuthService
                 {
                     Id = tenant.Id,  // 🎯 PHASE 1.1: Make clinic ID = tenant ID
                     TenantId = tenant.Id,
-                    Name = request.ClinicName ?? $"{request.FirstName} {request.LastName} Clinic",
+                    Name = $"{request.FirstName} {request.LastName} Clinic",
                     Email = request.Email,
                     Phone = string.Empty,
                     Address = string.Empty,
