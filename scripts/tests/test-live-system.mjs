@@ -117,6 +117,7 @@ const tests = {
     
     testData.user = data.userInfo;
     console.log(`  📝 User: ${data.userInfo.email}`);
+    console.log(`  📝 Role: ${data.userInfo.role}`);
   },
 
   async testCheckAuth() {
@@ -139,19 +140,30 @@ const tests = {
   async testCreatePatient() {
     console.log('\n📋 Test 5: Create Patient');
     
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(7);
     const patientData = {
       firstName: 'John',
       lastName: 'Doe',
       dateOfBirth: '1990-01-01',
-      email: `patient${Date.now()}@test.com`,
-      phone: '+61400000001',
-      gender: 'Male'
+      email: `patient-${timestamp}-${randomId}@test.com`,
+      phoneNumber: `+614${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+      gender: 'Male',
+      address: `${Math.floor(Math.random() * 999)} Test Street`,
+      emergencyContactName: 'Emergency Contact',
+      emergencyContactPhone: `+614${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`
     };
     
     const response = await makeRequest('/patients', {
       method: 'POST',
       body: JSON.stringify(patientData)
     });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`  ❌ Patient creation failed: ${errorText}`);
+      console.log(`  ❌ Status: ${response.status}`);
+    }
     
     assert(response.ok, 'Patient created');
     
