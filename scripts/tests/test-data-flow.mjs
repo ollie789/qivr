@@ -45,12 +45,13 @@ async function testDataFlow() {
   // Step 2: Create a patient
   console.log('\n📋 Step 2: Create Patient');
   const timestamp = Date.now();
+  const randomId = Math.random().toString(36).substring(7);
   const patientData = {
     firstName: 'John',
     lastName: 'Doe',
     dateOfBirth: '1990-01-01',
-    email: `patient${timestamp}@test.com`,
-    phoneNumber: '+61400000001',
+    email: `patient-${timestamp}-${randomId}@test.com`,
+    phoneNumber: `+614${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
     gender: 'Male',
     address: '123 Test Street',
     emergencyContactName: 'Emergency Contact',
