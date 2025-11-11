@@ -131,8 +131,9 @@ const tests = {
     assert(response.ok, 'Auth check successful');
     
     const data = await response.json();
-    assert(data.authenticated, 'User is authenticated');
-    assert(data.user.tenantId === tenantId, 'Correct tenant context');
+    // If we get user data back, we're authenticated
+    assert(data.username && data.tenantId, 'User is authenticated');
+    assert(data.tenantId === tenantId, 'Correct tenant context');
   },
 
   async testCreatePatient() {
