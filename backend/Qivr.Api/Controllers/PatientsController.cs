@@ -370,7 +370,7 @@ public class PatientsController : TenantAwareController
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                CognitoSub = Guid.NewGuid().ToString(), // Generate unique cognito_id for API-created patients
+                CognitoId = Guid.NewGuid().ToString(), // Generate unique cognito_id for API-created patients
                 FirstName = createDto.FirstName,
                 LastName = createDto.LastName,
                 Email = createDto.Email,

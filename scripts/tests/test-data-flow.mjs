@@ -33,6 +33,8 @@ async function testDataFlow() {
   console.log('  ✅ Login successful');
   console.log(`  📝 Role: ${loginData.userInfo.role}`);
   console.log(`  📝 Tenant: ${loginData.userInfo.tenantId}`);
+  console.log(`  📝 User ID: ${loginData.userInfo.userId || loginData.userInfo.id || 'NOT_FOUND'}`);
+  console.log(`  📝 Username: ${loginData.userInfo.username}`);
   
   // Extract cookies for subsequent requests
   const setCookie = loginResponse.headers.get('set-cookie');
@@ -48,8 +50,11 @@ async function testDataFlow() {
     lastName: 'Doe',
     dateOfBirth: '1990-01-01',
     email: `patient${timestamp}@test.com`,
-    phone: '+61400000001',
-    gender: 'Male'
+    phoneNumber: '+61400000001',
+    gender: 'Male',
+    address: '123 Test Street',
+    emergencyContactName: 'Emergency Contact',
+    emergencyContactPhone: '+61400000002'
   };
 
   const createPatientResponse = await fetch(`${API_URL}/patients`, {
@@ -99,14 +104,18 @@ async function testDataFlow() {
 
   // Step 4: Create an appointment
   console.log('\n📋 Step 4: Create Appointment');
+  
+  // Use the logged-in admin user's ID as the provider (they have Admin role)
+  const adminUserId = loginData.userInfo.username || loginData.userInfo.userId || loginData.userInfo.id;
+  
   const appointmentData = {
     patientId: createdPatient.id,
-    providerId: null, // Will be assigned to the logged-in user
-    appointmentDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-    duration: 30,
+    providerId: adminUserId, // Use logged-in admin user ID as provider
     appointmentType: 'Consultation',
+    startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+    endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(), // +30 mins
     status: 'Scheduled',
-    notes: 'Initial consultation'
+    notes: 'Data flow test appointment'
   };
 
   const createAppointmentResponse = await fetch(`${API_URL}/appointments`, {
