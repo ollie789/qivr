@@ -80,7 +80,7 @@ npm run dev
 
 ## 🚀 Deployment Status
 
-- **Build #105**: S3 permissions fixed for both production buckets
+- **Build #106**: ECS permissions fixed for task definition registration
 - **Provider endpoints**: Ready for deployment
 
 ## 📊 Features
