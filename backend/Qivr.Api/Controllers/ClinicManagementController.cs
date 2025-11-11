@@ -237,7 +237,7 @@ public class ClinicManagementController : ControllerBase
     
     // POST: api/clinic-management/clinics/{clinicId}/providers
     [HttpPost("clinics/{clinicId}/providers")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
+    [Authorize(Roles = "SystemAdmin,Admin")]
     [ProducesResponseType(typeof(ProviderDto), 201)]
     public async Task<IActionResult> AddProvider(Guid clinicId, [FromBody] CreateProviderDto dto)
     {
@@ -323,7 +323,7 @@ public class ClinicManagementController : ControllerBase
     
     // PUT: api/clinic-management/providers/{providerId}
     [HttpPut("providers/{providerId}")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
+    [Authorize(Roles = "SystemAdmin,Admin")]
     [ProducesResponseType(typeof(ProviderDetailDto), 200)]
     public async Task<IActionResult> UpdateProvider(Guid providerId, [FromBody] UpdateProviderDto dto)
     {
@@ -360,7 +360,7 @@ public class ClinicManagementController : ControllerBase
     
     // DELETE: api/clinic-management/providers/{providerId}
     [HttpDelete("providers/{providerId}")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
+    [Authorize(Roles = "SystemAdmin,Admin")]
     public async Task<IActionResult> DeleteProvider(Guid providerId)
     {
         var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);

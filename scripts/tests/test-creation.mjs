@@ -16,7 +16,8 @@ async function testRegistration() {
       password: 'TestPassword123!',
       firstName: 'Test',
       lastName: 'Doctor',
-      clinicName: `Test Clinic ${timestamp}`
+      clinicName: `Test Clinic ${timestamp}`,
+      role: 'admin'  // Clinic owner should be admin
     }),
     credentials: 'include'
   });
