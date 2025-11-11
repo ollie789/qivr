@@ -39,10 +39,10 @@ phases:
     commands:
       - echo Build completed on `date`
       
-      # Deploy frontend to production S3 (no more staging buckets)
+      # Deploy frontend to S3 buckets that CloudFront expects
       - echo Deploying frontend applications...
-      - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard --delete
-      - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal --delete
+      - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-staging --delete
+      - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-staging --delete
       
       # Invalidate production CloudFront (using built-in staging capabilities)
       - aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
