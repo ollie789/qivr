@@ -1,4 +1,4 @@
-import { api, apiRequest } from './api';
+import { api } from './api';
 import type {
   ChangePasswordPayload,
   UpdateProfilePayload,
@@ -19,9 +19,15 @@ export const uploadProfilePhoto = async (file: File): Promise<UserProfile> => {
   const formData = new FormData();
   formData.append('photo', file);
 
-  return apiRequest<UserProfile>({
-    url: '/profile/photo',
+  const response = await fetch('/api/profile/photo', {
     method: 'POST',
-    data: formData,
+    body: formData,
+    credentials: 'include',
   });
+
+  if (!response.ok) {
+    throw new Error('Failed to upload profile photo');
+  }
+
+  return response.json();
 };
