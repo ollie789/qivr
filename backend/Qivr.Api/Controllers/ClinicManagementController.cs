@@ -155,7 +155,7 @@ public class ClinicManagementController : ControllerBase
     
     // PUT: api/clinic-management/clinics/{clinicId}
     [HttpPut("clinics/{clinicId}")]
-    [Authorize(Roles = "SystemAdmin,ClinicAdmin")]
+    [Authorize(Roles = AuthorizationRoles.Admin)]
     [ProducesResponseType(204)]
     public async Task<IActionResult> UpdateClinic(Guid clinicId, [FromBody] UpdateClinicDto dto)
     {
