@@ -11,6 +11,7 @@ using Qivr.Core.DTOs;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
+using Qivr.Api.Constants;
 
 namespace Qivr.Api.Controllers;
 
