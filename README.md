@@ -80,7 +80,7 @@ npm run dev
 
 ## 🚀 Deployment Status
 
-- **Build #106**: ECS permissions fixed for task definition registration
+- **Build #107**: IAM PassRole permission added for ECS task roles
 - **Provider endpoints**: Ready for deployment
 
 ## 📊 Features
