@@ -244,7 +244,7 @@ public class CognitoAuthService : ICognitoAuthService
                 // Create clinic for new tenant
                 var clinic = new Clinic
                 {
-                    Id = Guid.NewGuid(),
+                    Id = tenant.Id,  // 🎯 PHASE 1.1: Make clinic ID = tenant ID
                     TenantId = tenant.Id,
                     Name = request.ClinicName ?? $"{request.FirstName} {request.LastName} Clinic",
                     Email = request.Email,
