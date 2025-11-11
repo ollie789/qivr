@@ -39,34 +39,14 @@ async function makeRequest(endpoint, options = {}) {
 }
 
 async function testLogin() {
-  console.log('\n📋 Test 1: Register & Login with New Admin User');
+  console.log('\n📋 Test 1: Login with Existing Admin User');
   
-  // First register a new clinic/admin user
-  const registerResponse = await fetch(`${API_URL}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: `admin${timestamp}@clinic.test`,
-      password: 'TestPassword123!',
-      firstName: 'Test',
-      lastName: 'Admin',
-      clinicName: `Test Clinic ${timestamp}`
-    }),
-    credentials: 'include'
-  });
-
-  if (!registerResponse.ok) {
-    console.log(`  ⚠️  Registration failed: ${registerResponse.status}, trying existing user`);
-  } else {
-    console.log('  ✅ New clinic registered successfully');
-  }
-
-  // Now login with the credentials
+  // Use existing admin user from database
   const loginResponse = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: `admin${timestamp}@clinic.test`,
+      email: 'test.doctor@clinic.com',
       password: 'TestPassword123!'
     }),
     credentials: 'include'

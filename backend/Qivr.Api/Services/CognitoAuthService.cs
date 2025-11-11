@@ -273,7 +273,17 @@ public class CognitoAuthService : ICognitoAuthService
             };
             await _dbContext.Users.AddAsync(user);
             
-            await _dbContext.SaveChangesAsync();
+            // Add timeout for database save
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            try
+            {
+                await _dbContext.SaveChangesAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogError("Database save timeout during registration for {Email}", request.Email);
+                return new SignUpResult { Success = false, ErrorMessage = "Registration timeout - please try again" };
+            }
             
             return new SignUpResult
             {
