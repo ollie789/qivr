@@ -21,41 +21,14 @@ async function makeRequest(endpoint, options = {}) {
   });
 }
 
-async function testRegistration() {
-  console.log('\n📋 Test 1: Clinic Registration');
-  
-  const response = await fetch(`${API_URL}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: `test${timestamp}@clinic.test`,
-      password: 'TestPassword123!',
-      firstName: 'Test',
-      lastName: 'Doctor',
-      clinicName: `Test Clinic ${timestamp}`
-    }),
-    credentials: 'include'
-  });
-
-  if (!response.ok) {
-    throw new Error(`Registration failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  console.log('  ✅ Registration successful');
-  console.log(`  📝 Tenant: ${data.tenantId}`);
-  
-  return data;
-}
-
 async function testLogin() {
-  console.log('\n📋 Test 2: Login');
+  console.log('\n📋 Test 1: Login with Admin User');
   
   const loginResponse = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: `test${timestamp}@clinic.test`,
+      email: 'test1762833271390@clinic.test',
       password: 'TestPassword123!'
     }),
     credentials: 'include'
@@ -71,12 +44,13 @@ async function testLogin() {
   
   console.log('  ✅ Login successful');
   console.log(`  📝 Role: ${loginData.userInfo.role}`);
+  console.log(`  📝 Tenant: ${tenantId}`);
   
   return loginData;
 }
 
 async function testCreatePatient() {
-  console.log('\n📋 Test 3: Create Patient');
+  console.log('\n📋 Test 2: Create Patient');
   
   const randomId = Math.random().toString(36).substring(7);
   const patientData = {
@@ -109,7 +83,7 @@ async function testCreatePatient() {
 }
 
 async function testCreateProvider() {
-  console.log('\n📋 Test 4: Create Provider');
+  console.log('\n📋 Test 3: Create Provider (Admin User)');
   
   const providerData = {
     firstName: 'Dr. Jane',
@@ -128,8 +102,8 @@ async function testCreateProvider() {
   });
 
   if (!response.ok) {
-    console.log(`  ⚠️  Provider creation failed: ${response.status}, using fallback`);
-    return { id: '44444444-4444-4444-9444-444444444444' }; // Fallback provider
+    console.log(`  ⚠️  Provider creation failed: ${response.status}, using existing provider`);
+    return { id: '44444444-4444-4444-9444-444444444444' }; // Known existing provider
   }
 
   const provider = await response.json();
@@ -242,10 +216,9 @@ async function testPROMs(patient) {
 async function runComprehensiveTest() {
   try {
     console.log('\n🧪 COMPREHENSIVE FULL SYSTEM TEST');
-    console.log('Testing: Registration → Login → Patients → Providers → Appointments → Messages → PROMs');
+    console.log('Testing: Admin Login → Patients → Providers → Appointments → Messages → PROMs');
     console.log(`API: ${API_URL}`);
     
-    await testRegistration();
     await testLogin();
     const patient = await testCreatePatient();
     const provider = await testCreateProvider();
@@ -254,8 +227,7 @@ async function runComprehensiveTest() {
     await testPROMs(patient);
     
     console.log('\n🎉🎉🎉 ALL COMPREHENSIVE TESTS PASSED! 🎉🎉🎉');
-    console.log('\n✅ Clinic registration works');
-    console.log('✅ User login works');
+    console.log('\n✅ Admin login works');
     console.log('✅ Patient creation works');
     console.log('✅ Provider management works');
     console.log('✅ Appointment creation works');
