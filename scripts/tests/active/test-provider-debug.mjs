@@ -126,14 +126,6 @@ async function debugClinicAccess() {
 async function testProviderCreation(clinics) {
   console.log('\n📋 Step 4: Test Provider Creation');
   
-  if (!clinics || clinics.length === 0) {
-    console.log('  ⚠️  No clinics available, using tenant ID as clinic ID');
-    clinics = [{ id: tenantId }];
-  }
-  
-  const clinicId = clinics[0].id;
-  console.log(`  📝 Using clinic ID: ${clinicId}`);
-  
   const providerData = {
     firstName: 'Dr. Jane',
     lastName: 'Smith',
@@ -145,17 +137,40 @@ async function testProviderCreation(clinics) {
     isActive: true
   };
 
-  const response = await makeRequest(`/clinic-management/clinics/${clinicId}/providers`, {
+  // Try new simplified endpoint first (Phase 2.1)
+  console.log('  🔍 Trying simplified endpoint: /clinic-management/providers...');
+  let response = await makeRequest('/clinic-management/providers', {
     method: 'POST',
     body: JSON.stringify(providerData)
   });
 
-  console.log(`  📝 Provider creation status: ${response.status}`);
+  console.log(`  📝 Simplified endpoint status: ${response.status}`);
   
   if (!response.ok) {
     const errorText = await response.text();
-    console.log(`  📝 Error: ${errorText}`);
-    return null;
+    console.log(`  📝 Simplified endpoint error: ${errorText}`);
+    
+    // Fallback to old endpoint if needed
+    if (clinics && clinics.length > 0) {
+      const clinicId = clinics[0].id;
+      console.log(`  🔍 Trying old endpoint: /clinic-management/clinics/${clinicId}/providers...`);
+      
+      response = await makeRequest(`/clinic-management/clinics/${clinicId}/providers`, {
+        method: 'POST',
+        body: JSON.stringify(providerData)
+      });
+      
+      console.log(`  📝 Old endpoint status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText2 = await response.text();
+        console.log(`  📝 Old endpoint error: ${errorText2}`);
+        return null;
+      }
+    } else {
+      console.log('  ⚠️  No clinics available and simplified endpoint failed');
+      return null;
+    }
   }
 
   const provider = await response.json();

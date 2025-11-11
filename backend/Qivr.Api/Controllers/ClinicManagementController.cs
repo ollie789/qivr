@@ -213,19 +213,22 @@ public class ClinicManagementController : ControllerBase
         return NoContent();
     }
     
-    // GET: api/clinic-management/clinics/{clinicId}/providers
-    [HttpGet("clinics/{clinicId}/providers")]
+    // GET: api/clinic-management/providers (PHASE 2.1: Simplified endpoint)
+    [HttpGet("providers")]
     [Authorize(Roles = "Admin,SystemAdmin,ClinicAdmin,Provider,Staff")]
     [ProducesResponseType(typeof(IEnumerable<ProviderDto>), 200)]
-    public async Task<IActionResult> GetClinicProviders(Guid clinicId, [FromQuery] bool activeOnly = true)
+    public async Task<IActionResult> GetProviders([FromQuery] bool activeOnly = true)
     {
         var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
         if (tenantId == Guid.Empty)
         {
-            _logger.LogWarning("GetClinicProviders request missing tenant context for clinic {ClinicId}", clinicId);
+            _logger.LogWarning("GetProviders request missing tenant context");
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
+        // Use tenantId as clinicId since they're now the same
+        var clinicId = tenantId;
+        
         var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
         if (!clinicExists)
         {
@@ -234,6 +237,70 @@ public class ClinicManagementController : ControllerBase
 
         var providers = await _clinicService.GetClinicProvidersAsync(tenantId, clinicId, activeOnly);
         return Ok(providers.Select(MapProviderSummary).ToArray());
+    }
+    
+    // POST: api/clinic-management/providers (PHASE 2.1: Simplified endpoint)
+    [HttpPost("providers")]
+    [Authorize(Roles = "SystemAdmin,Admin")]
+    [ProducesResponseType(typeof(ProviderDto), 201)]
+    public async Task<IActionResult> CreateProvider([FromBody] CreateProviderDto dto)
+    {
+        if (dto is null)
+        {
+            return BadRequest(new { error = "Request body is required." });
+        }
+
+        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+        if (tenantId == Guid.Empty)
+        {
+            return Unauthorized(new { error = "Tenant context is required." });
+        }
+
+        // Use tenantId as clinicId since they're now the same (PHASE 1 unification)
+        var clinicId = tenantId;
+
+        var clinicExists = await _context.Clinics.AsNoTracking().AnyAsync(c => c.Id == clinicId);
+        if (!clinicExists)
+        {
+            return NotFound(new { error = "Clinic not found for tenant" });
+        }
+
+        var request = new CreateProviderRequest
+        {
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            Email = dto.Email,
+            Phone = dto.Phone,
+            Title = dto.Title,
+            Specialty = dto.Specialty,
+            LicenseNumber = dto.LicenseNumber,
+            NpiNumber = dto.NpiNumber
+        };
+
+        var provider = await _clinicService.AddProviderToClinicAsync(tenantId, clinicId, request);
+        var detail = await _clinicService.GetProviderDetailsAsync(tenantId, provider.UserId);
+        var summary = await FindProviderSummary(provider.ClinicId, provider.UserId, tenantId);
+
+        var response = detail != null
+            ? MapProviderDetail(detail, summary)
+            : new ProviderDetailDto
+            {
+                Id = provider.UserId.ToString(),
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                Title = dto.Title,
+                Specialty = dto.Specialty,
+                LicenseNumber = dto.LicenseNumber,
+                IsActive = true,
+                PatientCount = summary?.PatientCount ?? 0,
+                AppointmentsToday = summary?.AppointmentsToday ?? 0,
+                NextAvailableSlot = summary?.NextAvailableSlot,
+                Statistics = new ProviderStatisticsDto()
+            };
+
+        return CreatedAtAction(nameof(GetProvider), new { providerId = provider.UserId }, response);
     }
     
     // POST: api/clinic-management/clinics/{clinicId}/providers

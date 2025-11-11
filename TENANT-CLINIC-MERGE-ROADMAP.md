@@ -13,8 +13,8 @@
 ---
 
 ## **PHASE 2: Endpoint Simplification (Incremental)**
-- [ ] **2.1** Update ClinicManagementController endpoints:
-  - [ ] `/clinics/{clinicId}/providers` → `/providers`
+- [x] **2.1** Update ClinicManagementController endpoints: ✅
+  - [x] `/clinics/{clinicId}/providers` → `/providers`
   - [ ] `/clinics/{clinicId}/schedule` → `/schedule`  
   - [ ] `/clinics/{clinicId}/analytics` → `/analytics`
 - [ ] **2.2** Update AppointmentsController:
@@ -60,9 +60,10 @@
 ---
 
 ## **PROGRESS TRACKER**
-- **Current Phase**: 1 (Foundation)
-- **Completed**: 0/16 tasks
-- **Next Task**: 1.1 - Make clinic.Id = tenant.Id in signup
+- **Current Phase**: 2 (Endpoint Simplification)
+- **Completed**: 3/16 tasks (18.75%)
+- **Next Task**: 2.1 - Complete remaining endpoint simplifications
+- **Build Status**: #111 deploying Phase 1 changes
 
 ---
 
