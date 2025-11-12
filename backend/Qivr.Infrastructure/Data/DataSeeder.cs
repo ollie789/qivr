@@ -52,23 +52,50 @@ public class DataSeeder
     private async Task SeedSampleAnalyticsData(Guid tenantId)
     {
         // Skip if sample data already exists
-        if (await _context.Providers.AnyAsync(p => p.Name == "Dr. Sarah Johnson"))
+        if (await _context.Users.AnyAsync(u => u.Email == "dr.sarah.johnson@clinic.com"))
             return;
 
-        // Create sample provider
+        // Create sample provider user first
+        var providerUser = new User
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            Email = "dr.sarah.johnson@clinic.com",
+            FirstName = "Dr. Sarah",
+            LastName = "Johnson",
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.Users.Add(providerUser);
+        await _context.SaveChangesAsync(); // Save to get the user ID
+
+        // Create provider profile
         var provider = new Provider
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            Name = "Dr. Sarah Johnson",
-            Specialization = "General Practice",
-            Email = "sarah.johnson@clinic.com",
-            Phone = "+1-555-0123",
+            UserId = providerUser.Id,
+            ClinicId = tenantId, // Use tenant as clinic for now
+            Title = "MD",
+            Specialty = "General Practice",
+            LicenseNumber = "MD123456",
+            IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
         _context.Providers.Add(provider);
         await _context.SaveChangesAsync(); // Save to get the provider ID
+
+        // Create sample patient users for appointments
+        var patientUsers = new[]
+        {
+            new User { Id = Guid.NewGuid(), TenantId = tenantId, Email = "patient1@example.com", FirstName = "John", LastName = "Doe", CreatedAt = DateTime.UtcNow },
+            new User { Id = Guid.NewGuid(), TenantId = tenantId, Email = "patient2@example.com", FirstName = "Jane", LastName = "Smith", CreatedAt = DateTime.UtcNow },
+            new User { Id = Guid.NewGuid(), TenantId = tenantId, Email = "patient3@example.com", FirstName = "Bob", LastName = "Wilson", CreatedAt = DateTime.UtcNow },
+            new User { Id = Guid.NewGuid(), TenantId = tenantId, Email = "patient4@example.com", FirstName = "Alice", LastName = "Brown", CreatedAt = DateTime.UtcNow },
+            new User { Id = Guid.NewGuid(), TenantId = tenantId, Email = "patient5@example.com", FirstName = "Charlie", LastName = "Davis", CreatedAt = DateTime.UtcNow }
+        };
+        _context.Users.AddRange(patientUsers);
+        await _context.SaveChangesAsync();
 
         // Create sample appointments
         var appointments = new[]
@@ -77,9 +104,9 @@ public class DataSeeder
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = Guid.NewGuid(),
+                PatientId = patientUsers[0].Id,
                 ProviderId = provider.Id,
-                ProviderProfileId = Guid.NewGuid(),
+                ProviderProfileId = provider.Id,
                 ScheduledStart = DateTime.UtcNow.AddDays(-2).AddHours(9),
                 ScheduledEnd = DateTime.UtcNow.AddDays(-2).AddHours(9.5),
                 Status = AppointmentStatus.Completed,
@@ -92,9 +119,9 @@ public class DataSeeder
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = Guid.NewGuid(),
+                PatientId = patientUsers[1].Id,
                 ProviderId = provider.Id,
-                ProviderProfileId = Guid.NewGuid(),
+                ProviderProfileId = provider.Id,
                 ScheduledStart = DateTime.UtcNow.AddDays(-2).AddHours(14.5),
                 ScheduledEnd = DateTime.UtcNow.AddDays(-2).AddHours(14.75),
                 Status = AppointmentStatus.Completed,
@@ -107,9 +134,9 @@ public class DataSeeder
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = Guid.NewGuid(),
+                PatientId = patientUsers[2].Id,
                 ProviderId = provider.Id,
-                ProviderProfileId = Guid.NewGuid(),
+                ProviderProfileId = provider.Id,
                 ScheduledStart = DateTime.UtcNow.AddDays(-1).AddHours(10.25),
                 ScheduledEnd = DateTime.UtcNow.AddDays(-1).AddHours(10.75),
                 Status = AppointmentStatus.NoShow,
@@ -122,9 +149,9 @@ public class DataSeeder
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = Guid.NewGuid(),
+                PatientId = patientUsers[3].Id,
                 ProviderId = provider.Id,
-                ProviderProfileId = Guid.NewGuid(),
+                ProviderProfileId = provider.Id,
                 ScheduledStart = DateTime.UtcNow.AddHours(11),
                 ScheduledEnd = DateTime.UtcNow.AddHours(11.5),
                 Status = AppointmentStatus.Scheduled,
@@ -137,9 +164,9 @@ public class DataSeeder
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = Guid.NewGuid(),
+                PatientId = patientUsers[4].Id,
                 ProviderId = provider.Id,
-                ProviderProfileId = Guid.NewGuid(),
+                ProviderProfileId = provider.Id,
                 ScheduledStart = DateTime.UtcNow.AddHours(15.5),
                 ScheduledEnd = DateTime.UtcNow.AddHours(15.75),
                 Status = AppointmentStatus.Scheduled,
