@@ -56,6 +56,13 @@ export default function Login() {
     } catch (err: unknown) {
       console.error('Login error:', err);
       const message = err instanceof Error ? err.message : '';
+      
+      // Check if user needs to complete clinic registration
+      if (message.includes('no tenant') || message.includes('no clinic') || message.includes('clinic registration')) {
+        navigate('/clinic-registration');
+        return;
+      }
+      
       if (message.includes('not verified')) {
         setError('Please verify your email address before logging in. Check your inbox for the verification link.');
       } else if (message.includes('Incorrect username or password')) {
@@ -179,11 +186,11 @@ export default function Login() {
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Don{"'"}t have a clinic account?
+                Don{"'"}t have an account?
               </Typography>
-              <Link to="/register" style={{ textDecoration: 'none' }}>
+              <Link to="/signup" style={{ textDecoration: 'none' }}>
                 <Typography variant="body2" color="primary">
-                  Contact us to register your clinic
+                  Sign up here
                 </Typography>
               </Link>
             </Box>

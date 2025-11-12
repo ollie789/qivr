@@ -100,13 +100,13 @@ public class SecurityHeadersMiddleware
         }
         else if (isApi)
         {
-            // API CSP - Very restrictive
+            // API CSP - Allow API responses to be consumed by frontend
             var apiCsp = new[]
             {
-                "default-src 'none'",
+                "default-src 'self'",
                 "frame-ancestors 'none'",
-                "base-uri 'none'",
-                "form-action 'none'"
+                "base-uri 'self'",
+                "form-action 'self'"
             };
             
             response.Headers["Content-Security-Policy"] = string.Join("; ", apiCsp);

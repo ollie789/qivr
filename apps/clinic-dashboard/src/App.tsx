@@ -30,6 +30,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Providers = lazy(() => import('./pages/Providers'));
 const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
 const ClinicRegistration = lazy(() => import('./pages/ClinicRegistration'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Documents = lazy(() => import('./pages/Documents'));
@@ -185,6 +186,7 @@ function App() {
                 <Routes>
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
                   <Route path="/clinic-registration" element={<ClinicRegistration />} />
 
                   {/* Private routes */}

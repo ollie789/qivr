@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -10,31 +10,51 @@ import {
   Grid,
   Container,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api-client';
+import { useAuthStore } from '../stores/authStore';
 
 interface ClinicData {
-  name: string;
+  clinicName: string;
   address: string;
+  city: string;
+  state: string;
+  zipCode: string;
   phone: string;
-  email: string;
 }
 
 const ClinicRegistration: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<ClinicData>({
-    name: '',
+  const location = useLocation();
+  const { user } = useAuthStore();
+  
+  const [clinicData, setClinicData] = useState<ClinicData>({
+    clinicName: '',
     address: '',
+    city: '',
+    state: '',
+    zipCode: '',
     phone: '',
-    email: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Redirect if user is not authenticated
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { 
+        state: { 
+          message: 'Please log in first to complete your clinic registration.',
+          redirectTo: '/clinic-registration'
+        }
+      });
+    }
+  }, [user, navigate]);
+
   const handleChange = (field: keyof ClinicData) => (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setFormData(prev => ({
+    setClinicData(prev => ({
       ...prev,
       [field]: event.target.value,
     }));
@@ -42,27 +62,45 @@ const ClinicRegistration: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    
+    if (!user) {
+      setError('You must be logged in to register a clinic');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // TODO: Call API to create clinic/tenant
-      const response = await api.post('/tenants', {
-        name: formData.name,
-        address: formData.address,
-        phone: formData.phone,
-        email: formData.email,
+      const response = await api.post('/tenant-onboarding/register-clinic', {
+        cognitoSub: user.id,
+        clinicName: clinicData.clinicName,
+        email: user.email,
+        phone: clinicData.phone,
+        firstName: user.name.split(' ')[0] || '',
+        lastName: user.name.split(' ').slice(1).join(' ') || '',
+        address: clinicData.address,
+        city: clinicData.city,
+        state: clinicData.state,
+        zipCode: clinicData.zipCode,
+        country: 'Australia',
       });
 
       if (response) {
+        // Redirect to dashboard after successful registration
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      setError(err instanceof Error ? err.message : 'Clinic registration failed');
     } finally {
       setLoading(false);
     }
   };
+
+  // Don't render if user is not authenticated
+  if (!user) {
+    return null;
+  }
 
   return (
     <Container maxWidth="md">
@@ -76,10 +114,10 @@ const ClinicRegistration: React.FC = () => {
         <Card sx={{ width: '100%', maxWidth: 600 }}>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h4" component="h1" gutterBottom align="center">
-              Register Your Clinic
+              Complete Your Clinic Setup
             </Typography>
             <Typography variant="body1" color="text.secondary" align="center" mb={4}>
-              Complete your clinic setup to get started with QIVR
+              Welcome {user.name.split(' ')[0]}! Please provide your clinic details to get started.
             </Typography>
 
             {error && (
@@ -94,62 +132,74 @@ const ClinicRegistration: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Clinic Name"
-                    value={formData.name}
-                    onChange={handleChange('name')}
+                    value={clinicData.clinicName}
+                    onChange={handleChange('clinicName')}
                     required
                     variant="outlined"
                   />
                 </Grid>
-                
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Address"
-                    value={formData.address}
-                    onChange={handleChange('address')}
-                    required
-                    multiline
-                    rows={2}
-                    variant="outlined"
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
                     label="Phone Number"
-                    value={formData.phone}
+                    value={clinicData.phone}
                     onChange={handleChange('phone')}
                     required
                     variant="outlined"
                   />
                 </Grid>
-
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange('email')}
+                    label="Address"
+                    value={clinicData.address}
+                    onChange={handleChange('address')}
                     required
                     variant="outlined"
                   />
                 </Grid>
-
-                <Grid item xs={12}>
-                  <Button
-                    type="submit"
+                <Grid item xs={12} sm={6}>
+                  <TextField
                     fullWidth
-                    variant="contained"
-                    size="large"
-                    disabled={loading}
-                    sx={{ mt: 2 }}
-                  >
-                    {loading ? 'Registering...' : 'Register Clinic'}
-                  </Button>
+                    label="City"
+                    value={clinicData.city}
+                    onChange={handleChange('city')}
+                    required
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="State"
+                    value={clinicData.state}
+                    onChange={handleChange('state')}
+                    required
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="Zip Code"
+                    value={clinicData.zipCode}
+                    onChange={handleChange('zipCode')}
+                    required
+                    variant="outlined"
+                  />
                 </Grid>
               </Grid>
+
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                size="large"
+                disabled={loading}
+                sx={{ mt: 3 }}
+              >
+                {loading ? 'Setting up your clinic...' : 'Complete Setup'}
+              </Button>
             </form>
           </CardContent>
         </Card>
