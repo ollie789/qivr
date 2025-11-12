@@ -61,7 +61,6 @@ interface DocumentItem {
 }
 
 const Documents: React.FC = () => {
-  const { canMakeApiCalls } = useAuthGuard();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);

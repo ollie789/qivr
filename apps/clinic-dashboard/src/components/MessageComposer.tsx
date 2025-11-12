@@ -28,7 +28,6 @@ import {
   Sms as SmsIcon,
 } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useSnackbar } from 'notistack';
 import { messagesApi } from '../services/messagesApi';
 import type { MessageDetail } from '../services/messagesApi';
@@ -115,7 +114,6 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   defaultType = 'sms',
   onSent,
 }) => {
-  const { canMakeApiCalls } = useAuthGuard();
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   const [messageType, setMessageType] = useState<'sms' | 'email'>(defaultType);
@@ -128,7 +126,6 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [scheduleTime] = useState<Date | null>(null);
 
   const { data: templateResult, isLoading: templatesLoading } = useQuery<MessageTemplateListResult>({
     queryKey: ['message-templates'],
@@ -313,12 +310,12 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
     }
 
     const primary = recipients[0];
-    if (!primary.id) {
+    if (!primary?.id) {
       setError('Recipient is missing an identifier.');
       return null;
     }
 
-    return primary;
+    return primary as Recipient;
   };
 
 

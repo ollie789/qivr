@@ -645,7 +645,7 @@ const MedicalRecords: React.FC = () => {
 
             {/* Main Content Tabs */}
             <Paper>
-              <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
+              <Tabs value={activeTab} onChange={(_e, v) => setActiveTab(v)}>
                 <Tab icon={<PersonIcon />} label="Demographics" />
                 <Tab icon={<HeartIcon />} label="Vital Signs" />
                 <Tab icon={<MedicalIcon />} label="Medical History" />

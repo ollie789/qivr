@@ -73,7 +73,6 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   preSelectedPatientId,
   preSelectedTemplateId,
 }) => {
-  const { canMakeApiCalls } = useAuthGuard();
   const [activeStep, setActiveStep] = useState(0);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
     preSelectedTemplateId || ''
