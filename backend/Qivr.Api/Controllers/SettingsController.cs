@@ -312,6 +312,206 @@ public class SettingsController : BaseApiController
         return NoContent();
     }
 
+    /// <summary>
+    /// Get clinic settings
+    /// </summary>
+    [HttpGet("clinic")]
+    [ProducesResponseType(typeof(ClinicSettingsDto), 200)]
+    public async Task<IActionResult> GetClinicSettings()
+    {
+        var tenantId = RequireTenantId();
+
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
+
+        if (tenant == null)
+        {
+            throw new ValidationException("Tenant not found");
+        }
+
+        var settings = new ClinicSettingsDto
+        {
+            Name = tenant.Name,
+            RegistrationNumber = tenant.Settings.ContainsKey("registrationNumber") 
+                ? tenant.Settings["registrationNumber"]?.ToString() ?? "" : "",
+            Address = tenant.Address ?? "",
+            City = tenant.City ?? "",
+            State = tenant.State ?? "",
+            ZipCode = tenant.ZipCode ?? "",
+            Phone = tenant.Phone ?? "",
+            Email = tenant.Email ?? "",
+            Website = tenant.Settings.ContainsKey("website") 
+                ? tenant.Settings["website"]?.ToString() ?? "" : "",
+            Timezone = tenant.Timezone,
+            Currency = tenant.Settings.ContainsKey("currency") 
+                ? tenant.Settings["currency"]?.ToString() ?? "AUD" : "AUD"
+        };
+
+        return Success(settings);
+    }
+
+    /// <summary>
+    /// Update clinic settings
+    /// </summary>
+    [HttpPost("clinic")]
+    [ProducesResponseType(204)]
+    public async Task<IActionResult> UpdateClinicSettings([FromBody] ClinicSettingsDto settings)
+    {
+        var tenantId = RequireTenantId();
+
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
+
+        if (tenant == null)
+        {
+            throw new ValidationException("Tenant not found");
+        }
+
+        // Update tenant fields
+        tenant.Name = settings.Name;
+        tenant.Address = settings.Address;
+        tenant.City = settings.City;
+        tenant.State = settings.State;
+        tenant.ZipCode = settings.ZipCode;
+        tenant.Phone = settings.Phone;
+        tenant.Email = settings.Email;
+        tenant.Timezone = settings.Timezone;
+
+        // Update settings JSONB
+        tenant.Settings["registrationNumber"] = settings.RegistrationNumber;
+        tenant.Settings["website"] = settings.Website;
+        tenant.Settings["currency"] = settings.Currency;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Updated clinic settings for tenant {TenantId}", tenantId);
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Get operations settings
+    /// </summary>
+    [HttpGet("operations")]
+    [ProducesResponseType(typeof(OperationsSettingsDto), 200)]
+    public async Task<IActionResult> GetOperationsSettings()
+    {
+        var tenantId = RequireTenantId();
+
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
+
+        if (tenant == null)
+        {
+            throw new ValidationException("Tenant not found");
+        }
+
+        // Get operations settings from tenant settings JSONB
+        var operationsSettings = tenant.Settings.ContainsKey("operations") 
+            ? tenant.Settings["operations"] as Dictionary<string, object> 
+            : null;
+
+        var settings = new OperationsSettingsDto();
+
+        if (operationsSettings != null)
+        {
+            // Parse working hours
+            if (operationsSettings.ContainsKey("workingHours"))
+            {
+                var workingHoursJson = operationsSettings["workingHours"]?.ToString();
+                if (!string.IsNullOrEmpty(workingHoursJson))
+                {
+                    try
+                    {
+                        settings.WorkingHours = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, WorkingHoursDto>>(workingHoursJson) ?? new();
+                    }
+                    catch
+                    {
+                        // Use defaults if parsing fails
+                    }
+                }
+            }
+
+            // Parse other settings
+            if (operationsSettings.ContainsKey("appointmentDuration") && int.TryParse(operationsSettings["appointmentDuration"]?.ToString(), out var duration))
+                settings.AppointmentDuration = duration;
+            if (operationsSettings.ContainsKey("bufferTime") && int.TryParse(operationsSettings["bufferTime"]?.ToString(), out var buffer))
+                settings.BufferTime = buffer;
+            if (operationsSettings.ContainsKey("maxAdvanceBooking") && int.TryParse(operationsSettings["maxAdvanceBooking"]?.ToString(), out var advance))
+                settings.MaxAdvanceBooking = advance;
+            if (operationsSettings.ContainsKey("cancellationWindow") && int.TryParse(operationsSettings["cancellationWindow"]?.ToString(), out var cancellation))
+                settings.CancellationWindow = cancellation;
+            if (operationsSettings.ContainsKey("autoConfirmAppointments") && bool.TryParse(operationsSettings["autoConfirmAppointments"]?.ToString(), out var autoConfirm))
+                settings.AutoConfirmAppointments = autoConfirm;
+            if (operationsSettings.ContainsKey("sendReminders") && bool.TryParse(operationsSettings["sendReminders"]?.ToString(), out var reminders))
+                settings.SendReminders = reminders;
+            if (operationsSettings.ContainsKey("reminderTiming") && int.TryParse(operationsSettings["reminderTiming"]?.ToString(), out var timing))
+                settings.ReminderTiming = timing;
+        }
+
+        // Set defaults if not found
+        if (!settings.WorkingHours.Any())
+        {
+            settings.WorkingHours = new Dictionary<string, WorkingHoursDto>
+            {
+                ["monday"] = new() { Open = "09:00", Close = "17:00", Closed = false },
+                ["tuesday"] = new() { Open = "09:00", Close = "17:00", Closed = false },
+                ["wednesday"] = new() { Open = "09:00", Close = "17:00", Closed = false },
+                ["thursday"] = new() { Open = "09:00", Close = "17:00", Closed = false },
+                ["friday"] = new() { Open = "09:00", Close = "17:00", Closed = false },
+                ["saturday"] = new() { Open = "09:00", Close = "13:00", Closed = false },
+                ["sunday"] = new() { Open = "09:00", Close = "17:00", Closed = true }
+            };
+        }
+
+        if (settings.AppointmentDuration == 0) settings.AppointmentDuration = 30;
+        if (settings.BufferTime == 0) settings.BufferTime = 15;
+        if (settings.MaxAdvanceBooking == 0) settings.MaxAdvanceBooking = 90;
+        if (settings.CancellationWindow == 0) settings.CancellationWindow = 24;
+        if (settings.ReminderTiming == 0) settings.ReminderTiming = 24;
+
+        return Success(settings);
+    }
+
+    /// <summary>
+    /// Update operations settings
+    /// </summary>
+    [HttpPost("operations")]
+    [ProducesResponseType(204)]
+    public async Task<IActionResult> UpdateOperationsSettings([FromBody] OperationsSettingsDto settings)
+    {
+        var tenantId = RequireTenantId();
+
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
+
+        if (tenant == null)
+        {
+            throw new ValidationException("Tenant not found");
+        }
+
+        // Update operations settings in JSONB
+        var operationsSettings = new Dictionary<string, object>
+        {
+            ["workingHours"] = System.Text.Json.JsonSerializer.Serialize(settings.WorkingHours),
+            ["appointmentDuration"] = settings.AppointmentDuration,
+            ["bufferTime"] = settings.BufferTime,
+            ["maxAdvanceBooking"] = settings.MaxAdvanceBooking,
+            ["cancellationWindow"] = settings.CancellationWindow,
+            ["autoConfirmAppointments"] = settings.AutoConfirmAppointments,
+            ["sendReminders"] = settings.SendReminders,
+            ["reminderTiming"] = settings.ReminderTiming
+        };
+
+        tenant.Settings["operations"] = operationsSettings;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Updated operations settings for tenant {TenantId}", tenantId);
+
+        return NoContent();
+    }
+
 }
 
 // DTOs
@@ -432,4 +632,38 @@ public class DeleteAccountRequest
 {
     public string Confirmation { get; set; } = string.Empty;
     public string? Reason { get; set; }
+}
+
+public class ClinicSettingsDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string RegistrationNumber { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string State { get; set; } = string.Empty;
+    public string ZipCode { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Website { get; set; } = string.Empty;
+    public string Timezone { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+}
+
+public class OperationsSettingsDto
+{
+    public Dictionary<string, WorkingHoursDto> WorkingHours { get; set; } = new();
+    public int AppointmentDuration { get; set; }
+    public int BufferTime { get; set; }
+    public int MaxAdvanceBooking { get; set; }
+    public int CancellationWindow { get; set; }
+    public bool AutoConfirmAppointments { get; set; }
+    public bool SendReminders { get; set; }
+    public int ReminderTiming { get; set; }
+}
+
+public class WorkingHoursDto
+{
+    public string Open { get; set; } = string.Empty;
+    public string Close { get; set; } = string.Empty;
+    public bool Closed { get; set; }
 }

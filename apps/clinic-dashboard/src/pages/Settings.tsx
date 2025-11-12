@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogActions,
   FormControl,
+  FormControlLabel,
   InputLabel,
   Select,
   MenuItem,
@@ -28,6 +29,7 @@ import {
   Alert,
   Chip,
   IconButton,
+  CircularProgress,
   Table,
   TableBody,
   TableCell,
@@ -65,6 +67,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
+import api from '../lib/api-client';
 import TenantInfo from '../components/TenantInfo';
 
 interface TabPanelProps {
@@ -183,6 +186,13 @@ export default function Settings() {
   const [tabValue, setTabValue] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [addStaffDialog, setAddStaffDialog] = useState(false);
+  const [staffForm, setStaffForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    specialization: '',
+    department: ''
+  });
   const [showApiKey, setShowApiKey] = useState(false);
   const [newApiKeyDialog, setNewApiKeyDialog] = useState(false);
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences | null>(null);
@@ -266,44 +276,67 @@ export default function Settings() {
     },
   });
 
-  const [staffMembers] = useState<StaffMember[]>([
-    {
-      id: '1',
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@clinic.com',
-      role: 'Physician',
-      department: 'General Practice',
-      status: 'active',
-      lastLogin: '2024-01-15T14:30:00',
+  const { data: staffMembers = [], isLoading: staffLoading } = useQuery({
+    queryKey: ['providers'],
+    queryFn: async () => {
+      const response = await api.get('/api/clinic-management/providers');
+      return response.map((provider: any) => ({
+        id: provider.id,
+        name: `${provider.firstName} ${provider.lastName}`,
+        email: provider.email,
+        role: provider.specialization || 'Provider',
+        department: provider.department || 'General',
+        status: provider.isActive ? 'active' : 'inactive',
+        lastLogin: provider.lastLogin || new Date().toISOString(),
+      }));
     },
-    {
-      id: '2',
-      name: 'Dr. Michael Chen',
-      email: 'michael.chen@clinic.com',
-      role: 'Physician',
-      department: 'Cardiology',
-      status: 'active',
-      lastLogin: '2024-01-15T09:15:00',
+    enabled: canMakeApiCalls,
+  });
+
+  // TODO: Add these endpoints to backend
+  const { data: operationsSettings } = useQuery({
+    queryKey: ['operations-settings'],
+    queryFn: async () => {
+      const response = await api.get('/api/settings/operations');
+      return response.data;
     },
-    {
-      id: '3',
-      name: 'Nancy Williams',
-      email: 'nancy.williams@clinic.com',
-      role: 'Nurse',
-      department: 'General Practice',
-      status: 'active',
-      lastLogin: '2024-01-15T11:45:00',
+    enabled: canMakeApiCalls,
+  });
+
+  const { data: clinicSettings } = useQuery({
+    queryKey: ['clinic-settings'],
+    queryFn: async () => {
+      const response = await api.get('/api/settings/clinic');
+      return response.data;
     },
-    {
-      id: '4',
-      name: 'James Martinez',
-      email: 'james.martinez@clinic.com',
-      role: 'Receptionist',
-      department: 'Administration',
-      status: 'active',
-      lastLogin: '2024-01-15T08:00:00',
-    },
-  ]);
+    enabled: canMakeApiCalls,
+  });
+
+  // Update settings when operations data is loaded
+  useEffect(() => {
+    if (operationsSettings) {
+      setSettings(prev => ({
+        ...prev,
+        operations: {
+          ...prev.operations,
+          ...operationsSettings
+        }
+      }));
+    }
+  }, [operationsSettings]);
+
+  // Update settings when clinic data is loaded
+  useEffect(() => {
+    if (clinicSettings) {
+      setSettings(prev => ({
+        ...prev,
+        clinic: {
+          ...prev.clinic,
+          ...clinicSettings
+        }
+      }));
+    }
+  }, [clinicSettings]);
 
   const {
     data: preferencesData,
@@ -365,10 +398,17 @@ export default function Settings() {
     setTabValue(newValue);
   };
 
-  const handleSaveSettings = () => {
-    // TODO: Implement save to backend
-    enqueueSnackbar('Settings saved successfully', { variant: 'success' });
-    setEditMode(false);
+  const handleSaveSettings = async () => {
+    try {
+      await api.post('/api/settings/clinic', settings.clinic);
+      await api.post('/api/settings/operations', settings.operations);
+      
+      enqueueSnackbar('Settings saved successfully', { variant: 'success' });
+      setEditMode(false);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      enqueueSnackbar('Failed to save settings', { variant: 'error' });
+    }
   };
 
   const handleGenerateApiKey = () => {
@@ -600,11 +640,233 @@ export default function Settings() {
         
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Operations Settings</Typography>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Configure clinic operating hours and appointment settings
-            </Alert>
-            {/* Add operations settings here */}
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h6">Operations Settings</Typography>
+              {!editMode ? (
+                <Button startIcon={<EditIcon />} onClick={() => setEditMode(true)}>
+                  Edit
+                </Button>
+              ) : (
+                <Box>
+                  <Button 
+                    startIcon={<CancelIcon />} 
+                    onClick={() => setEditMode(false)}
+                    sx={{ mr: 1 }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    startIcon={<SaveIcon />}
+                    onClick={handleSaveSettings}
+                  >
+                    Save Changes
+                  </Button>
+                </Box>
+              )}
+            </Box>
+
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Operating Hours</Typography>
+                    {Object.entries(settings.operations.workingHours).map(([day, hours]) => (
+                      <Box key={day} display="flex" alignItems="center" mb={2}>
+                        <Box sx={{ minWidth: 120 }}>
+                          <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
+                            {day}
+                          </Typography>
+                        </Box>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={!hours.closed}
+                              onChange={(e) => setSettings({
+                                ...settings,
+                                operations: {
+                                  ...settings.operations,
+                                  workingHours: {
+                                    ...settings.operations.workingHours,
+                                    [day]: { ...hours, closed: !e.target.checked }
+                                  }
+                                }
+                              })}
+                              disabled={!editMode}
+                            />
+                          }
+                          label="Open"
+                          sx={{ mr: 2 }}
+                        />
+                        {!hours.closed && (
+                          <>
+                            <TextField
+                              type="time"
+                              label="Open"
+                              value={hours.open}
+                              onChange={(e) => setSettings({
+                                ...settings,
+                                operations: {
+                                  ...settings.operations,
+                                  workingHours: {
+                                    ...settings.operations.workingHours,
+                                    [day]: { ...hours, open: e.target.value }
+                                  }
+                                }
+                              })}
+                              disabled={!editMode}
+                              sx={{ mr: 2, width: 120 }}
+                              InputLabelProps={{ shrink: true }}
+                            />
+                            <TextField
+                              type="time"
+                              label="Close"
+                              value={hours.close}
+                              onChange={(e) => setSettings({
+                                ...settings,
+                                operations: {
+                                  ...settings.operations,
+                                  workingHours: {
+                                    ...settings.operations.workingHours,
+                                    [day]: { ...hours, close: e.target.value }
+                                  }
+                                }
+                              })}
+                              disabled={!editMode}
+                              sx={{ width: 120 }}
+                              InputLabelProps={{ shrink: true }}
+                            />
+                          </>
+                        )}
+                      </Box>
+                    ))}
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Appointment Settings</Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Default Appointment Duration (minutes)"
+                          type="number"
+                          fullWidth
+                          value={settings.operations.appointmentDuration}
+                          onChange={(e) => setSettings({
+                            ...settings,
+                            operations: {
+                              ...settings.operations,
+                              appointmentDuration: parseInt(e.target.value) || 30
+                            }
+                          })}
+                          disabled={!editMode}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Buffer Time Between Appointments (minutes)"
+                          type="number"
+                          fullWidth
+                          value={settings.operations.bufferTime}
+                          onChange={(e) => setSettings({
+                            ...settings,
+                            operations: {
+                              ...settings.operations,
+                              bufferTime: parseInt(e.target.value) || 5
+                            }
+                          })}
+                          disabled={!editMode}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Maximum Advance Booking (days)"
+                          type="number"
+                          fullWidth
+                          value={settings.operations.maxAdvanceBooking}
+                          onChange={(e) => setSettings({
+                            ...settings,
+                            operations: {
+                              ...settings.operations,
+                              maxAdvanceBooking: parseInt(e.target.value) || 90
+                            }
+                          })}
+                          disabled={!editMode}
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Booking Policies</Typography>
+                    <List>
+                      <ListItem>
+                        <ListItemText 
+                          primary="Auto-confirm Appointments"
+                          secondary="Automatically confirm new appointments"
+                        />
+                        <ListItemSecondaryAction>
+                          <Switch
+                            checked={settings.operations.autoConfirmAppointments}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              operations: {
+                                ...settings.operations,
+                                autoConfirmAppointments: e.target.checked
+                              }
+                            })}
+                            disabled={!editMode}
+                          />
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText 
+                          primary="Send Reminders"
+                          secondary="Send appointment reminders to patients"
+                        />
+                        <ListItemSecondaryAction>
+                          <Switch
+                            checked={settings.operations.sendReminders}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              operations: {
+                                ...settings.operations,
+                                sendReminders: e.target.checked
+                              }
+                            })}
+                            disabled={!editMode}
+                          />
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    </List>
+                    {settings.operations.sendReminders && (
+                      <TextField
+                        label="Reminder Time (hours before appointment)"
+                        type="number"
+                        fullWidth
+                        value={settings.operations.reminderTiming}
+                        onChange={(e) => setSettings({
+                          ...settings,
+                          operations: {
+                            ...settings.operations,
+                            reminderTiming: parseInt(e.target.value) || 24
+                          }
+                        })}
+                        disabled={!editMode}
+                        sx={{ mt: 2 }}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
           </Box>
         </TabPanel>
 
@@ -634,7 +896,20 @@ export default function Settings() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {staffMembers.map((staff) => (
+                  {staffLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        <CircularProgress size={24} />
+                      </TableCell>
+                    </TableRow>
+                  ) : staffMembers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        No staff members found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    staffMembers.map((staff) => (
                     <TableRow key={staff.id}>
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={1}>
@@ -669,7 +944,8 @@ export default function Settings() {
                         </IconButton>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -843,33 +1119,59 @@ export default function Settings() {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
-              <TextField label="First Name" fullWidth />
+              <TextField 
+                label="First Name" 
+                fullWidth 
+                value={staffForm.firstName}
+                onChange={(e) => setStaffForm({...staffForm, firstName: e.target.value})}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Last Name" fullWidth />
+              <TextField 
+                label="Last Name" 
+                fullWidth 
+                value={staffForm.lastName}
+                onChange={(e) => setStaffForm({...staffForm, lastName: e.target.value})}
+              />
             </Grid>
             <Grid item xs={12}>
-              <TextField label="Email" type="email" fullWidth />
+              <TextField 
+                label="Email" 
+                type="email" 
+                fullWidth 
+                value={staffForm.email}
+                onChange={(e) => setStaffForm({...staffForm, email: e.target.value})}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Role</InputLabel>
-                <Select label="Role">
-                  <MenuItem value="physician">Physician</MenuItem>
-                  <MenuItem value="nurse">Nurse</MenuItem>
-                  <MenuItem value="receptionist">Receptionist</MenuItem>
-                  <MenuItem value="admin">Administrator</MenuItem>
+                <InputLabel>Specialization</InputLabel>
+                <Select 
+                  label="Specialization"
+                  value={staffForm.specialization}
+                  onChange={(e) => setStaffForm({...staffForm, specialization: e.target.value})}
+                >
+                  <MenuItem value="General Practice">General Practice</MenuItem>
+                  <MenuItem value="Cardiology">Cardiology</MenuItem>
+                  <MenuItem value="Pediatrics">Pediatrics</MenuItem>
+                  <MenuItem value="Orthopedics">Orthopedics</MenuItem>
+                  <MenuItem value="Dermatology">Dermatology</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Department</InputLabel>
-                <Select label="Department">
-                  <MenuItem value="general">General Practice</MenuItem>
-                  <MenuItem value="cardiology">Cardiology</MenuItem>
-                  <MenuItem value="pediatrics">Pediatrics</MenuItem>
-                  <MenuItem value="administration">Administration</MenuItem>
+                <Select 
+                  label="Department"
+                  value={staffForm.department}
+                  onChange={(e) => setStaffForm({...staffForm, department: e.target.value})}
+                >
+                  <MenuItem value="Primary Care">Primary Care</MenuItem>
+                  <MenuItem value="Cardiology">Cardiology</MenuItem>
+                  <MenuItem value="Pediatrics">Pediatrics</MenuItem>
+                  <MenuItem value="Orthopedics">Orthopedics</MenuItem>
+                  <MenuItem value="Administration">Administration</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -877,7 +1179,36 @@ export default function Settings() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddStaffDialog(false)}>Cancel</Button>
-          <Button variant="contained">Add Staff Member</Button>
+          <Button 
+            variant="contained"
+            onClick={async () => {
+              try {
+                if (!staffForm.firstName || !staffForm.lastName || !staffForm.email) {
+                  enqueueSnackbar('Please fill in all required fields', { variant: 'error' });
+                  return;
+                }
+                
+                await api.post('/api/clinic-management/providers', {
+                  firstName: staffForm.firstName,
+                  lastName: staffForm.lastName,
+                  email: staffForm.email,
+                  specialization: staffForm.specialization || 'General Practice',
+                  department: staffForm.department || 'Primary Care',
+                  isActive: true
+                });
+                
+                queryClient.invalidateQueries({ queryKey: ['providers'] });
+                setAddStaffDialog(false);
+                setStaffForm({ firstName: '', lastName: '', email: '', specialization: '', department: '' });
+                enqueueSnackbar('Staff member added successfully', { variant: 'success' });
+              } catch (error) {
+                console.error('Error adding staff:', error);
+                enqueueSnackbar('Failed to add staff member', { variant: 'error' });
+              }
+            }}
+          >
+            Add Staff Member
+          </Button>
         </DialogActions>
       </Dialog>
 

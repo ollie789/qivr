@@ -21,19 +21,19 @@ export interface SchedulePromPayload {
 export const promsApi = {
   createTemplate: async (payload: CreatePromTemplateRequest) => {
     return await apiClient.post<PromTemplateDetail>(
-      "/api/v1/proms/templates",
+      "/api/proms/templates",
       payload,
     );
   },
   getTemplate: async (key: string, version?: number) => {
     const path = version
-      ? `/api/v1/proms/templates/${key}/${version}`
-      : `/api/v1/proms/templates/${key}`;
+      ? `/api/proms/templates/${key}/${version}`
+      : `/api/proms/templates/${key}`;
     return await apiClient.get<PromTemplateDetail>(path);
   },
   listTemplates: async (page = 1, pageSize = 20) => {
     return await apiClient.get<PromTemplateSummary[]>(
-      "/api/v1/proms/templates",
+      "/api/proms/templates",
       { page, pageSize },
     );
   },
@@ -45,11 +45,11 @@ export const promsApi = {
     answers: Record<string, unknown>,
   ) => {
     return await apiClient.post<{ score: number; completedAt: string }>(
-      `/api/v1/proms/instances/${instanceId}/answers`,
+      `/api/proms/instances/${instanceId}/answers`,
       answers,
     );
   },
   getInstance: async (id: string) => {
-    return await apiClient.get(`/api/v1/proms/instances/${id}`);
+    return await apiClient.get(`/api/proms/instances/${id}`);
   },
 };

@@ -114,7 +114,7 @@ function mapEvaluationToIntake(e: EvaluationResponse): IntakeSubmission {
 export const intakeApi = {
   async getIntakes(filters?: IntakeFilters): Promise<{ data: IntakeSubmission[]; total: number }> {
     try {
-      const response = await apiClient.get('/api/v1/evaluations', { params: filters });
+      const response = await apiClient.get('/api/evaluations', { params: filters });
       const list = Array.isArray(response.data) ? response.data : [];
       const data = list.map(mapEvaluationToIntake);
       return { data, total: data.length };
@@ -129,7 +129,7 @@ export const intakeApi = {
 
   async getIntakeDetails(id: string): Promise<IntakeDetails> {
     try {
-      const response = await apiClient.get(`/api/v1/evaluations/${id}`);
+      const response = await apiClient.get(`/api/evaluations/${id}`);
       const e = response.data;
       return {
         id: e.id,
@@ -158,7 +158,7 @@ export const intakeApi = {
 
   async updateIntakeStatus(id: string, status: string, notes?: string): Promise<void> {
     try {
-      await apiClient.patch(`/api/v1/evaluations/${id}/status`, { status, notes });
+      await apiClient.patch(`/api/evaluations/${id}/status`, { status, notes });
     } catch (error) {
       console.error('Error updating intake status:', error);
       throw error;

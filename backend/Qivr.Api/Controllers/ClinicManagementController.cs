@@ -618,14 +618,63 @@ public class ClinicManagementController : ControllerBase
                 return BadRequest(new { error = "Date range cannot exceed 365 days." });
             }
 
-            // Get analytics data - simplified for now
+            // Get analytics data from database using tenant context
+            var periodStart = from == default ? DateTime.UtcNow.AddDays(-30) : DateTime.SpecifyKind(from, DateTimeKind.Utc);
+            var periodEnd = to == default ? DateTime.UtcNow : DateTime.SpecifyKind(to, DateTimeKind.Utc);
+
+            // Get appointment metrics
+            var appointments = await _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.TenantId == tenantId && a.ScheduledStart >= periodStart && a.ScheduledStart <= periodEnd)
+                .ToListAsync(ct);
+
+            var totalAppointments = appointments.Count;
+            var completedAppointments = appointments.Count(a => a.Status == AppointmentStatus.Completed);
+            var noShowAppointments = appointments.Count(a => a.Status == AppointmentStatus.NoShow);
+            var cancelledAppointments = appointments.Count(a => a.Status == AppointmentStatus.Cancelled);
+
+            // Get patient metrics
+            var patients = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.TenantId == tenantId && u.CreatedAt >= periodStart && u.CreatedAt <= periodEnd)
+                .ToListAsync(ct);
+
+            var newPatients = patients.Count;
+
+            // Get PROM metrics
+            var promInstances = await _context.PromInstances
+                .AsNoTracking()
+                .Where(p => p.TenantId == tenantId && p.CreatedAt >= periodStart && p.CreatedAt <= periodEnd)
+                .ToListAsync(ct);
+
+            var totalPromsSent = promInstances.Count;
+            var completedProms = promInstances.Count(p => p.CompletedAt.HasValue);
+
             var analytics = new
             {
-                period = new { from, to },
-                appointmentMetrics = new { totalScheduled = 0, completed = 0 },
-                patientMetrics = new { newPatients = 0, returningPatients = 0 },
-                promMetrics = new { totalSent = 0, completed = 0 },
-                revenueMetrics = new { totalBilled = 0m, totalCollected = 0m }
+                period = new { from = periodStart, to = periodEnd },
+                appointmentMetrics = new { 
+                    totalScheduled = totalAppointments, 
+                    completed = completedAppointments,
+                    noShows = noShowAppointments,
+                    cancelled = cancelledAppointments,
+                    utilizationRate = totalAppointments > 0 ? Math.Round((double)completedAppointments / totalAppointments * 100, 2) : 0
+                },
+                patientMetrics = new { 
+                    newPatients = newPatients, 
+                    returningPatients = totalAppointments - newPatients,
+                    totalPatients = await _context.Users.AsNoTracking().CountAsync(u => u.TenantId == tenantId, ct)
+                },
+                promMetrics = new { 
+                    totalSent = totalPromsSent, 
+                    completed = completedProms,
+                    completionRate = totalPromsSent > 0 ? Math.Round((double)completedProms / totalPromsSent * 100, 2) : 0
+                },
+                revenueMetrics = new { 
+                    totalBilled = 0m, 
+                    totalCollected = 0m,
+                    outstandingBalance = 0m
+                }
             };
             
             return Ok(analytics);

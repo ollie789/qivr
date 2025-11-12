@@ -66,8 +66,28 @@ const Signup: React.FC = () => {
           message: 'Account created successfully! Please check your email to verify your account, then log in to complete your clinic setup.' 
         }
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      
+      // Extract the actual error message from the API response
+      let errorMessage = 'Registration failed';
+      
+      if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      // Handle specific error cases
+      if (errorMessage.includes('User already exists') || errorMessage.includes('already exists')) {
+        errorMessage = 'An account with this email already exists. Please try logging in instead.';
+      } else if (errorMessage.includes('password')) {
+        errorMessage = 'Password does not meet requirements. Please use at least 8 characters with uppercase, lowercase, numbers, and special characters.';
+      } else if (errorMessage.includes('email')) {
+        errorMessage = 'Please enter a valid email address.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

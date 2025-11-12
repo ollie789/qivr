@@ -187,7 +187,6 @@ function App() {
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
-                  <Route path="/clinic-registration" element={<ClinicRegistration />} />
 
                   {/* Private routes */}
                   <Route
@@ -211,6 +210,7 @@ function App() {
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="providers" element={<Providers />} />
                     <Route path="settings" element={<Settings />} />
+                    <Route path="clinic-registration" element={<ClinicRegistration />} />
                   </Route>
 
                   {/* Catch all - redirect to dashboard */}

@@ -59,7 +59,7 @@ public class ClinicDashboardController : ControllerBase
                 {
                     Id = a.Id,
                     PatientId = a.PatientId,
-                    PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                    PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : "Unknown Patient",
                     ScheduledStart = a.ScheduledStart,
                     ScheduledEnd = a.ScheduledEnd,
                     AppointmentType = a.AppointmentType,
@@ -80,7 +80,7 @@ public class ClinicDashboardController : ControllerBase
                 {
                     AppointmentId = a.Id,
                     PatientId = a.PatientId,
-                    PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                    PatientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : "Unknown Patient",
                     CheckInTime = a.UpdatedAt,
                     AppointmentTime = a.ScheduledStart,
                     AppointmentType = a.AppointmentType,
@@ -126,8 +126,12 @@ public class ClinicDashboardController : ControllerBase
                 .Select(r => new PromSubmissionDto
                 {
                     Id = r.Id,
-                    PatientName = $"{r.PromInstance.Patient.FirstName} {r.PromInstance.Patient.LastName}",
-                    TemplateName = r.PromInstance.Template.Name,
+                    PatientName = r.PromInstance != null && r.PromInstance.Patient != null 
+                        ? $"{r.PromInstance.Patient.FirstName} {r.PromInstance.Patient.LastName}" 
+                        : "Unknown Patient",
+                    TemplateName = r.PromInstance != null && r.PromInstance.Template != null 
+                        ? r.PromInstance.Template.Name 
+                        : "Unknown Template",
                     SubmittedAt = r.CreatedAt,
                     Score = r.Score,
                     RequiresReview = r.Score > 70 // High scores may need review

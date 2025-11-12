@@ -72,17 +72,17 @@ const ClinicRegistration: React.FC = () => {
     setError(null);
 
     try {
-      const response = await api.post('/tenant-onboarding/register-clinic', {
-        cognitoSub: user.id,
-        clinicName: clinicData.clinicName,
-        email: user.email,
-        phone: clinicData.phone,
-        firstName: user.name.split(' ')[0] || '',
-        lastName: user.name.split(' ').slice(1).join(' ') || '',
-        address: clinicData.address,
-        city: clinicData.city,
-        state: clinicData.state,
-        zipCode: clinicData.zipCode,
+      const response = await api.post('/api/tenant-onboarding/register-clinic', {
+        CognitoSub: user.id,
+        ClinicName: clinicData.clinicName,
+        Email: user.email,
+        Phone: clinicData.phone,
+        FirstName: user.name.split(' ')[0] || '',
+        LastName: user.name.split(' ').slice(1).join(' ') || '',
+        Address: clinicData.address,
+        City: clinicData.city,
+        State: clinicData.state,
+        ZipCode: clinicData.zipCode,
         country: 'Australia',
       });
 

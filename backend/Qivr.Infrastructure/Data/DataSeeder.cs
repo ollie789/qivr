@@ -16,7 +16,11 @@ public class DataSeeder
     {
         // Skip if data already exists
         if (await _context.Tenants.AnyAsync())
+        {
+            // Update existing tenant with sample data if needed
+            await SeedSampleDataForExistingTenant();
             return;
+        }
 
         // Create test clinics (SaaS User Pools will be created later via API)
         var clinic1 = await CreateTestClinic("Demo Physio Clinic", "demo@qivr.pro");
@@ -29,7 +33,118 @@ public class DataSeeder
         await CreateTestUsers(clinic1.Id, "demo@qivr.pro");
         await CreateTestUsers(clinic2.Id, "test@qivr.pro");
 
+        // Add sample data for analytics
+        await SeedSampleAnalyticsData(clinic1.Id);
+
         await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedSampleDataForExistingTenant()
+    {
+        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id.ToString() == "tenant_qivr_demo");
+        if (tenant != null)
+        {
+            await SeedSampleAnalyticsData(tenant.Id);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    private async Task SeedSampleAnalyticsData(Guid tenantId)
+    {
+        // Skip if sample data already exists
+        if (await _context.Providers.AnyAsync(p => p.Id == "prov_sample_001"))
+            return;
+
+        // Create sample provider
+        var provider = new Provider
+        {
+            Id = "prov_sample_001",
+            TenantId = tenantId,
+            Name = "Dr. Sarah Johnson",
+            Specialization = "General Practice",
+            Email = "sarah.johnson@clinic.com",
+            Phone = "+1-555-0123",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _context.Providers.Add(provider);
+
+        // Create sample appointments
+        var appointments = new[]
+        {
+            new Appointment
+            {
+                Id = "appt_sample_001",
+                TenantId = tenantId,
+                PatientId = "patient_001",
+                ProviderId = "prov_sample_001",
+                AppointmentDate = DateTime.UtcNow.AddDays(-2).AddHours(9),
+                Status = AppointmentStatus.Completed,
+                AppointmentType = "Consultation",
+                DurationMinutes = 30,
+                Notes = "Regular checkup completed",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new Appointment
+            {
+                Id = "appt_sample_002",
+                TenantId = tenantId,
+                PatientId = "patient_002",
+                ProviderId = "prov_sample_001",
+                AppointmentDate = DateTime.UtcNow.AddDays(-2).AddHours(14.5),
+                Status = AppointmentStatus.Completed,
+                AppointmentType = "Follow-up",
+                DurationMinutes = 15,
+                Notes = "Follow-up visit completed",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new Appointment
+            {
+                Id = "appt_sample_003",
+                TenantId = tenantId,
+                PatientId = "patient_003",
+                ProviderId = "prov_sample_001",
+                AppointmentDate = DateTime.UtcNow.AddDays(-1).AddHours(10.25),
+                Status = AppointmentStatus.NoShow,
+                AppointmentType = "Consultation",
+                DurationMinutes = 30,
+                Notes = "Patient did not show up",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new Appointment
+            {
+                Id = "appt_sample_004",
+                TenantId = tenantId,
+                PatientId = "patient_004",
+                ProviderId = "prov_sample_001",
+                AppointmentDate = DateTime.UtcNow.AddHours(11),
+                Status = AppointmentStatus.Scheduled,
+                AppointmentType = "Consultation",
+                DurationMinutes = 30,
+                Notes = "Upcoming appointment",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new Appointment
+            {
+                Id = "appt_sample_005",
+                TenantId = tenantId,
+                PatientId = "patient_005",
+                ProviderId = "prov_sample_001",
+                AppointmentDate = DateTime.UtcNow.AddHours(15.5),
+                Status = AppointmentStatus.Scheduled,
+                AppointmentType = "Follow-up",
+                DurationMinutes = 15,
+                Notes = "Upcoming follow-up",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
+
+        _context.Appointments.AddRange(appointments);
     }
 
     private async Task<Tenant> CreateTestClinic(string name, string email)
@@ -41,10 +156,33 @@ public class DataSeeder
             Slug = name.ToLower().Replace(" ", "-"),
             Status = TenantStatus.Active,
             CreatedAt = DateTime.UtcNow,
+            Address = "123 Healthcare Ave, Medical District, City 12345",
+            Phone = "+1-555-CLINIC",
+            Email = email,
             Settings = new Dictionary<string, object>
             {
                 ["theme"] = "default",
-                ["features"] = new[] { "appointments", "patients", "analytics" }
+                ["features"] = new[] { "appointments", "patients", "analytics" },
+                ["operations"] = new Dictionary<string, object>
+                {
+                    ["workingHours"] = new Dictionary<string, object>
+                    {
+                        ["monday"] = new { start = "09:00", end = "17:00", enabled = true },
+                        ["tuesday"] = new { start = "09:00", end = "17:00", enabled = true },
+                        ["wednesday"] = new { start = "09:00", end = "17:00", enabled = true },
+                        ["thursday"] = new { start = "09:00", end = "17:00", enabled = true },
+                        ["friday"] = new { start = "09:00", end = "17:00", enabled = true },
+                        ["saturday"] = new { start = "09:00", end = "13:00", enabled = false },
+                        ["sunday"] = new { start = "09:00", end = "13:00", enabled = false }
+                    },
+                    ["appointmentDuration"] = 30,
+                    ["bufferTime"] = 15,
+                    ["maxAdvanceBooking"] = 90,
+                    ["allowOnlineBooking"] = true,
+                    ["requireConfirmation"] = true,
+                    ["sendReminders"] = true,
+                    ["reminderHours"] = 24
+                }
             }
         };
 
