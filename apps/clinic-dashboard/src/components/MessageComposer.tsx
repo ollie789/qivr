@@ -363,7 +363,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
     if (messageType === 'email' && !subject) return false;
     if (!message) return false;
     if (recipients.length === 0) return false;
-    if (!recipients[0].id) return false;
+    if (!recipients[0]?.id) return false;
     return true;
   };
 

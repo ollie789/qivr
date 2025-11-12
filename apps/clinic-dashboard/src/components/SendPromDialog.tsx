@@ -138,7 +138,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
         notes: message || undefined,
       } as const;
 
-      if (selectedPatients.length === 1) {
+      if (selectedPatients.length === 1 && selectedPatients[0]) {
         await promsApi.schedule({
           ...schedulePayload,
           patientId: selectedPatients[0].id,

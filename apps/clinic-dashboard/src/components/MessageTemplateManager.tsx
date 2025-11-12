@@ -105,15 +105,17 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
 
     if (!selectedId && templates.length > 0) {
       const first = templates[0];
-      setSelectedId(first.id);
-      setForm({
-        id: first.id,
-        name: first.name,
-        description: first.description ?? '',
-        subject: first.subject ?? '',
-        content: first.content,
-        channel: first.channel,
-      });
+      if (first) {
+        setSelectedId(first.id);
+        setForm({
+          id: first.id,
+          name: first.name,
+          description: first.description ?? '',
+          subject: first.subject ?? '',
+          content: first.content,
+          channel: first.channel,
+        });
+      }
       return;
     }
 

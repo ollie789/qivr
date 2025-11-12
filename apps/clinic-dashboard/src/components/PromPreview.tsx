@@ -397,17 +397,17 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
                         label={`Question ${currentStep + 1} of ${preview.questions.length}`} 
                         color="primary"
                       />
-                      {preview.questions[currentStep].required && (
+                      {preview.questions[currentStep]?.required && (
                         <Chip label="Required" color="error" size="small" />
                       )}
                     </Box>
                     
                     <Typography variant="h6" gutterBottom>
-                      {preview.questions[currentStep].text}
+                      {preview.questions[currentStep]?.text}
                     </Typography>
                     
                     <Box sx={{ mt: 3 }}>
-                      {renderQuestion(preview.questions[currentStep])}
+                      {preview.questions[currentStep] && renderQuestion(preview.questions[currentStep])}
                     </Box>
                   </CardContent>
                 </Card>

@@ -131,7 +131,7 @@ const MedicalRecords: React.FC = () => {
   const patients: Patient[] = patientList?.data ?? [];
 
   useEffect(() => {
-    if (!selectedPatientId && patients.length > 0) {
+    if (!selectedPatientId && patients.length > 0 && patients[0]) {
       setSelectedPatientId(patients[0].id);
     }
   }, [patients, selectedPatientId]);
