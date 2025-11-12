@@ -155,7 +155,7 @@ interface ClinicSettings {
   };
 }
 
-interface StaffMember {
+interface ProviderMember {
   id: string;
   name: string;
   email: string;
@@ -185,8 +185,8 @@ export default function Settings() {
   const { canMakeApiCalls } = useAuthGuard();
   const [tabValue, setTabValue] = useState(0);
   const [editMode, setEditMode] = useState(false);
-  const [addStaffDialog, setAddStaffDialog] = useState(false);
-  const [staffForm, setStaffForm] = useState({
+  const [addProviderDialog, setAddProviderDialog] = useState(false);
+  const [providerForm, setProviderForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
@@ -276,7 +276,7 @@ export default function Settings() {
     },
   });
 
-  const { data: staffMembers = [], isLoading: staffLoading } = useQuery({
+  const { data: providerMembers = [], isLoading: providersLoading } = useQuery({
     queryKey: ['providers'],
     queryFn: async () => {
       const response = await api.get('/api/clinic-management/providers');
@@ -443,7 +443,7 @@ export default function Settings() {
         <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
           <Tab icon={<BusinessIcon />} label="Clinic Info" />
           <Tab icon={<ScheduleIcon />} label="Operations" />
-          <Tab icon={<PeopleIcon />} label="Staff" />
+          <Tab icon={<PeopleIcon />} label="Providers" />
           <Tab icon={<NotificationsIcon />} label="Notifications" />
           <Tab icon={<PaymentIcon />} label="Billing" />
           <Tab icon={<ApiIcon />} label="Integrations" />
@@ -873,13 +873,13 @@ export default function Settings() {
         <TabPanel value={tabValue} index={2}>
           <Box sx={{ p: 3 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-              <Typography variant="h6">Staff Management</Typography>
+              <Typography variant="h6">Provider Management</Typography>
               <Button 
                 variant="contained" 
                 startIcon={<AddIcon />}
-                onClick={() => setAddStaffDialog(true)}
+                onClick={() => setAddProviderDialog(true)}
               >
-                Add Staff Member
+                Add Provider
               </Button>
             </Box>
             
@@ -896,43 +896,43 @@ export default function Settings() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {staffLoading ? (
+                  {providersLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} align="center">
                         <CircularProgress size={24} />
                       </TableCell>
                     </TableRow>
-                  ) : staffMembers.length === 0 ? (
+                  ) : providerMembers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} align="center">
-                        No staff members found
+                        No providers found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    staffMembers.map((staff) => (
-                    <TableRow key={staff.id}>
+                    providerMembers.map((provider) => (
+                    <TableRow key={provider.id}>
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={1}>
                           <Avatar sx={{ width: 32, height: 32 }}>
-                            {staff.name.charAt(0)}
+                            {provider.name.charAt(0)}
                           </Avatar>
-                          {staff.name}
+                          {provider.name}
                         </Box>
                       </TableCell>
-                      <TableCell>{staff.email}</TableCell>
+                      <TableCell>{provider.email}</TableCell>
                       <TableCell>
                         <Chip 
-                          label={staff.role} 
+                          label={provider.role} 
                           size="small"
-                          color={staff.role === 'Physician' ? 'primary' : 'default'}
+                          color={provider.role === 'Physician' ? 'primary' : 'default'}
                         />
                       </TableCell>
-                      <TableCell>{staff.department}</TableCell>
+                      <TableCell>{provider.department}</TableCell>
                       <TableCell>
                         <Chip 
-                          label={staff.status} 
+                          label={provider.status} 
                           size="small"
-                          color={staff.status === 'active' ? 'success' : 'default'}
+                          color={provider.status === 'active' ? 'success' : 'default'}
                         />
                       </TableCell>
                       <TableCell>
@@ -1073,7 +1073,7 @@ export default function Settings() {
                     </ListItemIcon>
                     <ListItemText 
                       primary="Multi-Factor Authentication"
-                      secondary="Require MFA for all staff accounts"
+                      secondary="Require MFA for all provider accounts"
                     />
                     <ListItemSecondaryAction>
                       <Switch
@@ -1113,25 +1113,25 @@ export default function Settings() {
         </TabPanel>
       </Paper>
 
-      {/* Add Staff Dialog */}
-      <Dialog open={addStaffDialog} onClose={() => setAddStaffDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Staff Member</DialogTitle>
+      {/* Add Provider Dialog */}
+      <Dialog open={addProviderDialog} onClose={() => setAddProviderDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Provider</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField 
                 label="First Name" 
                 fullWidth 
-                value={staffForm.firstName}
-                onChange={(e) => setStaffForm({...staffForm, firstName: e.target.value})}
+                value={providerForm.firstName}
+                onChange={(e) => setProviderForm({...providerForm, firstName: e.target.value})}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField 
                 label="Last Name" 
                 fullWidth 
-                value={staffForm.lastName}
-                onChange={(e) => setStaffForm({...staffForm, lastName: e.target.value})}
+                value={providerForm.lastName}
+                onChange={(e) => setProviderForm({...providerForm, lastName: e.target.value})}
               />
             </Grid>
             <Grid item xs={12}>
@@ -1139,8 +1139,8 @@ export default function Settings() {
                 label="Email" 
                 type="email" 
                 fullWidth 
-                value={staffForm.email}
-                onChange={(e) => setStaffForm({...staffForm, email: e.target.value})}
+                value={providerForm.email}
+                onChange={(e) => setProviderForm({...providerForm, email: e.target.value})}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -1148,8 +1148,8 @@ export default function Settings() {
                 <InputLabel>Specialization</InputLabel>
                 <Select 
                   label="Specialization"
-                  value={staffForm.specialization}
-                  onChange={(e) => setStaffForm({...staffForm, specialization: e.target.value})}
+                  value={providerForm.specialization}
+                  onChange={(e) => setProviderForm({...providerForm, specialization: e.target.value})}
                 >
                   <MenuItem value="General Practice">General Practice</MenuItem>
                   <MenuItem value="Cardiology">Cardiology</MenuItem>
@@ -1164,8 +1164,8 @@ export default function Settings() {
                 <InputLabel>Department</InputLabel>
                 <Select 
                   label="Department"
-                  value={staffForm.department}
-                  onChange={(e) => setStaffForm({...staffForm, department: e.target.value})}
+                  value={providerForm.department}
+                  onChange={(e) => setProviderForm({...providerForm, department: e.target.value})}
                 >
                   <MenuItem value="Primary Care">Primary Care</MenuItem>
                   <MenuItem value="Cardiology">Cardiology</MenuItem>
@@ -1178,36 +1178,36 @@ export default function Settings() {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAddStaffDialog(false)}>Cancel</Button>
+          <Button onClick={() => setAddProviderDialog(false)}>Cancel</Button>
           <Button 
             variant="contained"
             onClick={async () => {
               try {
-                if (!staffForm.firstName || !staffForm.lastName || !staffForm.email) {
+                if (!providerForm.firstName || !providerForm.lastName || !providerForm.email) {
                   enqueueSnackbar('Please fill in all required fields', { variant: 'error' });
                   return;
                 }
                 
                 await api.post('/api/clinic-management/providers', {
-                  firstName: staffForm.firstName,
-                  lastName: staffForm.lastName,
-                  email: staffForm.email,
-                  specialization: staffForm.specialization || 'General Practice',
-                  department: staffForm.department || 'Primary Care',
+                  firstName: providerForm.firstName,
+                  lastName: providerForm.lastName,
+                  email: providerForm.email,
+                  specialization: providerForm.specialization || 'General Practice',
+                  department: providerForm.department || 'Primary Care',
                   isActive: true
                 });
                 
                 queryClient.invalidateQueries({ queryKey: ['providers'] });
-                setAddStaffDialog(false);
-                setStaffForm({ firstName: '', lastName: '', email: '', specialization: '', department: '' });
-                enqueueSnackbar('Staff member added successfully', { variant: 'success' });
+                setAddProviderDialog(false);
+                setProviderForm({ firstName: '', lastName: '', email: '', specialization: '', department: '' });
+                enqueueSnackbar('Provider added successfully', { variant: 'success' });
               } catch (error) {
-                console.error('Error adding staff:', error);
-                enqueueSnackbar('Failed to add staff member', { variant: 'error' });
+                console.error('Error adding provider:', error);
+                enqueueSnackbar('Failed to add provider', { variant: 'error' });
               }
             }}
           >
-            Add Staff Member
+            Add Provider
           </Button>
         </DialogActions>
       </Dialog>
