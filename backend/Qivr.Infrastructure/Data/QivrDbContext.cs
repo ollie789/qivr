@@ -75,6 +75,20 @@ public class QivrDbContext : DbContext
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
 
+    private static Dictionary<string, object> DeserializeJsonSafely(string v)
+    {
+        if (string.IsNullOrEmpty(v) || v == "NULL" || v == "null") 
+            return new Dictionary<string, object>();
+        try 
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>();
+        }
+        catch 
+        {
+            return new Dictionary<string, object>();
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -121,7 +135,7 @@ public class QivrDbContext : DbContext
         // Configure value converters for complex types
         var jsonConverter = new ValueConverter<Dictionary<string, object>?, string>(
             v => v == null ? "{}" : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-            v => string.IsNullOrEmpty(v) ? new Dictionary<string, object>() : JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>()
+            v => DeserializeJsonSafely(v)
         );
         
         var stringListConverter = new ValueConverter<List<string>, string[]>(
