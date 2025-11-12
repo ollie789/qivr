@@ -7,7 +7,7 @@ namespace Qivr.Api.Controllers;
 [ApiController]
 [Route("api/evaluations")]
 [Authorize]
-public class EvaluationsController : TenantAwareController
+public class EvaluationsController : BaseApiController
 {
     private readonly IEvaluationService _evaluationService;
     private readonly ILogger<EvaluationsController> _logger;
