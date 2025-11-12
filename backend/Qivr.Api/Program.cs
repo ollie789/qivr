@@ -9,6 +9,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Qivr.Api.Extensions;
 using Qivr.Api.Middleware;
+using Qivr.Api.Services;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
 using Microsoft.AspNetCore.Mvc.Versioning;
@@ -199,7 +200,16 @@ builder.Services.AddDbContext<QivrDbContext>(options =>
 
 // Configure Email Services
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+builder.Services.Configure<EmailConfiguration>(builder.Configuration.GetSection("Email"));
+
+// Legacy email service (deprecated)
 builder.Services.AddScoped<Qivr.Api.Services.IEmailService, Qivr.Api.Services.EmailService>();
+
+// Modern SES email service
+builder.Services.AddAWSService<Amazon.SimpleEmail.IAmazonSimpleEmailService>();
+builder.Services.AddAWSService<Amazon.SecretsManager.IAmazonSecretsManager>();
+builder.Services.AddScoped<IModernEmailService, ModernEmailService>();
+
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 
 // Configure Audit and Notification Services
