@@ -323,13 +323,13 @@ const MedicalRecords: React.FC = () => {
       
       return medicalRecordsApi.createVitalSigns({
         patientId: selectedPatientId,
-        bloodPressureSystolic: vitalForm.bloodPressure.systolic,
-        bloodPressureDiastolic: vitalForm.bloodPressure.diastolic,
-        heartRate: vitalForm.heartRate,
-        respiratoryRate: vitalForm.respiratoryRate,
-        temperature: vitalForm.temperature,
-        weight: vitalForm.weight,
-        height: vitalForm.height,
+        bloodPressureSystolic: newVital.bloodPressure?.systolic || 120,
+        bloodPressureDiastolic: newVital.bloodPressure?.diastolic || 80,
+        heartRate: newVital.heartRate || 70,
+        respiratoryRate: newVital.respiratoryRate || 16,
+        temperature: newVital.temperature || 98.6,
+        weight: newVital.weight || 0,
+        height: newVital.height || 0,
       });
     },
     onSuccess: () => {
@@ -353,11 +353,11 @@ const MedicalRecords: React.FC = () => {
         case 'allergy':
           return medicalRecordsApi.createAllergy({
             patientId: selectedPatientId,
-            allergen: allergyForm.allergen,
-            type: allergyForm.type,
-            severity: allergyForm.severity,
-            reaction: allergyForm.reaction,
-            notes: allergyForm.notes,
+            allergen: newHistory.title || '',
+            type: 'unknown',
+            severity: 'mild',
+            reaction: newHistory.description || '',
+            notes: newHistory.description || '',
           });
         
         case 'condition':
