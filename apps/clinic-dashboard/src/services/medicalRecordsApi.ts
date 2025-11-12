@@ -405,6 +405,33 @@ class MedicalRecordsApi {
     const response = await apiClient.post<AllergyDto>('/api/medical-records/allergies', data);
     return mapAllergy(response);
   }
+
+  async createCondition(data: {
+    patientId: string;
+    condition: string;
+    icd10Code?: string;
+    diagnosedDate: string;
+    status?: string;
+    managedBy?: string;
+    notes?: string;
+  }): Promise<any> {
+    const response = await apiClient.post('/api/medical-records/conditions', data);
+    return response;
+  }
+
+  async createImmunization(data: {
+    patientId: string;
+    vaccine: string;
+    date: string;
+    nextDue?: string;
+    provider?: string;
+    facility?: string;
+    lotNumber?: string;
+    series?: string;
+  }): Promise<Immunization> {
+    const response = await apiClient.post<ImmunizationDto>('/api/medical-records/immunizations', data);
+    return mapImmunization(response);
+  }
 }
 
 export const medicalRecordsApi = new MedicalRecordsApi();

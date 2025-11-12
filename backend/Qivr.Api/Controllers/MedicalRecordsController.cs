@@ -276,6 +276,110 @@ public class MedicalRecordsController : BaseApiController
         return CreatedAtAction(nameof(GetAllergies), new { patientId }, dto);
     }
 
+    [HttpPost("conditions")]
+    [ProducesResponseType(typeof(MedicalConditionDto), 201)]
+    public async Task<ActionResult<MedicalConditionDto>> CreateCondition([FromBody] CreateConditionRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+        
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        // Validate patient exists
+        var patient = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == patientId && u.TenantId == tenantId);
+        
+        if (patient == null)
+        {
+            return NotFound("Patient not found");
+        }
+
+        var condition = new MedicalCondition
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            Condition = request.Condition,
+            Icd10Code = request.Icd10Code,
+            DiagnosedDate = request.DiagnosedDate,
+            Status = request.Status ?? "active",
+            ManagedBy = request.ManagedBy ?? "Care Team",
+            LastReviewed = DateTime.UtcNow,
+            Notes = request.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.MedicalConditions.Add(condition);
+        await _context.SaveChangesAsync();
+
+        var dto = new MedicalConditionDto
+        {
+            Id = condition.Id.ToString(),
+            Condition = condition.Condition,
+            Icd10Code = condition.Icd10Code,
+            DiagnosedDate = condition.DiagnosedDate.ToString("yyyy-MM-dd"),
+            Status = condition.Status,
+            ManagedBy = condition.ManagedBy,
+            LastReviewed = condition.LastReviewed.ToString("yyyy-MM-dd"),
+            Notes = condition.Notes
+        };
+
+        return CreatedAtAction(nameof(GetSummary), new { patientId }, dto);
+    }
+
+    [HttpPost("immunizations")]
+    [ProducesResponseType(typeof(ImmunizationDto), 201)]
+    public async Task<ActionResult<ImmunizationDto>> CreateImmunization([FromBody] CreateImmunizationRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+        
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        // Validate patient exists
+        var patient = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == patientId && u.TenantId == tenantId);
+        
+        if (patient == null)
+        {
+            return NotFound("Patient not found");
+        }
+
+        var immunization = new MedicalImmunization
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            Vaccine = request.Vaccine,
+            Date = request.Date,
+            NextDue = request.NextDue,
+            Provider = request.Provider ?? "Care Team",
+            Facility = request.Facility ?? "Clinic",
+            LotNumber = request.LotNumber,
+            Series = request.Series,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.MedicalImmunizations.Add(immunization);
+        await _context.SaveChangesAsync();
+
+        var dto = new ImmunizationDto
+        {
+            Id = immunization.Id.ToString(),
+            Vaccine = immunization.Vaccine,
+            Date = immunization.Date.ToString("yyyy-MM-dd"),
+            NextDue = immunization.NextDue?.ToString("yyyy-MM-dd"),
+            Provider = immunization.Provider,
+            Facility = immunization.Facility,
+            LotNumber = immunization.LotNumber,
+            Series = immunization.Series
+        };
+
+        return CreatedAtAction(nameof(GetImmunizations), new { patientId }, dto);
+    }
+
     [HttpGet("immunizations")]
     [ProducesResponseType(typeof(IEnumerable<ImmunizationDto>), 200)]
     public async Task<ActionResult<IEnumerable<ImmunizationDto>>> GetImmunizations([FromQuery] Guid? patientId, CancellationToken cancellationToken)
@@ -930,4 +1034,27 @@ public sealed class CreateAllergyRequest
     public string Reaction { get; set; } = string.Empty;
     public DateTime? DiagnosedDate { get; set; }
     public string? Notes { get; set; }
+}
+
+public sealed class CreateConditionRequest
+{
+    public Guid PatientId { get; set; }
+    public string Condition { get; set; } = string.Empty;
+    public string? Icd10Code { get; set; }
+    public DateTime DiagnosedDate { get; set; }
+    public string? Status { get; set; }
+    public string? ManagedBy { get; set; }
+    public string? Notes { get; set; }
+}
+
+public sealed class CreateImmunizationRequest
+{
+    public Guid PatientId { get; set; }
+    public string Vaccine { get; set; } = string.Empty;
+    public DateTime Date { get; set; }
+    public DateTime? NextDue { get; set; }
+    public string? Provider { get; set; }
+    public string? Facility { get; set; }
+    public string? LotNumber { get; set; }
+    public string? Series { get; set; }
 }

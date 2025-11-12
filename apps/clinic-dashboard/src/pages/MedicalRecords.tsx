@@ -327,24 +327,72 @@ const MedicalRecords: React.FC = () => {
     mutationFn: async () => {
       if (!selectedPatientId) throw new Error('No patient selected');
       
-      // For now, we'll add as an allergy since that's what the form is for
-      return medicalRecordsApi.createAllergy({
-        patientId: selectedPatientId,
-        allergen: allergyForm.allergen,
-        type: allergyForm.type,
-        severity: allergyForm.severity,
-        reaction: allergyForm.reaction,
-        notes: allergyForm.notes,
-      });
+      switch (newHistory.category) {
+        case 'allergy':
+          return medicalRecordsApi.createAllergy({
+            patientId: selectedPatientId,
+            allergen: allergyForm.allergen,
+            type: allergyForm.type,
+            severity: allergyForm.severity,
+            reaction: allergyForm.reaction,
+            notes: allergyForm.notes,
+          });
+        
+        case 'condition':
+          return medicalRecordsApi.createCondition({
+            patientId: selectedPatientId,
+            condition: newHistory.title,
+            diagnosedDate: new Date().toISOString().split('T')[0],
+            status: 'active',
+            notes: newHistory.description,
+          });
+        
+        case 'immunization':
+          return medicalRecordsApi.createImmunization({
+            patientId: selectedPatientId,
+            vaccine: newHistory.title,
+            date: new Date().toISOString().split('T')[0],
+            provider: 'Care Team',
+            facility: 'Clinic',
+          });
+        
+        case 'medication':
+          return medicalRecordsApi.createMedication({
+            patientId: selectedPatientId,
+            name: newHistory.title,
+            dosage: '1 tablet',
+            frequency: 'Daily',
+            startDate: new Date().toISOString().split('T')[0],
+            instructions: newHistory.description,
+          });
+        
+        default:
+          throw new Error('Unsupported medical record type');
+      }
     },
-    onSuccess: () => {
-      enqueueSnackbar('Allergy added successfully', { variant: 'success' });
+    onSuccess: (data, variables) => {
+      const category = newHistory.category;
+      enqueueSnackbar(`${category.charAt(0).toUpperCase() + category.slice(1)} added successfully`, { variant: 'success' });
       setHistoryDialogOpen(false);
-      // Refresh allergies data
-      queryClient.invalidateQueries({ queryKey: ['allergies', selectedPatientId] });
+      
+      // Refresh appropriate data based on category
+      switch (category) {
+        case 'allergy':
+          queryClient.invalidateQueries({ queryKey: ['allergies', selectedPatientId] });
+          break;
+        case 'condition':
+          queryClient.invalidateQueries({ queryKey: ['medicalSummary', selectedPatientId] });
+          break;
+        case 'immunization':
+          queryClient.invalidateQueries({ queryKey: ['immunizations', selectedPatientId] });
+          break;
+        case 'medication':
+          queryClient.invalidateQueries({ queryKey: ['medications', selectedPatientId] });
+          break;
+      }
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Failed to add allergy';
+      const message = error instanceof Error ? error.message : 'Failed to add medical record';
       enqueueSnackbar(message, { variant: 'error' });
     },
   });
