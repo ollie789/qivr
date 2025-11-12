@@ -46,8 +46,8 @@ async function testLogin() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'test.doctor@clinic.com',
-      password: 'TestPassword123!'
+      email: 'fresh.test@clinic.com',
+      password: 'TestPass123!'
     }),
     credentials: 'include'
   });

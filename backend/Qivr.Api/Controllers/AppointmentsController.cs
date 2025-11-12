@@ -457,6 +457,7 @@ public class AppointmentsController : BaseApiController
         var appointment = await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Provider)
+                .ThenInclude(p => p.User)
             .Where(a => a.TenantId == tenantId && a.Id == id)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -474,7 +475,9 @@ public class AppointmentsController : BaseApiController
         {
             AppointmentId = appointment.Id,
             ProviderId = appointment.ProviderId,
-            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}".Trim() : "Clinician",
+            ProviderName = appointment.Provider != null 
+                ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}".Trim() 
+                : "Clinician",
             AppointmentTime = appointment.ScheduledStart,
             Location = appointment.Location ?? appointment.LocationDetails.GetValueOrDefault("address")?.ToString()
         };
@@ -809,7 +812,9 @@ public class AppointmentsController : BaseApiController
             PatientPhone = appointment.Patient?.Phone,
             ProviderId = appointment.ProviderId,
             ProviderProfileId = appointment.ProviderProfileId,
-            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" : null,
+            ProviderName = appointment.Provider != null 
+                ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" 
+                : null,
             ProviderEmail = appointment.Provider?.Email,
             ProviderPhone = appointment.Provider?.Phone,
             EvaluationId = appointment.EvaluationId,

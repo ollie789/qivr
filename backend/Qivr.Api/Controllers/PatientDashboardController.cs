@@ -61,6 +61,7 @@ public class PatientDashboardController : ControllerBase
             // Get upcoming appointments
             var upcomingAppointments = await _context.Appointments
                 .Include(a => a.Provider)
+                    .ThenInclude(p => p.User)
                 .Where(a => a.PatientId == userId 
                     && a.ScheduledStart > now 
                     && a.Status != AppointmentStatus.Cancelled)
@@ -70,7 +71,9 @@ public class PatientDashboardController : ControllerBase
                 {
                     Id = a.Id,
                     ProviderId = a.ProviderId,
-                    ProviderName = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : "Unknown",
+                    ProviderName = a.Provider != null 
+                        ? $"{a.Provider.FirstName} {a.Provider.LastName}" 
+                        : "Unknown Provider",
                     ScheduledStart = a.ScheduledStart,
                     ScheduledEnd = a.ScheduledEnd,
                     AppointmentType = a.AppointmentType,
@@ -177,6 +180,7 @@ public class PatientDashboardController : ControllerBase
 
         var query = _context.Appointments
             .Include(a => a.Provider)
+                .ThenInclude(p => p.User)
             .Where(a => a.PatientId == userId)
             .OrderByDescending(a => a.ScheduledStart);
 
@@ -189,7 +193,9 @@ public class PatientDashboardController : ControllerBase
             {
                 Id = a.Id,
                 ProviderId = a.ProviderId,
-                ProviderName = a.Provider != null ? $"{a.Provider.FirstName} {a.Provider.LastName}" : "Unknown",
+                ProviderName = a.Provider != null 
+                    ? $"{a.Provider.FirstName} {a.Provider.LastName}" 
+                    : "Unknown Provider",
                 ScheduledStart = a.ScheduledStart,
                 ScheduledEnd = a.ScheduledEnd,
                 AppointmentType = a.AppointmentType,
