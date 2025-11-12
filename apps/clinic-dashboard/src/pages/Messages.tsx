@@ -172,7 +172,7 @@ const Messages: React.FC = () => {
 
       <Paper sx={{ mb: 3 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={selectedTab} onChange={(event, value) => setSelectedTab(value)}>
+          <Tabs value={selectedTab} onChange={(_event, value) => setSelectedTab(value)}>
             <Tab label="All Conversations" />
             <Tab label="SMS" icon={<SmsIcon />} iconPosition="start" />
             <Tab label="Email" icon={<EmailIcon />} iconPosition="start" />

@@ -85,7 +85,6 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const PROM: React.FC = () => {
-  const { canMakeApiCalls } = useAuthGuard();
   const { enqueueSnackbar } = useSnackbar();
   
   const [currentTab, setCurrentTab] = useState(0);
@@ -220,7 +219,7 @@ const PROM: React.FC = () => {
     avgScore: item.scoreCount > 0 ? Math.round(item.totalScore / item.scoreCount) : 0,
   }));
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
   };
 
@@ -692,7 +691,7 @@ const PROM: React.FC = () => {
                   count={totalResponses}
                   rowsPerPage={rowsPerPage}
                   page={page}
-                  onPageChange={(e, newPage) => setPage(newPage)}
+                  onPageChange={(_e, newPage) => setPage(newPage)}
                   onRowsPerPageChange={(e) => {
                     setRowsPerPage(parseInt(e.target.value, 10));
                     setPage(0);
