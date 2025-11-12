@@ -77,7 +77,7 @@ const mapProvider = (dto: ProviderDto): Provider => {
 };
 
 class ProviderApi {
-  async getClinicProviders(clinicId?: string, options: { activeOnly?: boolean } = {}): Promise<Provider[]> {
+  async getClinicProviders(_clinicId?: string, options: { activeOnly?: boolean } = {}): Promise<Provider[]> {
     const { activeOnly = true } = options;
 
     const providers = await apiClient.get<ProviderDto[]>(
@@ -88,7 +88,7 @@ class ProviderApi {
     return Array.isArray(providers) ? providers.map(mapProvider) : [];
   }
 
-  async createProvider(data: CreateProviderData, clinicId?: string): Promise<Provider> {
+  async createProvider(data: CreateProviderData, _clinicId?: string): Promise<Provider> {
     const provider = await apiClient.post<ProviderDto>(
       `/api/clinic-management/providers`,
       data

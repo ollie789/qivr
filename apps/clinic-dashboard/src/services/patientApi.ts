@@ -199,7 +199,7 @@ class PatientApi {
     return apiClient.delete(`/api/patients/${id}`);
   }
 
-  async getPatientHistory(id: string) {
+  async getPatientHistory(_id: string) {
     console.warn('getPatientHistory is not yet backed by an API endpoint');
     return {
       appointments: [] as Appointment[],
@@ -222,12 +222,12 @@ class PatientApi {
     return items as Appointment[];
   }
 
-  async getPatientEvaluations(id: string) {
+  async getPatientEvaluations(_id: string) {
     console.warn('getPatientEvaluations is not yet backed by an API endpoint');
     return [];
   }
 
-  async linkPatientToIntake(patientId: string, intakeId: string) {
+  async linkPatientToIntake(_patientId: string, _intakeId: string) {
     console.warn('linkPatientToIntake is not yet backed by an API endpoint');
     return { success: true };
   }
