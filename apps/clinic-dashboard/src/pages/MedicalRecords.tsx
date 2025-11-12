@@ -71,7 +71,6 @@ import { format, parseISO, differenceInYears } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import apiClient from '../lib/api-client';
 import {
   medicalRecordsApi,
   type VitalSign,

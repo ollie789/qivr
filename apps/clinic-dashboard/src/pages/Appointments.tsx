@@ -672,7 +672,7 @@ const Appointments: React.FC = () => {
                 <ToggleButtonGroup
                   value={viewMode}
                   exclusive
-                  onChange={(e, newMode) => newMode && setViewMode(newMode)}
+                  onChange={(_e, newMode) => newMode && setViewMode(newMode)}
                   size="small"
                 >
                   <ToggleButton value="day">
@@ -692,7 +692,7 @@ const Appointments: React.FC = () => {
 
         {/* View Tabs */}
         <Card sx={{ mb: 3 }}>
-          <Tabs value={viewTab} onChange={(e, v) => setViewTab(v)}>
+          <Tabs value={viewTab} onChange={(_e, v) => setViewTab(v)}>
             <Tab icon={<CalendarMonthIcon />} label="Calendar View" />
             <Tab icon={<ViewModuleIcon />} label="Grid View" />
             <Tab icon={<ViewListIcon />} label="List View" />
