@@ -69,7 +69,7 @@ const Messages: React.FC = () => {
   }, [conversationsData, searchQuery]);
 
   useEffect(() => {
-    if (!selectedConversationId && conversationsData && conversationsData.length > 0) {
+    if (!selectedConversationId && conversationsData && conversationsData.length > 0 && conversationsData[0]) {
       setSelectedConversationId(conversationsData[0].participantId);
     }
   }, [conversationsData, selectedConversationId]);

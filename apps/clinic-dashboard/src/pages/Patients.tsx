@@ -257,7 +257,7 @@ const Patients: React.FC = () => {
             return {
               ...previous,
               data: [createdPatient, ...previous.data],
-              total: previous.total + 1,
+              total: (previous.total ?? 0) + 1,
             };
           });
         }
@@ -491,7 +491,7 @@ const Patients: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {patient.conditions.slice(0, 2).map((condition) => (
+                      {patient.conditions?.slice(0, 2).map((condition) => (
                         <Chip
                           key={condition}
                           label={condition}
@@ -499,9 +499,9 @@ const Patients: React.FC = () => {
                           variant="outlined"
                         />
                       ))}
-                      {patient.conditions.length > 2 && (
+                      {(patient.conditions?.length ?? 0) > 2 && (
                         <Chip
-                          label={`+${patient.conditions.length - 2}`}
+                          label={`+${(patient.conditions?.length ?? 0) - 2}`}
                           size="small"
                           variant="outlined"
                         />
