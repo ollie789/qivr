@@ -515,7 +515,7 @@ public class QivrDbContext : DbContext
             entity.ToTable("providers");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.UserId }); // Phase 4.1: Removed ClinicId from index
-            // Phase 4.1: Ignore ClinicId column that exists in database but not in entity model
+            entity.Ignore(e => e.ClinicId); // Phase 4.1: ClinicId exists in entity but not mapped to DB
             
             entity.HasOne(e => e.User)
                 .WithMany()

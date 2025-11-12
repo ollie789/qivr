@@ -315,13 +315,13 @@ public class MedicalRecordsController : BaseApiController
 
         var dto = new MedicalConditionDto
         {
-            Id = condition.Id.ToString(),
+            Id = condition.Id,
             Condition = condition.Condition,
             Icd10Code = condition.Icd10Code,
-            DiagnosedDate = condition.DiagnosedDate.ToString("yyyy-MM-dd"),
+            DiagnosedDate = condition.DiagnosedDate,
             Status = condition.Status,
             ManagedBy = condition.ManagedBy,
-            LastReviewed = condition.LastReviewed.ToString("yyyy-MM-dd"),
+            LastReviewed = condition.LastReviewed,
             Notes = condition.Notes
         };
 
@@ -367,10 +367,10 @@ public class MedicalRecordsController : BaseApiController
 
         var dto = new ImmunizationDto
         {
-            Id = immunization.Id.ToString(),
+            Id = immunization.Id,
             Vaccine = immunization.Vaccine,
-            Date = immunization.Date.ToString("yyyy-MM-dd"),
-            NextDue = immunization.NextDue?.ToString("yyyy-MM-dd"),
+            Date = immunization.Date,
+            NextDue = immunization.NextDue,
             Provider = immunization.Provider,
             Facility = immunization.Facility,
             LotNumber = immunization.LotNumber,
