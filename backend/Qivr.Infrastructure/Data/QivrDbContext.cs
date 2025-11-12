@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Qivr.Core.Common;
 using Qivr.Core.Entities;
@@ -118,9 +119,9 @@ public class QivrDbContext : DbContext
         // modelBuilder.HasDefaultSchema("qivr");
         
         // Configure value converters for complex types
-        var jsonConverter = new ValueConverter<Dictionary<string, object>, string>(
-            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-            v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>()
+        var jsonConverter = new ValueConverter<Dictionary<string, object>?, string>(
+            v => v == null ? "{}" : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => string.IsNullOrEmpty(v) ? new Dictionary<string, object>() : JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>()
         );
         
         var stringListConverter = new ValueConverter<List<string>, string[]>(
@@ -151,9 +152,26 @@ public class QivrDbContext : DbContext
             entity.Ignore(e => e.Plan); // Database doesn't have plan column
             entity.Ignore(e => e.Timezone); // Database doesn't have timezone column
             entity.Ignore(e => e.Locale); // Database doesn't have locale column
-            entity.Ignore(e => e.Plan); // Database doesn't have plan column
-            entity.Ignore(e => e.Timezone); // Database doesn't have timezone column
-            entity.Ignore(e => e.Locale); // Database doesn't have locale column
+            // Ignore clinic properties that don't exist in database yet
+            entity.Ignore(e => e.Description);
+            entity.Ignore(e => e.Address);
+            entity.Ignore(e => e.City);
+            entity.Ignore(e => e.State);
+            entity.Ignore(e => e.ZipCode);
+            entity.Ignore(e => e.Country);
+            entity.Ignore(e => e.Phone);
+            entity.Ignore(e => e.Email);
+            entity.Ignore(e => e.IsActive);
+            // Ignore clinic properties that don't exist in database
+            entity.Ignore(e => e.Description);
+            entity.Ignore(e => e.Address);
+            entity.Ignore(e => e.City);
+            entity.Ignore(e => e.State);
+            entity.Ignore(e => e.ZipCode);
+            entity.Ignore(e => e.Country);
+            entity.Ignore(e => e.Phone);
+            entity.Ignore(e => e.Email);
+            entity.Ignore(e => e.IsActive);
             // No query filter since DeletedAt doesn't exist in database
         });
 
@@ -497,6 +515,7 @@ public class QivrDbContext : DbContext
             entity.ToTable("providers");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.UserId }); // Phase 4.1: Removed ClinicId from index
+            // Phase 4.1: Ignore ClinicId column that exists in database but not in entity model
             
             entity.HasOne(e => e.User)
                 .WithMany()

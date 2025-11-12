@@ -91,7 +91,6 @@ public class DataSeeder
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             UserId = providerUser.Id,
-            ClinicId = tenantId, // Use tenant as clinic ID (as per existing pattern)
             Title = "MD",
             Specialty = "General Practice",
             LicenseNumber = "MD123456",
@@ -110,8 +109,8 @@ public class DataSeeder
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 PatientId = patientUsers[0].Id,
-                ProviderId = provider.Id,
-                ProviderProfileId = provider.Id,
+                ProviderId = providerUser.Id,  // User ID of the provider
+                ProviderProfileId = provider.Id,  // Provider entity ID
                 ScheduledStart = DateTime.UtcNow.AddDays(-2).AddHours(9),
                 ScheduledEnd = DateTime.UtcNow.AddDays(-2).AddHours(9.5),
                 Status = AppointmentStatus.Completed,
@@ -125,8 +124,8 @@ public class DataSeeder
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 PatientId = patientUsers[1].Id,
-                ProviderId = provider.Id,
-                ProviderProfileId = provider.Id,
+                ProviderId = providerUser.Id,  // User ID of the provider
+                ProviderProfileId = provider.Id,  // Provider entity ID
                 ScheduledStart = DateTime.UtcNow.AddDays(-2).AddHours(14.5),
                 ScheduledEnd = DateTime.UtcNow.AddDays(-2).AddHours(14.75),
                 Status = AppointmentStatus.Completed,
@@ -140,8 +139,8 @@ public class DataSeeder
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 PatientId = patientUsers[2].Id,
-                ProviderId = provider.Id,
-                ProviderProfileId = provider.Id,
+                ProviderId = providerUser.Id,  // User ID of the provider
+                ProviderProfileId = provider.Id,  // Provider entity ID
                 ScheduledStart = DateTime.UtcNow.AddDays(-1).AddHours(10.25),
                 ScheduledEnd = DateTime.UtcNow.AddDays(-1).AddHours(10.75),
                 Status = AppointmentStatus.NoShow,
@@ -155,8 +154,8 @@ public class DataSeeder
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 PatientId = patientUsers[3].Id,
-                ProviderId = provider.Id,
-                ProviderProfileId = provider.Id,
+                ProviderId = providerUser.Id,  // User ID of the provider
+                ProviderProfileId = provider.Id,  // Provider entity ID
                 ScheduledStart = DateTime.UtcNow.AddHours(11),
                 ScheduledEnd = DateTime.UtcNow.AddHours(11.5),
                 Status = AppointmentStatus.Scheduled,
@@ -170,8 +169,8 @@ public class DataSeeder
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 PatientId = patientUsers[4].Id,
-                ProviderId = provider.Id,
-                ProviderProfileId = provider.Id,
+                ProviderId = providerUser.Id,  // User ID of the provider
+                ProviderProfileId = provider.Id,  // Provider entity ID
                 ScheduledStart = DateTime.UtcNow.AddHours(15.5),
                 ScheduledEnd = DateTime.UtcNow.AddHours(15.75),
                 Status = AppointmentStatus.Scheduled,
