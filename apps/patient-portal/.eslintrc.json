@@ -20,7 +20,6 @@
   "plugins": [
     "react",
     "react-hooks",
-    "react-refresh",
     "@typescript-eslint"
   ],
   "settings": {
@@ -39,10 +38,6 @@
       }
     ],
     "no-undef": "off",
-    "no-unused-vars": "off",
-    "react-refresh/only-export-components": [
-      "warn",
-      { "allowConstantExport": true }
-    ]
+    "no-unused-vars": "off"
   }
 }

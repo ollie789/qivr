@@ -13,7 +13,15 @@ import {
   startOfMonth,
   endOfMonth,
   addDays,
+  addWeeks,
+  addMonths,
+  subWeeks,
+  subMonths,
+  setHours,
+  setMinutes,
   getHours,
+  isSameDay,
+  isToday,
 } from 'date-fns';
 
 // Commonly used date formatting functions
@@ -32,5 +40,24 @@ export const formatTime = (date: Date | string) => {
   return format(d, 'HH:mm');
 };
 
-// Date range helpers
-export { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, getHours };
+// Re-export commonly used functions
+export {
+  format,
+  parseISO,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  addDays,
+  addWeeks,
+  addMonths,
+  subWeeks,
+  subMonths,
+  setHours,
+  setMinutes,
+  getHours,
+  isSameDay,
+  isToday,
+};
