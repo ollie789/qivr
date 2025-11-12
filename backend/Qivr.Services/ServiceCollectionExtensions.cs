@@ -66,7 +66,7 @@ public interface IEvaluationService
 {
     Task<Guid> CreateEvaluationAsync(CreateEvaluationDto dto, CancellationToken cancellationToken = default);
     Task<EvaluationDto?> GetEvaluationAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<List<EvaluationDto>> GetEvaluationsAsync(Guid? patientId = null, CancellationToken cancellationToken = default);
+    Task<List<EvaluationDto>> GetEvaluationsAsync(Guid tenantId, Guid? patientId = null, CancellationToken cancellationToken = default);
     Task UpdateEvaluationStatusAsync(Guid id, string status, CancellationToken cancellationToken = default);
 }
 

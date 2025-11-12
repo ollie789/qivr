@@ -83,12 +83,7 @@ public class EvaluationsController : BaseApiController
         [FromQuery] Guid? patientId,
         CancellationToken cancellationToken)
     {
-        // Get tenant context like other working controllers
-        var tenantId = CurrentTenantId;
-        if (!tenantId.HasValue)
-        {
-            return BadRequest("Tenant context required");
-        }
+        var tenantId = RequireTenantId();
 
         // If user is a patient, only return their evaluations
         if (User.IsInRole("Patient"))
@@ -100,7 +95,7 @@ public class EvaluationsController : BaseApiController
             }
         }
         
-        var evaluations = await _evaluationService.GetEvaluationsAsync(patientId, cancellationToken);
+        var evaluations = await _evaluationService.GetEvaluationsAsync(tenantId, patientId, cancellationToken);
         
         // Transform to match frontend expectations
         var response = evaluations.Select(e => new

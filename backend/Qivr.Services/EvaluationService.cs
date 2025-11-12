@@ -88,10 +88,11 @@ public class EvaluationService : IEvaluationService
         );
     }
 
-    public async Task<List<EvaluationDto>> GetEvaluationsAsync(Guid? patientId = null, CancellationToken cancellationToken = default)
+    public async Task<List<EvaluationDto>> GetEvaluationsAsync(Guid tenantId, Guid? patientId = null, CancellationToken cancellationToken = default)
     {
         var query = _context.Evaluations
             .Include(e => e.Patient)
+            .Where(e => e.TenantId == tenantId)
             .AsQueryable();
 
         if (patientId.HasValue)
