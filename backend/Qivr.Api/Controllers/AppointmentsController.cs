@@ -457,7 +457,6 @@ public class AppointmentsController : BaseApiController
         var appointment = await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Provider)
-                .ThenInclude(p => p.User)
             .Where(a => a.TenantId == tenantId && a.Id == id)
             .FirstOrDefaultAsync(cancellationToken);
 
