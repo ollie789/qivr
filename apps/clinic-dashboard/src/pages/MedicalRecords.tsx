@@ -68,7 +68,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO, differenceInYears } from 'date-fns';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import apiClient from '../lib/api-client';
@@ -110,6 +110,7 @@ type TimelineFilter = 'all' | 'vital' | MedicalHistory['category'];
 const MedicalRecords: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { canMakeApiCalls } = useAuthGuard();
+  const queryClient = useQueryClient();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [activeTab, setActiveTab] = useState(0);
@@ -296,24 +297,55 @@ const MedicalRecords: React.FC = () => {
   // Add vital sign mutation
   const addVitalMutation = useMutation({
     mutationFn: async () => {
-      throw new Error('Recording vitals is now handled by the clinical workflow service.');
+      if (!selectedPatientId) throw new Error('No patient selected');
+      
+      return medicalRecordsApi.createVitalSigns({
+        patientId: selectedPatientId,
+        bloodPressureSystolic: vitalForm.bloodPressure.systolic,
+        bloodPressureDiastolic: vitalForm.bloodPressure.diastolic,
+        heartRate: vitalForm.heartRate,
+        respiratoryRate: vitalForm.respiratoryRate,
+        temperature: vitalForm.temperature,
+        weight: vitalForm.weight,
+        height: vitalForm.height,
+      });
+    },
+    onSuccess: () => {
+      enqueueSnackbar('Vital signs recorded successfully', { variant: 'success' });
+      setVitalDialogOpen(false);
+      // Refresh vital signs data
+      queryClient.invalidateQueries({ queryKey: ['vitalSigns', selectedPatientId] });
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Recording vitals is not available yet.';
-      enqueueSnackbar(message, { variant: 'info' });
-      setVitalDialogOpen(false);
+      const message = error instanceof Error ? error.message : 'Failed to record vital signs';
+      enqueueSnackbar(message, { variant: 'error' });
     },
   });
 
-  // Add medical history mutation
+  // Add medical history mutation  
   const addHistoryMutation = useMutation({
     mutationFn: async () => {
-      throw new Error('Manual medical history edits will return once the new audit pipeline is wired up.');
+      if (!selectedPatientId) throw new Error('No patient selected');
+      
+      // For now, we'll add as an allergy since that's what the form is for
+      return medicalRecordsApi.createAllergy({
+        patientId: selectedPatientId,
+        allergen: allergyForm.allergen,
+        type: allergyForm.type,
+        severity: allergyForm.severity,
+        reaction: allergyForm.reaction,
+        notes: allergyForm.notes,
+      });
+    },
+    onSuccess: () => {
+      enqueueSnackbar('Allergy added successfully', { variant: 'success' });
+      setHistoryDialogOpen(false);
+      // Refresh allergies data
+      queryClient.invalidateQueries({ queryKey: ['allergies', selectedPatientId] });
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Adding history is not available yet.';
-      enqueueSnackbar(message, { variant: 'info' });
-      setHistoryDialogOpen(false);
+      const message = error instanceof Error ? error.message : 'Failed to add allergy';
+      enqueueSnackbar(message, { variant: 'error' });
     },
   });
 

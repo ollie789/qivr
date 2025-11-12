@@ -366,6 +366,45 @@ class MedicalRecordsApi {
 
     return (response ?? []).map(mapImmunization);
   }
+
+  async createVitalSigns(data: {
+    patientId: string;
+    bloodPressureSystolic: number;
+    bloodPressureDiastolic: number;
+    heartRate: number;
+    respiratoryRate: number;
+    temperature: number;
+    weight: number;
+    height: number;
+  }): Promise<VitalSign> {
+    const response = await apiClient.post<VitalSignDto>('/api/medical-records/vitals', data);
+    return mapVital(data.patientId)(response);
+  }
+
+  async createMedication(data: {
+    patientId: string;
+    name: string;
+    dosage: string;
+    frequency: string;
+    startDate: string;
+    endDate?: string;
+    instructions?: string;
+  }): Promise<Medication> {
+    const response = await apiClient.post<MedicationDto>('/api/medical-records/medications', data);
+    return mapMedication(response);
+  }
+
+  async createAllergy(data: {
+    patientId: string;
+    allergen: string;
+    type: string;
+    severity: string;
+    reaction: string;
+    notes?: string;
+  }): Promise<Allergy> {
+    const response = await apiClient.post<AllergyDto>('/api/medical-records/allergies', data);
+    return mapAllergy(response);
+  }
 }
 
 export const medicalRecordsApi = new MedicalRecordsApi();
