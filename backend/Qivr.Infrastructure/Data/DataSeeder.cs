@@ -52,13 +52,13 @@ public class DataSeeder
     private async Task SeedSampleAnalyticsData(Guid tenantId)
     {
         // Skip if sample data already exists
-        if (await _context.Providers.AnyAsync(p => p.Id == "prov_sample_001"))
+        if (await _context.Providers.AnyAsync(p => p.Name == "Dr. Sarah Johnson"))
             return;
 
         // Create sample provider
         var provider = new Provider
         {
-            Id = "prov_sample_001",
+            Id = Guid.NewGuid(),
             TenantId = tenantId,
             Name = "Dr. Sarah Johnson",
             Specialization = "General Practice",
@@ -68,76 +68,82 @@ public class DataSeeder
             UpdatedAt = DateTime.UtcNow
         };
         _context.Providers.Add(provider);
+        await _context.SaveChangesAsync(); // Save to get the provider ID
 
         // Create sample appointments
         var appointments = new[]
         {
             new Appointment
             {
-                Id = "appt_sample_001",
+                Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = "patient_001",
-                ProviderId = "prov_sample_001",
-                AppointmentDate = DateTime.UtcNow.AddDays(-2).AddHours(9),
+                PatientId = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                ProviderProfileId = Guid.NewGuid(),
+                ScheduledStart = DateTime.UtcNow.AddDays(-2).AddHours(9),
+                ScheduledEnd = DateTime.UtcNow.AddDays(-2).AddHours(9.5),
                 Status = AppointmentStatus.Completed,
                 AppointmentType = "Consultation",
-                DurationMinutes = 30,
                 Notes = "Regular checkup completed",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
             new Appointment
             {
-                Id = "appt_sample_002",
+                Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = "patient_002",
-                ProviderId = "prov_sample_001",
-                AppointmentDate = DateTime.UtcNow.AddDays(-2).AddHours(14.5),
+                PatientId = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                ProviderProfileId = Guid.NewGuid(),
+                ScheduledStart = DateTime.UtcNow.AddDays(-2).AddHours(14.5),
+                ScheduledEnd = DateTime.UtcNow.AddDays(-2).AddHours(14.75),
                 Status = AppointmentStatus.Completed,
                 AppointmentType = "Follow-up",
-                DurationMinutes = 15,
                 Notes = "Follow-up visit completed",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
             new Appointment
             {
-                Id = "appt_sample_003",
+                Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = "patient_003",
-                ProviderId = "prov_sample_001",
-                AppointmentDate = DateTime.UtcNow.AddDays(-1).AddHours(10.25),
+                PatientId = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                ProviderProfileId = Guid.NewGuid(),
+                ScheduledStart = DateTime.UtcNow.AddDays(-1).AddHours(10.25),
+                ScheduledEnd = DateTime.UtcNow.AddDays(-1).AddHours(10.75),
                 Status = AppointmentStatus.NoShow,
                 AppointmentType = "Consultation",
-                DurationMinutes = 30,
                 Notes = "Patient did not show up",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
             new Appointment
             {
-                Id = "appt_sample_004",
+                Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = "patient_004",
-                ProviderId = "prov_sample_001",
-                AppointmentDate = DateTime.UtcNow.AddHours(11),
+                PatientId = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                ProviderProfileId = Guid.NewGuid(),
+                ScheduledStart = DateTime.UtcNow.AddHours(11),
+                ScheduledEnd = DateTime.UtcNow.AddHours(11.5),
                 Status = AppointmentStatus.Scheduled,
                 AppointmentType = "Consultation",
-                DurationMinutes = 30,
                 Notes = "Upcoming appointment",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
             new Appointment
             {
-                Id = "appt_sample_005",
+                Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                PatientId = "patient_005",
-                ProviderId = "prov_sample_001",
-                AppointmentDate = DateTime.UtcNow.AddHours(15.5),
+                PatientId = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                ProviderProfileId = Guid.NewGuid(),
+                ScheduledStart = DateTime.UtcNow.AddHours(15.5),
+                ScheduledEnd = DateTime.UtcNow.AddHours(15.75),
                 Status = AppointmentStatus.Scheduled,
                 AppointmentType = "Follow-up",
-                DurationMinutes = 15,
                 Notes = "Upcoming follow-up",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
