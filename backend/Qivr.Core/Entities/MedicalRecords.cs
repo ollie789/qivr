@@ -81,3 +81,17 @@ public class MedicalImmunization : TenantEntity
     public string? LotNumber { get; set; }
     public string? Series { get; set; }
 }
+
+public class MedicalProcedure : TenantEntity
+{
+    public Guid PatientId { get; set; }
+    public string ProcedureName { get; set; } = string.Empty;
+    public string? CptCode { get; set; }
+    public DateTime ProcedureDate { get; set; }
+    public string Provider { get; set; } = string.Empty;
+    public string Facility { get; set; } = string.Empty;
+    public string Status { get; set; } = "completed";
+    public string? Outcome { get; set; }
+    public string? Complications { get; set; }
+    public string? Notes { get; set; }
+}

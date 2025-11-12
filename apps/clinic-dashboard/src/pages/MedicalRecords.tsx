@@ -195,6 +195,15 @@ const MedicalRecords: React.FC = () => {
     enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
+  const { data: procedures = [] } = useQuery({
+    queryKey: ['procedures', selectedPatientId],
+    queryFn: async () => {
+      if (!selectedPatientId) return [];
+      return medicalRecordsApi.getProcedures(selectedPatientId);
+    },
+    enabled: canMakeApiCalls && !!selectedPatientId,
+  });
+
   const medicalHistory: MedicalHistory[] = useMemo(() => {
     if (!selectedPatientId) {
       return [];
@@ -254,6 +263,19 @@ const MedicalRecords: React.FC = () => {
       });
     });
 
+    procedures.forEach((procedure: any) => {
+      entries.push({
+        id: procedure.id,
+        category: 'surgery',
+        title: procedure.procedureName,
+        description: procedure.provider,
+        date: procedure.procedureDate,
+        status: procedure.status === 'completed' ? 'resolved' : 'active',
+        severity: undefined,
+        notes: procedure.notes ?? procedure.outcome ?? undefined,
+      });
+    });
+
     medicalSummary?.recentVisits.forEach((visit) => {
       entries.push({
         id: visit.id,
@@ -272,7 +294,7 @@ const MedicalRecords: React.FC = () => {
       const bDate = b.date ? new Date(b.date).getTime() : 0;
       return bDate - aDate;
     });
-  }, [selectedPatientId, medicalSummary, medications, allergies, immunizations]);
+  }, [selectedPatientId, medicalSummary, medications, allergies, immunizations, procedures]);
 
   // New vital sign state
   const [newVital, setNewVital] = useState<Partial<VitalSign>>({
@@ -366,6 +388,17 @@ const MedicalRecords: React.FC = () => {
             instructions: newHistory.description,
           });
         
+        case 'surgery':
+          return medicalRecordsApi.createProcedure({
+            patientId: selectedPatientId,
+            procedureName: newHistory.title,
+            procedureDate: new Date().toISOString().split('T')[0],
+            provider: 'Care Team',
+            facility: 'Clinic',
+            status: 'completed',
+            notes: newHistory.description,
+          });
+        
         default:
           throw new Error('Unsupported medical record type');
       }
@@ -388,6 +421,9 @@ const MedicalRecords: React.FC = () => {
           break;
         case 'medication':
           queryClient.invalidateQueries({ queryKey: ['medications', selectedPatientId] });
+          break;
+        case 'surgery':
+          queryClient.invalidateQueries({ queryKey: ['procedures', selectedPatientId] });
           break;
       }
     },

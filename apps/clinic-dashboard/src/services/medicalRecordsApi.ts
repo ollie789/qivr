@@ -367,6 +367,15 @@ class MedicalRecordsApi {
     return (response ?? []).map(mapImmunization);
   }
 
+  async getProcedures(patientId: string): Promise<any[]> {
+    const response = await apiClient.get<any[]>(
+      '/api/medical-records/procedures',
+      { patientId },
+    );
+
+    return response ?? [];
+  }
+
   async createVitalSigns(data: {
     patientId: string;
     bloodPressureSystolic: number;
@@ -431,6 +440,22 @@ class MedicalRecordsApi {
   }): Promise<Immunization> {
     const response = await apiClient.post<ImmunizationDto>('/api/medical-records/immunizations', data);
     return mapImmunization(response);
+  }
+
+  async createProcedure(data: {
+    patientId: string;
+    procedureName: string;
+    cptCode?: string;
+    procedureDate: string;
+    provider?: string;
+    facility?: string;
+    status?: string;
+    outcome?: string;
+    complications?: string;
+    notes?: string;
+  }): Promise<any> {
+    const response = await apiClient.post('/api/medical-records/procedures', data);
+    return response;
   }
 }
 

@@ -67,6 +67,7 @@ public class QivrDbContext : DbContext
     public DbSet<MedicalMedication> MedicalMedications => Set<MedicalMedication>();
     public DbSet<MedicalAllergy> MedicalAllergies => Set<MedicalAllergy>();
     public DbSet<MedicalImmunization> MedicalImmunizations => Set<MedicalImmunization>();
+    public DbSet<MedicalProcedure> MedicalProcedures => Set<MedicalProcedure>();
     public DbSet<AppointmentWaitlistEntry> AppointmentWaitlistEntries => Set<AppointmentWaitlistEntry>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
@@ -800,6 +801,21 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Provider).HasMaxLength(200);
             entity.Property(e => e.Facility).HasMaxLength(200);
             entity.Property(e => e.Series).HasMaxLength(100);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        modelBuilder.Entity<MedicalProcedure>(entity =>
+        {
+            entity.ToTable("medical_procedures");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.ProcedureDate });
+            entity.Property(e => e.ProcedureName).HasMaxLength(200);
+            entity.Property(e => e.CptCode).HasMaxLength(20);
+            entity.Property(e => e.Provider).HasMaxLength(200);
+            entity.Property(e => e.Facility).HasMaxLength(200);
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.Outcome).HasMaxLength(500);
+            entity.Property(e => e.Complications).HasMaxLength(500);
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
     }

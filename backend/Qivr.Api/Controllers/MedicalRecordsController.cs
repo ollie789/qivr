@@ -380,6 +380,62 @@ public class MedicalRecordsController : BaseApiController
         return CreatedAtAction(nameof(GetImmunizations), new { patientId }, dto);
     }
 
+    [HttpPost("procedures")]
+    [ProducesResponseType(typeof(ProcedureDto), 201)]
+    public async Task<ActionResult<ProcedureDto>> CreateProcedure([FromBody] CreateProcedureRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+        
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        // Validate patient exists
+        var patient = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == patientId && u.TenantId == tenantId);
+        
+        if (patient == null)
+        {
+            return NotFound("Patient not found");
+        }
+
+        var procedure = new MedicalProcedure
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            ProcedureName = request.ProcedureName,
+            CptCode = request.CptCode,
+            ProcedureDate = request.ProcedureDate,
+            Provider = request.Provider ?? "Care Team",
+            Facility = request.Facility ?? "Clinic",
+            Status = request.Status ?? "completed",
+            Outcome = request.Outcome,
+            Complications = request.Complications,
+            Notes = request.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.MedicalProcedures.Add(procedure);
+        await _context.SaveChangesAsync();
+
+        var dto = new ProcedureDto
+        {
+            Id = procedure.Id.ToString(),
+            ProcedureName = procedure.ProcedureName,
+            CptCode = procedure.CptCode,
+            ProcedureDate = procedure.ProcedureDate.ToString("yyyy-MM-dd"),
+            Provider = procedure.Provider,
+            Facility = procedure.Facility,
+            Status = procedure.Status,
+            Outcome = procedure.Outcome,
+            Complications = procedure.Complications,
+            Notes = procedure.Notes
+        };
+
+        return CreatedAtAction(nameof(GetProcedures), new { patientId }, dto);
+    }
+
     [HttpGet("immunizations")]
     [ProducesResponseType(typeof(IEnumerable<ImmunizationDto>), 200)]
     public async Task<ActionResult<IEnumerable<ImmunizationDto>>> GetImmunizations([FromQuery] Guid? patientId, CancellationToken cancellationToken)
@@ -394,6 +450,23 @@ public class MedicalRecordsController : BaseApiController
 
         var immunizations = await BuildImmunizationsAsync(tenantId, effectivePatientId, cancellationToken);
         return Ok(immunizations);
+    }
+
+    [HttpGet("procedures")]
+    [ProducesResponseType(typeof(ProcedureDto[]), 200)]
+    public async Task<ActionResult<ProcedureDto[]>> GetProcedures([FromQuery] Guid? patientId, CancellationToken cancellationToken)
+    {
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
+
+        var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
+        if (effectivePatientId == Guid.Empty)
+        {
+            return Ok(Array.Empty<ProcedureDto>());
+        }
+
+        var procedures = await BuildProceduresAsync(tenantId, effectivePatientId, cancellationToken);
+        return Ok(procedures);
     }
 
     private async Task<MedicalSummaryDto> BuildMedicalSummaryAsync(Guid tenantId, Guid patientId, CancellationToken cancellationToken)
@@ -609,6 +682,28 @@ public class MedicalRecordsController : BaseApiController
             LotNumber = i.LotNumber,
             Series = i.Series
         }).ToList();
+    }
+
+    private async Task<ProcedureDto[]> BuildProceduresAsync(Guid tenantId, Guid patientId, CancellationToken cancellationToken)
+    {
+        var procedures = await _context.MedicalProcedures
+            .Where(p => p.TenantId == tenantId && p.PatientId == patientId)
+            .OrderByDescending(p => p.ProcedureDate)
+            .ToListAsync(cancellationToken);
+
+        return procedures.Select(p => new ProcedureDto
+        {
+            Id = p.Id.ToString(),
+            ProcedureName = p.ProcedureName,
+            CptCode = p.CptCode,
+            ProcedureDate = p.ProcedureDate.ToString("yyyy-MM-dd"),
+            Provider = p.Provider,
+            Facility = p.Facility,
+            Status = p.Status,
+            Outcome = p.Outcome,
+            Complications = p.Complications,
+            Notes = p.Notes
+        }).ToArray();
     }
 
     private async Task<Guid> ResolveEffectivePatientIdAsync(Guid currentUserId, Guid? requestedPatientId, CancellationToken cancellationToken)
@@ -1057,4 +1152,32 @@ public sealed class CreateImmunizationRequest
     public string? Facility { get; set; }
     public string? LotNumber { get; set; }
     public string? Series { get; set; }
+}
+
+public sealed class CreateProcedureRequest
+{
+    public Guid PatientId { get; set; }
+    public string ProcedureName { get; set; } = string.Empty;
+    public string? CptCode { get; set; }
+    public DateTime ProcedureDate { get; set; }
+    public string? Provider { get; set; }
+    public string? Facility { get; set; }
+    public string? Status { get; set; }
+    public string? Outcome { get; set; }
+    public string? Complications { get; set; }
+    public string? Notes { get; set; }
+}
+
+public sealed class ProcedureDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string ProcedureName { get; set; } = string.Empty;
+    public string? CptCode { get; set; }
+    public string ProcedureDate { get; set; } = string.Empty;
+    public string Provider { get; set; } = string.Empty;
+    public string Facility { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string? Outcome { get; set; }
+    public string? Complications { get; set; }
+    public string? Notes { get; set; }
 }
