@@ -203,16 +203,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         <EmptyState
           icon={<UploadIcon />}
           title={isDragActive ? 'Drop files here...' : 'Drag & drop files here'}
-          description={
-            <>
-              <Typography variant="body2" color="text.secondary">
-                Supported formats: Images, PDF, Word documents
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Max file size: {formatFileSize(maxSize)} | Max files: {maxFiles}
-              </Typography>
-            </>
-          }
+          description={`Supported formats: Images, PDF, Word documents. Max file size: ${formatFileSize(maxSize)} | Max files: ${maxFiles}`}
         />
       </Paper>
 

@@ -71,7 +71,7 @@ export const PatientInviteDialog: React.FC<PatientInviteDialogProps> = ({
             title="Patient Information"
             description="Enter the patient's details to send an invitation"
           >
-            <FormRow label="First Name" required>
+            <FormRow>
               <TextField
                 fullWidth
                 value={firstName}
@@ -80,7 +80,7 @@ export const PatientInviteDialog: React.FC<PatientInviteDialogProps> = ({
               />
             </FormRow>
             
-            <FormRow label="Last Name" required>
+            <FormRow>
               <TextField
                 fullWidth
                 value={lastName}
@@ -89,7 +89,7 @@ export const PatientInviteDialog: React.FC<PatientInviteDialogProps> = ({
               />
             </FormRow>
             
-            <FormRow label="Email Address" required>
+            <FormRow>
               <TextField
                 fullWidth
                 type="email"

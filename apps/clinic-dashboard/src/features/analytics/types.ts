@@ -23,10 +23,12 @@ export interface DiagnosisDatum {
   value?: number;
 }
 
+export type TopDiagnosisDatum = DiagnosisDatum;
+
 export interface StatCardItem {
   id: string;
   title: string;
-  value: string | number | ReactNode;
+  value: string | number;
   icon: ReactNode;
   avatarColor?: string;
   change?: number;

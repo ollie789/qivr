@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  Box,
+
   Typography,
-  Card,
-  CardContent,
-  CardActionArea,
+
+
+
   TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Chip,
+
   Alert,
-  Avatar,
+
   ToggleButton,
   ToggleButtonGroup,
   List,
@@ -26,7 +26,7 @@ import {
   CheckCircle as CheckIcon,
 } from '@mui/icons-material';
 import { postWithAuth } from '@qivr/http';
-import { StepperDialog, FormSection, FormRow, TimeSlotPicker, ProviderCard, EmptyState } from '@qivr/design-system';
+import { StepperDialog, FormSection, FormRow, TimeSlotPicker, ProviderCard } from '@qivr/design-system';
 
 interface ScheduledAppointment {
   id: string;
@@ -150,7 +150,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       case 1:
         return (
           <FormSection title="Date & Time" description="Choose appointment date and time">
-            <FormRow label="Date" required>
+            <FormRow>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
                   value={selectedDate}
@@ -160,7 +160,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
               </LocalizationProvider>
             </FormRow>
             {selectedDate && (
-              <FormRow label="Time" required>
+              <FormRow>
                 <TimeSlotPicker
                   slots={mockTimeSlots}
                   selectedSlot={selectedTime}
@@ -174,7 +174,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       case 2:
         return (
           <FormSection title="Appointment Details" description="Configure appointment settings">
-            <FormRow label="Appointment Type" required>
+            <FormRow>
               <FormControl fullWidth>
                 <InputLabel>Type</InputLabel>
                 <Select value={appointmentType} onChange={(e) => setAppointmentType(e.target.value)} label="Type">
@@ -186,7 +186,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                 </Select>
               </FormControl>
             </FormRow>
-            <FormRow label="Location">
+            <FormRow>
               <ToggleButtonGroup
                 value={includeVideo ? 'video' : 'clinic'}
                 exclusive
@@ -203,7 +203,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                 </ToggleButton>
               </ToggleButtonGroup>
             </FormRow>
-            <FormRow label="Notes">
+            <FormRow>
               <TextField
                 fullWidth
                 multiline

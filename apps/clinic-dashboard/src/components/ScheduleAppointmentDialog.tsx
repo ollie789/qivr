@@ -129,7 +129,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
           {intakeId && (
             <Alert severity="info">Creating appointment from intake submission</Alert>
           )}
-          <FormRow label="First Name" required>
+          <FormRow>
             <TextField
               fullWidth
               value={appointmentData.patientName.split(' ')[0] || ''}
@@ -139,7 +139,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
               })}
             />
           </FormRow>
-          <FormRow label="Last Name" required>
+          <FormRow>
             <TextField
               fullWidth
               value={appointmentData.patientName.split(' ')[1] || ''}
@@ -149,7 +149,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
               })}
             />
           </FormRow>
-          <FormRow label="Email" required>
+          <FormRow>
             <TextField
               fullWidth
               type="email"
@@ -157,7 +157,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
               onChange={(e) => setAppointmentData({ ...appointmentData, patientEmail: e.target.value })}
             />
           </FormRow>
-          <FormRow label="Phone">
+          <FormRow>
             <TextField
               fullWidth
               value={appointmentData.patientPhone}
@@ -221,7 +221,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
     if ((patient && idx === 1) || (!patient && idx === 2)) {
       return (
         <FormSection title="Date & Time" description="Choose appointment date and time">
-          <FormRow label="Date" required>
+          <FormRow>
             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enAU}>
               <DatePicker
                 value={appointmentData.date}
@@ -230,7 +230,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
             </LocalizationProvider>
           </FormRow>
           {appointmentData.date && (
-            <FormRow label="Time" required>
+            <FormRow>
               <TimeSlotPicker
                 slots={timeSlots}
                 selectedSlot={appointmentData.timeSlot}
@@ -238,7 +238,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
               />
             </FormRow>
           )}
-          <FormRow label="Notes">
+          <FormRow>
             <TextField
               fullWidth
               multiline

@@ -290,9 +290,7 @@ const Analytics: React.FC = () => {
           <TopDiagnosesCard
             title="Top Diagnoses"
             data={conditionData}
-            loading={loading}
             emptyMessage="No diagnosis data available for the selected range"
-            xAxisAngle={-15}
           />
         </Grid>
 

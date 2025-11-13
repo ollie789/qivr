@@ -186,7 +186,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
             title="PROM Selection"
             description="Choose the PROM template to send"
           >
-            <FormRow label="PROM Template" required>
+            <FormRow>
               <FormControl fullWidth>
                 <InputLabel>PROM Template</InputLabel>
                 <Select
@@ -208,7 +208,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
             title="Patient Selection"
             description="Select patients to receive the PROM"
           >
-            <FormRow label="Patients" required>
+            <FormRow>
               <Autocomplete
                 multiple
                 options={patients}
@@ -274,7 +274,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
             title="Scheduling"
             description="Configure when the PROM should be sent"
           >
-            <FormRow label="Send Timing">
+            <FormRow>
               <FormControlLabel
                 control={
                   <Switch
@@ -288,7 +288,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
 
             {!sendImmediately && (
               <>
-                <FormRow label="Scheduled Date">
+                <FormRow>
                   <LocalizationProvider dateAdapter={AdapterDateFns}>
                     <DatePicker
                       value={scheduledDate}
@@ -296,7 +296,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
                     />
                   </LocalizationProvider>
                 </FormRow>
-                <FormRow label="Scheduled Time">
+                <FormRow>
                   <LocalizationProvider dateAdapter={AdapterDateFns}>
                     <TimePicker
                       value={scheduledDate}
@@ -307,7 +307,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
               </>
             )}
 
-            <FormRow label="Due Date">
+            <FormRow>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
                   value={dueDate}
@@ -321,7 +321,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
             title="Notifications"
             description="Choose how patients will be notified"
           >
-            <FormRow label="Notification Methods">
+            <FormRow>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <FormControlLabel
                   control={
@@ -358,7 +358,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
             title="Additional Options"
             description="Add a custom message and tags"
           >
-            <FormRow label="Custom Message">
+            <FormRow>
               <TextField
                 fullWidth
                 multiline
@@ -369,7 +369,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
               />
             </FormRow>
 
-            <FormRow label="Tags">
+            <FormRow>
               <Autocomplete
                 multiple
                 freeSolo

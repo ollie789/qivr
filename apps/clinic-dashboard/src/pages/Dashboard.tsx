@@ -443,7 +443,6 @@ const Dashboard: React.FC = () => {
             title="Patient Conditions Distribution"
             data={conditionData}
             emptyMessage="No condition data available"
-            xAxisAngle={-45}
           />
         </Grid>
 

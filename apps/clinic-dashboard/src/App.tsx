@@ -7,7 +7,8 @@ import {
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { QivrThemeProvider } from '@qivr/design-system';
+import { ThemeProvider } from '@mui/material/styles';
+import { theme } from '@qivr/design-system';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { SnackbarProvider } from 'notistack';
@@ -72,7 +73,7 @@ function App() {
   console.log('App component rendering');
   return (
     <QueryClientProvider client={queryClient}>
-      <QivrThemeProvider brand="clinic">
+      <ThemeProvider theme={theme}>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <SnackbarProvider
             maxSnack={3}
@@ -121,7 +122,7 @@ function App() {
             </Router>
           </SnackbarProvider>
         </LocalizationProvider>
-      </QivrThemeProvider>
+      </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
