@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { 
-  Button,
   Container, 
   Paper, 
   Typography,
@@ -23,20 +21,10 @@ import {
   Alert
 } from '@mui/material';
 import { BodyMapping3D } from './components/BodyMapping3D';
+import { QivrThemeProvider, QivrButton } from '@qivr/design-system';
 
 const API_ROOT_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5001';
 const API_URL = API_ROOT_URL.replace(/\/+$/, '');
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
 
 const steps = [
   'Personal Information',
@@ -513,72 +501,73 @@ export const Widget: React.FC = () => {
     }
   };
 
-  if (activeStep === steps.length) {
-    return (
-      <ThemeProvider theme={theme}>
-        <Container maxWidth="md">
-          <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-            <div style={{ textAlign: 'center' }}>
-              <Typography variant="h4" gutterBottom color="primary">
-                Thank You!
-              </Typography>
-              <Typography variant="h6" gutterBottom>
-                Your evaluation has been submitted successfully.
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-                We will review your information and contact you shortly to schedule an appointment.
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Please check your email for confirmation and next steps.
-              </Typography>
-            </div>
-          </Paper>
-        </Container>
-      </ThemeProvider>
-    );
-  }
+  const completionView = (
+    <Container maxWidth="md">
+      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
+        <div style={{ textAlign: 'center' }}>
+          <Typography variant="h4" gutterBottom color="primary">
+            Thank You!
+          </Typography>
+          <Typography variant="h6" gutterBottom>
+            Your evaluation has been submitted successfully.
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+            We will review your information and contact you shortly to schedule an appointment.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            Please check your email for confirmation and next steps.
+          </Typography>
+        </div>
+      </Paper>
+    </Container>
+  );
+
+  const formView = (
+    <Container maxWidth="md">
+      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
+        <Typography variant="h4" gutterBottom align="center" color="primary">
+          Patient Evaluation Form
+        </Typography>
+        
+        <Stepper activeStep={activeStep} orientation="vertical">
+          {steps.map((label, index) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+              <StepContent>
+                {renderStepContent(index)}
+                <div style={{ marginBottom: 16, marginTop: 24 }}>
+                  <QivrButton
+                    variant="contained"
+                    onClick={index === steps.length - 1 ? handleSubmit : handleNext}
+                    sx={{ mt: 1, mr: 1 }}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      index === steps.length - 1 ? 'Submit' : 'Continue'
+                    )}
+                  </QivrButton>
+                  <QivrButton
+                    disabled={index === 0 || loading}
+                    onClick={handleBack}
+                    sx={{ mt: 1, mr: 1 }}
+                    emphasize="subtle"
+                  >
+                    Back
+                  </QivrButton>
+                </div>
+              </StepContent>
+            </Step>
+          ))}
+        </Stepper>
+      </Paper>
+    </Container>
+  );
 
   return (
-    <ThemeProvider theme={theme}>
-      <Container maxWidth="md">
-        <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-          <Typography variant="h4" gutterBottom align="center" color="primary">
-            Patient Evaluation Form
-          </Typography>
-          
-          <Stepper activeStep={activeStep} orientation="vertical">
-            {steps.map((label, index) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-                <StepContent>
-                  {renderStepContent(index)}
-                  <div style={{ marginBottom: 16, marginTop: 24 }}>
-                    <Button
-                      variant="contained"
-                      onClick={index === steps.length - 1 ? handleSubmit : handleNext}
-                      sx={{ mt: 1, mr: 1 }}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <CircularProgress size={24} />
-                      ) : (
-                        index === steps.length - 1 ? 'Submit' : 'Continue'
-                      )}
-                    </Button>
-                    <Button
-                      disabled={index === 0 || loading}
-                      onClick={handleBack}
-                      sx={{ mt: 1, mr: 1 }}
-                    >
-                      Back
-                    </Button>
-                  </div>
-                </StepContent>
-              </Step>
-            ))}
-          </Stepper>
-        </Paper>
-      </Container>
-    </ThemeProvider>
+    <QivrThemeProvider brand="widget">
+      {activeStep === steps.length ? completionView : formView}
+    </QivrThemeProvider>
   );
 };

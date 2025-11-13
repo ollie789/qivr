@@ -15,7 +15,6 @@ import {
   ListItemButton,
   Divider,
   Avatar,
-  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -32,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import TenantSelector from '../components/TenantSelector';
+import { QivrButton } from '@qivr/design-system';
 
 const drawerWidth = 280;
 
@@ -151,9 +151,14 @@ export const MainLayout: React.FC = () => {
           <Box sx={{ mr: 2 }}>
             <TenantSelector />
           </Box>
-          <Button color="inherit" onClick={() => window.open('https://widget.qivr.health', '_blank')}>
+          <QivrButton
+            emphasize="subtle"
+            size="small"
+            color="secondary"
+            onClick={() => window.open('https://widget.qivr.health', '_blank')}
+          >
             New Evaluation
-          </Button>
+          </QivrButton>
         </Toolbar>
       </AppBar>
 

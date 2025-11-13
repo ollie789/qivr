@@ -190,3 +190,6 @@ test-frontend-config.js
 *.backup
 deployment-status.md
 DEPLOYMENT_STATUS.md
+
+*storybook.log
+storybook-static

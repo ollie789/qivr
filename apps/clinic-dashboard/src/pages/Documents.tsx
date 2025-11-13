@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogActions,
   Avatar,
-  CircularProgress,
   Alert,
   ListItemIcon,
   ListItemText,
@@ -43,6 +42,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { documentsApi } from '../services/documentsApi';
 import FileUpload from '../components/FileUpload';
+import { PageHeader, EmptyState, FlexBetween, LoadingSpinner } from '@qivr/design-system';
 
 interface DocumentItem {
   id: string;
@@ -169,18 +169,18 @@ const Documents: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" fontWeight={600}>
-          Documents
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<UploadIcon />}
-          onClick={() => setUploadDialogOpen(true)}
-        >
-          Upload Documents
-        </Button>
-      </Box>
+      <PageHeader
+        title="Documents"
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<UploadIcon />}
+            onClick={() => setUploadDialogOpen(true)}
+          >
+            Upload Documents
+          </Button>
+        }
+      />
 
       <Paper sx={{ mb: 3, p: 2 }}>
         <Grid container spacing={2} alignItems="center">
@@ -216,28 +216,17 @@ const Documents: React.FC = () => {
       </Paper>
 
       {isLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-          <CircularProgress />
-        </Box>
+        <LoadingSpinner size="large" message="Loading documents..." />
       ) : error ? (
         <Alert severity="error">Failed to load documents</Alert>
       ) : filteredDocuments.length === 0 ? (
-        <Paper sx={{ p: 6, textAlign: 'center' }}>
-          <FolderIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No documents found
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {searchQuery ? 'Try adjusting your search criteria' : 'Upload your first document to get started'}
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<UploadIcon />}
-            onClick={() => setUploadDialogOpen(true)}
-          >
-            Upload Document
-          </Button>
-        </Paper>
+        <EmptyState
+          icon={<FolderIcon />}
+          title="No documents found"
+          description={searchQuery ? 'Try adjusting your search criteria' : 'Upload your first document to get started'}
+          actionText="Upload Document"
+          onAction={() => setUploadDialogOpen(true)}
+        />
       ) : (
         <Grid container spacing={3}>
           {filteredDocuments.map((doc: DocumentItem) => (
@@ -349,17 +338,17 @@ const Documents: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <FlexBetween>
             {selectedDocument?.name}
-            <Box>
+            <FlexBetween sx={{ gap: 1 }}>
               <IconButton onClick={() => selectedDocument && window.open(selectedDocument.url, '_blank')}>
                 <DownloadIcon />
               </IconButton>
               <IconButton>
                 <ShareIcon />
               </IconButton>
-            </Box>
-          </Box>
+            </FlexBetween>
+          </FlexBetween>
         </DialogTitle>
         <DialogContent>
           {selectedDocument?.type.includes('image') ? (

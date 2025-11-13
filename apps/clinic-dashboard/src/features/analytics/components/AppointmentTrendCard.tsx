@@ -1,5 +1,5 @@
 import React, { useId } from 'react';
-import { Box, Card, CardContent, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import {
   Area,
   AreaChart,
@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { AppointmentTrendDatum } from '../types';
+import { DashboardSectionCard } from '@qivr/design-system';
 
 export interface AppointmentTrendCardProps {
   title?: string;
@@ -38,29 +39,27 @@ const AppointmentTrendCard: React.FC<AppointmentTrendCardProps> = ({
     : [{ name: 'No Data', appointments: 0, completed: 0 }];
 
   return (
-    <Card>
-      <CardContent>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 2,
-          }}
-        >
+    <DashboardSectionCard
+      header={
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <Typography variant="h6">{title}</Typography>
           {headerAction}
         </Box>
+      }
+      headerProps={{ sx: { borderBottom: 'none', px: 3, py: 2 } }}
+      sx={{ p: 0 }}
+    >
+      <Box sx={{ px: 3, pb: 3 }}>
         <ResponsiveContainer width="100%" height={height}>
           <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id={appointmentsGradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--qivr-palette-primary-main)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--qivr-palette-primary-main)" stopOpacity={0} />
               </linearGradient>
               <linearGradient id={completedGradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--qivr-palette-success-main)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--qivr-palette-success-main)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis dataKey="name" />
@@ -71,14 +70,14 @@ const AppointmentTrendCard: React.FC<AppointmentTrendCardProps> = ({
             <Area
               type="monotone"
               dataKey="appointments"
-              stroke="#2563eb"
+              stroke="var(--qivr-palette-primary-main)"
               fillOpacity={1}
               fill={`url(#${appointmentsGradientId})`}
             />
             <Area
               type="monotone"
               dataKey="completed"
-              stroke="#10b981"
+              stroke="var(--qivr-palette-success-main)"
               fillOpacity={1}
               fill={`url(#${completedGradientId})`}
             />
@@ -89,8 +88,8 @@ const AppointmentTrendCard: React.FC<AppointmentTrendCardProps> = ({
             {emptyMessage}
           </Typography>
         ) : null}
-      </CardContent>
-    </Card>
+      </Box>
+    </DashboardSectionCard>
   );
 };
 

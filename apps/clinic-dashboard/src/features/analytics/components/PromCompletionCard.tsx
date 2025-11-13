@@ -1,7 +1,8 @@
 import React from 'react';
-import { Box, Card, CardContent, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { PromCompletionDatum } from '../types';
+import { DashboardSectionCard } from '@qivr/design-system';
 
 export interface PromCompletionCardProps {
   title?: string;
@@ -12,9 +13,9 @@ export interface PromCompletionCardProps {
 }
 
 const getSegmentColor = (value: number) => {
-  if (value >= 85) return '#10b981';
-  if (value >= 60) return '#f59e0b';
-  return '#ef4444';
+  if (value >= 85) return 'var(--qivr-palette-success-main)';
+  if (value >= 60) return 'var(--qivr-palette-warning-main)';
+  return 'var(--qivr-palette-error-main)';
 };
 
 const PromCompletionCard: React.FC<PromCompletionCardProps> = ({
@@ -26,7 +27,7 @@ const PromCompletionCard: React.FC<PromCompletionCardProps> = ({
 }) => {
   const isEmpty = data.length === 0;
   const chartData = isEmpty
-    ? [{ name: 'No Data', value: 100, color: '#e5e7eb' }]
+    ? [{ name: 'No Data', value: 100, color: 'var(--qivr-palette-neutral-200, #e5e7eb)' }]
     : data.map((item) => ({
         name: item.name,
         value: item.completed,
@@ -44,11 +45,12 @@ const PromCompletionCard: React.FC<PromCompletionCardProps> = ({
     (isEmpty ? emptyMessage : `Average completion rate: ${average}%`);
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          {title}
-        </Typography>
+    <DashboardSectionCard
+      header={<Typography variant="h6">{title}</Typography>}
+      headerProps={{ sx: { borderBottom: 'none', px: 3, py: 2 } }}
+      sx={{ p: 0 }}
+    >
+      <Box sx={{ px: 3, pb: 3 }}>
         <ResponsiveContainer width="100%" height={height}>
           <PieChart>
             <Pie
@@ -74,8 +76,8 @@ const PromCompletionCard: React.FC<PromCompletionCardProps> = ({
             {summaryContent}
           </Typography>
         </Box>
-      </CardContent>
-    </Card>
+      </Box>
+    </DashboardSectionCard>
   );
 };
 

@@ -54,27 +54,7 @@ import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDial
 import IntakeDetailsDialog from '../components/IntakeDetailsDialog';
 import { downloadCSV, downloadExcel, prepareIntakeExportData, intakeQueueColumns } from '../utils/exportUtils';
 import { handleApiError } from '../lib/api-client';
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`intake-tabpanel-${index}`}
-      aria-labelledby={`intake-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+import { PageHeader, TabPanel as DesignTabPanel } from '@qivr/design-system';
 
 const IntakeManagement: React.FC = () => {
   const { canMakeApiCalls } = useAuthGuard();
@@ -334,15 +314,10 @@ const IntakeManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Intake Management
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Process and manage patient intake submissions
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Intake Management"
+        description="Process and manage patient intake submissions"
+      />
 
       {/* Statistics Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -359,9 +334,7 @@ const IntakeManagement: React.FC = () => {
         <Grid item xs={12} sm={6} md={2}>
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 2 }}>
-              <Badge badgeContent={stats.pending} color="warning">
-                <Typography variant="h4">{stats.pending}</Typography>
-              </Badge>
+              <Typography variant="h4">{stats.pending}</Typography>
               <Typography variant="body2" color="text.secondary">
                 Pending Review
               </Typography>
@@ -541,7 +514,7 @@ const IntakeManagement: React.FC = () => {
         </Tabs>
 
         {/* Tab Panels */}
-        <TabPanel value={currentTab} index={0}>
+        <DesignTabPanel value={currentTab} index={0}>
           {isLoading ? (
             <LinearProgress />
           ) : pendingIntakes.length === 0 ? (
@@ -566,9 +539,9 @@ const IntakeManagement: React.FC = () => {
               </Table>
             </TableContainer>
           )}
-        </TabPanel>
+        </DesignTabPanel>
 
-        <TabPanel value={currentTab} index={1}>
+        <DesignTabPanel value={currentTab} index={1}>
           {isLoading ? (
             <LinearProgress />
           ) : reviewingIntakes.length === 0 ? (
@@ -593,9 +566,9 @@ const IntakeManagement: React.FC = () => {
               </Table>
             </TableContainer>
           )}
-        </TabPanel>
+        </DesignTabPanel>
 
-        <TabPanel value={currentTab} index={2}>
+        <DesignTabPanel value={currentTab} index={2}>
           {isLoading ? (
             <LinearProgress />
           ) : processedIntakes.length === 0 ? (
@@ -620,7 +593,7 @@ const IntakeManagement: React.FC = () => {
               </Table>
             </TableContainer>
           )}
-        </TabPanel>
+        </DesignTabPanel>
       </Paper>
 
       {/* Dialogs */}

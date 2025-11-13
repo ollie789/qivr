@@ -21,6 +21,7 @@ import {
   LocalHospital as ClinicIcon,
 } from '@mui/icons-material';
 import { useAuth, useAuthActions } from '../stores/authStore';
+import { FlexBetween } from '@qivr/design-system';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -92,9 +93,9 @@ export default function Login() {
         }}
       >
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <FlexBetween sx={{ justifyContent: 'center', mb: 3 }}>
             <ClinicIcon sx={{ fontSize: 48, color: 'primary.main' }} />
-          </Box>
+          </FlexBetween>
           
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             Qivr Clinic Portal

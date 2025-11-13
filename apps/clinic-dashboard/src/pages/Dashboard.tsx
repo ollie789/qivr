@@ -5,17 +5,14 @@ import { useNavigate } from "react-router-dom";
 import {
   Box,
   Grid,
-  Card,
   CardContent,
   Typography,
   Avatar,
   Chip,
-  Button,
   List,
   ListItem,
   ListItemAvatar,
   ListItemText,
-  Skeleton,
   FormControl,
   Select,
   MenuItem,
@@ -60,6 +57,7 @@ import type {
   PromCompletionDatum,
   StatCardItem,
 } from "../features/analytics";
+import { DashboardSectionCard, QivrButton, QivrCard, EmptyState, SkeletonLoader } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -145,7 +143,13 @@ const Dashboard: React.FC = () => {
       name: diagnosis.description,
       percentage: (diagnosis.count / total) * 100,
       value: diagnosis.count,
-      color: ["#2563eb", "#7c3aed", "#10b981", "#f59e0b", "#6b7280"][index % 5],
+      color: [
+        'var(--qivr-palette-primary-main)',
+        'var(--qivr-palette-secondary-main)',
+        'var(--qivr-palette-success-main)',
+        'var(--qivr-palette-warning-main)',
+        'var(--qivr-palette-neutral-500, #64748b)',
+      ][index % 5],
     }));
   }, [clinicAnalytics]);
 
@@ -204,42 +208,42 @@ const Dashboard: React.FC = () => {
         title: "Appointments Today",
         value: derivedStats.todayAppointments.toString(),
         icon: <CalendarIcon />,
-        avatarColor: "#2563eb",
+        avatarColor: 'var(--qivr-palette-primary-main)',
       },
       {
         id: "pending-intakes",
         title: "Pending Intakes",
         value: derivedStats.pendingIntakes.toString(),
         icon: <AssignmentIcon />,
-        avatarColor: "#f59e0b",
+        avatarColor: 'var(--qivr-palette-warning-main)',
       },
       {
         id: "active-patients",
         title: "Active Patients",
         value: derivedStats.activePatients.toString(),
         icon: <PeopleIcon />,
-        avatarColor: "#7c3aed",
+        avatarColor: 'var(--qivr-palette-secondary-main)',
       },
       {
         id: "average-wait-time",
         title: "Avg Wait Time",
         value: `${derivedStats.averageWaitTime} min`,
         icon: <AccessTimeIcon />,
-        avatarColor: "#10b981",
+        avatarColor: 'var(--qivr-palette-success-main)',
       },
       {
         id: "completed-today",
         title: "Completed Today",
         value: derivedStats.completedToday.toString(),
         icon: <CheckCircleIcon />,
-        avatarColor: "#10b981",
+        avatarColor: 'var(--qivr-palette-success-main)',
       },
       {
         id: "patient-satisfaction",
         title: "Patient Satisfaction",
         value: derivedStats.patientSatisfaction.toFixed(1),
         icon: <StarIcon />,
-        avatarColor: "#f59e0b",
+        avatarColor: 'var(--qivr-palette-warning-main)',
       },
     ],
     [derivedStats],
@@ -269,14 +273,14 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3}>
         {/* Upcoming Appointments */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <QivrCard elevated>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Today&apos;s Appointments
               </Typography>
               <List>
                 {appointmentsLoading ? (
-                  <Skeleton variant="rectangular" height={200} />
+                  <SkeletonLoader type="list" count={3} />
                 ) : appointmentsData?.length ? (
                   appointmentsData.map((apt) => (
                     <ListItem key={apt.id} sx={{ px: 0 }}>
@@ -309,33 +313,40 @@ const Dashboard: React.FC = () => {
                     </ListItem>
                   ))
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No appointments scheduled for today
-                  </Typography>
+                  <EmptyState
+                    icon={<CalendarIcon />}
+                    title="No appointments today"
+                    description="Your schedule is clear for today."
+                    actionText="Schedule New"
+                    onAction={() => navigate("/appointments")}
+                    sx={{ py: 3 }}
+                  />
                 )}
               </List>
-              <Button
+              <QivrButton
                 fullWidth
                 variant="outlined"
                 sx={{ mt: 2 }}
                 onClick={() => navigate("/appointments")}
               >
                 View All Appointments
-              </Button>
+              </QivrButton>
             </CardContent>
-          </Card>
+          </QivrCard>
         </Grid>
 
         {/* Recent Intakes */}
         <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
+          <DashboardSectionCard
+            header={
               <Typography variant="h6" gutterBottom>
                 Recent Intake Submissions
               </Typography>
-              <List>
+            }
+          >
+            <List>
                 {activityLoading ? (
-                  <Skeleton variant="rectangular" height={200} />
+                  <SkeletonLoader type="list" count={3} />
                 ) : activityData?.length ? (
                   activityData
                     .filter((activity) => activity.type === "intake")
@@ -347,8 +358,8 @@ const Dashboard: React.FC = () => {
                             sx={{
                               bgcolor:
                                 activity.status === "urgent"
-                                  ? "#ef4444"
-                                  : "#6b7280",
+                                  ? 'var(--qivr-palette-error-main)'
+                                  : 'var(--qivr-palette-neutral-500, #6b7280)',
                             }}
                           >
                             {activity.status === "urgent" ? (
@@ -376,21 +387,25 @@ const Dashboard: React.FC = () => {
                       </ListItem>
                     ))
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No recent intake submissions
-                  </Typography>
+                  <EmptyState
+                    icon={<AssignmentIcon />}
+                    title="No recent intakes"
+                    description="No intake submissions to review."
+                    actionText="View Queue"
+                    onAction={() => navigate("/intake")}
+                    sx={{ py: 3 }}
+                  />
                 )}
-              </List>
-              <Button
-                fullWidth
-                variant="outlined"
-                sx={{ mt: 2 }}
-                onClick={() => navigate("/intake")}
-              >
-                Review Intake Queue
-              </Button>
-            </CardContent>
-          </Card>
+            </List>
+            <QivrButton
+              fullWidth
+              variant="outlined"
+              sx={{ mt: 2 }}
+              onClick={() => navigate("/intake")}
+            >
+              Review Intake Queue
+            </QivrButton>
+          </DashboardSectionCard>
         </Grid>
 
         {/* Analytics Charts */}
@@ -428,13 +443,12 @@ const Dashboard: React.FC = () => {
             title="Patient Conditions Distribution"
             data={conditionData}
             emptyMessage="No condition data available"
-            xAxisAngle={-45}
           />
         </Grid>
 
         {/* Clinic Performance Metrics */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <QivrCard elevated>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Clinic Performance Metrics
@@ -453,20 +467,20 @@ const Dashboard: React.FC = () => {
                   <Radar
                     name="Performance"
                     dataKey="value"
-                    stroke="#2563eb"
-                    fill="#2563eb"
+                    stroke="var(--qivr-palette-primary-main)"
+                    fill="var(--qivr-palette-primary-main)"
                     fillOpacity={0.6}
                   />
                   <Tooltip />
                 </RadarChart>
               </ResponsiveContainer>
             </CardContent>
-          </Card>
+          </QivrCard>
         </Grid>
 
         {/* Weekly Activity Heatmap */}
         <Grid item xs={12}>
-          <Card>
+          <QivrCard elevated>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Weekly Activity Overview
@@ -487,19 +501,19 @@ const Dashboard: React.FC = () => {
                   <Line
                     type="monotone"
                     dataKey="appointments"
-                    stroke="#2563eb"
+                    stroke="var(--qivr-palette-primary-main)"
                     strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="completed"
-                    stroke="#10b981"
+                    stroke="var(--qivr-palette-success-main)"
                     strokeWidth={2}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
-          </Card>
+          </QivrCard>
         </Grid>
       </Grid>
     </Box>

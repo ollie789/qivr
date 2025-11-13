@@ -30,22 +30,38 @@
     "deploy:docker": "./deploy.sh",
     "deploy:docker:backend": "./deploy.sh --backend-only",
     "deploy:docker:frontend": "./deploy.sh --frontend-only",
-    "status": "./status.sh"
+    "status": "./status.sh",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "chromatic": "npx chromatic --project-token=chpt_93f772240dc2a03"
   },
   "devDependencies": {
+    "@chromatic-com/storybook": "^4.1.2",
+    "@storybook/addon-a11y": "^10.0.7",
+    "@storybook/addon-docs": "^10.0.7",
+    "@storybook/addon-onboarding": "^10.0.7",
+    "@storybook/addon-vitest": "^10.0.7",
+    "@storybook/react-vite": "^10.0.7",
     "@types/node": "^20.11.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/browser-playwright": "^4.0.8",
+    "@vitest/coverage-v8": "^4.0.8",
+    "chromatic": "^13.3.3",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-storybook": "^10.0.7",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.2",
     "playwright": "^1.56.1",
     "prettier": "^3.2.0",
+    "storybook": "^10.0.7",
+    "style-dictionary": "^5.1.1",
     "turbo": "^1.12.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.8"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -67,9 +83,15 @@
     ]
   },
   "dependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.53.2",
     "google-auth-library": "^10.2.1",
     "googleapis": "^156.0.0",
     "pg": "^8.16.3",
     "pg-connection-string": "^2.9.1"
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:storybook/recommended"
+    ]
   }
 }

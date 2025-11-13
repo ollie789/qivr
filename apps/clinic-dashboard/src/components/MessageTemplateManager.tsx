@@ -29,6 +29,7 @@ import type {
   MessageTemplateChannel,
   UpsertMessageTemplateInput,
 } from '../services/messageTemplatesApi';
+import { EmptyState } from '@qivr/design-system';
 
 interface MessageTemplateManagerProps {
   open: boolean;
@@ -228,11 +229,10 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
             </Stack>
             <List dense sx={{ maxHeight: 320, overflowY: 'auto', border: theme => `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
               {templates.length === 0 ? (
-                <Box sx={{ p: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No templates yet. Create one to get started.
-                  </Typography>
-                </Box>
+                <EmptyState
+                  title="No templates"
+                  description="Create one to get started."
+                />
               ) : (
                 templates.map(template => (
                   <ListItemButton

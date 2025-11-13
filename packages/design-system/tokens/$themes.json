@@ -1,0 +1,11 @@
+[
+  {
+    "id": "default",
+    "name": "Default",
+    "selectedTokenSets": {
+      "colors": "enabled",
+      "spacing": "enabled",
+      "typography": "enabled"
+    }
+  }
+]

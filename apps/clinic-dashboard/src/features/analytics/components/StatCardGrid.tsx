@@ -1,18 +1,9 @@
 import React from 'react';
-import {
-  Avatar,
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Grid,
-  Skeleton,
-  Typography,
-} from '@mui/material';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { Grid, Skeleton } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import type { StatCardItem } from '../types';
+import { StatCard, QivrCard } from '@qivr/design-system';
+import { CardContent } from '@mui/material';
 
 export interface StatCardGridProps {
   items: StatCardItem[];
@@ -42,58 +33,27 @@ const StatCardGrid: React.FC<StatCardGridProps> = ({
       {loading
         ? Array.from({ length: placeholders }).map((_, index) => (
             <Grid item key={`stat-skeleton-${index}`} {...itemSizes}>
-              <Card>
+              <QivrCard elevated>
                 <CardContent>
                   <Skeleton variant="rectangular" height={80} />
                 </CardContent>
-              </Card>
+              </QivrCard>
             </Grid>
           ))
-        : items.map((item) => {
-            const hasChange = item.change !== undefined || item.changeLabel !== undefined;
-            const changeValue = typeof item.change === 'number' ? item.change : undefined;
-            const isPositive = changeValue === undefined ? true : changeValue >= 0;
-            const chipColor: 'success' | 'error' = isPositive ? 'success' : 'error';
-            const chipLabel =
-              item.changeLabel ??
-              (changeValue !== undefined ? `${Math.abs(changeValue).toFixed(1)}%` : undefined);
-
-            return (
-              <Grid item key={item.id} {...itemSizes}>
-                <Card>
-                  <CardContent>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          {item.title}
-                        </Typography>
-                        <Typography variant="h5">{item.value}</Typography>
-                      </Box>
-                      <Avatar sx={{ bgcolor: item.avatarColor ?? 'primary.main' }}>
-                        {item.icon}
-                      </Avatar>
-                    </Box>
-                    {hasChange && chipLabel ? (
-                      <Chip
-                        size="small"
-                        color={chipColor}
-                        icon={isPositive ? <TrendingUpIcon /> : <TrendingDownIcon />}
-                        label={chipLabel}
-                        variant="outlined"
-                        sx={{ mt: 2 }}
-                      />
-                    ) : null}
-                  </CardContent>
-                </Card>
-              </Grid>
-            );
-          })}
+        : items.map((item) => (
+            <Grid item key={item.id} {...itemSizes}>
+              <StatCard
+                title={item.title}
+                value={item.value}
+                icon={item.icon}
+                trend={item.change !== undefined ? {
+                  value: item.change,
+                  label: item.changeLabel
+                } : undefined}
+                iconColor={item.avatarColor}
+              />
+            </Grid>
+          ))}
     </Grid>
   );
 };

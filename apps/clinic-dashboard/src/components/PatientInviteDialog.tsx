@@ -5,11 +5,9 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Button,
   Alert,
-  Box,
-  CircularProgress
 } from '@mui/material';
+import { DialogSection, FormSection, FormRow, QivrButton } from '@qivr/design-system';
 
 interface PatientInviteDialogProps {
   open: boolean;
@@ -65,51 +63,61 @@ export const PatientInviteDialog: React.FC<PatientInviteDialogProps> = ({
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>Invite New Patient</DialogTitle>
       <DialogContent>
-        <Box sx={{ pt: 1 }}>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+        <DialogSection>
+          {error && <Alert severity="error">{error}</Alert>}
+          {success && <Alert severity="success">{success}</Alert>}
           
-          <TextField
-            fullWidth
-            label="First Name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            margin="normal"
-            disabled={loading}
-          />
-          
-          <TextField
-            fullWidth
-            label="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            margin="normal"
-            disabled={loading}
-          />
-          
-          <TextField
-            fullWidth
-            label="Email Address"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            margin="normal"
-            disabled={loading}
-          />
-        </Box>
+          <FormSection
+            title="Patient Information"
+            description="Enter the patient's details to send an invitation"
+          >
+            <FormRow>
+              <TextField
+                fullWidth
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                disabled={loading}
+              />
+            </FormRow>
+            
+            <FormRow>
+              <TextField
+                fullWidth
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                disabled={loading}
+              />
+            </FormRow>
+            
+            <FormRow>
+              <TextField
+                fullWidth
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </FormRow>
+          </FormSection>
+        </DialogSection>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
-          disabled={loading || success !== ''}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
+        <QivrButton 
+          onClick={handleClose} 
+          disabled={loading}
+          variant="outlined"
+          emphasize="subtle"
         >
-          {loading ? 'Sending...' : 'Send Invitation'}
-        </Button>
+          Cancel
+        </QivrButton>
+        <QivrButton 
+          onClick={handleSubmit} 
+          variant="contained"
+          disabled={loading || success !== ''}
+          loading={loading}
+        >
+          Send Invitation
+        </QivrButton>
       </DialogActions>
     </Dialog>
   );

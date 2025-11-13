@@ -69,12 +69,7 @@ import { useAuthGuard } from '../hooks/useAuthGuard';
 import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
 import api from '../lib/api-client';
 import TenantInfo from '../components/TenantInfo';
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+import { PageHeader, TabPanel as DesignTabPanel } from '@qivr/design-system';
 
 interface ClinicSettings {
   clinic: {
@@ -164,20 +159,6 @@ interface ProviderMember {
   status: 'active' | 'inactive';
   lastLogin: string;
 }
-
-const TabPanel = (props: TabPanelProps) => {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`settings-tabpanel-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
-    </div>
-  );
-};
 
 export default function Settings() {
   const { enqueueSnackbar } = useSnackbar();
@@ -435,9 +416,7 @@ export default function Settings() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
-        Clinic Settings
-      </Typography>
+      <PageHeader title="Clinic Settings" />
 
       <Paper sx={{ width: '100%' }}>
         <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
@@ -451,7 +430,7 @@ export default function Settings() {
         </Tabs>
 
         {/* Clinic Info Tab */}
-        <TabPanel value={tabValue} index={0}>
+        <DesignTabPanel value={tabValue} index={0}>
           <Box sx={{ p: 3 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
               <Typography variant="h6">Clinic Information</Typography>
@@ -633,12 +612,12 @@ export default function Settings() {
               </Grid>
             </Grid>
           </Box>
-        </TabPanel>
+        </DesignTabPanel>
 
         {/* Operations Tab - Rest of the tabs continue similarly... */}
         {/* For brevity, I'll add placeholder content for other tabs */}
         
-        <TabPanel value={tabValue} index={1}>
+        <DesignTabPanel value={tabValue} index={1}>
           <Box sx={{ p: 3 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
               <Typography variant="h6">Operations Settings</Typography>
@@ -868,9 +847,9 @@ export default function Settings() {
               </Grid>
             </Grid>
           </Box>
-        </TabPanel>
+        </DesignTabPanel>
 
-        <TabPanel value={tabValue} index={2}>
+        <DesignTabPanel value={tabValue} index={2}>
           <Box sx={{ p: 3 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
               <Typography variant="h6">Provider Management</Typography>
@@ -950,9 +929,9 @@ export default function Settings() {
               </Table>
             </TableContainer>
           </Box>
-        </TabPanel>
+        </DesignTabPanel>
 
-        <TabPanel value={tabValue} index={3}>
+        <DesignTabPanel value={tabValue} index={3}>
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>Notification Settings</Typography>
             <Card>
@@ -994,18 +973,18 @@ export default function Settings() {
               </CardContent>
             </Card>
           </Box>
-        </TabPanel>
+        </DesignTabPanel>
 
-        <TabPanel value={tabValue} index={4}>
+        <DesignTabPanel value={tabValue} index={4}>
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>Billing & Payment Settings</Typography>
             <Alert severity="info" sx={{ mb: 2 }}>
               Configure billing rates, payment methods, and insurance providers
             </Alert>
           </Box>
-        </TabPanel>
+        </DesignTabPanel>
 
-        <TabPanel value={tabValue} index={5}>
+        <DesignTabPanel value={tabValue} index={5}>
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>Integrations</Typography>
             <Grid container spacing={3}>
@@ -1059,9 +1038,9 @@ export default function Settings() {
               </Grid>
             </Grid>
           </Box>
-        </TabPanel>
+        </DesignTabPanel>
 
-        <TabPanel value={tabValue} index={6}>
+        <DesignTabPanel value={tabValue} index={6}>
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>Security Settings</Typography>
             <Card>
@@ -1110,7 +1089,7 @@ export default function Settings() {
               </CardContent>
             </Card>
           </Box>
-        </TabPanel>
+        </DesignTabPanel>
       </Paper>
 
       {/* Add Provider Dialog */}

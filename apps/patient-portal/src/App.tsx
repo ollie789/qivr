@@ -1,4 +1,4 @@
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { CssBaseline } from '@mui/material';
 // Temporarily disabled due to version conflict - will fix later
 // import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 // import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
@@ -9,14 +9,12 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // Initialize Amplify
 import './config/amplify.config';
 
-// Theme
-import { theme } from './theme';
-
 // Auth
 import { AuthProvider } from './contexts/AuthContext';
 
 // App Content
 import { AppContent } from './AppContent';
+import { QivrThemeProvider } from '@qivr/design-system';
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -34,14 +32,14 @@ function App() {
   try {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={theme}>
+        <QivrThemeProvider brand="patient">
           {/* LocalizationProvider temporarily disabled - date pickers will work without localization */}
           <CssBaseline />
           <AuthProvider>
             <AppContent />
           </AuthProvider>
           <ReactQueryDevtools initialIsOpen={false} />
-        </ThemeProvider>
+        </QivrThemeProvider>
       </QueryClientProvider>
     );
   } catch (error) {

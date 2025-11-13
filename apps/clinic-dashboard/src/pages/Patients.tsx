@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Card,
   CardContent,
   CircularProgress,
   Divider,
@@ -16,7 +15,6 @@ import {
   TablePagination,
   TextField,
   InputAdornment,
-  Button,
   IconButton,
   Chip,
   Avatar,
@@ -29,7 +27,6 @@ import {
   Select,
   MenuItem,
   Tooltip,
-  LinearProgress,
   Tab,
   Tabs,
   List,
@@ -71,6 +68,7 @@ import {
 import MessageComposer from '../components/MessageComposer';
 import FileUpload from '../components/FileUpload';
 import { SelectField, type SelectOption } from '../components/forms';
+import { QivrButton, QivrCard, TableSection, EmptyState, SkeletonLoader, PageHeader, FlexBetween } from '@qivr/design-system';
 
 // Using Patient type from patientApi
 
@@ -275,39 +273,35 @@ const Patients: React.FC = () => {
 
   return (
     <Box>
-      {/* Header */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={8}>
-          <Typography variant="h4" gutterBottom>
-            Patients
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage patient records and medical history
-          </Typography>
-        </Grid>
-        <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-          >
-            Export
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreatePatient}
-          >
-            New Patient
-          </Button>
-        </Grid>
-      </Grid>
+      <PageHeader
+        title="Patients"
+        description="Manage patient records and medical history"
+        actions={
+          <FlexBetween sx={{ gap: 1 }}>
+            <QivrButton
+              variant="outlined"
+              emphasize="subtle"
+              startIcon={<DownloadIcon />}
+            >
+              Export
+            </QivrButton>
+            <QivrButton
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleCreatePatient}
+            >
+              New Patient
+            </QivrButton>
+          </FlexBetween>
+        }
+      />
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <QivrCard elevated>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <FlexBetween sx={{ alignItems: 'center', gap: 2 }}>
                 <Avatar sx={{ bgcolor: 'primary.main' }}>
                   <PersonIcon />
                 </Avatar>
@@ -317,14 +311,14 @@ const Patients: React.FC = () => {
                   </Typography>
                   <Typography variant="h4">{patientsData?.total || patients.length}</Typography>
                 </Box>
-              </Box>
+              </FlexBetween>
             </CardContent>
-          </Card>
+          </QivrCard>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <QivrCard elevated>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <FlexBetween sx={{ alignItems: 'center', gap: 2 }}>
                 <Avatar sx={{ bgcolor: 'success.main' }}>
                   <PersonIcon />
                 </Avatar>
@@ -336,14 +330,14 @@ const Patients: React.FC = () => {
                     {patients.filter(p => p.status === 'active').length}
                   </Typography>
                 </Box>
-              </Box>
+              </FlexBetween>
             </CardContent>
-          </Card>
+          </QivrCard>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <QivrCard elevated>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <FlexBetween sx={{ alignItems: 'center', gap: 2 }}>
                 <Avatar sx={{ bgcolor: 'info.main' }}>
                   <CalendarIcon />
                 </Avatar>
@@ -353,14 +347,14 @@ const Patients: React.FC = () => {
                   </Typography>
                   <Typography variant="h4">8</Typography>
                 </Box>
-              </Box>
+              </FlexBetween>
             </CardContent>
-          </Card>
+          </QivrCard>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <QivrCard elevated>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <FlexBetween sx={{ alignItems: 'center', gap: 2 }}>
                 <Avatar sx={{ bgcolor: 'warning.main' }}>
                   <AssignmentIcon />
                 </Avatar>
@@ -370,16 +364,18 @@ const Patients: React.FC = () => {
                   </Typography>
                   <Typography variant="h4">12</Typography>
                 </Box>
-              </Box>
+              </FlexBetween>
             </CardContent>
-          </Card>
+          </QivrCard>
         </Grid>
       </Grid>
 
       {/* Search and Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2}>
+      <TableSection
+        header={<Typography variant="h6">Search & Filters</Typography>}
+        sx={{ mb: 3, p: 3 }}
+      >
+        <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -411,43 +407,63 @@ const Patients: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={3}>
-              <Button
+              <QivrButton
                 fullWidth
                 variant="outlined"
                 startIcon={<FilterIcon />}
                 sx={{ height: '56px' }}
+                emphasize="subtle"
               >
                 More Filters
-              </Button>
+              </QivrButton>
             </Grid>
           </Grid>
-        </CardContent>
-      </Card>
+      </TableSection>
 
       {/* Patients Table */}
-      <Card>
-        {isLoading && <LinearProgress />}
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Patient</TableCell>
-                <TableCell>MRN</TableCell>
-                <TableCell>Contact</TableCell>
-                <TableCell>Last Visit</TableCell>
-                <TableCell>Conditions</TableCell>
-                <TableCell>Provider</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredPatients
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((patient) => (
+      <TableSection
+        header={
+          <FlexBetween sx={{ alignItems: 'center' }}>
+            <Typography variant="h6">Patients</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {filteredPatients.length} records
+            </Typography>
+          </FlexBetween>
+        }
+      >
+        {isLoading ? (
+          <SkeletonLoader type="table" count={5} />
+        ) : filteredPatients.length === 0 ? (
+          <EmptyState
+            icon={<PersonIcon />}
+            title="No patients found"
+            description={searchQuery ? "Try adjusting your search or filter criteria." : "You haven't added any patients yet. Get started by adding your first patient."}
+            actionText="Add Patient"
+            onAction={handleCreatePatient}
+          />
+        ) : (
+          <>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Patient</TableCell>
+                    <TableCell>MRN</TableCell>
+                    <TableCell>Contact</TableCell>
+                    <TableCell>Last Visit</TableCell>
+                    <TableCell>Conditions</TableCell>
+                    <TableCell>Provider</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredPatients
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((patient) => (
                 <TableRow key={patient.id} hover>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <FlexBetween sx={{ alignItems: 'center', gap: 2 }}>
                       <Avatar>
                         {patient.firstName[0]}{patient.lastName[0]}
                       </Avatar>
@@ -459,7 +475,7 @@ const Patients: React.FC = () => {
                           {patient.dateOfBirth && !isNaN(new Date(patient.dateOfBirth).getTime()) ? format(new Date(patient.dateOfBirth), 'MMM d, yyyy') : 'DOB not set'} • {patient.gender || 'N/A'}
                         </Typography>
                       </Box>
-                    </Box>
+                    </FlexBetween>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
@@ -491,7 +507,7 @@ const Patients: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    <FlexBetween sx={{ gap: 0.5, flexWrap: 'wrap' }}>
                       {patient.conditions?.slice(0, 2).map((condition) => (
                         <Chip
                           key={condition}
@@ -507,7 +523,7 @@ const Patients: React.FC = () => {
                           variant="outlined"
                         />
                       )}
-                    </Box>
+                    </FlexBetween>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">{patient.provider || '—'}</Typography>
@@ -520,7 +536,7 @@ const Patients: React.FC = () => {
                       />
                   </TableCell>
                   <TableCell align="right">
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                    <FlexBetween sx={{ gap: 1, justifyContent: 'flex-end' }}>
                       <Tooltip title="View Details">
                         <IconButton
                           size="small"
@@ -562,7 +578,7 @@ const Patients: React.FC = () => {
                           <ScheduleIcon />
                         </IconButton>
                       </Tooltip>
-                    </Box>
+                    </FlexBetween>
                   </TableCell>
                 </TableRow>
               ))}
@@ -580,7 +596,9 @@ const Patients: React.FC = () => {
             setPage(0);
           }}
         />
-      </Card>
+          </>
+        )}
+      </TableSection>
 
       {/* Patient Details Dialog */}
       <Dialog 
@@ -591,7 +609,7 @@ const Patients: React.FC = () => {
         disableRestoreFocus
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <FlexBetween sx={{ alignItems: 'center' }}>
             <Box>
               <Typography variant="h6">Patient Details</Typography>
               {detail && (
@@ -608,13 +626,13 @@ const Patients: React.FC = () => {
                 ×
               </IconButton>
             </Box>
-          </Box>
+          </FlexBetween>
         </DialogTitle>
         <DialogContent>
           {detailLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <FlexBetween sx={{ justifyContent: 'center', py: 4 }}>
               <CircularProgress size={32} />
-            </Box>
+            </FlexBetween>
           ) : !detail ? (
             <Typography color="text.secondary">Select a patient to view details.</Typography>
           ) : (
@@ -717,14 +735,14 @@ const Patients: React.FC = () => {
                     <Typography variant="subtitle2" gutterBottom>
                       Active Conditions
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <FlexBetween sx={{ gap: 1, flexWrap: 'wrap' }}>
                       {(detail.conditions ?? []).map((condition) => (
                         <Chip key={condition} label={condition} />
                       ))}
                       {(detail.conditions ?? []).length === 0 && (
                         <Typography variant="body2" color="text.secondary">No conditions on record</Typography>
                       )}
-                    </Box>
+                    </FlexBetween>
                     {detail.notes && (
                       <Box sx={{ mt: 2 }}>
                         <Typography variant="subtitle2" gutterBottom>Notes</Typography>
@@ -779,16 +797,17 @@ const Patients: React.FC = () => {
 
               {detailsTab === 3 && (
                 <Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <FlexBetween sx={{ mb: 2 }}>
                     <Typography variant="h6">Documents</Typography>
-                    <Button
+                    <QivrButton
                       variant="outlined"
                       startIcon={<UploadFileIcon />}
+                      emphasize="subtle"
                       onClick={() => detail && handleUploadFile(detail)}
-                      >
+                    >
                       Upload Document
-                    </Button>
-                  </Box>
+                    </QivrButton>
+                  </FlexBetween>
                   <Typography color="text.secondary">
                     Patient documents and files will be displayed here
                   </Typography>
@@ -836,22 +855,25 @@ const Patients: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-          <Button
+          <QivrButton emphasize="subtle" onClick={() => setDetailsOpen(false)}>
+            Close
+          </QivrButton>
+          <QivrButton
             variant="outlined"
             startIcon={<MessageIcon />}
             onClick={() => detail && handleSendMessage(detail)}
             disabled={!detail}
+            emphasize="subtle"
           >
             Send Message
-          </Button>
-          <Button
+          </QivrButton>
+          <QivrButton
             variant="contained"
             onClick={() => detail && handleScheduleAppointment(detail)}
             disabled={!detail}
           >
             Schedule Appointment
-          </Button>
+          </QivrButton>
         </DialogActions>
       </Dialog>
 
@@ -906,7 +928,9 @@ const Patients: React.FC = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadOpen(false)}>Cancel</Button>
+          <QivrButton emphasize="subtle" onClick={() => setUploadOpen(false)}>
+            Cancel
+          </QivrButton>
         </DialogActions>
       </Dialog>
     </Box>
@@ -1130,10 +1154,12 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={!isValid}>
+        <QivrButton emphasize="subtle" onClick={onClose}>
+          Cancel
+        </QivrButton>
+        <QivrButton variant="contained" onClick={handleSubmit} disabled={!isValid}>
           {patient ? 'Save Changes' : 'Create Patient'}
-        </Button>
+        </QivrButton>
       </DialogActions>
     </Dialog>
   );

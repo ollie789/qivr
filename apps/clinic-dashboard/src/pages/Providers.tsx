@@ -20,6 +20,7 @@ import {
 import { Add, Edit, Delete, Person } from '@mui/icons-material';
 import { providerApi, Provider, CreateProviderData, UpdateProviderData } from '../services/providerApi';
 import { useAuthStore } from '../stores/authStore';
+import { PageHeader, FlexBetween, LoadingSpinner } from '@qivr/design-system';
 
 const Providers: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -125,20 +126,22 @@ const Providers: React.FC = () => {
     }
   };
 
-  if (loading) return <Typography>Loading providers...</Typography>;
+  if (loading) return <LoadingSpinner size="large" message="Loading providers..." />;
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Providers</Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpenDialog()}
-        >
-          Add Provider
-        </Button>
-      </Box>
+      <PageHeader
+        title="Providers"
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenDialog()}
+          >
+            Add Provider
+          </Button>
+        }
+      />
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -151,17 +154,19 @@ const Providers: React.FC = () => {
           <Grid item xs={12} md={6} lg={4} key={provider.id}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Person sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="h6">{provider.fullName}</Typography>
-                  <Box sx={{ ml: 'auto' }}>
+                <FlexBetween sx={{ mb: 2 }}>
+                  <FlexBetween sx={{ gap: 1 }}>
+                    <Person color="primary" />
+                    <Typography variant="h6">{provider.fullName}</Typography>
+                  </FlexBetween>
+                  <Box>
                     <Chip 
                       label={provider.isActive ? 'Active' : 'Inactive'} 
                       color={provider.isActive ? 'success' : 'default'}
                       size="small"
                     />
                   </Box>
-                </Box>
+                </FlexBetween>
                 
                 {provider.title && (
                   <Typography variant="body2" color="text.secondary">
