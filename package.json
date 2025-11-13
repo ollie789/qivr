@@ -32,7 +32,8 @@
     "deploy:docker:frontend": "./deploy.sh --frontend-only",
     "status": "./status.sh",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "chromatic": "npx chromatic --project-token=chpt_93f772240dc2a03"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^4.1.2",
@@ -57,6 +58,7 @@
     "playwright": "^1.56.1",
     "prettier": "^3.2.0",
     "storybook": "^10.0.7",
+    "storybook-addon-designs": "^6.3.1",
     "turbo": "^1.12.0",
     "typescript": "^5.3.0",
     "vitest": "^4.0.8"
