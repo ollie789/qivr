@@ -1,0 +1,20 @@
+{
+  "typography": {
+    "fontFamily": {
+      "base": { "value": "Roboto, sans-serif" }
+    },
+    "fontSize": {
+      "xs": { "value": "12px" },
+      "sm": { "value": "14px" },
+      "md": { "value": "16px" },
+      "lg": { "value": "18px" },
+      "xl": { "value": "24px" },
+      "xxl": { "value": "32px" }
+    },
+    "fontWeight": {
+      "regular": { "value": "400" },
+      "medium": { "value": "500" },
+      "bold": { "value": "700" }
+    }
+  }
+}

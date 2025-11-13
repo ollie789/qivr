@@ -17,7 +17,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build-tokens && tsc -p tsconfig.json",
+    "build-tokens": "style-dictionary build",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

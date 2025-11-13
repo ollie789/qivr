@@ -1,0 +1,26 @@
+{
+  "color": {
+    "primary": {
+      "main": { "value": "#1976d2" },
+      "light": { "value": "#42a5f5" },
+      "dark": { "value": "#1565c0" }
+    },
+    "secondary": {
+      "main": { "value": "#dc004e" },
+      "light": { "value": "#f50057" },
+      "dark": { "value": "#c51162" }
+    },
+    "success": {
+      "main": { "value": "#2e7d32" }
+    },
+    "error": {
+      "main": { "value": "#d32f2f" }
+    },
+    "warning": {
+      "main": { "value": "#ed6c02" }
+    },
+    "info": {
+      "main": { "value": "#0288d1" }
+    }
+  }
+}
