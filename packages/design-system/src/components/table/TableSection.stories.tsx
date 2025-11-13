@@ -9,7 +9,7 @@ import {
   Typography,
   Paper,
 } from '@mui/material';
-import { TableSection } from '../components';
+import { TableSection } from './TableSection';
 
 const meta: Meta<typeof TableSection> = {
   title: 'Design System/TableSection',
