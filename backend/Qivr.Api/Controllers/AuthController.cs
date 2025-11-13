@@ -67,12 +67,14 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = result.ErrorMessage });
         }
 
-        // Set tokens as httpOnly cookies
+        // Set tokens as httpOnly cookies for browser clients
         SetAuthCookies(result.AccessToken!, result.RefreshToken!, result.ExpiresIn!.Value);
 
-        // Return user info without tokens
+        // Return tokens in response body for API clients
         return Ok(new 
         {
+            accessToken = result.AccessToken,
+            refreshToken = result.RefreshToken,
             expiresIn = result.ExpiresIn!.Value,
             userInfo = result.UserInfo
         });
