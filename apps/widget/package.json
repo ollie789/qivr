@@ -13,6 +13,7 @@
   "dependencies": {
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
+    "@qivr/design-system": "file:../../packages/design-system",
     "@mui/material": "^5.15.0",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",

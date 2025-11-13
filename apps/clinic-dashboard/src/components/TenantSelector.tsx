@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Button,
-  CircularProgress,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -14,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { fetchTenantOptions, type TenantOption } from '../services/tenantService';
 import { useAuth, useAuthActions } from '../stores/authStore';
+import { QivrButton, FlexBetween, LoadingSpinner } from '@qivr/design-system';
 
 const TenantSelector = () => {
   const { activeTenantId, user } = useAuth();
@@ -66,8 +65,8 @@ const TenantSelector = () => {
 
   if (isLoading && tenants.length === 0) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 120 }}>
-        <CircularProgress size={20} />
+      <Box sx={{ minWidth: 120 }}>
+        <LoadingSpinner size="small" />
       </Box>
     );
   }
@@ -75,11 +74,13 @@ const TenantSelector = () => {
   if (tenants.length <= 1 && selectedTenant) {
     return (
       <Tooltip title="Active clinic tenant">
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, borderRadius: 1, bgcolor: 'action.hover' }}>
-          <ApartmentIcon fontSize="small" color="action" />
-          <Box component="span" sx={{ fontSize: 14, fontWeight: 500 }}>
-            {selectedTenant.name || selectedTenant.id}
-          </Box>
+        <Box sx={{ px: 1.5, py: 0.75, borderRadius: 1, bgcolor: 'action.hover' }}>
+          <FlexBetween sx={{ gap: 1 }}>
+            <ApartmentIcon fontSize="small" color="action" />
+            <Box component="span" sx={{ fontSize: 14, fontWeight: 500 }}>
+              {selectedTenant.name || selectedTenant.id}
+            </Box>
+          </FlexBetween>
         </Box>
       </Tooltip>
     );
@@ -87,7 +88,7 @@ const TenantSelector = () => {
 
   return (
     <>
-      <Button
+      <QivrButton
         variant="outlined"
         size="small"
         color="inherit"
@@ -99,7 +100,7 @@ const TenantSelector = () => {
         <Box component="span" sx={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {selectedTenant?.name || selectedTenant?.id || 'Select Tenant'}
         </Box>
-      </Button>
+      </QivrButton>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
         {tenants.map((tenant) => (
           <MenuItem

@@ -37,6 +37,7 @@ import { patientApi, type Patient as PatientSummary } from '../services/patientA
 import { NotificationMethod } from '../services/promApi';
 import type { PromTemplateSummary } from '../services/promApi';
 import { handleApiError } from '../lib/api-client';
+import { FlexBetween } from '@qivr/design-system';
 
 interface SendPromDialogProps {
   open: boolean;
@@ -176,10 +177,10 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Box display="flex" alignItems="center" gap={1}>
+        <FlexBetween sx={{ gap: 1 }}>
           <SendIcon />
           Send PROM to Patients
-        </Box>
+        </FlexBetween>
       </DialogTitle>
       <DialogContent>
         <Grid container spacing={3} sx={{ mt: 1 }}>
@@ -240,16 +241,16 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
                     secondary={
                       <Box>
                         {option.email && (
-                          <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <FlexBetween component="span" sx={{ gap: 0.5 }}>
                             <EmailIcon fontSize="small" />
                             {option.email}
-                          </Box>
+                          </FlexBetween>
                         )}
                         {option.phone && (
-                          <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <FlexBetween component="span" sx={{ gap: 0.5 }}>
                             <PhoneIcon fontSize="small" />
                             {option.phone}
-                          </Box>
+                          </FlexBetween>
                         )}
                       </Box>
                     }

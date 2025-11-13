@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, Skeleton, Typography } from '@mui/material';
+import { Box, Skeleton, Typography } from '@mui/material';
 import {
   Bar,
   BarChart,
@@ -11,6 +11,7 @@ import {
   Cell,
 } from 'recharts';
 import type { DiagnosisDatum } from '../types';
+import { DashboardSectionCard } from '@qivr/design-system';
 
 export interface TopDiagnosesCardProps {
   title: string;
@@ -31,25 +32,27 @@ const TopDiagnosesCard: React.FC<TopDiagnosesCardProps> = ({
 }) => {
   if (loading) {
     return (
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            {title}
-          </Typography>
+      <DashboardSectionCard
+        header={<Typography variant="h6">{title}</Typography>}
+        headerProps={{ sx: { borderBottom: 'none', px: 3, py: 2 } }}
+        sx={{ p: 0 }}
+      >
+        <Box sx={{ px: 3, pb: 3 }}>
           <Skeleton variant="rectangular" height={height} />
-        </CardContent>
-      </Card>
+        </Box>
+      </DashboardSectionCard>
     );
   }
 
   const hasData = data.length > 0;
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          {title}
-        </Typography>
+    <DashboardSectionCard
+      header={<Typography variant="h6">{title}</Typography>}
+      headerProps={{ sx: { borderBottom: 'none', px: 3, py: 2 } }}
+      sx={{ p: 0 }}
+    >
+      <Box sx={{ px: 3, pb: 3 }}>
         {hasData ? (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart data={data}>
@@ -65,7 +68,7 @@ const TopDiagnosesCard: React.FC<TopDiagnosesCardProps> = ({
               <Tooltip formatter={(value: number) => `${value}%`} />
               <Bar dataKey="percentage">
                 {data.map((item, index) => (
-                  <Cell key={`diagnosis-${index}`} fill={item.color ?? '#7c3aed'} />
+                  <Cell key={`diagnosis-${index}`} fill={item.color ?? 'var(--qivr-palette-secondary-main)'} />
                 ))}
               </Bar>
             </BarChart>
@@ -75,8 +78,8 @@ const TopDiagnosesCard: React.FC<TopDiagnosesCardProps> = ({
             {emptyMessage}
           </Typography>
         )}
-      </CardContent>
-    </Card>
+      </Box>
+    </DashboardSectionCard>
   );
 };
 

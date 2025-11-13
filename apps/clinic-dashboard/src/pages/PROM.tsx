@@ -61,6 +61,7 @@ import PROMSender from '../components/PROMSender';
 import { PromBuilder } from '../features/proms/components/PromBuilder';
 import { PromPreview } from '../components/PromPreview';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PageHeader, FlexBetween } from '@qivr/design-system';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -304,14 +305,10 @@ const PROM: React.FC = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" gutterBottom>
-            Patient Reported Outcome Measures (PROM)
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage questionnaires and track patient-reported outcomes
-          </Typography>
-        </Box>
+        <PageHeader
+          title="Patient Reported Outcome Measures (PROM)"
+          description="Manage questionnaires and track patient-reported outcomes"
+        />
 
         {/* Statistics Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -481,7 +478,7 @@ const PROM: React.FC = () => {
           <TabPanel value={currentTab} index={0}>
             {/* Templates Tab */}
             <Box>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <FlexBetween sx={{ alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6">PROM Templates</Typography>
                 <Button
                   variant="contained"
@@ -490,7 +487,7 @@ const PROM: React.FC = () => {
                 >
                   Send PROM
                 </Button>
-              </Box>
+              </FlexBetween>
 
               {templatesLoading ? (
                 <Box display="flex" justifyContent="center" p={3}>

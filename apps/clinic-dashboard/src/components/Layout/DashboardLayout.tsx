@@ -40,6 +40,7 @@ import {
 import { useAuthActions, useAuthUser } from '../../stores/authStore';
 import NotificationBell from '../NotificationBell';
 import TenantSelector from '../TenantSelector';
+import type { SxProps, Theme } from '@mui/material/styles';
 
 const drawerWidth = 280;
 const drawerWidthCollapsed = 64;
@@ -63,6 +64,29 @@ const menuItems: MenuItemType[] = [
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];
+
+const getNavButtonStyles = (theme: Theme, drawerOpen: boolean): SxProps<Theme> => ({
+  borderRadius: 2,
+  justifyContent: drawerOpen ? 'initial' : 'center',
+  px: drawerOpen ? 2 : 1,
+  '&.Mui-selected': {
+    backgroundColor: theme.palette.primary.main,
+    color: 'white',
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+    },
+    '& .MuiListItemIcon-root': {
+      color: 'white',
+    },
+  },
+});
+
+const getDrawerToolbarStyles = (drawerOpen: boolean): SxProps<Theme> => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: drawerOpen ? 'space-between' : 'center',
+  px: drawerOpen ? 3 : 1,
+});
 
 const DashboardLayout: React.FC = () => {
   const theme = useTheme();
@@ -112,14 +136,7 @@ const DashboardLayout: React.FC = () => {
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: drawerOpen ? 'space-between' : 'center',
-          px: drawerOpen ? 3 : 1,
-        }}
-      >
+      <Toolbar sx={getDrawerToolbarStyles(drawerOpen)}>
         {drawerOpen && (
           <Typography variant="h5" noWrap component="div" sx={{ fontWeight: 700 }}>
             Qivr Clinic
@@ -139,21 +156,7 @@ const DashboardLayout: React.FC = () => {
               <ListItemButton
                 selected={location.pathname === item.path}
                 onClick={() => handleMenuClick(item.path)}
-                sx={{
-                  borderRadius: 2,
-                  justifyContent: drawerOpen ? 'initial' : 'center',
-                  px: drawerOpen ? 2 : 1,
-                  '&.Mui-selected': {
-                    backgroundColor: theme.palette.primary.main,
-                    color: 'white',
-                    '&:hover': {
-                      backgroundColor: theme.palette.primary.dark,
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: 'white',
-                    },
-                  },
-                }}
+                sx={getNavButtonStyles(theme, drawerOpen)}
               >
                 <ListItemIcon
                   sx={{

@@ -1,15 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Grid,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -53,6 +50,7 @@ import {
   StatCardGrid,
   TopDiagnosesCard,
 } from '../features/analytics';
+import { DashboardSectionCard, FlexBetween, QivrButton, TableSection, PageHeader } from '@qivr/design-system';
 import type {
   AppointmentTrendDatum,
   DiagnosisDatum,
@@ -135,7 +133,13 @@ const Analytics: React.FC = () => {
       name: diagnosis.description,
       value: diagnosis.count,
       percentage: (diagnosis.count / total) * 100,
-      color: ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#6b7280'][index % 5],
+      color: [
+        'var(--qivr-palette-primary-main)',
+        'var(--qivr-palette-secondary-main)',
+        'var(--qivr-palette-success-main)',
+        'var(--qivr-palette-warning-main)',
+        'var(--qivr-palette-neutral-500, #64748b)',
+      ][index % 5],
     }));
   }, [clinicAnalytics]);
 
@@ -216,38 +220,35 @@ const Analytics: React.FC = () => {
 
   return (
     <Box>
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={8}>
-          <Typography variant="h4" gutterBottom>
-            Analytics Dashboard
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Track your clinic&apos;s performance and patient outcomes
-          </Typography>
-        </Grid>
-        <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-          <FormControl size="small" sx={{ minWidth: 120, mr: 2 }}>
-            <InputLabel>Range</InputLabel>
-            <Select
-              label="Range"
-              value={dateRange}
-              onChange={(event) => setDateRange(event.target.value)}
+      <PageHeader
+        title="Analytics Dashboard"
+        description="Track your clinic's performance and patient outcomes"
+        actions={
+          <FlexBetween sx={{ gap: 2 }}>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Range</InputLabel>
+              <Select
+                label="Range"
+                value={dateRange}
+                onChange={(event) => setDateRange(event.target.value)}
+              >
+                <MenuItem value="7">7 days</MenuItem>
+                <MenuItem value="30">30 days</MenuItem>
+                <MenuItem value="90">90 days</MenuItem>
+              </Select>
+            </FormControl>
+            <QivrButton
+              variant="outlined"
+              emphasize="subtle"
+              startIcon={loading ? <CircularProgress size={18} /> : <RefreshIcon />}
+              onClick={handleRefresh}
+              disabled={loading}
             >
-              <MenuItem value="7">7 days</MenuItem>
-              <MenuItem value="30">30 days</MenuItem>
-              <MenuItem value="90">90 days</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            variant="outlined"
-            startIcon={loading ? <CircularProgress size={18} /> : <RefreshIcon />}
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-        </Grid>
-      </Grid>
+              Refresh
+            </QivrButton>
+          </FlexBetween>
+        }
+      />
 
       {loading && (
         <Box sx={{ mb: 3 }}>
@@ -296,56 +297,55 @@ const Analytics: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Provider Performance
-              </Typography>
-              <TableContainer component={Paper}>
-                <Table size="small">
-                  <TableHead>
+          <TableSection
+            header={<Typography variant="h6">Provider Performance</Typography>}
+          >
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Provider</TableCell>
+                    <TableCell align="right">Patients</TableCell>
+                    <TableCell align="right">Completed</TableCell>
+                    <TableCell align="right">No-Show %</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {practitionerPerformance.length === 0 ? (
                     <TableRow>
-                      <TableCell>Provider</TableCell>
-                      <TableCell align="right">Patients</TableCell>
-                      <TableCell align="right">Completed</TableCell>
-                      <TableCell align="right">No-Show %</TableCell>
+                      <TableCell colSpan={4} align="center">
+                        <Typography variant="body2" color="text.secondary">
+                          No provider data available for the selected range
+                        </Typography>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {practitionerPerformance.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} align="center">
-                          <Typography variant="body2" color="text.secondary">
-                            No provider data available for the selected range
-                          </Typography>
-                        </TableCell>
+                  ) : (
+                    practitionerPerformance.map((provider) => (
+                      <TableRow key={provider.providerId}>
+                        <TableCell>{provider.providerName}</TableCell>
+                        <TableCell align="right">{provider.patients}</TableCell>
+                        <TableCell align="right">{provider.appointmentsCompleted}</TableCell>
+                        <TableCell align="right">{provider.noShowRate.toFixed(2)}%</TableCell>
                       </TableRow>
-                    ) : (
-                      practitionerPerformance.map((provider) => (
-                        <TableRow key={provider.providerId}>
-                          <TableCell>{provider.providerName}</TableCell>
-                          <TableCell align="right">{provider.patients}</TableCell>
-                          <TableCell align="right">{provider.appointmentsCompleted}</TableCell>
-                          <TableCell align="right">{provider.noShowRate.toFixed(2)}%</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TableSection>
         </Grid>
 
         <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <DashboardSectionCard
+            header={
+              <FlexBetween>
                 <Typography variant="h6">Revenue Overview</Typography>
-                <Button variant="outlined" size="small" startIcon={<DownloadIcon />}>
+                <QivrButton variant="outlined" size="small" startIcon={<DownloadIcon />} emphasize="subtle">
                   Export report
-                </Button>
-              </Box>
+                </QivrButton>
+              </FlexBetween>
+            }
+          >
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={revenueData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -353,12 +353,11 @@ const Analytics: React.FC = () => {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#2563eb" />
-                  <Line type="monotone" dataKey="expenses" stroke="#ef4444" />
+                  <Line type="monotone" dataKey="revenue" stroke="var(--qivr-palette-primary-main)" />
+                  <Line type="monotone" dataKey="expenses" stroke="var(--qivr-palette-error-main)" />
                 </LineChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          </DashboardSectionCard>
         </Grid>
       </Grid>
     </Box>

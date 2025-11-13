@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Avatar,
   Box,
-  Card,
   CardContent,
   Chip,
   Grid,
@@ -13,6 +12,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import type { SxProps, Theme } from '@mui/material/styles';
 import type { StatCardItem } from '../types';
+import { QivrCard } from '@qivr/design-system';
 
 export interface StatCardGridProps {
   items: StatCardItem[];
@@ -42,11 +42,11 @@ const StatCardGrid: React.FC<StatCardGridProps> = ({
       {loading
         ? Array.from({ length: placeholders }).map((_, index) => (
             <Grid item key={`stat-skeleton-${index}`} {...itemSizes}>
-              <Card>
+              <QivrCard elevated>
                 <CardContent>
                   <Skeleton variant="rectangular" height={80} />
                 </CardContent>
-              </Card>
+              </QivrCard>
             </Grid>
           ))
         : items.map((item) => {
@@ -60,7 +60,7 @@ const StatCardGrid: React.FC<StatCardGridProps> = ({
 
             return (
               <Grid item key={item.id} {...itemSizes}>
-                <Card>
+                <QivrCard elevated>
                   <CardContent>
                     <Box
                       sx={{
@@ -90,7 +90,7 @@ const StatCardGrid: React.FC<StatCardGridProps> = ({
                       />
                     ) : null}
                   </CardContent>
-                </Card>
+                </QivrCard>
               </Grid>
             );
           })}

@@ -182,6 +182,12 @@ const QUESTION_LIBRARY = {
 const GUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const SCORING_COLORS = {
+  low: 'var(--qivr-palette-success-main)',
+  medium: 'var(--qivr-palette-warning-main)',
+  high: 'var(--qivr-palette-error-main)',
+} as const;
+
 const generateGuid = (): string => {
   if (
     typeof crypto !== "undefined" &&
@@ -395,9 +401,9 @@ export const PromBuilder: React.FC = () => {
     scoring: {
       method: "sum",
       ranges: [
-        { min: 0, max: 30, label: "Low", color: "#4caf50" },
-        { min: 31, max: 70, label: "Medium", color: "#ff9800" },
-        { min: 71, max: 100, label: "High", color: "#f44336" },
+        { min: 0, max: 30, label: "Low", color: SCORING_COLORS.low },
+        { min: 31, max: 70, label: "Medium", color: SCORING_COLORS.medium },
+        { min: 71, max: 100, label: "High", color: SCORING_COLORS.high },
       ],
     },
     schedule: {
@@ -578,9 +584,9 @@ export const PromBuilder: React.FC = () => {
         scoring: {
           method: "sum",
           ranges: [
-            { min: 0, max: 30, label: "Low", color: "#4caf50" },
-            { min: 31, max: 70, label: "Medium", color: "#ff9800" },
-            { min: 71, max: 100, label: "High", color: "#f44336" },
+            { min: 0, max: 30, label: "Low", color: SCORING_COLORS.low },
+            { min: 31, max: 70, label: "Medium", color: SCORING_COLORS.medium },
+            { min: 71, max: 100, label: "High", color: SCORING_COLORS.high },
           ],
         },
         schedule: {

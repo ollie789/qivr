@@ -35,6 +35,7 @@ import {
   type ConversationSummary,
   type MessageDetail,
 } from '../services/messagesApi';
+import { PageHeader, FlexBetween } from '@qivr/design-system';
 
 const Messages: React.FC = () => {
   const queryClient = useQueryClient();
@@ -145,19 +146,19 @@ const Messages: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" fontWeight={600}>
-          Messages
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          disabled={!selectedConversation}
-          onClick={handleOpenComposer}
-        >
-          Reply
-        </Button>
-      </Box>
+      <PageHeader
+        title="Messages"
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            disabled={!selectedConversation}
+            onClick={handleOpenComposer}
+          >
+            Reply
+          </Button>
+        }
+      />
 
       <Paper sx={{ mb: 3 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -185,7 +186,7 @@ const Messages: React.FC = () => {
         </Box>
       </Paper>
 
-      <Box sx={{ display: 'flex', gap: 3 }}>
+      <FlexBetween sx={{ gap: 3, alignItems: 'flex-start' }}>
         <Paper sx={{ width: 320, minHeight: 620, flexShrink: 0 }}>
           {conversationsLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -348,7 +349,7 @@ const Messages: React.FC = () => {
             </>
           )}
         </Paper>
-      </Box>
+      </FlexBetween>
 
       <MessageComposer
         open={composerOpen}

@@ -22,6 +22,7 @@
     "@mui/x-date-pickers": "^8.10.2",
     "@mui/x-date-pickers-pro": "^8.10.2",
     "@qivr/http": "file:../../packages/http",
+    "@qivr/design-system": "file:../../packages/design-system",
     "@react-three/drei": "^9.117.3",
     "@react-three/fiber": "^8.17.10",
     "@tanstack/react-query": "^5.29.0",

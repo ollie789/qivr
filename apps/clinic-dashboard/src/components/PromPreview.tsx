@@ -40,6 +40,7 @@ import type {
 } from '../services/promApi';
 import { promApi } from '../services/promApi';
 import { useSnackbar } from 'notistack';
+import { FlexBetween, LoadingSpinner } from '@qivr/design-system';
 
 interface PromPreviewProps {
   open: boolean;
@@ -282,22 +283,20 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
       }}
     >
       <DialogTitle>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box display="flex" alignItems="center" gap={1}>
+        <FlexBetween>
+          <FlexBetween sx={{ gap: 1 }}>
             <PreviewIcon />
             <Typography variant="h6">PROM Preview</Typography>
-          </Box>
+          </FlexBetween>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
           </IconButton>
-        </Box>
+        </FlexBetween>
       </DialogTitle>
       
       <DialogContent>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <LinearProgress sx={{ width: '50%' }} />
-          </Box>
+          <LoadingSpinner size="large" message="Loading preview..." />
         ) : preview ? (
           <Box>
             {/* Header Info */}
@@ -412,7 +411,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
                   </CardContent>
                 </Card>
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                <FlexBetween sx={{ mt: 3 }}>
                   <Button
                     startIcon={<BackIcon />}
                     onClick={handleBack}
@@ -428,7 +427,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
                   >
                     Next
                   </Button>
-                </Box>
+                </FlexBetween>
               </>
             )}
 

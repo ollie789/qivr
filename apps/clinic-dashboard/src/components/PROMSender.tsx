@@ -36,6 +36,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
+import { FlexBetween } from '@qivr/design-system';
 import {
   Send as SendIcon,
   Schedule as ScheduleIcon,
@@ -242,7 +243,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                           Version {template.version} • Created {format(new Date(template.createdAt), 'dd MMM yyyy')}
                         </Typography>
                         {isSelected ? (
-                          <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          <FlexBetween sx={{ mt: 2, gap: 1, flexWrap: 'wrap' }}>
                             <Chip
                               label={`${questionCount ?? 0} questions`}
                               size="small"
@@ -255,7 +256,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                             {frequencyLabel && (
                               <Chip label={frequencyLabel} size="small" variant="outlined" />
                             )}
-                          </Box>
+                          </FlexBetween>
                         ) : (
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
                             Select to preview questions and metadata
@@ -574,7 +575,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                   <Typography variant="body2" gutterBottom>
                     Send reminders after (days):
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <FlexBetween sx={{ gap: 1 }}>
                     {[1, 3, 5, 7, 14].map((day) => (
                       <Chip
                         key={day}
@@ -589,7 +590,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                         variant={notificationSettings.reminderDays.includes(day) ? 'filled' : 'outlined'}
                       />
                     ))}
-                  </Box>
+                  </FlexBetween>
                 </Box>
               )}
             </Paper>
@@ -676,11 +677,11 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                     <NotificationIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Notifications
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <FlexBetween sx={{ gap: 1 }}>
                     {notificationSettings.sendEmail && <Chip label="Email" size="small" icon={<EmailIcon />} />}
                     {notificationSettings.sendSMS && <Chip label="SMS" size="small" icon={<SmsIcon />} />}
                     {notificationSettings.sendPushNotification && <Chip label="Push" size="small" icon={<NotificationIcon />} />}
-                  </Box>
+                  </FlexBetween>
                   {notificationSettings.reminderEnabled && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                       Reminders on days: {notificationSettings.reminderDays.join(', ')}
@@ -745,7 +746,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
         {getStepContent(activeStep)}
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+      <FlexBetween sx={{ mt: 4 }}>
         <Button
           disabled={activeStep === 0}
           onClick={handleBack}
@@ -754,7 +755,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
           Back
         </Button>
         
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <FlexBetween sx={{ gap: 2 }}>
           {activeStep === steps.length - 1 && (
             <Button
               variant="outlined"
@@ -784,8 +785,8 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               Next
             </Button>
           )}
-        </Box>
-      </Box>
+        </FlexBetween>
+      </FlexBetween>
 
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth>

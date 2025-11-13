@@ -83,6 +83,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import type { ChipProps } from '@mui/material/Chip';
 import type { SelectChangeEvent } from '@mui/material/Select';
+import { PageHeader, TabPanel, StatCard, FlexBetween } from '@qivr/design-system';
 
 interface MedicalHistory {
   id: string;
@@ -561,15 +562,10 @@ const MedicalRecords: React.FC = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box>
-        {/* Header */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" gutterBottom>
-            Medical Records
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Comprehensive patient health information management
-          </Typography>
-        </Box>
+        <PageHeader
+          title="Medical Records"
+          description="Comprehensive patient health information management"
+        />
 
         {/* Patient Selector */}
         <Paper sx={{ p: 2, mb: 3 }}>
@@ -602,8 +598,8 @@ const MedicalRecords: React.FC = () => {
             {/* Patient Info Card */}
             <Card sx={{ mb: 3 }}>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <FlexBetween sx={{ mb: 2 }}>
+                  <FlexBetween sx={{ gap: 2 }}>
                     <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main' }}>
                       {patient?.firstName?.[0]}{patient?.lastName?.[0]}
                     </Avatar>
@@ -619,7 +615,7 @@ const MedicalRecords: React.FC = () => {
                         {patient?.email} • {patient?.phone}
                       </Typography>
                     </Box>
-                  </Box>
+                  </FlexBetween>
                   <Button
                     variant={editMode ? "contained" : "outlined"}
                     startIcon={editMode ? <SaveIcon /> : <EditIcon />}
@@ -627,37 +623,29 @@ const MedicalRecords: React.FC = () => {
                   >
                     {editMode ? 'Save Changes' : 'Edit Info'}
                   </Button>
-                </Box>
+                </FlexBetween>
 
                 {/* Quick Stats */}
                 <Grid container spacing={2}>
                   <Grid item xs={6} md={3}>
-                    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                      <Typography variant="caption" color="text.secondary">Blood Type</Typography>
-                      <Typography variant="h6">O+</Typography>
-                    </Box>
+                    <StatCard label="Blood Type" value="O+" compact />
                   </Grid>
                   <Grid item xs={6} md={3}>
-                    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                      <Typography variant="caption" color="text.secondary">Allergies</Typography>
-                      <Typography variant="h6">
-                        {medicalHistory.filter((h: MedicalHistory) => h.category === 'allergy').length}
-                      </Typography>
-                    </Box>
+                    <StatCard 
+                      label="Allergies" 
+                      value={medicalHistory.filter((h: MedicalHistory) => h.category === 'allergy').length}
+                      compact
+                    />
                   </Grid>
                   <Grid item xs={6} md={3}>
-                    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                      <Typography variant="caption" color="text.secondary">Medications</Typography>
-                      <Typography variant="h6">
-                        {medicalHistory.filter((h: MedicalHistory) => h.category === 'medication' && h.status === 'active').length}
-                      </Typography>
-                    </Box>
+                    <StatCard 
+                      label="Medications"
+                      value={medicalHistory.filter((h: MedicalHistory) => h.category === 'medication' && h.status === 'active').length}
+                      compact
+                    />
                   </Grid>
                   <Grid item xs={6} md={3}>
-                    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                      <Typography variant="caption" color="text.secondary">Last Visit</Typography>
-                      <Typography variant="h6">{lastVisitDisplay}</Typography>
-                    </Box>
+                    <StatCard label="Last Visit" value={lastVisitDisplay} compact />
                   </Grid>
                 </Grid>
               </CardContent>
@@ -672,9 +660,8 @@ const MedicalRecords: React.FC = () => {
                 <Tab icon={<TimelineIcon />} label="Timeline" />
               </Tabs>
 
-              <Box sx={{ p: 3 }}>
-                {/* Demographics Tab */}
-                {activeTab === 0 && (
+              <TabPanel value={activeTab} index={0}>
+                <Box sx={{ p: 3 }}>
                   <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
                       <Typography variant="h6" gutterBottom>
@@ -816,97 +803,61 @@ const MedicalRecords: React.FC = () => {
                       </Stack>
                     </Grid>
                   </Grid>
-                )}
+                </Box>
+              </TabPanel>
 
-                {/* Vital Signs Tab */}
-                {activeTab === 1 && (
-                  <>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6">
-                        Vital Signs History
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => setVitalDialogOpen(true)}
-                      >
-                        Record Vitals
-                      </Button>
-                    </Box>
+              <TabPanel value={activeTab} index={1}>
+                <Box sx={{ p: 3 }}>
+                  <FlexBetween sx={{ mb: 3 }}>
+                    <Typography variant="h6">
+                      Vital Signs History
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => setVitalDialogOpen(true)}
+                    >
+                      Record Vitals
+                    </Button>
+                  </FlexBetween>
 
-                    {/* Latest Vitals */}
-                    {vitalSigns.length > 0 && vitalSigns[0] && (
-                      <Grid container spacing={2} sx={{ mb: 3 }}>
-                        <Grid item xs={6} md={3}>
-                          <Card>
-                            <CardContent>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <BloodIcon color="error" />
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Blood Pressure
-                                  </Typography>
-                                  <Typography variant="h6">
-                                    {vitalSigns[0].bloodPressure.systolic}/{vitalSigns[0].bloodPressure.diastolic}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                        <Grid item xs={6} md={3}>
-                          <Card>
-                            <CardContent>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <PulseIcon color="primary" />
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Heart Rate
-                                  </Typography>
-                                  <Typography variant="h6">
-                                    {vitalSigns[0].heartRate} bpm
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                        <Grid item xs={6} md={3}>
-                          <Card>
-                            <CardContent>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <TempIcon color="warning" />
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Temperature
-                                  </Typography>
-                                  <Typography variant="h6">
-                                    {vitalSigns[0].temperature}°F
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                        <Grid item xs={6} md={3}>
-                          <Card>
-                            <CardContent>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <WeightIcon color="info" />
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Weight
-                                  </Typography>
-                                  <Typography variant="h6">
-                                    {vitalSigns[0].weight} kg
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </CardContent>
-                          </Card>
-                        </Grid>
+                  {/* Latest Vitals */}
+                  {vitalSigns.length > 0 && vitalSigns[0] && (
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      <Grid item xs={6} md={3}>
+                        <StatCard
+                          label="Blood Pressure"
+                          value={`${vitalSigns[0].bloodPressure.systolic}/${vitalSigns[0].bloodPressure.diastolic}`}
+                          icon={<BloodIcon />}
+                          iconColor="error"
+                        />
                       </Grid>
-                    )}
+                      <Grid item xs={6} md={3}>
+                        <StatCard
+                          label="Heart Rate"
+                          value={`${vitalSigns[0].heartRate} bpm`}
+                          icon={<PulseIcon />}
+                          iconColor="primary"
+                        />
+                      </Grid>
+                      <Grid item xs={6} md={3}>
+                        <StatCard
+                          label="Temperature"
+                          value={`${vitalSigns[0].temperature}°F`}
+                          icon={<TempIcon />}
+                          iconColor="warning"
+                        />
+                      </Grid>
+                      <Grid item xs={6} md={3}>
+                        <StatCard
+                          label="Weight"
+                          value={`${vitalSigns[0].weight} kg`}
+                          icon={<WeightIcon />}
+                          iconColor="info"
+                        />
+                      </Grid>
+                    </Grid>
+                  )}
 
                     {/* Vitals Chart */}
                     <Grid container spacing={3}>
@@ -975,24 +926,23 @@ const MedicalRecords: React.FC = () => {
                         </TableBody>
                       </Table>
                     </TableContainer>
-                  </>
-                )}
+                </Box>
+              </TabPanel>
 
-                {/* Medical History Tab */}
-                {activeTab === 2 && (
-                  <>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6">
-                        Medical History
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => setHistoryDialogOpen(true)}
-                      >
-                        Add Entry
-                      </Button>
-                    </Box>
+              <TabPanel value={activeTab} index={2}>
+                <Box sx={{ p: 3 }}>
+                  <FlexBetween sx={{ mb: 3 }}>
+                    <Typography variant="h6">
+                      Medical History
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => setHistoryDialogOpen(true)}
+                    >
+                      Add Entry
+                    </Button>
+                  </FlexBetween>
 
                     {['condition', 'allergy', 'medication', 'surgery', 'immunization', 'family', 'visit'].map((category) => (
                       <Accordion key={category}>
@@ -1056,32 +1006,31 @@ const MedicalRecords: React.FC = () => {
                         </AccordionDetails>
                       </Accordion>
                     ))}
-                  </>
-                )}
+                </Box>
+              </TabPanel>
 
-                {/* Timeline Tab */}
-                {activeTab === 3 && (
-                  <>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6">
-                        Medical Timeline
-                      </Typography>
-                      <FormControl size="small">
-                        <Select
-                          value={timelineFilter}
-                          onChange={(event: SelectChangeEvent<TimelineFilter>) => {
-                            const value = event.target.value as TimelineFilter;
-                            setTimelineFilter(value);
-                          }}
-                        >
-                          <MenuItem value="all">All Events</MenuItem>
-                          <MenuItem value="vital">Vital Signs</MenuItem>
-                          <MenuItem value="condition">Conditions</MenuItem>
-                          <MenuItem value="medication">Medications</MenuItem>
-                          <MenuItem value="surgery">Surgeries</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Box>
+              <TabPanel value={activeTab} index={3}>
+                <Box sx={{ p: 3 }}>
+                  <FlexBetween sx={{ mb: 3 }}>
+                    <Typography variant="h6">
+                      Medical Timeline
+                    </Typography>
+                    <FormControl size="small">
+                      <Select
+                        value={timelineFilter}
+                        onChange={(event: SelectChangeEvent<TimelineFilter>) => {
+                          const value = event.target.value as TimelineFilter;
+                          setTimelineFilter(value);
+                        }}
+                      >
+                        <MenuItem value="all">All Events</MenuItem>
+                        <MenuItem value="vital">Vital Signs</MenuItem>
+                        <MenuItem value="condition">Conditions</MenuItem>
+                        <MenuItem value="medication">Medications</MenuItem>
+                        <MenuItem value="surgery">Surgeries</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </FlexBetween>
 
                     <Timeline position="alternate">
                       {generateTimeline().map((event, index) => (
@@ -1104,9 +1053,8 @@ const MedicalRecords: React.FC = () => {
                         </TimelineItem>
                       ))}
                     </Timeline>
-                  </>
-                )}
-              </Box>
+                </Box>
+              </TabPanel>
             </Paper>
           </>
         )}

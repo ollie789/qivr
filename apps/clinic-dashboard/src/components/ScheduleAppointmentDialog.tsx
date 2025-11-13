@@ -26,6 +26,7 @@ import {
   StepLabel,
   Alert,
 } from '@mui/material';
+import { IconWithLabel } from '@qivr/design-system';
 import {
   CalendarMonth as CalendarIcon,
   AccessTime as TimeIcon,
@@ -390,77 +391,39 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
             </Typography>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <PersonIcon color="action" />
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Patient
-                </Typography>
-                <Typography variant="body1">
-                  {appointmentData.patientName}
-                </Typography>
-              </Box>
-            </Box>
+            <IconWithLabel icon={<PersonIcon />} label="Patient">
+              {appointmentData.patientName}
+            </IconWithLabel>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <PersonIcon color="action" />
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Provider
-                </Typography>
-                <Typography variant="body1">
-                  {providers.find(p => p.id === appointmentData.providerId)?.name}
-                </Typography>
-              </Box>
-            </Box>
+            <IconWithLabel icon={<PersonIcon />} label="Provider">
+              {providers.find(p => p.id === appointmentData.providerId)?.name}
+            </IconWithLabel>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <CalendarIcon color="action" />
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Date & Time
-                </Typography>
-                <Typography variant="body1">
-                  {appointmentData.date && format(appointmentData.date, 'EEEE, MMMM d, yyyy')}
-                  {appointmentData.time && ` at ${format(appointmentData.time, 'h:mm a')}`}
-                </Typography>
-              </Box>
-            </Box>
+            <IconWithLabel icon={<CalendarIcon />} label="Date & Time">
+              {appointmentData.date && format(appointmentData.date, 'EEEE, MMMM d, yyyy')}
+              {appointmentData.time && ` at ${format(appointmentData.time, 'h:mm a')}`}
+            </IconWithLabel>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <LocationIcon color="action" />
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Location
-                </Typography>
-                <Typography variant="body1">
-                  {appointmentData.location === 'clinic' ? 'Main Clinic' :
-                   appointmentData.location === 'satellite' ? 'Satellite Office' : 'Telehealth'}
-                </Typography>
-              </Box>
-            </Box>
+            <IconWithLabel icon={<LocationIcon />} label="Location">
+              {appointmentData.location === 'clinic' ? 'Main Clinic' :
+               appointmentData.location === 'satellite' ? 'Satellite Office' : 'Telehealth'}
+            </IconWithLabel>
           </Grid>
           <Grid item xs={12}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-              <NotesIcon color="action" />
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Type & Notes
+            <IconWithLabel icon={<NotesIcon />} label="Type & Notes">
+              <Typography variant="body1">
+                {appointmentTypes.find(t => t.id === appointmentData.appointmentType)?.label}
+                {' '}({appointmentData.duration} minutes)
+              </Typography>
+              {appointmentData.notes && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {appointmentData.notes}
                 </Typography>
-                <Typography variant="body1">
-                  {appointmentTypes.find(t => t.id === appointmentData.appointmentType)?.label}
-                  {' '}({appointmentData.duration} minutes)
-                </Typography>
-                {appointmentData.notes && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {appointmentData.notes}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
+              )}
+            </IconWithLabel>
           </Grid>
         </Grid>
       </Paper>

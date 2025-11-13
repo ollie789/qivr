@@ -11,7 +11,6 @@ import {
   Box,
   Divider,
   Button,
-  CircularProgress,
   Avatar,
 } from '@mui/material';
 import {
@@ -29,6 +28,7 @@ import {
   notificationsApi,
   type NotificationListItem,
 } from '../services/notificationsApi';
+import { FlexBetween, EmptyState, LoadingSpinner } from '@qivr/design-system';
 
 const NotificationBell: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -149,9 +149,10 @@ const NotificationBell: React.FC = () => {
           sx: { width: 400, maxHeight: 500 }
         }}
       >
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">Notifications</Typography>
-          <Box>
+        <Box sx={{ p: 2 }}>
+          <FlexBetween>
+            <Typography variant="h6">Notifications</Typography>
+            <FlexBetween sx={{ gap: 1 }}>
             <IconButton size="small" onClick={() => refetch()}>
               <RefreshIcon fontSize="small" />
             </IconButton>
@@ -163,20 +164,22 @@ const NotificationBell: React.FC = () => {
                 Mark all read
               </Button>
             )}
-          </Box>
+            </FlexBetween>
+          </FlexBetween>
         </Box>
         
         <Divider />
 
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress size={24} />
+          <Box sx={{ p: 3 }}>
+            <LoadingSpinner size="small" />
           </Box>
         ) : notifications.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="text.secondary">
-              No notifications
-            </Typography>
+          <Box sx={{ p: 3 }}>
+            <EmptyState
+              icon={<NotificationIcon />}
+              title="No notifications"
+            />
           </Box>
         ) : (
           <List sx={{ p: 0 }}>

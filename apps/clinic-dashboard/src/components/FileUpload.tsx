@@ -21,6 +21,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { documentsApi, type Document } from '../services/documentsApi';
+import { FlexBetween } from '@qivr/design-system';
 
 interface FileUploadProps {
   patientId?: string;
@@ -242,7 +243,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               </ListItemIcon>
               <ListItemText
                 primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <FlexBetween sx={{ gap: 1 }}>
                     <Typography variant="body2">{file.name}</Typography>
                     <Chip
                       label={formatFileSize(file.size)}
@@ -256,7 +257,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                         color="primary"
                       />
                     )}
-                  </Box>
+                  </FlexBetween>
                 }
                 secondary={
                   file.status === 'uploading' ? (

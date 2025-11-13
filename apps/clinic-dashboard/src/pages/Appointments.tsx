@@ -4,8 +4,6 @@ import {
   Autocomplete,
   Avatar,
   Box,
-  Button,
-  Card,
   CardContent,
   Chip,
   Dialog,
@@ -22,7 +20,6 @@ import {
   ListItemAvatar,
   ListItemText,
   MenuItem,
-  Paper,
   Select,
   Stack,
   Tab,
@@ -125,6 +122,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
+import { AvailabilitySlot, FlexBetween, PageHeader, QivrButton, QivrCard, CalendarGridCell, AppointmentChip, calendar as calendarStyles } from '@qivr/design-system';
 
 interface Appointment {
   id: string;
@@ -144,11 +142,11 @@ interface Appointment {
 }
 
 const appointmentTypes = [
-  { value: 'initial-consultation', label: 'Initial Consultation', duration: 60, color: '#1976d2' },
-  { value: 'follow-up', label: 'Follow-up', duration: 30, color: '#388e3c' },
-  { value: 'assessment', label: 'Assessment', duration: 45, color: '#7b1fa2' },
-  { value: 'treatment', label: 'Treatment', duration: 30, color: '#d32f2f' },
-  { value: 'review', label: 'Review', duration: 20, color: '#f57c00' },
+  { value: 'initial-consultation', label: 'Initial Consultation', duration: 60, color: 'var(--qivr-palette-primary-main)' },
+  { value: 'follow-up', label: 'Follow-up', duration: 30, color: 'var(--qivr-palette-success-main)' },
+  { value: 'assessment', label: 'Assessment', duration: 45, color: 'var(--qivr-palette-secondary-main)' },
+  { value: 'treatment', label: 'Treatment', duration: 30, color: 'var(--qivr-palette-error-main)' },
+  { value: 'review', label: 'Review', duration: 20, color: 'var(--qivr-palette-warning-main)' },
 ];
 
 const Appointments: React.FC = () => {
@@ -353,7 +351,7 @@ const Appointments: React.FC = () => {
 
   const getAppointmentColor = (type: string) => {
     const appointmentType = appointmentTypes.find(t => t.value === type);
-    return appointmentType?.color || '#1976d2';
+    return appointmentType?.color || 'var(--qivr-palette-primary-main)';
   };
 
   const navigateDate = (direction: 'prev' | 'next') => {
@@ -373,7 +371,7 @@ const Appointments: React.FC = () => {
     );
 
     return (
-      <Paper sx={{ p: 2, height: 600, overflowY: 'auto' }}>
+      <QivrCard elevated sx={{ p: 2, height: 600, overflowY: 'auto' }}>
         <Typography variant="h6" gutterBottom>
           {format(selectedDate, 'EEEE, MMMM d, yyyy')}
         </Typography>
@@ -384,14 +382,14 @@ const Appointments: React.FC = () => {
           );
           
           return (
-            <Box key={hour} sx={{ display: 'flex', mb: 2 }}>
-              <Typography sx={{ width: 80, flexShrink: 0, color: 'text.secondary' }}>
+            <FlexBetween key={hour} sx={{ alignItems: 'flex-start', mb: 2 }}>
+              <Typography sx={calendarStyles.timeLabel}>
                 {format(setHours(new Date(), hour), 'h:mm a')}
               </Typography>
               <Box sx={{ flex: 1 }}>
                 {hourAppointments.length > 0 ? (
                   hourAppointments.map((apt: Appointment) => (
-                    <Card 
+                    <QivrCard 
                       key={apt.id} 
                       sx={{ 
                         mb: 1, 
@@ -403,7 +401,7 @@ const Appointments: React.FC = () => {
                       onClick={() => setSelectedAppointment(apt)}
                     >
                       <CardContent sx={{ py: 1 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <FlexBetween>
                           <Box>
                             <Typography variant="subtitle2">
                               {apt.patientName}
@@ -417,23 +415,12 @@ const Appointments: React.FC = () => {
                             size="small" 
                             color={getStatusColor(apt.status)}
                           />
-                        </Box>
+                        </FlexBetween>
                       </CardContent>
-                    </Card>
+                    </QivrCard>
                   ))
                 ) : (
-                  <Box 
-                    sx={{ 
-                      height: 60, 
-                      border: '1px dashed',
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      '&:hover': { bgcolor: 'action.hover' }
-                    }}
+                  <AvailabilitySlot
                     onClick={() => {
                       const newDate = new Date(selectedDate);
                       newDate.setHours(hour, 0, 0, 0);
@@ -449,13 +436,13 @@ const Appointments: React.FC = () => {
                     <Typography variant="caption" color="text.secondary">
                       Available
                     </Typography>
-                  </Box>
+                  </AvailabilitySlot>
                 )}
               </Box>
-            </Box>
+            </FlexBetween>
           );
         })}
-      </Paper>
+      </QivrCard>
     );
   };
 
@@ -465,29 +452,24 @@ const Appointments: React.FC = () => {
     const hours = Array.from({ length: 12 }, (_, i) => i + 8);
 
     return (
-      <Paper sx={{ p: 2, overflowX: 'auto' }}>
+      <QivrCard elevated sx={{ p: 2, overflowX: 'auto' }}>
         <Grid container spacing={1}>
           <Grid item xs={1}>
             <Box sx={{ height: 40 }} />
             {hours.map((hour) => (
-              <Box key={hour} sx={{ height: 60, display: 'flex', alignItems: 'center' }}>
+              <FlexBetween key={hour} sx={{ height: 60, alignItems: 'center' }}>
                 <Typography variant="caption" color="text.secondary">
                   {format(setHours(new Date(), hour), 'ha')}
                 </Typography>
-              </Box>
+              </FlexBetween>
             ))}
           </Grid>
           {days.map((day) => (
             <Grid item key={day.toISOString()} xs>
               <Box 
-                sx={{ 
-                  height: 40, 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  bgcolor: isToday(day) ? 'primary.light' : 'transparent',
-                  borderRadius: 1,
-                  p: 0.5,
+                sx={{
+                  ...(calendarStyles.dayHeader as any),
+                  ...(isToday(day) && { bgcolor: 'primary.light' }),
                 }}
               >
                 <Typography variant="caption">{format(day, 'EEE')}</Typography>
@@ -500,16 +482,8 @@ const Appointments: React.FC = () => {
                 );
                 
                 return (
-                  <Box 
-                    key={hour} 
-                    sx={{ 
-                      height: 60, 
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      p: 0.5,
-                      cursor: 'pointer',
-                      '&:hover': { bgcolor: 'action.hover' }
-                    }}
+                  <CalendarGridCell
+                    key={hour}
                     onClick={() => {
                       const newDate = new Date(day);
                       newDate.setHours(hour, 0, 0, 0);
@@ -523,40 +497,30 @@ const Appointments: React.FC = () => {
                     }}
                   >
                     {hourAppointments.map((apt: Appointment) => (
-                      <Box
+                      <AppointmentChip
                         key={apt.id}
-                        sx={{
-                          bgcolor: getAppointmentColor(apt.appointmentType),
-                          color: 'white',
-                          borderRadius: 0.5,
-                          p: 0.25,
-                          mb: 0.25,
-                          fontSize: '10px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
+                        color={getAppointmentColor(apt.appointmentType)}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedAppointment(apt);
                         }}
                       >
                         {apt.patientName.split(' ')[0]}
-                      </Box>
+                      </AppointmentChip>
                     ))}
-                  </Box>
+                  </CalendarGridCell>
                 );
               })}
             </Grid>
           ))}
         </Grid>
-      </Paper>
+      </QivrCard>
     );
   };
 
   const renderMonthView = () => {
     return (
-      <Paper sx={{ p: 2 }}>
+      <QivrCard elevated sx={{ p: 2 }}>
         <DateCalendar
           value={selectedDate}
           onChange={(newDate) => newDate && setSelectedDate(newDate)}
@@ -589,7 +553,7 @@ const Appointments: React.FC = () => {
                 >
                   <Typography>{format(props.day, 'd')}</Typography>
                   {dayAppointments.length > 0 && (
-                    <Box sx={{ display: 'flex', gap: 0.25, mt: 0.5 }}>
+                    <FlexBetween sx={{ gap: 0.25, mt: 0.5 }}>
                       {dayAppointments.slice(0, 3).map((apt, idx) => (
                         <CircleIcon
                           key={idx}
@@ -599,43 +563,36 @@ const Appointments: React.FC = () => {
                           }}
                         />
                       ))}
-                    </Box>
+                    </FlexBetween>
                   )}
                 </Box>
               );
             },
           }}
         />
-      </Paper>
+      </QivrCard>
     );
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box>
-        {/* Header */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={8}>
-            <Typography variant="h4" gutterBottom>
-              Appointments
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Manage clinic appointments and schedules
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button
+        <PageHeader
+          title="Appointments"
+          description="Manage clinic appointments and schedules"
+          actions={
+            <QivrButton
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => setCreateDialogOpen(true)}
             >
               New Appointment
-            </Button>
-          </Grid>
-        </Grid>
+            </QivrButton>
+          }
+        />
 
         {/* Controls */}
-        <Card sx={{ mb: 3 }}>
+        <QivrCard sx={{ mb: 3 }}>
           <CardContent>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={3}>
@@ -655,26 +612,30 @@ const Appointments: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', gap: 1, alignItems: 'center' }}>
-                <IconButton onClick={() => navigateDate('prev')}>
-                  <ChevronLeftIcon />
-                </IconButton>
-                <Button
-                  startIcon={<TodayIcon />}
-                  onClick={() => setSelectedDate(new Date())}
-                >
-                  Today
-                </Button>
-                <Typography sx={{ mx: 2, minWidth: 200, textAlign: 'center' }}>
-                  {viewMode === 'day' && format(selectedDate, 'MMMM d, yyyy')}
-                  {viewMode === 'week' && `Week of ${format(startOfWeek(selectedDate), 'MMM d')}`}
-                  {viewMode === 'month' && format(selectedDate, 'MMMM yyyy')}
-                </Typography>
-                <IconButton onClick={() => navigateDate('next')}>
-                  <ChevronRightIcon />
-                </IconButton>
+              <Grid item xs={12} md={6}>
+                <FlexBetween sx={{ justifyContent: 'center', gap: 1 }}>
+                  <IconButton onClick={() => navigateDate('prev')}>
+                    <ChevronLeftIcon />
+                  </IconButton>
+                  <QivrButton
+                    startIcon={<TodayIcon />}
+                    onClick={() => setSelectedDate(new Date())}
+                    emphasize="subtle"
+                  >
+                    Today
+                  </QivrButton>
+                  <Typography sx={{ mx: 2, minWidth: 200, textAlign: 'center' }}>
+                    {viewMode === 'day' && format(selectedDate, 'MMMM d, yyyy')}
+                    {viewMode === 'week' && `Week of ${format(startOfWeek(selectedDate), 'MMM d')}`}
+                    {viewMode === 'month' && format(selectedDate, 'MMMM yyyy')}
+                  </Typography>
+                  <IconButton onClick={() => navigateDate('next')}>
+                    <ChevronRightIcon />
+                  </IconButton>
+                </FlexBetween>
               </Grid>
-              <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Grid item xs={12} md={3}>
+                <FlexBetween sx={{ justifyContent: 'flex-end' }}>
                 <ToggleButtonGroup
                   value={viewMode}
                   exclusive
@@ -691,32 +652,33 @@ const Appointments: React.FC = () => {
                     <CalendarMonthIcon />
                   </ToggleButton>
                 </ToggleButtonGroup>
+                </FlexBetween>
               </Grid>
             </Grid>
           </CardContent>
-        </Card>
+        </QivrCard>
 
         {/* View Tabs */}
-        <Card sx={{ mb: 3 }}>
+        <QivrCard sx={{ mb: 3 }}>
           <Tabs value={viewTab} onChange={(_e, v) => setViewTab(v)}>
             <Tab icon={<CalendarMonthIcon />} label="Calendar View" />
             <Tab icon={<ViewModuleIcon />} label="Grid View" />
             <Tab icon={<ViewListIcon />} label="List View" />
           </Tabs>
-        </Card>
+        </QivrCard>
 
         {/* Main Content */}
         <Grid container spacing={3}>
           <Grid item xs={12} md={viewTab === 0 ? 12 : 9}>
             {isLoading ? (
-              <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <QivrCard elevated sx={{ p: 3, textAlign: 'center' }}>
                 <Typography>Loading appointments...</Typography>
-              </Paper>
+              </QivrCard>
             ) : (
               <>
                 {viewTab === 0 ? (
                   // FullCalendar View
-                  <Card>
+                  <QivrCard elevated>
                     <CardContent sx={{ height: 700 }}>
                       <FullCalendar
                         ref={calendarRef}
@@ -810,17 +772,17 @@ const Appointments: React.FC = () => {
                         }}
                       />
                     </CardContent>
-                  </Card>
+                  </QivrCard>
                 ) : viewTab === 1 ? (
-                  // Grid View
-                  <>
+                // Grid View
+                <>
                     {viewMode === 'day' && renderDayView()}
                     {viewMode === 'week' && renderWeekView()}
                     {viewMode === 'month' && renderMonthView()}
                   </>
                 ) : (
                   // List View
-                  <Card>
+                  <QivrCard elevated>
                     <CardContent>
                       <List>
                         {appointments
@@ -843,14 +805,14 @@ const Appointments: React.FC = () => {
                                 </ListItemAvatar>
                                 <ListItemText
                                   primary={
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <FlexBetween sx={{ gap: 1 }}>
                                       <Typography>{apt.patientName}</Typography>
-                                      <Chip 
+                                      <Chip
                                         label={apt.status} 
                                         size="small" 
                                         color={getStatusColor(apt.status)}
                                       />
-                                    </Box>
+                                    </FlexBetween>
                                   }
                                   secondary={
                                     <Box>
@@ -870,7 +832,7 @@ const Appointments: React.FC = () => {
                                     </Box>
                                   }
                                 />
-                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                <FlexBetween sx={{ gap: 1 }}>
                                   {apt.videoLink && (
                                     <Tooltip title="Video Call">
                                       <IconButton size="small">
@@ -885,54 +847,54 @@ const Appointments: React.FC = () => {
                                       </IconButton>
                                     </Tooltip>
                                   )}
-                                </Box>
+                                </FlexBetween>
                               </ListItem>
                               <Divider variant="inset" component="li" />
                             </React.Fragment>
                           ))}
                       </List>
                     </CardContent>
-                  </Card>
+                  </QivrCard>
                 )}
               </>
             )}
           </Grid>
           <Grid item xs={12} md={3}>
             {/* Today's Summary */}
-            <Card>
+            <QivrCard>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Today{"'"}s Summary
                 </Typography>
                 <Stack spacing={1}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <FlexBetween>
                     <Typography variant="body2" color="text.secondary">Total</Typography>
                     <Typography variant="body2">
                       {appointments.filter((a: Appointment) => isToday(parseISO(a.scheduledStart))).length}
                     </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  </FlexBetween>
+                  <FlexBetween>
                     <Typography variant="body2" color="text.secondary">Confirmed</Typography>
                     <Typography variant="body2">
                       {appointments.filter((a: Appointment) => 
                         isToday(parseISO(a.scheduledStart)) && a.status === 'confirmed'
                       ).length}
                     </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  </FlexBetween>
+                  <FlexBetween>
                     <Typography variant="body2" color="text.secondary">Pending</Typography>
                     <Typography variant="body2">
                       {appointments.filter((a: Appointment) => 
                         isToday(parseISO(a.scheduledStart)) && a.status === 'scheduled'
                       ).length}
                     </Typography>
-                  </Box>
+                  </FlexBetween>
                 </Stack>
               </CardContent>
-            </Card>
+            </QivrCard>
 
             {/* Upcoming Appointments */}
-            <Card sx={{ mt: 2 }}>
+            <QivrCard sx={{ mt: 2 }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Upcoming Today
@@ -965,7 +927,7 @@ const Appointments: React.FC = () => {
                   )}
                 </List>
               </CardContent>
-            </Card>
+            </QivrCard>
           </Grid>
         </Grid>
 
@@ -1108,14 +1070,16 @@ const Appointments: React.FC = () => {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-            <Button 
-              variant="contained" 
+            <QivrButton emphasize="subtle" onClick={() => setCreateDialogOpen(false)}>
+              Cancel
+            </QivrButton>
+            <QivrButton
+              variant="contained"
               onClick={handleCreateAppointment}
               disabled={!newAppointment.patientId || !newAppointment.providerId || createAppointmentMutation.isPending}
             >
               {createAppointmentMutation.isPending ? 'Creating…' : 'Create Appointment'}
-            </Button>
+            </QivrButton>
           </DialogActions>
         </Dialog>
 
@@ -1168,13 +1132,15 @@ const Appointments: React.FC = () => {
               </Stack>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setSelectedAppointment(null)}>Close</Button>
-              <Button variant="outlined" color="error">
+              <QivrButton emphasize="subtle" onClick={() => setSelectedAppointment(null)}>
+                Close
+              </QivrButton>
+              <QivrButton variant="outlined" color="error" emphasize="subtle">
                 Cancel Appointment
-              </Button>
-              <Button variant="contained">
+              </QivrButton>
+              <QivrButton variant="contained">
                 Edit
-              </Button>
+              </QivrButton>
             </DialogActions>
           </Dialog>
         )}
