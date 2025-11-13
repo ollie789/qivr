@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
   Typography,
   Box,
   Chip,
@@ -20,27 +10,18 @@ import {
   ListItemButton,
   ListItemText,
   ListItemAvatar,
-  Paper,
-  Stepper,
-  Step,
-  StepLabel,
   Alert,
 } from '@mui/material';
-import { IconWithLabel } from '@qivr/design-system';
 import {
-  CalendarMonth as CalendarIcon,
-  AccessTime as TimeIcon,
   Person as PersonIcon,
-  LocationOn as LocationIcon,
-  Notes as NotesIcon,
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { format, addDays, setHours, setMinutes } from 'date-fns';
 import { enAU } from 'date-fns/locale';
 import type { ChipProps } from '@mui/material/Chip';
 import { useSnackbar } from 'notistack';
+import { StepperDialog, FormSection, FormRow, TimeSlotPicker } from '@qivr/design-system';
 
 export interface ScheduleAppointmentDialogProps {
   open: boolean;
@@ -95,6 +76,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
 }) => {
   const { enqueueSnackbar } = useSnackbar();
   const [activeStep, setActiveStep] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [appointmentData, setAppointmentData] = useState({
     patientId: patient?.id || '',
     patientName: patient ? `${patient.firstName} ${patient.lastName}` : '',
@@ -103,398 +85,204 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
     providerId: prefilledData?.preferredProvider || '',
     appointmentType: intakeId ? 'initial' : 'followup',
     date: null as Date | null,
-    time: null as Date | null,
+    timeSlot: null as string | null,
     duration: 60,
-    location: 'clinic',
     notes: prefilledData?.chiefComplaint || '',
-    sendReminder: true,
   });
 
   const steps = patient 
-    ? ['Select Provider', 'Choose Date & Time', 'Confirm Details']
-    : ['Patient Information', 'Select Provider', 'Choose Date & Time', 'Confirm Details'];
-
-  const handleNext = () => {
-    setActiveStep((prev) => prev + 1);
-  };
-
-  const handleBack = () => {
-    setActiveStep((prev) => prev - 1);
-  };
+    ? ['Select Provider', 'Choose Date & Time', 'Confirm']
+    : ['Patient Info', 'Select Provider', 'Date & Time', 'Confirm'];
 
   const handleSchedule = async () => {
+    setLoading(true);
     try {
-      // TODO: Make API call to schedule appointment
+      // TODO: API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       enqueueSnackbar('Appointment scheduled successfully!', { variant: 'success' });
-      
       if (intakeId) {
-        // Update intake status to 'scheduled'
-        enqueueSnackbar('Intake status updated to scheduled', { variant: 'info' });
+        enqueueSnackbar('Intake status updated', { variant: 'info' });
       }
-      
       onClose();
     } catch (error) {
       enqueueSnackbar('Failed to schedule appointment', { variant: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
   const isStepValid = () => {
-    const currentStepIndex = patient ? activeStep : activeStep;
-    
-    switch (currentStepIndex) {
-      case 0:
-        if (!patient) {
-          return appointmentData.patientName && appointmentData.patientEmail;
-        }
-        return appointmentData.providerId !== '';
-      case 1:
-        if (!patient) {
-          return appointmentData.providerId !== '';
-        }
-        return appointmentData.date && appointmentData.time;
-      case 2:
-        return appointmentData.date && appointmentData.time;
-      default:
-        return true;
-    }
+    const idx = patient ? activeStep : activeStep;
+    if (!patient && idx === 0) return appointmentData.patientName && appointmentData.patientEmail;
+    if ((patient && idx === 0) || (!patient && idx === 1)) return appointmentData.providerId;
+    if ((patient && idx === 1) || (!patient && idx === 2)) return appointmentData.date && appointmentData.timeSlot;
+    return true;
   };
 
-  const renderPatientStep = () => (
-    <Grid container spacing={2}>
-      <Grid item xs={12}>
-        <Alert severity="info" sx={{ mb: 2 }}>
-          Creating appointment from intake submission
-        </Alert>
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <TextField
-          fullWidth
-          label="First Name"
-          value={appointmentData.patientName.split(' ')[0] || ''}
-          onChange={(e) => setAppointmentData({
-            ...appointmentData,
-            patientName: `${e.target.value} ${appointmentData.patientName.split(' ')[1] || ''}`
-          })}
-          required
-        />
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <TextField
-          fullWidth
-          label="Last Name"
-          value={appointmentData.patientName.split(' ')[1] || ''}
-          onChange={(e) => setAppointmentData({
-            ...appointmentData,
-            patientName: `${appointmentData.patientName.split(' ')[0] || ''} ${e.target.value}`
-          })}
-          required
-        />
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <TextField
-          fullWidth
-          label="Email"
-          type="email"
-          value={appointmentData.patientEmail}
-          onChange={(e) => setAppointmentData({
-            ...appointmentData,
-            patientEmail: e.target.value
-          })}
-          required
-        />
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <TextField
-          fullWidth
-          label="Phone"
-          value={appointmentData.patientPhone}
-          onChange={(e) => setAppointmentData({
-            ...appointmentData,
-            patientPhone: e.target.value
-          })}
-          required
-        />
-      </Grid>
-      {prefilledData?.chiefComplaint && (
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Chief Complaint (from intake)"
-            value={prefilledData.chiefComplaint}
-            disabled
-            multiline
-            rows={2}
-          />
-        </Grid>
-      )}
-    </Grid>
-  );
-
-  const renderProviderStep = () => (
-    <Box>
-      <Typography variant="body1" sx={{ mb: 2 }}>
-        Select a provider for the appointment
-      </Typography>
-      <List>
-        {providers.map((provider) => (
-          <ListItem key={provider.id} disablePadding sx={{ mb: 1 }}>
-            <ListItemButton
-              selected={appointmentData.providerId === provider.id}
-              onClick={() => setAppointmentData({
-                ...appointmentData,
-                providerId: provider.id
-              })}
-              sx={{
-                border: 1,
-                borderColor: appointmentData.providerId === provider.id ? 'primary.main' : 'divider',
-                borderRadius: 1,
-              }}
-            >
-              <ListItemAvatar>
-                <Avatar>
-                  <PersonIcon />
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={provider.name}
-                secondary={
-                  <>
-                    {provider.title} • Available {provider.availability}
-                  </>
-                }
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Appointment Type
-        </Typography>
-        <Grid container spacing={1}>
-          {appointmentTypes.map((type) => (
-            <Grid item key={type.id}>
-              <Chip
-                label={`${type.label} (${type.duration} min)`}
-                color={appointmentData.appointmentType === type.id ? type.color : 'default'}
-                onClick={() => setAppointmentData({
-                  ...appointmentData,
-                  appointmentType: type.id,
-                  duration: type.duration
-                })}
-                variant={appointmentData.appointmentType === type.id ? 'filled' : 'outlined'}
-              />
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-    </Box>
-  );
-
-  const renderDateTimeStep = () => (
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enAU}>
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <DatePicker
-            label="Appointment Date"
-            value={appointmentData.date}
-            onChange={(newValue) => setAppointmentData({
-              ...appointmentData,
-              date: newValue
-            })}
-            minDate={new Date()}
-            maxDate={addDays(new Date(), 60)}
-            slotProps={{
-              textField: {
-                fullWidth: true,
-              }
-            }}
-          />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <FormControl fullWidth>
-            <InputLabel>Location</InputLabel>
-            <Select
-              value={appointmentData.location}
-              label="Location"
+  const renderStep = () => {
+    const idx = patient ? activeStep : activeStep;
+    
+    // Patient Info Step
+    if (!patient && idx === 0) {
+      return (
+        <FormSection title="Patient Information" description="Enter patient details">
+          {intakeId && (
+            <Alert severity="info">Creating appointment from intake submission</Alert>
+          )}
+          <FormRow label="First Name" required>
+            <TextField
+              fullWidth
+              value={appointmentData.patientName.split(' ')[0] || ''}
               onChange={(e) => setAppointmentData({
                 ...appointmentData,
-                location: e.target.value
+                patientName: `${e.target.value} ${appointmentData.patientName.split(' ')[1] || ''}`
               })}
-            >
-              <MenuItem value="clinic">Main Clinic</MenuItem>
-              <MenuItem value="satellite">Satellite Office</MenuItem>
-              <MenuItem value="telehealth">Telehealth</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        {appointmentData.date && (
-          <Grid item xs={12}>
-            <Typography variant="subtitle2" gutterBottom>
-              Available Time Slots
-            </Typography>
-            <Grid container spacing={1}>
-              {timeSlots.map((slot) => {
-                const timeParts = slot.split(':').map(Number);
-                const hours = timeParts[0] ?? 0;
-                const minutes = timeParts[1] ?? 0;
-                const slotTime = setMinutes(setHours(new Date(), hours), minutes);
-                const isSelected = appointmentData.time && 
-                  format(appointmentData.time, 'HH:mm') === slot;
-                
-                return (
-                  <Grid item key={slot}>
-                    <Button
-                      variant={isSelected ? 'contained' : 'outlined'}
-                      onClick={() => setAppointmentData({
-                        ...appointmentData,
-                        time: slotTime
-                      })}
-                      startIcon={<TimeIcon />}
-                    >
-                      {slot}
-                    </Button>
-                  </Grid>
-                );
+            />
+          </FormRow>
+          <FormRow label="Last Name" required>
+            <TextField
+              fullWidth
+              value={appointmentData.patientName.split(' ')[1] || ''}
+              onChange={(e) => setAppointmentData({
+                ...appointmentData,
+                patientName: `${appointmentData.patientName.split(' ')[0] || ''} ${e.target.value}`
               })}
-            </Grid>
-          </Grid>
-        )}
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Notes"
-            multiline
-            rows={3}
-            value={appointmentData.notes}
-            onChange={(e) => setAppointmentData({
-              ...appointmentData,
-              notes: e.target.value
-            })}
-            placeholder="Any additional notes for the appointment..."
-          />
-        </Grid>
-      </Grid>
-    </LocalizationProvider>
-  );
-
-  const renderConfirmStep = () => (
-    <Box>
-      <Alert severity="success" sx={{ mb: 3 }}>
-        Please review the appointment details before confirming
-      </Alert>
-      <Paper variant="outlined" sx={{ p: 3 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Typography variant="h6" gutterBottom>
-              Appointment Summary
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <IconWithLabel icon={<PersonIcon />} label="Patient">
-              {appointmentData.patientName}
-            </IconWithLabel>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <IconWithLabel icon={<PersonIcon />} label="Provider">
-              {providers.find(p => p.id === appointmentData.providerId)?.name}
-            </IconWithLabel>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <IconWithLabel icon={<CalendarIcon />} label="Date & Time">
-              {appointmentData.date && format(appointmentData.date, 'EEEE, MMMM d, yyyy')}
-              {appointmentData.time && ` at ${format(appointmentData.time, 'h:mm a')}`}
-            </IconWithLabel>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <IconWithLabel icon={<LocationIcon />} label="Location">
-              {appointmentData.location === 'clinic' ? 'Main Clinic' :
-               appointmentData.location === 'satellite' ? 'Satellite Office' : 'Telehealth'}
-            </IconWithLabel>
-          </Grid>
-          <Grid item xs={12}>
-            <IconWithLabel icon={<NotesIcon />} label="Type & Notes">
-              <Typography variant="body1">
-                {appointmentTypes.find(t => t.id === appointmentData.appointmentType)?.label}
-                {' '}({appointmentData.duration} minutes)
-              </Typography>
-              {appointmentData.notes && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {appointmentData.notes}
-                </Typography>
-              )}
-            </IconWithLabel>
-          </Grid>
-        </Grid>
-      </Paper>
-      {intakeId && (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          This appointment is linked to intake #{intakeId}. The intake status will be updated to {`"Scheduled"`} upon confirmation.
-        </Alert>
-      )}
-    </Box>
-  );
-
-  const renderStepContent = () => {
-    const currentStep = patient ? activeStep + 1 : activeStep;
-    
-    switch (currentStep) {
-      case 0:
-        return renderPatientStep();
-      case 1:
-        return renderProviderStep();
-      case 2:
-        return renderDateTimeStep();
-      case 3:
-        return renderConfirmStep();
-      default:
-        return null;
+            />
+          </FormRow>
+          <FormRow label="Email" required>
+            <TextField
+              fullWidth
+              type="email"
+              value={appointmentData.patientEmail}
+              onChange={(e) => setAppointmentData({ ...appointmentData, patientEmail: e.target.value })}
+            />
+          </FormRow>
+          <FormRow label="Phone">
+            <TextField
+              fullWidth
+              value={appointmentData.patientPhone}
+              onChange={(e) => setAppointmentData({ ...appointmentData, patientPhone: e.target.value })}
+            />
+          </FormRow>
+        </FormSection>
+      );
     }
+
+    // Provider Step
+    if ((patient && idx === 0) || (!patient && idx === 1)) {
+      return (
+        <FormSection title="Select Provider" description="Choose a provider for the appointment">
+          <List>
+            {providers.map((provider) => (
+              <ListItem key={provider.id} disablePadding sx={{ mb: 1 }}>
+                <ListItemButton
+                  selected={appointmentData.providerId === provider.id}
+                  onClick={() => setAppointmentData({ ...appointmentData, providerId: provider.id })}
+                  sx={{
+                    border: 1,
+                    borderColor: appointmentData.providerId === provider.id ? 'primary.main' : 'divider',
+                    borderRadius: 1,
+                  }}
+                >
+                  <ListItemAvatar>
+                    <Avatar><PersonIcon /></Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={provider.name}
+                    secondary={`${provider.title} • Available ${provider.availability}`}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>Appointment Type</Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {appointmentTypes.map((type) => (
+                <Chip
+                  key={type.id}
+                  label={`${type.label} (${type.duration} min)`}
+                  color={appointmentData.appointmentType === type.id ? type.color : 'default'}
+                  onClick={() => setAppointmentData({
+                    ...appointmentData,
+                    appointmentType: type.id,
+                    duration: type.duration
+                  })}
+                  variant={appointmentData.appointmentType === type.id ? 'filled' : 'outlined'}
+                />
+              ))}
+            </Box>
+          </Box>
+        </FormSection>
+      );
+    }
+
+    // Date & Time Step
+    if ((patient && idx === 1) || (!patient && idx === 2)) {
+      return (
+        <FormSection title="Date & Time" description="Choose appointment date and time">
+          <FormRow label="Date" required>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enAU}>
+              <DatePicker
+                value={appointmentData.date}
+                onChange={(newDate) => setAppointmentData({ ...appointmentData, date: newDate })}
+              />
+            </LocalizationProvider>
+          </FormRow>
+          {appointmentData.date && (
+            <FormRow label="Time" required>
+              <TimeSlotPicker
+                slots={timeSlots}
+                selectedSlot={appointmentData.timeSlot}
+                onSelectSlot={(slot) => setAppointmentData({ ...appointmentData, timeSlot: slot })}
+              />
+            </FormRow>
+          )}
+          <FormRow label="Notes">
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              value={appointmentData.notes}
+              onChange={(e) => setAppointmentData({ ...appointmentData, notes: e.target.value })}
+              placeholder="Add any notes or special requirements"
+            />
+          </FormRow>
+        </FormSection>
+      );
+    }
+
+    // Confirm Step
+    return (
+      <FormSection title="Confirm Details" description="Review appointment details">
+        <Alert severity="info">
+          <Typography variant="subtitle2" gutterBottom>Appointment Summary</Typography>
+          <Typography variant="body2">Patient: {appointmentData.patientName}</Typography>
+          <Typography variant="body2">Provider: {providers.find(p => p.id === appointmentData.providerId)?.name}</Typography>
+          <Typography variant="body2">Type: {appointmentTypes.find(t => t.id === appointmentData.appointmentType)?.label}</Typography>
+          <Typography variant="body2">Date: {appointmentData.date?.toLocaleDateString()}</Typography>
+          <Typography variant="body2">Time: {appointmentData.timeSlot}</Typography>
+          <Typography variant="body2">Duration: {appointmentData.duration} minutes</Typography>
+        </Alert>
+      </FormSection>
+    );
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        Schedule Appointment
-        {patient && (
-          <Typography variant="body2" color="text.secondary">
-            for {patient.firstName} {patient.lastName}
-          </Typography>
-        )}
-      </DialogTitle>
-      <DialogContent>
-        <Stepper activeStep={activeStep} sx={{ mb: 3, mt: 1 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-        {renderStepContent()}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        {activeStep > 0 && (
-          <Button onClick={handleBack}>Back</Button>
-        )}
-        {activeStep < steps.length - 1 ? (
-          <Button 
-            variant="contained" 
-            onClick={handleNext}
-            disabled={!isStepValid()}
-          >
-            Next
-          </Button>
-        ) : (
-          <Button 
-            variant="contained" 
-            onClick={handleSchedule}
-            disabled={!isStepValid()}
-          >
-            Schedule Appointment
-          </Button>
-        )}
-      </DialogActions>
-    </Dialog>
+    <StepperDialog
+      open={open}
+      onClose={onClose}
+      title="Schedule Appointment"
+      steps={steps}
+      activeStep={activeStep}
+      onNext={() => setActiveStep(prev => prev + 1)}
+      onBack={() => setActiveStep(prev => prev - 1)}
+      onComplete={handleSchedule}
+      isStepValid={isStepValid()}
+      loading={loading}
+      completeLabel="Schedule Appointment"
+    >
+      {renderStep()}
+    </StepperDialog>
   );
 };
