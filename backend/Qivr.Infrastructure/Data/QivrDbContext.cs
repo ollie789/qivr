@@ -148,8 +148,8 @@ public class QivrDbContext : DbContext
         
         // Configure value converters for complex types
         var jsonConverter = new ValueConverter<Dictionary<string, object>, string>(
-            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-            v => DeserializeJsonSafely(v) ?? new Dictionary<string, object>()
+            v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions?)null),
+            v => DeserializeJsonSafely(v)
         );
         
         var nullableJsonConverter = new ValueConverter<Dictionary<string, object>?, string>(
