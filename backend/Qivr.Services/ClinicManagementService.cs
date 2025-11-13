@@ -249,9 +249,10 @@ public class ClinicManagementService : IClinicManagementService
 
     public async Task<IEnumerable<ProviderSummary>> GetClinicProvidersAsync(Guid tenantId, Guid clinicId, bool activeOnly = true)
     {
+        // Note: ClinicId is ignored in DB mapping, using TenantId only
         var query = _context.Providers
             .Include(p => p.User)
-            .Where(p => p.TenantId == tenantId && p.ClinicId == clinicId);
+            .Where(p => p.TenantId == tenantId);
 
         if (activeOnly)
             query = query.Where(p => p.IsActive);
