@@ -13,7 +13,6 @@ function getAbsolutePath(value: string): any {
 }
 const config: StorybookConfig = {
   "stories": [
-    "../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)",
     "../packages/design-system/src/**/*.stories.@(js|jsx|ts|tsx)"
   ],
   "addons": [
