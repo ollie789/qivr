@@ -1,10 +1,28 @@
 {
   "spacing": {
-    "xs": { "value": "4px" },
-    "sm": { "value": "8px" },
-    "md": { "value": "16px" },
-    "lg": { "value": "24px" },
-    "xl": { "value": "32px" },
-    "xxl": { "value": "48px" }
+    "xs": {
+      "value": "4",
+      "type": "spacing"
+    },
+    "sm": {
+      "value": "8",
+      "type": "spacing"
+    },
+    "md": {
+      "value": "16",
+      "type": "spacing"
+    },
+    "lg": {
+      "value": "24",
+      "type": "spacing"
+    },
+    "xl": {
+      "value": "32",
+      "type": "spacing"
+    },
+    "xxl": {
+      "value": "48",
+      "type": "spacing"
+    }
   }
 }
