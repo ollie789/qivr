@@ -21,7 +21,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { documentsApi, type Document } from '../services/documentsApi';
-import { FlexBetween } from '@qivr/design-system';
+import { FlexBetween, EmptyState } from '@qivr/design-system';
 
 interface FileUploadProps {
   patientId?: string;
@@ -188,32 +188,32 @@ const FileUpload: React.FC<FileUploadProps> = ({
         {...getRootProps()}
         sx={{
           p: 3,
-          border: '2px dashed',
+          border: 2,
+          borderStyle: 'dashed',
           borderColor: isDragActive ? 'primary.main' : 'divider',
-          backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
+          bgcolor: isDragActive ? 'action.hover' : 'background.paper',
           cursor: 'pointer',
-          transition: 'all 0.3s ease',
           '&:hover': {
             borderColor: 'primary.main',
-            backgroundColor: 'action.hover',
+            bgcolor: 'action.hover',
           },
         }}
       >
         <input {...getInputProps()} />
-        <Box sx={{ textAlign: 'center' }}>
-          <UploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" gutterBottom>
-            {isDragActive
-              ? 'Drop files here...'
-              : 'Drag & drop files here, or click to select'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Supported formats: Images, PDF, Word documents
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Max file size: {formatFileSize(maxSize)} | Max files: {maxFiles}
-          </Typography>
-        </Box>
+        <EmptyState
+          icon={<UploadIcon />}
+          title={isDragActive ? 'Drop files here...' : 'Drag & drop files here'}
+          description={
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Supported formats: Images, PDF, Word documents
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Max file size: {formatFileSize(maxSize)} | Max files: {maxFiles}
+              </Typography>
+            </>
+          }
+        />
       </Paper>
 
       {files.length > 0 && (
@@ -224,7 +224,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
               secondaryAction={
                 <IconButton
                   edge="end"
-                  aria-label="delete"
                   onClick={() => removeFile(file.name)}
                   disabled={file.status === 'uploading'}
                 >
@@ -245,27 +244,15 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 primary={
                   <FlexBetween sx={{ gap: 1 }}>
                     <Typography variant="body2">{file.name}</Typography>
-                    <Chip
-                      label={formatFileSize(file.size)}
-                      size="small"
-                      variant="outlined"
-                    />
+                    <Chip label={formatFileSize(file.size)} size="small" variant="outlined" />
                     {file.status === 'uploading' && (
-                      <Chip
-                        label={`${file.progress}%`}
-                        size="small"
-                        color="primary"
-                      />
+                      <Chip label={`${file.progress}%`} size="small" color="primary" />
                     )}
                   </FlexBetween>
                 }
                 secondary={
                   file.status === 'uploading' ? (
-                    <LinearProgress
-                      variant="determinate"
-                      value={file.progress || 0}
-                      sx={{ mt: 1 }}
-                    />
+                    <LinearProgress variant="determinate" value={file.progress || 0} sx={{ mt: 1 }} />
                   ) : file.error ? (
                     <Alert severity="error" sx={{ mt: 1, py: 0 }}>
                       {file.error}
