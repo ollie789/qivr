@@ -2,13 +2,13 @@ import React from 'react';
 import { 
   Dialog, 
   DialogContent,
+  DialogTitle,
   IconButton,
-  Box
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { EvaluationViewer } from '../features/intake/components/EvaluationViewer';
+import { FlexBetween } from '@qivr/design-system';
 
-// Type for intake data
 interface IntakeData {
   id: string;
   patientName: string;
@@ -95,17 +95,19 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
         sx: { height: '90vh' }
       }}
     >
-      <Box sx={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }}>
-        <IconButton onClick={onClose}>
-          <CloseIcon />
-        </IconButton>
-      </Box>
-      <DialogContent sx={{ p: 0 }}>
+      <DialogTitle>
+        <FlexBetween>
+          Intake Evaluation
+          <IconButton onClick={onClose} size="small">
+            <CloseIcon />
+          </IconButton>
+        </FlexBetween>
+      </DialogTitle>
+      <DialogContent>
         <EvaluationViewer
           evaluation={evaluation}
           onUpdate={(updatedEvaluation) => {
             console.log('Evaluation updated:', updatedEvaluation);
-            // TODO: Call API to update evaluation
             onClose();
           }}
           onSchedule={() => {
