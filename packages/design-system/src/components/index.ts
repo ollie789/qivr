@@ -3,6 +3,7 @@ export * from './QivrCard';
 export * from './calendar/CalendarGridCell';
 export * from './calendar/AppointmentChip';
 export * from './calendar/TimeSlotPicker';
+export * from './cards/ProviderCard';
 export * from './dashboard/DashboardSectionCard';
 export * from './dialogs/StepperDialog';
 export * from './feedback/LoadingSpinner';
