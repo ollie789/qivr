@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Typography, List, ListItem, ListItemText, Divider } from '@mui/material';
 import { DashboardSectionCard } from './DashboardSectionCard';
-import { QivrButton } from '../buttons/QivrButton';
+import { QivrButton } from '../QivrButton';
 
 const meta: Meta<typeof DashboardSectionCard> = {
   title: 'Design System/DashboardSectionCard',
