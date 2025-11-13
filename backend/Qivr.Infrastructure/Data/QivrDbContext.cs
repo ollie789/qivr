@@ -75,7 +75,7 @@ public class QivrDbContext : DbContext
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
 
-    private static Dictionary<string, object> DeserializeJsonSafely(string v)
+    private static Dictionary<string, object>? DeserializeJsonSafely(string v)
     {
         if (string.IsNullOrEmpty(v) || v == "NULL" || v == "null") 
             return new Dictionary<string, object>();
@@ -133,7 +133,12 @@ public class QivrDbContext : DbContext
         // modelBuilder.HasDefaultSchema("qivr");
         
         // Configure value converters for complex types
-        var jsonConverter = new ValueConverter<Dictionary<string, object>?, string>(
+        var jsonConverter = new ValueConverter<Dictionary<string, object>, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => DeserializeJsonSafely(v) ?? new Dictionary<string, object>()
+        );
+        
+        var nullableJsonConverter = new ValueConverter<Dictionary<string, object>?, string>(
             v => v == null ? "{}" : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
             v => DeserializeJsonSafely(v)
         );
@@ -583,7 +588,7 @@ public class QivrDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
                 
             // Match Role entity filter to allow system role permissions
-            entity.HasQueryFilter(e => e.Role.TenantId == _tenantId || e.Role.IsSystem);
+            entity.HasQueryFilter(e => e.Role != null && (e.Role.TenantId == _tenantId || e.Role.IsSystem));
         });
 
         // UserRole configuration
