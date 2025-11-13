@@ -19,7 +19,7 @@
   ],
   "exclude": [
     "src/**/*.stories.*",
-    "src/theme",
-    "src/providers"
+    "src/theme.disabled",
+    "src/providers.disabled"
   ]
 }
