@@ -30,7 +30,7 @@ export interface BreadcrumbsProps extends Omit<MuiBreadcrumbsProps, 'children'> 
  * A consistent breadcrumb navigation component
  */
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
-  items,
+  items = [],
   separator = <NavigateNextIcon fontSize="small" />,
   ...props
 }) => {
