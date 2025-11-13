@@ -25,13 +25,13 @@ phases:
       # Build frontend apps
       - echo Building frontend applications...
       - cd packages/http
-      - npm ci --omit=optional
+      - npm install --force
       - npm run build
       - cd ../../apps/clinic-dashboard
-      - npm ci --omit=optional
+      - npm install --force
       - npm run build
       - cd ../patient-portal
-      - npm ci --omit=optional
+      - npm install --force
       - npm run build
       - cd ../..
 
