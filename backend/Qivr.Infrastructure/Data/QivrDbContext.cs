@@ -158,8 +158,8 @@ public class QivrDbContext : DbContext
         );
         
         var stringListConverter = new ValueConverter<List<string>, string[]>(
-            v => v?.ToArray() ?? Array.Empty<string>(),
-            v => v?.ToList() ?? new List<string>()
+            v => v == null ? Array.Empty<string>() : v.ToArray(),
+            v => v == null ? new List<string>() : v.ToList()
         );
 
         var dateTimeListConverter = new ValueConverter<List<DateTime>, string>(
