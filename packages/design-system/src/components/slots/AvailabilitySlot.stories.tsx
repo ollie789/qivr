@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Typography } from '@mui/material';
-import { AvailabilitySlot } from '../components';
+import { AvailabilitySlot } from './AvailabilitySlot';
 
 const meta: Meta<typeof AvailabilitySlot> = {
   title: 'Design System/AvailabilitySlot',
