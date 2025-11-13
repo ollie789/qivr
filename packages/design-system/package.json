@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "build": "npm run build-tokens && tsc -p tsconfig.json",
-    "build-tokens": "style-dictionary build",
+    "build-tokens": "style-dictionary build --config style-dictionary.config.js",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
