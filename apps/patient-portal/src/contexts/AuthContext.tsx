@@ -1,10 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import authApi, { type AuthResponse, type UserInfo } from '../services/authApi';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
+import authApi, { type AuthResponse } from "../services/authApi";
 import {
   getActiveTenantId as getStoredTenantId,
   setActiveTenantId as storeActiveTenantId,
   clearActiveTenantId,
-} from '../state/tenantState';
+} from "../state/tenantState";
 
 interface User {
   username: string;
@@ -29,7 +36,10 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<AuthResult<AuthResponse>>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<AuthResult<AuthResponse>>;
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<AuthResult<AuthResponse>>;
   signInWithGoogle: () => Promise<void>;
   signInWithFacebook: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -40,33 +50,38 @@ interface AuthContextType {
     firstName: string,
     lastName: string,
     tenantId: string,
-    phoneNumber?: string
+    phoneNumber?: string,
   ) => Promise<AuthResponse>;
   activeTenantId: string | null;
   setActiveTenantId: (tenantId: string | null) => void;
 }
 
-const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'false') === 'true';
+const DEV_AUTH_ENABLED =
+  (import.meta.env.VITE_ENABLE_DEV_AUTH ?? "false") === "true";
 
 const DEV_USER: User = {
-  username: 'dev.patient@qivr.local',
-  email: 'dev.patient@qivr.local',
-  firstName: 'Dev',
-  lastName: 'Patient',
-  phoneNumber: '+15551112222',
-  tenantId: 'b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11',
-  role: 'patient',
+  username: "dev.patient@qivr.local",
+  email: "dev.patient@qivr.local",
+  firstName: "Dev",
+  lastName: "Patient",
+  phoneNumber: "+15551112222",
+  tenantId: "b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11",
+  role: "patient",
   emailVerified: true,
   phoneVerified: true,
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTenantId, setActiveTenantIdState] = useState<string | null>(() => getStoredTenantId());
+  const [activeTenantId, setActiveTenantIdState] = useState<string | null>(() =>
+    getStoredTenantId(),
+  );
 
   const setActiveTenant = useCallback((tenantId: string | null) => {
     setActiveTenantIdState(tenantId);
@@ -96,12 +111,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           tenantId: userInfo.tenantId,
           role: userInfo.role,
           emailVerified: true,
-          phoneVerified: false
+          phoneVerified: false,
         });
         setIsAuthenticated(true);
         setActiveTenant(userInfo.tenantId);
       } catch (error) {
-        console.error('Auth check failed:', error);
+        console.error("Auth check failed:", error);
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
@@ -126,13 +141,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { success: true, data: {} as AuthResponse };
       }
 
-      console.log('Attempting login for:', email);
+      console.log("Attempting login for:", email);
       const response = await authApi.login(email, password);
-      console.log('Login response:', response);
-      
+      console.log("Login response:", response);
+
       const userInfo = response.userInfo;
       setIsAuthenticated(true);
-      
+
       setUser({
         username: userInfo.email,
         email: userInfo.email,
@@ -142,14 +157,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         tenantId: userInfo.tenantId,
         role: userInfo.role,
         emailVerified: true,
-        phoneVerified: false
+        phoneVerified: false,
       });
 
       setActiveTenant(userInfo.tenantId);
       return { success: true, data: response };
     } catch (error: unknown) {
-      console.error('Login error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown authentication error';
+      console.error("Login error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown authentication error";
       return { success: false, error: errorMessage };
     }
   };
@@ -158,7 +174,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await authApi.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
       setUser(null);
       setIsAuthenticated(false);
@@ -172,12 +188,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async () => {
     // Social login not implemented yet
-    throw new Error('Google sign-in not available');
+    throw new Error("Google sign-in not available");
   };
 
   const signInWithFacebook = async () => {
-    // Social login not implemented yet  
-    throw new Error('Facebook sign-in not available');
+    // Social login not implemented yet
+    throw new Error("Facebook sign-in not available");
   };
 
   const register = async (
@@ -196,7 +212,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       tenantId,
       phoneNumber,
     });
-    
+
     // Auto-login after signup
     const userInfo = response.userInfo;
     setUser({
@@ -208,20 +224,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       tenantId: userInfo.tenantId,
       role: userInfo.role,
       emailVerified: true,
-      phoneVerified: false
+      phoneVerified: false,
     });
     setIsAuthenticated(true);
     setActiveTenant(userInfo.tenantId);
-    
+
     return response;
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        login, 
-        logout, 
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
         isAuthenticated,
         signIn,
         signInWithGoogle,
@@ -241,7 +257,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

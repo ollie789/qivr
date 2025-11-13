@@ -1,79 +1,76 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock('../../lib/api-client', () => {
+vi.mock("../../lib/api-client", () => {
   const mock = {
     get: vi.fn(),
   };
   return { __esModule: true, default: mock };
 });
 
-import apiClient from '../../lib/api-client';
+import apiClient from "../../lib/api-client";
 import {
   fetchHealthMetrics,
   fetchPromAnalytics,
   fetchHealthGoals,
   fetchMetricCorrelations,
-} from '../analyticsApi';
-import type {
-  HealthGoal,
-  HealthMetric,
-  MetricCorrelation,
-  PromAnalyticsSummary,
-} from '../../types';
+} from "../analyticsApi";
 
 const mockClient = vi.mocked(apiClient);
 
-describe('analyticsApi', () => {
+describe("analyticsApi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('fetchHealthMetrics forwards timeRange and maps values', async () => {
+  it("fetchHealthMetrics forwards timeRange and maps values", async () => {
     mockClient.get.mockResolvedValueOnce({
       data: [
         {
-          Id: 'metric-1',
-          Category: 'vitals',
-          Name: 'Blood Pressure',
+          Id: "metric-1",
+          Category: "vitals",
+          Name: "Blood Pressure",
           Value: 120,
-          Unit: 'mmHg',
-          Date: '2024-01-01T00:00:00Z',
-          Trend: 'down',
+          Unit: "mmHg",
+          Date: "2024-01-01T00:00:00Z",
+          Trend: "down",
           PercentageChange: 5,
-          Status: 'good',
+          Status: "good",
           Target: 110,
         },
       ],
     });
 
-    const result = await fetchHealthMetrics('30days');
+    const result = await fetchHealthMetrics("30days");
 
-    expect(mockClient.get).toHaveBeenCalledWith('/api/analytics/health-metrics', { timeRange: '30days' });
+    expect(mockClient.get).toHaveBeenCalledWith(
+      "/api/analytics/health-metrics",
+      { timeRange: "30days" },
+    );
     expect(result).toEqual([
       {
-        id: 'metric-1',
-        category: 'vitals',
-        name: 'Blood Pressure',
+        id: "metric-1",
+        category: "vitals",
+        name: "Blood Pressure",
         value: 120,
-        unit: 'mmHg',
+        unit: "mmHg",
         date: expect.any(String),
-        trend: 'down',
+        trend: "down",
         percentageChange: 5,
-        status: 'good',
+        status: "good",
         target: 110,
       },
     ]);
   });
 
-  it('fetchPromAnalytics, fetchHealthGoals, fetchMetricCorrelations map responses', async () => {
+  it("fetchPromAnalytics, fetchHealthGoals, fetchMetricCorrelations map responses", async () => {
     mockClient.get
       .mockResolvedValueOnce({
         data: [
           {
-            TemplateName: 'PROM A',
+            TemplateName: "PROM A",
             CompletionRate: 80,
             AverageScore: 75,
-            TrendData: [{ Date: '2024-01-01', Score: 70 }],
+            TrendData: [{ Date: "2024-01-01", Score: 70 }],
             CategoryScores: { mobility: 60 },
             ResponseTime: 12,
           },
@@ -82,32 +79,32 @@ describe('analyticsApi', () => {
       .mockResolvedValueOnce({
         data: [
           {
-            Id: 'goal-1',
-            Title: 'Walk Daily',
-            Category: 'activity',
+            Id: "goal-1",
+            Title: "Walk Daily",
+            Category: "activity",
             Target: 30,
             Current: 20,
-            Unit: 'minutes',
-            Deadline: '2024-02-01',
+            Unit: "minutes",
+            Deadline: "2024-02-01",
             Progress: 66,
-            Status: 'behind',
+            Status: "behind",
           },
         ],
       })
       .mockResolvedValueOnce({
         data: [
           {
-            Metric1: 'Sleep',
-            Metric2: 'Mood',
+            Metric1: "Sleep",
+            Metric2: "Mood",
             Correlation: 0.7,
-            Significance: 'high',
+            Significance: "high",
           },
         ],
       });
 
-    expect(await fetchPromAnalytics('30days')).toEqual([
+    expect(await fetchPromAnalytics("30days")).toEqual([
       {
-        templateName: 'PROM A',
+        templateName: "PROM A",
         completionRate: 80,
         averageScore: 75,
         trendData: [{ date: expect.any(String), score: 70 }],
@@ -117,28 +114,38 @@ describe('analyticsApi', () => {
     ]);
     expect(await fetchHealthGoals()).toEqual([
       {
-        id: 'goal-1',
-        title: 'Walk Daily',
-        category: 'activity',
+        id: "goal-1",
+        title: "Walk Daily",
+        category: "activity",
         target: 30,
         current: 20,
-        unit: 'minutes',
+        unit: "minutes",
         deadline: expect.any(String),
         progress: 66,
-        status: 'behind',
+        status: "behind",
       },
     ]);
     expect(await fetchMetricCorrelations()).toEqual([
       {
-        metric1: 'Sleep',
-        metric2: 'Mood',
+        metric1: "Sleep",
+        metric2: "Mood",
         correlation: 0.7,
-        significance: 'high',
+        significance: "high",
       },
     ]);
 
-    expect(mockClient.get).toHaveBeenNthCalledWith(1, '/api/analytics/prom-analytics', { timeRange: '30days' });
-    expect(mockClient.get).toHaveBeenNthCalledWith(2, '/api/analytics/health-goals');
-    expect(mockClient.get).toHaveBeenNthCalledWith(3, '/api/analytics/correlations');
+    expect(mockClient.get).toHaveBeenNthCalledWith(
+      1,
+      "/api/analytics/prom-analytics",
+      { timeRange: "30days" },
+    );
+    expect(mockClient.get).toHaveBeenNthCalledWith(
+      2,
+      "/api/analytics/health-goals",
+    );
+    expect(mockClient.get).toHaveBeenNthCalledWith(
+      3,
+      "/api/analytics/correlations",
+    );
   });
 });

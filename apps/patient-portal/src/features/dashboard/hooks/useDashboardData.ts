@@ -1,27 +1,27 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   deriveDashboardStats,
   fetchDashboardOverview,
   fetchHealthSummary,
   fetchPendingProms,
   mapUpcomingAppointments,
-} from '../../../services/dashboardApi';
-import type { DashboardAppointment, DashboardStats, PendingProm } from '../../../types';
+} from "../../../services/dashboardApi";
+import type { DashboardAppointment, DashboardStats } from "../../../types";
 
 export function useDashboardData(limit = 3) {
   const overviewQuery = useQuery({
-    queryKey: ['dashboard', 'overview'],
+    queryKey: ["dashboard", "overview"],
     queryFn: fetchDashboardOverview,
   });
 
   const healthSummaryQuery = useQuery({
-    queryKey: ['dashboard', 'health-summary'],
+    queryKey: ["dashboard", "health-summary"],
     queryFn: fetchHealthSummary,
   });
 
   const pendingPromsQuery = useQuery({
-    queryKey: ['dashboard', 'pending-proms', limit],
+    queryKey: ["dashboard", "pending-proms", limit],
     queryFn: () => fetchPendingProms(limit),
   });
 

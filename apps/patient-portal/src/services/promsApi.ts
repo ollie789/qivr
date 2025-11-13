@@ -1,4 +1,4 @@
-import apiClient from '../lib/api-client';
+import apiClient from "../lib/api-client";
 import {
   ApiEnvelope,
   PromAnswerValue,
@@ -9,14 +9,18 @@ import {
   PromScoringMethod,
   PromStats,
   PromTemplate,
-} from '../types';
+} from "../types";
 
-const PROM_API_BASE = '/api/v1/proms';
+const PROM_API_BASE = "/api/v1/proms";
 
 type EnvelopeOrValue<T> = ApiEnvelope<T> | T;
 
 function unwrapEnvelope<T>(payload: EnvelopeOrValue<T>): T {
-  if (payload && typeof payload === 'object' && 'data' in (payload as ApiEnvelope<T>)) {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "data" in (payload as ApiEnvelope<T>)
+  ) {
     const { data } = payload as ApiEnvelope<T>;
     return data;
   }
@@ -43,25 +47,27 @@ const MAX_SCORE_PER_QUESTION = 3;
 const normalizeStatus = (status: string): PromInstanceStatus => {
   const normalized = status.toLowerCase();
   switch (normalized) {
-    case 'inprogress':
-    case 'in-progress':
-      return 'in-progress';
-    case 'completed':
-      return 'completed';
-    case 'expired':
-      return 'expired';
-    case 'cancelled':
-    case 'canceled':
-      return 'cancelled';
+    case "inprogress":
+    case "in-progress":
+      return "in-progress";
+    case "completed":
+      return "completed";
+    case "expired":
+      return "expired";
+    case "cancelled":
+    case "canceled":
+      return "cancelled";
     default:
-      return 'pending';
+      return "pending";
   }
 };
 
 const mapPromInstance = (dto: ApiPromInstance): PromInstance => {
   const status = normalizeStatus(dto.status);
-  const totalScore = typeof dto.totalScore === 'number' ? dto.totalScore : undefined;
-  const questionCount = typeof dto.questionCount === 'number' ? dto.questionCount : undefined;
+  const totalScore =
+    typeof dto.totalScore === "number" ? dto.totalScore : undefined;
+  const questionCount =
+    typeof dto.questionCount === "number" ? dto.questionCount : undefined;
 
   return {
     id: dto.id,
@@ -82,11 +88,12 @@ const mapPromInstance = (dto: ApiPromInstance): PromInstance => {
 
 const toHistoryEntry = (instance: PromInstance): PromHistoryEntry => {
   const score = instance.totalScore ?? instance.score ?? 0;
-  const maxScore = instance.questionCount && instance.questionCount > 0
-    ? instance.questionCount * MAX_SCORE_PER_QUESTION
-    : score > 0
-      ? score
-      : 0;
+  const maxScore =
+    instance.questionCount && instance.questionCount > 0
+      ? instance.questionCount * MAX_SCORE_PER_QUESTION
+      : score > 0
+        ? score
+        : 0;
   const percentageScore = maxScore > 0 ? (Number(score) / maxScore) * 100 : 0;
 
   const completedDate =
@@ -102,30 +109,36 @@ const toHistoryEntry = (instance: PromInstance): PromHistoryEntry => {
     score: Number(score),
     maxScore,
     percentageScore,
-    trend: 'stable',
+    trend: "stable",
   };
 };
 
 const calculateStats = (instances: PromInstance[]): PromStats => {
   const totalAssigned = instances.length;
-  const completed = instances.filter((i) => i.status === 'completed');
-  const pending = instances.filter((i) => i.status === 'pending' || i.status === 'in-progress');
+  const completed = instances.filter((i) => i.status === "completed");
+  const pending = instances.filter(
+    (i) => i.status === "pending" || i.status === "in-progress",
+  );
 
-  const completionRate = totalAssigned === 0 ? 0 : (completed.length / totalAssigned) * 100;
+  const completionRate =
+    totalAssigned === 0 ? 0 : (completed.length / totalAssigned) * 100;
 
   const percentageScores = completed.map((instance) => {
     const score = instance.totalScore ?? instance.score ?? 0;
-    const maxScore = instance.questionCount && instance.questionCount > 0
-      ? instance.questionCount * MAX_SCORE_PER_QUESTION
-      : score > 0
-        ? score
-        : 0;
+    const maxScore =
+      instance.questionCount && instance.questionCount > 0
+        ? instance.questionCount * MAX_SCORE_PER_QUESTION
+        : score > 0
+          ? score
+          : 0;
     return maxScore > 0 ? (Number(score) / maxScore) * 100 : 0;
   });
 
-  const averageScore = percentageScores.length > 0
-    ? percentageScores.reduce((total, value) => total + value, 0) / percentageScores.length
-    : 0;
+  const averageScore =
+    percentageScores.length > 0
+      ? percentageScores.reduce((total, value) => total + value, 0) /
+        percentageScores.length
+      : 0;
 
   const sortedCompletedDates = completed
     .map((instance) => instance.completedDate)
@@ -135,10 +148,14 @@ const calculateStats = (instances: PromInstance[]): PromStats => {
   let streak = 0;
   if (sortedCompletedDates.length > 0) {
     streak = 1;
-    let previous = new Date(sortedCompletedDates[0]).setHours(0, 0, 0, 0);
+    const firstDate = sortedCompletedDates[0];
+    let previous = firstDate ? new Date(firstDate).setHours(0, 0, 0, 0) : 0;
 
     for (let index = 1; index < sortedCompletedDates.length; index += 1) {
-      const current = new Date(sortedCompletedDates[index]).setHours(0, 0, 0, 0);
+      const currentDateStr = sortedCompletedDates[index];
+      const current = currentDateStr
+        ? new Date(currentDateStr).setHours(0, 0, 0, 0)
+        : 0;
       const difference = (previous - current) / (24 * 60 * 60 * 1000);
       if (difference === 1) {
         streak += 1;
@@ -168,7 +185,9 @@ const calculateStats = (instances: PromInstance[]): PromStats => {
   };
 };
 
-export async function fetchPromInstances(status?: PromInstanceStatus): Promise<PromInstance[]> {
+export async function fetchPromInstances(
+  status?: PromInstanceStatus,
+): Promise<PromInstance[]> {
   const params = status ? { status } : undefined;
   const response = await apiClient.get<EnvelopeOrValue<ApiPromInstance[]>>(
     `${PROM_API_BASE}/instances`,
@@ -180,7 +199,7 @@ export async function fetchPromInstances(status?: PromInstanceStatus): Promise<P
 export async function fetchPromHistory(): Promise<PromHistoryEntry[]> {
   const response = await apiClient.get<EnvelopeOrValue<ApiPromInstance[]>>(
     `${PROM_API_BASE}/instances`,
-    { status: 'completed' },
+    { status: "completed" },
   );
   return unwrapEnvelope(response).map(mapPromInstance).map(toHistoryEntry);
 }
@@ -199,11 +218,17 @@ export async function submitPromResponse(
   timeSpentSeconds: number,
 ): Promise<void> {
   const payload = {
-    answers: Object.entries(responses).map(([questionId, value]) => ({ questionId, value })),
+    answers: Object.entries(responses).map(([questionId, value]) => ({
+      questionId,
+      value,
+    })),
     completionSeconds: timeSpentSeconds,
   };
 
-  await apiClient.post(`${PROM_API_BASE}/instances/${instanceId}/answers`, payload);
+  await apiClient.post(
+    `${PROM_API_BASE}/instances/${instanceId}/answers`,
+    payload,
+  );
 }
 
 export async function savePromDraft(
@@ -213,14 +238,18 @@ export async function savePromDraft(
   await apiClient.put(`${PROM_API_BASE}/instances/${instanceId}/draft`, draft);
 }
 
-export async function fetchPromInstance(instanceId: string): Promise<PromInstance> {
+export async function fetchPromInstance(
+  instanceId: string,
+): Promise<PromInstance> {
   const response = await apiClient.get<ApiPromInstance>(
     `${PROM_API_BASE}/instances/${instanceId}`,
   );
   return mapPromInstance(response);
 }
 
-export async function fetchPromTemplate(templateId: string): Promise<PromTemplate> {
+export async function fetchPromTemplate(
+  templateId: string,
+): Promise<PromTemplate> {
   const response = await apiClient.get<PromTemplate>(
     `${PROM_API_BASE}/templates/by-id/${templateId}`,
   );
@@ -231,7 +260,10 @@ export async function submitPromAnswers(
   instanceId: string,
   answers: Record<string, PromAnswerValue>,
 ): Promise<void> {
-  await apiClient.post(`${PROM_API_BASE}/instances/${instanceId}/answers`, answers);
+  await apiClient.post(
+    `${PROM_API_BASE}/instances/${instanceId}/answers`,
+    answers,
+  );
 }
 
 export type { PromScoringMethod };
