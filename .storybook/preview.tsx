@@ -1,6 +1,5 @@
 import type { Preview } from '@storybook/react-vite';
 import React from 'react';
-import { QivrThemeProvider } from '../packages/design-system/src/providers/QivrThemeProvider';
 
 const preview: Preview = {
   parameters: {
@@ -20,9 +19,7 @@ const preview: Preview = {
   },
   decorators: [
     (Story) => (
-      <QivrThemeProvider>
-        <Story />
-      </QivrThemeProvider>
+      <Story />
     ),
   ],
 };
