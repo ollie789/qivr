@@ -75,7 +75,7 @@ const extractVariables = (content: string, provided?: unknown): string[] => {
     return Array.from(new Set(provided as string[]));
   }
 
-  const matches = content.match(/{{\s*([a-zA-Z0-9_\.]+)\s*}}/g) ?? [];
+  const matches = content.match(/{{\s*([a-zA-Z0-9_.]+)\s*}}/g) ?? [];
   return Array.from(new Set(matches.map(match => match.replace(/{{\s*|\s*}}/g, '').trim())));
 };
 

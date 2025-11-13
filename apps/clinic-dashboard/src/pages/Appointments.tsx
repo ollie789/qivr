@@ -183,16 +183,12 @@ const Appointments: React.FC = () => {
   const { user } = useAuthStore();
   const clinicId = user?.clinicId;
 
-  // Don't render if no clinic ID available
-  if (!clinicId) {
-    return <div>Loading clinic information...</div>;
-  }
-
+  // All hooks must be called before any conditional returns
   const { data: patientsData, isLoading: isPatientsLoading } = useQuery<PatientListResponse>({
     queryKey: ['appointments', 'patients'],
     queryFn: () => patientApi.getPatients({ limit: 200 }),
     staleTime: 5 * 60 * 1000,
-    enabled: canMakeApiCalls,
+    enabled: canMakeApiCalls && Boolean(clinicId),
   });
   const patients = patientsData?.data ?? [];
 
@@ -203,25 +199,6 @@ const Appointments: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
   const providerOptions = providersData ?? [];
-
-  const handlePatientSelect = (_: unknown, patient: Patient | null) => {
-    setSelectedPatientOption(patient);
-    setNewAppointment((prev) => ({
-      ...prev,
-      patientId: patient?.id ?? '',
-      patientName: patient ? `${patient.firstName} ${patient.lastName}`.trim() || patient.email : '',
-      patientEmail: patient?.email ?? '',
-      patientPhone: patient?.phone ?? '',
-    }));
-  };
-
-  const handleProviderSelect = (_: unknown, provider: Provider | null) => {
-    setSelectedProviderOption(provider);
-    setNewAppointment((prev) => ({
-      ...prev,
-      providerId: provider?.id ?? '',
-    }));
-  };
 
   // Fetch appointments
   const { data: appointments = [], isLoading } = useQuery({
@@ -262,20 +239,10 @@ const Appointments: React.FC = () => {
         return [] as Appointment[];
       }
     },
-    enabled: canMakeApiCalls,
+    enabled: canMakeApiCalls && Boolean(clinicId),
   });
 
   // Create appointment mutation
-  // Type for appointment creation
-  interface CreateAppointmentData {
-    patientId: string;
-    providerId: string;
-    scheduledStart: string;
-    scheduledEnd: string;
-    appointmentType: string;
-    notes?: string;
-  }
-
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: CreateAppointmentData) => {
       if (!data.patientId || !data.providerId) {
@@ -319,7 +286,7 @@ const Appointments: React.FC = () => {
     const startDateTime = new Date(newAppointment.date);
     startDateTime.setHours(newAppointment.startTime.getHours());
     startDateTime.setMinutes(newAppointment.startTime.getMinutes());
-    
+
     const endDateTime = new Date(newAppointment.date);
     endDateTime.setHours(newAppointment.endTime.getHours());
     endDateTime.setMinutes(newAppointment.endTime.getMinutes());
@@ -333,6 +300,45 @@ const Appointments: React.FC = () => {
       notes: newAppointment.notes,
     });
   }, [newAppointment, createAppointmentMutation]);
+
+  // Don't render if no clinic ID available
+  if (!clinicId) {
+    return <div>Loading clinic information...</div>;
+  }
+
+  // Don't render if no clinic ID available
+  if (!clinicId) {
+    return <div>Loading clinic information...</div>;
+  }
+
+  // Type for appointment creation
+  interface CreateAppointmentData {
+    patientId: string;
+    providerId: string;
+    scheduledStart: string;
+    scheduledEnd: string;
+    appointmentType: string;
+    notes?: string;
+  }
+
+  const handlePatientSelect = (_: unknown, patient: Patient | null) => {
+    setSelectedPatientOption(patient);
+    setNewAppointment((prev) => ({
+      ...prev,
+      patientId: patient?.id ?? '',
+      patientName: patient ? `${patient.firstName} ${patient.lastName}`.trim() || patient.email : '',
+      patientEmail: patient?.email ?? '',
+      patientPhone: patient?.phone ?? '',
+    }));
+  };
+
+  const handleProviderSelect = (_: unknown, provider: Provider | null) => {
+    setSelectedProviderOption(provider);
+    setNewAppointment((prev) => ({
+      ...prev,
+      providerId: provider?.id ?? '',
+    }));
+  };
 
   const getStatusColor = (status: string): 'success' | 'error' | 'primary' | 'warning' | 'default' => {
     switch (status) {

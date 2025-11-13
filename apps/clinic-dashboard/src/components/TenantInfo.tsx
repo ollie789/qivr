@@ -11,7 +11,7 @@ import {
 import { api } from '../lib/api-client';
 import { Cloud, Security, AccountTree } from '@mui/icons-material';
 
-interface TenantInfo {
+interface TenantInfoType {
   id: string;
   name: string;
   slug: string;
@@ -22,7 +22,7 @@ interface TenantInfo {
 }
 
 const TenantInfo: React.FC = () => {
-  const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<TenantInfoType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

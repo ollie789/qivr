@@ -13,7 +13,9 @@ export function arrayToCSV(data: ExportableData[], columns?: { key: string; labe
 
   // If no columns specified, use all keys from first object
   if (!columns) {
-    const keys = Object.keys(data[0]);
+    const firstItem = data[0];
+    if (!firstItem) return '';
+    const keys = Object.keys(firstItem);
     columns = keys.map(key => ({ key, label: key }));
   }
 
@@ -38,8 +40,9 @@ export function arrayToCSV(data: ExportableData[], columns?: { key: string; labe
 /**
  * Get nested object value using dot notation
  */
-function getNestedValue(obj: ExportableData, path: string): unknown {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: ExportableData, path: string): string {
+  const value = path.split('.').reduce((current: any, key) => current?.[key], obj);
+  return String(value ?? '');
 }
 
 /**
@@ -67,7 +70,7 @@ export function arrayToExcelHTML(data: ExportableData[], columns?: { key: string
   }
 
   // If no columns specified, use all keys from first object
-  if (!columns) {
+  if (!columns && data.length > 0 && data[0]) {
     const keys = Object.keys(data[0]);
     columns = keys.map(key => ({ key, label: key }));
   }
@@ -76,9 +79,11 @@ export function arrayToExcelHTML(data: ExportableData[], columns?: { key: string
   
   // Add header
   html += '<thead><tr>';
-  columns.forEach(col => {
-    html += `<th style="background-color: #f0f0f0; font-weight: bold;">${col.label}</th>`;
-  });
+  if (columns) {
+    columns.forEach(col => {
+      html += `<th style="background-color: #f0f0f0; font-weight: bold;">${col.label}</th>`;
+    });
+  }
   html += '</tr></thead>';
 
   // Add data rows
@@ -100,7 +105,8 @@ export function arrayToExcelHTML(data: ExportableData[], columns?: { key: string
 /**
  * Escape HTML special characters
  */
-function escapeHtml(text: string): string {
+function escapeHtml(text: string | undefined): string {
+  if (!text) return '';
   const map: { [key: string]: string } = {
     '&': '&amp;',
     '<': '&lt;',
@@ -108,7 +114,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;'
   };
-  return text.replace(/[&<>"']/g, m => map[m]);
+  return String(text || '').replace(/[&<>"']/g, m => map[m] || m);
 }
 
 /**

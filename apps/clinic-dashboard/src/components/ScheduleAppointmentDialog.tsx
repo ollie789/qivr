@@ -334,7 +334,9 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
             </Typography>
             <Grid container spacing={1}>
               {timeSlots.map((slot) => {
-                const [hours, minutes] = slot.split(':').map(Number);
+                const timeParts = slot.split(':').map(Number);
+                const hours = timeParts[0] ?? 0;
+                const minutes = timeParts[1] ?? 0;
                 const slotTime = setMinutes(setHours(new Date(), hours), minutes);
                 const isSelected = appointmentData.time && 
                   format(appointmentData.time, 'HH:mm') === slot;

@@ -27,6 +27,17 @@ interface AuthState {
 }
 
 const mapUserInfo = (info: AuthUserInfo): User => {
+  // Validate required fields
+  if (!info.username) {
+    throw new Error('Username is required for authentication');
+  }
+  if (!info.email) {
+    throw new Error('Email is required for authentication');
+  }
+  if (!info.tenantId) {
+    throw new Error('Tenant ID is required for authentication');
+  }
+
   const firstName = info.firstName ?? '';
   const lastName = info.lastName ?? '';
   const name = `${firstName} ${lastName}`.trim() || info.email;

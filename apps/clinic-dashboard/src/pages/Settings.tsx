@@ -909,7 +909,7 @@ export default function Settings() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    providerMembers.map((provider) => (
+                    providerMembers.map((provider: ProviderMember) => (
                     <TableRow key={provider.id}>
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={1}>

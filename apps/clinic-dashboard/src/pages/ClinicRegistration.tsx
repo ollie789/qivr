@@ -10,7 +10,7 @@ import {
   Grid,
   Container,
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api-client';
 import { useAuthStore } from '../stores/authStore';
 
@@ -25,7 +25,7 @@ interface ClinicData {
 
 const ClinicRegistration: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+
   const { user } = useAuthStore();
   
   const [clinicData, setClinicData] = useState<ClinicData>({

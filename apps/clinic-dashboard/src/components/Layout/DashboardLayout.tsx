@@ -44,14 +44,14 @@ import TenantSelector from '../TenantSelector';
 const drawerWidth = 280;
 const drawerWidthCollapsed = 64;
 
-interface MenuItem {
+interface MenuItemType {
   text: string;
   icon: React.ReactElement;
   path: string;
   badge?: number;
 }
 
-const menuItems: MenuItem[] = [
+const menuItems: MenuItemType[] = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Intake Management', icon: <QueueIcon />, path: '/intake', badge: 5 },
   { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },

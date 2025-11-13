@@ -658,21 +658,4 @@ const IntakeManagement: React.FC = () => {
   );
 };
 
-const handleInvitePatient = async (email: string, firstName: string, lastName: string) => {
-  const response = await fetch('/api/patientinvitations/invite', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, firstName, lastName }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to send invitation');
-  }
-
-  const result = await response.json();
-  console.log('Invitation sent:', result.invitationUrl);
-};
-
 export default IntakeManagement;

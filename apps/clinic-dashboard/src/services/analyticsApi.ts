@@ -380,7 +380,7 @@ const buildSearchParams = (params?: { from?: Date; to?: Date }) => {
 };
 
 const getClinicAnalytics = async (
-  clinicId?: string,
+  _clinicId?: string,
   params?: { from?: Date; to?: Date }
 ): Promise<ClinicAnalytics> => {
   const search = buildSearchParams(params);

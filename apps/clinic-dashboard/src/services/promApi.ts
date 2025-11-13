@@ -240,11 +240,15 @@ const calculateStats = (responses: PromResponse[]): PromResponsesStats => {
   if (normalizedCompletionDays.length > 0) {
     streak = 1;
     for (let index = 1; index < normalizedCompletionDays.length; index += 1) {
-      const difference = (normalizedCompletionDays[index - 1] - normalizedCompletionDays[index]) / (24 * 60 * 60 * 1000);
-      if (difference === 1) {
-        streak += 1;
-      } else if (difference !== 0) {
-        break;
+      const prevDay = normalizedCompletionDays[index - 1];
+      const currentDay = normalizedCompletionDays[index];
+      if (prevDay && currentDay) {
+        const difference = (prevDay - currentDay) / (24 * 60 * 60 * 1000);
+        if (difference === 1) {
+          streak += 1;
+        } else if (difference !== 0) {
+          break;
+        }
       }
     }
   }

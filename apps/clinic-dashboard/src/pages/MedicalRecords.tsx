@@ -128,7 +128,7 @@ const MedicalRecords: React.FC = () => {
     enabled: canMakeApiCalls,
   });
 
-  const patients: Patient[] = patientList?.data ?? [];
+  const patients: Patient[] = useMemo(() => patientList?.data ?? [], [patientList?.data]);
 
   useEffect(() => {
     if (!selectedPatientId && patients.length > 0 && patients[0]) {
@@ -349,61 +349,81 @@ const MedicalRecords: React.FC = () => {
       if (!selectedPatientId) throw new Error('No patient selected');
       
       switch (newHistory.category) {
-        case 'allergy':
-          return medicalRecordsApi.createAllergy({
+        case 'allergy': {
+          const allergyData: any = {
             patientId: selectedPatientId,
-            allergen: newHistory.title || '',
+            allergen: newHistory.title?.trim() || 'Untitled Allergen',
             type: 'unknown',
             severity: 'mild',
-            reaction: newHistory.description || '',
-            notes: newHistory.description || '',
-          });
+            reaction: newHistory.description?.trim() || 'No reaction specified',
+          };
+          const notes = newHistory.description?.trim();
+          if (notes) {
+            allergyData.notes = notes;
+          }
+          return medicalRecordsApi.createAllergy(allergyData);
+        }
         
-        case 'condition':
-          return medicalRecordsApi.createCondition({
+        case 'condition': {
+          const conditionData: any = {
             patientId: selectedPatientId,
-            condition: newHistory.title,
+            condition: newHistory.title?.trim() || 'Untitled Condition',
             diagnosedDate: new Date().toISOString().split('T')[0],
             status: 'active',
-            notes: newHistory.description,
-          });
+          };
+          const notes = newHistory.description?.trim();
+          if (notes) {
+            conditionData.notes = notes;
+          }
+          return medicalRecordsApi.createCondition(conditionData);
+        }
         
         case 'immunization':
           return medicalRecordsApi.createImmunization({
             patientId: selectedPatientId,
-            vaccine: newHistory.title,
-            date: new Date().toISOString().split('T')[0],
+            vaccine: String(newHistory.title?.trim() || 'Untitled Vaccine'),
+            date: new Date().toISOString().split('T')[0] || new Date().toISOString().substring(0, 10),
             provider: 'Care Team',
             facility: 'Clinic',
           });
         
-        case 'medication':
-          return medicalRecordsApi.createMedication({
+        case 'medication': {
+          const medicationData: any = {
             patientId: selectedPatientId,
-            name: newHistory.title,
+            name: newHistory.title?.trim() || 'Untitled Medication',
             dosage: '1 tablet',
             frequency: 'Daily',
             startDate: new Date().toISOString().split('T')[0],
-            instructions: newHistory.description,
-          });
+          };
+          const instructions = newHistory.description?.trim();
+          if (instructions) {
+            medicationData.instructions = instructions;
+          }
+          return medicalRecordsApi.createMedication(medicationData);
+        }
         
-        case 'surgery':
-          return medicalRecordsApi.createProcedure({
+        case 'surgery': {
+          const procedureData: any = {
             patientId: selectedPatientId,
-            procedureName: newHistory.title,
+            procedureName: newHistory.title?.trim() || 'Untitled Procedure',
             procedureDate: new Date().toISOString().split('T')[0],
             provider: 'Care Team',
             facility: 'Clinic',
             status: 'completed',
-            notes: newHistory.description,
-          });
+          };
+          const notes = newHistory.description?.trim();
+          if (notes) {
+            procedureData.notes = notes;
+          }
+          return medicalRecordsApi.createProcedure(procedureData);
+        }
         
         default:
           throw new Error('Unsupported medical record type');
       }
     },
-    onSuccess: (data, variables) => {
-      const category = newHistory.category;
+    onSuccess: (_data, _variables) => {
+      const category = newHistory.category || 'condition';
       enqueueSnackbar(`${category.charAt(0).toUpperCase() + category.slice(1)} added successfully`, { variant: 'success' });
       setHistoryDialogOpen(false);
       
@@ -815,7 +835,7 @@ const MedicalRecords: React.FC = () => {
                     </Box>
 
                     {/* Latest Vitals */}
-                    {vitalSigns.length > 0 && (
+                    {vitalSigns.length > 0 && vitalSigns[0] && (
                       <Grid container spacing={2} sx={{ mb: 3 }}>
                         <Grid item xs={6} md={3}>
                           <Card>

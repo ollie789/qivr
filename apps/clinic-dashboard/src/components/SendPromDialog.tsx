@@ -217,15 +217,18 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
                 />
               )}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    key={option.id || index}
-                    variant="outlined"
-                    label={`${option.firstName} ${option.lastName}`}
-                    {...getTagProps({ index })}
-                    icon={<PersonIcon />}
-                  />
-                ))
+                value.map((option, index) => {
+                  const { key: _key, ...tagProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={option.id || index}
+                      variant="outlined"
+                      label={`${option.firstName} ${option.lastName}`}
+                      {...tagProps}
+                      icon={<PersonIcon />}
+                    />
+                  );
+                })
               }
               renderOption={(props, option) => (
                 <Box component="li" {...props}>
@@ -373,15 +376,18 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
                 />
               )}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    key={option || index}
-                    variant="outlined"
-                    label={option}
-                    size="small"
-                    {...getTagProps({ index })}
-                  />
-                ))
+                value.map((option, index) => {
+                  const { key: _key, ...tagProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={option || index}
+                      variant="outlined"
+                      label={option}
+                      size="small"
+                      {...tagProps}
+                    />
+                  );
+                })
               }
             />
           </Grid>

@@ -66,6 +66,7 @@ import {
   type PatientListResponse,
   type CreatePatientDto,
   type UpdatePatientDto,
+  type PatientAddress,
 } from '../services/patientApi';
 import MessageComposer from '../components/MessageComposer';
 import FileUpload from '../components/FileUpload';
@@ -572,7 +573,7 @@ const Patients: React.FC = () => {
           component="div"
           count={filteredPatients.length}
           page={page}
-          onPageChange={(e, newPage) => setPage(newPage)}
+          onPageChange={(_e, newPage) => setPage(newPage)}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={(e) => {
             setRowsPerPage(parseInt(e.target.value, 10));
@@ -618,7 +619,7 @@ const Patients: React.FC = () => {
             <Typography color="text.secondary">Select a patient to view details.</Typography>
           ) : (
             <Box>
-              <Tabs value={detailsTab} onChange={(e, v) => setDetailsTab(v)} sx={{ mb: 2 }}>
+              <Tabs value={detailsTab} onChange={(_, v) => setDetailsTab(v)} sx={{ mb: 2 }}>
                 <Tab label="Overview" />
                 <Tab label="Medical History" />
                 <Tab label="Appointments" />
@@ -963,7 +964,7 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
       }));
     };
 
-  const handleAddressChange = (field: keyof CreatePatientDto['address']) =>
+  const handleAddressChange = (field: keyof PatientAddress) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value;
       setFormState((prev) => ({
@@ -993,16 +994,16 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
   };
 
   const isValid = Boolean(
-    formState.firstName.trim() &&
-      formState.lastName.trim() &&
-      formState.email.trim() &&
-      formState.phone.trim() &&
-      formState.dateOfBirth.trim() &&
-      formState.gender.trim() &&
-      formState.address.street.trim() &&
-      formState.address.city.trim() &&
-      formState.address.state.trim() &&
-      formState.address.postcode.trim(),
+    formState.firstName?.trim() &&
+      formState.lastName?.trim() &&
+      formState.email?.trim() &&
+      formState.phone?.trim() &&
+      formState.dateOfBirth?.trim() &&
+      formState.gender?.trim() &&
+      formState.address?.street?.trim() &&
+      formState.address?.city?.trim() &&
+      formState.address?.state?.trim() &&
+      formState.address?.postcode?.trim(),
   );
 
   const handleSubmit = () => {
@@ -1069,7 +1070,7 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
           <Grid item xs={12} md={6}>
             <SelectField
               label="Gender"
-              value={formState.gender}
+              value={formState.gender || ''}
               onChange={handleGenderChange}
               options={GENDER_OPTIONS}
               required
@@ -1080,7 +1081,7 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
             <TextField
               fullWidth
               label="Street Address"
-              value={formState.address.street}
+              value={formState.address?.street || ''}
               onChange={handleAddressChange('street')}
             />
           </Grid>
@@ -1088,14 +1089,14 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
             <TextField
               fullWidth
               label="City"
-              value={formState.address.city}
+              value={formState.address?.city || ''}
               onChange={handleAddressChange('city')}
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <SelectField
               label="State"
-              value={formState.address.state}
+              value={formState.address?.state || ''}
               onChange={handleStateChange}
               options={STATE_OPTIONS}
               required
@@ -1106,7 +1107,7 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
             <TextField
               fullWidth
               label="Postcode"
-              value={formState.address.postcode}
+              value={formState.address?.postcode || ''}
               onChange={handleAddressChange('postcode')}
             />
           </Grid>

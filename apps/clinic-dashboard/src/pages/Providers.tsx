@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -41,11 +41,7 @@ const Providers: React.FC = () => {
   const { user } = useAuthStore();
   const clinicId = user?.tenantId;
 
-  useEffect(() => {
-    loadProviders();
-  }, [clinicId]);
-
-  const loadProviders = async () => {
+  const loadProviders = useCallback(async () => {
     if (!clinicId) return;
     
     try {
@@ -58,7 +54,11 @@ const Providers: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clinicId]);
+
+  useEffect(() => {
+    loadProviders();
+  }, [loadProviders]);
 
   const handleOpenDialog = (provider?: Provider) => {
     if (provider) {

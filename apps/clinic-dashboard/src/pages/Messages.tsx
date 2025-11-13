@@ -128,17 +128,6 @@ const Messages: React.FC = () => {
     return lastMessage?.messageType?.toLowerCase() === 'email' ? 'email' : 'sms';
   }, [visibleMessages, conversationMessages]);
 
-  const renderCategoryIcon = (messageType?: string) => {
-    const type = messageType?.toLowerCase();
-    if (type === 'sms') {
-      return <SmsIcon />;
-    }
-    if (type === 'email') {
-      return <EmailIcon />;
-    }
-    return <EmailIcon />;
-  };
-
   const handleOpenComposer = () => {
     if (!selectedConversation) {
       return;
