@@ -25,8 +25,6 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   appointmentId,
   onUploadComplete,
   onError,
-  allowedTypes,
-  maxSize,
   className = '',
 }) => {
   const [uploadingFiles, setUploadingFiles] = useState<Map<string, UploadingFile>>(new Map());
