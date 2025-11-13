@@ -14,8 +14,7 @@ function getAbsolutePath(value: string): any {
 const config: StorybookConfig = {
   "stories": [
     "../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)",
-    "../apps/**/src/**/*.stories.@(js|jsx|ts|tsx)",
-    "../packages/**/src/**/*.stories.@(js|jsx|ts|tsx)"
+    "../packages/design-system/src/**/*.stories.@(js|jsx|ts|tsx)"
   ],
   "addons": [
     getAbsolutePath('@chromatic-com/storybook'),
@@ -27,6 +26,9 @@ const config: StorybookConfig = {
   "framework": {
     "name": getAbsolutePath('@storybook/react-vite'),
     "options": {}
+  },
+  "typescript": {
+    "reactDocgen": "react-docgen-typescript"
   }
 };
 export default config;
