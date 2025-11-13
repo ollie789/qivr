@@ -372,15 +372,15 @@ public class AuthController : ControllerBase
     // Helper methods for cookie management
     private void SetAuthCookies(string accessToken, string? refreshToken, int expiresInSeconds)
     {
-        var isSecureRequest = HttpContext.Request.IsHttps ||
-            string.Equals(HttpContext.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+        // Always use Secure cookies (we're behind HTTPS ALB/CloudFront)
+        var isSecure = true;
 
         // Access token cookie
         var accessTokenOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = isSecureRequest,
-            SameSite = SameSiteMode.Lax, // Lax to support OAuth redirects while working over HTTP in dev
+            Secure = isSecure,
+            SameSite = SameSiteMode.Lax,
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddSeconds(expiresInSeconds)
         };
@@ -390,10 +390,10 @@ public class AuthController : ControllerBase
         var refreshTokenOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = isSecureRequest,
+            Secure = isSecure,
             SameSite = SameSiteMode.Lax,
             Path = "/",
-            Expires = DateTimeOffset.UtcNow.AddDays(30) // 30 days
+            Expires = DateTimeOffset.UtcNow.AddDays(30)
         };
         if (!string.IsNullOrEmpty(refreshToken))
         {
@@ -406,8 +406,11 @@ public class AuthController : ControllerBase
         var clearOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = HttpContext.Request.IsHttps ||
-                     string.Equals(HttpContext.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase),
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Path = "/",
+            Expires = DateTimeOffset.UtcNow.AddDays(-1)
+        };
             SameSite = SameSiteMode.Lax,
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddDays(-1)
