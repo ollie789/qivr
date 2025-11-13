@@ -4,12 +4,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   TextField,
   Autocomplete,
   Box,
   Typography,
-  Grid,
   FormControl,
   InputLabel,
   Select,
@@ -37,7 +35,7 @@ import { patientApi, type Patient as PatientSummary } from '../services/patientA
 import { NotificationMethod } from '../services/promApi';
 import type { PromTemplateSummary } from '../services/promApi';
 import { handleApiError } from '../lib/api-client';
-import { FlexBetween } from '@qivr/design-system';
+import { DialogSection, FormSection, FormRow, QivrButton, FlexBetween } from '@qivr/design-system';
 
 interface SendPromDialogProps {
   open: boolean;
@@ -183,257 +181,269 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
         </FlexBetween>
       </DialogTitle>
       <DialogContent>
-        <Grid container spacing={3} sx={{ mt: 1 }}>
-          {/* Template Selection */}
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel>PROM Template</InputLabel>
-              <Select
-                value={selectedTemplate}
-                onChange={(e) => setSelectedTemplate(e.target.value)}
-                label="PROM Template"
-              >
-                {templates.map((template) => (
-                  <MenuItem key={template.id} value={template.id}>
-                    {template.name} (v{template.version})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+        <DialogSection>
+          <FormSection
+            title="PROM Selection"
+            description="Choose the PROM template to send"
+          >
+            <FormRow label="PROM Template" required>
+              <FormControl fullWidth>
+                <InputLabel>PROM Template</InputLabel>
+                <Select
+                  value={selectedTemplate}
+                  onChange={(e) => setSelectedTemplate(e.target.value)}
+                  label="PROM Template"
+                >
+                  {templates.map((template) => (
+                    <MenuItem key={template.id} value={template.id}>
+                      {template.name} (v{template.version})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </FormRow>
+          </FormSection>
 
-          {/* Patient Selection */}
-          <Grid item xs={12}>
-            <Autocomplete
-              multiple
-              options={patients}
-              value={selectedPatients}
-              onChange={(_, newValue) => setSelectedPatients(newValue)}
-              getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Select Patients"
-                  placeholder="Search patients..."
-                />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key: _key, ...tagProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={option.id || index}
-                      variant="outlined"
-                      label={`${option.firstName} ${option.lastName}`}
-                      {...tagProps}
-                      icon={<PersonIcon />}
-                    />
-                  );
-                })
-              }
-              renderOption={(props, option) => (
-                <Box component="li" {...props}>
-                  <ListItemIcon>
-                    <PersonIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={`${option.firstName} ${option.lastName}`}
-                    secondary={
-                      <Box>
-                        {option.email && (
-                          <FlexBetween component="span" sx={{ gap: 0.5 }}>
-                            <EmailIcon fontSize="small" />
-                            {option.email}
-                          </FlexBetween>
-                        )}
-                        {option.phone && (
-                          <FlexBetween component="span" sx={{ gap: 0.5 }}>
-                            <PhoneIcon fontSize="small" />
-                            {option.phone}
-                          </FlexBetween>
-                        )}
-                      </Box>
-                    }
+          <FormSection
+            title="Patient Selection"
+            description="Select patients to receive the PROM"
+          >
+            <FormRow label="Patients" required>
+              <Autocomplete
+                multiple
+                options={patients}
+                value={selectedPatients}
+                onChange={(_, newValue) => setSelectedPatients(newValue)}
+                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Search patients..."
                   />
-                </Box>
-              )}
-            />
-            {selectedPatients.length > 0 && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                {selectedPatients.length} patient(s) selected
-              </Typography>
-            )}
-          </Grid>
-
-          {/* Scheduling Options */}
-          <Grid item xs={12}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={sendImmediately}
-                  onChange={(e) => setSendImmediately(e.target.checked)}
-                />
-              }
-              label="Send Immediately"
-            />
-          </Grid>
-
-          {!sendImmediately && (
-            <>
-              <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    label="Scheduled Date"
-                    value={scheduledDate}
-                    onChange={(newValue: Date | null) => setScheduledDate(newValue)}
-                  />
-                </LocalizationProvider>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <TimePicker
-                    label="Scheduled Time"
-                    value={scheduledDate}
-                    onChange={(newValue: Date | null) => setScheduledDate(newValue)}
-                  />
-                </LocalizationProvider>
-              </Grid>
-            </>
-          )}
-
-          <Grid item xs={12}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Due Date"
-                value={dueDate}
-                onChange={(newValue: Date | null) => setDueDate(newValue)}
-              />
-            </LocalizationProvider>
-          </Grid>
-
-          {/* Notification Options */}
-          <Grid item xs={12}>
-            <Typography variant="subtitle2" gutterBottom>
-              Notification Options
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={sendEmail}
-                    onChange={(e) => setSendEmail(e.target.checked)}
-                  />
-                }
-                label="Send Email Notification"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={sendSms}
-                    onChange={(e) => setSendSms(e.target.checked)}
-                  />
-                }
-                label="Send SMS Notification"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={includeReminders}
-                    onChange={(e) => setIncludeReminders(e.target.checked)}
-                  />
-                }
-                label="Send Automatic Reminders"
-              />
-            </Box>
-          </Grid>
-
-          {/* Custom Message */}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Custom Message (Optional)"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              helperText="Add a personalized message to include with the PROM notification"
-            />
-          </Grid>
-
-          {/* Tags */}
-          <Grid item xs={12}>
-            <Autocomplete
-              multiple
-              freeSolo
-              options={[]}
-              value={tags}
-              onChange={(_, newValue) => setTags(newValue)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Tags (Optional)"
-                  placeholder="Add tags..."
-                  helperText="Press Enter to add tags for organizing PROMs"
-                />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key: _key, ...tagProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={option || index}
-                      variant="outlined"
-                      label={option}
-                      size="small"
-                      {...tagProps}
-                    />
-                  );
-                })
-              }
-            />
-          </Grid>
-
-          {/* Summary */}
-          {selectedPatients.length > 0 && selectedTemplate && (
-            <Grid item xs={12}>
-              <Alert severity="info">
-                <Typography variant="subtitle2" gutterBottom>
-                  Summary
-                </Typography>
-                <Typography variant="body2">
-                  • Sending to {selectedPatients.length} patient(s)
-                </Typography>
-                <Typography variant="body2">
-                  • Template: {templates.find(t => t.id === selectedTemplate)?.name}
-                </Typography>
-                <Typography variant="body2">
-                  • Schedule: {sendImmediately ? 'Immediately' : `${scheduledDate?.toLocaleDateString()} at ${scheduledDate?.toLocaleTimeString()}`}
-                </Typography>
-                <Typography variant="body2">
-                  • Due: {dueDate ? dueDate.toLocaleDateString() : '7 days from scheduled date'}
-                </Typography>
-                {(sendEmail || sendSms) && (
-                  <Typography variant="body2">
-                    • Notifications: {[sendEmail && 'Email', sendSms && 'SMS'].filter(Boolean).join(', ')}
-                  </Typography>
                 )}
-              </Alert>
-            </Grid>
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const { key: _key, ...tagProps } = getTagProps({ index });
+                    return (
+                      <Chip
+                        key={option.id || index}
+                        variant="outlined"
+                        label={`${option.firstName} ${option.lastName}`}
+                        {...tagProps}
+                        icon={<PersonIcon />}
+                      />
+                    );
+                  })
+                }
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <ListItemIcon>
+                      <PersonIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`${option.firstName} ${option.lastName}`}
+                      secondary={
+                        <Box>
+                          {option.email && (
+                            <FlexBetween component="span" sx={{ gap: 0.5 }}>
+                              <EmailIcon fontSize="small" />
+                              {option.email}
+                            </FlexBetween>
+                          )}
+                          {option.phone && (
+                            <FlexBetween component="span" sx={{ gap: 0.5 }}>
+                              <PhoneIcon fontSize="small" />
+                              {option.phone}
+                            </FlexBetween>
+                          )}
+                        </Box>
+                      }
+                    />
+                  </Box>
+                )}
+              />
+              {selectedPatients.length > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  {selectedPatients.length} patient(s) selected
+                </Typography>
+              )}
+            </FormRow>
+          </FormSection>
+
+          <FormSection
+            title="Scheduling"
+            description="Configure when the PROM should be sent"
+          >
+            <FormRow label="Send Timing">
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={sendImmediately}
+                    onChange={(e) => setSendImmediately(e.target.checked)}
+                  />
+                }
+                label="Send Immediately"
+              />
+            </FormRow>
+
+            {!sendImmediately && (
+              <>
+                <FormRow label="Scheduled Date">
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      value={scheduledDate}
+                      onChange={(newValue: Date | null) => setScheduledDate(newValue)}
+                    />
+                  </LocalizationProvider>
+                </FormRow>
+                <FormRow label="Scheduled Time">
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <TimePicker
+                      value={scheduledDate}
+                      onChange={(newValue: Date | null) => setScheduledDate(newValue)}
+                    />
+                  </LocalizationProvider>
+                </FormRow>
+              </>
+            )}
+
+            <FormRow label="Due Date">
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  value={dueDate}
+                  onChange={(newValue: Date | null) => setDueDate(newValue)}
+                />
+              </LocalizationProvider>
+            </FormRow>
+          </FormSection>
+
+          <FormSection
+            title="Notifications"
+            description="Choose how patients will be notified"
+          >
+            <FormRow label="Notification Methods">
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={sendEmail}
+                      onChange={(e) => setSendEmail(e.target.checked)}
+                    />
+                  }
+                  label="Send Email Notification"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={sendSms}
+                      onChange={(e) => setSendSms(e.target.checked)}
+                    />
+                  }
+                  label="Send SMS Notification"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={includeReminders}
+                      onChange={(e) => setIncludeReminders(e.target.checked)}
+                    />
+                  }
+                  label="Send Automatic Reminders"
+                />
+              </Box>
+            </FormRow>
+          </FormSection>
+
+          <FormSection
+            title="Additional Options"
+            description="Add a custom message and tags"
+          >
+            <FormRow label="Custom Message">
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Add a personalized message to include with the PROM notification"
+              />
+            </FormRow>
+
+            <FormRow label="Tags">
+              <Autocomplete
+                multiple
+                freeSolo
+                options={[]}
+                value={tags}
+                onChange={(_, newValue) => setTags(newValue)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Add tags..."
+                  />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const { key: _key, ...tagProps } = getTagProps({ index });
+                    return (
+                      <Chip
+                        key={option || index}
+                        variant="outlined"
+                        label={option}
+                        size="small"
+                        {...tagProps}
+                      />
+                    );
+                  })
+                }
+              />
+            </FormRow>
+          </FormSection>
+
+          {selectedPatients.length > 0 && selectedTemplate && (
+            <Alert severity="info">
+              <Typography variant="subtitle2" gutterBottom>
+                Summary
+              </Typography>
+              <Typography variant="body2">
+                • Sending to {selectedPatients.length} patient(s)
+              </Typography>
+              <Typography variant="body2">
+                • Template: {templates.find(t => t.id === selectedTemplate)?.name}
+              </Typography>
+              <Typography variant="body2">
+                • Schedule: {sendImmediately ? 'Immediately' : `${scheduledDate?.toLocaleDateString()} at ${scheduledDate?.toLocaleTimeString()}`}
+              </Typography>
+              <Typography variant="body2">
+                • Due: {dueDate ? dueDate.toLocaleDateString() : '7 days from scheduled date'}
+              </Typography>
+              {(sendEmail || sendSms) && (
+                <Typography variant="body2">
+                  • Notifications: {[sendEmail && 'Email', sendSms && 'SMS'].filter(Boolean).join(', ')}
+                </Typography>
+              )}
+            </Alert>
           )}
-        </Grid>
+        </DialogSection>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+        <QivrButton 
+          onClick={onClose} 
+          disabled={loading}
+          variant="outlined"
+          emphasize="subtle"
+        >
           Cancel
-        </Button>
-        <Button
+        </QivrButton>
+        <QivrButton
           variant="contained"
           onClick={handleSend}
           disabled={loading || selectedPatients.length === 0 || !selectedTemplate}
+          loading={loading}
           startIcon={<SendIcon />}
         >
-          {loading ? 'Sending...' : `Send to ${selectedPatients.length} Patient(s)`}
-        </Button>
+          Send to {selectedPatients.length} Patient(s)
+        </QivrButton>
       </DialogActions>
     </Dialog>
   );
