@@ -135,7 +135,7 @@ public class PatientDashboardController : ControllerBase
 
             // Get unread messages count
             var unreadMessagesCount = await _context.Messages
-                .Where(m => m.RecipientId == userId && !m.IsRead)
+                .Where(m => m.DirectRecipientId == userId && !m.IsRead)
                 .CountAsync();
 
             var dashboard = new PatientDashboardDto
