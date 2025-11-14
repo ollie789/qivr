@@ -205,7 +205,7 @@ public class RealTimeNotificationService : IRealTimeNotificationService
             Title = "Appointment Reminder",
             Message = $"You have an appointment with {reminder.ProviderName} on {reminder.AppointmentTime:MMM dd, yyyy} at {reminder.AppointmentTime:hh:mm tt}",
             Type = "appointment",
-            Priority = "high",
+            Priority = "High",
             Data = new Dictionary<string, object>
             {
                 ["appointmentId"] = reminder.AppointmentId,
@@ -230,7 +230,7 @@ public class RealTimeNotificationService : IRealTimeNotificationService
             Title = "New Message",
             Message = $"You have a new message from {message.SenderName}",
             Type = "message",
-            Priority = message.IsUrgent ? "high" : "normal",
+            Priority = message.IsUrgent ? "High" : "Normal",
             Data = new Dictionary<string, object>
             {
                 ["messageId"] = message.MessageId,
@@ -263,10 +263,10 @@ public class RealTimeNotificationService : IRealTimeNotificationService
             Type = "system",
             Priority = alert.Severity switch
             {
-                "critical" => "urgent",
-                "warning" => "high",
-                "info" => "normal",
-                _ => "low"
+                "critical" => "Urgent",
+                "warning" => "High",
+                "info" => "Normal",
+                _ => "Low"
             },
             Data = new Dictionary<string, object>
             {
@@ -297,7 +297,7 @@ public class NotificationDto
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
-    public string Priority { get; set; } = "normal";
+    public string Priority { get; set; } = "Normal";
     public Dictionary<string, object>? Data { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
