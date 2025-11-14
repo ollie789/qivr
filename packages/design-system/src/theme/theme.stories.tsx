@@ -79,7 +79,7 @@ export const Spacing: Story = {
   ),
 };
 
-export const Typography: Story = {
+export const TypographyScale: Story = {
   render: () => (
     <Box>
       <Typography variant="h5" gutterBottom>Typography Scale</Typography>
