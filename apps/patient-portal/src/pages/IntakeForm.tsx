@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, TextField, Typography, Stepper, Step, StepLabel, Paper } from '@mui/material';
+import { Box, Button, TextField, Typography, Stepper, Step, StepLabel, Paper, CircularProgress } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import apiClient from '../lib/api-client';
 
@@ -10,6 +10,8 @@ export const IntakeForm = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
   const [activeStep, setActiveStep] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     chiefComplaint: '',
     symptoms: '',
@@ -18,14 +20,35 @@ export const IntakeForm = () => {
     additionalNotes: ''
   });
 
+  useEffect(() => {
+    // Get current user info
+    const fetchUserInfo = async () => {
+      try {
+        const userInfo = await apiClient.get('/api/auth/user-info');
+        setUserId(userInfo.id);
+      } catch (error) {
+        enqueueSnackbar('Failed to load user info', { variant: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserInfo();
+  }, []);
+
   const handleNext = () => setActiveStep((prev) => prev + 1);
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
   const handleSubmit = async () => {
+    if (!userId) {
+      enqueueSnackbar('User not authenticated', { variant: 'error' });
+      return;
+    }
+
     try {
       const symptoms = formData.symptoms.split(',').map(s => s.trim()).filter(Boolean);
       
       await apiClient.post('/api/evaluations', {
+        patientId: userId,
         chiefComplaint: formData.chiefComplaint,
         symptoms,
         questionnaireResponses: {
@@ -37,11 +60,20 @@ export const IntakeForm = () => {
       });
 
       enqueueSnackbar('Intake submitted successfully!', { variant: 'success' });
-      navigate('/dashboard');
+      navigate('/evaluations');
     } catch (error) {
+      console.error('Submit error:', error);
       enqueueSnackbar('Failed to submit intake', { variant: 'error' });
     }
   };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
@@ -76,6 +108,7 @@ export const IntakeForm = () => {
               multiline
               rows={3}
               sx={{ mb: 2 }}
+              required
             />
             <TextField
               fullWidth
@@ -135,11 +168,19 @@ export const IntakeForm = () => {
             Back
           </Button>
           {activeStep === steps.length - 1 ? (
-            <Button variant="contained" onClick={handleSubmit}>
+            <Button 
+              variant="contained" 
+              onClick={handleSubmit}
+              disabled={!formData.chiefComplaint}
+            >
               Submit
             </Button>
           ) : (
-            <Button variant="contained" onClick={handleNext}>
+            <Button 
+              variant="contained" 
+              onClick={handleNext}
+              disabled={activeStep === 1 && !formData.chiefComplaint}
+            >
               Next
             </Button>
           )}
