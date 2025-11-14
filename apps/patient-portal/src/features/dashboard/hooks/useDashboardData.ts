@@ -15,10 +15,11 @@ export function useDashboardData(limit = 3) {
     queryFn: fetchDashboardOverview,
   });
 
-  const healthSummaryQuery = useQuery({
-    queryKey: ["dashboard", "health-summary"],
-    queryFn: fetchHealthSummary,
-  });
+  // Disabled - patient portal doesn't need health summary
+  // const healthSummaryQuery = useQuery({
+  //   queryKey: ["dashboard", "health-summary"],
+  //   queryFn: fetchHealthSummary,
+  // });
 
   const pendingPromsQuery = useQuery({
     queryKey: ["dashboard", "pending-proms", limit],
@@ -33,9 +34,9 @@ export function useDashboardData(limit = 3) {
     return deriveDashboardStats(
       overviewQuery.data,
       pendingPromsQuery.data ?? [],
-      healthSummaryQuery.data,
+      undefined, // healthSummaryQuery.data,
     );
-  }, [overviewQuery.data, pendingPromsQuery.data, healthSummaryQuery.data]);
+  }, [overviewQuery.data, pendingPromsQuery.data]);
 
   const upcomingAppointments = useMemo<DashboardAppointment[]>(() => {
     if (!overviewQuery.data) {
