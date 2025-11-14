@@ -215,6 +215,11 @@ class NotificationsApi {
     onNotification: (notification: NotificationDetail) => void,
     onError?: (error: Event) => void,
   ) {
+    // SSE stream disabled - endpoint not implemented
+    console.warn('Real-time notifications stream not available');
+    return () => {}; // Return no-op cleanup function
+    
+    /* Disabled until backend implements SSE
     const source = new EventSource('/api/notifications/stream');
 
     source.onmessage = (event) => {
@@ -231,6 +236,7 @@ class NotificationsApi {
     }
 
     return () => source.close();
+    */
   }
 }
 
