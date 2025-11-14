@@ -88,7 +88,7 @@ async function main() {
   // Step 4: Check current messages for patient
   console.log('4️⃣  Checking patient messages (before)...');
   const messagesBefore = await apiCall('/messages', patient.cookies);
-  const beforeMessages = Array.isArray(messagesBefore.data) ? messagesBefore.data : (messagesBefore.data?.items || []);
+  const beforeMessages = messagesBefore.data?.data?.items || messagesBefore.data?.items || (Array.isArray(messagesBefore.data) ? messagesBefore.data : []);
   const beforeCount = beforeMessages.length;
   console.log(`   📬 Patient has ${beforeCount} messages\n`);
   
@@ -112,13 +112,13 @@ async function main() {
   console.log('6️⃣  Checking patient messages (after)...');
   await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
   const messagesAfter = await apiCall('/messages', patient.cookies);
-  const messages = Array.isArray(messagesAfter.data) ? messagesAfter.data : (messagesAfter.data?.items || []);
+  const messages = messagesAfter.data?.data?.items || messagesAfter.data?.items || (Array.isArray(messagesAfter.data) ? messagesAfter.data : []);
   const afterCount = messages.length;
-  const newMessage = messages.find(m => m.subject?.includes(timestamp.toString()) || m.directSubject?.includes(timestamp.toString()));
+  const newMessage = messages.find(m => m.subject?.includes(timestamp.toString()));
   
   console.log(`   📬 Patient now has ${afterCount} messages`);
   if (newMessage) {
-    console.log(`   ✅ New message received: "${newMessage.subject || newMessage.directSubject}"`);
+    console.log(`   ✅ New message received: "${newMessage.subject}"`);
   } else {
     console.log(`   ⚠️  Message not found yet (may need time to sync)`);
   }
