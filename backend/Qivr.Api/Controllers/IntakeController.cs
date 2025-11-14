@@ -106,14 +106,13 @@ public class IntakeController : ControllerBase
 
             // Ensure a patient user exists (or create one) to satisfy NOT NULL FK
             Guid patientId;
-            await using (var conn = intakeContext.Database.GetDbConnection())
+            var conn = intakeContext.Database.GetDbConnection();
+            if (conn.State != System.Data.ConnectionState.Open)
             {
-                if (conn.State != System.Data.ConnectionState.Open)
-                {
-                    await conn.OpenAsync(cancellationToken);
-                }
+                await conn.OpenAsync(cancellationToken);
+            }
 
-                await using (var findCmd = conn.CreateCommand())
+            await using (var findCmd = conn.CreateCommand())
                 {
                     findCmd.CommandText = "SELECT id FROM qivr.users WHERE tenant_id = @tenant AND email = @mail LIMIT 1";
                     var pTenant = findCmd.CreateParameter();
@@ -154,7 +153,6 @@ public class IntakeController : ControllerBase
                         }
                     }
                 }
-            }
 
             // Generate evaluation number
             var evaluationNumber = $"E-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8]}";
