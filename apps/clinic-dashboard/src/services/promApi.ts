@@ -144,7 +144,8 @@ interface ApiPromResponsesResponse {
 
 const MAX_SCORE_PER_QUESTION = 3;
 
-const normalizeStatus = (status: string) => {
+const normalizeStatus = (status: string | undefined) => {
+  if (!status) return 'pending' as const;
   const normalized = status.toLowerCase();
   switch (normalized) {
     case 'inprogress':
