@@ -248,7 +248,7 @@ public class RealTimeNotificationService : IRealTimeNotificationService
 
         // Update unread message count
         var unreadCount = await _context.Messages
-            .CountAsync(m => m.RecipientId == userId && !m.IsRead && !m.IsDeleted);
+            .CountAsync(m => m.DirectRecipientId == userId && !m.IsRead && !m.IsDeleted);
         
         await _hubContext.Clients.Group($"user-{userId}")
             .SendAsync("UnreadMessageCount", unreadCount);
