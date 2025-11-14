@@ -38,6 +38,7 @@ public enum UrgencyLevel
 {
     Low,
     Medium,
+    Moderate, // Database has 'moderate' values
     High,
     Urgent
 }

@@ -211,6 +211,7 @@ builder.Services.AddAWSService<Amazon.SecretsManager.IAmazonSecretsManager>();
 builder.Services.AddScoped<IModernEmailService, ModernEmailService>();
 
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 // Configure Audit and Notification Services
 builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
