@@ -118,6 +118,7 @@ const MedicalRecords: React.FC = () => {
   const [vitalDialogOpen, setVitalDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('all');
+  const [editedPatient, setEditedPatient] = useState<Partial<Patient>>({});
 
   const {
     data: patientList,
@@ -139,6 +140,20 @@ const MedicalRecords: React.FC = () => {
 
   // Get patient from the list
   const patient = patients?.find(p => p.id === selectedPatientId);
+
+  // Initialize edited patient when patient changes
+  useEffect(() => {
+    if (patient) {
+      setEditedPatient(patient);
+    }
+  }, [patient]);
+
+  const handleSavePatient = () => {
+    if (!selectedPatientId) return;
+    // TODO: Call API to save patient data
+    enqueueSnackbar('Patient information saved', { variant: 'success' });
+    setEditMode(false);
+  };
 
   // Fetch vital signs
   const { data: medicalSummary } = useQuery({
@@ -335,6 +350,17 @@ const MedicalRecords: React.FC = () => {
     onSuccess: () => {
       enqueueSnackbar('Vital signs recorded successfully', { variant: 'success' });
       setVitalDialogOpen(false);
+      
+      // Reset form
+      setNewVital({
+        bloodPressure: { systolic: 120, diastolic: 80 },
+        heartRate: 70,
+        temperature: 98.6,
+        weight: 0,
+        height: 0,
+        respiratoryRate: 16,
+      });
+      
       // Refresh vital signs data
       queryClient.invalidateQueries({ queryKey: ['vitalSigns', selectedPatientId] });
     },
@@ -427,6 +453,15 @@ const MedicalRecords: React.FC = () => {
       const category = newHistory.category || 'condition';
       enqueueSnackbar(`${category.charAt(0).toUpperCase() + category.slice(1)} added successfully`, { variant: 'success' });
       setHistoryDialogOpen(false);
+      
+      // Reset form
+      setNewHistory({
+        category: 'condition',
+        title: '',
+        description: '',
+        status: 'active',
+        severity: 'mild',
+      });
       
       // Refresh appropriate data based on category
       switch (category) {
@@ -619,7 +654,7 @@ const MedicalRecords: React.FC = () => {
                   <Button
                     variant={editMode ? "contained" : "outlined"}
                     startIcon={editMode ? <SaveIcon /> : <EditIcon />}
-                    onClick={() => setEditMode(!editMode)}
+                    onClick={() => editMode ? handleSavePatient() : setEditMode(true)}
                   >
                     {editMode ? 'Save Changes' : 'Edit Info'}
                   </Button>
@@ -671,27 +706,31 @@ const MedicalRecords: React.FC = () => {
                       <Stack spacing={2}>
                         <TextField
                           label="First Name"
-                          value={patient?.firstName || ''}
+                          value={editedPatient?.firstName || ''}
+                          onChange={(e) => setEditedPatient({...editedPatient, firstName: e.target.value})}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Last Name"
-                          value={patient?.lastName || ''}
+                          value={editedPatient?.lastName || ''}
+                          onChange={(e) => setEditedPatient({...editedPatient, lastName: e.target.value})}
                           disabled={!editMode}
                           fullWidth
                         />
                         <DatePicker
                           label="Date of Birth"
-                          value={patient?.dateOfBirth ? parseISO(patient.dateOfBirth) : null}
+                          value={editedPatient?.dateOfBirth ? parseISO(editedPatient.dateOfBirth) : null}
+                          onChange={(date) => setEditedPatient({...editedPatient, dateOfBirth: date?.toISOString()})}
                           disabled={!editMode}
                           slotProps={{ textField: { fullWidth: true } }}
                         />
                         <FormControl fullWidth>
                           <InputLabel>Gender</InputLabel>
                           <Select
-                            value={patient?.gender || ''}
+                            value={editedPatient?.gender || ''}
                             label="Gender"
+                            onChange={(e) => setEditedPatient({...editedPatient, gender: e.target.value})}
                             disabled={!editMode}
                           >
                             <MenuItem value="Male">Male</MenuItem>
@@ -708,19 +747,22 @@ const MedicalRecords: React.FC = () => {
                       <Stack spacing={2}>
                         <TextField
                           label="Email"
-                          value={patient?.email || ''}
+                          value={editedPatient?.email || ''}
+                          onChange={(e) => setEditedPatient({...editedPatient, email: e.target.value})}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Phone"
-                          value={patient?.phone || ''}
+                          value={editedPatient?.phone || ''}
+                          onChange={(e) => setEditedPatient({...editedPatient, phone: e.target.value})}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Street Address"
-                          value={patient?.address?.street || ''}
+                          value={editedPatient?.address?.street || ''}
+                          onChange={(e) => setEditedPatient({...editedPatient, address: {...editedPatient.address, street: e.target.value}})}
                           disabled={!editMode}
                           fullWidth
                         />
@@ -728,7 +770,8 @@ const MedicalRecords: React.FC = () => {
                           <Grid item xs={6}>
                             <TextField
                               label="City"
-                              value={patient?.address?.city || ''}
+                              value={editedPatient?.address?.city || ''}
+                              onChange={(e) => setEditedPatient({...editedPatient, address: {...editedPatient.address, city: e.target.value}})}
                               disabled={!editMode}
                               fullWidth
                             />
@@ -736,7 +779,8 @@ const MedicalRecords: React.FC = () => {
                           <Grid item xs={3}>
                             <TextField
                               label="State"
-                              value={patient?.address?.state || ''}
+                              value={editedPatient?.address?.state || ''}
+                              onChange={(e) => setEditedPatient({...editedPatient, address: {...editedPatient.address, state: e.target.value}})}
                               disabled={!editMode}
                               fullWidth
                             />
@@ -744,7 +788,8 @@ const MedicalRecords: React.FC = () => {
                           <Grid item xs={3}>
                             <TextField
                               label="Zip"
-                              value={(patient?.address as any)?.zipCode || ''}
+                              value={(editedPatient?.address as any)?.zipCode || ''}
+                              onChange={(e) => setEditedPatient({...editedPatient, address: {...editedPatient.address, zipCode: e.target.value} as any})}
                               disabled={!editMode}
                               fullWidth
                             />

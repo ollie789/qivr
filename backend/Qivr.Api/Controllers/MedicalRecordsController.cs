@@ -193,13 +193,23 @@ public class MedicalRecordsController : BaseApiController
             Name = request.Name,
             Dosage = request.Dosage,
             Frequency = request.Frequency,
-            StartDate = request.StartDate,
-            EndDate = request.EndDate,
+            StartDate = request.StartDate.Kind == DateTimeKind.Unspecified 
+                ? DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc) 
+                : request.StartDate.ToUniversalTime(),
+            EndDate = request.EndDate.HasValue 
+                ? (request.EndDate.Value.Kind == DateTimeKind.Unspecified 
+                    ? DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc) 
+                    : request.EndDate.Value.ToUniversalTime())
+                : null,
             Status = request.Status ?? "active",
             PrescribedBy = request.PrescribedBy,
             Instructions = request.Instructions,
             RefillsRemaining = request.RefillsRemaining,
-            LastFilled = request.LastFilled,
+            LastFilled = request.LastFilled.HasValue 
+                ? (request.LastFilled.Value.Kind == DateTimeKind.Unspecified 
+                    ? DateTime.SpecifyKind(request.LastFilled.Value, DateTimeKind.Utc) 
+                    : request.LastFilled.Value.ToUniversalTime())
+                : null,
             Pharmacy = request.Pharmacy,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -253,7 +263,11 @@ public class MedicalRecordsController : BaseApiController
             Type = request.Type ?? "other",
             Severity = request.Severity ?? "mild",
             Reaction = request.Reaction,
-            DiagnosedDate = request.DiagnosedDate,
+            DiagnosedDate = request.DiagnosedDate.HasValue 
+                ? (request.DiagnosedDate.Value.Kind == DateTimeKind.Unspecified 
+                    ? DateTime.SpecifyKind(request.DiagnosedDate.Value, DateTimeKind.Utc) 
+                    : request.DiagnosedDate.Value.ToUniversalTime())
+                : null,
             Notes = request.Notes,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -301,7 +315,9 @@ public class MedicalRecordsController : BaseApiController
             PatientId = patientId,
             Condition = request.Condition,
             Icd10Code = request.Icd10Code,
-            DiagnosedDate = request.DiagnosedDate,
+            DiagnosedDate = request.DiagnosedDate.Kind == DateTimeKind.Unspecified 
+                ? DateTime.SpecifyKind(request.DiagnosedDate, DateTimeKind.Utc) 
+                : request.DiagnosedDate.ToUniversalTime(),
             Status = request.Status ?? "active",
             ManagedBy = request.ManagedBy ?? "Care Team",
             LastReviewed = DateTime.UtcNow,
@@ -352,8 +368,14 @@ public class MedicalRecordsController : BaseApiController
             TenantId = tenantId,
             PatientId = patientId,
             Vaccine = request.Vaccine,
-            Date = request.Date,
-            NextDue = request.NextDue,
+            Date = request.Date.Kind == DateTimeKind.Unspecified 
+                ? DateTime.SpecifyKind(request.Date, DateTimeKind.Utc) 
+                : request.Date.ToUniversalTime(),
+            NextDue = request.NextDue.HasValue 
+                ? (request.NextDue.Value.Kind == DateTimeKind.Unspecified 
+                    ? DateTime.SpecifyKind(request.NextDue.Value, DateTimeKind.Utc) 
+                    : request.NextDue.Value.ToUniversalTime())
+                : null,
             Provider = request.Provider ?? "Care Team",
             Facility = request.Facility ?? "Clinic",
             LotNumber = request.LotNumber,
@@ -405,7 +427,9 @@ public class MedicalRecordsController : BaseApiController
             PatientId = patientId,
             ProcedureName = request.ProcedureName,
             CptCode = request.CptCode,
-            ProcedureDate = request.ProcedureDate,
+            ProcedureDate = request.ProcedureDate.Kind == DateTimeKind.Unspecified 
+                ? DateTime.SpecifyKind(request.ProcedureDate, DateTimeKind.Utc) 
+                : request.ProcedureDate.ToUniversalTime(),
             Provider = request.Provider ?? "Care Team",
             Facility = request.Facility ?? "Clinic",
             Status = request.Status ?? "completed",
