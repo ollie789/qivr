@@ -23,19 +23,23 @@ public class EvaluationService : IEvaluationService
     {
         _logger.LogInformation("Creating evaluation for patient {PatientId}", dto.PatientId);
 
+        // Get patient to retrieve tenant ID
+        var patient = await _context.Users.FirstOrDefaultAsync(u => u.Id == dto.PatientId, cancellationToken);
+        if (patient == null)
+        {
+            throw new InvalidOperationException($"Patient {dto.PatientId} not found");
+        }
+
         var evaluation = new Evaluation
         {
             PatientId = dto.PatientId,
+            TenantId = patient.TenantId,
             EvaluationNumber = GenerateEvaluationNumber(),
             ChiefComplaint = dto.ChiefComplaint,
             Symptoms = dto.Symptoms,
             QuestionnaireResponses = dto.QuestionnaireResponses,
             Status = EvaluationStatus.Pending
         };
-
-        // Get tenant from context (in production, this would come from the HTTP context)
-        var demoTenant = await _context.Tenants.FirstAsync(t => t.Slug == "demo-clinic", cancellationToken);
-        evaluation.TenantId = demoTenant.Id;
 
         await _context.Evaluations.AddAsync(evaluation, cancellationToken);
 
