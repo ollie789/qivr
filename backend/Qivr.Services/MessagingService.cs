@@ -177,11 +177,22 @@ public class MessagingService : IMessagingService
         var providerProfileId = parentMessage?.ProviderProfileId ??
             await ResolveProviderProfileIdAsync(tenantId, senderId, messageDto.RecipientId);
 
+        // Get sender info
+        var sender = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == senderId && u.TenantId == tenantId);
+        
+        if (sender == null)
+        {
+            throw new ArgumentException("Sender not found");
+        }
+        
         var message = new Message
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             SenderId = senderId,
+            SenderName = $"{sender.FirstName} {sender.LastName}".Trim(),
+            SenderRole = sender.UserType.ToString(),
             DirectRecipientId = messageDto.RecipientId,
             DirectSubject = messageDto.Subject,
             Content = messageDto.Content,
