@@ -87,8 +87,9 @@ async function main() {
   
   // Step 4: Check current messages for patient
   console.log('4️⃣  Checking patient messages (before)...');
-  const messagesBefore = await apiCall('/patient/messages', patient.cookies);
-  const beforeCount = messagesBefore.data?.length || 0;
+  const messagesBefore = await apiCall('/messages', patient.cookies);
+  const beforeMessages = Array.isArray(messagesBefore.data) ? messagesBefore.data : (messagesBefore.data?.items || []);
+  const beforeCount = beforeMessages.length;
   console.log(`   📬 Patient has ${beforeCount} messages\n`);
   
   // Step 5: Clinician sends message to patient
@@ -110,23 +111,24 @@ async function main() {
   // Step 6: Check if patient received the message
   console.log('6️⃣  Checking patient messages (after)...');
   await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-  const messagesAfter = await apiCall('/patient/messages', patient.cookies);
-  const afterCount = messagesAfter.data?.length || 0;
-  const newMessage = messagesAfter.data?.find(m => m.subject?.includes(timestamp.toString()));
+  const messagesAfter = await apiCall('/messages', patient.cookies);
+  const messages = Array.isArray(messagesAfter.data) ? messagesAfter.data : (messagesAfter.data?.items || []);
+  const afterCount = messages.length;
+  const newMessage = messages.find(m => m.subject?.includes(timestamp.toString()) || m.directSubject?.includes(timestamp.toString()));
   
   console.log(`   📬 Patient now has ${afterCount} messages`);
   if (newMessage) {
-    console.log(`   ✅ New message received: "${newMessage.subject}"`);
+    console.log(`   ✅ New message received: "${newMessage.subject || newMessage.directSubject}"`);
   } else {
     console.log(`   ⚠️  Message not found yet (may need time to sync)`);
   }
   
   console.log('\n7️⃣  Testing document sharing...');
-  const docsBefore = await apiCall('/patient/documents', patient.cookies);
+  const docsBefore = await apiCall('/documents', patient.cookies);
   console.log(`   📄 Patient has ${docsBefore.data?.length || 0} documents`);
   
   console.log('\n8️⃣  Testing PROM assignment...');
-  const promsBefore = await apiCall('/patient/proms', patient.cookies);
+  const promsBefore = await apiCall('/proms', patient.cookies);
   console.log(`   📋 Patient has ${promsBefore.data?.length || 0} PROMs available`);
   
   console.log('\n📊 Summary:');
