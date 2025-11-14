@@ -183,14 +183,13 @@ public class MessagingService : IMessagingService
             TenantId = tenantId,
             SenderId = senderId,
             DirectRecipientId = messageDto.RecipientId,
-            Subject = messageDto.Subject,
+            DirectSubject = messageDto.Subject,
             Content = messageDto.Content,
-            MessageType = messageDto.MessageType ?? "General",
-            Priority = messageDto.Priority ?? "Normal",
+            DirectMessageType = messageDto.MessageType ?? "General",
+            DirectPriority = messageDto.Priority ?? "Normal",
             ParentMessageId = messageDto.ParentMessageId,
             RelatedAppointmentId = messageDto.RelatedAppointmentId,
             ProviderProfileId = providerProfileId,
-            // HasAttachments is now a computed property based on AttachmentId
             IsRead = false,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
