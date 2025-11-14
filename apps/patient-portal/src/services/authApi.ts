@@ -33,7 +33,7 @@ export interface AuthResponse {
 
 class AuthApiService {
   async signUp(data: SignUpRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/register', {
+    const response = await apiClient.post<AuthResponse>('/api/auth/register', {
       email: data.email,
       password: data.password,
       firstName: data.firstName,
@@ -46,7 +46,7 @@ class AuthApiService {
   }
 
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/login', {
+    const response = await apiClient.post<AuthResponse>('/api/auth/login', {
       email,
       password,
     });
@@ -54,16 +54,16 @@ class AuthApiService {
   }
 
   async getUserInfo(): Promise<UserInfo> {
-    const response = await apiClient.get<UserInfo>('/auth/user-info');
+    const response = await apiClient.get<UserInfo>('/api/auth/user-info');
     return response;
   }
 
   async logout(): Promise<void> {
-    await apiClient.post('/auth/logout');
+    await apiClient.post('/api/auth/logout');
   }
 
   async refreshToken(): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/refresh');
+    const response = await apiClient.post<AuthResponse>('/api/auth/refresh');
     return response;
   }
 }

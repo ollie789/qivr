@@ -1,7 +1,9 @@
 // Aligned with clinic dashboard auth system
 // Uses httpOnly cookies + X-Tenant-Id header pattern
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://clinic.qivr.pro/api';
+import { API_CONFIG } from '../config/api';
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 class ApiClient {
   private tenantId: string | null = null;
@@ -11,7 +13,9 @@ class ApiClient {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    // Normalize endpoint to always include /api prefix
+    const normalizedEndpoint = API_CONFIG.url(endpoint);
+    const url = `${API_BASE_URL}${normalizedEndpoint}`;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

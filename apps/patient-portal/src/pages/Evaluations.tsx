@@ -115,7 +115,7 @@ export const Evaluations = () => {
   const fetchEvaluations = async () => {
     setLoading(true);
     try {
-      const data = await apiClient.get<Evaluation[]>("/api/v1/evaluations");
+      const data = await apiClient.get<Evaluation[]>("/api/evaluations");
       setEvaluations(data);
     } catch (error) {
       console.error("Error fetching evaluations:", error);

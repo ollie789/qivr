@@ -10,7 +10,6 @@ import { AuthProvider } from './contexts/AuthContext';
 
 // App Content
 import { AppContent } from './AppContent';
-import { ThemeProvider } from '@qivr/design-system';
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -28,13 +27,11 @@ function App() {
   try {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <CssBaseline />
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-          <ReactQueryDevtools initialIsOpen={false} />
-        </ThemeProvider>
+        <CssBaseline />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     );
   } catch (error) {

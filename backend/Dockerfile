@@ -23,8 +23,8 @@ RUN dotnet publish "Qivr.Api.csproj" -c Release -o /app/publish /p:UseAppHost=fa
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.19 AS final
 WORKDIR /app
 
-# Install required packages
-RUN apk add --no-cache curl icu-libs icu-data-full
+# Install required packages (update package index first)
+RUN apk update && apk add --no-cache curl icu-libs icu-data-full tzdata
 
 # Create non-root user
 RUN addgroup -g 1000 -S qivr && \
@@ -36,7 +36,10 @@ COPY --from=publish --chown=qivr:qivr /app/publish .
 # Set environment variables
 ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
-    DOTNET_RUNNING_IN_CONTAINER=true
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

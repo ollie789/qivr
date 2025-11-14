@@ -11,7 +11,7 @@ import {
   PromTemplate,
 } from "../types";
 
-const PROM_API_BASE = "/api/v1/proms";
+const PROM_API_BASE = "/api/proms";
 
 type EnvelopeOrValue<T> = ApiEnvelope<T> | T;
 
