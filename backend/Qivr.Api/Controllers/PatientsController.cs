@@ -71,7 +71,7 @@ public class PatientsController : TenantAwareController
             }
             
             var patients = await _context.Users
-                .Where(u => u.TenantId == tenantId && u.Role == "Patient")
+                .Where(u => u.TenantId == tenantId && u.UserType == UserType.Patient)
                 .Where(u => 
                     (u.FirstName != null && u.FirstName.ToLower().Contains(searchLower)) ||
                     (u.LastName != null && u.LastName.ToLower().Contains(searchLower)) ||
@@ -137,7 +137,7 @@ public class PatientsController : TenantAwareController
         try
         {
             var query = _context.Users
-                .Where(u => u.TenantId == tenantId && u.Role == "Patient");
+                .Where(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
 
             // activeOnly filter removed - EmailVerified not in DB
 
@@ -232,7 +232,7 @@ public class PatientsController : TenantAwareController
         try
         {
             var query = _context.Users
-                .Where(u => u.TenantId == tenantId && u.Role == "Patient");
+                .Where(u => u.TenantId == tenantId && u.UserType == UserType.Patient);
 
             // activeOnly filter removed - EmailVerified not in DB
 
@@ -306,7 +306,7 @@ public class PatientsController : TenantAwareController
                 return Ok(cachedPatient);
             }
             var patient = await _context.Users
-                .Where(u => u.Id == patientId && u.TenantId == tenantId && u.Role == "Patient")
+                .Where(u => u.Id == patientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
                 .Select(u => new PatientDetailsDto
                 {
                     Id = u.Id,
@@ -417,7 +417,7 @@ public class PatientsController : TenantAwareController
         try
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == patientId && u.Role == "Patient" && !u.IsDeleted);
+                .FirstOrDefaultAsync(u => u.Id == patientId && u.UserType == UserType.Patient && !u.IsDeleted);
 
             if (user == null)
                 return NotFound();
@@ -470,7 +470,7 @@ public class PatientsController : TenantAwareController
         try
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == patientId && u.Role == "Patient" && !u.IsDeleted);
+                .FirstOrDefaultAsync(u => u.Id == patientId && u.UserType == UserType.Patient && !u.IsDeleted);
 
             if (user == null)
                 return NotFound();
