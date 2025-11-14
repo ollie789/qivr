@@ -411,10 +411,6 @@ public class AuthController : ControllerBase
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddDays(-1)
         };
-            SameSite = SameSiteMode.Lax,
-            Path = "/",
-            Expires = DateTimeOffset.UtcNow.AddDays(-1)
-        };
         
         Response.Cookies.Delete("accessToken", clearOptions);
         Response.Cookies.Delete("refreshToken", clearOptions);
