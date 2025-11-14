@@ -138,7 +138,7 @@ public class IntakeController : ControllerBase
                         insertCmd.CommandText = @"INSERT INTO qivr.users (
                                 id, tenant_id, cognito_sub, email, email_verified, phone_verified, first_name, last_name, phone, user_type, roles, created_at, updated_at
                             ) VALUES (
-                                @id, @tenant, @cognito, @email, false, false, @first, @last, @phone, 0, '[]', NOW(), NOW()
+                                @id, @tenant, @cognito, @email, false, false, @first, @last, @phone, 0, ARRAY[]::text[], NOW(), NOW()
                             ) RETURNING id";
                         var pId = insertCmd.CreateParameter(); pId.ParameterName = "@id"; pId.Value = patientId; insertCmd.Parameters.Add(pId);
                         var pT = insertCmd.CreateParameter(); pT.ParameterName = "@tenant"; pT.Value = tenantId; insertCmd.Parameters.Add(pT);
