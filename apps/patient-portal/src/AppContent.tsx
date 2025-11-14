@@ -9,6 +9,7 @@ import { AuthLayout } from './layouts/AuthLayout';
 import Dashboard from './pages/Dashboard';
 import { Evaluations } from './pages/Evaluations';
 import { EvaluationDetail } from './pages/EvaluationDetail';
+import { IntakeForm } from './pages/IntakeForm';
 import Appointments from './pages/Appointments';
 import { BookAppointment } from './pages/BookAppointment';
 import PROMEnhanced from './pages/PROMEnhanced';
@@ -62,7 +63,7 @@ export const AppContent: React.FC = () => {
           {/* Evaluations */}
           <Route path="/evaluations" element={<Evaluations />} />
           <Route path="/evaluations/:id" element={<EvaluationDetail />} />
-          <Route path="/evaluations/new" element={<Navigate to="https://widget.qivr.health" />} />
+          <Route path="/evaluations/new" element={<IntakeForm />} />
           
           {/* Appointments */}
           <Route path="/appointments" element={<Appointments />} />
