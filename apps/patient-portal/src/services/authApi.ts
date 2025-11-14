@@ -15,6 +15,7 @@ export interface LoginRequest {
 }
 
 export interface UserInfo {
+  id?: string;
   username: string;
   email: string;
   firstName: string;
