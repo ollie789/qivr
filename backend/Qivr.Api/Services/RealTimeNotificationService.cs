@@ -46,7 +46,7 @@ public class RealTimeNotificationService : IRealTimeNotificationService
                 Title = notification.Title,
                 Message = notification.Message,
                 Type = notification.Type,
-                Priority = Enum.Parse<NotificationPriority>(notification.Priority),
+                Priority = Enum.Parse<NotificationPriority>(notification.Priority, ignoreCase: true),
                 Data = notification.Data,
                 Channel = NotificationChannel.InApp,
                 CreatedAt = DateTime.UtcNow
@@ -88,7 +88,7 @@ public class RealTimeNotificationService : IRealTimeNotificationService
                     Title = notification.Title,
                     Message = notification.Message,
                     Type = notification.Type,
-                    Priority = Enum.Parse<NotificationPriority>(notification.Priority),
+                    Priority = Enum.Parse<NotificationPriority>(notification.Priority, ignoreCase: true),
                     Data = notification.Data,
                     Channel = NotificationChannel.InApp,
                     CreatedAt = createdAt
