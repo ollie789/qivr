@@ -21,7 +21,16 @@ public abstract class BaseApiController : ControllerBase
     {
         get
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            // First try to get the database user ID from the user_id claim (added during authentication)
+            var userIdClaim = User.FindFirst("user_id")?.Value;
+            
+            if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var dbUserId))
+            {
+                return dbUserId;
+            }
+            
+            // Fallback to Cognito sub for backwards compatibility
+            userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                 ?? User.FindFirst("sub")?.Value
                 ?? User.FindFirst("username")?.Value
                 ?? User.FindFirst("cognito:username")?.Value;
