@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 
 namespace Qivr.Api.Services;
@@ -147,7 +148,7 @@ public class ResourceAuthorizationService : IResourceAuthorizationService
             }
 
             // Allow Admin/Clinician to access all patients in their tenant
-            if ((user.Role == "Admin" || user.Role == "Clinician") && user.TenantId == patient.TenantId)
+            if ((user.UserType == UserType.Admin || user.UserType == UserType.Staff) && user.TenantId == patient.TenantId)
             {
                 return true;
             }
