@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Qivr.Infrastructure.Data;
 using Qivr.Services;
 
 namespace Qivr.Api.Controllers;
@@ -11,13 +13,16 @@ public class EvaluationsController : BaseApiController
 {
     private readonly IEvaluationService _evaluationService;
     private readonly ILogger<EvaluationsController> _logger;
+    private readonly QivrDbContext _context;
 
     public EvaluationsController(
         IEvaluationService evaluationService,
-        ILogger<EvaluationsController> logger)
+        ILogger<EvaluationsController> logger,
+        QivrDbContext context)
     {
         _evaluationService = evaluationService;
         _logger = logger;
+        _context = context;
     }
 
     /// <summary>
@@ -88,13 +93,25 @@ public class EvaluationsController : BaseApiController
         // If user is a patient, only return their evaluations
         if (User.IsInRole("Patient"))
         {
-            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (Guid.TryParse(userIdClaim, out var userId))
+            var cognitoId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation("Patient request - CognitoId: {CognitoId}", cognitoId);
+            
+            if (!string.IsNullOrEmpty(cognitoId))
             {
-                patientId = userId;
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.CognitoSub == cognitoId, cancellationToken);
+                if (user != null)
+                {
+                    _logger.LogInformation("Found user {UserId} for CognitoId {CognitoId}", user.Id, cognitoId);
+                    patientId = user.Id;
+                }
+                else
+                {
+                    _logger.LogWarning("No user found for CognitoId {CognitoId}", cognitoId);
+                }
             }
         }
         
+        _logger.LogInformation("Fetching evaluations for TenantId: {TenantId}, PatientId: {PatientId}", tenantId, patientId);
         var evaluations = await _evaluationService.GetEvaluationsAsync(tenantId, patientId, cancellationToken);
         
         // Transform to match frontend expectations
