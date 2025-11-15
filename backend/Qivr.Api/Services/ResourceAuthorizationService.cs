@@ -137,6 +137,21 @@ public class ResourceAuthorizationService : IResourceAuthorizationService
                 return true;
             }
 
+            // Get user and patient to check roles and tenant
+            var user = await _context.Users.FindAsync(userId);
+            var patient = await _context.Users.FindAsync(patientId);
+            
+            if (user == null || patient == null)
+            {
+                return false;
+            }
+
+            // Allow Admin/Clinician to access all patients in their tenant
+            if ((user.Role == "Admin" || user.Role == "Clinician") && user.TenantId == patient.TenantId)
+            {
+                return true;
+            }
+
             // Check if user is a practitioner with access to this patient
             var isPractitioner = await _context.Appointments
                 .AnyAsync(a => a.PatientId == patientId && a.ProviderId == userId);
