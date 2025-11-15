@@ -222,6 +222,13 @@ builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationSer
 builder.Services.AddScoped<IAppointmentWaitlistService, AppointmentWaitlistService>();
 builder.Services.AddScoped<IMessagingService, MessagingService>();
 
+// Document Management Services
+builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
+builder.Services.AddAWSService<Amazon.Textract.IAmazonTextract>();
+builder.Services.AddScoped<IS3Service, S3Service>();
+builder.Services.AddScoped<ITextractService, TextractService>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
+
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR(options =>
 {

@@ -53,6 +53,7 @@ public class QivrDbContext : DbContext
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<BrandTheme> BrandThemes => Set<BrandTheme>();
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentAuditLog> DocumentAuditLogs => Set<DocumentAuditLog>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
