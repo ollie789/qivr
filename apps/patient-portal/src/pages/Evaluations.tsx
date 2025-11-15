@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Box,
   Card,
@@ -100,8 +101,22 @@ const mockEvaluations: Evaluation[] = [
 
 export const Evaluations = () => {
   const navigate = useNavigate();
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: evaluations = [], isLoading: loading } = useQuery({
+    queryKey: ['evaluations'],
+    queryFn: async () => {
+      try {
+        const data = await apiClient.get<Evaluation[]>("/api/evaluations");
+        console.log('Evaluations fetched:', data);
+        return data;
+      } catch (error) {
+        console.error("Error fetching evaluations:", error);
+        return mockEvaluations;
+      }
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnWindowFocus: true,
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [page, setPage] = useState(0);
@@ -109,24 +124,6 @@ export const Evaluations = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedEvaluation, setSelectedEvaluation] =
     useState<Evaluation | null>(null);
-
-  useEffect(() => {
-    fetchEvaluations();
-  }, []);
-
-  const fetchEvaluations = async () => {
-    setLoading(true);
-    try {
-      const data = await apiClient.get<Evaluation[]>("/api/evaluations");
-      setEvaluations(data);
-    } catch (error) {
-      console.error("Error fetching evaluations:", error);
-      // Fallback to mock data if API fails
-      setEvaluations(mockEvaluations);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);

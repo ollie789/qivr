@@ -65,6 +65,7 @@ import {
   ExpandMore,
 } from "@mui/icons-material";
 import { promApi, PromTemplateQuestion } from "../../../services/promApi";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Types
 interface PromQuestion {
@@ -390,6 +391,7 @@ const SortableQuestionItem: React.FC<{
 
 // Main Component
 export const PromBuilder: React.FC = () => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(0);
   const [template, setTemplate] = useState<PromTemplate>({
     id: "",
@@ -572,6 +574,8 @@ export const PromBuilder: React.FC = () => {
       const res = await promApi.createTemplate(payload);
       console.log("Template saved successfully:", res);
       alert(`Template "${template.name}" saved successfully!`);
+      
+      queryClient.invalidateQueries({ queryKey: ['prom-templates'] });
 
       // Reset form after successful save
       setTemplate({

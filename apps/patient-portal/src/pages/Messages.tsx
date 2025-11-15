@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { fetchMessages, markAsRead, sendMessage, type Message, type SendMessageRequest } from '../services/messagesApi';
 
 export default function MessagesPage() {
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,7 @@ export default function MessagesPage() {
     setSelectedMessage(message);
     if (!message.read) {
       await markAsRead(message.id);
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
       setMessages(prev => prev.map(m => m.id === message.id ? { ...m, read: true } : m));
     }
   };
@@ -40,6 +43,7 @@ export default function MessagesPage() {
   const handleSendMessage = async (request: SendMessageRequest) => {
     try {
       await sendMessage(request);
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
       setShowCompose(false);
       setReplyTo(null);
       await loadMessages();

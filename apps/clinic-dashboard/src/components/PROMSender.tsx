@@ -54,7 +54,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, addDays } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { promApi, PromTemplateDetail, PromTemplateSummary } from '../services/promApi';
 import { patientApi, type Patient, type PatientListResponse } from '../services/patientApi';
 
@@ -73,6 +73,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
   preSelectedPatientId,
   preSelectedTemplateId,
 }) => {
+  const queryClient = useQueryClient();
   const [activeStep, setActiveStep] = useState(0);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
     preSelectedTemplateId || ''
@@ -184,6 +185,9 @@ const PROMSender: React.FC<PROMSenderProps> = ({
       await Promise.all(promises);
 
       console.log('PROM sent successfully to', selectedPatients.length, 'patients');
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['prom-responses'] });
 
       // Show success message and complete
       if (onComplete) {

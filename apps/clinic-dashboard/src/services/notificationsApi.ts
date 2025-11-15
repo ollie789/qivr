@@ -212,8 +212,8 @@ class NotificationsApi {
   }
 
   subscribe(
-    onNotification: (notification: NotificationDetail) => void,
-    onError?: (error: Event) => void,
+    _onNotification: (notification: NotificationDetail) => void,
+    _onError?: (error: Event) => void,
   ) {
     // SSE stream disabled - endpoint not implemented
     console.warn('Real-time notifications stream not available');

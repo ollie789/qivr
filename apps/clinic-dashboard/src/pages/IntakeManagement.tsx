@@ -83,8 +83,9 @@ const IntakeManagement: React.FC = () => {
         throw err;
       }
     },
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
     enabled: canMakeApiCalls,
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
   
   const intakes = data?.data || [];

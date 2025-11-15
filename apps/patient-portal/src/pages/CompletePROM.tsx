@@ -31,6 +31,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   fetchPromInstance as fetchPromInstanceById,
   fetchPromTemplate,
@@ -46,6 +47,7 @@ import type {
 export const CompletePROM = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -158,6 +160,8 @@ export const CompletePROM = () => {
 
       await submitPromAnswers(id, responses);
 
+      queryClient.invalidateQueries({ queryKey: ['prom'] });
+      
       setSuccess(true);
 
       // Redirect after 2 seconds

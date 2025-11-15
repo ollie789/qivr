@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, TextField, Typography, Stepper, Step, StepLabel, Paper, CircularProgress } from '@mui/material';
 import { useSnackbar } from 'notistack';
+import { useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/api-client';
 
 const steps = ['Basic Info', 'Chief Complaint', 'Symptoms', 'Review'];
@@ -9,6 +10,7 @@ const steps = ['Basic Info', 'Chief Complaint', 'Symptoms', 'Review'];
 export const IntakeForm = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const queryClient = useQueryClient();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export const IntakeForm = () => {
     // Get current user info
     const fetchUserInfo = async () => {
       try {
-        const userInfo = await apiClient.get('/api/auth/user-info');
+        const userInfo = await apiClient.get('/api/auth/user-info') as { id: string };
         setUserId(userInfo.id);
       } catch (error) {
         enqueueSnackbar('Failed to load user info', { variant: 'error' });
@@ -33,12 +35,15 @@ export const IntakeForm = () => {
       }
     };
     fetchUserInfo();
-  }, []);
+  }, [enqueueSnackbar]);
 
   const handleNext = () => setActiveStep((prev) => prev + 1);
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    console.log('Submit clicked, userId:', userId);
+    
     if (!userId) {
       enqueueSnackbar('User not authenticated', { variant: 'error' });
       return;
@@ -47,7 +52,13 @@ export const IntakeForm = () => {
     try {
       const symptoms = formData.symptoms.split(',').map(s => s.trim()).filter(Boolean);
       
-      await apiClient.post('/api/evaluations', {
+      console.log('Submitting evaluation:', {
+        patientId: userId,
+        chiefComplaint: formData.chiefComplaint,
+        symptoms
+      });
+      
+      const result = await apiClient.post('/api/evaluations', {
         patientId: userId,
         chiefComplaint: formData.chiefComplaint,
         symptoms,
@@ -59,6 +70,11 @@ export const IntakeForm = () => {
         painMaps: []
       });
 
+      console.log('Evaluation created:', result);
+      
+      queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+      queryClient.invalidateQueries({ queryKey: ['intakeManagement'] });
+      
       enqueueSnackbar('Intake submitted successfully!', { variant: 'success' });
       navigate('/evaluations');
     } catch (error) {
@@ -170,6 +186,7 @@ export const IntakeForm = () => {
           {activeStep === steps.length - 1 ? (
             <Button 
               variant="contained" 
+              type="button"
               onClick={handleSubmit}
               disabled={!formData.chiefComplaint}
             >

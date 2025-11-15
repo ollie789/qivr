@@ -1,5 +1,4 @@
 import apiClient from '../lib/api-client';
-import { EvaluationResponse } from '../types/api';
 
 export interface IntakeSubmission {
   id: string;
@@ -84,7 +83,8 @@ export interface IntakeFilters {
   limit?: number;
 }
 
-function mapEvaluationToIntake(e: EvaluationResponse): IntakeSubmission {
+function mapEvaluationToIntake(e: any): IntakeSubmission {
+  console.log('Mapping evaluation:', e);
   const severityMap: Record<string, IntakeSubmission['severity']> = {
     urgent: 'critical',
     high: 'high',
@@ -92,6 +92,10 @@ function mapEvaluationToIntake(e: EvaluationResponse): IntakeSubmission {
     low: 'low',
   };
   const statusMap: Record<string, IntakeSubmission['status']> = {
+    pending: 'pending',
+    reviewed: 'reviewing',
+    triaged: 'approved',
+    archived: 'rejected',
     Pending: 'pending',
     Reviewed: 'reviewing',
     Triaged: 'approved',
@@ -99,13 +103,13 @@ function mapEvaluationToIntake(e: EvaluationResponse): IntakeSubmission {
   };
   return {
     id: e.id,
-    patientName: e.patientName,
+    patientName: e.patientName || 'Unknown Patient',
     email: e.patientEmail || 'n/a@unknown',
     phone: e.patientPhone || '',
-    submittedAt: e.createdAt,
-    conditionType: e.chiefComplaint,
+    submittedAt: e.date || e.createdAt,
+    conditionType: e.chiefComplaint || 'Not specified',
     severity: severityMap[(e.urgency || '').toLowerCase()] || 'medium',
-    status: statusMap[e.status] || 'pending',
+    status: statusMap[e.status?.toLowerCase()] || 'pending',
     painLevel: (e.painMaps && e.painMaps[0]?.painIntensity) || 5,
     symptoms: e.symptoms || [],
   };
@@ -115,8 +119,12 @@ export const intakeApi = {
   async getIntakes(filters?: IntakeFilters): Promise<{ data: IntakeSubmission[]; total: number }> {
     try {
       const response = await apiClient.get('/api/evaluations', { params: filters });
-      const list = Array.isArray(response.data) ? response.data : [];
+      console.log('Raw evaluations response:', response);
+      // Response is already the array, not wrapped in .data
+      const list = Array.isArray(response) ? response : [];
+      console.log('Evaluations list:', list);
       const data = list.map(mapEvaluationToIntake);
+      console.log('Mapped intakes:', data);
       return { data, total: data.length };
     } catch (error) {
       console.error('Error fetching intakes:', error);

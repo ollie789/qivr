@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   deriveDashboardStats,
   fetchDashboardOverview,
-  fetchHealthSummary,
   fetchPendingProms,
   mapUpcomingAppointments,
 } from "../../../services/dashboardApi";
@@ -54,8 +53,7 @@ export function useDashboardData(limit = 3) {
     pendingProms: pendingPromsQuery.data ?? [],
     isLoading:
       overviewQuery.isLoading ||
-      pendingPromsQuery.isLoading ||
-      healthSummaryQuery.isLoading,
+      pendingPromsQuery.isLoading,
     error,
   };
 }

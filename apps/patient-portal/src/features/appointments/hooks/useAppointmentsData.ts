@@ -18,6 +18,8 @@ export function useAppointmentsData(filters: AppointmentFilters) {
   const query = useQuery<AppointmentDto[]>({
     queryKey: ['appointments', filters],
     queryFn: () => fetchAppointments(filters),
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   const cancelMutation = useMutation({

@@ -314,12 +314,17 @@ const mapImmunization = (dto: ImmunizationDto): Immunization => ({
 
 class MedicalRecordsApi {
   async getSummary(patientId: string): Promise<MedicalSummary | null> {
+    console.log('getSummary called with patientId:', patientId);
     const response = await apiClient.get<ApiEnvelope<MedicalSummaryDto | null> | MedicalSummaryDto | null>(
       '/api/medical-records',
       { patientId },
     );
+    console.log('getSummary raw response:', response);
     const dto = unwrapEnvelope(response);
-    return mapSummary(dto);
+    console.log('getSummary unwrapped dto:', dto);
+    const mapped = mapSummary(dto);
+    console.log('getSummary mapped result:', mapped);
+    return mapped;
   }
 
   async getVitals(patientId: string): Promise<VitalSign[]> {

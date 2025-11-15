@@ -23,7 +23,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
   VideoCall as VideoCallIcon,
   LocationOn as LocationIcon,
-  CheckCircle as CheckIcon,
 } from '@mui/icons-material';
 import { postWithAuth } from '@qivr/http';
 import { StepperDialog, FormSection, FormRow, TimeSlotPicker, ProviderCard } from '@qivr/design-system';

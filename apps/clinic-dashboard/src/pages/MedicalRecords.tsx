@@ -160,7 +160,9 @@ const MedicalRecords: React.FC = () => {
     queryKey: ['medicalSummary', selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return null;
-      return medicalRecordsApi.getSummary(selectedPatientId);
+      const result = await medicalRecordsApi.getSummary(selectedPatientId);
+      console.log('Medical summary response:', result);
+      return result;
     },
     enabled: canMakeApiCalls && !!selectedPatientId,
   });

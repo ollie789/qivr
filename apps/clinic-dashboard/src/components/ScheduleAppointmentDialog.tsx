@@ -278,7 +278,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
       onNext={() => setActiveStep(prev => prev + 1)}
       onBack={() => setActiveStep(prev => prev - 1)}
       onComplete={handleSchedule}
-      isStepValid={isStepValid()}
+      isStepValid={Boolean(isStepValid())}
       loading={loading}
       completeLabel="Schedule Appointment"
     >

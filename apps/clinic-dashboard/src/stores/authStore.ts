@@ -74,6 +74,12 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Failed to load user info');
           }
 
+          // Block patients from accessing clinic dashboard
+          if (userInfo.role?.toLowerCase() === 'patient') {
+            await authApi.logout();
+            throw new Error('Patients cannot access the clinic dashboard. Please use the patient portal.');
+          }
+
           const user = mapUserInfo(userInfo);
           set({ 
             user, 
@@ -107,6 +113,18 @@ export const useAuthStore = create<AuthState>()(
         try {
           const userInfo = await authApi.getUserInfo();
           if (userInfo) {
+            // Block patients from accessing clinic dashboard
+            if (userInfo.role?.toLowerCase() === 'patient') {
+              await authApi.logout();
+              set({ 
+                user: null, 
+                token: null,
+                isAuthenticated: false,
+                activeTenantId: null,
+              });
+              throw new Error('Patients cannot access the clinic dashboard. Please use the patient portal.');
+            }
+
             const user = mapUserInfo(userInfo);
             set({ 
               user, 

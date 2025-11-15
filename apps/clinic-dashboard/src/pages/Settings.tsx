@@ -384,6 +384,7 @@ export default function Settings() {
       await api.post('/api/settings/clinic', settings.clinic);
       await api.post('/api/settings/operations', settings.operations);
       
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
       enqueueSnackbar('Settings saved successfully', { variant: 'success' });
       setEditMode(false);
     } catch (error) {

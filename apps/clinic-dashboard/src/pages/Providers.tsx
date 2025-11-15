@@ -18,11 +18,13 @@ import {
   Chip
 } from '@mui/material';
 import { Add, Edit, Delete, Person } from '@mui/icons-material';
+import { useQueryClient } from '@tanstack/react-query';
 import { providerApi, Provider, CreateProviderData, UpdateProviderData } from '../services/providerApi';
 import { useAuthStore } from '../stores/authStore';
 import { PageHeader, FlexBetween, LoadingSpinner } from '@qivr/design-system';
 
 const Providers: React.FC = () => {
+  const queryClient = useQueryClient();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +108,7 @@ const Providers: React.FC = () => {
         await providerApi.createProvider(formData as CreateProviderData);
       }
       
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
       handleCloseDialog();
       loadProviders();
     } catch (err) {
@@ -119,6 +122,7 @@ const Providers: React.FC = () => {
 
     try {
       await providerApi.deleteProvider(providerId);
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
       loadProviders();
     } catch (err) {
       setError('Failed to delete provider');
