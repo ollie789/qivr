@@ -1,46 +1,59 @@
-# Scripts Directory
+# Scripts
 
-## Main Scripts (in root)
-- `install.sh` - Initial setup and dependency installation
-- `start-all.sh` - Start all services (backend API and frontend apps)
-- `stop-all.sh` - Stop all running services
+Essential utility scripts for Qivr platform.
 
-## Development Scripts
-- `dev-migrate.sh` - Run database migrations
-- `manage-dev-db.sh` - Manage local PostgreSQL database
-- `test-auth-db.sh` - Test database authentication
+## 🧪 Testing
 
-## Test Scripts (in tests/)
-- `test-api-direct.mjs` - Direct API testing
-- `test-auth-flow.mjs` - Authentication flow testing
-- `test-all-endpoints.sh` - Test all API endpoints
-- `test-api-migration.ts` - API migration testing
-- `run-api-tests.sh` - Run API test suite
-
-## Archive Directory
-Contains deprecated scripts related to:
-- AWS Cognito setup (now using DevAuth for local development)
-- Old startup scripts
-- Legacy configuration scripts
-
-## Usage
-
-### Initial Setup
+### Main Test Suite
 ```bash
-./install.sh
+# Run comprehensive E2E tests
+node scripts/tests/test-live-system.mjs
+
+# Or use npm script
+npm run test
 ```
 
-### Start Development Environment
+## 🚀 Deployment
+
+### Backend Deployment
 ```bash
-./start-all.sh
+# Deploy backend API to ECS
+./scripts/deploy-backend.sh
 ```
 
-### Stop All Services
+### Full Deployment
 ```bash
-./stop-all.sh
+# Deploy all components
+./scripts/deploy.sh
 ```
 
-### Run Database Migrations
+## 🗄️ Database
+
+### Development Database
 ```bash
+# Manage local development database
+./scripts/manage-dev-db.sh
+
+# Run migrations
 ./scripts/dev-migrate.sh
+
+# Seed development data
+./scripts/seed-dev-data.sh
 ```
+
+## 📦 Deployment Scripts
+
+- `deploy.sh` - Full deployment (frontend + backend)
+- `deploy-backend.sh` - Backend API deployment only
+- `deployment/` - Deployment utilities and configurations
+
+## 🗃️ Database Scripts
+
+- `manage-dev-db.sh` - Local database management
+- `dev-migrate.sh` - Run database migrations
+- `seed-dev-data.sh` - Seed development data
+- `database/` - Database-specific scripts
+
+## 🧹 Cleanup
+
+All old test scripts, audit scripts, and debug utilities have been removed. Only production-ready scripts remain.

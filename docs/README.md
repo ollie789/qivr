@@ -1,29 +1,57 @@
-# QIVR Documentation Home
+# Qivr Documentation
 
-Welcome to the central hub for product, engineering, and operations references. Each guide below stays intentionally concise and points to the source files or scripts you need when digging deeper.
+## 📚 Essential Documentation
 
-## What do you need?
+### Getting Started
+- [Main README](../README.md) - Project overview and quick start
+- [Deployment Guide](DEPLOYMENT.md) - Production deployment instructions
+- [Testing Guide](testing.md) - Running tests and test suite
 
-| Area | Start Here | Highlights |
-| --- | --- | --- |
-| New machine or clean workspace | [setup.md](./setup.md) | Prerequisites, environment flags, service ports, quick start commands |
-| Understand the system | [architecture.md](./architecture.md) | Backend solution layout, React app structure, shared packages, data flow |
-| Day-to-day development | [development.md](./development.md) | Turbo/NPM scripts, coding conventions, branching, useful tooling |
-| Authentication choices | [authentication.md](./authentication.md) | Dev auth defaults, Cognito integration, switching modes |
-| Running tests | [testing.md](./testing.md) | .NET, React, end-to-end scripts, recommended coverage cadence |
-| Operating in local/hosted envs | [operations.md](./operations.md) | Docker helpers, migrations, logs, deployment outline, break/fix playbooks |
-| Security expectations | [security.md](./security.md) | Secrets management, auth configuration, review cadence |
+### Architecture & Patterns
+- [MVP Milestone](MVP-MILESTONE.md) - Complete architecture overview and feature list
+- [React Query Patterns](REACT-QUERY-PATTERNS.md) - State management best practices
+- [Cache Invalidation](CACHE-INVALIDATION-FIX.md) - Cache management implementation
+- [Database Schema](DATABASE-SCHEMA.md) - Database structure and relationships
 
-Additional references:
-- **Root** – [README.md](../README.md), [AGENTS.md](../AGENTS.md), [CHANGELOG.md](../CHANGELOG.md)
-- **Cognito appendix** – [AWS_COGNITO_SETUP.md](./AWS_COGNITO_SETUP.md)
-- **Historical context** – archival notes live under [docs/archive/](./archive)
+### Quick References
+- [Quick Reference](QUICK-REFERENCE.md) - Common commands and workflows
+- [API Routes](API-ROUTES.md) - API endpoint documentation
 
-## Contributing to the docs
+### Development Guides
+- [Authentication](authentication.md) - Auth flow and Cognito setup
+- [Development Setup](development.md) - Local development environment
+- [Operations](operations.md) - Production operations guide
+- [Security](security.md) - Security best practices
 
-1. Keep updates in the closest relevant file; avoid duplicating the same instructions across documents.
-2. If a document becomes predominantly historical or speculative, move it to `docs/archive/` with a short note.
-3. Cross-reference scripts or source files using relative paths so readers can jump straight into the codebase.
-4. Append a short _Last updated_ note when materially changing guidance that others rely on.
+## 🏗️ Application Documentation
 
-_Questions or stale sections? Raise an issue or leave a TODO block so we know to revisit._
+### Frontend Applications
+- [Clinic Dashboard](../apps/clinic-dashboard/README.md)
+- [Patient Portal](../apps/patient-portal/README.md)
+
+### Backend
+- [Backend API](../backend/README.md)
+
+### Infrastructure
+- [AWS Infrastructure](../aws/README.md)
+- [Infrastructure Setup](../infrastructure/README.md)
+
+### Database
+- [Database Documentation](../database/README.md)
+
+## 🧪 Testing
+
+Main test suite: `scripts/tests/test-live-system.mjs`
+
+Run tests:
+```bash
+npm run test
+# or
+node scripts/tests/test-live-system.mjs
+```
+
+## 📝 Notes
+
+All archived documentation, old migration guides, and development session logs have been removed to keep the documentation clean and focused on current production architecture.
+
+For historical context, refer to git history.
