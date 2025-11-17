@@ -2,7 +2,7 @@ using Qivr.Core.Common;
 
 namespace Qivr.Core.Entities;
 
-public class Document : TenantEntity, IAuditable
+public class Document : TenantEntity
 {
     public Guid PatientId { get; set; }
     public Guid UploadedBy { get; set; }
