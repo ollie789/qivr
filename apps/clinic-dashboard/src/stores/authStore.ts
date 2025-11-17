@@ -27,8 +27,11 @@ interface AuthState {
 }
 
 const mapUserInfo = (info: AuthUserInfo): User => {
+  // Handle case-insensitive username field
+  const username = info.username || (info as any).Username;
+  
   // Validate required fields
-  if (!info.username) {
+  if (!username) {
     throw new Error('Username is required for authentication');
   }
   if (!info.email) {
@@ -45,7 +48,7 @@ const mapUserInfo = (info: AuthUserInfo): User => {
   const validRoles: User['role'][] = ['admin', 'practitioner', 'receptionist', 'manager'];
 
   return {
-    id: info.username,
+    id: username,
     name,
     email: info.email,
     tenantId: info.tenantId,
