@@ -35,6 +35,7 @@ const Signup = lazy(() => import('./pages/Signup'));
 const ClinicRegistration = lazy(() => import('./pages/ClinicRegistration'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Documents = lazy(() => import('./pages/Documents'));
+const DocumentUpload = lazy(() => import('./pages/DocumentUpload'));
 const MedicalRecords = lazy(() => import('./pages/MedicalRecords'));
 
 // NOTE: Theme now provided by @qivr/design-system (see QivrThemeProvider usage).
@@ -107,6 +108,7 @@ function App() {
                     <Route path="patients/:id" element={<PatientDetail />} />
                     <Route path="messages" element={<Messages />} />
                     <Route path="documents" element={<Documents />} />
+                    <Route path="documents/upload" element={<DocumentUpload />} />
                     <Route path="medical-records" element={<MedicalRecords />} />
                     <Route path="prom" element={<PROM />} />
                     <Route path="analytics" element={<Analytics />} />

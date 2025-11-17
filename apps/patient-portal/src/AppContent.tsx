@@ -21,6 +21,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import { ConfirmEmail } from './pages/ConfirmEmail';
 import MedicalRecordsEnhanced from './pages/MedicalRecordsEnhanced';
 import DocumentsEnhanced from './pages/DocumentsEnhanced';
+import DocumentChecklist from './pages/DocumentChecklist';
 import AnalyticsEnhanced from './pages/AnalyticsEnhanced';
 
 // Auth
@@ -56,6 +57,7 @@ export const AppContent: React.FC = () => {
           
           {/* Documents */}
           <Route path="/documents" element={<DocumentsEnhanced />} />
+          <Route path="/documents/checklist" element={<DocumentChecklist />} />
           
           {/* Analytics */}
           <Route path="/analytics" element={<AnalyticsEnhanced />} />
