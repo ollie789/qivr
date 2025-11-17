@@ -117,22 +117,41 @@ export default function DocumentUpload() {
   const canUpload = selectedFile && selectedPatient && !uploadMutation.isPending;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Upload Document
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Upload patient documents with automatic OCR extraction
-      </Typography>
+    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight={600} gutterBottom>
+          📄 Upload Document
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Upload patient documents with automatic OCR extraction and intelligent classification
+        </Typography>
+      </Box>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
+        <Grid item xs={12} lg={8}>
+          <Paper sx={{ p: 4, borderRadius: 2, boxShadow: 3 }}>
             {uploadedDocument ? (
               <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                  <CheckCircle color="success" />
-                  <Typography variant="h6">Upload Complete</Typography>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 2, 
+                  mb: 3,
+                  p: 2,
+                  bgcolor: 'success.50',
+                  borderRadius: 2,
+                  border: '2px solid',
+                  borderColor: 'success.main'
+                }}>
+                  <CheckCircle color="success" sx={{ fontSize: 40 }} />
+                  <Box>
+                    <Typography variant="h5" fontWeight={600}>
+                      Upload Complete!
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Document processed successfully
+                    </Typography>
+                  </Box>
                 </Box>
 
                 <OCRResultsViewer document={uploadedDocument} />
@@ -140,12 +159,14 @@ export default function DocumentUpload() {
                 <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
                   <Button
                     variant="contained"
+                    size="large"
                     onClick={() => navigate('/documents')}
                   >
                     View All Documents
                   </Button>
                   <Button
                     variant="outlined"
+                    size="large"
                     onClick={handleReset}
                   >
                     Upload Another
@@ -154,49 +175,94 @@ export default function DocumentUpload() {
               </Box>
             ) : (
               <>
-                <Typography variant="h6" gutterBottom>
-                  1. Select Patient
-                </Typography>
-                <Autocomplete
-                  options={patients}
-                  getOptionLabel={(option) => `${option.firstName} ${option.lastName} - ${option.email}`}
-                  value={selectedPatient}
-                  onChange={(_, newValue) => setSelectedPatient(newValue)}
-                  loading={loadingPatients}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Search Patient"
-                      placeholder="Type to search..."
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {loadingPatients ? <CircularProgress size={20} /> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                  sx={{ mb: 3 }}
-                />
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ 
+                      bgcolor: 'primary.main', 
+                      color: 'white', 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: '50%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      fontWeight: 700
+                    }}>
+                      1
+                    </Box>
+                    Select Patient
+                  </Typography>
+                  <Autocomplete
+                    options={patients}
+                    getOptionLabel={(option) => `${option.firstName} ${option.lastName} - ${option.email}`}
+                    value={selectedPatient}
+                    onChange={(_, newValue) => setSelectedPatient(newValue)}
+                    loading={loadingPatients}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Search Patient"
+                        placeholder="Type name or email to search..."
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingPatients ? <CircularProgress size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                    sx={{ mt: 2 }}
+                  />
+                </Box>
 
-                <Typography variant="h6" gutterBottom>
-                  2. Upload File
-                </Typography>
-                <DocumentUploader
-                  onFileSelect={setSelectedFile}
-                  disabled={!selectedPatient}
-                />
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ 
+                      bgcolor: selectedPatient ? 'primary.main' : 'grey.300', 
+                      color: 'white', 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: '50%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      fontWeight: 700
+                    }}>
+                      2
+                    </Box>
+                    Upload File
+                  </Typography>
+                  <Box sx={{ mt: 2 }}>
+                    <DocumentUploader
+                      onFileSelect={setSelectedFile}
+                      disabled={!selectedPatient}
+                    />
+                  </Box>
+                </Box>
 
                 {selectedFile && (
-                  <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      3. Document Details
+                  <Box>
+                    <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ 
+                        bgcolor: 'primary.main', 
+                        color: 'white', 
+                        width: 32, 
+                        height: 32, 
+                        borderRadius: '50%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontWeight: 700
+                      }}>
+                        3
+                      </Box>
+                      Document Details
                     </Typography>
 
-                    <Grid container spacing={2}>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
                       <Grid item xs={12} sm={6}>
                         <TextField
                           select
@@ -219,6 +285,7 @@ export default function DocumentUpload() {
                             <Checkbox
                               checked={isUrgent}
                               onChange={(e) => setIsUrgent(e.target.checked)}
+                              color="error"
                             />
                           }
                           label="Mark as Urgent"
@@ -238,20 +305,23 @@ export default function DocumentUpload() {
                       </Grid>
                     </Grid>
 
-                    <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                    <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
                       <Button
                         variant="contained"
                         size="large"
-                        startIcon={uploadMutation.isPending ? <CircularProgress size={20} /> : <CloudUpload />}
+                        startIcon={uploadMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <CloudUpload />}
                         onClick={handleUpload}
                         disabled={!canUpload}
+                        sx={{ px: 4, py: 1.5, fontWeight: 600 }}
                       >
                         {uploadMutation.isPending ? 'Uploading...' : 'Upload Document'}
                       </Button>
                       <Button
                         variant="outlined"
+                        size="large"
                         onClick={handleReset}
                         disabled={uploadMutation.isPending}
+                        sx={{ px: 4, py: 1.5 }}
                       >
                         Reset
                       </Button>
@@ -263,27 +333,45 @@ export default function DocumentUpload() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, bgcolor: 'info.50' }}>
-            <Typography variant="h6" gutterBottom>
+        <Grid item xs={12} lg={4}>
+          <Paper sx={{ p: 3, bgcolor: 'primary.50', borderRadius: 2, boxShadow: 2, border: '1px solid', borderColor: 'primary.100' }}>
+            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               📋 Upload Guidelines
             </Typography>
-            <Typography variant="body2" paragraph>
-              <strong>Supported Formats:</strong><br />
-              PDF, JPG, PNG, DOC, DOCX
-            </Typography>
-            <Typography variant="body2" paragraph>
-              <strong>Max File Size:</strong><br />
-              50 MB per file
-            </Typography>
-            <Typography variant="body2" paragraph>
-              <strong>OCR Processing:</strong><br />
-              Documents are automatically scanned to extract patient information, dates, and identifiers.
-            </Typography>
-            <Typography variant="body2" paragraph>
-              <strong>Security:</strong><br />
-              All files are encrypted at rest and in transit. Access is logged for audit purposes.
-            </Typography>
+            <Box sx={{ mt: 2, '& > *': { mb: 2 } }}>
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  Supported Formats
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  PDF, JPG, PNG, DOC, DOCX
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  Max File Size
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  50 MB per file
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  OCR Processing
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Documents are automatically scanned to extract patient information, dates, and identifiers.
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  Security
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  All files are encrypted at rest and in transit. Access is logged for audit purposes.
+                </Typography>
+              </Box>
+            </Box>
           </Paper>
         </Grid>
       </Grid>

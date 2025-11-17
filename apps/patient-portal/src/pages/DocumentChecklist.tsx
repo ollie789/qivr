@@ -81,34 +81,51 @@ export default function DocumentChecklist() {
   const progress = requiredCount > 0 ? (requiredCompleted / requiredCount) * 100 : 0;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Document Checklist
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Upload required documents before your appointment
-      </Typography>
+    <Box sx={{ p: 3, maxWidth: 1000, mx: 'auto' }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight={600} gutterBottom>
+          📋 Document Checklist
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Upload required documents before your appointment
+        </Typography>
+      </Box>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ p: 4, mb: 3, borderRadius: 2, boxShadow: 3, bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.200' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">
+          <Typography variant="h6" fontWeight={600}>
             Progress: {requiredCompleted} of {requiredCount} required documents
           </Typography>
           <Chip
-            label={progress === 100 ? 'Complete' : 'In Progress'}
+            label={progress === 100 ? '✓ Complete' : 'In Progress'}
             color={progress === 100 ? 'success' : 'warning'}
+            sx={{ fontWeight: 600, px: 2 }}
           />
         </Box>
-        <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 1 }} />
+        <LinearProgress 
+          variant="determinate" 
+          value={progress} 
+          sx={{ 
+            height: 10, 
+            borderRadius: 2,
+            bgcolor: 'grey.200',
+            '& .MuiLinearProgress-bar': {
+              borderRadius: 2
+            }
+          }} 
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          {completedCount} of {requiredDocs.length} total documents uploaded
+        </Typography>
       </Paper>
 
       {progress < 100 && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }} icon={<Info />}>
           <strong>Important:</strong> Please upload all required documents at least 24 hours before your appointment.
         </Alert>
       )}
 
-      <Paper>
+      <Paper sx={{ borderRadius: 2, boxShadow: 2 }}>
         <List>
           {isLoading ? (
             <ListItem>
@@ -120,40 +137,58 @@ export default function DocumentChecklist() {
                 key={doc.type}
                 divider={index < requiredDocs.length - 1}
                 sx={{
+                  py: 3,
                   bgcolor: doc.uploaded ? 'success.50' : 'inherit',
-                  '&:hover': { bgcolor: doc.uploaded ? 'success.100' : 'grey.50' }
+                  borderLeft: doc.uploaded ? '4px solid' : 'none',
+                  borderColor: 'success.main',
+                  transition: 'all 0.2s',
+                  '&:hover': { 
+                    bgcolor: doc.uploaded ? 'success.100' : 'grey.50',
+                    transform: 'translateX(4px)'
+                  }
                 }}
               >
                 <ListItemIcon>
                   {doc.uploaded ? (
-                    <CheckCircle color="success" />
+                    <CheckCircle color="success" sx={{ fontSize: 32 }} />
                   ) : (
-                    <RadioButtonUnchecked color="action" />
+                    <RadioButtonUnchecked color="action" sx={{ fontSize: 32 }} />
                   )}
                 </ListItemIcon>
                 <ListItemText
                   primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {doc.label}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                      <Typography variant="h6" fontWeight={600}>
+                        {doc.label}
+                      </Typography>
                       {doc.required && (
-                        <Chip label="Required" size="small" color="error" />
+                        <Chip label="Required" size="small" color="error" sx={{ fontWeight: 600 }} />
                       )}
                     </Box>
                   }
-                  secondary={doc.description}
+                  secondary={
+                    <Typography variant="body2" color="text.secondary">
+                      {doc.description}
+                    </Typography>
+                  }
                 />
                 {!doc.uploaded && (
                   <Button
                     variant="contained"
-                    size="small"
+                    size="large"
                     startIcon={<CloudUpload />}
                     onClick={() => handleUploadClick(doc)}
+                    sx={{ px: 3, fontWeight: 600 }}
                   >
                     Upload
                   </Button>
                 )}
                 {doc.uploaded && (
-                  <Chip label="Uploaded" color="success" size="small" />
+                  <Chip 
+                    label="✓ Uploaded" 
+                    color="success" 
+                    sx={{ fontWeight: 600, px: 2 }}
+                  />
                 )}
               </ListItem>
             ))
@@ -161,15 +196,15 @@ export default function DocumentChecklist() {
         </List>
       </Paper>
 
-      <Paper sx={{ p: 2, mt: 3, bgcolor: 'info.50' }}>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-          <Info color="info" />
+      <Paper sx={{ p: 3, mt: 3, bgcolor: 'info.50', borderRadius: 2, border: '1px solid', borderColor: 'info.200' }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          <Info color="info" sx={{ fontSize: 32 }} />
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="h6" fontWeight={600} gutterBottom>
               Need Help?
             </Typography>
-            <Typography variant="body2">
-              If you have questions about which documents to upload, please contact our office at (555) 123-4567.
+            <Typography variant="body2" color="text.secondary">
+              If you have questions about which documents to upload or need assistance, please contact our office at <strong>(555) 123-4567</strong> or email <strong>support@clinic.com</strong>
             </Typography>
           </Box>
         </Box>

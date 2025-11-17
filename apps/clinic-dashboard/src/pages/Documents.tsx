@@ -160,26 +160,28 @@ export default function Documents() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <Box sx={{ p: 3, maxWidth: 1600, mx: 'auto' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
-          <Typography variant="h4" gutterBottom>
-            Documents
+          <Typography variant="h4" fontWeight={600} gutterBottom>
+            📁 Documents
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage patient documents and files
+          <Typography variant="body1" color="text.secondary">
+            Manage and organize patient documents
           </Typography>
         </Box>
         <Button
           variant="contained"
+          size="large"
           startIcon={<Add />}
           onClick={() => navigate('/documents/upload')}
+          sx={{ px: 3, py: 1.5, fontWeight: 600 }}
         >
           Upload Document
         </Button>
       </Box>
 
-      <Paper sx={{ mb: 3, p: 2 }}>
+      <Paper sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: 2 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
             <TextField
@@ -237,7 +239,7 @@ export default function Documents() {
         </Grid>
       </Paper>
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
         <Table>
           <TableHead>
             <TableRow>
