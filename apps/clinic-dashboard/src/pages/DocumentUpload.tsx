@@ -51,13 +51,12 @@ export default function DocumentUpload() {
   const [uploadedDocument, setUploadedDocument] = useState<Document | null>(null);
 
   // Fetch patients for autocomplete
-  const { data: patients = [], isLoading: loadingPatients } = useQuery({
+  const { data: patientsResponse, isLoading: loadingPatients } = useQuery({
     queryKey: ['patients'],
-    queryFn: async () => {
-      const response = await patientApi.getAll();
-      return response.data || [];
-    }
+    queryFn: () => patientApi.getPatients({ limit: 200 })
   });
+  
+  const patients = patientsResponse?.data || [];
 
   // Upload mutation
   const uploadMutation = useMutation({
