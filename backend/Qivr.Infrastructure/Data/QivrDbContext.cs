@@ -370,6 +370,24 @@ public class QivrDbContext : DbContext
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
+        // DocumentAuditLog configuration
+        modelBuilder.Entity<DocumentAuditLog>(entity =>
+        {
+            entity.ToTable("document_audit_log");
+            entity.HasKey(e => e.Id);
+            
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions)null));
+            
+            entity.HasOne(e => e.Document)
+                .WithMany(d => d.AuditLogs)
+                .HasForeignKey(e => e.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // Conversation configuration
         modelBuilder.Entity<Conversation>(entity =>
         {
