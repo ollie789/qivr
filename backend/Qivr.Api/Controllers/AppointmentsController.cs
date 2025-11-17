@@ -625,7 +625,8 @@ public class AppointmentsController : BaseApiController
         [FromQuery] DateTime date,
         [FromQuery] string? specialization = null)
     {
-        var providers = await _availabilityService.GetAvailableProviders(date, specialization);
+        var utcDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+        var providers = await _availabilityService.GetAvailableProviders(utcDate, specialization);
         return Ok(providers);
     }
     
