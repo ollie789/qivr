@@ -26,8 +26,15 @@ const DOCUMENT_TYPES = [
   { value: 'referral', label: 'Referral' },
   { value: 'consent', label: 'Consent Form' },
   { value: 'progress_note', label: 'Progress Note' },
-  { value: 'lab_report', label: 'Lab Report' },
   { value: 'assessment', label: 'Assessment' },
+  { value: 'lab_report', label: 'Lab Report' },
+  { value: 'imaging', label: 'Imaging/X-Ray' },
+  { value: 'prescription', label: 'Prescription' },
+  { value: 'insurance', label: 'Insurance Document' },
+  { value: 'discharge_summary', label: 'Discharge Summary' },
+  { value: 'treatment_plan', label: 'Treatment Plan' },
+  { value: 'invoice', label: 'Invoice/Receipt' },
+  { value: 'correspondence', label: 'Correspondence' },
   { value: 'other', label: 'Other' }
 ];
 

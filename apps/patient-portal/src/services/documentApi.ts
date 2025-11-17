@@ -66,6 +66,27 @@ export const documentApi = {
         uploaded: myDocs.some(d => d.documentType === 'consent')
       },
       {
+        type: 'insurance',
+        label: 'Insurance Details',
+        description: 'Health insurance or Medicare card',
+        required: false,
+        uploaded: myDocs.some(d => d.documentType === 'insurance')
+      },
+      {
+        type: 'imaging',
+        label: 'Imaging/X-Rays',
+        description: 'Any recent X-rays, MRI, or CT scans',
+        required: false,
+        uploaded: myDocs.some(d => d.documentType === 'imaging')
+      },
+      {
+        type: 'lab_report',
+        label: 'Lab Results',
+        description: 'Recent blood work or lab tests',
+        required: false,
+        uploaded: myDocs.some(d => d.documentType === 'lab_report')
+      },
+      {
         type: 'assessment',
         label: 'Previous Assessments',
         description: 'Any previous therapy or medical assessments',
