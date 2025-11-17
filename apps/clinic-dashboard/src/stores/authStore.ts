@@ -68,7 +68,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const response = await authApi.login(email, password);
-          const userInfo = 'userInfo' in response ? response.userInfo : await authApi.getUserInfo();
+          const userInfo = (response && typeof response === 'object' && 'userInfo' in response) 
+            ? response.userInfo 
+            : await authApi.getUserInfo();
           
           if (!userInfo) {
             throw new Error('Failed to load user info');
