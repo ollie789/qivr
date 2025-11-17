@@ -30,7 +30,7 @@ import {
   Download,
   Visibility,
   Delete,
-  Edit,
+
   FilterList,
   Search
 } from '@mui/icons-material';
@@ -78,7 +78,7 @@ export default function Documents() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Fetch documents
-  const { data: documents = [], isLoading, refetch } = useQuery({
+  const { data: documents = [], isLoading } = useQuery({
     queryKey: ['documents', documentType, status],
     queryFn: () => documentApi.list({
       documentType: documentType || undefined,
@@ -164,7 +164,7 @@ export default function Documents() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
           <Typography variant="h4" fontWeight={600} gutterBottom>
-            📁 Documents
+            Documents
           </Typography>
           <Typography variant="body1" color="text.secondary">
             Manage and organize patient documents
@@ -351,7 +351,7 @@ export default function Documents() {
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Document</DialogTitle>
         <DialogContent>
-          Are you sure you want to delete "{selectedDocument?.fileName}"? This action cannot be undone.
+          Are you sure you want to delete &ldquo;{selectedDocument?.fileName}&rdquo;? This action cannot be undone.
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>

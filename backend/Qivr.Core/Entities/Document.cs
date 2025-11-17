@@ -32,8 +32,6 @@ public class Document : TenantEntity, IAuditable
     public DateTime? DueDate { get; set; }
     
     // Audit
-    public string? CreatedBy { get; set; }
-    public string? UpdatedBy { get; set; }
     public DateTime? DeletedAt { get; set; }
     
     // Navigation properties

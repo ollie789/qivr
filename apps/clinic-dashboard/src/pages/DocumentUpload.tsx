@@ -10,8 +10,7 @@ import {
   Checkbox,
   Grid,
   Autocomplete,
-  CircularProgress,
-  Alert
+  CircularProgress
 } from '@mui/material';
 import { CloudUpload, CheckCircle } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -119,7 +118,7 @@ export default function DocumentUpload() {
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight={600} gutterBottom>
-          📄 Upload Document
+          Upload Document
         </Typography>
         <Typography variant="body1" color="text.secondary">
           Upload patient documents with automatic OCR extraction and intelligent classification
@@ -335,7 +334,7 @@ export default function DocumentUpload() {
         <Grid item xs={12} lg={4}>
           <Paper sx={{ p: 3, bgcolor: 'primary.50', borderRadius: 2, boxShadow: 2, border: '1px solid', borderColor: 'primary.100' }}>
             <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              📋 Upload Guidelines
+              Upload Guidelines
             </Typography>
             <Box sx={{ mt: 2, '& > *': { mb: 2 } }}>
               <Box>
