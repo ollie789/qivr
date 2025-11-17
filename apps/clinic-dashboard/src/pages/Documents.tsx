@@ -1,424 +1,356 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Paper,
   Typography,
   Button,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  IconButton,
   TextField,
-  InputAdornment,
-  Chip,
-  Menu,
   MenuItem,
+  Chip,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  Menu,
+  ListItemIcon,
+  ListItemText,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Avatar,
-  Alert,
-  ListItemIcon,
-  ListItemText,
+  Grid
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  FolderOpen as FolderIcon,
-  InsertDriveFile as FileIcon,
-  PictureAsPdf as PdfIcon,
-  Image as ImageIcon,
-  Description as DocIcon,
-  MoreVert as MoreIcon,
-  Download as DownloadIcon,
-  Share as ShareIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
-  CloudUpload as UploadIcon,
+  Add,
+  MoreVert,
+  Download,
+  Visibility,
+  Delete,
+  Edit,
+  FilterList,
+  Search
 } from '@mui/icons-material';
-import { formatDistanceToNow } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { documentsApi } from '../services/documentsApi';
-import FileUpload from '../components/FileUpload';
-import { PageHeader, EmptyState, FlexBetween, LoadingSpinner } from '@qivr/design-system';
+import { useNavigate } from 'react-router-dom';
+import { documentApi, Document } from '../services/documentApi';
 
-interface DocumentItem {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  sizeLabel: string;
-  category: string;
-  patientId?: string;
-  patientName?: string;
-  uploadedBy: string;
-  uploadedAt: Date;
-  url: string;
-  thumbnailUrl?: string;
-}
+const DOCUMENT_TYPES = [
+  { value: '', label: 'All Types' },
+  { value: 'referral', label: 'Referral' },
+  { value: 'consent', label: 'Consent' },
+  { value: 'progress_note', label: 'Progress Note' },
+  { value: 'lab_report', label: 'Lab Report' },
+  { value: 'assessment', label: 'Assessment' },
+  { value: 'other', label: 'Other' }
+];
 
-const Documents: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const queryClient = useQueryClient();
+const STATUS_COLORS: Record<string, 'default' | 'primary' | 'success' | 'error' | 'warning'> = {
+  processing: 'primary',
+  ready: 'success',
+  failed: 'error'
+};
+
+export default function Documents() {
+  const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const queryClient = useQueryClient();
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [documentType, setDocumentType] = useState('');
+  const [status, setStatus] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Fetch documents
-  const { data: documents = [], isLoading, error } = useQuery({
-    queryKey: ['documents', selectedCategory],
-    queryFn: async () => {
-      const items = await documentsApi.list({
-        category: selectedCategory === 'all' ? undefined : selectedCategory,
-        pageSize: 100,
-      });
-
-      return items.map((doc) => ({
-        id: doc.id,
-        name: doc.fileName,
-        type: doc.mimeType,
-        size: doc.fileSize,
-        sizeLabel: doc.fileSizeFormatted,
-        category: doc.category,
-        patientId: doc.patientId,
-        patientName: doc.patientName,
-        uploadedBy: doc.uploadedBy,
-        uploadedAt: new Date(doc.uploadedAt),
-        url: doc.url ?? '',
-        thumbnailUrl: doc.thumbnailUrl ?? undefined,
-      } satisfies DocumentItem));
-    },
+  const { data: documents = [], isLoading, refetch } = useQuery({
+    queryKey: ['documents', documentType, status],
+    queryFn: () => documentApi.list({
+      documentType: documentType || undefined,
+      status: status || undefined
+    }),
+    refetchInterval: 30000 // Auto-refresh every 30s
   });
 
-  // Delete document mutation
+  // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: async (documentId: string) => {
-      await documentsApi.delete(documentId);
-    },
+    mutationFn: (id: string) => documentApi.delete(id),
     onSuccess: () => {
+      enqueueSnackbar('Document deleted successfully', { variant: 'success' });
       queryClient.invalidateQueries({ queryKey: ['documents'] });
-      handleMenuClose();
-      enqueueSnackbar('Document deleted', { variant: 'success' });
+      setDeleteDialogOpen(false);
     },
-    onError: (mutationError) => {
-      const message = mutationError instanceof Error ? mutationError.message : 'Failed to delete document';
-      enqueueSnackbar(message, { variant: 'error' });
-    },
+    onError: () => {
+      enqueueSnackbar('Failed to delete document', { variant: 'error' });
+    }
   });
 
-  const filteredDocuments = documents.filter((d: DocumentItem) =>
-    d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (d.patientName && d.patientName.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Download mutation
+  const downloadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { url } = await documentApi.getDownloadUrl(id);
+      window.open(url, '_blank');
+    },
+    onError: () => {
+      enqueueSnackbar('Failed to download document', { variant: 'error' });
+    }
+  });
 
-  const categories = [
-    { value: 'all', label: 'All Documents' },
-    { value: 'medical-records', label: 'Medical Records' },
-    { value: 'lab-results', label: 'Lab Results' },
-    { value: 'imaging', label: 'Imaging' },
-    { value: 'prescriptions', label: 'Prescriptions' },
-    { value: 'insurance', label: 'Insurance' },
-    { value: 'consent-forms', label: 'Consent Forms' },
-    { value: 'other', label: 'Other' },
-  ];
-
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.includes('pdf')) return <PdfIcon />;
-    if (mimeType.includes('image')) return <ImageIcon />;
-    if (mimeType.includes('word') || mimeType.includes('text')) return <DocIcon />;
-    return <FileIcon />;
-  };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, doc: DocumentItem) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, document: Document) => {
     setAnchorEl(event.currentTarget);
-    setSelectedDocument(doc);
+    setSelectedDocument(document);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
 
-  const handleView = () => {
-    setViewDialogOpen(true);
-    handleMenuClose();
-  };
-
-  const handleDownload = async () => {
-    if (selectedDocument?.url) {
-      window.open(selectedDocument.url, '_blank');
-    } else {
-      enqueueSnackbar('Download link is not available yet. Please refresh and try again.', {
-        variant: 'warning',
-      });
+  const handleDownload = () => {
+    if (selectedDocument) {
+      downloadMutation.mutate(selectedDocument.id);
     }
     handleMenuClose();
   };
 
   const handleDelete = () => {
+    setDeleteDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const confirmDelete = () => {
     if (selectedDocument) {
-      if (window.confirm(`Are you sure you want to delete ${selectedDocument.name}?`)) {
-        deleteMutation.mutate(selectedDocument.id);
-      }
+      deleteMutation.mutate(selectedDocument.id);
     }
   };
 
+  const filteredDocuments = documents.filter(doc => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      doc.fileName.toLowerCase().includes(search) ||
+      doc.patientName?.toLowerCase().includes(search) ||
+      doc.notes?.toLowerCase().includes(search)
+    );
+  });
+
+  const paginatedDocuments = filteredDocuments.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   return (
-    <Box>
-      <PageHeader
-        title="Documents"
-        actions={
-          <Button
-            variant="contained"
-            startIcon={<UploadIcon />}
-            onClick={() => setUploadDialogOpen(true)}
-          >
-            Upload Documents
-          </Button>
-        }
-      />
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            Documents
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage patient documents and files
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => navigate('/documents/upload')}
+        >
+          Upload Document
+        </Button>
+      </Box>
 
       <Paper sx={{ mb: 3, p: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
             <TextField
               fullWidth
+              size="small"
               placeholder="Search documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
+                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
               }}
             />
           </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {categories.map(cat => (
-                <Chip
-                  key={cat.value}
-                  label={cat.label}
-                  onClick={() => setSelectedCategory(cat.value)}
-                  color={selectedCategory === cat.value ? 'primary' : 'default'}
-                  variant={selectedCategory === cat.value ? 'filled' : 'outlined'}
-                />
+          <Grid item xs={12} md={3}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Document Type"
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value)}
+            >
+              {DOCUMENT_TYPES.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
+                </MenuItem>
               ))}
-            </Box>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <MenuItem value="">All Status</MenuItem>
+              <MenuItem value="processing">Processing</MenuItem>
+              <MenuItem value="ready">Ready</MenuItem>
+              <MenuItem value="failed">Failed</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<FilterList />}
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              Filters
+            </Button>
           </Grid>
         </Grid>
       </Paper>
 
-      {isLoading ? (
-        <LoadingSpinner size="large" message="Loading documents..." />
-      ) : error ? (
-        <Alert severity="error">Failed to load documents</Alert>
-      ) : filteredDocuments.length === 0 ? (
-        <EmptyState
-          icon={<FolderIcon />}
-          title="No documents found"
-          description={searchQuery ? 'Try adjusting your search criteria' : 'Upload your first document to get started'}
-          actionText="Upload Document"
-          onAction={() => setUploadDialogOpen(true)}
-        />
-      ) : (
-        <Grid container spacing={3}>
-          {filteredDocuments.map((doc: DocumentItem) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={doc.id}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                      {getFileIcon(doc.type)}
-                    </Avatar>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography
-                        variant="body1"
-                        fontWeight={500}
-                        sx={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {doc.name}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>File Name</TableCell>
+              <TableCell>Patient</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Size</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Uploaded</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : paginatedDocuments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  No documents found
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedDocuments.map((doc) => (
+                <TableRow key={doc.id} hover>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" fontWeight={500}>
+                        {doc.fileName}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {doc.sizeLabel}
-                      </Typography>
+                      {doc.isUrgent && (
+                        <Chip label="Urgent" size="small" color="error" sx={{ mt: 0.5 }} />
+                      )}
                     </Box>
+                  </TableCell>
+                  <TableCell>{doc.patientName || 'Unknown'}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={doc.documentType}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>{formatFileSize(doc.fileSize)}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={doc.status}
+                      size="small"
+                      color={STATUS_COLORS[doc.status] || 'default'}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {new Date(doc.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell align="right">
                     <IconButton
                       size="small"
                       onClick={(e) => handleMenuOpen(e, doc)}
                     >
-                      <MoreIcon />
+                      <MoreVert />
                     </IconButton>
-                  </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+        <TablePagination
+          component="div"
+          count={filteredDocuments.length}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setRowsPerPage(parseInt(e.target.value, 10));
+            setPage(0);
+          }}
+        />
+      </TableContainer>
 
-                  {doc.patientName && (
-                    <Chip
-                      label={doc.patientName}
-                      size="small"
-                      variant="outlined"
-                      sx={{ mb: 1 }}
-                    />
-                  )}
-
-                  <Typography variant="body2" color="text.secondary">
-                    Uploaded by {doc.uploadedBy}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDistanceToNow(doc.uploadedAt, { addSuffix: true })}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button
-                    size="small"
-                    startIcon={<ViewIcon />}
-                    onClick={() => {
-                      setSelectedDocument(doc);
-                      setViewDialogOpen(true);
-                    }}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<DownloadIcon />}
-                    onClick={() => window.open(doc.url, '_blank')}
-                  >
-                    Download
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-
-      {/* Upload Dialog */}
-      <Dialog
-        open={uploadDialogOpen}
-        onClose={() => setUploadDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Upload Documents</DialogTitle>
-        <DialogContent>
-          <FileUpload
-            category={selectedCategory === 'all' ? 'general' : selectedCategory}
-            onUpload={(files) => {
-              console.log('Uploaded files:', files);
-              queryClient.invalidateQueries({ queryKey: ['documents'] });
-              setUploadDialogOpen(false);
-            }}
-            onError={(error) => {
-              console.error('Upload error:', error);
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* View Dialog */}
-      <Dialog
-        open={viewDialogOpen}
-        onClose={() => setViewDialogOpen(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>
-          <FlexBetween>
-            {selectedDocument?.name}
-            <FlexBetween sx={{ gap: 1 }}>
-              <IconButton onClick={() => selectedDocument && window.open(selectedDocument.url, '_blank')}>
-                <DownloadIcon />
-              </IconButton>
-              <IconButton>
-                <ShareIcon />
-              </IconButton>
-            </FlexBetween>
-          </FlexBetween>
-        </DialogTitle>
-        <DialogContent>
-          {selectedDocument?.type.includes('image') ? (
-            <img
-              src={selectedDocument.url}
-              alt={selectedDocument.name}
-              style={{ width: '100%', height: 'auto' }}
-            />
-          ) : selectedDocument?.type.includes('pdf') ? (
-            <iframe
-              src={selectedDocument.url}
-              title={selectedDocument.name}
-              style={{ width: '100%', height: '600px', border: 'none' }}
-            />
-          ) : (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <FileIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" gutterBottom>
-                Preview not available
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<DownloadIcon />}
-                onClick={() => selectedDocument && window.open(selectedDocument.url, '_blank')}
-              >
-                Download to view
-              </Button>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewDialogOpen(false)}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Context Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleView}>
-          <ListItemIcon>
-            <ViewIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>View</ListItemText>
-        </MenuItem>
         <MenuItem onClick={handleDownload}>
           <ListItemIcon>
-            <DownloadIcon fontSize="small" />
+            <Download fontSize="small" />
           </ListItemIcon>
           <ListItemText>Download</ListItemText>
         </MenuItem>
-        <MenuItem>
+        <MenuItem onClick={handleMenuClose}>
           <ListItemIcon>
-            <ShareIcon fontSize="small" />
+            <Visibility fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Share</ListItemText>
+          <ListItemText>View Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={handleDelete}>
           <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
+            <Delete fontSize="small" color="error" />
           </ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Document</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete "{selectedDocument?.fileName}"? This action cannot be undone.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
-};
-
-export default Documents;
+}

@@ -38,45 +38,57 @@
 - backend/Qivr.Api/Controllers/DocumentsController.cs
 - backend/Qivr.Api/Program.cs (updated)
 
-## Phase 2: Clinic Dashboard Frontend
+## Phase 2: Clinic Dashboard Frontend ✅ COMPLETE
 
-### Step 2.1: Upload Page
-- [ ] DocumentUpload page component
-- [ ] Drag-and-drop component
-- [ ] Patient search/select
-- [ ] Document type selector
-- [ ] OCR results display
-- [ ] Manual override form
+### Step 2.1: Upload Page ✅
+- [x] DocumentUpload page component
+- [x] Drag-and-drop component (DocumentUploader)
+- [x] Patient search/select (Autocomplete)
+- [x] Document type selector
+- [x] OCR results display (OCRResultsViewer)
+- [x] Manual override form
 
-### Step 2.2: Document List
-- [ ] DocumentList page
-- [ ] Filters (patient, type, date, status)
-- [ ] Search functionality
-- [ ] Quick actions menu
+### Step 2.2: Document List ✅
+- [x] Documents page
+- [x] Filters (patient, type, date, status)
+- [x] Search functionality
+- [x] Quick actions menu (download, view, delete)
 
-### Step 2.3: Services & API
-- [ ] documentApi.ts service
-- [ ] File upload with progress
-- [ ] React Query integration
+### Step 2.3: Services & API ✅
+- [x] documentApi.ts service
+- [x] File upload with progress
+- [x] React Query integration
 
-## Phase 3: Patient Portal Frontend
+**Files Created:**
+- apps/clinic-dashboard/src/services/documentApi.ts
+- apps/clinic-dashboard/src/components/DocumentUploader.tsx
+- apps/clinic-dashboard/src/components/OCRResultsViewer.tsx
+- apps/clinic-dashboard/src/pages/DocumentUpload.tsx
+- apps/clinic-dashboard/src/pages/Documents.tsx
 
-### Step 3.1: Document Checklist
-- [ ] DocumentChecklist page
-- [ ] Required documents list
-- [ ] Status indicators
-- [ ] Upload buttons
+## Phase 3: Patient Portal Frontend ✅ COMPLETE
 
-### Step 3.2: Upload Interface
-- [ ] PatientUpload page
-- [ ] Mobile-friendly uploader
-- [ ] Camera capture
-- [ ] Progress tracking
+### Step 3.1: Document Checklist ✅
+- [x] DocumentChecklist page
+- [x] Required documents list
+- [x] Status indicators
+- [x] Upload buttons
+- [x] Progress tracking
 
-### Step 3.3: Services
-- [ ] Patient document API
-- [ ] Upload service
-- [ ] Status polling
+### Step 3.2: Upload Interface ✅
+- [x] Upload dialog
+- [x] File selection
+- [x] Progress tracking
+- [x] Mobile-friendly
+
+### Step 3.3: Services ✅
+- [x] Patient document API
+- [x] Upload service
+- [x] Required documents logic
+
+**Files Created:**
+- apps/patient-portal/src/services/documentApi.ts
+- apps/patient-portal/src/pages/DocumentChecklist.tsx
 
 ## Phase 4: AWS Infrastructure
 
