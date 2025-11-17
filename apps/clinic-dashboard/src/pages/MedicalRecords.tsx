@@ -48,11 +48,13 @@ import {
   Person as PersonIcon,
   LocalHospital as HospitalIcon,
   Favorite as HeartIcon,
+  Description as DocumentIcon,
   Timeline as TimelineIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Save as SaveIcon,
   ExpandMore as ExpandMoreIcon,
+  Add,
   ThermostatAuto as TempIcon,
   MonitorHeart as PulseIcon,
   Bloodtype as BloodIcon,
@@ -80,6 +82,7 @@ import {
   type PatientListResponse,
   type Patient,
 } from '../services/patientApi';
+import { documentApi } from '../services/documentApi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import type { ChipProps } from '@mui/material/Chip';
 import type { SelectChangeEvent } from '@mui/material/Select';
@@ -182,6 +185,12 @@ const MedicalRecords: React.FC = () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getLabResults(selectedPatientId);
     },
+    enabled: canMakeApiCalls && !!selectedPatientId,
+  });
+
+  const { data: documents = [], refetch: refetchDocuments } = useQuery({
+    queryKey: ['documents', selectedPatientId],
+    queryFn: () => documentApi.list({ patientId: selectedPatientId }),
     enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
@@ -695,6 +704,7 @@ const MedicalRecords: React.FC = () => {
                 <Tab icon={<HeartIcon />} label="Vital Signs" />
                 <Tab icon={<MedicalIcon />} label="Medical History" />
                 <Tab icon={<TimelineIcon />} label="Timeline" />
+                <Tab icon={<DocumentIcon />} label="Documents" />
               </Tabs>
 
               <TabPanel value={activeTab} index={0}>
@@ -1100,6 +1110,106 @@ const MedicalRecords: React.FC = () => {
                         </TimelineItem>
                       ))}
                     </Timeline>
+                </Box>
+              </TabPanel>
+
+              <TabPanel value={activeTab} index={4}>
+                <Box sx={{ p: 3 }}>
+                  <FlexBetween sx={{ mb: 3 }}>
+                    <Typography variant="h6">
+                      <DocumentIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+                      Medical Documents
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<Add />}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf,.jpg,.jpeg,.png';
+                        input.onchange = async (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file && selectedPatientId) {
+                            try {
+                              await documentApi.upload({ file, patientId: selectedPatientId });
+                              refetchDocuments();
+                              enqueueSnackbar('Document uploaded successfully', { variant: 'success' });
+                            } catch (error) {
+                              enqueueSnackbar('Failed to upload document', { variant: 'error' });
+                            }
+                          }
+                        };
+                        input.click();
+                      }}
+                    >
+                      Upload Document
+                    </Button>
+                  </FlexBetween>
+
+                  {documents.length > 0 ? (
+                    <Grid container spacing={2}>
+                      {documents.map((doc) => (
+                        <Grid item xs={12} key={doc.id}>
+                          <Card>
+                            <CardContent>
+                              <FlexBetween>
+                                <Box>
+                                  <Typography variant="h6">{doc.fileName}</Typography>
+                                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                                    <Chip
+                                      label={doc.documentType}
+                                      size="small"
+                                      color="primary"
+                                      variant="outlined"
+                                    />
+                                    <Chip
+                                      label={doc.status}
+                                      size="small"
+                                      color={
+                                        doc.status === 'ready' ? 'success' :
+                                        doc.status === 'processing' ? 'warning' : 'default'
+                                      }
+                                    />
+                                    <Typography variant="caption" color="text.secondary">
+                                      {format(parseISO(doc.createdAt), 'MMM d, yyyy')}
+                                    </Typography>
+                                  </Stack>
+                                  {doc.extractedPatientName && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                      Extracted: {doc.extractedPatientName}
+                                      {doc.extractedDob && ` • DOB: ${doc.extractedDob}`}
+                                      {doc.confidenceScore && ` • ${doc.confidenceScore}% confidence`}
+                                    </Typography>
+                                  )}
+                                </Box>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={async () => {
+                                    try {
+                                      const { url } = await documentApi.getDownloadUrl(doc.id);
+                                      window.open(url, '_blank');
+                                    } catch (error) {
+                                      enqueueSnackbar('Failed to download document', { variant: 'error' });
+                                    }
+                                  }}
+                                >
+                                  Download
+                                </Button>
+                              </FlexBetween>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  ) : (
+                    <Paper sx={{ p: 4, textAlign: 'center' }}>
+                      <DocumentIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="body1" color="text.secondary">
+                        No documents uploaded yet
+                      </Typography>
+                    </Paper>
+                  )}
                 </Box>
               </TabPanel>
             </Paper>
