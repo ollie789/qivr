@@ -366,6 +366,16 @@ public class QivrDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.PatientId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(e => e.UploadedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.UploadedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            entity.HasOne(e => e.AssignedToUser)
+                .WithMany()
+                .HasForeignKey(e => e.AssignedTo)
+                .OnDelete(DeleteBehavior.SetNull);
                 
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
