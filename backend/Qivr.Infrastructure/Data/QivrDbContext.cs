@@ -356,6 +356,12 @@ public class QivrDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.PatientId });
             
+            entity.Property(e => e.ExtractedIdentifiers)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions)null));
+            
             entity.HasOne(e => e.Patient)
                 .WithMany()
                 .HasForeignKey(e => e.PatientId)
