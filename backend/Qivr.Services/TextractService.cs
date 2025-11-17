@@ -58,10 +58,7 @@ public class TextractService : ITextractService
                 if (block.BlockType == BlockType.LINE)
                 {
                     textBuilder.AppendLine(block.Text);
-                    if (block.Confidence.HasValue)
-                    {
-                        confidenceScores.Add((decimal)block.Confidence.Value);
-                    }
+                    confidenceScores.Add((decimal)block.Confidence);
                 }
             }
 

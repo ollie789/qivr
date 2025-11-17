@@ -220,10 +220,11 @@ public class ProfileService : IProfileService
             PatientId = userId,
             FileName = fileName,
             DocumentType = "Profile Photo",
-            ContentType = contentType,
-            FileSizeBytes = photoData.Length,
-            StoragePath = $"profiles/{tenantId}/{userId}/{fileName}",
-            IsConfidential = false, // Profile photos are not confidential
+            MimeType = contentType,
+            FileSize = photoData.Length,
+            S3Key = $"profiles/{tenantId}/{userId}/{fileName}",
+            S3Bucket = "qivr-documents-prod",
+            Status = "ready",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -236,12 +237,12 @@ public class ProfileService : IProfileService
         var user = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Id == userId);
         if (user != null)
         {
-            user.Preferences["profilePhotoUrl"] = document.StoragePath;
+            user.Preferences["profilePhotoUrl"] = document.S3Key;
             user.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
         }
 
-        return document.StoragePath;
+        return document.S3Key;
     }
 
     public async Task UpdateEmailVerificationStatusAsync(Guid tenantId, Guid userId, bool verified)

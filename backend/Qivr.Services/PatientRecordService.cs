@@ -88,7 +88,7 @@ public class PatientRecordService : IPatientRecordService
                 Name = d.FileName,
                 Type = d.DocumentType,
                 UploadedAt = d.CreatedAt,
-                Size = FormatFileSize(d.FileSizeBytes)
+                Size = FormatFileSize(d.FileSize)
             })
             .ToListAsync();
 

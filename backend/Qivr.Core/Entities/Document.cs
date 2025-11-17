@@ -34,6 +34,7 @@ public class Document : TenantEntity, IAuditable
     // Audit
     public string? CreatedBy { get; set; }
     public string? UpdatedBy { get; set; }
+    public DateTime? DeletedAt { get; set; }
     
     // Navigation properties
     public virtual User? Patient { get; set; }
