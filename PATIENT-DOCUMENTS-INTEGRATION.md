@@ -2,19 +2,30 @@
 
 **Date:** 2025-11-17  
 **Status:** COMPLETE  
-**Commit:** b65e660
+**Commit:** 4e0f8a4
 
 ---
 
 ## ✅ Integration Complete
 
-Documents are now fully integrated with patient medical records across the entire stack.
+Documents are now fully integrated into the **Medical Records page** as a new tab.
+
+---
+
+## 📍 Integration Location
+
+**Medical Records Page** (`/medical-records`)
+
+- New "Documents" tab added alongside Demographics, Vital Signs, Medical History, Timeline
+- Accessible from main navigation
+- Integrated into existing patient workflow
 
 ---
 
 ## 🔗 Integration Points
 
 ### 1. Database Level
+
 ```sql
 -- Foreign key relationships
 fk_documents_users_patient_id: documents.patient_id → users.id (CASCADE DELETE)
@@ -25,6 +36,7 @@ documents.tenant_id → tenants.id
 ```
 
 **Features:**
+
 - ✅ Documents linked to patients via `patient_id`
 - ✅ Automatic deletion when patient deleted
 - ✅ Multi-tenant isolation enforced
@@ -33,6 +45,7 @@ documents.tenant_id → tenants.id
 ### 2. Backend Entity Level
 
 **Document.cs:**
+
 ```csharp
 public class Document {
     public Guid PatientId { get; set; }
@@ -42,6 +55,7 @@ public class Document {
 ```
 
 **Features:**
+
 - ✅ Strong typing with navigation properties
 - ✅ EF Core relationship mapping
 - ✅ Lazy loading support
@@ -49,6 +63,7 @@ public class Document {
 ### 3. Backend Service Level
 
 **PatientRecordService.GetPatientRecordAsync():**
+
 ```csharp
 public class PatientRecord {
     public List<DocumentSummary> Documents { get; set; }
@@ -57,6 +72,7 @@ public class PatientRecord {
 ```
 
 **DocumentService:**
+
 - ✅ Filter documents by patient ID
 - ✅ Upload with patient association
 - ✅ OCR extraction with patient data validation
@@ -64,22 +80,26 @@ public class PatientRecord {
 
 ### 4. Frontend Integration
 
-**PatientDetail.tsx (NEW):**
+**MedicalRecords.tsx - Documents Tab:**
+
+- ✅ New tab in existing Medical Records page
 - ✅ Display all patient documents
-- ✅ Upload documents directly from patient page
+- ✅ Upload documents with file picker
 - ✅ View OCR extracted data
 - ✅ Download via presigned URLs
 - ✅ Real-time status updates
 - ✅ Document type badges
-- ✅ Modal viewers for details
+- ✅ Material-UI design matching existing tabs
 
 **Features:**
+
 - Document list with metadata
-- Upload button with file picker
-- Status indicators (processing/ready/failed)
+- Upload button with inline file picker
+- Status chips (processing/ready/failed)
 - OCR results display (patient name, DOB, confidence)
 - Download functionality
-- Responsive design
+- Empty state with icon
+- Consistent with existing Medical Records UI
 
 ---
 
@@ -100,6 +120,7 @@ Display in UI with upload/download actions
 ```
 
 **Upload Flow:**
+
 ```
 User selects file → Upload to /api/documents/upload
     ↓
@@ -122,34 +143,39 @@ Display OCR results
 
 ## 🎯 Features Available
 
-### For Clinicians (Patient Detail Page)
+### For Clinicians (Medical Records Page)
 
-1. **View Patient Documents**
-   - See all documents for a patient
-   - Filter by type, status, date
-   - View document metadata
+1. **Navigate to Medical Records**
+   - Select patient from dropdown
+   - Click "Documents" tab
 
-2. **Upload Documents**
+2. **View Patient Documents**
+   - See all documents for selected patient
+   - View document metadata (type, status, date)
+   - See OCR extracted data
+
+3. **Upload Documents**
    - Click "Upload Document" button
    - Select file (PDF, JPG, PNG)
    - Automatic patient association
-   - Real-time upload progress
+   - Real-time upload feedback
 
-3. **View OCR Results**
+4. **View OCR Results**
    - Extracted patient name
    - Extracted date of birth
    - Confidence scores
-   - Mismatch warnings
+   - Displayed inline with document
 
-4. **Download Documents**
+5. **Download Documents**
+   - Click "Download" button
    - Secure presigned URLs (60min expiry)
    - Opens in new tab
    - Audit logged
 
-5. **Document Status**
-   - Processing (yellow badge)
-   - Ready (green badge)
-   - Failed (red badge)
+6. **Document Status**
+   - Processing (yellow chip)
+   - Ready (green chip)
+   - Failed (default chip)
 
 ### For Patients (Patient Portal)
 
@@ -184,32 +210,41 @@ Display OCR results
 
 ## 📱 UI Components
 
-### PatientDetail.tsx
+### MedicalRecords.tsx - Documents Tab
 
-**Sections:**
-1. Patient header with back button
-2. Patient information card
-3. Medical documents section
-   - Upload button
-   - Documents list
-   - Status badges
-   - OCR data display
+**Location:** 5th tab in Medical Records page (after Timeline)
 
-**Modals:**
-1. Upload modal - file picker
-2. Document detail modal - full metadata + OCR results
+**Layout:**
+
+1. Header with "Medical Documents" title and upload button
+2. Document cards grid
+   - Document name
+   - Type and status chips
+   - Upload date
+   - OCR extracted data (if available)
+   - Download button
+3. Empty state with icon and message
 
 **Styling:**
-- Tailwind CSS
-- Responsive grid layout
-- Hover effects
-- Color-coded status badges
+
+- Material-UI components (Card, Chip, Button)
+- Consistent with existing Medical Records tabs
+- FlexBetween layout for header
+- Grid layout for document cards
+- Color-coded status chips
+
+**Interactions:**
+
+- Click "Upload Document" → file picker → upload → refetch
+- Click "Download" → get presigned URL → open in new tab
+- Automatic refresh after upload
 
 ---
 
 ## 🧪 Testing Checklist
 
 ### Backend
+
 - ✅ Documents linked to patients in database
 - ✅ Foreign keys enforced
 - ✅ PatientRecordService returns documents
@@ -217,6 +252,7 @@ Display OCR results
 - ✅ OCR extraction working
 
 ### Frontend
+
 - ⏳ PatientDetail page displays documents
 - ⏳ Upload button functional
 - ⏳ Download button functional
@@ -224,6 +260,7 @@ Display OCR results
 - ⏳ Status updates in real-time
 
 ### Integration
+
 - ⏳ Upload from patient page saves to correct patient
 - ⏳ Documents appear in patient record
 - ⏳ Download URLs work
@@ -287,28 +324,35 @@ documents
 
 ## 🎉 Summary
 
-**Patient medical records are now fully integrated with the document upload system!**
+**Documents are now integrated into the Medical Records page!**
 
 Clinicians can:
-- ✅ View all patient documents from patient detail page
-- ✅ Upload documents directly to patient records
+
+- ✅ Access documents from Medical Records → Documents tab
+- ✅ View all patient documents in one place
+- ✅ Upload documents directly from medical records workflow
 - ✅ See OCR extracted data for verification
 - ✅ Download documents securely
 - ✅ Track document processing status
 
 Patients can:
+
 - ✅ Upload required documents via patient portal
 - ✅ Track completion progress
 - ✅ View uploaded documents
 
 **The integration is complete across:**
+
 - ✅ Database (foreign keys, relationships)
 - ✅ Backend (services, entities, APIs)
-- ✅ Frontend (patient detail page, upload/download)
+- ✅ Frontend (Medical Records page, Documents tab)
+
+**Location:** Medical Records page → Documents tab (5th tab)
 
 ---
 
 **Next Steps:**
+
 1. Deploy frontend to CloudFront
 2. Test full upload/download flow
 3. Verify OCR extraction in production
