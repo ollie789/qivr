@@ -14,11 +14,6 @@ import {
   Avatar,
   Chip,
   IconButton,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from '@mui/material';
 import {
   Person as PersonIcon,

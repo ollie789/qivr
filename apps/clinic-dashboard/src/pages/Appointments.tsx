@@ -5,7 +5,6 @@ import {
   Avatar,
   Box,
   CardContent,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,

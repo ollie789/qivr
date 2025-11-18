@@ -277,7 +277,7 @@ export const BookAppointment: React.FC = () => {
             onClick={handleBookingConfirm}
             disabled={bookMutation.isPending}
           >
-            {bookMutation.isPending ? <CircularProgress size={24} /> : 'Confirm Booking'}
+            {bookMutation.isPending ? 'Booking...' : 'Confirm Booking'}
           </Button>
         </Box>
       </Paper>

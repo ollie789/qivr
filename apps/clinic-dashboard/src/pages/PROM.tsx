@@ -40,7 +40,6 @@ import {
   Preview as PreviewIcon,
   Assessment as AssessmentIcon,
   Schedule as ScheduleIcon,
-  CheckCircle as CheckCircleIcon,
   PendingActions as PendingIcon,
   Cancel as CancelIcon,
   Email as EmailIcon,
@@ -317,13 +316,9 @@ const PROM: React.FC = () => {
                     </Typography>
                     <Typography variant="h4">{completionRate.toFixed(1)}%</Typography>
                   </Box>
-                  <CircularProgress
-                    variant="determinate"
-                    value={completionRate}
-                    size={50}
-                    thickness={4}
-                    sx={{ color: 'success.main' }}
-                  />
+                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <Typography variant="caption">Loading...</Typography>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>
@@ -411,13 +406,9 @@ const PROM: React.FC = () => {
                     </Typography>
                     <Typography variant="h4">{averageScore.toFixed(1)}%</Typography>
                   </Box>
-                  <CircularProgress
-                    variant="determinate"
-                    value={Math.min(averageScore, 100)}
-                    size={50}
-                    thickness={4}
-                    sx={{ color: 'primary.main' }}
-                  />
+                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <Typography variant="caption">Loading...</Typography>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>

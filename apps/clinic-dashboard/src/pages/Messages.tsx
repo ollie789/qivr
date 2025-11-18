@@ -4,8 +4,6 @@ import {
   Paper,
   Typography,
   Button,
-  TextField,
-  InputAdornment,
   Tabs,
   Tab,
   List,
@@ -20,7 +18,6 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Search as SearchIcon,
   Email as EmailIcon,
   Sms as SmsIcon,
   Delete as DeleteIcon,

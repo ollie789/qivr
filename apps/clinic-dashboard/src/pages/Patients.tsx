@@ -13,7 +13,6 @@ import {
   TableRow,
   TablePagination,
   TextField,
-  InputAdornment,
   IconButton,
   Chip,
   Avatar,
@@ -33,9 +32,7 @@ import {
   ListItemText,
   ListItemIcon,
 } from '@mui/material';
-import type { ChipProps } from '@mui/material/Chip';
 import {
-  Search as SearchIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Visibility as ViewIcon,
