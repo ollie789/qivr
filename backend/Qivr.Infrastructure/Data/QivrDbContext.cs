@@ -64,6 +64,7 @@ public class QivrDbContext : DbContext
     public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<MedicalCondition> MedicalConditions => Set<MedicalCondition>();
+    public DbSet<MedicalVital> MedicalVitals => Set<MedicalVital>(); // Keep for migration compatibility
     public DbSet<PainAssessment> PainAssessments => Set<PainAssessment>();
     public DbSet<MedicalLabResult> MedicalLabResults => Set<MedicalLabResult>();
     public DbSet<MedicalMedication> MedicalMedications => Set<MedicalMedication>();
@@ -829,6 +830,15 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Icd10Code).HasMaxLength(20);
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.ManagedBy).HasMaxLength(200);
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // Keep for migration compatibility - DO NOT USE
+        modelBuilder.Entity<MedicalVital>(entity =>
+        {
+            entity.ToTable("medical_vitals");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId, e.RecordedAt });
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 

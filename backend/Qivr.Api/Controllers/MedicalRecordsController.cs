@@ -782,29 +782,7 @@ public class MedicalRecordsController : BaseApiController
         return conditions;
     }
 
-    private static List<VitalSignDto> GenerateSampleVitalSigns(DateTime referenceDate)
-    {
-        var results = new List<VitalSignDto>();
-        for (var i = 0; i < 6; i++)
-        {
-            var date = referenceDate.AddDays(-14 * i);
-            results.Add(new VitalSignDto
-            {
-                Id = Guid.NewGuid(),
-                Date = date,
-                BloodPressure = new BloodPressureDto { Systolic = 118 + i, Diastolic = 76 + (i % 3) },
-                HeartRate = 68 + (i % 5),
-                Temperature = 36.6m + (i % 2 == 0 ? 0.1m : 0m),
-                Weight = 78 - i * 0.3m,
-                Height = 175.0m,
-                Bmi = 25.5m - i * 0.1m,
-                OxygenSaturation = 97 - (i % 2),
-                RespiratoryRate = 16
-            });
-        }
 
-        return results;
-    }
 
     private static decimal CalculateBmi(decimal heightCentimetres, decimal weightKilograms)
     {
