@@ -28,7 +28,8 @@ phases:
 
       # Build frontends
       - echo Installing Node.js dependencies...
-      - npm install --legacy-peer-deps --no-optional
+      - rm -f package-lock.json
+      - npm install --legacy-peer-deps
 
       - echo Building design system...
       - cd packages/design-system
