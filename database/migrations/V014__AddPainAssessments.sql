@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS "PainAssessments" (
     "FunctionalImpact" text NOT NULL DEFAULT 'none',
     "PainPointsJson" text NULL,
     "Notes" text NULL,
+    "WeightKg" numeric(5,2) NULL,
+    "HeightCm" numeric(5,2) NULL,
+    "Bmi" numeric(4,1) NULL,
     "CreatedAt" timestamp with time zone NOT NULL DEFAULT NOW(),
     "UpdatedAt" timestamp with time zone NOT NULL DEFAULT NOW(),
     CONSTRAINT "FK_PainAssessments_Tenants" FOREIGN KEY ("TenantId") REFERENCES "Tenants"("Id") ON DELETE CASCADE,
@@ -30,8 +33,11 @@ ADD COLUMN IF NOT EXISTS "PreviousTreatments" text NULL,
 ADD COLUMN IF NOT EXISTS "AggravatingFactors" text NULL,
 ADD COLUMN IF NOT EXISTS "RelievingFactors" text NULL;
 
--- Add comment
+-- Add comments
 COMMENT ON TABLE "PainAssessments" IS 'Pain assessments for allied health practices (physio, chiro, etc.)';
 COMMENT ON COLUMN "PainAssessments"."OverallPainLevel" IS 'Pain level on 0-10 scale';
 COMMENT ON COLUMN "PainAssessments"."FunctionalImpact" IS 'Impact on daily function: none, mild, moderate, severe';
 COMMENT ON COLUMN "PainAssessments"."PainPointsJson" IS 'JSON array of specific pain points with body part, side, intensity, quality';
+COMMENT ON COLUMN "PainAssessments"."WeightKg" IS 'Patient weight in kilograms';
+COMMENT ON COLUMN "PainAssessments"."HeightCm" IS 'Patient height in centimeters';
+COMMENT ON COLUMN "PainAssessments"."Bmi" IS 'Body Mass Index (auto-calculated)';

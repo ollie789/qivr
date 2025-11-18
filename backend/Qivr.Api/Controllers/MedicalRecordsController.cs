@@ -49,22 +49,6 @@ public class MedicalRecordsController : BaseApiController
         return Ok(new ApiEnvelope<MedicalSummaryDto?>(summary));
     }
 
-    [HttpGet("vitals")]
-    [ProducesResponseType(typeof(IEnumerable<VitalSignDto>), 200)]
-    public async Task<ActionResult<IEnumerable<VitalSignDto>>> GetVitalSigns([FromQuery] Guid? patientId, CancellationToken cancellationToken)
-    {
-        var currentUserId = CurrentUserId;
-        var tenantId = RequireTenantId();
-        var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
-        if (effectivePatientId == Guid.Empty)
-        {
-            return Ok(Array.Empty<VitalSignDto>());
-        }
-
-        var vitals = await BuildVitalSignsAsync(tenantId, effectivePatientId, cancellationToken);
-        return Ok(vitals);
-    }
-
     [HttpGet("pain-assessments")]
     [ProducesResponseType(typeof(IEnumerable<PainAssessmentDto>), 200)]
     public async Task<ActionResult<IEnumerable<PainAssessmentDto>>> GetPainAssessments([FromQuery] Guid? patientId, CancellationToken cancellationToken)
@@ -144,61 +128,6 @@ public class MedicalRecordsController : BaseApiController
         return Ok(allergies);
     }
 
-    [HttpPost("vitals")]
-    [ProducesResponseType(typeof(VitalSignDto), 201)]
-    public async Task<ActionResult<VitalSignDto>> CreateVitalSigns([FromBody] CreateVitalSignRequest request)
-    {
-        var tenantId = RequireTenantId();
-        var userId = CurrentUserId;
-        
-        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
-        
-        // Validate patient exists
-        var patient = await _context.Users
-            .Where(u => u.Id == patientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
-            .FirstOrDefaultAsync();
-            
-        if (patient == null)
-            return BadRequest(new { message = "Patient not found" });
-
-        var vital = new MedicalVital
-        {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
-            PatientId = patientId,
-            RecordedAt = request.RecordedAt ?? DateTime.UtcNow,
-            Systolic = request.BloodPressure?.Systolic,
-            Diastolic = request.BloodPressure?.Diastolic,
-            HeartRate = request.HeartRate,
-            TemperatureCelsius = request.Temperature,
-            WeightKilograms = request.Weight,
-            HeightCentimetres = request.Height,
-            OxygenSaturation = request.OxygenSaturation,
-            RespiratoryRate = request.RespiratoryRate,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        _context.MedicalVitals.Add(vital);
-        await _context.SaveChangesAsync();
-
-        var dto = new VitalSignDto
-        {
-            Id = vital.Id,
-            Date = vital.RecordedAt,
-            BloodPressure = new BloodPressureDto { Systolic = vital.Systolic ?? 0, Diastolic = vital.Diastolic ?? 0 },
-            HeartRate = vital.HeartRate ?? 0,
-            Temperature = vital.TemperatureCelsius ?? 0,
-            Weight = vital.WeightKilograms ?? 0,
-            Height = vital.HeightCentimetres ?? 0,
-            Bmi = CalculateBmi(vital.HeightCentimetres ?? 0, vital.WeightKilograms ?? 0),
-            OxygenSaturation = vital.OxygenSaturation ?? 0,
-            RespiratoryRate = vital.RespiratoryRate ?? 0
-        };
-
-        return CreatedAtAction(nameof(GetVitalSigns), new { patientId }, dto);
-    }
-
     [HttpPost("pain-assessments")]
     [ProducesResponseType(typeof(PainAssessmentDto), 201)]
     public async Task<ActionResult<PainAssessmentDto>> CreatePainAssessment([FromBody] CreatePainAssessmentRequest request)
@@ -215,6 +144,10 @@ public class MedicalRecordsController : BaseApiController
         if (patient == null)
             return BadRequest(new { message = "Patient not found" });
 
+        var bmi = request.WeightKg.HasValue && request.HeightCm.HasValue 
+            ? CalculateBmi(request.HeightCm.Value, request.WeightKg.Value)
+            : null;
+
         var assessment = new PainAssessment
         {
             Id = Guid.NewGuid(),
@@ -227,6 +160,9 @@ public class MedicalRecordsController : BaseApiController
             FunctionalImpact = request.FunctionalImpact ?? "none",
             PainPointsJson = request.PainPointsJson,
             Notes = request.Notes,
+            WeightKg = request.WeightKg,
+            HeightCm = request.HeightCm,
+            Bmi = bmi,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -243,7 +179,10 @@ public class MedicalRecordsController : BaseApiController
             FunctionalImpact = assessment.FunctionalImpact,
             PainPointsJson = assessment.PainPointsJson,
             EvaluationId = assessment.EvaluationId,
-            Notes = assessment.Notes
+            Notes = assessment.Notes,
+            WeightKg = assessment.WeightKg,
+            HeightCm = assessment.HeightCm,
+            Bmi = assessment.Bmi
         };
 
         return CreatedAtAction(nameof(GetPainAssessments), new { patientId }, dto);
@@ -642,40 +581,6 @@ public class MedicalRecordsController : BaseApiController
             UpcomingAppointments = upcomingAppointments,
             RecentVisits = recentVisits
         };
-    }
-
-    private async Task<List<VitalSignDto>> BuildVitalSignsAsync(Guid tenantId, Guid patientId, CancellationToken cancellationToken)
-    {
-        var vitals = await _context.MedicalVitals
-            .Where(v => v.TenantId == tenantId && v.PatientId == patientId)
-            .OrderByDescending(v => v.RecordedAt)
-            .Take(12)
-            .ToListAsync(cancellationToken);
-
-        if (!vitals.Any())
-        {
-            var baseline = await _context.Appointments
-                .Where(a => a.TenantId == tenantId && a.PatientId == patientId)
-                .OrderByDescending(a => a.ScheduledStart)
-                .Select(a => a.ScheduledStart)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            return GenerateSampleVitalSigns(baseline == default ? DateTime.UtcNow : baseline);
-        }
-
-        return vitals.Select(v => new VitalSignDto
-        {
-            Id = v.Id,
-            Date = v.RecordedAt,
-            BloodPressure = new BloodPressureDto { Systolic = v.Systolic ?? 0, Diastolic = v.Diastolic ?? 0 },
-            HeartRate = v.HeartRate ?? 0,
-            Temperature = v.TemperatureCelsius ?? 0,
-            Weight = v.WeightKilograms ?? 0,
-            Height = v.HeightCentimetres ?? 0,
-            Bmi = CalculateBmi(v.HeightCentimetres ?? 0, v.WeightKilograms ?? 0),
-            OxygenSaturation = v.OxygenSaturation ?? 0,
-            RespiratoryRate = v.RespiratoryRate ?? 0
-        }).ToList();
     }
 
     private async Task<List<LabResultGroupDto>> BuildLabResultsAsync(Guid tenantId, Guid patientId, CancellationToken cancellationToken)
@@ -1118,26 +1023,6 @@ public sealed class RecentVisitDto
     public string? Notes { get; set; }
 }
 
-public sealed class VitalSignDto
-{
-    public Guid Id { get; set; }
-    public DateTime Date { get; set; }
-    public BloodPressureDto BloodPressure { get; set; } = new();
-    public int HeartRate { get; set; }
-    public decimal Temperature { get; set; }
-    public decimal Weight { get; set; }
-    public decimal Height { get; set; }
-    public decimal Bmi { get; set; }
-    public int OxygenSaturation { get; set; }
-    public int RespiratoryRate { get; set; }
-}
-
-public sealed class BloodPressureDto
-{
-    public int Systolic { get; set; }
-    public int Diastolic { get; set; }
-}
-
 public sealed class LabResultGroupDto
 {
     public string Category { get; set; } = string.Empty;
@@ -1194,19 +1079,6 @@ public sealed class ImmunizationDto
     public DateTime? NextDue { get; set; }
     public string? Series { get; set; }
     public string? LotNumber { get; set; }
-}
-
-public sealed class CreateVitalSignRequest
-{
-    public Guid PatientId { get; set; }
-    public DateTime? RecordedAt { get; set; }
-    public BloodPressureDto? BloodPressure { get; set; }
-    public int? HeartRate { get; set; }
-    public decimal? Temperature { get; set; }
-    public decimal? Weight { get; set; }
-    public decimal? Height { get; set; }
-    public int? OxygenSaturation { get; set; }
-    public int? RespiratoryRate { get; set; }
 }
 
 public sealed class CreateMedicationRequest
@@ -1297,6 +1169,9 @@ public sealed class PainAssessmentDto
     public string? PainPointsJson { get; set; }
     public Guid? EvaluationId { get; set; }
     public string? Notes { get; set; }
+    public decimal? WeightKg { get; set; }
+    public decimal? HeightCm { get; set; }
+    public decimal? Bmi { get; set; }
 }
 
 public sealed class CreatePainAssessmentRequest
@@ -1308,4 +1183,6 @@ public sealed class CreatePainAssessmentRequest
     public string? FunctionalImpact { get; set; }
     public string? PainPointsJson { get; set; }
     public string? Notes { get; set; }
+    public decimal? WeightKg { get; set; }
+    public decimal? HeightCm { get; set; }
 }

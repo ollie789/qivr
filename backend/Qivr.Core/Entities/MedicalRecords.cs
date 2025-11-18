@@ -31,22 +31,10 @@ public class PainAssessment : TenantEntity
     public string FunctionalImpact { get; set; } = "none"; // none, mild, moderate, severe
     public string? PainPointsJson { get; set; } // JSON array of pain points
     public string? Notes { get; set; }
-}
-
-// Keep for backward compatibility
-[Obsolete("Use PainAssessment for allied health records")]
-public class MedicalVital : TenantEntity
-{
-    public Guid PatientId { get; set; }
-    public DateTime RecordedAt { get; set; }
-    public int? Systolic { get; set; }
-    public int? Diastolic { get; set; }
-    public int? HeartRate { get; set; }
-    public decimal? TemperatureCelsius { get; set; }
-    public decimal? WeightKilograms { get; set; }
-    public decimal? HeightCentimetres { get; set; }
-    public int? OxygenSaturation { get; set; }
-    public int? RespiratoryRate { get; set; }
+    // Body metrics for allied health
+    public decimal? WeightKg { get; set; }
+    public decimal? HeightCm { get; set; }
+    public decimal? Bmi { get; set; }
 }
 
 public class MedicalLabResult : TenantEntity
