@@ -228,6 +228,7 @@ builder.Services.AddAWSService<Amazon.Textract.IAmazonTextract>();
 builder.Services.AddScoped<IS3Service, S3Service>();
 builder.Services.AddScoped<ITextractService, TextractService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<IOcrQueueService, OcrQueueService>();
 
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR(options =>

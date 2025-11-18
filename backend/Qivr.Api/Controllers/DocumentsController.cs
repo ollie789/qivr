@@ -10,11 +10,16 @@ namespace Qivr.Api.Controllers;
 public class DocumentsController : BaseApiController
 {
     private readonly IDocumentService _documentService;
+    private readonly IOcrQueueService _ocrQueueService;
     private readonly ILogger<DocumentsController> _logger;
 
-    public DocumentsController(IDocumentService documentService, ILogger<DocumentsController> logger)
+    public DocumentsController(
+        IDocumentService documentService,
+        IOcrQueueService ocrQueueService,
+        ILogger<DocumentsController> logger)
     {
         _documentService = documentService;
+        _ocrQueueService = ocrQueueService;
         _logger = logger;
     }
 
@@ -53,6 +58,13 @@ public class DocumentsController : BaseApiController
 
         using var stream = request.File.OpenReadStream();
         var document = await _documentService.UploadDocumentAsync(dto, stream, cancellationToken);
+
+        // Queue for OCR processing
+        await _ocrQueueService.QueueDocumentForOcrAsync(
+            document.Id,
+            document.S3Bucket,
+            document.S3Key,
+            cancellationToken);
 
         return CreatedAtAction(nameof(GetDocument), new { id = document.Id }, new DocumentResponse(document));
     }

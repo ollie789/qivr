@@ -186,14 +186,25 @@ const calculateStats = (instances: PromInstance[]): PromStats => {
 };
 
 export async function fetchPromInstances(
-  status?: PromInstanceStatus,
+  _status?: PromInstanceStatus,
 ): Promise<PromInstance[]> {
-  const params = status ? { status } : undefined;
+  // Temporarily remove status filter for debugging
+  const params = undefined;
+  console.log('[promsApi] DEBUG: Fetching without status filter');
   const response = await apiClient.get<EnvelopeOrValue<ApiPromInstance[]>>(
     `${PROM_API_BASE}/instances`,
     params,
   );
-  return unwrapEnvelope(response).map(mapPromInstance);
+  console.log('[promsApi] fetchPromInstances raw response:', response);
+  console.log('[promsApi] fetchPromInstances params:', params);
+  
+  const unwrapped = unwrapEnvelope(response);
+  console.log('[promsApi] fetchPromInstances unwrapped:', unwrapped);
+  
+  const mapped = unwrapped.map(mapPromInstance);
+  console.log('[promsApi] fetchPromInstances mapped:', mapped);
+  
+  return mapped;
 }
 
 export async function fetchPromHistory(): Promise<PromHistoryEntry[]> {

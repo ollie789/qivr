@@ -22,6 +22,11 @@ export function useAppointmentsData(filters: AppointmentFilters) {
     refetchOnWindowFocus: true,
   });
 
+  console.log('[useAppointmentsData] query.data:', query.data);
+  console.log('[useAppointmentsData] query.isLoading:', query.isLoading);
+  console.log('[useAppointmentsData] query.error:', query.error);
+  console.log('[useAppointmentsData] query.status:', query.status);
+
   const cancelMutation = useMutation({
     mutationFn: ({ id, reason }: CancelArgs) => cancelAppointment(id, reason),
     onSuccess: () => {

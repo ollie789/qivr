@@ -18,11 +18,19 @@ type CursorResponse<T> = {
 };
 
 const unwrapItems = <T>(payload: CursorResponse<T> | T[] | { data: CursorResponse<T> | T[] }): T[] => {
+  console.log('[unwrapItems] Input payload:', payload);
+  console.log('[unwrapItems] Is array?', Array.isArray(payload));
+  console.log('[unwrapItems] Has data?', payload && typeof payload === 'object' && 'data' in payload);
+  
   const raw = (payload && typeof payload === 'object' && 'data' in payload
     ? (payload as { data: CursorResponse<T> | T[] }).data
     : payload) ?? [];
 
+  console.log('[unwrapItems] Raw after extraction:', raw);
+  console.log('[unwrapItems] Raw is array?', Array.isArray(raw));
+
   if (Array.isArray(raw)) {
+    console.log('[unwrapItems] Returning array directly:', raw);
     return raw;
   }
 
@@ -30,9 +38,11 @@ const unwrapItems = <T>(payload: CursorResponse<T> | T[] | { data: CursorRespons
   if (raw && typeof raw === 'object') {
     const cursorResponse = raw as CursorResponse<T>;
     const items = cursorResponse.items ?? cursorResponse.Items ?? [];
+    console.log('[unwrapItems] Extracted items from cursor:', items);
     return Array.isArray(items) ? items : [];
   }
   
+  console.log('[unwrapItems] Returning empty array');
   return [];
 };
 
@@ -65,10 +75,24 @@ const minutesBetween = (startIso: string, endIso: string): number => {
   return Math.max(0, Math.round((endMs - startMs) / 60000));
 };
 
-const normalizeStatus = (value: Maybe<string>): string => {
-  if (!value) {
+const normalizeStatus = (value: Maybe<string | number>): string => {
+  if (value === null || value === undefined) {
     return 'unknown';
   }
+  
+  // Handle numeric enum values
+  if (typeof value === 'number') {
+    switch (value) {
+      case 0: return 'scheduled';
+      case 1: return 'confirmed';
+      case 2: return 'in-progress';
+      case 3: return 'completed';
+      case 4: return 'cancelled';
+      case 5: return 'no-show';
+      default: return 'unknown';
+    }
+  }
+  
   return value.toLowerCase();
 };
 
@@ -82,6 +106,11 @@ const mapAppointment = (raw: any): AppointmentDto => {
   const location = raw.location ?? raw.Location ?? (locationDetails.address ?? locationDetails.Address); 
   const videoLink = raw.videoLink ?? raw.VideoLink ?? locationDetails.meetingUrl ?? locationDetails.videoLink;
 
+  const locationTypeValue = raw.locationType ?? raw.LocationType;
+  const isVirtualLocation = typeof locationTypeValue === 'number' 
+    ? locationTypeValue === 1 // Assuming 0=InPerson, 1=Virtual
+    : String(locationTypeValue).toLowerCase() === 'virtual';
+
   return {
     id: String(raw.id ?? raw.Id ?? ''),
     providerId: String(raw.providerId ?? raw.ProviderId ?? ''),
@@ -93,7 +122,7 @@ const mapAppointment = (raw: any): AppointmentDto => {
     duration: minutesBetween(scheduledStart, scheduledEnd),
     status: normalizeStatus(raw.status ?? raw.Status),
     location: location ?? '',
-    isVirtual: Boolean((raw.locationType ?? raw.LocationType ?? '').toLowerCase() === 'virtual' || videoLink),
+    isVirtual: Boolean(isVirtualLocation || videoLink),
     notes: raw.notes ?? raw.Notes ?? '',
     createdAt: toIsoString(raw.createdAt ?? raw.CreatedAt),
     updatedAt: toIsoString(raw.updatedAt ?? raw.UpdatedAt ?? raw.createdAt ?? raw.CreatedAt),
@@ -201,7 +230,14 @@ export async function fetchAppointments(filters: AppointmentFilters): Promise<Ap
     params,
   );
 
-  const mapped = unwrapItems(payload).map(mapAppointment);
+  console.log('[appointmentsApi] Raw payload:', payload);
+  console.log('[appointmentsApi] Params:', params);
+  
+  const items = unwrapItems(payload);
+  console.log('[appointmentsApi] Unwrapped items:', items);
+  
+  const mapped = items.map(mapAppointment);
+  console.log('[appointmentsApi] Mapped appointments:', mapped);
 
   return mapped.sort((a, b) => {
     const delta = new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime();

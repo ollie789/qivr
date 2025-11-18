@@ -63,6 +63,10 @@ const AppointmentsPage: React.FC = () => {
 
   const { appointments, isLoading, cancel, reschedule } = useAppointmentsData(filters);
 
+  console.log('[AppointmentsPage] appointments:', appointments);
+  console.log('[AppointmentsPage] isLoading:', isLoading);
+  console.log('[AppointmentsPage] filters:', filters);
+
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return appointments.filter((apt) =>
