@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Paper,
@@ -30,7 +30,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Timeline,
   TimelineItem,
@@ -39,7 +39,7 @@ import {
   TimelineContent,
   TimelineDot,
   TimelineOppositeContent,
-} from '@mui/lab';
+} from "@mui/lab";
 import {
   Person as PersonIcon,
   LocalHospital as HospitalIcon,
@@ -51,47 +51,64 @@ import {
   Save as SaveIcon,
   ExpandMore as ExpandMoreIcon,
   Add,
-  ThermostatAuto as TempIcon,
-  MonitorHeart as PulseIcon,
-  Bloodtype as BloodIcon,
-  Scale as WeightIcon,
   MedicalServices as MedicalIcon,
   Vaccines as VaccineIcon,
   Medication as MedicationIcon,
   Warning as WarningIcon,
   CheckCircle as CheckIcon,
   Info as InfoIcon,
-} from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parseISO, differenceInYears } from 'date-fns';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSnackbar } from 'notistack';
-import { useAuthGuard } from '../hooks/useAuthGuard';
+} from "@mui/icons-material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { format, parseISO, differenceInYears } from "date-fns";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSnackbar } from "notistack";
+import { useAuthGuard } from "../hooks/useAuthGuard";
 import {
   medicalRecordsApi,
   type VitalSign,
-} from '../services/medicalRecordsApi';
+} from "../services/medicalRecordsApi";
 import {
   patientApi,
   type PatientListResponse,
   type Patient,
-} from '../services/patientApi';
-import { documentApi } from '../services/documentApi';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
-import type { ChipProps } from '@mui/material/Chip';
-import type { SelectChangeEvent } from '@mui/material/Select';
-import { PageHeader, TabPanel, StatCard, FlexBetween, FormDialog } from '@qivr/design-system';
+} from "../services/patientApi";
+import { documentApi } from "../services/documentApi";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as ChartTooltip,
+  ResponsiveContainer,
+} from "recharts";
+import type { ChipProps } from "@mui/material/Chip";
+import type { SelectChangeEvent } from "@mui/material/Select";
+import {
+  PageHeader,
+  TabPanel,
+  StatCard,
+  FlexBetween,
+  FormDialog,
+} from "@qivr/design-system";
 
 interface MedicalHistory {
   id: string;
-  category: 'condition' | 'surgery' | 'allergy' | 'medication' | 'immunization' | 'family' | 'visit';
+  category:
+    | "condition"
+    | "surgery"
+    | "allergy"
+    | "medication"
+    | "immunization"
+    | "family"
+    | "visit";
   title: string;
   description: string;
   date?: string;
-  status: 'active' | 'resolved' | 'ongoing';
-  severity?: 'mild' | 'moderate' | 'severe' | 'critical';
+  status: "active" | "resolved" | "ongoing";
+  severity?: "mild" | "moderate" | "severe" | "critical";
   notes?: string;
 }
 
@@ -101,35 +118,36 @@ type TimelineEvent = {
   title: string;
   description?: string;
   icon: React.ReactNode;
-  color: 'inherit' | 'grey' | 'primary' | 'secondary';
+  color: "inherit" | "grey" | "primary" | "secondary";
 };
 
-type TimelineFilter = 'all' | 'vital' | MedicalHistory['category'];
+type TimelineFilter = "all" | "vital" | MedicalHistory["category"];
 
 const MedicalRecords: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { canMakeApiCalls } = useAuthGuard();
   const queryClient = useQueryClient();
-  
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
+
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [activeTab, setActiveTab] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [vitalDialogOpen, setVitalDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('all');
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [editedPatient, setEditedPatient] = useState<Partial<Patient>>({});
 
-  const {
-    data: patientList,
-    isLoading: isPatientsLoading,
-  } = useQuery<PatientListResponse>({
-    queryKey: ['medicalRecords', 'patients'],
-    queryFn: () => patientApi.getPatients({ limit: 200 }),
-    staleTime: 5 * 60 * 1000,
-    enabled: canMakeApiCalls,
-  });
+  const { data: patientList, isLoading: isPatientsLoading } =
+    useQuery<PatientListResponse>({
+      queryKey: ["medicalRecords", "patients"],
+      queryFn: () => patientApi.getPatients({ limit: 200 }),
+      staleTime: 5 * 60 * 1000,
+      enabled: canMakeApiCalls,
+    });
 
-  const patients: Patient[] = useMemo(() => patientList?.data ?? [], [patientList?.data]);
+  const patients: Patient[] = useMemo(
+    () => patientList?.data ?? [],
+    [patientList?.data],
+  );
 
   useEffect(() => {
     if (!selectedPatientId && patients.length > 0 && patients[0]) {
@@ -138,7 +156,7 @@ const MedicalRecords: React.FC = () => {
   }, [patients, selectedPatientId]);
 
   // Get patient from the list
-  const patient = patients?.find(p => p.id === selectedPatientId);
+  const patient = patients?.find((p) => p.id === selectedPatientId);
 
   // Initialize edited patient when patient changes
   useEffect(() => {
@@ -150,24 +168,24 @@ const MedicalRecords: React.FC = () => {
   const handleSavePatient = () => {
     if (!selectedPatientId) return;
     // TODO: Call API to save patient data
-    enqueueSnackbar('Patient information saved', { variant: 'success' });
+    enqueueSnackbar("Patient information saved", { variant: "success" });
     setEditMode(false);
   };
 
   // Fetch vital signs
   const { data: medicalSummary } = useQuery({
-    queryKey: ['medicalSummary', selectedPatientId],
+    queryKey: ["medicalSummary", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return null;
       const result = await medicalRecordsApi.getSummary(selectedPatientId);
-      console.log('Medical summary response:', result);
+      console.log("Medical summary response:", result);
       return result;
     },
     enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
   const { data: vitalSigns = [] } = useQuery({
-    queryKey: ['vitalSigns', selectedPatientId],
+    queryKey: ["vitalSigns", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getVitals(selectedPatientId);
@@ -176,7 +194,7 @@ const MedicalRecords: React.FC = () => {
   });
 
   const { data: labResults = [] } = useQuery({
-    queryKey: ['labResults', selectedPatientId],
+    queryKey: ["labResults", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getLabResults(selectedPatientId);
@@ -185,13 +203,13 @@ const MedicalRecords: React.FC = () => {
   });
 
   const { data: documents = [], refetch: refetchDocuments } = useQuery({
-    queryKey: ['documents', selectedPatientId],
+    queryKey: ["documents", selectedPatientId],
     queryFn: () => documentApi.list({ patientId: selectedPatientId }),
     enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
   const { data: medications = [] } = useQuery({
-    queryKey: ['medications', selectedPatientId],
+    queryKey: ["medications", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getMedications(selectedPatientId);
@@ -200,7 +218,7 @@ const MedicalRecords: React.FC = () => {
   });
 
   const { data: allergies = [] } = useQuery({
-    queryKey: ['allergies', selectedPatientId],
+    queryKey: ["allergies", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getAllergies(selectedPatientId);
@@ -209,7 +227,7 @@ const MedicalRecords: React.FC = () => {
   });
 
   const { data: immunizations = [] } = useQuery({
-    queryKey: ['immunizations', selectedPatientId],
+    queryKey: ["immunizations", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getImmunizations(selectedPatientId);
@@ -218,7 +236,7 @@ const MedicalRecords: React.FC = () => {
   });
 
   const { data: procedures = [] } = useQuery({
-    queryKey: ['procedures', selectedPatientId],
+    queryKey: ["procedures", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return [];
       return medicalRecordsApi.getProcedures(selectedPatientId);
@@ -236,11 +254,11 @@ const MedicalRecords: React.FC = () => {
     medicalSummary?.conditions.forEach((condition) => {
       entries.push({
         id: condition.id,
-        category: 'condition',
+        category: "condition",
         title: condition.condition,
         description: condition.managedBy,
         date: condition.diagnosedDate,
-        status: condition.status === 'resolved' ? 'resolved' : 'active',
+        status: condition.status === "resolved" ? "resolved" : "active",
         severity: undefined,
         notes: condition.notes ?? undefined,
       });
@@ -249,11 +267,11 @@ const MedicalRecords: React.FC = () => {
     medications.forEach((medication) => {
       entries.push({
         id: medication.id,
-        category: 'medication',
+        category: "medication",
         title: medication.name,
         description: medication.instructions ?? medication.frequency,
         date: medication.startDate,
-        status: medication.status === 'completed' ? 'resolved' : 'active',
+        status: medication.status === "completed" ? "resolved" : "active",
         severity: undefined,
         notes: medication.instructions ?? undefined,
       });
@@ -262,12 +280,14 @@ const MedicalRecords: React.FC = () => {
     allergies.forEach((allergy) => {
       entries.push({
         id: allergy.id,
-        category: 'allergy',
+        category: "allergy",
         title: allergy.allergen,
         description: allergy.reaction,
         date: allergy.diagnosedDate ?? undefined,
-        status: 'active',
-        severity: (allergy.severity?.toLowerCase() as MedicalHistory['severity']) ?? undefined,
+        status: "active",
+        severity:
+          (allergy.severity?.toLowerCase() as MedicalHistory["severity"]) ??
+          undefined,
         notes: allergy.notes ?? undefined,
       });
     });
@@ -275,11 +295,11 @@ const MedicalRecords: React.FC = () => {
     immunizations.forEach((immunization) => {
       entries.push({
         id: immunization.id,
-        category: 'immunization',
+        category: "immunization",
         title: immunization.vaccine,
         description: immunization.provider,
         date: immunization.date,
-        status: 'resolved',
+        status: "resolved",
         severity: undefined,
         notes: immunization.facility,
       });
@@ -288,11 +308,11 @@ const MedicalRecords: React.FC = () => {
     procedures.forEach((procedure: any) => {
       entries.push({
         id: procedure.id,
-        category: 'surgery',
+        category: "surgery",
         title: procedure.procedureName,
         description: procedure.provider,
         date: procedure.procedureDate,
-        status: procedure.status === 'completed' ? 'resolved' : 'active',
+        status: procedure.status === "completed" ? "resolved" : "active",
         severity: undefined,
         notes: procedure.notes ?? procedure.outcome ?? undefined,
       });
@@ -301,11 +321,11 @@ const MedicalRecords: React.FC = () => {
     medicalSummary?.recentVisits.forEach((visit) => {
       entries.push({
         id: visit.id,
-        category: 'visit',
+        category: "visit",
         title: visit.provider,
         description: visit.facility,
         date: visit.date,
-        status: 'resolved',
+        status: "resolved",
         severity: undefined,
         notes: visit.notes ?? undefined,
       });
@@ -316,80 +336,84 @@ const MedicalRecords: React.FC = () => {
       const bDate = b.date ? new Date(b.date).getTime() : 0;
       return bDate - aDate;
     });
-  }, [selectedPatientId, medicalSummary, medications, allergies, immunizations, procedures]);
+  }, [
+    selectedPatientId,
+    medicalSummary,
+    medications,
+    allergies,
+    immunizations,
+    procedures,
+  ]);
 
-  // New vital sign state
+  // New pain assessment state
   const [newVital, setNewVital] = useState<Partial<VitalSign>>({
-    bloodPressure: { systolic: 120, diastolic: 80 },
-    heartRate: 70,
-    respiratoryRate: 16,
-    temperature: 98.6,
-    weight: 0,
-    height: 0,
-    oxygenSaturation: 98,
+    overallPainLevel: 0,
+    functionalImpact: "none",
+    painPoints: [],
   });
 
-  // New medical history state  
+  // New medical history state
   const [newHistory, setNewHistory] = useState<Partial<MedicalHistory>>({
-    category: 'condition',
-    title: '',
-    description: '',
-    status: 'active',
-    severity: 'mild',
+    category: "condition",
+    title: "",
+    description: "",
+    status: "active",
+    severity: "mild",
   });
 
   // Add vital sign mutation
   const addVitalMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedPatientId) throw new Error('No patient selected');
-      
+      if (!selectedPatientId) throw new Error("No patient selected");
+
       return medicalRecordsApi.createVitalSigns({
         patientId: selectedPatientId,
-        bloodPressureSystolic: newVital.bloodPressure?.systolic || 120,
-        bloodPressureDiastolic: newVital.bloodPressure?.diastolic || 80,
-        heartRate: newVital.heartRate || 70,
-        respiratoryRate: newVital.respiratoryRate || 16,
-        temperature: newVital.temperature || 98.6,
-        weight: newVital.weight || 0,
-        height: newVital.height || 0,
+        overallPainLevel: newVital.overallPainLevel || 0,
+        functionalImpact: newVital.functionalImpact || "none",
+        painPoints: newVital.painPoints || [],
+        notes: newVital.notes || "",
       });
     },
     onSuccess: () => {
-      enqueueSnackbar('Vital signs recorded successfully', { variant: 'success' });
+      enqueueSnackbar("Pain assessment recorded successfully", {
+        variant: "success",
+      });
       setVitalDialogOpen(false);
-      
+
       // Reset form
       setNewVital({
-        bloodPressure: { systolic: 120, diastolic: 80 },
-        heartRate: 70,
-        temperature: 98.6,
-        weight: 0,
-        height: 0,
-        respiratoryRate: 16,
+        overallPainLevel: 0,
+        functionalImpact: "none",
+        painPoints: [],
       });
-      
-      // Refresh vital signs data
-      queryClient.invalidateQueries({ queryKey: ['vitalSigns', selectedPatientId] });
+
+      // Refresh pain assessments data
+      queryClient.invalidateQueries({
+        queryKey: ["vitalSigns", selectedPatientId],
+      });
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Failed to record vital signs';
-      enqueueSnackbar(message, { variant: 'error' });
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to record pain assessment";
+      enqueueSnackbar(message, { variant: "error" });
     },
   });
 
-  // Add medical history mutation  
+  // Add medical history mutation
   const addHistoryMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedPatientId) throw new Error('No patient selected');
-      
+      if (!selectedPatientId) throw new Error("No patient selected");
+
       switch (newHistory.category) {
-        case 'allergy': {
+        case "allergy": {
           const allergyData: any = {
             patientId: selectedPatientId,
-            allergen: newHistory.title?.trim() || 'Untitled Allergen',
-            type: 'unknown',
-            severity: 'mild',
-            reaction: newHistory.description?.trim() || 'No reaction specified',
+            allergen: newHistory.title?.trim() || "Untitled Allergen",
+            type: "unknown",
+            severity: "mild",
+            reaction: newHistory.description?.trim() || "No reaction specified",
           };
           const notes = newHistory.description?.trim();
           if (notes) {
@@ -397,13 +421,13 @@ const MedicalRecords: React.FC = () => {
           }
           return medicalRecordsApi.createAllergy(allergyData);
         }
-        
-        case 'condition': {
+
+        case "condition": {
           const conditionData: any = {
             patientId: selectedPatientId,
-            condition: newHistory.title?.trim() || 'Untitled Condition',
-            diagnosedDate: new Date().toISOString().split('T')[0],
-            status: 'active',
+            condition: newHistory.title?.trim() || "Untitled Condition",
+            diagnosedDate: new Date().toISOString().split("T")[0],
+            status: "active",
           };
           const notes = newHistory.description?.trim();
           if (notes) {
@@ -411,23 +435,25 @@ const MedicalRecords: React.FC = () => {
           }
           return medicalRecordsApi.createCondition(conditionData);
         }
-        
-        case 'immunization':
+
+        case "immunization":
           return medicalRecordsApi.createImmunization({
             patientId: selectedPatientId,
-            vaccine: String(newHistory.title?.trim() || 'Untitled Vaccine'),
-            date: new Date().toISOString().split('T')[0] || new Date().toISOString().substring(0, 10),
-            provider: 'Care Team',
-            facility: 'Clinic',
+            vaccine: String(newHistory.title?.trim() || "Untitled Vaccine"),
+            date:
+              new Date().toISOString().split("T")[0] ||
+              new Date().toISOString().substring(0, 10),
+            provider: "Care Team",
+            facility: "Clinic",
           });
-        
-        case 'medication': {
+
+        case "medication": {
           const medicationData: any = {
             patientId: selectedPatientId,
-            name: newHistory.title?.trim() || 'Untitled Medication',
-            dosage: '1 tablet',
-            frequency: 'Daily',
-            startDate: new Date().toISOString().split('T')[0],
+            name: newHistory.title?.trim() || "Untitled Medication",
+            dosage: "1 tablet",
+            frequency: "Daily",
+            startDate: new Date().toISOString().split("T")[0],
           };
           const instructions = newHistory.description?.trim();
           if (instructions) {
@@ -435,15 +461,15 @@ const MedicalRecords: React.FC = () => {
           }
           return medicalRecordsApi.createMedication(medicationData);
         }
-        
-        case 'surgery': {
+
+        case "surgery": {
           const procedureData: any = {
             patientId: selectedPatientId,
-            procedureName: newHistory.title?.trim() || 'Untitled Procedure',
-            procedureDate: new Date().toISOString().split('T')[0],
-            provider: 'Care Team',
-            facility: 'Clinic',
-            status: 'completed',
+            procedureName: newHistory.title?.trim() || "Untitled Procedure",
+            procedureDate: new Date().toISOString().split("T")[0],
+            provider: "Care Team",
+            facility: "Clinic",
+            status: "completed",
           };
           const notes = newHistory.description?.trim();
           if (notes) {
@@ -451,106 +477,114 @@ const MedicalRecords: React.FC = () => {
           }
           return medicalRecordsApi.createProcedure(procedureData);
         }
-        
+
         default:
-          throw new Error('Unsupported medical record type');
+          throw new Error("Unsupported medical record type");
       }
     },
     onSuccess: (_data, _variables) => {
-      const category = newHistory.category || 'condition';
-      enqueueSnackbar(`${category.charAt(0).toUpperCase() + category.slice(1)} added successfully`, { variant: 'success' });
+      const category = newHistory.category || "condition";
+      enqueueSnackbar(
+        `${category.charAt(0).toUpperCase() + category.slice(1)} added successfully`,
+        { variant: "success" },
+      );
       setHistoryDialogOpen(false);
-      
+
       // Reset form
       setNewHistory({
-        category: 'condition',
-        title: '',
-        description: '',
-        status: 'active',
-        severity: 'mild',
+        category: "condition",
+        title: "",
+        description: "",
+        status: "active",
+        severity: "mild",
       });
-      
+
       // Refresh appropriate data based on category
       switch (category) {
-        case 'allergy':
-          queryClient.invalidateQueries({ queryKey: ['allergies', selectedPatientId] });
+        case "allergy":
+          queryClient.invalidateQueries({
+            queryKey: ["allergies", selectedPatientId],
+          });
           break;
-        case 'condition':
-          queryClient.invalidateQueries({ queryKey: ['medicalSummary', selectedPatientId] });
+        case "condition":
+          queryClient.invalidateQueries({
+            queryKey: ["medicalSummary", selectedPatientId],
+          });
           break;
-        case 'immunization':
-          queryClient.invalidateQueries({ queryKey: ['immunizations', selectedPatientId] });
+        case "immunization":
+          queryClient.invalidateQueries({
+            queryKey: ["immunizations", selectedPatientId],
+          });
           break;
-        case 'medication':
-          queryClient.invalidateQueries({ queryKey: ['medications', selectedPatientId] });
+        case "medication":
+          queryClient.invalidateQueries({
+            queryKey: ["medications", selectedPatientId],
+          });
           break;
-        case 'surgery':
-          queryClient.invalidateQueries({ queryKey: ['procedures', selectedPatientId] });
+        case "surgery":
+          queryClient.invalidateQueries({
+            queryKey: ["procedures", selectedPatientId],
+          });
           break;
       }
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Failed to add medical record';
-      enqueueSnackbar(message, { variant: 'error' });
+      const message =
+        error instanceof Error ? error.message : "Failed to add medical record";
+      enqueueSnackbar(message, { variant: "error" });
     },
   });
 
-  const calculateBMI = (weight: number, height: number) => {
-    if (!weight || !height) return 0;
-    const heightInMeters = height / 100;
-    return Math.round((weight / (heightInMeters * heightInMeters)) * 10) / 10;
-  };
-
-  const getVitalTrend = (vitalType: string) => {
-    return vitalSigns
-      .slice(-10)
-      .map((vital: VitalSign) => ({
-        date: format(parseISO(vital.recordedAt), 'MMM d'),
-        value: vitalType === 'bp' 
-          ? vital.bloodPressure.systolic
-          : vitalType === 'hr' 
-          ? vital.heartRate
-          : vitalType === 'weight'
-          ? vital.weight
-          : vital.temperature,
-      }));
-  };
-
-  const getCategoryIcon = (category: MedicalHistory['category'] | string) => {
+  const getCategoryIcon = (category: MedicalHistory["category"] | string) => {
     switch (category) {
-      case 'condition': return <MedicalIcon />;
-      case 'surgery': return <HospitalIcon />;
-      case 'allergy': return <WarningIcon />;
-      case 'medication': return <MedicationIcon />;
-      case 'immunization': return <VaccineIcon />;
-      case 'family': return <PersonIcon />;
-      case 'visit': return <TimelineIcon />;
-      default: return <InfoIcon />;
+      case "condition":
+        return <MedicalIcon />;
+      case "surgery":
+        return <HospitalIcon />;
+      case "allergy":
+        return <WarningIcon />;
+      case "medication":
+        return <MedicationIcon />;
+      case "immunization":
+        return <VaccineIcon />;
+      case "family":
+        return <PersonIcon />;
+      case "visit":
+        return <TimelineIcon />;
+      default:
+        return <InfoIcon />;
     }
   };
 
-  const getSeverityColor = (severity?: MedicalHistory['severity']): ChipProps['color'] => {
+  const getSeverityColor = (
+    severity?: MedicalHistory["severity"],
+  ): ChipProps["color"] => {
     switch (severity) {
-      case 'critical': return 'error';
-      case 'severe': return 'warning';
-      case 'moderate': return 'info';
-      case 'mild': return 'success';
-      default: return 'default';
+      case "critical":
+        return "error";
+      case "severe":
+        return "warning";
+      case "moderate":
+        return "info";
+      case "mild":
+        return "success";
+      default:
+        return "default";
     }
   };
 
   const generateTimeline = () => {
     const events: TimelineEvent[] = [];
-    
-    // Add vital signs to timeline
+
+    // Add pain assessments to timeline
     vitalSigns.forEach((vital: VitalSign) => {
       events.push({
-        type: 'vital',
+        type: "vital",
         date: vital.recordedAt,
-        title: 'Vital Signs Recorded',
-        description: `BP: ${vital.bloodPressure.systolic}/${vital.bloodPressure.diastolic}, HR: ${vital.heartRate}`,
+        title: "Pain Assessment Recorded",
+        description: `Pain Level: ${vital.overallPainLevel}/10, Impact: ${vital.functionalImpact}`,
         icon: <HeartIcon />,
-        color: 'primary',
+        color: "primary",
       });
     });
 
@@ -558,36 +592,38 @@ const MedicalRecords: React.FC = () => {
     labResults.forEach((group) => {
       group.tests.forEach((test) => {
         events.push({
-          type: 'surgery',
+          type: "surgery",
           date: group.date,
           title: `${test.testName} (${group.category})`,
-          description: `${test.value} ${test.unit ?? ''}`.trim(),
+          description: `${test.value} ${test.unit ?? ""}`.trim(),
           icon: <MedicalIcon />,
-          color: 'primary',
+          color: "primary",
         });
       });
     });
 
     // Add medical history to timeline
     medicalHistory.forEach((history: MedicalHistory) => {
-        if (history.date) {
-          events.push({
-            type: history.category,
-            date: history.date,
-            title: history.title,
-            description: history.description,
-            icon: getCategoryIcon(history.category),
-            color: history.status === 'active' ? 'secondary' : 'primary',
-          });
-        }
-      });
+      if (history.date) {
+        events.push({
+          type: history.category,
+          date: history.date,
+          title: history.title,
+          description: history.description,
+          icon: getCategoryIcon(history.category),
+          color: history.status === "active" ? "secondary" : "primary",
+        });
+      }
+    });
 
     // Sort by date
-    events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    events.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
 
     // Filter if needed
-    if (timelineFilter !== 'all') {
-      return events.filter(e => e.type === timelineFilter);
+    if (timelineFilter !== "all") {
+      return events.filter((e) => e.type === timelineFilter);
     }
 
     return events.slice(0, 20); // Show last 20 events
@@ -596,9 +632,9 @@ const MedicalRecords: React.FC = () => {
   const lastVisitDisplay = useMemo(() => {
     const mostRecentVisit = medicalSummary?.recentVisits?.[0];
     if (!mostRecentVisit?.date) {
-      return 'N/A';
+      return "N/A";
     }
-    return format(parseISO(mostRecentVisit.date), 'MMM d, yyyy');
+    return format(parseISO(mostRecentVisit.date), "MMM d, yyyy");
   }, [medicalSummary]);
 
   return (
@@ -620,14 +656,15 @@ const MedicalRecords: React.FC = () => {
               displayEmpty
             >
               <MenuItem value="" disabled>
-                {isPatientsLoading ? 'Loading patients...' : 'Select a patient'}
+                {isPatientsLoading ? "Loading patients..." : "Select a patient"}
               </MenuItem>
               {patients.map((patientOption) => {
-                const name = `${patientOption.firstName ?? ''} ${patientOption.lastName ?? ''}`.trim();
+                const name =
+                  `${patientOption.firstName ?? ""} ${patientOption.lastName ?? ""}`.trim();
                 const label = name.length > 0 ? name : patientOption.email;
                 return (
                   <MenuItem key={patientOption.id} value={patientOption.id}>
-                    {label || 'Unknown patient'}
+                    {label || "Unknown patient"}
                   </MenuItem>
                 );
               })}
@@ -642,16 +679,28 @@ const MedicalRecords: React.FC = () => {
               <CardContent>
                 <FlexBetween sx={{ mb: 2 }}>
                   <FlexBetween sx={{ gap: 2 }}>
-                    <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main' }}>
-                      {patient?.firstName?.[0]}{patient?.lastName?.[0]}
+                    <Avatar
+                      sx={{ width: 64, height: 64, bgcolor: "primary.main" }}
+                    >
+                      {patient?.firstName?.[0]}
+                      {patient?.lastName?.[0]}
                     </Avatar>
                     <Box>
                       <Typography variant="h5">
                         {patient?.firstName} {patient?.lastName}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Age: {patient?.dateOfBirth ? differenceInYears(new Date(), parseISO(patient.dateOfBirth)) : 'N/A'} • 
-                        {patient?.gender} • DOB: {patient?.dateOfBirth ? format(parseISO(patient.dateOfBirth), 'MMM d, yyyy') : 'N/A'}
+                        Age:{" "}
+                        {patient?.dateOfBirth
+                          ? differenceInYears(
+                              new Date(),
+                              parseISO(patient.dateOfBirth),
+                            )
+                          : "N/A"}{" "}
+                        •{patient?.gender} • DOB:{" "}
+                        {patient?.dateOfBirth
+                          ? format(parseISO(patient.dateOfBirth), "MMM d, yyyy")
+                          : "N/A"}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {patient?.email} • {patient?.phone}
@@ -661,9 +710,11 @@ const MedicalRecords: React.FC = () => {
                   <Button
                     variant={editMode ? "contained" : "outlined"}
                     startIcon={editMode ? <SaveIcon /> : <EditIcon />}
-                    onClick={() => editMode ? handleSavePatient() : setEditMode(true)}
+                    onClick={() =>
+                      editMode ? handleSavePatient() : setEditMode(true)
+                    }
                   >
-                    {editMode ? 'Save Changes' : 'Edit Info'}
+                    {editMode ? "Save Changes" : "Edit Info"}
                   </Button>
                 </FlexBetween>
 
@@ -673,21 +724,35 @@ const MedicalRecords: React.FC = () => {
                     <StatCard label="Blood Type" value="O+" compact />
                   </Grid>
                   <Grid item xs={6} md={3}>
-                    <StatCard 
-                      label="Allergies" 
-                      value={medicalHistory.filter((h: MedicalHistory) => h.category === 'allergy').length}
+                    <StatCard
+                      label="Allergies"
+                      value={
+                        medicalHistory.filter(
+                          (h: MedicalHistory) => h.category === "allergy",
+                        ).length
+                      }
                       compact
                     />
                   </Grid>
                   <Grid item xs={6} md={3}>
-                    <StatCard 
+                    <StatCard
                       label="Medications"
-                      value={medicalHistory.filter((h: MedicalHistory) => h.category === 'medication' && h.status === 'active').length}
+                      value={
+                        medicalHistory.filter(
+                          (h: MedicalHistory) =>
+                            h.category === "medication" &&
+                            h.status === "active",
+                        ).length
+                      }
                       compact
                     />
                   </Grid>
                   <Grid item xs={6} md={3}>
-                    <StatCard label="Last Visit" value={lastVisitDisplay} compact />
+                    <StatCard
+                      label="Last Visit"
+                      value={lastVisitDisplay}
+                      compact
+                    />
                   </Grid>
                 </Grid>
               </CardContent>
@@ -697,7 +762,7 @@ const MedicalRecords: React.FC = () => {
             <Paper>
               <Tabs value={activeTab} onChange={(_e, v) => setActiveTab(v)}>
                 <Tab icon={<PersonIcon />} label="Demographics" />
-                <Tab icon={<HeartIcon />} label="Vital Signs" />
+                <Tab icon={<HeartIcon />} label="Pain Assessment" />
                 <Tab icon={<MedicalIcon />} label="Medical History" />
                 <Tab icon={<TimelineIcon />} label="Timeline" />
                 <Tab icon={<DocumentIcon />} label="Documents" />
@@ -708,37 +773,61 @@ const MedicalRecords: React.FC = () => {
                   <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
                       <Typography variant="h6" gutterBottom>
-                        <PersonIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+                        <PersonIcon sx={{ verticalAlign: "middle", mr: 1 }} />
                         Personal Information
                       </Typography>
                       <Stack spacing={2}>
                         <TextField
                           label="First Name"
-                          value={editedPatient?.firstName || ''}
-                          onChange={(e) => setEditedPatient({...editedPatient, firstName: e.target.value})}
+                          value={editedPatient?.firstName || ""}
+                          onChange={(e) =>
+                            setEditedPatient({
+                              ...editedPatient,
+                              firstName: e.target.value,
+                            })
+                          }
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Last Name"
-                          value={editedPatient?.lastName || ''}
-                          onChange={(e) => setEditedPatient({...editedPatient, lastName: e.target.value})}
+                          value={editedPatient?.lastName || ""}
+                          onChange={(e) =>
+                            setEditedPatient({
+                              ...editedPatient,
+                              lastName: e.target.value,
+                            })
+                          }
                           disabled={!editMode}
                           fullWidth
                         />
                         <DatePicker
                           label="Date of Birth"
-                          value={editedPatient?.dateOfBirth ? parseISO(editedPatient.dateOfBirth) : null}
-                          onChange={(date) => setEditedPatient({...editedPatient, dateOfBirth: date?.toISOString()})}
+                          value={
+                            editedPatient?.dateOfBirth
+                              ? parseISO(editedPatient.dateOfBirth)
+                              : null
+                          }
+                          onChange={(date) =>
+                            setEditedPatient({
+                              ...editedPatient,
+                              dateOfBirth: date?.toISOString(),
+                            })
+                          }
                           disabled={!editMode}
                           slotProps={{ textField: { fullWidth: true } }}
                         />
                         <FormControl fullWidth>
                           <InputLabel>Gender</InputLabel>
                           <Select
-                            value={editedPatient?.gender || ''}
+                            value={editedPatient?.gender || ""}
                             label="Gender"
-                            onChange={(e) => setEditedPatient({...editedPatient, gender: e.target.value})}
+                            onChange={(e) =>
+                              setEditedPatient({
+                                ...editedPatient,
+                                gender: e.target.value,
+                              })
+                            }
                             disabled={!editMode}
                           >
                             <MenuItem value="Male">Male</MenuItem>
@@ -755,22 +844,40 @@ const MedicalRecords: React.FC = () => {
                       <Stack spacing={2}>
                         <TextField
                           label="Email"
-                          value={editedPatient?.email || ''}
-                          onChange={(e) => setEditedPatient({...editedPatient, email: e.target.value})}
+                          value={editedPatient?.email || ""}
+                          onChange={(e) =>
+                            setEditedPatient({
+                              ...editedPatient,
+                              email: e.target.value,
+                            })
+                          }
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Phone"
-                          value={editedPatient?.phone || ''}
-                          onChange={(e) => setEditedPatient({...editedPatient, phone: e.target.value})}
+                          value={editedPatient?.phone || ""}
+                          onChange={(e) =>
+                            setEditedPatient({
+                              ...editedPatient,
+                              phone: e.target.value,
+                            })
+                          }
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Street Address"
-                          value={editedPatient?.address?.street || ''}
-                          onChange={(e) => setEditedPatient({...editedPatient, address: {...editedPatient.address, street: e.target.value}})}
+                          value={editedPatient?.address?.street || ""}
+                          onChange={(e) =>
+                            setEditedPatient({
+                              ...editedPatient,
+                              address: {
+                                ...editedPatient.address,
+                                street: e.target.value,
+                              },
+                            })
+                          }
                           disabled={!editMode}
                           fullWidth
                         />
@@ -778,8 +885,16 @@ const MedicalRecords: React.FC = () => {
                           <Grid item xs={6}>
                             <TextField
                               label="City"
-                              value={editedPatient?.address?.city || ''}
-                              onChange={(e) => setEditedPatient({...editedPatient, address: {...editedPatient.address, city: e.target.value}})}
+                              value={editedPatient?.address?.city || ""}
+                              onChange={(e) =>
+                                setEditedPatient({
+                                  ...editedPatient,
+                                  address: {
+                                    ...editedPatient.address,
+                                    city: e.target.value,
+                                  },
+                                })
+                              }
                               disabled={!editMode}
                               fullWidth
                             />
@@ -787,8 +902,16 @@ const MedicalRecords: React.FC = () => {
                           <Grid item xs={3}>
                             <TextField
                               label="State"
-                              value={editedPatient?.address?.state || ''}
-                              onChange={(e) => setEditedPatient({...editedPatient, address: {...editedPatient.address, state: e.target.value}})}
+                              value={editedPatient?.address?.state || ""}
+                              onChange={(e) =>
+                                setEditedPatient({
+                                  ...editedPatient,
+                                  address: {
+                                    ...editedPatient.address,
+                                    state: e.target.value,
+                                  },
+                                })
+                              }
                               disabled={!editMode}
                               fullWidth
                             />
@@ -796,8 +919,18 @@ const MedicalRecords: React.FC = () => {
                           <Grid item xs={3}>
                             <TextField
                               label="Zip"
-                              value={(editedPatient?.address as any)?.zipCode || ''}
-                              onChange={(e) => setEditedPatient({...editedPatient, address: {...editedPatient.address, zipCode: e.target.value} as any})}
+                              value={
+                                (editedPatient?.address as any)?.zipCode || ""
+                              }
+                              onChange={(e) =>
+                                setEditedPatient({
+                                  ...editedPatient,
+                                  address: {
+                                    ...editedPatient.address,
+                                    zipCode: e.target.value,
+                                  } as any,
+                                })
+                              }
                               disabled={!editMode}
                               fullWidth
                             />
@@ -812,19 +945,24 @@ const MedicalRecords: React.FC = () => {
                       <Stack spacing={2}>
                         <TextField
                           label="Name"
-                          value={(patient?.emergencyContact as any)?.name || ''}
+                          value={(patient?.emergencyContact as any)?.name || ""}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Relationship"
-                          value={(patient?.emergencyContact as any)?.relationship || ''}
+                          value={
+                            (patient?.emergencyContact as any)?.relationship ||
+                            ""
+                          }
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Phone"
-                          value={(patient?.emergencyContact as any)?.phone || ''}
+                          value={
+                            (patient?.emergencyContact as any)?.phone || ""
+                          }
                           disabled={!editMode}
                           fullWidth
                         />
@@ -837,19 +975,21 @@ const MedicalRecords: React.FC = () => {
                       <Stack spacing={2}>
                         <TextField
                           label="Provider"
-                          value={(patient as any)?.insurance?.provider || ''}
+                          value={(patient as any)?.insurance?.provider || ""}
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Policy Number"
-                          value={(patient as any)?.insurance?.policyNumber || ''}
+                          value={
+                            (patient as any)?.insurance?.policyNumber || ""
+                          }
                           disabled={!editMode}
                           fullWidth
                         />
                         <TextField
                           label="Group Number"
-                          value={(patient as any)?.insurance?.groupNumber || ''}
+                          value={(patient as any)?.insurance?.groupNumber || ""}
                           disabled={!editMode}
                           fullWidth
                         />
@@ -863,131 +1003,153 @@ const MedicalRecords: React.FC = () => {
                 <Box sx={{ p: 3 }}>
                   <FlexBetween sx={{ mb: 3 }}>
                     <Typography variant="h6">
-                      Vital Signs History
+                      Pain Assessment History
                     </Typography>
                     <Button
                       variant="contained"
                       startIcon={<AddIcon />}
                       onClick={() => setVitalDialogOpen(true)}
                     >
-                      Record Vitals
+                      Record Assessment
                     </Button>
                   </FlexBetween>
 
-                  {/* Latest Vitals */}
+                  {/* Latest Pain Assessment */}
                   {vitalSigns.length > 0 && vitalSigns[0] && (
                     <Grid container spacing={2} sx={{ mb: 3 }}>
-                      <Grid item xs={6} md={3}>
+                      <Grid item xs={12} md={4}>
                         <StatCard
-                          label="Blood Pressure"
-                          value={`${vitalSigns[0].bloodPressure.systolic}/${vitalSigns[0].bloodPressure.diastolic}`}
-                          icon={<BloodIcon />}
-                          iconColor="error"
+                          label="Overall Pain Level"
+                          value={`${vitalSigns[0].overallPainLevel || 0}/10`}
+                          icon={<WarningIcon />}
+                          iconColor={
+                            vitalSigns[0].overallPainLevel > 6
+                              ? "error"
+                              : vitalSigns[0].overallPainLevel > 3
+                                ? "warning"
+                                : "success"
+                          }
                         />
                       </Grid>
-                      <Grid item xs={6} md={3}>
+                      <Grid item xs={12} md={4}>
                         <StatCard
-                          label="Heart Rate"
-                          value={`${vitalSigns[0].heartRate} bpm`}
-                          icon={<PulseIcon />}
+                          label="Functional Impact"
+                          value={vitalSigns[0].functionalImpact || "None"}
+                          icon={<MedicalIcon />}
                           iconColor="primary"
                         />
                       </Grid>
-                      <Grid item xs={6} md={3}>
+                      <Grid item xs={12} md={4}>
                         <StatCard
-                          label="Temperature"
-                          value={`${vitalSigns[0].temperature}°F`}
-                          icon={<TempIcon />}
-                          iconColor="warning"
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <StatCard
-                          label="Weight"
-                          value={`${vitalSigns[0].weight} kg`}
-                          icon={<WeightIcon />}
+                          label="Pain Points"
+                          value={`${vitalSigns[0].painPoints?.length || 0} areas`}
+                          icon={<PersonIcon />}
                           iconColor="info"
                         />
                       </Grid>
                     </Grid>
                   )}
 
-                    {/* Vitals Chart */}
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle1" gutterBottom>
-                            Blood Pressure Trend
-                          </Typography>
-                          <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={getVitalTrend('bp')}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="date" />
-                              <YAxis />
-                              <ChartTooltip />
-                              <Line type="monotone" dataKey="value" stroke="#8884d8" />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </Paper>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle1" gutterBottom>
-                            Heart Rate Trend
-                          </Typography>
-                          <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={getVitalTrend('hr')}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="date" />
-                              <YAxis />
-                              <ChartTooltip />
-                              <Line type="monotone" dataKey="value" stroke="#82ca9d" />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </Paper>
-                      </Grid>
+                  {/* Pain Trend Chart */}
+                  <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                      <Paper sx={{ p: 2 }}>
+                        <Typography variant="subtitle1" gutterBottom>
+                          Pain Level Trend
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <LineChart
+                            data={vitalSigns.map((v) => ({
+                              date: format(parseISO(v.recordedAt), "MMM d"),
+                              value: v.overallPainLevel || 0,
+                            }))}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" />
+                            <YAxis domain={[0, 10]} />
+                            <ChartTooltip />
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#f44336"
+                              strokeWidth={2}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </Paper>
                     </Grid>
+                  </Grid>
 
-                    {/* Vitals Table */}
-                    <TableContainer component={Paper} sx={{ mt: 3 }}>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Date/Time</TableCell>
-                            <TableCell>BP (mmHg)</TableCell>
-                            <TableCell>HR (bpm)</TableCell>
-                            <TableCell>Temp (°F)</TableCell>
-                            <TableCell>Weight (kg)</TableCell>
-                            <TableCell>BMI</TableCell>
-                            <TableCell>SpO2 (%)</TableCell>
-                            <TableCell>Recorded By</TableCell>
+                  {/* Pain Assessments Table */}
+                  <TableContainer component={Paper} sx={{ mt: 3 }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Date/Time</TableCell>
+                          <TableCell>Overall Pain</TableCell>
+                          <TableCell>Affected Areas</TableCell>
+                          <TableCell>Functional Impact</TableCell>
+                          <TableCell>Evaluation</TableCell>
+                          <TableCell>Recorded By</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {vitalSigns.map((assessment: VitalSign) => (
+                          <TableRow key={assessment.id}>
+                            <TableCell>
+                              {format(
+                                parseISO(assessment.recordedAt),
+                                "MMM d, yyyy h:mm a",
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={`${assessment.overallPainLevel || 0}/10`}
+                                color={
+                                  assessment.overallPainLevel > 6
+                                    ? "error"
+                                    : assessment.overallPainLevel > 3
+                                      ? "warning"
+                                      : "success"
+                                }
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {assessment.painPoints?.map((p, i) => (
+                                <Chip
+                                  key={i}
+                                  label={`${p.bodyPart}${p.side ? ` (${p.side})` : ""}: ${p.intensity}/10`}
+                                  size="small"
+                                  sx={{ mr: 0.5, mb: 0.5 }}
+                                />
+                              )) || "-"}
+                            </TableCell>
+                            <TableCell sx={{ textTransform: "capitalize" }}>
+                              {assessment.functionalImpact || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {assessment.evaluationId ? (
+                                <Button size="small" variant="outlined">
+                                  View Eval
+                                </Button>
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                            <TableCell>{assessment.recordedBy}</TableCell>
                           </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {vitalSigns.map((vital: VitalSign) => (
-                            <TableRow key={vital.id}>
-                              <TableCell>{format(parseISO(vital.recordedAt), 'MMM d, yyyy h:mm a')}</TableCell>
-                              <TableCell>{vital.bloodPressure.systolic}/{vital.bloodPressure.diastolic}</TableCell>
-                              <TableCell>{vital.heartRate}</TableCell>
-                              <TableCell>{vital.temperature}</TableCell>
-                              <TableCell>{vital.weight}</TableCell>
-                              <TableCell>{vital.bmi}</TableCell>
-                              <TableCell>{vital.oxygenSaturation || '-'}</TableCell>
-                              <TableCell>{vital.recordedBy}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 </Box>
               </TabPanel>
 
               <TabPanel value={activeTab} index={2}>
                 <Box sx={{ p: 3 }}>
                   <FlexBetween sx={{ mb: 3 }}>
-                    <Typography variant="h6">
-                      Medical History
-                    </Typography>
+                    <Typography variant="h6">Medical History</Typography>
                     <Button
                       variant="contained"
                       startIcon={<AddIcon />}
@@ -997,87 +1159,127 @@ const MedicalRecords: React.FC = () => {
                     </Button>
                   </FlexBetween>
 
-                    {['condition', 'allergy', 'medication', 'surgery', 'immunization', 'family', 'visit'].map((category) => (
-                      <Accordion key={category}>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            {getCategoryIcon(category)}
-                            <Typography variant="h6" sx={{ textTransform: 'capitalize' }}>
-                              {category === 'family'
-                                ? 'Family History'
-                                : category === 'visit'
-                                ? 'Visits'
+                  {[
+                    "condition",
+                    "allergy",
+                    "medication",
+                    "surgery",
+                    "immunization",
+                    "family",
+                    "visit",
+                  ].map((category) => (
+                    <Accordion key={category}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                        >
+                          {getCategoryIcon(category)}
+                          <Typography
+                            variant="h6"
+                            sx={{ textTransform: "capitalize" }}
+                          >
+                            {category === "family"
+                              ? "Family History"
+                              : category === "visit"
+                                ? "Visits"
                                 : `${category}s`}
-                            </Typography>
-                            <Chip 
-                              label={medicalHistory.filter((h: MedicalHistory) => h.category === category).length}
-                              size="small"
-                            />
-                          </Box>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <List>
-                            {medicalHistory
-                              .filter((h: MedicalHistory) => h.category === category)
-                              .map((item: MedicalHistory) => (
-                                <ListItem key={item.id}>
-                                  <ListItemIcon>
-                                    {item.status === 'active' ? <CheckIcon color="success" /> : <InfoIcon />}
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary={
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Typography>{item.title}</Typography>
-                                        {item.severity && (
-                                          <Chip 
-                                            label={item.severity}
-                                            size="small"
-                                            color={getSeverityColor(item.severity)}
-                                          />
-                                        )}
-                                        <Chip 
-                                          label={item.status}
+                          </Typography>
+                          <Chip
+                            label={
+                              medicalHistory.filter(
+                                (h: MedicalHistory) => h.category === category,
+                              ).length
+                            }
+                            size="small"
+                          />
+                        </Box>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <List>
+                          {medicalHistory
+                            .filter(
+                              (h: MedicalHistory) => h.category === category,
+                            )
+                            .map((item: MedicalHistory) => (
+                              <ListItem key={item.id}>
+                                <ListItemIcon>
+                                  {item.status === "active" ? (
+                                    <CheckIcon color="success" />
+                                  ) : (
+                                    <InfoIcon />
+                                  )}
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                      }}
+                                    >
+                                      <Typography>{item.title}</Typography>
+                                      {item.severity && (
+                                        <Chip
+                                          label={item.severity}
                                           size="small"
-                                          variant="outlined"
+                                          color={getSeverityColor(
+                                            item.severity,
+                                          )}
                                         />
-                                      </Box>
-                                    }
-                                    secondary={
-                                      <>
-                                        <Typography variant="body2">{item.description}</Typography>
-                                        {item.date && (
-                                          <Typography variant="caption" color="text.secondary">
-                                            Since: {format(parseISO(item.date), 'MMM d, yyyy')}
-                                          </Typography>
-                                        )}
-                                      </>
-                                    }
-                                  />
-                                </ListItem>
-                              ))}
-                          </List>
-                        </AccordionDetails>
-                      </Accordion>
-                    ))}
+                                      )}
+                                      <Chip
+                                        label={item.status}
+                                        size="small"
+                                        variant="outlined"
+                                      />
+                                    </Box>
+                                  }
+                                  secondary={
+                                    <>
+                                      <Typography variant="body2">
+                                        {item.description}
+                                      </Typography>
+                                      {item.date && (
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                        >
+                                          Since:{" "}
+                                          {format(
+                                            parseISO(item.date),
+                                            "MMM d, yyyy",
+                                          )}
+                                        </Typography>
+                                      )}
+                                    </>
+                                  }
+                                />
+                              </ListItem>
+                            ))}
+                        </List>
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
                 </Box>
               </TabPanel>
 
               <TabPanel value={activeTab} index={3}>
                 <Box sx={{ p: 3 }}>
                   <FlexBetween sx={{ mb: 3 }}>
-                    <Typography variant="h6">
-                      Medical Timeline
-                    </Typography>
+                    <Typography variant="h6">Medical Timeline</Typography>
                     <FormControl size="small">
                       <Select
                         value={timelineFilter}
-                        onChange={(event: SelectChangeEvent<TimelineFilter>) => {
+                        onChange={(
+                          event: SelectChangeEvent<TimelineFilter>,
+                        ) => {
                           const value = event.target.value as TimelineFilter;
                           setTimelineFilter(value);
                         }}
                       >
                         <MenuItem value="all">All Events</MenuItem>
-                        <MenuItem value="vital">Vital Signs</MenuItem>
+                        <MenuItem value="vital">Pain Assessments</MenuItem>
                         <MenuItem value="condition">Conditions</MenuItem>
                         <MenuItem value="medication">Medications</MenuItem>
                         <MenuItem value="surgery">Surgeries</MenuItem>
@@ -1085,27 +1287,31 @@ const MedicalRecords: React.FC = () => {
                     </FormControl>
                   </FlexBetween>
 
-                    <Timeline position="alternate">
-                      {generateTimeline().map((event, index) => (
-                        <TimelineItem key={index}>
-                          <TimelineOppositeContent color="text.secondary">
-                            {format(parseISO(event.date), 'MMM d, yyyy')}
-                          </TimelineOppositeContent>
-                          <TimelineSeparator>
-                            <TimelineDot color={event.color}>
-                              {event.icon}
-                            </TimelineDot>
-                            {index < generateTimeline().length - 1 && <TimelineConnector />}
-                          </TimelineSeparator>
-                          <TimelineContent>
-                            <Paper sx={{ p: 2 }}>
-                              <Typography variant="h6">{event.title}</Typography>
-                              <Typography variant="body2">{event.description}</Typography>
-                            </Paper>
-                          </TimelineContent>
-                        </TimelineItem>
-                      ))}
-                    </Timeline>
+                  <Timeline position="alternate">
+                    {generateTimeline().map((event, index) => (
+                      <TimelineItem key={index}>
+                        <TimelineOppositeContent color="text.secondary">
+                          {format(parseISO(event.date), "MMM d, yyyy")}
+                        </TimelineOppositeContent>
+                        <TimelineSeparator>
+                          <TimelineDot color={event.color}>
+                            {event.icon}
+                          </TimelineDot>
+                          {index < generateTimeline().length - 1 && (
+                            <TimelineConnector />
+                          )}
+                        </TimelineSeparator>
+                        <TimelineContent>
+                          <Paper sx={{ p: 2 }}>
+                            <Typography variant="h6">{event.title}</Typography>
+                            <Typography variant="body2">
+                              {event.description}
+                            </Typography>
+                          </Paper>
+                        </TimelineContent>
+                      </TimelineItem>
+                    ))}
+                  </Timeline>
                 </Box>
               </TabPanel>
 
@@ -1113,25 +1319,34 @@ const MedicalRecords: React.FC = () => {
                 <Box sx={{ p: 3 }}>
                   <FlexBetween sx={{ mb: 3 }}>
                     <Typography variant="h6">
-                      <DocumentIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+                      <DocumentIcon sx={{ verticalAlign: "middle", mr: 1 }} />
                       Medical Documents
                     </Typography>
                     <Button
                       variant="contained"
                       startIcon={<Add />}
                       onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = '.pdf,.jpg,.jpeg,.png';
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = ".pdf,.jpg,.jpeg,.png";
                         input.onchange = async (e) => {
-                          const file = (e.target as HTMLInputElement).files?.[0];
+                          const file = (e.target as HTMLInputElement)
+                            .files?.[0];
                           if (file && selectedPatientId) {
                             try {
-                              await documentApi.upload({ file, patientId: selectedPatientId });
+                              await documentApi.upload({
+                                file,
+                                patientId: selectedPatientId,
+                              });
                               refetchDocuments();
-                              enqueueSnackbar('Document uploaded successfully', { variant: 'success' });
+                              enqueueSnackbar(
+                                "Document uploaded successfully",
+                                { variant: "success" },
+                              );
                             } catch (error) {
-                              enqueueSnackbar('Failed to upload document', { variant: 'error' });
+                              enqueueSnackbar("Failed to upload document", {
+                                variant: "error",
+                              });
                             }
                           }
                         };
@@ -1150,8 +1365,14 @@ const MedicalRecords: React.FC = () => {
                             <CardContent>
                               <FlexBetween>
                                 <Box>
-                                  <Typography variant="h6">{doc.fileName}</Typography>
-                                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                                  <Typography variant="h6">
+                                    {doc.fileName}
+                                  </Typography>
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    sx={{ mt: 1 }}
+                                  >
                                     <Chip
                                       label={doc.documentType}
                                       size="small"
@@ -1162,19 +1383,34 @@ const MedicalRecords: React.FC = () => {
                                       label={doc.status}
                                       size="small"
                                       color={
-                                        doc.status === 'ready' ? 'success' :
-                                        doc.status === 'processing' ? 'warning' : 'default'
+                                        doc.status === "ready"
+                                          ? "success"
+                                          : doc.status === "processing"
+                                            ? "warning"
+                                            : "default"
                                       }
                                     />
-                                    <Typography variant="caption" color="text.secondary">
-                                      {format(parseISO(doc.createdAt), 'MMM d, yyyy')}
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {format(
+                                        parseISO(doc.createdAt),
+                                        "MMM d, yyyy",
+                                      )}
                                     </Typography>
                                   </Stack>
                                   {doc.extractedPatientName && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                      sx={{ mt: 1 }}
+                                    >
                                       Extracted: {doc.extractedPatientName}
-                                      {doc.extractedDob && ` • DOB: ${doc.extractedDob}`}
-                                      {doc.confidenceScore && ` • ${doc.confidenceScore}% confidence`}
+                                      {doc.extractedDob &&
+                                        ` • DOB: ${doc.extractedDob}`}
+                                      {doc.confidenceScore &&
+                                        ` • ${doc.confidenceScore}% confidence`}
                                     </Typography>
                                   )}
                                 </Box>
@@ -1183,10 +1419,16 @@ const MedicalRecords: React.FC = () => {
                                   size="small"
                                   onClick={async () => {
                                     try {
-                                      const { url } = await documentApi.getDownloadUrl(doc.id);
-                                      window.open(url, '_blank');
+                                      const { url } =
+                                        await documentApi.getDownloadUrl(
+                                          doc.id,
+                                        );
+                                      window.open(url, "_blank");
                                     } catch (error) {
-                                      enqueueSnackbar('Failed to download document', { variant: 'error' });
+                                      enqueueSnackbar(
+                                        "Failed to download document",
+                                        { variant: "error" },
+                                      );
                                     }
                                   }}
                                 >
@@ -1199,8 +1441,10 @@ const MedicalRecords: React.FC = () => {
                       ))}
                     </Grid>
                   ) : (
-                    <Paper sx={{ p: 4, textAlign: 'center' }}>
-                      <DocumentIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Paper sx={{ p: 4, textAlign: "center" }}>
+                      <DocumentIcon
+                        sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+                      />
                       <Typography variant="body1" color="text.secondary">
                         No documents uploaded yet
                       </Typography>
@@ -1212,11 +1456,11 @@ const MedicalRecords: React.FC = () => {
           </>
         )}
 
-        {/* Record Vitals Dialog */}
+        {/* Record Pain Assessment Dialog */}
         <FormDialog
           open={vitalDialogOpen}
           onClose={() => setVitalDialogOpen(false)}
-          title="Record Vital Signs"
+          title="Record Pain Assessment"
           onSubmit={() => addVitalMutation.mutate()}
           submitLabel="Record"
           submitDisabled={addVitalMutation.isPending}
@@ -1224,110 +1468,72 @@ const MedicalRecords: React.FC = () => {
           maxWidth="sm"
         >
           <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={6}>
-                <TextField
-                  label="Systolic"
-                  type="number"
-                  value={newVital.bloodPressure?.systolic}
-                  onChange={(e) => setNewVital({
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>
+                Overall Pain Level
+              </Typography>
+              <TextField
+                label="Pain Level (0-10)"
+                type="number"
+                inputProps={{ min: 0, max: 10 }}
+                value={newVital.overallPainLevel}
+                onChange={(e) =>
+                  setNewVital({
                     ...newVital,
-                    bloodPressure: {
-                      ...newVital.bloodPressure!,
-                      systolic: parseInt(e.target.value)
-                    }
-                  })}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Diastolic"
-                  type="number"
-                  value={newVital.bloodPressure?.diastolic}
-                  onChange={(e) => setNewVital({
-                    ...newVital,
-                    bloodPressure: {
-                      ...newVital.bloodPressure!,
-                      diastolic: parseInt(e.target.value)
-                    }
-                  })}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Heart Rate (bpm)"
-                  type="number"
-                  value={newVital.heartRate}
-                  onChange={(e) => setNewVital({ ...newVital, heartRate: parseInt(e.target.value) })}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Temperature (°F)"
-                  type="number"
-                  value={newVital.temperature}
-                  onChange={(e) => setNewVital({ ...newVital, temperature: parseFloat(e.target.value) })}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Weight (kg)"
-                  type="number"
-                  value={newVital.weight}
-                  onChange={(e) => {
-                    const weight = parseFloat(e.target.value);
-                    const bmi = calculateBMI(weight, newVital.height || 0);
-                    setNewVital({ ...newVital, weight, bmi });
-                  }}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Height (cm)"
-                  type="number"
-                  value={newVital.height}
-                  onChange={(e) => {
-                    const height = parseFloat(e.target.value);
-                    const bmi = calculateBMI(newVital.weight || 0, height);
-                    setNewVital({ ...newVital, height, bmi });
-                  }}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Respiratory Rate"
-                  type="number"
-                  value={newVital.respiratoryRate}
-                  onChange={(e) => setNewVital({ ...newVital, respiratoryRate: parseInt(e.target.value) })}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="SpO2 (%)"
-                  type="number"
-                  value={newVital.oxygenSaturation}
-                  onChange={(e) => setNewVital({ ...newVital, oxygenSaturation: parseInt(e.target.value) })}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Notes"
-                  multiline
-                  rows={3}
-                  value={newVital.notes}
-                  onChange={(e) => setNewVital({ ...newVital, notes: e.target.value })}
-                  fullWidth
-                />
-              </Grid>
+                    overallPainLevel: parseInt(e.target.value) || 0,
+                  })
+                }
+                fullWidth
+                helperText="0 = No pain, 10 = Worst pain imaginable"
+              />
             </Grid>
-          </FormDialog>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Functional Impact</InputLabel>
+                <Select
+                  value={newVital.functionalImpact || "none"}
+                  label="Functional Impact"
+                  onChange={(e) =>
+                    setNewVital({
+                      ...newVital,
+                      functionalImpact: e.target.value as any,
+                    })
+                  }
+                >
+                  <MenuItem value="none">
+                    None - No impact on daily activities
+                  </MenuItem>
+                  <MenuItem value="mild">Mild - Minor limitations</MenuItem>
+                  <MenuItem value="moderate">
+                    Moderate - Significant limitations
+                  </MenuItem>
+                  <MenuItem value="severe">
+                    Severe - Unable to perform activities
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Notes"
+                multiline
+                rows={3}
+                value={newVital.notes}
+                onChange={(e) =>
+                  setNewVital({ ...newVital, notes: e.target.value })
+                }
+                fullWidth
+                placeholder="Additional observations, pain quality, aggravating/relieving factors..."
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary">
+                Note: Detailed pain mapping is captured during evaluations. This
+                is for quick pain tracking between sessions.
+              </Typography>
+            </Grid>
+          </Grid>
+        </FormDialog>
 
         {/* Add Medical History Dialog */}
         <FormDialog
@@ -1336,109 +1542,133 @@ const MedicalRecords: React.FC = () => {
           title="Add Medical History Entry"
           onSubmit={() => addHistoryMutation.mutate()}
           submitLabel="Add Entry"
-          submitDisabled={addHistoryMutation.isPending || !newHistory.title || !newHistory.description}
+          submitDisabled={
+            addHistoryMutation.isPending ||
+            !newHistory.title ||
+            !newHistory.description
+          }
           loading={addHistoryMutation.isPending}
           maxWidth="sm"
         >
           <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Category</InputLabel>
-                  <Select
-                    value={newHistory.category}
-                    label="Category"
-                    onChange={(event: SelectChangeEvent<MedicalHistory['category']>) => {
-                      const value = event.target.value as MedicalHistory['category'];
-                      setNewHistory({ ...newHistory, category: value });
-                    }}
-                  >
-                    <MenuItem value="condition">Condition</MenuItem>
-                    <MenuItem value="surgery">Surgery</MenuItem>
-                    <MenuItem value="allergy">Allergy</MenuItem>
-                    <MenuItem value="medication">Medication</MenuItem>
-                    <MenuItem value="immunization">Immunization</MenuItem>
-                    <MenuItem value="family">Family History</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Title"
-                  value={newHistory.title}
-                  onChange={(e) => setNewHistory({ ...newHistory, title: e.target.value })}
-                  fullWidth
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Description"
-                  multiline
-                  rows={3}
-                  value={newHistory.description}
-                  onChange={(e) => setNewHistory({ ...newHistory, description: e.target.value })}
-                  fullWidth
-                  required
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    value={newHistory.status}
-                    label="Status"
-                    onChange={(event: SelectChangeEvent<MedicalHistory['status']>) => {
-                      const value = event.target.value as MedicalHistory['status'];
-                      setNewHistory({ ...newHistory, status: value });
-                    }}
-                  >
-                    <MenuItem value="active">Active</MenuItem>
-                    <MenuItem value="resolved">Resolved</MenuItem>
-                    <MenuItem value="ongoing">Ongoing</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Severity</InputLabel>
-                  <Select
-                    value={newHistory.severity}
-                    label="Severity"
-                    onChange={(event: SelectChangeEvent<NonNullable<MedicalHistory['severity']>>) => {
-                      const value = event.target.value as NonNullable<MedicalHistory['severity']>;
-                      setNewHistory({ ...newHistory, severity: value });
-                    }}
-                  >
-                    <MenuItem value="mild">Mild</MenuItem>
-                    <MenuItem value="moderate">Moderate</MenuItem>
-                    <MenuItem value="severe">Severe</MenuItem>
-                    <MenuItem value="critical">Critical</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <DatePicker
-                  label="Date"
-                  value={newHistory.date ? parseISO(newHistory.date) : null}
-                  onChange={(newValue) => setNewHistory({ 
-                    ...newHistory, 
-                    date: newValue ? newValue.toISOString() : undefined 
-                  })}
-                  slotProps={{ textField: { fullWidth: true } }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Additional Notes"
-                  multiline
-                  rows={2}
-                  value={newHistory.notes}
-                  onChange={(e) => setNewHistory({ ...newHistory, notes: e.target.value })}
-                  fullWidth
-                />
-              </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={newHistory.category}
+                  label="Category"
+                  onChange={(
+                    event: SelectChangeEvent<MedicalHistory["category"]>,
+                  ) => {
+                    const value = event.target
+                      .value as MedicalHistory["category"];
+                    setNewHistory({ ...newHistory, category: value });
+                  }}
+                >
+                  <MenuItem value="condition">Condition</MenuItem>
+                  <MenuItem value="surgery">Surgery</MenuItem>
+                  <MenuItem value="allergy">Allergy</MenuItem>
+                  <MenuItem value="medication">Medication</MenuItem>
+                  <MenuItem value="immunization">Immunization</MenuItem>
+                  <MenuItem value="family">Family History</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
-          </FormDialog>
+            <Grid item xs={12}>
+              <TextField
+                label="Title"
+                value={newHistory.title}
+                onChange={(e) =>
+                  setNewHistory({ ...newHistory, title: e.target.value })
+                }
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Description"
+                multiline
+                rows={3}
+                value={newHistory.description}
+                onChange={(e) =>
+                  setNewHistory({ ...newHistory, description: e.target.value })
+                }
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={newHistory.status}
+                  label="Status"
+                  onChange={(
+                    event: SelectChangeEvent<MedicalHistory["status"]>,
+                  ) => {
+                    const value = event.target
+                      .value as MedicalHistory["status"];
+                    setNewHistory({ ...newHistory, status: value });
+                  }}
+                >
+                  <MenuItem value="active">Active</MenuItem>
+                  <MenuItem value="resolved">Resolved</MenuItem>
+                  <MenuItem value="ongoing">Ongoing</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Severity</InputLabel>
+                <Select
+                  value={newHistory.severity}
+                  label="Severity"
+                  onChange={(
+                    event: SelectChangeEvent<
+                      NonNullable<MedicalHistory["severity"]>
+                    >,
+                  ) => {
+                    const value = event.target.value as NonNullable<
+                      MedicalHistory["severity"]
+                    >;
+                    setNewHistory({ ...newHistory, severity: value });
+                  }}
+                >
+                  <MenuItem value="mild">Mild</MenuItem>
+                  <MenuItem value="moderate">Moderate</MenuItem>
+                  <MenuItem value="severe">Severe</MenuItem>
+                  <MenuItem value="critical">Critical</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <DatePicker
+                label="Date"
+                value={newHistory.date ? parseISO(newHistory.date) : null}
+                onChange={(newValue) =>
+                  setNewHistory({
+                    ...newHistory,
+                    date: newValue ? newValue.toISOString() : undefined,
+                  })
+                }
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Additional Notes"
+                multiline
+                rows={2}
+                value={newHistory.notes}
+                onChange={(e) =>
+                  setNewHistory({ ...newHistory, notes: e.target.value })
+                }
+                fullWidth
+              />
+            </Grid>
+          </Grid>
+        </FormDialog>
       </Box>
     </LocalizationProvider>
   );
