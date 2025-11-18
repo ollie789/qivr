@@ -6,7 +6,7 @@ import {
   IconButton,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { EvaluationViewer } from '../features/intake/components/EvaluationViewer';
+import { EvaluationViewer } from '../../features/intake/components/EvaluationViewer';
 import { FlexBetween } from '@qivr/design-system';
 
 interface IntakeData {

@@ -20,7 +20,7 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import { documentsApi, type Document } from '../services/documentsApi';
+import { documentsApi, type Document } from '../../services/documentsApi';
 import { FlexBetween, EmptyState } from '@qivr/design-system';
 
 interface FileUploadProps {

@@ -1,6 +1,6 @@
 import { Box, Card, CardContent, Typography, Chip, Grid, Alert, CircularProgress } from '@mui/material';
 import { CheckCircle, Warning, Error as ErrorIcon } from '@mui/icons-material';
-import { Document } from '../services/documentApi';
+import { Document } from '../../services/documentApi';
 
 interface OCRResultsViewerProps {
   document: Document;
@@ -104,7 +104,7 @@ export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
              document.extractedPatientName.toLowerCase() !== document.patientName.toLowerCase() && (
               <Grid item xs={12}>
                 <Alert severity="warning">
-                  ⚠️ Extracted name doesn't match selected patient. Please verify.
+                  ⚠️ Extracted name doesn&apos;t match selected patient. Please verify.
                 </Alert>
               </Grid>
             )}

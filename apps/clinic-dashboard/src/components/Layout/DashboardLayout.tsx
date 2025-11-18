@@ -38,8 +38,7 @@ import {
   LocalHospital as MedicalIcon,
 } from '@mui/icons-material';
 import { useAuthActions, useAuthUser } from '../../stores/authStore';
-import NotificationBell from '../NotificationBell';
-import TenantSelector from '../TenantSelector';
+import { NotificationBell, TenantSelector } from '../shared';
 import type { SxProps, Theme } from '@mui/material/styles';
 
 const drawerWidth = 280;

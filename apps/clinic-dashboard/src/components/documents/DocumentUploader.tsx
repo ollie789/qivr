@@ -70,7 +70,7 @@ export default function DocumentUploader({
         handleFile(files[0]);
       }
     },
-    [disabled],
+    [disabled, handleFile],
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

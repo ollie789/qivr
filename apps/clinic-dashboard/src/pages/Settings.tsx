@@ -68,7 +68,7 @@ import { useSnackbar } from 'notistack';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
 import api from '../lib/api-client';
-import TenantInfo from '../components/TenantInfo';
+import TenantInfo from '../components/shared';
 import { PageHeader, TabPanel as DesignTabPanel } from '@qivr/design-system';
 
 interface ClinicSettings {

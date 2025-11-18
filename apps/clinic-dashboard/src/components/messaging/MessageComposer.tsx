@@ -29,15 +29,15 @@ import {
 } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { messagesApi } from '../services/messagesApi';
-import type { MessageDetail } from '../services/messagesApi';
+import { messagesApi } from '../../services/messagesApi';
+import type { MessageDetail } from '../../services/messagesApi';
 import {
   messageTemplatesApi,
   defaultMessageTemplates,
   type MessageTemplate,
   type MessageTemplateListResult,
   type UpsertMessageTemplateInput,
-} from '../services/messageTemplatesApi';
+} from '../../services/messageTemplatesApi';
 import MessageTemplateManager from './MessageTemplateManager';
 import { FlexBetween } from '@qivr/design-system';
 

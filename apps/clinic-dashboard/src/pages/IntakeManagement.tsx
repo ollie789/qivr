@@ -51,7 +51,7 @@ import { useSnackbar } from 'notistack';
 import { PatientInviteDialog } from '../components/PatientInviteDialog';
 import { intakeApi, type IntakeSubmission } from '../services/intakeApi';
 import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDialog';
-import IntakeDetailsDialog from '../components/IntakeDetailsDialog';
+import IntakeDetailsDialog from '../components/dialogs';
 import { downloadCSV, downloadExcel, prepareIntakeExportData, intakeQueueColumns } from '../utils/exportUtils';
 import { handleApiError } from '../lib/api-client';
 import { PageHeader, TabPanel as DesignTabPanel } from '@qivr/design-system';

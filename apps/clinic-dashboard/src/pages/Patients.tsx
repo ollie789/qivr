@@ -66,7 +66,7 @@ import {
   type PatientAddress,
 } from '../services/patientApi';
 import MessageComposer from '../components/MessageComposer';
-import FileUpload from '../components/FileUpload';
+import FileUpload from '../components/documents';
 import { SelectField, type SelectOption } from '../components/forms';
 import { QivrButton, QivrCard, TableSection, EmptyState, SkeletonLoader, PageHeader, FlexBetween } from '@qivr/design-system';
 
