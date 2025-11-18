@@ -31,6 +31,11 @@ phases:
       - rm -f package-lock.json
       - npm install --legacy-peer-deps
 
+      - echo Building http package...
+      - cd packages/http
+      - npm run build
+      - cd ../..
+
       - echo Building design system...
       - cd packages/design-system
       - npm run build
