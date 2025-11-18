@@ -24,7 +24,7 @@ phases:
 
       # Build frontends
       - echo Installing Node.js dependencies...
-      - npm ci
+      - npm install --legacy-peer-deps
 
       - echo Building design system...
       - cd packages/design-system
