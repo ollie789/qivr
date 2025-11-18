@@ -55,8 +55,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, addDays } from 'date-fns';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { promApi, PromTemplateDetail, PromTemplateSummary } from '../services/promApi';
-import { patientApi, type Patient, type PatientListResponse } from '../services/patientApi';
+import { promApi, PromTemplateDetail, PromTemplateSummary } from '../../services/promApi';
+import { patientApi, type Patient, type PatientListResponse } from '../../services/patientApi';
 
 interface PROMSenderProps {
   onComplete?: () => void;

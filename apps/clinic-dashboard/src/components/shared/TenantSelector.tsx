@@ -9,9 +9,9 @@ import {
 } from '@mui/material';
 import { Apartment as ApartmentIcon, ArrowDropDown as ArrowDropDownIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { useAuthGuard } from '../hooks/useAuthGuard';
-import { fetchTenantOptions, type TenantOption } from '../services/tenantService';
-import { useAuth, useAuthActions } from '../stores/authStore';
+import { useAuthGuard } from '../../hooks/useAuthGuard';
+import { fetchTenantOptions, type TenantOption } from '../../services/tenantService';
+import { useAuth, useAuthActions } from '../../stores/authStore';
 import { QivrButton, FlexBetween, LoadingSpinner } from '@qivr/design-system';
 
 const TenantSelector = () => {
@@ -20,7 +20,7 @@ const TenantSelector = () => {
   const { canMakeApiCalls } = useAuthGuard();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-  const { data: tenants = [], isLoading } = useQuery({
+  const { data: tenants = [], isLoading } = useQuery<TenantOption[]>({
     queryKey: ['tenants', user?.id],
     queryFn: fetchTenantOptions,
     enabled: canMakeApiCalls,

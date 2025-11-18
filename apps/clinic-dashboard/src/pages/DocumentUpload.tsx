@@ -16,8 +16,7 @@ import { CloudUpload, CheckCircle } from "@mui/icons-material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
-import DocumentUploader from "../components/documents";
-import OCRResultsViewer from "../components/documents";
+import { DocumentUploader, OCRResultsViewer } from "../components/documents";
 import { documentApi, Document } from "../services/documentApi";
 import { patientApi } from "../services/patientApi";
 

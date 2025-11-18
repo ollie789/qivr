@@ -37,8 +37,8 @@ import type {
   PromTemplateDetail,
   PromTemplateQuestion,
   PromAnswerValue,
-} from '../services/promApi';
-import { promApi } from '../services/promApi';
+} from '../../services/promApi';
+import { promApi } from '../../services/promApi';
 import { useSnackbar } from 'notistack';
 import { FlexBetween, LoadingSpinner } from '@qivr/design-system';
 

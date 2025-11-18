@@ -23,11 +23,11 @@ import {
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuthGuard } from '../hooks/useAuthGuard';
+import { useAuthGuard } from '../../hooks/useAuthGuard';
 import {
   notificationsApi,
   type NotificationListItem,
-} from '../services/notificationsApi';
+} from '../../services/notificationsApi';
 import { FlexBetween, EmptyState, LoadingSpinner } from '@qivr/design-system';
 
 const NotificationBell: React.FC = () => {
@@ -54,7 +54,7 @@ const NotificationBell: React.FC = () => {
   const {
     data: unreadCountData,
     refetch: refetchUnread,
-  } = useQuery({
+  } = useQuery<number>({
     queryKey: ['notifications-unread-count'],
     queryFn: notificationsApi.unreadCount,
     enabled: canMakeApiCalls,

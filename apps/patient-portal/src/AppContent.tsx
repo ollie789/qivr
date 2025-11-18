@@ -26,8 +26,8 @@ import AnalyticsEnhanced from './pages/AnalyticsEnhanced';
 
 // Auth
 import { useAuth } from './contexts/AuthContext';
-import { PrivateRoute } from './components/PrivateRoute';
-import { LoadingScreen } from './components/LoadingScreen';
+import { PrivateRoute } from './components/auth/PrivateRoute';
+import { LoadingScreen } from './components/shared/LoadingScreen';
 
 export const AppContent: React.FC = () => {
   const { loading } = useAuth();

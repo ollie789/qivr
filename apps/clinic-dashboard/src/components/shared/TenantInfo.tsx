@@ -8,7 +8,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { api } from '../lib/api-client';
+import { api } from '../../lib/api-client';
 import { Cloud, Security, AccountTree } from '@mui/icons-material';
 
 interface TenantInfoType {

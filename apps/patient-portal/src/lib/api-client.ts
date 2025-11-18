@@ -49,6 +49,7 @@ class ApiClient {
     return response.text() as T;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
     let url = endpoint;
     if (params) {

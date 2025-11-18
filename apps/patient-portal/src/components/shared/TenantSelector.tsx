@@ -13,14 +13,14 @@ import {
   ArrowDropDown as ArrowDropDownIcon,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
-import { fetchTenantOptions } from "../services/tenantService";
-import { useAuth } from "../contexts/AuthContext";
+import { fetchTenantOptions, type TenantOption } from "../../services/tenantService";
+import { useAuth } from "../../contexts/AuthContext";
 
 const TenantSelector = () => {
   const { activeTenantId, setActiveTenantId } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-  const { data: tenants = [], isLoading } = useQuery({
+  const { data: tenants = [], isLoading } = useQuery<TenantOption[]>({
     queryKey: ["tenants"],
     queryFn: fetchTenantOptions,
     staleTime: 5 * 60 * 1000,

@@ -250,7 +250,7 @@ const DashboardLayout: React.FC = () => {
 
           <NotificationBell />
 
-          <ThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} />
+          <ThemeToggle mode={darkMode ? 'dark' : 'light'} onToggle={toggleDarkMode} />
 
           <IconButton
             edge="end"

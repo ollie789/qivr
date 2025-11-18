@@ -58,20 +58,20 @@ export const EvaluationDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchEvaluation = async () => {
+      setLoading(true);
+      try {
+        const data = await apiClient.get<Evaluation>(`/api/evaluations/${id}`);
+        setEvaluation(data);
+      } catch (error) {
+        console.error("Error fetching evaluation:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     fetchEvaluation();
   }, [id]);
-
-  const fetchEvaluation = async () => {
-    setLoading(true);
-    try {
-      const data = await apiClient.get<Evaluation>(`/api/evaluations/${id}`);
-      setEvaluation(data);
-    } catch (error) {
-      console.error("Error fetching evaluation:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (status: string): ChipProps["color"] => {
     switch (status) {

@@ -29,7 +29,7 @@ export default function DocumentUploader({
     }
   }, []);
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     const maxBytes = maxSize * 1024 * 1024;
     if (file.size > maxBytes) {
       return `File size exceeds ${maxSize}MB limit`;
@@ -42,9 +42,9 @@ export default function DocumentUploader({
     }
 
     return null;
-  };
+  }, [maxSize, accept]);
 
-  const handleFile = (file: File) => {
+  const handleFile = useCallback((file: File) => {
     setError(null);
     const validationError = validateFile(file);
 
@@ -55,7 +55,7 @@ export default function DocumentUploader({
 
     setSelectedFile(file);
     onFileSelect(file);
-  };
+  }, [onFileSelect, validateFile]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {

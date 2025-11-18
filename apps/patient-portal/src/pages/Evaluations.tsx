@@ -6,8 +6,6 @@ import {
   CardContent,
   Typography,
   Grid,
-  TextField,
-  InputAdornment,
   Chip,
   IconButton,
   Button,
@@ -25,7 +23,6 @@ import {
   Avatar,
 } from "@mui/material";
 import {
-  Search as SearchIcon,
   Assessment as AssessmentIcon,
   Schedule as ScheduleIcon,
   CheckCircle as CheckCircleIcon,
@@ -372,7 +369,6 @@ export const Evaluations = () => {
             placeholder="Search evaluations..."
           />
         </Box>
-        />
 
         <Box sx={{ display: "flex", gap: 1 }}>
           <Chip

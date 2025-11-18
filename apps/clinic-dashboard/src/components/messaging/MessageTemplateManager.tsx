@@ -28,7 +28,7 @@ import type {
   MessageTemplate,
   MessageTemplateChannel,
   UpsertMessageTemplateInput,
-} from '../services/messageTemplatesApi';
+} from '../../services/messageTemplatesApi';
 import { EmptyState } from '@qivr/design-system';
 
 interface MessageTemplateManagerProps {

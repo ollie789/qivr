@@ -30,11 +30,11 @@ import {
   Phone as PhoneIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
-import { promsApi } from '../services/proms';
-import { patientApi, type Patient as PatientSummary } from '../services/patientApi';
-import { NotificationMethod } from '../services/promApi';
-import type { PromTemplateSummary } from '../services/promApi';
-import { handleApiError } from '../lib/api-client';
+import { promsApi } from '../../services/proms';
+import { patientApi, type Patient as PatientSummary } from '../../services/patientApi';
+import { NotificationMethod } from '../../services/promApi';
+import type { PromTemplateSummary } from '../../services/promApi';
+import { handleApiError } from '../../lib/api-client';
 import { DialogSection, FormSection, FormRow, QivrButton, FlexBetween } from '@qivr/design-system';
 
 interface SendPromDialogProps {

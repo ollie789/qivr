@@ -11,6 +11,7 @@ export * from './forms';
 export * from './layout';
 export * from './navigation/Breadcrumbs';
 export * from './navigation/PageHeader';
+export * from './navigation/ThemeToggle';
 export * from './slots/AvailabilitySlot';
 export * from './stats/StatCard';
 export * from './table/TableSection';

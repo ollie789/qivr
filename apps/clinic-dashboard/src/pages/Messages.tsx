@@ -25,7 +25,7 @@ import {
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import MessageComposer from '../components/messaging';
+import { MessageComposer } from '../components/messaging';
 import {
   messagesApi,
   type ConversationSummary,

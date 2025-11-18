@@ -168,7 +168,7 @@ export default function ThemeShowcase() {
           Success alert - Action completed successfully
         </Alert>
         <Alert severity="info" icon={<Info />}>
-          Info alert - Here's some helpful information
+          Info alert - Here&apos;s some helpful information
         </Alert>
         <Alert severity="warning" icon={<Warning />}>
           Warning alert - Please review this carefully

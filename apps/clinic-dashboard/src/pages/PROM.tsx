@@ -55,9 +55,9 @@ import { format, parseISO } from 'date-fns';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { promApi, PromTemplateSummary, PromResponse, PromResponsesResult, PromAnswerValue } from '../services/promApi';
-import PROMSender from '../components/messaging';
+import { PROMSender } from '../components/messaging';
 import { PromBuilder } from '../features/proms/components/PromBuilder';
-import { PromPreview } from '../components/PromPreview';
+import { PromPreview } from '../components/messaging/PromPreview';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { PageHeader, FlexBetween, SectionLoader, StatusBadge } from '@qivr/design-system';
 

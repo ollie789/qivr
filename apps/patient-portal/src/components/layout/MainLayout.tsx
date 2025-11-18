@@ -29,9 +29,9 @@ import {
   LocalHospital as HospitalIcon,
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
-import TenantSelector from '../components/TenantSelector';
-import { QivrButton, QivrCard } from '@qivr/design-system';
+import { useAuth } from '../../contexts/AuthContext';
+import TenantSelector from '../shared/TenantSelector';
+import { QivrButton } from '@qivr/design-system';
 
 const drawerWidth = 280;
 

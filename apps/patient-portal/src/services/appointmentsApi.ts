@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { api, handleApiError } from '../services/api';
 
 type Maybe<T> = T | null | undefined;
