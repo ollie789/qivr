@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { PageLoader } from './PageLoader';
+import { PageLoader } from '@qivr/design-system';
 
 const meta: Meta<typeof PageLoader> = {
   title: 'Feedback/PageLoader',

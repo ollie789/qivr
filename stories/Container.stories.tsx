@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Box, Typography } from '@mui/material';
-import { Container } from './Container';
+import { Container } from '@qivr/design-system';
 
 const meta: Meta<typeof Container> = {
   title: 'Layout/Container',

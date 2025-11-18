@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Typography } from '@mui/material';
-import { Section } from './Section';
+import { Section } from '@qivr/design-system';
 import { Container } from './Container';
 
 const meta: Meta<typeof Section> = {

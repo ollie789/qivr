@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Stack } from '../layout/Stack';
-import { StatusBadge } from './StatusBadge';
+import { Stack } from '@qivr/design-system';
+import { StatusBadge } from '@qivr/design-system';
 
 const meta: Meta<typeof StatusBadge> = {
   title: 'Feedback/StatusBadge',

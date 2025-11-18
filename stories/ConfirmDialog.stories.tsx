@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { Button } from '@mui/material';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@qivr/design-system';
 
 const meta: Meta<typeof ConfirmDialog> = {
   title: 'Dialogs/ConfirmDialog',

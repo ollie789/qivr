@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Box } from '@mui/material';
-import { Stack } from './Stack';
+import { Stack } from '@qivr/design-system';
 
 const meta: Meta<typeof Stack> = {
   title: 'Layout/Stack',

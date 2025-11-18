@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { Button } from '@mui/material';
-import { FormDialog } from './FormDialog';
-import { FormField } from '../forms/FormField';
-import { Stack } from '../layout/Stack';
+import { FormDialog } from '@qivr/design-system';
+import { FormField } from '@qivr/design-system';
+import { Stack } from '@qivr/design-system';
 
 const meta: Meta<typeof FormDialog> = {
   title: 'Dialogs/FormDialog',

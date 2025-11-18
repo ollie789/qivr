@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Box } from '@mui/material';
-import { SectionLoader } from './SectionLoader';
+import { SectionLoader } from '@qivr/design-system';
 
 const meta: Meta<typeof SectionLoader> = {
   title: 'Feedback/SectionLoader',

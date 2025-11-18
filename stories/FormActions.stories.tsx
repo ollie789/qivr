@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { FormActions } from './FormActions';
+import { FormActions } from '@qivr/design-system';
 
 const meta: Meta<typeof FormActions> = {
   title: 'Forms/FormActions',
