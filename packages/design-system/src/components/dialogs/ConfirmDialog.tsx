@@ -16,6 +16,7 @@ export interface ConfirmDialogProps {
   title: string;
   message: string;
   confirmLabel?: string;
+  confirmText?: string; // Alias for confirmLabel
   cancelLabel?: string;
   severity?: 'warning' | 'error' | 'info';
   loading?: boolean;
@@ -27,11 +28,14 @@ export const ConfirmDialog = ({
   onConfirm,
   title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel,
+  confirmText,
   cancelLabel = 'Cancel',
   severity = 'warning',
   loading = false,
 }: ConfirmDialogProps) => {
+  const finalConfirmLabel = confirmLabel || confirmText || 'Confirm';
+  
   const colorMap = {
     warning: 'warning.main',
     error: 'error.main',
@@ -59,7 +63,7 @@ export const ConfirmDialog = ({
           color={severity === 'error' ? 'error' : 'primary'}
           disabled={loading}
         >
-          {loading ? 'Processing...' : confirmLabel}
+          {loading ? 'Processing...' : finalConfirmLabel}
         </Button>
       </DialogActions>
     </Dialog>

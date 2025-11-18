@@ -9,7 +9,6 @@ import {
   Chip,
   Button,
   Divider,
-  CircularProgress,
   IconButton,
   Paper,
 } from "@mui/material";
@@ -25,6 +24,7 @@ import {
 import { format } from "date-fns";
 import type { ChipProps } from "@mui/material/Chip";
 import apiClient from "../lib/api-client";
+import { PageLoader } from '@qivr/design-system';
 
 interface Evaluation {
   id: string;
@@ -117,11 +117,7 @@ export const EvaluationDetail = () => {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
+    return <PageLoader />;
   }
 
   if (!evaluation) {

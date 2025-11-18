@@ -86,7 +86,7 @@ import { documentApi } from '../services/documentApi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import type { ChipProps } from '@mui/material/Chip';
 import type { SelectChangeEvent } from '@mui/material/Select';
-import { PageHeader, TabPanel, StatCard, FlexBetween } from '@qivr/design-system';
+import { PageHeader, TabPanel, StatCard, FlexBetween, FormDialog } from '@qivr/design-system';
 
 interface MedicalHistory {
   id: string;
@@ -1217,10 +1217,17 @@ const MedicalRecords: React.FC = () => {
         )}
 
         {/* Record Vitals Dialog */}
-        <Dialog open={vitalDialogOpen} onClose={() => setVitalDialogOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Record Vital Signs</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
+        <FormDialog
+          open={vitalDialogOpen}
+          onClose={() => setVitalDialogOpen(false)}
+          title="Record Vital Signs"
+          onSubmit={() => addVitalMutation.mutate()}
+          submitLabel="Record"
+          submitDisabled={addVitalMutation.isPending}
+          loading={addVitalMutation.isPending}
+          maxWidth="sm"
+        >
+          <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={6}>
                 <TextField
                   label="Systolic"
@@ -1324,24 +1331,20 @@ const MedicalRecords: React.FC = () => {
                 />
               </Grid>
             </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setVitalDialogOpen(false)}>Cancel</Button>
-            <Button 
-              variant="contained" 
-              onClick={() => addVitalMutation.mutate()}
-              disabled={addVitalMutation.isPending}
-            >
-              Record
-            </Button>
-          </DialogActions>
-        </Dialog>
+          </FormDialog>
 
         {/* Add Medical History Dialog */}
-        <Dialog open={historyDialogOpen} onClose={() => setHistoryDialogOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Add Medical History Entry</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
+        <FormDialog
+          open={historyDialogOpen}
+          onClose={() => setHistoryDialogOpen(false)}
+          title="Add Medical History Entry"
+          onSubmit={() => addHistoryMutation.mutate()}
+          submitLabel="Add Entry"
+          submitDisabled={addHistoryMutation.isPending || !newHistory.title || !newHistory.description}
+          loading={addHistoryMutation.isPending}
+          maxWidth="sm"
+        >
+          <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12}>
                 <FormControl fullWidth>
                   <InputLabel>Category</InputLabel>
@@ -1439,18 +1442,7 @@ const MedicalRecords: React.FC = () => {
                 />
               </Grid>
             </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setHistoryDialogOpen(false)}>Cancel</Button>
-            <Button 
-              variant="contained" 
-              onClick={() => addHistoryMutation.mutate()}
-              disabled={addHistoryMutation.isPending || !newHistory.title || !newHistory.description}
-            >
-              Add Entry
-            </Button>
-          </DialogActions>
-        </Dialog>
+          </FormDialog>
       </Box>
     </LocalizationProvider>
   );

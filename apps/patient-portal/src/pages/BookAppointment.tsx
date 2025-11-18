@@ -12,7 +12,6 @@ import {
   Grid,
   Avatar,
   Chip,
-  CircularProgress,
   Paper,
   Dialog,
   DialogContent,
@@ -39,6 +38,7 @@ import {
   fetchAvailableProviders,
   fetchAvailableSlots,
 } from '../services/appointmentsApi';
+import { SectionLoader } from '@qivr/design-system';
 
 const steps = ['Select Provider', 'Pick Date & Time', 'Confirm Details'];
 
@@ -216,7 +216,7 @@ export const BookAppointment: React.FC = () => {
             Available times for {format(selectedDate ?? new Date(), 'MMMM d, yyyy')}
           </Typography>
           {slotsLoading ? (
-            <CircularProgress />
+            <SectionLoader minHeight={200} />
           ) : slots.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               No slots available for this provider on the selected date. Try another day.

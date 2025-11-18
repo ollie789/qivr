@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, TextField, Typography, Stepper, Step, StepLabel, Paper, CircularProgress } from '@mui/material';
+import { Box, Button, TextField, Typography, Stepper, Step, StepLabel, Paper } from '@mui/material';
+import { PageLoader } from '@qivr/design-system';
 import { useSnackbar } from 'notistack';
 import { useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/api-client';
@@ -84,11 +85,7 @@ export const IntakeForm = () => {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
+    return <PageLoader />;
   }
 
   return (

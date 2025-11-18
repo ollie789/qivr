@@ -25,6 +25,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { documentApi, RequiredDocument } from '../services/documentApi';
+import { FormDialog } from '@qivr/design-system';
 
 export default function DocumentChecklist() {
   const { enqueueSnackbar } = useSnackbar();
@@ -210,57 +211,49 @@ export default function DocumentChecklist() {
         </Box>
       </Paper>
 
-      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Upload {selectedDocType?.label}
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {selectedDocType?.description}
-          </Typography>
+      <FormDialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        title={`Upload ${selectedDocType?.label}`}
+        onSubmit={handleUpload}
+        submitLabel={uploadMutation.isPending ? 'Uploading...' : 'Upload'}
+        submitDisabled={!selectedFile || uploadMutation.isPending}
+        loading={uploadMutation.isPending}
+        maxWidth="sm"
+      >
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {selectedDocType?.description}
+        </Typography>
 
-          <input
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-            id="file-upload-input"
-          />
-          <label htmlFor="file-upload-input">
-            <Button
-              variant="outlined"
-              component="span"
-              fullWidth
-              startIcon={<CloudUpload />}
-              sx={{ mb: 2 }}
-            >
-              Choose File
-            </Button>
-          </label>
-
-          {selectedFile && (
-            <Alert severity="success">
-              Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-            </Alert>
-          )}
-
-          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>
-            Accepted formats: PDF, JPG, PNG, DOC, DOCX (Max 50MB)
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)}>
-            Cancel
-          </Button>
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+          id="file-upload-input"
+        />
+        <label htmlFor="file-upload-input">
           <Button
-            variant="contained"
-            onClick={handleUpload}
-            disabled={!selectedFile || uploadMutation.isPending}
+            variant="outlined"
+            component="span"
+            fullWidth
+            startIcon={<CloudUpload />}
+            sx={{ mb: 2 }}
           >
-            {uploadMutation.isPending ? 'Uploading...' : 'Upload'}
+            Choose File
           </Button>
-        </DialogActions>
-      </Dialog>
+        </label>
+
+        {selectedFile && (
+          <Alert severity="success">
+            Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+          </Alert>
+        )}
+
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>
+          Accepted formats: PDF, JPG, PNG, DOC, DOCX (Max 50MB)
+        </Typography>
+      </FormDialog>
     </Box>
   );
 }

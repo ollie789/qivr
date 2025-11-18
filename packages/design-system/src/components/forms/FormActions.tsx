@@ -24,7 +24,7 @@ export const FormActions = ({
   submitProps,
   align = 'right',
 }: FormActionsProps) => {
-  const justifyMap = {
+  const justifyMap: Record<string, 'flex-start' | 'center' | 'flex-end'> = {
     left: 'flex-start',
     center: 'center',
     right: 'flex-end',

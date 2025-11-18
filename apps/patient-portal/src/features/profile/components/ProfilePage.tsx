@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Container,
   Dialog,
   DialogActions,
@@ -47,6 +46,7 @@ import {
 } from '@mui/icons-material';
 import { handleApiError } from '../../../lib/api-client';
 import { useProfileData } from '../hooks';
+import { PageLoader, FormDialog } from '@qivr/design-system';
 import type {
   EmergencyContact,
   MedicalInfo,
@@ -207,11 +207,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   if (isLoading) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
-        <CircularProgress />
-      </Container>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -752,56 +748,52 @@ export const ProfilePage: React.FC = () => {
         </TabPanel>
       </Paper>
 
-      <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)}>
-        <DialogTitle>Change Password</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              fullWidth
-              type="password"
-              label="Current Password"
-              value={passwords.current}
-              onChange={(event) => setPasswords({ ...passwords, current: event.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              type="password"
-              label="New Password"
-              value={passwords.new}
-              onChange={(event) => setPasswords({ ...passwords, new: event.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              type="password"
-              label="Confirm New Password"
-              value={passwords.confirm}
-              onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })}
-              error={passwords.confirm !== '' && passwords.new !== passwords.confirm}
-              helperText={
-                passwords.confirm !== '' && passwords.new !== passwords.confirm ? 'Passwords do not match' : ''
-              }
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handlePasswordChange}
-            variant="contained"
-            disabled={
-              !passwords.current ||
-              !passwords.new ||
-              !passwords.confirm ||
-              passwords.new !== passwords.confirm ||
-              changePasswordStatus.isPending
+      <FormDialog
+        open={passwordDialogOpen}
+        onClose={() => setPasswordDialogOpen(false)}
+        title="Change Password"
+        onSubmit={handlePasswordChange}
+        submitLabel="Change Password"
+        submitDisabled={
+          !passwords.current ||
+          !passwords.new ||
+          !passwords.confirm ||
+          passwords.new !== passwords.confirm ||
+          changePasswordStatus.isPending
+        }
+        loading={changePasswordStatus.isPending}
+        maxWidth="sm"
+      >
+        <Box sx={{ pt: 2 }}>
+          <TextField
+            fullWidth
+            type="password"
+            label="Current Password"
+            value={passwords.current}
+            onChange={(event) => setPasswords({ ...passwords, current: event.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            type="password"
+            label="New Password"
+            value={passwords.new}
+            onChange={(event) => setPasswords({ ...passwords, new: event.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            type="password"
+            label="Confirm New Password"
+            value={passwords.confirm}
+            onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })}
+            error={passwords.confirm !== '' && passwords.new !== passwords.confirm}
+            helperText={
+              passwords.confirm !== '' && passwords.new !== passwords.confirm ? 'Passwords do not match' : ''
             }
-          >
-            Change Password
-          </Button>
-        </DialogActions>
-      </Dialog>
+          />
+        </Box>
+      </FormDialog>
     </Container>
   );
 };

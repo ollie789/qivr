@@ -38,6 +38,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { documentApi, Document } from '../services/documentApi';
+import { SearchBar, ConfirmDialog } from '@qivr/design-system';
 
 const DOCUMENT_TYPES = [
   { value: '', label: 'All Types' },
@@ -184,15 +185,10 @@ export default function Documents() {
       <Paper sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: 2 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search documents..."
+            <SearchBar
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
-              }}
+              onChange={setSearchTerm}
+              placeholder="Search documents..."
             />
           </Grid>
           <Grid item xs={12} md={3}>
@@ -348,18 +344,15 @@ export default function Documents() {
         </MenuItem>
       </Menu>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Document</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete &ldquo;{selectedDocument?.fileName}&rdquo;? This action cannot be undone.
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={confirmDelete} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Document"
+        message={`Are you sure you want to delete "${selectedDocument?.fileName}"? This action cannot be undone.`}
+        severity="error"
+        confirmText="Delete"
+      />
     </Box>
   );
 }

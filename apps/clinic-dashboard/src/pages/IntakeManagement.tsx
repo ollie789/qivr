@@ -54,7 +54,7 @@ import { ScheduleAppointmentDialog } from '../components/ScheduleAppointmentDial
 import IntakeDetailsDialog from '../components/dialogs';
 import { downloadCSV, downloadExcel, prepareIntakeExportData, intakeQueueColumns } from '../utils/exportUtils';
 import { handleApiError } from '../lib/api-client';
-import { PageHeader, TabPanel as DesignTabPanel } from '@qivr/design-system';
+import { PageHeader, TabPanel as DesignTabPanel, SearchBar, StatusBadge } from '@qivr/design-system';
 
 const IntakeManagement: React.FC = () => {
   const { canMakeApiCalls } = useAuthGuard();
@@ -133,16 +133,6 @@ const IntakeManagement: React.FC = () => {
       case 'critical': return 'error';
       case 'high': return 'warning';
       case 'medium': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const getStatusColor = (status: IntakeSubmission['status']): ChipProps['color'] => {
-    switch (status) {
-      case 'approved': return 'success';
-      case 'rejected': return 'error';
-      case 'reviewing': return 'warning';
-      case 'scheduled': return 'info';
       default: return 'default';
     }
   };
@@ -245,12 +235,7 @@ const IntakeManagement: React.FC = () => {
         {format(new Date(intake.submittedAt), 'MMM dd, yyyy HH:mm')}
       </TableCell>
       <TableCell>
-        <Chip 
-          label={intake.status}
-          color={getStatusColor(intake.status)}
-          size="small"
-          variant="outlined"
-        />
+        <StatusBadge status={intake.status} />
       </TableCell>
       <TableCell>
         <Stack direction="row" spacing={1}>
@@ -396,15 +381,10 @@ const IntakeManagement: React.FC = () => {
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={3}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search by name, email, or condition..."
+            <SearchBar
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: <FilterIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-              }}
+              onChange={setSearchQuery}
+              placeholder="Search by name, email, or condition..."
             />
           </Grid>
           <Grid item xs={12} md={2}>

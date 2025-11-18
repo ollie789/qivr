@@ -43,6 +43,7 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import type { ChipProps } from "@mui/material/Chip";
 import apiClient from "../lib/api-client";
+import { SearchBar } from '@qivr/design-system';
 
 interface Evaluation {
   id: string;
@@ -364,20 +365,13 @@ export const Evaluations = () => {
 
       {/* Search and Filter */}
       <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap" }}>
-        <TextField
-          placeholder="Search evaluations..."
-          variant="outlined"
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flexGrow: 1, maxWidth: 400 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
+        <Box sx={{ flexGrow: 1, maxWidth: 400 }}>
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search evaluations..."
+          />
+        </Box>
         />
 
         <Box sx={{ display: "flex", gap: 1 }}>

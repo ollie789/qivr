@@ -21,7 +21,7 @@ import { Add, Edit, Delete, Person } from '@mui/icons-material';
 import { useQueryClient } from '@tanstack/react-query';
 import { providerApi, Provider, CreateProviderData, UpdateProviderData } from '../services/providerApi';
 import { useAuthStore } from '../stores/authStore';
-import { PageHeader, FlexBetween, LoadingSpinner } from '@qivr/design-system';
+import { PageHeader, FlexBetween, LoadingSpinner, FormDialog } from '@qivr/design-system';
 
 const Providers: React.FC = () => {
   const queryClient = useQueryClient();
@@ -210,12 +210,15 @@ const Providers: React.FC = () => {
         ))}
       </Grid>
 
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingProvider ? 'Edit Provider' : 'Add Provider'}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
+      <FormDialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        title={editingProvider ? 'Edit Provider' : 'Add Provider'}
+        onSubmit={handleSave}
+        submitLabel={editingProvider ? 'Update' : 'Create'}
+        maxWidth="sm"
+      >
+        <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={6}>
               <TextField
                 fullWidth
@@ -291,14 +294,7 @@ const Providers: React.FC = () => {
               </Grid>
             )}
           </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained">
-            {editingProvider ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </FormDialog>
     </Box>
   );
 };

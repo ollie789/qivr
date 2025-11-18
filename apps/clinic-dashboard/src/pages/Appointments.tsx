@@ -122,7 +122,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
-import { AvailabilitySlot, FlexBetween, PageHeader, QivrButton, QivrCard, CalendarGridCell, AppointmentChip, calendar as calendarStyles } from '@qivr/design-system';
+import { AvailabilitySlot, FlexBetween, PageHeader, QivrButton, QivrCard, CalendarGridCell, AppointmentChip, calendar as calendarStyles, StatusBadge } from '@qivr/design-system';
 
 interface Appointment {
   id: string;
@@ -338,17 +338,6 @@ const Appointments: React.FC = () => {
     }));
   };
 
-  const getStatusColor = (status: string): 'success' | 'error' | 'primary' | 'warning' | 'default' => {
-    switch (status) {
-      case 'confirmed': return 'success';
-      case 'cancelled': return 'error';
-      case 'completed': return 'primary';
-      case 'in-progress': return 'warning';
-      case 'no-show': return 'error';
-      default: return 'default';
-    }
-  };
-
   const getAppointmentColor = (type: string) => {
     const appointmentType = appointmentTypes.find(t => t.value === type);
     return appointmentType?.color || 'var(--qivr-palette-primary-main)';
@@ -410,11 +399,7 @@ const Appointments: React.FC = () => {
                               {appointmentTypes.find(t => t.value === apt.appointmentType)?.label} • {apt.providerName}
                             </Typography>
                           </Box>
-                          <Chip 
-                            label={apt.status} 
-                            size="small" 
-                            color={getStatusColor(apt.status)}
-                          />
+                          <StatusBadge status={apt.status} />
                         </FlexBetween>
                       </CardContent>
                     </QivrCard>
@@ -807,11 +792,7 @@ const Appointments: React.FC = () => {
                                   primary={
                                     <FlexBetween sx={{ gap: 1 }}>
                                       <Typography>{apt.patientName}</Typography>
-                                      <Chip
-                                        label={apt.status} 
-                                        size="small" 
-                                        color={getStatusColor(apt.status)}
-                                      />
+                                      <StatusBadge status={apt.status} />
                                     </FlexBetween>
                                   }
                                   secondary={
@@ -1124,10 +1105,7 @@ const Appointments: React.FC = () => {
                   </>
                 )}
                 <Box>
-                  <Chip 
-                    label={selectedAppointment.status} 
-                    color={getStatusColor(selectedAppointment.status)}
-                  />
+                  <StatusBadge status={selectedAppointment.status} />
                 </Box>
               </Stack>
             </DialogContent>

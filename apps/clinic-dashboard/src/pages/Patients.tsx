@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   CardContent,
-  CircularProgress,
   Divider,
   Typography,
   Grid,
@@ -68,7 +67,7 @@ import {
 import MessageComposer from '../components/MessageComposer';
 import FileUpload from '../components/documents';
 import { SelectField, type SelectOption } from '../components/forms';
-import { QivrButton, QivrCard, TableSection, EmptyState, SkeletonLoader, PageHeader, FlexBetween } from '@qivr/design-system';
+import { QivrButton, QivrCard, TableSection, EmptyState, SkeletonLoader, PageHeader, FlexBetween, SectionLoader, FormDialog, SearchBar, StatusBadge } from '@qivr/design-system';
 
 // Using Patient type from patientApi
 
@@ -158,15 +157,6 @@ const Patients: React.FC = () => {
     () => patients.filter(matchesFilters),
     [matchesFilters, patients],
   );
-
-  const getStatusColor = (status: PatientType['status']): ChipProps['color'] => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'inactive': return 'default';
-      case 'pending': return 'warning';
-      default: return 'default';
-    }
-  };
 
   const handleViewDetails = (patient: PatientType) => {
     setSelectedPatient(patient);
@@ -377,18 +367,10 @@ const Patients: React.FC = () => {
       >
         <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                placeholder="Search patients by name, email, or MRN..."
+              <SearchBar
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
+                onChange={setSearchQuery}
+                placeholder="Search patients by name, email, or MRN..."
               />
             </Grid>
             <Grid item xs={12} md={3}>
@@ -529,11 +511,7 @@ const Patients: React.FC = () => {
                     <Typography variant="body2">{patient.provider || '—'}</Typography>
                   </TableCell>
                   <TableCell>
-                      <Chip
-                        label={patient.status}
-                        color={getStatusColor(patient.status)}
-                        size="small"
-                      />
+                    <StatusBadge status={patient.status} />
                   </TableCell>
                   <TableCell align="right">
                     <FlexBetween sx={{ gap: 1, justifyContent: 'flex-end' }}>
@@ -630,9 +608,7 @@ const Patients: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           {detailLoading ? (
-            <FlexBetween sx={{ justifyContent: 'center', py: 4 }}>
-              <CircularProgress size={32} />
-            </FlexBetween>
+            <SectionLoader minHeight={200} />
           ) : !detail ? (
             <Typography color="text.secondary">Select a patient to view details.</Typography>
           ) : (
@@ -1038,16 +1014,16 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
-      fullWidth
-      disableRestoreFocus
+    <FormDialog
+      open={open}
+      onClose={onClose}
+      title={patient ? 'Edit Patient' : 'New Patient'}
+      onSubmit={handleSubmit}
+      submitLabel={patient ? 'Save Changes' : 'Create Patient'}
+      submitDisabled={!isValid}
+      maxWidth="md"
     >
-      <DialogTitle>{patient ? 'Edit Patient' : 'New Patient'}</DialogTitle>
-      <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+      <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -1152,16 +1128,7 @@ const PatientFormDialog: React.FC<PatientFormDialogProps> = ({
             />
           </Grid>
         </Grid>
-      </DialogContent>
-      <DialogActions>
-        <QivrButton emphasize="subtle" onClick={onClose}>
-          Cancel
-        </QivrButton>
-        <QivrButton variant="contained" onClick={handleSubmit} disabled={!isValid}>
-          {patient ? 'Save Changes' : 'Create Patient'}
-        </QivrButton>
-      </DialogActions>
-    </Dialog>
+      </FormDialog>
   );
 };
 

@@ -8,13 +8,13 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from '@mui/material/styles';
-import { theme } from '@qivr/design-system';
+import { theme, darkTheme, PageLoader } from '@qivr/design-system';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { SnackbarProvider } from 'notistack';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, CircularProgress } from '@mui/material';
 import { useAuthActions } from './stores/authStore';
+import { ThemeModeProvider } from './contexts/ThemeContext';
 
 // Layout components
 import DashboardLayout from './components/Layout/DashboardLayout';
@@ -52,30 +52,28 @@ const queryClient = new QueryClient({
   },
 });
 
-// Loading component
-const PageLoader: React.FC = () => (
-  <Box
-    display="flex"
-    justifyContent="center"
-    alignItems="center"
-    minHeight="100vh"
-  >
-    <CircularProgress />
-  </Box>
-);
-
 function App() {
   const { checkAuth } = useAuthActions();
+  const [darkMode, setDarkMode] = React.useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved === 'true';
+  });
   
   // Check auth status on app load
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  // Save dark mode preference
+  useEffect(() => {
+    localStorage.setItem('darkMode', String(darkMode));
+  }, [darkMode]);
   
   console.log('App component rendering');
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
+      <ThemeModeProvider value={{ darkMode, toggleDarkMode: () => setDarkMode(!darkMode) }}>
+        <ThemeProvider theme={darkMode ? darkTheme : theme}>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <SnackbarProvider
             maxSnack={3}
@@ -127,6 +125,7 @@ function App() {
           </SnackbarProvider>
         </LocalizationProvider>
       </ThemeProvider>
+      </ThemeModeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

@@ -1,8 +1,11 @@
 import { Box, type BoxProps } from '@mui/material';
+import { ReactNode } from 'react';
 
-export interface ContainerProps extends BoxProps {
+export interface ContainerProps {
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | false;
   padding?: number;
+  children?: ReactNode;
+  sx?: BoxProps['sx'];
 }
 
 const maxWidths = {
@@ -17,7 +20,6 @@ export const Container = ({
   padding = 3,
   children,
   sx,
-  ...props 
 }: ContainerProps) => (
   <Box
     sx={{
@@ -27,7 +29,6 @@ export const Container = ({
       px: padding,
       ...sx,
     }}
-    {...props}
   >
     {children}
   </Box>

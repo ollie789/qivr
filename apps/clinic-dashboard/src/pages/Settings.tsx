@@ -29,7 +29,6 @@ import {
   Alert,
   Chip,
   IconButton,
-  CircularProgress,
   Table,
   TableBody,
   TableCell,
@@ -69,7 +68,7 @@ import { useAuthGuard } from '../hooks/useAuthGuard';
 import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
 import api from '../lib/api-client';
 import TenantInfo from '../components/shared';
-import { PageHeader, TabPanel as DesignTabPanel } from '@qivr/design-system';
+import { PageHeader, TabPanel as DesignTabPanel, SectionLoader, ConfirmDialog, FormDialog } from '@qivr/design-system';
 
 interface ClinicSettings {
   clinic: {
@@ -879,7 +878,7 @@ export default function Settings() {
                   {providersLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} align="center">
-                        <CircularProgress size={24} />
+                        <SectionLoader minHeight={100} />
                       </TableCell>
                     </TableRow>
                   ) : providerMembers.length === 0 ? (
@@ -1094,10 +1093,39 @@ export default function Settings() {
       </Paper>
 
       {/* Add Provider Dialog */}
-      <Dialog open={addProviderDialog} onClose={() => setAddProviderDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Provider</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
+      <FormDialog
+        open={addProviderDialog}
+        onClose={() => setAddProviderDialog(false)}
+        title="Add Provider"
+        onSubmit={async () => {
+          try {
+            if (!providerForm.firstName || !providerForm.lastName || !providerForm.email) {
+              enqueueSnackbar('Please fill in all required fields', { variant: 'error' });
+              return;
+            }
+            
+            await api.post('/api/clinic-management/providers', {
+              firstName: providerForm.firstName,
+              lastName: providerForm.lastName,
+              email: providerForm.email,
+              specialization: providerForm.specialization || 'General Practice',
+              department: providerForm.department || 'Primary Care',
+              isActive: true
+            });
+            
+            queryClient.invalidateQueries({ queryKey: ['providers'] });
+            setAddProviderDialog(false);
+            setProviderForm({ firstName: '', lastName: '', email: '', specialization: '', department: '' });
+            enqueueSnackbar('Provider added successfully', { variant: 'success' });
+          } catch (error) {
+            console.error('Error adding provider:', error);
+            enqueueSnackbar('Failed to add provider', { variant: 'error' });
+          }
+        }}
+        submitLabel="Add Provider"
+        maxWidth="sm"
+      >
+        <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField 
                 label="First Name" 
@@ -1156,57 +1184,18 @@ export default function Settings() {
               </FormControl>
             </Grid>
           </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddProviderDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained"
-            onClick={async () => {
-              try {
-                if (!providerForm.firstName || !providerForm.lastName || !providerForm.email) {
-                  enqueueSnackbar('Please fill in all required fields', { variant: 'error' });
-                  return;
-                }
-                
-                await api.post('/api/clinic-management/providers', {
-                  firstName: providerForm.firstName,
-                  lastName: providerForm.lastName,
-                  email: providerForm.email,
-                  specialization: providerForm.specialization || 'General Practice',
-                  department: providerForm.department || 'Primary Care',
-                  isActive: true
-                });
-                
-                queryClient.invalidateQueries({ queryKey: ['providers'] });
-                setAddProviderDialog(false);
-                setProviderForm({ firstName: '', lastName: '', email: '', specialization: '', department: '' });
-                enqueueSnackbar('Provider added successfully', { variant: 'success' });
-              } catch (error) {
-                console.error('Error adding provider:', error);
-                enqueueSnackbar('Failed to add provider', { variant: 'error' });
-              }
-            }}
-          >
-            Add Provider
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </FormDialog>
 
       {/* Generate API Key Dialog */}
-      <Dialog open={newApiKeyDialog} onClose={() => setNewApiKeyDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Generate New API Key</DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            Generating a new API key will invalidate the current key. Make sure to update your integrations.
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewApiKeyDialog(false)}>Cancel</Button>
-          <Button variant="contained" color="warning" onClick={handleGenerateApiKey}>
-            Generate New Key
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={newApiKeyDialog}
+        onClose={() => setNewApiKeyDialog(false)}
+        onConfirm={handleGenerateApiKey}
+        title="Generate New API Key"
+        message="Generating a new API key will invalidate the current key. Make sure to update your integrations."
+        severity="warning"
+        confirmText="Generate New Key"
+      />
     </Box>
   );
 }

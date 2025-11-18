@@ -30,7 +30,6 @@ import {
   TablePagination,
   Alert,
   Stack,
-  CircularProgress,
   Divider,
   Tooltip,
 } from '@mui/material';
@@ -61,7 +60,7 @@ import PROMSender from '../components/messaging';
 import { PromBuilder } from '../features/proms/components/PromBuilder';
 import { PromPreview } from '../components/PromPreview';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
-import { PageHeader, FlexBetween } from '@qivr/design-system';
+import { PageHeader, FlexBetween, SectionLoader, StatusBadge } from '@qivr/design-system';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -250,28 +249,6 @@ const PROM: React.FC = () => {
     setResponseDetailOpen(false);
     setSelectedResponse(null);
     setResponseDetailLoading(false);
-  };
-
-  const getStatusColor = (status: string): 'success' | 'warning' | 'info' | 'error' | 'default' => {
-    switch (status) {
-      case 'completed': return 'success';
-      case 'pending': return 'warning';
-      case 'in-progress': return 'info';
-      case 'expired': return 'error';
-      case 'cancelled': return 'default';
-      default: return 'default';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed': return <CheckCircleIcon />;
-      case 'pending': return <PendingIcon />;
-      case 'in-progress': return <ScheduleIcon />;
-      case 'expired': return <CancelIcon />;
-      case 'cancelled': return <CancelIcon />;
-      default: return <AssignmentIcon />;
-    }
   };
 
   const renderAnswerValue = (answer: PromAnswerValue): React.ReactNode => {
@@ -490,9 +467,7 @@ const PROM: React.FC = () => {
               </FlexBetween>
 
               {templatesLoading ? (
-                <Box display="flex" justifyContent="center" p={3}>
-                  <CircularProgress />
-                </Box>
+                <SectionLoader minHeight={200} />
               ) : (
                 <Grid container spacing={3}>
                   {templates.map((template) => (
@@ -612,7 +587,7 @@ const PROM: React.FC = () => {
                     {responsesLoading ? (
                       <TableRow>
                         <TableCell colSpan={7} align="center">
-                          <CircularProgress />
+                          <SectionLoader minHeight={100} />
                         </TableCell>
                       </TableRow>
                     ) : responses.length === 0 ? (
@@ -629,12 +604,7 @@ const PROM: React.FC = () => {
                           <TableCell>{response.patientName}</TableCell>
                           <TableCell>{response.templateName || response.templateId || '—'}</TableCell>
                           <TableCell>
-                            <Chip
-                              icon={getStatusIcon(response.status)}
-                              label={response.status}
-                              color={getStatusColor(response.status)}
-                              size="small"
-                            />
+                            <StatusBadge status={response.status} />
                           </TableCell>
                           <TableCell>
                             {response.assignedAt
@@ -821,19 +791,14 @@ const PROM: React.FC = () => {
           <DialogTitle>
             Response Details
             {selectedResponse && (
-              <Chip
-                label={selectedResponse.status}
-                color={getStatusColor(selectedResponse.status)}
-                size="small"
-                sx={{ ml: 2 }}
-              />
+              <Box sx={{ ml: 2 }}>
+                <StatusBadge status={selectedResponse.status} />
+              </Box>
             )}
           </DialogTitle>
           <DialogContent>
             {responseDetailLoading ? (
-              <Box display="flex" justifyContent="center" py={4}>
-                <CircularProgress />
-              </Box>
+              <SectionLoader minHeight={200} />
             ) : selectedResponse ? (
               <Box>
                 <Stack spacing={2}>

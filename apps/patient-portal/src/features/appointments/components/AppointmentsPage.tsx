@@ -31,6 +31,7 @@ import { parseISO, format, isFuture } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAppointmentsData } from '../hooks/useAppointmentsData';
 import type { AppointmentDto } from '../types';
+import { FormDialog } from '@qivr/design-system';
 
 const statusChipColor = (status: string): 'success' | 'info' | 'default' | 'warning' | 'error' => {
   switch (status) {
@@ -194,29 +195,24 @@ const AppointmentsPage: React.FC = () => {
         </MenuItem>
       </Menu>
 
-      <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)}>
-        <DialogTitle>Cancel appointment</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Reason"
-            value={cancelReason}
-            onChange={(event) => setCancelReason(event.target.value)}
-            fullWidth
-            multiline
-            rows={3}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCancelDialogOpen(false)}>Close</Button>
-          <Button
-            variant="contained"
-            onClick={handleCancelConfirm}
-            disabled={!cancelReason}
-          >
-            Cancel Appointment
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FormDialog
+        open={cancelDialogOpen}
+        onClose={() => setCancelDialogOpen(false)}
+        title="Cancel appointment"
+        onSubmit={handleCancelConfirm}
+        submitLabel="Cancel Appointment"
+        submitDisabled={!cancelReason}
+        maxWidth="sm"
+      >
+        <TextField
+          label="Reason"
+          value={cancelReason}
+          onChange={(event) => setCancelReason(event.target.value)}
+          fullWidth
+          multiline
+          rows={3}
+        />
+      </FormDialog>
     </Container>
   );
 };

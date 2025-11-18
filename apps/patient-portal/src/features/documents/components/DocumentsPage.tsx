@@ -38,6 +38,7 @@ import {
   requestDocumentReview,
   completeDocumentReview,
 } from '../../../services/documentsApi';
+import { SearchBar } from '@qivr/design-system';
 import { useSnackbar } from 'notistack';
 
 interface UploadDialogProps {
@@ -236,11 +237,11 @@ const DocumentsPage: React.FC = () => {
           </Typography>
         </Box>
         <Stack direction="row" spacing={2}>
-          <TextField
-            size="small"
-            placeholder="Search documents"
+          <SearchBar
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={setSearchTerm}
+            placeholder="Search documents"
+            fullWidth={false}
           />
           <FormControl size="small">
             <InputLabel id="documents-category-label">Category</InputLabel>

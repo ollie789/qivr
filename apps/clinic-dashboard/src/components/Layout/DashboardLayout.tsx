@@ -39,6 +39,8 @@ import {
 } from '@mui/icons-material';
 import { useAuthActions, useAuthUser } from '../../stores/authStore';
 import { NotificationBell, TenantSelector } from '../shared';
+import { useThemeMode } from '../../contexts/ThemeContext';
+import { ThemeToggle } from '@qivr/design-system';
 import type { SxProps, Theme } from '@mui/material/styles';
 
 const drawerWidth = 280;
@@ -92,6 +94,7 @@ const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { darkMode, toggleDarkMode } = useThemeMode();
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(!isMobile);
@@ -246,6 +249,8 @@ const DashboardLayout: React.FC = () => {
           </Box>
 
           <NotificationBell />
+
+          <ThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} />
 
           <IconButton
             edge="end"

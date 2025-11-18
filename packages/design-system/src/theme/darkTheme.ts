@@ -6,7 +6,7 @@ export const darkTheme = createTheme({
     mode: 'dark',
     primary: {
       main: tokens.ColorPrimaryLight,
-      light: tokens.ColorPrimary100,
+      light: tokens.ColorPrimaryLight,
       dark: tokens.ColorPrimaryMain,
     },
     secondary: {
@@ -16,23 +16,15 @@ export const darkTheme = createTheme({
     },
     success: {
       main: tokens.ColorSuccessMain,
-      light: tokens.ColorSuccessLight,
-      dark: tokens.ColorSuccessDark,
     },
     error: {
       main: tokens.ColorErrorMain,
-      light: tokens.ColorErrorLight,
-      dark: tokens.ColorErrorDark,
     },
     warning: {
       main: tokens.ColorWarningMain,
-      light: tokens.ColorWarningLight,
-      dark: tokens.ColorWarningDark,
     },
     info: {
       main: tokens.ColorInfoMain,
-      light: tokens.ColorInfoLight,
-      dark: tokens.ColorInfoDark,
     },
     background: {
       default: '#121212',
@@ -52,14 +44,14 @@ export const darkTheme = createTheme({
   },
   spacing: parseInt(tokens.SpacingSm),
   shape: {
-    borderRadius: parseInt(tokens.BorderRadiusMd),
+    borderRadius: 8,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: parseInt(tokens.BorderRadiusMd),
+          borderRadius: 8,
           fontWeight: parseInt(tokens.TypographyFontWeightMedium),
         },
         contained: {
@@ -70,7 +62,7 @@ export const darkTheme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: parseInt(tokens.BorderRadiusLg),
+          borderRadius: 12,
           backgroundImage: 'none',
         },
       },

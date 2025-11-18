@@ -88,7 +88,7 @@ const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
   const user = useAuthUser();
   const { canMakeApiCalls } = useAuthGuard();
-  const clinicId = user?.clinicId;
+  const tenantId = user?.tenantId;
 
   const getDateRange = () => {
     const to = new Date();
@@ -97,25 +97,34 @@ const Analytics: React.FC = () => {
     return { from, to };
   };
 
-  const { data: clinicAnalytics, isLoading, isFetching, refetch } = useQuery<ClinicAnalytics | null>({
-    queryKey: ['clinicAnalytics', clinicId, dateRange],
+  const { data: clinicAnalytics, isLoading, isFetching, refetch, error } = useQuery<ClinicAnalytics | null>({
+    queryKey: ['clinicAnalytics', tenantId, dateRange],
     queryFn: async () => {
-      if (!clinicId) {
+      if (!tenantId) {
+        console.log('Analytics: No tenantId available');
         return null;
       }
       const { from, to } = getDateRange();
-      return analyticsApi.getClinicAnalytics(undefined, { from, to });
+      console.log('Analytics: Fetching data for tenantId:', tenantId, 'from:', from, 'to:', to);
+      const result = await analyticsApi.getClinicAnalytics(undefined, { from, to });
+      console.log('Analytics: Received data:', result);
+      return result;
     },
-    enabled: canMakeApiCalls && Boolean(clinicId),
+    enabled: canMakeApiCalls && Boolean(tenantId),
   });
 
-  const dashboardStats = useMemo(() => buildDashboardStats(clinicAnalytics ?? undefined), [clinicAnalytics]);
+  const dashboardStats = useMemo(() => {
+    const stats = buildDashboardStats(clinicAnalytics ?? undefined);
+    console.log('Analytics: Dashboard stats:', stats);
+    return stats;
+  }, [clinicAnalytics]);
 
   const appointmentData = useMemo<AppointmentTrendDatum[]>(() => {
     if (!clinicAnalytics?.appointmentTrends) {
+      console.log('Analytics: No appointment trends data');
       return [];
     }
-    return clinicAnalytics.appointmentTrends.map((trend: AppointmentTrend) => ({
+    const data = clinicAnalytics.appointmentTrends.map((trend: AppointmentTrend) => ({
       name: format(new Date(trend.date), 'MMM d'),
       appointments: trend.appointments,
       completed: trend.completed,
@@ -123,6 +132,8 @@ const Analytics: React.FC = () => {
       noShows: trend.noShows,
       newPatients: trend.newPatients,
     }));
+    console.log('Analytics: Appointment data:', data);
+    return data;
   }, [clinicAnalytics]);
 
   const conditionData = useMemo<DiagnosisDatum[]>(() => {
@@ -256,7 +267,13 @@ const Analytics: React.FC = () => {
         </Box>
       )}
 
-      {clinicAnalytics == null && !loading && (
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Failed to load analytics: {error instanceof Error ? error.message : 'Unknown error'}
+        </Alert>
+      )}
+
+      {clinicAnalytics == null && !loading && !error && (
         <Alert severity="info" sx={{ mb: 3 }}>
           Select a clinic to view analytics.
         </Alert>

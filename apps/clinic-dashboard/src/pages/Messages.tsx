@@ -14,7 +14,6 @@ import {
   ListItemAvatar,
   Avatar,
   Chip,
-  CircularProgress,
   Alert,
   Divider,
   IconButton,
@@ -35,7 +34,7 @@ import {
   type ConversationSummary,
   type MessageDetail,
 } from '../services/messagesApi';
-import { PageHeader, FlexBetween } from '@qivr/design-system';
+import { PageHeader, FlexBetween, SearchBar, SectionLoader } from '@qivr/design-system';
 
 const Messages: React.FC = () => {
   const queryClient = useQueryClient();
@@ -170,18 +169,10 @@ const Messages: React.FC = () => {
         </Box>
 
         <Box sx={{ p: 2 }}>
-          <TextField
-            fullWidth
-            placeholder="Search conversations..."
+          <SearchBar
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
+            onChange={setSearchQuery}
+            placeholder="Search conversations..."
           />
         </Box>
       </Paper>
@@ -189,9 +180,7 @@ const Messages: React.FC = () => {
       <FlexBetween sx={{ gap: 3, alignItems: 'flex-start' }}>
         <Paper sx={{ width: 320, minHeight: 620, flexShrink: 0 }}>
           {conversationsLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress size={32} />
-            </Box>
+            <SectionLoader minHeight={200} />
           ) : conversationsError ? (
             <Alert severity="error" sx={{ m: 2 }}>
               Failed to load conversations
@@ -270,9 +259,7 @@ const Messages: React.FC = () => {
               <Typography color="text.secondary">Select a conversation to view messages</Typography>
             </Box>
           ) : conversationLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress size={32} />
-            </Box>
+            <SectionLoader minHeight={200} />
           ) : conversationError ? (
             <Alert severity="error">Unable to load conversation</Alert>
           ) : visibleMessages.length === 0 ? (
