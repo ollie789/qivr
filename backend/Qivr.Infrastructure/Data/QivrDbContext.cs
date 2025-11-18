@@ -832,11 +832,13 @@ public class QivrDbContext : DbContext
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
-        modelBuilder.Entity<MedicalVital>(entity =>
+        modelBuilder.Entity<PainAssessment>(entity =>
         {
-            entity.ToTable("medical_vitals");
+            entity.ToTable("PainAssessments");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.PatientId, e.RecordedAt });
+            entity.Property(e => e.RecordedBy).HasMaxLength(200);
+            entity.Property(e => e.FunctionalImpact).HasMaxLength(50);
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
