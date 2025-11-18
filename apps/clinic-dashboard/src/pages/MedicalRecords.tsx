@@ -252,12 +252,35 @@ const MedicalRecords: React.FC = () => {
     enabled: canMakeApiCalls && !!selectedPatientId,
   });
 
+  const { data: physioHistory = [] } = useQuery({
+    queryKey: ["physioHistory", selectedPatientId],
+    queryFn: async () => {
+      if (!selectedPatientId) return [];
+      return medicalRecordsApi.getPhysioHistory(selectedPatientId);
+    },
+    enabled: canMakeApiCalls && !!selectedPatientId,
+  });
+
   const medicalHistory: MedicalHistory[] = useMemo(() => {
     if (!selectedPatientId) {
       return [];
     }
 
     const entries: MedicalHistory[] = [];
+
+    // Add physio history entries
+    physioHistory.forEach((history) => {
+      entries.push({
+        id: history.id,
+        category: history.category,
+        title: history.title,
+        description: history.description,
+        date: history.date ?? undefined,
+        status: history.status,
+        severity: history.severity ?? undefined,
+        notes: history.notes ?? undefined,
+      });
+    });
 
     medicalSummary?.conditions.forEach((condition) => {
       // Parse category prefix like [INJURY], [SYMPTOM], etc.
@@ -360,6 +383,7 @@ const MedicalRecords: React.FC = () => {
     allergies,
     immunizations,
     procedures,
+    physioHistory,
   ]);
 
   // New pain assessment state
@@ -423,7 +447,7 @@ const MedicalRecords: React.FC = () => {
     mutationFn: async () => {
       if (!selectedPatientId) throw new Error("No patient selected");
 
-      // Map new categories to condition type with category prefix
+      // Use new physio-history endpoint for allied health categories
       if (
         [
           "injury",
@@ -434,18 +458,16 @@ const MedicalRecords: React.FC = () => {
           "goal",
         ].includes(newHistory.category || "")
       ) {
-        const conditionData: any = {
+        return medicalRecordsApi.createPhysioHistory({
           patientId: selectedPatientId,
-          condition: `[${newHistory.category?.toUpperCase()}] ${newHistory.title?.trim() || "Untitled"}`,
-          diagnosedDate:
-            newHistory.date || new Date().toISOString().split("T")[0],
+          category: newHistory.category || "injury",
+          title: newHistory.title?.trim() || "Untitled",
+          description: newHistory.description?.trim() || "",
+          date: newHistory.date,
           status: newHistory.status || "active",
-        };
-        const notes = newHistory.description?.trim();
-        if (notes) {
-          conditionData.notes = notes;
-        }
-        return medicalRecordsApi.createCondition(conditionData);
+          severity: newHistory.severity,
+          notes: newHistory.notes,
+        });
       }
 
       switch (newHistory.category) {
@@ -545,6 +567,22 @@ const MedicalRecords: React.FC = () => {
       queryClient.invalidateQueries({
         queryKey: ["medicalSummary", selectedPatientId],
       });
+
+      // Refresh physio history for new allied health categories
+      if (
+        [
+          "injury",
+          "symptom",
+          "treatment",
+          "activity",
+          "occupation",
+          "goal",
+        ].includes(category)
+      ) {
+        queryClient.invalidateQueries({
+          queryKey: ["physioHistory", selectedPatientId],
+        });
+      }
 
       // Also refresh specific queries for old categories
       switch (category) {

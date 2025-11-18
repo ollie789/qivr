@@ -113,6 +113,23 @@ export type Immunization = {
   lotNumber?: string | null;
 };
 
+export type PhysioHistory = {
+  id: string;
+  category:
+    | "injury"
+    | "symptom"
+    | "treatment"
+    | "activity"
+    | "occupation"
+    | "goal";
+  title: string;
+  description: string;
+  date?: string | null;
+  status: "active" | "resolved" | "ongoing";
+  severity?: "mild" | "moderate" | "severe" | "critical" | null;
+  notes?: string | null;
+};
+
 type ApiEnvelope<T> = {
   data: T;
 };
@@ -206,6 +223,17 @@ type ImmunizationDto = {
   nextDue?: string | null;
   series?: string | null;
   lotNumber?: string | null;
+};
+
+type PhysioHistoryDto = {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  date?: string | null;
+  status: string;
+  severity?: string | null;
+  notes?: string | null;
 };
 
 const unwrapEnvelope = <T>(payload: T | ApiEnvelope<T>): T => {
@@ -498,6 +526,48 @@ class MedicalRecordsApi {
       data,
     );
     return response;
+  }
+
+  async getPhysioHistory(patientId: string): Promise<PhysioHistory[]> {
+    const response = await apiClient.get<PhysioHistoryDto[]>(
+      `/api/medical-records/physio-history?patientId=${patientId}`,
+    );
+    return response.map((dto) => ({
+      id: dto.id,
+      category: dto.category as PhysioHistory["category"],
+      title: dto.title,
+      description: dto.description,
+      date: dto.date ? toIsoString(dto.date) : null,
+      status: dto.status as PhysioHistory["status"],
+      severity: dto.severity as PhysioHistory["severity"],
+      notes: dto.notes ?? null,
+    }));
+  }
+
+  async createPhysioHistory(data: {
+    patientId: string;
+    category: string;
+    title: string;
+    description: string;
+    date?: string;
+    status?: string;
+    severity?: string;
+    notes?: string;
+  }): Promise<PhysioHistory> {
+    const response = await apiClient.post<PhysioHistoryDto>(
+      "/api/medical-records/physio-history",
+      data,
+    );
+    return {
+      id: response.id,
+      category: response.category as PhysioHistory["category"],
+      title: response.title,
+      description: response.description,
+      date: response.date ? toIsoString(response.date) : null,
+      status: response.status as PhysioHistory["status"],
+      severity: response.severity as PhysioHistory["severity"],
+      notes: response.notes ?? null,
+    };
   }
 }
 
