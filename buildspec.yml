@@ -57,10 +57,10 @@ phases:
 
       # Deploy frontends to S3
       - echo Deploying clinic dashboard to S3...
-      - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-staging --delete --region $AWS_DEFAULT_REGION
+      - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION
 
       - echo Deploying patient portal to S3...
-      - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-staging --delete --region $AWS_DEFAULT_REGION
+      - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION
 
       - echo Invalidating CloudFront caches...
       - aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
