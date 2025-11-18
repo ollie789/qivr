@@ -99,6 +99,12 @@ import {
 interface MedicalHistory {
   id: string;
   category:
+    | "injury"
+    | "symptom"
+    | "treatment"
+    | "activity"
+    | "occupation"
+    | "goal"
     | "condition"
     | "surgery"
     | "allergy"
@@ -254,10 +260,19 @@ const MedicalRecords: React.FC = () => {
     const entries: MedicalHistory[] = [];
 
     medicalSummary?.conditions.forEach((condition) => {
+      // Parse category prefix like [INJURY], [SYMPTOM], etc.
+      const match = condition.condition?.match(/^\[([A-Z]+)\]\s*(.+)$/);
+      const category = (
+        match ? match[1]?.toLowerCase() : "condition"
+      ) as MedicalHistory["category"];
+      const title = match
+        ? match[2] || condition.condition
+        : condition.condition;
+
       entries.push({
         id: condition.id,
-        category: "condition",
-        title: condition.condition,
+        category: category,
+        title: title || "Untitled",
         description: condition.managedBy,
         date: condition.diagnosedDate,
         status: condition.status === "resolved" ? "resolved" : "active",
@@ -356,7 +371,7 @@ const MedicalRecords: React.FC = () => {
 
   // New medical history state
   const [newHistory, setNewHistory] = useState<Partial<MedicalHistory>>({
-    category: "condition",
+    category: "injury",
     title: "",
     description: "",
     status: "active",
@@ -407,6 +422,31 @@ const MedicalRecords: React.FC = () => {
   const addHistoryMutation = useMutation({
     mutationFn: async () => {
       if (!selectedPatientId) throw new Error("No patient selected");
+
+      // Map new categories to condition type with category prefix
+      if (
+        [
+          "injury",
+          "symptom",
+          "treatment",
+          "activity",
+          "occupation",
+          "goal",
+        ].includes(newHistory.category || "")
+      ) {
+        const conditionData: any = {
+          patientId: selectedPatientId,
+          condition: `[${newHistory.category?.toUpperCase()}] ${newHistory.title?.trim() || "Untitled"}`,
+          diagnosedDate:
+            newHistory.date || new Date().toISOString().split("T")[0],
+          status: newHistory.status || "active",
+        };
+        const notes = newHistory.description?.trim();
+        if (notes) {
+          conditionData.notes = notes;
+        }
+        return medicalRecordsApi.createCondition(conditionData);
+      }
 
       switch (newHistory.category) {
         case "allergy": {
@@ -485,7 +525,7 @@ const MedicalRecords: React.FC = () => {
       }
     },
     onSuccess: (_data, _variables) => {
-      const category = newHistory.category || "condition";
+      const category = newHistory.category || "injury";
       enqueueSnackbar(
         `${category.charAt(0).toUpperCase() + category.slice(1)} added successfully`,
         { variant: "success" },
@@ -494,23 +534,23 @@ const MedicalRecords: React.FC = () => {
 
       // Reset form
       setNewHistory({
-        category: "condition",
+        category: "injury",
         title: "",
         description: "",
         status: "active",
         severity: "mild",
       });
 
-      // Refresh appropriate data based on category
+      // Refresh medical summary for all new categories
+      queryClient.invalidateQueries({
+        queryKey: ["medicalSummary", selectedPatientId],
+      });
+
+      // Also refresh specific queries for old categories
       switch (category) {
         case "allergy":
           queryClient.invalidateQueries({
             queryKey: ["allergies", selectedPatientId],
-          });
-          break;
-        case "condition":
-          queryClient.invalidateQueries({
-            queryKey: ["medicalSummary", selectedPatientId],
           });
           break;
         case "immunization":
@@ -1162,34 +1202,25 @@ const MedicalRecords: React.FC = () => {
                   </FlexBetween>
 
                   {[
-                    "condition",
-                    "allergy",
-                    "medication",
-                    "surgery",
-                    "immunization",
-                    "family",
-                    "visit",
-                  ].map((category) => (
-                    <Accordion key={category}>
+                    { key: "injury", label: "Previous Injuries" },
+                    { key: "symptom", label: "Current Symptoms" },
+                    { key: "treatment", label: "Treatment History" },
+                    { key: "activity", label: "Exercise/Activity Level" },
+                    { key: "occupation", label: "Occupation/Ergonomics" },
+                    { key: "goal", label: "Goals/Objectives" },
+                  ].map(({ key, label }) => (
+                    <Accordion key={key}>
                       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Box
                           sx={{ display: "flex", alignItems: "center", gap: 2 }}
                         >
-                          {getCategoryIcon(category)}
-                          <Typography
-                            variant="h6"
-                            sx={{ textTransform: "capitalize" }}
-                          >
-                            {category === "family"
-                              ? "Family History"
-                              : category === "visit"
-                                ? "Visits"
-                                : `${category}s`}
-                          </Typography>
+                          {getCategoryIcon(key)}
+                          <Typography variant="h6">{label}</Typography>
                           <Chip
                             label={
                               medicalHistory.filter(
-                                (h: MedicalHistory) => h.category === category,
+                                (h: MedicalHistory) =>
+                                  h.category === (key as any),
                               ).length
                             }
                             size="small"
@@ -1200,7 +1231,8 @@ const MedicalRecords: React.FC = () => {
                         <List>
                           {medicalHistory
                             .filter(
-                              (h: MedicalHistory) => h.category === category,
+                              (h: MedicalHistory) =>
+                                h.category === (key as any),
                             )
                             .map((item: MedicalHistory) => (
                               <ListItem key={item.id}>
@@ -1567,12 +1599,12 @@ const MedicalRecords: React.FC = () => {
                     setNewHistory({ ...newHistory, category: value });
                   }}
                 >
-                  <MenuItem value="condition">Condition</MenuItem>
-                  <MenuItem value="surgery">Surgery</MenuItem>
-                  <MenuItem value="allergy">Allergy</MenuItem>
-                  <MenuItem value="medication">Medication</MenuItem>
-                  <MenuItem value="immunization">Immunization</MenuItem>
-                  <MenuItem value="family">Family History</MenuItem>
+                  <MenuItem value="injury">Previous Injury</MenuItem>
+                  <MenuItem value="symptom">Current Symptom</MenuItem>
+                  <MenuItem value="treatment">Treatment History</MenuItem>
+                  <MenuItem value="activity">Exercise/Activity</MenuItem>
+                  <MenuItem value="occupation">Occupation/Ergonomics</MenuItem>
+                  <MenuItem value="goal">Goal/Objective</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
