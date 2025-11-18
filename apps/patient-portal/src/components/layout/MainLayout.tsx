@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import TenantSelector from '../components/TenantSelector';
-import { QivrButton } from '@qivr/design-system';
+import { QivrButton, QivrCard } from '@qivr/design-system';
 
 const drawerWidth = 280;
 
