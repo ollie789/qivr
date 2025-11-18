@@ -66,6 +66,7 @@ public class QivrDbContext : DbContext
     public DbSet<MedicalCondition> MedicalConditions => Set<MedicalCondition>();
     public DbSet<MedicalVital> MedicalVitals => Set<MedicalVital>(); // Keep for migration compatibility
     public DbSet<PainAssessment> PainAssessments => Set<PainAssessment>();
+    public DbSet<PhysioHistory> PhysioHistories => Set<PhysioHistory>();
     public DbSet<MedicalLabResult> MedicalLabResults => Set<MedicalLabResult>();
     public DbSet<MedicalMedication> MedicalMedications => Set<MedicalMedication>();
     public DbSet<MedicalAllergy> MedicalAllergies => Set<MedicalAllergy>();

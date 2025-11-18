@@ -21,6 +21,18 @@ public class MedicalCondition : TenantEntity
     public string? RelievingFactors { get; set; }
 }
 
+public class PhysioHistory : TenantEntity
+{
+    public Guid PatientId { get; set; }
+    public string Category { get; set; } = string.Empty; // injury, symptom, treatment, activity, occupation, goal
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateTime? Date { get; set; }
+    public string Status { get; set; } = "active"; // active, resolved, ongoing
+    public string? Severity { get; set; } // mild, moderate, severe, critical
+    public string? Notes { get; set; }
+}
+
 public class PainAssessment : TenantEntity
 {
     public Guid PatientId { get; set; }

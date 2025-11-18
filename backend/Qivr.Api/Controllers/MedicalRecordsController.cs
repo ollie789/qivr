@@ -513,6 +513,89 @@ public class MedicalRecordsController : BaseApiController
         return Ok(procedures);
     }
 
+    [HttpGet("physio-history")]
+    [ProducesResponseType(typeof(IEnumerable<PhysioHistoryDto>), 200)]
+    public async Task<ActionResult<IEnumerable<PhysioHistoryDto>>> GetPhysioHistory([FromQuery] Guid? patientId, CancellationToken cancellationToken)
+    {
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
+        var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
+        if (effectivePatientId == Guid.Empty)
+        {
+            return Ok(Array.Empty<PhysioHistoryDto>());
+        }
+
+        var history = await _context.PhysioHistories
+            .Where(p => p.TenantId == tenantId && p.PatientId == effectivePatientId)
+            .OrderByDescending(p => p.Date ?? p.CreatedAt)
+            .Select(p => new PhysioHistoryDto
+            {
+                Id = p.Id,
+                Category = p.Category,
+                Title = p.Title,
+                Description = p.Description,
+                Date = p.Date,
+                Status = p.Status,
+                Severity = p.Severity,
+                Notes = p.Notes
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(history);
+    }
+
+    [HttpPost("physio-history")]
+    [ProducesResponseType(typeof(PhysioHistoryDto), 201)]
+    public async Task<ActionResult<PhysioHistoryDto>> CreatePhysioHistory([FromBody] CreatePhysioHistoryRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+        
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        // Validate patient exists
+        var patient = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == patientId && u.TenantId == tenantId);
+        
+        if (patient == null)
+        {
+            return NotFound("Patient not found");
+        }
+
+        var history = new PhysioHistory
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            Category = request.Category,
+            Title = request.Title,
+            Description = request.Description,
+            Date = request.Date,
+            Status = request.Status ?? "active",
+            Severity = request.Severity,
+            Notes = request.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.PhysioHistories.Add(history);
+        await _context.SaveChangesAsync();
+
+        var dto = new PhysioHistoryDto
+        {
+            Id = history.Id,
+            Category = history.Category,
+            Title = history.Title,
+            Description = history.Description,
+            Date = history.Date,
+            Status = history.Status,
+            Severity = history.Severity,
+            Notes = history.Notes
+        };
+
+        return CreatedAtAction(nameof(GetPhysioHistory), new { patientId }, dto);
+    }
+
     private async Task<MedicalSummaryDto> BuildMedicalSummaryAsync(Guid tenantId, Guid patientId, CancellationToken cancellationToken)
     {
         var patient = await _context.Users
@@ -1163,4 +1246,28 @@ public sealed class CreatePainAssessmentRequest
     public string? Notes { get; set; }
     public decimal? WeightKg { get; set; }
     public decimal? HeightCm { get; set; }
+}
+
+public sealed class PhysioHistoryDto
+{
+    public Guid Id { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateTime? Date { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Severity { get; set; }
+    public string? Notes { get; set; }
+}
+
+public sealed class CreatePhysioHistoryRequest
+{
+    public Guid PatientId { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateTime? Date { get; set; }
+    public string Status { get; set; } = "active";
+    public string? Severity { get; set; }
+    public string? Notes { get; set; }
 }
