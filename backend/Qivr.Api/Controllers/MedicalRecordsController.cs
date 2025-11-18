@@ -144,7 +144,7 @@ public class MedicalRecordsController : BaseApiController
         if (patient == null)
             return BadRequest(new { message = "Patient not found" });
 
-        var bmi = request.WeightKg.HasValue && request.HeightCm.HasValue 
+        decimal? bmi = request.WeightKg.HasValue && request.HeightCm.HasValue 
             ? CalculateBmi(request.HeightCm.Value, request.WeightKg.Value)
             : null;
 
