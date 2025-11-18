@@ -92,6 +92,8 @@ import {
   StatCard,
   FlexBetween,
   FormDialog,
+  QivrButton,
+  QivrCard,
 } from "@qivr/design-system";
 
 interface MedicalHistory {
@@ -1005,13 +1007,13 @@ const MedicalRecords: React.FC = () => {
                     <Typography variant="h6">
                       Pain Assessment History
                     </Typography>
-                    <Button
+                    <QivrButton
                       variant="contained"
                       startIcon={<AddIcon />}
                       onClick={() => setVitalDialogOpen(true)}
                     >
                       Record Assessment
-                    </Button>
+                    </QivrButton>
                   </FlexBetween>
 
                   {/* Latest Pain Assessment */}
@@ -1053,7 +1055,7 @@ const MedicalRecords: React.FC = () => {
                   {/* Pain Trend Chart */}
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
-                      <Paper sx={{ p: 2 }}>
+                      <QivrCard>
                         <Typography variant="subtitle1" gutterBottom>
                           Pain Level Trend
                         </Typography>
@@ -1076,7 +1078,7 @@ const MedicalRecords: React.FC = () => {
                             />
                           </LineChart>
                         </ResponsiveContainer>
-                      </Paper>
+                      </QivrCard>
                     </Grid>
                   </Grid>
 
