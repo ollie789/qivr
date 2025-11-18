@@ -17,28 +17,58 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      
+
       # Build and push multi-arch backend image
       - echo Building multi-arch Docker image and pushing to ECR...
       - docker buildx build --platform linux/amd64 -t $REPOSITORY_URI:$IMAGE_TAG -t $REPOSITORY_URI:latest --push ./backend
 
+      # Build frontends
+      - echo Installing Node.js dependencies...
+      - npm ci
+
+      - echo Building design system...
+      - cd packages/design-system
+      - npm run build
+      - cd ../..
+
+      - echo Building clinic dashboard...
+      - cd apps/clinic-dashboard
+      - npm run build
+      - cd ../..
+
+      - echo Building patient portal...
+      - cd apps/patient-portal
+      - npm run build
+      - cd ../..
+
   post_build:
     commands:
       - echo Build completed on `date`
-      
+
+      # Deploy frontends to S3
+      - echo Deploying clinic dashboard to S3...
+      - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-staging --delete --region $AWS_DEFAULT_REGION
+
+      - echo Deploying patient portal to S3...
+      - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-staging --delete --region $AWS_DEFAULT_REGION
+
+      - echo Invalidating CloudFront caches...
+      - aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
+      - aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*"
+
       # Create new task definition
       - echo Creating new task definition...
       - sed "s|IMAGE_URI_PLACEHOLDER|$REPOSITORY_URI:$IMAGE_TAG|g" task-definition-template.json > task-definition-new.json
-      
+
       # Register new task definition
       - echo Registering new task definition...
       - NEW_TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://task-definition-new.json --query 'taskDefinition.taskDefinitionArn' --output text)
       - echo "New task definition:" $NEW_TASK_DEF
-      
+
       # Update service with new task definition
       - echo Updating ECS service...
       - aws ecs update-service --cluster qivr_cluster --service qivr-api --task-definition $NEW_TASK_DEF --force-new-deployment
-      
+
       - echo Writing image definitions file...
       - printf '[{"name":"qivr-api","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
 
