@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
-import { Box, Typography, LinearProgress, Alert, IconButton } from '@mui/material';
-import { CloudUpload, Close, InsertDriveFile } from '@mui/icons-material';
+import { useState, useCallback } from "react";
+import { Box, Typography, Alert, IconButton } from "@mui/material";
+import { CloudUpload, Close, InsertDriveFile } from "@mui/icons-material";
 
 interface DocumentUploaderProps {
   onFileSelect: (file: File) => void;
@@ -11,9 +11,9 @@ interface DocumentUploaderProps {
 
 export default function DocumentUploader({
   onFileSelect,
-  accept = '.pdf,.jpg,.jpeg,.png,.doc,.docx',
+  accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx",
   maxSize = 50,
-  disabled = false
+  disabled = false,
 }: DocumentUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -22,9 +22,9 @@ export default function DocumentUploader({
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   }, []);
@@ -35,8 +35,8 @@ export default function DocumentUploader({
       return `File size exceeds ${maxSize}MB limit`;
     }
 
-    const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-    const acceptedTypes = accept.split(',').map(t => t.trim());
+    const extension = "." + file.name.split(".").pop()?.toLowerCase();
+    const acceptedTypes = accept.split(",").map((t) => t.trim());
     if (!acceptedTypes.includes(extension)) {
       return `File type ${extension} not accepted`;
     }
@@ -47,7 +47,7 @@ export default function DocumentUploader({
   const handleFile = (file: File) => {
     setError(null);
     const validationError = validateFile(file);
-    
+
     if (validationError) {
       setError(validationError);
       return;
@@ -57,18 +57,21 @@ export default function DocumentUploader({
     onFileSelect(file);
   };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragActive(false);
 
-    if (disabled) return;
+      if (disabled) return;
 
-    const files = e.dataTransfer.files;
-    if (files && files[0]) {
-      handleFile(files[0]);
-    }
-  }, [disabled]);
+      const files = e.dataTransfer.files;
+      if (files && files[0]) {
+        handleFile(files[0]);
+      }
+    },
+    [disabled],
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -86,9 +89,9 @@ export default function DocumentUploader({
   };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   return (
@@ -102,14 +105,14 @@ export default function DocumentUploader({
       {selectedFile ? (
         <Box
           sx={{
-            border: '2px solid',
-            borderColor: 'primary.main',
+            border: "2px solid",
+            borderColor: "primary.main",
             borderRadius: 2,
             p: 2,
-            display: 'flex',
-            alignItems: 'center',
+            display: "flex",
+            alignItems: "center",
             gap: 2,
-            bgcolor: 'primary.50'
+            bgcolor: "primary.50",
           }}
         >
           <InsertDriveFile color="primary" />
@@ -132,18 +135,20 @@ export default function DocumentUploader({
           onDragOver={handleDrag}
           onDrop={handleDrop}
           sx={{
-            border: '2px dashed',
-            borderColor: dragActive ? 'primary.main' : 'grey.300',
+            border: "2px dashed",
+            borderColor: dragActive ? "primary.main" : "grey.300",
             borderRadius: 2,
             p: 4,
-            textAlign: 'center',
-            bgcolor: dragActive ? 'primary.50' : 'grey.50',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s',
-            '&:hover': disabled ? {} : {
-              borderColor: 'primary.main',
-              bgcolor: 'primary.50'
-            }
+            textAlign: "center",
+            bgcolor: dragActive ? "primary.50" : "grey.50",
+            cursor: disabled ? "not-allowed" : "pointer",
+            transition: "all 0.2s",
+            "&:hover": disabled
+              ? {}
+              : {
+                  borderColor: "primary.main",
+                  bgcolor: "primary.50",
+                },
           }}
         >
           <input
@@ -152,17 +157,25 @@ export default function DocumentUploader({
             accept={accept}
             onChange={handleChange}
             disabled={disabled}
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
           />
-          <label htmlFor="file-upload" style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}>
-            <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+          <label
+            htmlFor="file-upload"
+            style={{ cursor: disabled ? "not-allowed" : "pointer" }}
+          >
+            <CloudUpload sx={{ fontSize: 48, color: "primary.main", mb: 2 }} />
             <Typography variant="h6" gutterBottom>
               Drag and drop file here
             </Typography>
             <Typography variant="body2" color="text.secondary">
               or click to browse
             </Typography>
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+              sx={{ mt: 1 }}
+            >
               Accepted: {accept} (Max {maxSize}MB)
             </Typography>
           </label>

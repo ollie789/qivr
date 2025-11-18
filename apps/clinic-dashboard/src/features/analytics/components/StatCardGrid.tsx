@@ -1,15 +1,15 @@
-import React from 'react';
-import { Grid, Skeleton } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material/styles';
-import type { StatCardItem } from '../types';
-import { StatCard, QivrCard } from '@qivr/design-system';
-import { CardContent } from '@mui/material';
+import React from "react";
+import { Grid, Skeleton } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
+import type { StatCardItem } from "../types";
+import { StatCard, QivrCard } from "@qivr/design-system";
+import { CardContent } from "@mui/material";
 
 export interface StatCardGridProps {
   items: StatCardItem[];
   loading?: boolean;
   skeletonCount?: number;
-  itemSizes?: Partial<Record<'xs' | 'sm' | 'md' | 'lg' | 'xl', number>>;
+  itemSizes?: Partial<Record<"xs" | "sm" | "md" | "lg" | "xl", number>>;
   spacing?: number;
   sx?: SxProps<Theme>;
 }
@@ -43,13 +43,9 @@ const StatCardGrid: React.FC<StatCardGridProps> = ({
         : items.map((item) => (
             <Grid item key={item.id} {...itemSizes}>
               <StatCard
-                title={item.title}
+                label={item.title}
                 value={item.value}
                 icon={item.icon}
-                trend={item.change !== undefined ? {
-                  value: item.change,
-                  label: item.changeLabel
-                } : undefined}
                 iconColor={item.avatarColor}
               />
             </Grid>

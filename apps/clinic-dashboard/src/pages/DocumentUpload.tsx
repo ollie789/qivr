@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Box,
   Paper,
@@ -10,31 +10,31 @@ import {
   Checkbox,
   Grid,
   Autocomplete,
-  CircularProgress
-} from '@mui/material';
-import { CloudUpload, CheckCircle } from '@mui/icons-material';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSnackbar } from 'notistack';
-import { useNavigate } from 'react-router-dom';
-import DocumentUploader from '../components/DocumentUploader';
-import OCRResultsViewer from '../components/OCRResultsViewer';
-import { documentApi, Document } from '../services/documentApi';
-import { patientApi } from '../services/patientApi';
+  CircularProgress,
+} from "@mui/material";
+import { CloudUpload, CheckCircle } from "@mui/icons-material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSnackbar } from "notistack";
+import { useNavigate } from "react-router-dom";
+import DocumentUploader from "../components/DocumentUploader";
+import OCRResultsViewer from "../components/OCRResultsViewer";
+import { documentApi, Document } from "../services/documentApi";
+import { patientApi } from "../services/patientApi";
 
 const DOCUMENT_TYPES = [
-  { value: 'referral', label: 'Referral' },
-  { value: 'consent', label: 'Consent Form' },
-  { value: 'progress_note', label: 'Progress Note' },
-  { value: 'assessment', label: 'Assessment' },
-  { value: 'lab_report', label: 'Lab Report' },
-  { value: 'imaging', label: 'Imaging/X-Ray' },
-  { value: 'prescription', label: 'Prescription' },
-  { value: 'insurance', label: 'Insurance Document' },
-  { value: 'discharge_summary', label: 'Discharge Summary' },
-  { value: 'treatment_plan', label: 'Treatment Plan' },
-  { value: 'invoice', label: 'Invoice/Receipt' },
-  { value: 'correspondence', label: 'Correspondence' },
-  { value: 'other', label: 'Other' }
+  { value: "referral", label: "Referral" },
+  { value: "consent", label: "Consent Form" },
+  { value: "progress_note", label: "Progress Note" },
+  { value: "assessment", label: "Assessment" },
+  { value: "lab_report", label: "Lab Report" },
+  { value: "imaging", label: "Imaging/X-Ray" },
+  { value: "prescription", label: "Prescription" },
+  { value: "insurance", label: "Insurance Document" },
+  { value: "discharge_summary", label: "Discharge Summary" },
+  { value: "treatment_plan", label: "Treatment Plan" },
+  { value: "invoice", label: "Invoice/Receipt" },
+  { value: "correspondence", label: "Correspondence" },
+  { value: "other", label: "Other" },
 ];
 
 export default function DocumentUpload() {
@@ -44,24 +44,26 @@ export default function DocumentUpload() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [documentType, setDocumentType] = useState('referral');
-  const [notes, setNotes] = useState('');
+  const [documentType, setDocumentType] = useState("referral");
+  const [notes, setNotes] = useState("");
   const [isUrgent, setIsUrgent] = useState(false);
-  const [uploadedDocument, setUploadedDocument] = useState<Document | null>(null);
+  const [uploadedDocument, setUploadedDocument] = useState<Document | null>(
+    null,
+  );
 
   // Fetch patients for autocomplete
   const { data: patientsResponse, isLoading: loadingPatients } = useQuery({
-    queryKey: ['patients'],
-    queryFn: () => patientApi.getPatients({ limit: 200 })
+    queryKey: ["patients"],
+    queryFn: () => patientApi.getPatients({ limit: 200 }),
   });
-  
+
   const patients = patientsResponse?.data || [];
 
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!selectedFile || !selectedPatient) {
-        throw new Error('File and patient are required');
+        throw new Error("File and patient are required");
       }
 
       return documentApi.upload({
@@ -69,34 +71,56 @@ export default function DocumentUpload() {
         patientId: selectedPatient.id,
         documentType,
         notes: notes || undefined,
-        isUrgent
+        isUrgent,
       });
     },
     onSuccess: (document) => {
-      enqueueSnackbar('Document uploaded successfully! OCR processing started.', { variant: 'success' });
+      console.log("[DocumentUpload] Upload success:", document);
+      enqueueSnackbar(
+        "Document uploaded successfully! OCR processing started.",
+        { variant: "success" },
+      );
       setUploadedDocument(document);
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
-      
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+
       // Poll for OCR results
+      console.log(
+        "[DocumentUpload] Starting OCR polling for document:",
+        document.id,
+      );
       const pollInterval = setInterval(async () => {
         try {
+          console.log("[DocumentUpload] Polling document status...");
           const updated = await documentApi.getById(document.id);
+          console.log(
+            "[DocumentUpload] Document status:",
+            updated.status,
+            updated,
+          );
           setUploadedDocument(updated);
-          
-          if (updated.status === 'ready' || updated.status === 'failed') {
+
+          if (updated.status === "ready" || updated.status === "failed") {
+            console.log(
+              "[DocumentUpload] OCR complete, stopping poll. Status:",
+              updated.status,
+            );
             clearInterval(pollInterval);
           }
         } catch (error) {
+          console.error("[DocumentUpload] Polling error:", error);
           clearInterval(pollInterval);
         }
       }, 3000);
 
       // Stop polling after 30 seconds
-      setTimeout(() => clearInterval(pollInterval), 30000);
+      setTimeout(() => {
+        console.log("[DocumentUpload] Polling timeout reached");
+        clearInterval(pollInterval);
+      }, 30000);
     },
     onError: (error: any) => {
-      enqueueSnackbar(error.message || 'Upload failed', { variant: 'error' });
-    }
+      enqueueSnackbar(error.message || "Upload failed", { variant: "error" });
+    },
   });
 
   const handleUpload = () => {
@@ -106,22 +130,24 @@ export default function DocumentUpload() {
   const handleReset = () => {
     setSelectedFile(null);
     setSelectedPatient(null);
-    setDocumentType('referral');
-    setNotes('');
+    setDocumentType("referral");
+    setNotes("");
     setIsUrgent(false);
     setUploadedDocument(null);
   };
 
-  const canUpload = selectedFile && selectedPatient && !uploadMutation.isPending;
+  const canUpload =
+    selectedFile && selectedPatient && !uploadMutation.isPending;
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight={600} gutterBottom>
           Upload Document
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Upload patient documents with automatic OCR extraction and intelligent classification
+          Upload patient documents with automatic OCR extraction and intelligent
+          classification
         </Typography>
       </Box>
 
@@ -130,17 +156,19 @@ export default function DocumentUpload() {
           <Paper sx={{ p: 4, borderRadius: 2, boxShadow: 3 }}>
             {uploadedDocument ? (
               <Box>
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 2, 
-                  mb: 3,
-                  p: 2,
-                  bgcolor: 'success.50',
-                  borderRadius: 2,
-                  border: '2px solid',
-                  borderColor: 'success.main'
-                }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    mb: 3,
+                    p: 2,
+                    bgcolor: "success.50",
+                    borderRadius: 2,
+                    border: "2px solid",
+                    borderColor: "success.main",
+                  }}
+                >
                   <CheckCircle color="success" sx={{ fontSize: 40 }} />
                   <Box>
                     <Typography variant="h5" fontWeight={600}>
@@ -154,19 +182,15 @@ export default function DocumentUpload() {
 
                 <OCRResultsViewer document={uploadedDocument} />
 
-                <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                <Box sx={{ mt: 3, display: "flex", gap: 2 }}>
                   <Button
                     variant="contained"
                     size="large"
-                    onClick={() => navigate('/documents')}
+                    onClick={() => navigate("/documents")}
                   >
                     View All Documents
                   </Button>
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    onClick={handleReset}
-                  >
+                  <Button variant="outlined" size="large" onClick={handleReset}>
                     Upload Another
                   </Button>
                 </Box>
@@ -174,25 +198,34 @@ export default function DocumentUpload() {
             ) : (
               <>
                 <Box sx={{ mb: 4 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ 
-                      bgcolor: 'primary.main', 
-                      color: 'white', 
-                      width: 32, 
-                      height: 32, 
-                      borderRadius: '50%', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      fontWeight: 700
-                    }}>
+                  <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    gutterBottom
+                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                  >
+                    <Box
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "white",
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 700,
+                      }}
+                    >
                       1
                     </Box>
                     Select Patient
                   </Typography>
                   <Autocomplete
                     options={patients}
-                    getOptionLabel={(option) => `${option.firstName} ${option.lastName} - ${option.email}`}
+                    getOptionLabel={(option) =>
+                      `${option.firstName} ${option.lastName} - ${option.email}`
+                    }
                     value={selectedPatient}
                     onChange={(_, newValue) => setSelectedPatient(newValue)}
                     loading={loadingPatients}
@@ -205,7 +238,9 @@ export default function DocumentUpload() {
                           ...params.InputProps,
                           endAdornment: (
                             <>
-                              {loadingPatients ? <CircularProgress size={20} /> : null}
+                              {loadingPatients ? (
+                                <CircularProgress size={20} />
+                              ) : null}
                               {params.InputProps.endAdornment}
                             </>
                           ),
@@ -217,18 +252,25 @@ export default function DocumentUpload() {
                 </Box>
 
                 <Box sx={{ mb: 4 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ 
-                      bgcolor: selectedPatient ? 'primary.main' : 'grey.300', 
-                      color: 'white', 
-                      width: 32, 
-                      height: 32, 
-                      borderRadius: '50%', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      fontWeight: 700
-                    }}>
+                  <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    gutterBottom
+                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                  >
+                    <Box
+                      sx={{
+                        bgcolor: selectedPatient ? "primary.main" : "grey.300",
+                        color: "white",
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 700,
+                      }}
+                    >
                       2
                     </Box>
                     Upload File
@@ -243,18 +285,25 @@ export default function DocumentUpload() {
 
                 {selectedFile && (
                   <Box>
-                    <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ 
-                        bgcolor: 'primary.main', 
-                        color: 'white', 
-                        width: 32, 
-                        height: 32, 
-                        borderRadius: '50%', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        fontWeight: 700
-                      }}>
+                    <Typography
+                      variant="h6"
+                      fontWeight={600}
+                      gutterBottom
+                      sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                    >
+                      <Box
+                        sx={{
+                          bgcolor: "primary.main",
+                          color: "white",
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: 700,
+                        }}
+                      >
                         3
                       </Box>
                       Document Details
@@ -303,16 +352,24 @@ export default function DocumentUpload() {
                       </Grid>
                     </Grid>
 
-                    <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
+                    <Box sx={{ mt: 4, display: "flex", gap: 2 }}>
                       <Button
                         variant="contained"
                         size="large"
-                        startIcon={uploadMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <CloudUpload />}
+                        startIcon={
+                          uploadMutation.isPending ? (
+                            <CircularProgress size={20} color="inherit" />
+                          ) : (
+                            <CloudUpload />
+                          )
+                        }
                         onClick={handleUpload}
                         disabled={!canUpload}
                         sx={{ px: 4, py: 1.5, fontWeight: 600 }}
                       >
-                        {uploadMutation.isPending ? 'Uploading...' : 'Upload Document'}
+                        {uploadMutation.isPending
+                          ? "Uploading..."
+                          : "Upload Document"}
                       </Button>
                       <Button
                         variant="outlined"
@@ -332,11 +389,25 @@ export default function DocumentUpload() {
         </Grid>
 
         <Grid item xs={12} lg={4}>
-          <Paper sx={{ p: 3, bgcolor: 'primary.50', borderRadius: 2, boxShadow: 2, border: '1px solid', borderColor: 'primary.100' }}>
-            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Paper
+            sx={{
+              p: 3,
+              bgcolor: "primary.50",
+              borderRadius: 2,
+              boxShadow: 2,
+              border: "1px solid",
+              borderColor: "primary.100",
+            }}
+          >
+            <Typography
+              variant="h6"
+              fontWeight={600}
+              gutterBottom
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
               Upload Guidelines
             </Typography>
-            <Box sx={{ mt: 2, '& > *': { mb: 2 } }}>
+            <Box sx={{ mt: 2, "& > *": { mb: 2 } }}>
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                   Supported Formats
@@ -358,7 +429,8 @@ export default function DocumentUpload() {
                   OCR Processing
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Documents are automatically scanned to extract patient information, dates, and identifiers.
+                  Documents are automatically scanned to extract patient
+                  information, dates, and identifiers.
                 </Typography>
               </Box>
               <Box>
@@ -366,7 +438,8 @@ export default function DocumentUpload() {
                   Security
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  All files are encrypted at rest and in transit. Access is logged for audit purposes.
+                  All files are encrypted at rest and in transit. Access is
+                  logged for audit purposes.
                 </Typography>
               </Box>
             </Box>
