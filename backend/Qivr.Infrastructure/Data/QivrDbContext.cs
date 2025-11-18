@@ -65,6 +65,7 @@ public class QivrDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<MedicalCondition> MedicalConditions => Set<MedicalCondition>();
     public DbSet<MedicalVital> MedicalVitals => Set<MedicalVital>();
+    public DbSet<PainAssessment> PainAssessments => Set<PainAssessment>();
     public DbSet<MedicalLabResult> MedicalLabResults => Set<MedicalLabResult>();
     public DbSet<MedicalMedication> MedicalMedications => Set<MedicalMedication>();
     public DbSet<MedicalAllergy> MedicalAllergies => Set<MedicalAllergy>();

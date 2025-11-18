@@ -13,8 +13,28 @@ public class MedicalCondition : TenantEntity
     public string ManagedBy { get; set; } = string.Empty;
     public DateTime LastReviewed { get; set; }
     public string? Notes { get; set; }
+    // Allied health specific fields
+    public string? AffectedArea { get; set; }
+    public string? OnsetType { get; set; } // acute, gradual, chronic
+    public string? PreviousTreatments { get; set; }
+    public string? AggravatingFactors { get; set; }
+    public string? RelievingFactors { get; set; }
 }
 
+public class PainAssessment : TenantEntity
+{
+    public Guid PatientId { get; set; }
+    public Guid? EvaluationId { get; set; }
+    public DateTime RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public int OverallPainLevel { get; set; } // 0-10
+    public string FunctionalImpact { get; set; } = "none"; // none, mild, moderate, severe
+    public string? PainPointsJson { get; set; } // JSON array of pain points
+    public string? Notes { get; set; }
+}
+
+// Keep for backward compatibility
+[Obsolete("Use PainAssessment for allied health records")]
 public class MedicalVital : TenantEntity
 {
     public Guid PatientId { get; set; }

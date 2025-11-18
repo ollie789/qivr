@@ -65,6 +65,37 @@ public class MedicalRecordsController : BaseApiController
         return Ok(vitals);
     }
 
+    [HttpGet("pain-assessments")]
+    [ProducesResponseType(typeof(IEnumerable<PainAssessmentDto>), 200)]
+    public async Task<ActionResult<IEnumerable<PainAssessmentDto>>> GetPainAssessments([FromQuery] Guid? patientId, CancellationToken cancellationToken)
+    {
+        var currentUserId = CurrentUserId;
+        var tenantId = RequireTenantId();
+        var effectivePatientId = await ResolveEffectivePatientIdAsync(currentUserId, patientId, cancellationToken);
+        if (effectivePatientId == Guid.Empty)
+        {
+            return Ok(Array.Empty<PainAssessmentDto>());
+        }
+
+        var assessments = await _context.PainAssessments
+            .Where(p => p.TenantId == tenantId && p.PatientId == effectivePatientId)
+            .OrderByDescending(p => p.RecordedAt)
+            .Select(p => new PainAssessmentDto
+            {
+                Id = p.Id,
+                RecordedAt = p.RecordedAt,
+                RecordedBy = p.RecordedBy,
+                OverallPainLevel = p.OverallPainLevel,
+                FunctionalImpact = p.FunctionalImpact,
+                PainPointsJson = p.PainPointsJson,
+                EvaluationId = p.EvaluationId,
+                Notes = p.Notes
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(assessments);
+    }
+
     [HttpGet("lab-results")]
     [ProducesResponseType(typeof(IEnumerable<LabResultGroupDto>), 200)]
     public async Task<ActionResult<IEnumerable<LabResultGroupDto>>> GetLabResults([FromQuery] Guid? patientId, CancellationToken cancellationToken)
@@ -166,6 +197,56 @@ public class MedicalRecordsController : BaseApiController
         };
 
         return CreatedAtAction(nameof(GetVitalSigns), new { patientId }, dto);
+    }
+
+    [HttpPost("pain-assessments")]
+    [ProducesResponseType(typeof(PainAssessmentDto), 201)]
+    public async Task<ActionResult<PainAssessmentDto>> CreatePainAssessment([FromBody] CreatePainAssessmentRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+        
+        var patientId = User.IsInRole("Patient") ? userId : request.PatientId;
+        
+        var patient = await _context.Users
+            .Where(u => u.Id == patientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
+            .FirstOrDefaultAsync();
+            
+        if (patient == null)
+            return BadRequest(new { message = "Patient not found" });
+
+        var assessment = new PainAssessment
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PatientId = patientId,
+            EvaluationId = request.EvaluationId,
+            RecordedAt = request.RecordedAt ?? DateTime.UtcNow,
+            RecordedBy = User.Identity?.Name ?? "Unknown",
+            OverallPainLevel = request.OverallPainLevel,
+            FunctionalImpact = request.FunctionalImpact ?? "none",
+            PainPointsJson = request.PainPointsJson,
+            Notes = request.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.PainAssessments.Add(assessment);
+        await _context.SaveChangesAsync();
+
+        var dto = new PainAssessmentDto
+        {
+            Id = assessment.Id,
+            RecordedAt = assessment.RecordedAt,
+            RecordedBy = assessment.RecordedBy,
+            OverallPainLevel = assessment.OverallPainLevel,
+            FunctionalImpact = assessment.FunctionalImpact,
+            PainPointsJson = assessment.PainPointsJson,
+            EvaluationId = assessment.EvaluationId,
+            Notes = assessment.Notes
+        };
+
+        return CreatedAtAction(nameof(GetPainAssessments), new { patientId }, dto);
     }
 
     [HttpPost("medications")]
@@ -1203,5 +1284,28 @@ public sealed class ProcedureDto
     public string Status { get; set; } = string.Empty;
     public string? Outcome { get; set; }
     public string? Complications { get; set; }
+    public string? Notes { get; set; }
+}
+
+public sealed class PainAssessmentDto
+{
+    public Guid Id { get; set; }
+    public DateTime RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public int OverallPainLevel { get; set; }
+    public string FunctionalImpact { get; set; } = string.Empty;
+    public string? PainPointsJson { get; set; }
+    public Guid? EvaluationId { get; set; }
+    public string? Notes { get; set; }
+}
+
+public sealed class CreatePainAssessmentRequest
+{
+    public Guid PatientId { get; set; }
+    public Guid? EvaluationId { get; set; }
+    public DateTime? RecordedAt { get; set; }
+    public int OverallPainLevel { get; set; }
+    public string? FunctionalImpact { get; set; }
+    public string? PainPointsJson { get; set; }
     public string? Notes { get; set; }
 }
