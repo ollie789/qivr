@@ -1,3 +1,20 @@
+export interface PainAssessment {
+  id: string;
+  recordedAt: string;
+  recordedBy: string;
+  overallPainLevel: number; // 0-10
+  functionalImpact: "none" | "mild" | "moderate" | "severe";
+  painPoints: Array<{
+    bodyPart: string;
+    side?: "left" | "right" | "bilateral" | null;
+    intensity: number;
+    quality?: string | null;
+  }>;
+  evaluationId?: string | null;
+  notes?: string | null;
+}
+
+/** @deprecated Use PainAssessment for allied health records */
 export interface VitalSign {
   id: string;
   date: string;
@@ -11,7 +28,11 @@ export interface VitalSign {
   respiratoryRate: number;
 }
 
-export type LabResultStatus = 'normal' | 'abnormal-high' | 'abnormal-low' | 'critical';
+export type LabResultStatus =
+  | "normal"
+  | "abnormal-high"
+  | "abnormal-low"
+  | "critical";
 
 export interface LabResult {
   id: string;
@@ -32,7 +53,7 @@ export interface LabResultGroup {
   tests: LabResult[];
 }
 
-export type MedicationStatus = 'active' | 'completed' | 'discontinued';
+export type MedicationStatus = "active" | "completed" | "discontinued";
 
 export interface Medication {
   id: string;
@@ -49,8 +70,12 @@ export interface Medication {
   instructions?: string;
 }
 
-export type AllergyType = 'medication' | 'food' | 'environmental' | 'other';
-export type AllergySeverity = 'mild' | 'moderate' | 'severe' | 'life-threatening';
+export type AllergyType = "medication" | "food" | "environmental" | "other";
+export type AllergySeverity =
+  | "mild"
+  | "moderate"
+  | "severe"
+  | "life-threatening";
 
 export interface Allergy {
   id: string;
@@ -73,7 +98,11 @@ export interface Immunization {
   lotNumber?: string;
 }
 
-export type MedicalConditionStatus = 'active' | 'resolved' | 'chronic' | 'managed';
+export type MedicalConditionStatus =
+  | "active"
+  | "resolved"
+  | "chronic"
+  | "managed";
 
 export interface MedicalCondition {
   id: string;
@@ -84,6 +113,12 @@ export interface MedicalCondition {
   managedBy: string;
   lastReviewed: string;
   notes?: string;
+  // Allied health specific fields
+  affectedArea?: string;
+  onsetType?: "acute" | "gradual" | "chronic";
+  previousTreatments?: string;
+  aggravatingFactors?: string;
+  relievingFactors?: string;
 }
 
 export interface MedicalDocument {

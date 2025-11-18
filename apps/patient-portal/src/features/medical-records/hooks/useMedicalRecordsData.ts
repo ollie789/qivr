@@ -1,24 +1,24 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import {
   fetchAllergies,
   fetchImmunizations,
   fetchLabResults,
   fetchMedicalSummary,
   fetchMedications,
-  fetchVitalSigns,
-} from '../../../services/medicalRecordsApi';
+  fetchPainAssessments,
+} from "../../../services/medicalRecordsApi";
 import type {
   Allergy,
   Immunization,
   LabResultGroup,
   MedicalSummary,
   Medication,
-  VitalSign,
-} from '../../../types';
+  PainAssessment,
+} from "../../../types";
 
 type MedicalRecordsData = {
   summary: MedicalSummary | null;
-  vitalSigns: VitalSign[];
+  vitalSigns: PainAssessment[];
   labGroups: LabResultGroup[];
   medications: Medication[];
   allergies: Allergy[];
@@ -28,34 +28,35 @@ type MedicalRecordsData = {
 
 export function useMedicalRecordsData(): MedicalRecordsData {
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['medicalSummary'],
+    queryKey: ["medicalSummary"],
     queryFn: fetchMedicalSummary,
   });
 
   const { data: vitalSigns = [], isLoading: vitalsLoading } = useQuery({
-    queryKey: ['vitalSigns'],
-    queryFn: fetchVitalSigns,
+    queryKey: ["painAssessments"],
+    queryFn: fetchPainAssessments,
   });
 
   const { data: labGroups = [], isLoading: labsLoading } = useQuery({
-    queryKey: ['labResults'],
+    queryKey: ["labResults"],
     queryFn: fetchLabResults,
   });
 
   const { data: medications = [], isLoading: medsLoading } = useQuery({
-    queryKey: ['medications'],
+    queryKey: ["medications"],
     queryFn: fetchMedications,
   });
 
   const { data: allergies = [], isLoading: allergiesLoading } = useQuery({
-    queryKey: ['allergies'],
+    queryKey: ["allergies"],
     queryFn: fetchAllergies,
   });
 
-  const { data: immunizations = [], isLoading: immunizationsLoading } = useQuery({
-    queryKey: ['immunizations'],
-    queryFn: fetchImmunizations,
-  });
+  const { data: immunizations = [], isLoading: immunizationsLoading } =
+    useQuery({
+      queryKey: ["immunizations"],
+      queryFn: fetchImmunizations,
+    });
 
   return {
     summary: summary ?? null,

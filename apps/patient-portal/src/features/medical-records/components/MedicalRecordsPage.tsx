@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Box,
   Card,
@@ -11,22 +11,29 @@ import {
   Divider,
   Chip,
   Stack,
-} from '@mui/material';
-import { format } from 'date-fns';
-import { useMedicalRecordsData } from '../hooks/useMedicalRecordsData';
+} from "@mui/material";
+import { format } from "date-fns";
+import { useMedicalRecordsData } from "../hooks/useMedicalRecordsData";
 
 const formatDate = (date?: string) => {
-  if (!date) return 'Unknown';
+  if (!date) return "Unknown";
   try {
-    return format(new Date(date), 'MMM dd, yyyy');
+    return format(new Date(date), "MMM dd, yyyy");
   } catch {
     return date;
   }
 };
 
 const MedicalRecordsPage: React.FC = () => {
-  const { summary, vitalSigns, labGroups, medications, allergies, immunizations, loading } =
-    useMedicalRecordsData();
+  const {
+    summary,
+    vitalSigns,
+    labGroups,
+    medications,
+    allergies,
+    immunizations,
+    loading,
+  } = useMedicalRecordsData();
 
   return (
     <Box sx={{ p: 3 }}>
@@ -44,7 +51,9 @@ const MedicalRecordsPage: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>Conditions</Typography>
+                <Typography variant="h6" gutterBottom>
+                  Conditions
+                </Typography>
                 {summary?.conditions.length ? (
                   <List>
                     {summary.conditions.slice(0, 5).map((condition) => (
@@ -71,15 +80,34 @@ const MedicalRecordsPage: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>Latest Vitals</Typography>
+                <Typography variant="h6" gutterBottom>
+                  Latest Pain Assessments
+                </Typography>
                 {vitalSigns.length ? (
                   <List>
-                    {vitalSigns.slice(0, 3).map((vital) => (
-                      <React.Fragment key={vital.id}>
+                    {vitalSigns.slice(0, 3).map((assessment) => (
+                      <React.Fragment key={assessment.id}>
                         <ListItem>
                           <ListItemText
-                            primary={`Blood Pressure ${vital.bloodPressure.systolic}/${vital.bloodPressure.diastolic}`}
-                            secondary={`Recorded ${formatDate(vital.date)} • Heart Rate ${vital.heartRate} bpm`}
+                            primary={`Pain Level: ${assessment.overallPainLevel || 0}/10`}
+                            secondary={`Recorded ${formatDate(assessment.recordedAt)} • Impact: ${assessment.functionalImpact || "none"}`}
+                          />
+                          <Chip
+                            label={
+                              assessment.overallPainLevel > 6
+                                ? "High"
+                                : assessment.overallPainLevel > 3
+                                  ? "Moderate"
+                                  : "Low"
+                            }
+                            color={
+                              assessment.overallPainLevel > 6
+                                ? "error"
+                                : assessment.overallPainLevel > 3
+                                  ? "warning"
+                                  : "success"
+                            }
+                            size="small"
                           />
                         </ListItem>
                         <Divider component="li" />
@@ -88,7 +116,7 @@ const MedicalRecordsPage: React.FC = () => {
                   </List>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    No vitals recorded.
+                    No pain assessments recorded.
                   </Typography>
                 )}
               </CardContent>
@@ -98,7 +126,9 @@ const MedicalRecordsPage: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>Medications</Typography>
+                <Typography variant="h6" gutterBottom>
+                  Medications
+                </Typography>
                 {medications.length ? (
                   <List>
                     {medications.slice(0, 3).map((medication) => (
@@ -126,7 +156,9 @@ const MedicalRecordsPage: React.FC = () => {
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>Recent Lab Results</Typography>
+                <Typography variant="h6" gutterBottom>
+                  Recent Lab Results
+                </Typography>
                 {labGroups.length ? (
                   <List>
                     {labGroups.slice(0, 3).map((group) => (
@@ -153,7 +185,9 @@ const MedicalRecordsPage: React.FC = () => {
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>Allergies & Immunizations</Typography>
+                <Typography variant="h6" gutterBottom>
+                  Allergies & Immunizations
+                </Typography>
                 <Stack spacing={2}>
                   <Box>
                     <Typography variant="subtitle2">Allergies</Typography>
@@ -187,7 +221,7 @@ const MedicalRecordsPage: React.FC = () => {
                             <ListItem>
                               <ListItemText
                                 primary={shot.vaccine}
-                                secondary={`${shot.facility ?? 'Clinic'} • ${formatDate(shot.date)}`}
+                                secondary={`${shot.facility ?? "Clinic"} • ${formatDate(shot.date)}`}
                               />
                             </ListItem>
                             <Divider component="li" />
