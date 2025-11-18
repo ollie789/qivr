@@ -6,7 +6,6 @@ import {
   LabResultGroup,
   MedicalSummary,
   Medication,
-  VitalSign,
   PainAssessment,
 } from "../types";
 
@@ -26,13 +25,6 @@ function unwrapEnvelope<T>(payload: EnvelopeOrValue<T>): T {
 export async function fetchMedicalSummary(): Promise<MedicalSummary | null> {
   const response = await apiClient.get<EnvelopeOrValue<MedicalSummary | null>>(
     "/api/medical-records",
-  );
-  return unwrapEnvelope(response);
-}
-
-export async function fetchVitalSigns(): Promise<VitalSign[]> {
-  const response = await apiClient.get<EnvelopeOrValue<VitalSign[]>>(
-    "/api/medical-records/vitals",
   );
   return unwrapEnvelope(response);
 }

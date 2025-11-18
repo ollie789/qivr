@@ -12,20 +12,10 @@ export interface PainAssessment {
   }>;
   evaluationId?: string | null;
   notes?: string | null;
-}
-
-/** @deprecated Use PainAssessment for allied health records */
-export interface VitalSign {
-  id: string;
-  date: string;
-  bloodPressure: { systolic: number; diastolic: number };
-  heartRate: number;
-  temperature: number;
-  weight: number;
-  height: number;
-  bmi: number;
-  oxygenSaturation: number;
-  respiratoryRate: number;
+  // Body metrics
+  weightKg?: number | null;
+  heightCm?: number | null;
+  bmi?: number | null;
 }
 
 export type LabResultStatus =
