@@ -4,8 +4,9 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-const textract = new TextractClient({ region: process.env.AWS_REGION });
-const s3 = new S3Client({ region: process.env.AWS_REGION });
+const region = process.env.AWS_REGION || 'ap-southeast-2';
+const textract = new TextractClient({ region });
+const s3 = new S3Client({ region });
 
 const pool = new Pool({
   host: process.env.DB_HOST,
