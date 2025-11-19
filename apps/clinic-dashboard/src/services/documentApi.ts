@@ -8,6 +8,7 @@ export interface Document {
   fileName: string;
   fileSize: number;
   status: string;
+  extractedText?: string;
   extractedPatientName?: string;
   extractedDob?: string;
   confidenceScore?: number;
