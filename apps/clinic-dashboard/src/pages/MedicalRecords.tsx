@@ -57,6 +57,7 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckIcon,
   Info as InfoIcon,
+  Message as MessageIcon,
 } from "@mui/icons-material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -95,6 +96,7 @@ import {
   QivrButton,
   QivrCard,
 } from "@qivr/design-system";
+import { MessageComposer } from "../components/messaging";
 
 interface MedicalHistory {
   id: string;
@@ -147,6 +149,7 @@ const MedicalRecords: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
 
   const { data: patientList, isLoading: isPatientsLoading } =
     useQuery<PatientListResponse>({
@@ -881,15 +884,24 @@ const MedicalRecords: React.FC = () => {
                       </Typography>
                     </Box>
                   </FlexBetween>
-                  <Button
-                    variant={editMode ? "contained" : "outlined"}
-                    startIcon={editMode ? <SaveIcon /> : <EditIcon />}
-                    onClick={() =>
-                      editMode ? handleSavePatient() : setEditMode(true)
-                    }
-                  >
-                    {editMode ? "Save Changes" : "Edit Info"}
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<MessageIcon />}
+                      onClick={() => setMessageDialogOpen(true)}
+                    >
+                      Send Message
+                    </Button>
+                    <Button
+                      variant={editMode ? "contained" : "outlined"}
+                      startIcon={editMode ? <SaveIcon /> : <EditIcon />}
+                      onClick={() =>
+                        editMode ? handleSavePatient() : setEditMode(true)
+                      }
+                    >
+                      {editMode ? "Save Changes" : "Edit Info"}
+                    </Button>
+                  </Box>
                 </FlexBetween>
 
                 {/* Quick Stats */}
@@ -1870,6 +1882,16 @@ const MedicalRecords: React.FC = () => {
             </Grid>
           </Grid>
         </FormDialog>
+
+        {/* Message Composer */}
+        {patient && (
+          <MessageComposer
+            open={messageDialogOpen}
+            onClose={() => setMessageDialogOpen(false)}
+            recipientId={selectedPatientId}
+            recipientName={`${patient.firstName} ${patient.lastName}`}
+          />
+        )}
         </>
         )}
       </Box>

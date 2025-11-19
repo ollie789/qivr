@@ -46,6 +46,9 @@ import type { SxProps, Theme } from '@mui/material/styles';
 const drawerWidth = 280;
 const drawerWidthCollapsed = 64;
 
+import { useQuery } from '@tanstack/react-query';
+import { messagesApi } from '../../services/messagesApi';
+
 interface MenuItemType {
   text: string;
   icon: React.ReactElement;
@@ -53,18 +56,32 @@ interface MenuItemType {
   badge?: number;
 }
 
-const menuItems: MenuItemType[] = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Intake Management', icon: <QueueIcon />, path: '/intake', badge: 5 },
-  { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
-  { text: 'Patients', icon: <PeopleIcon />, path: '/medical-records' },
-  { text: 'Medical Records', icon: <MedicalIcon />, path: '/medical-records' },
-  { text: 'Messages', icon: <MessageIcon />, path: '/messages' },
-  { text: 'Documents', icon: <DocumentsIcon />, path: '/documents' },
-  { text: 'PROM', icon: <AssignmentIcon />, path: '/prom' },
-  { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-];
+const DashboardLayout: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  const { user, logout } = useAuthStore();
+  const { darkMode, toggleDarkMode } = useThemeMode();
+
+  // Fetch unread message count
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['unread-messages'],
+    queryFn: messagesApi.getUnreadCount,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const menuItems: MenuItemType[] = [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'Intake Management', icon: <QueueIcon />, path: '/intake', badge: 5 },
+    { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
+    { text: 'Patients', icon: <PeopleIcon />, path: '/medical-records' },
+    { text: 'Medical Records', icon: <MedicalIcon />, path: '/medical-records' },
+    { text: 'Messages', icon: <MessageIcon />, path: '/messages', badge: unreadCount },
+    { text: 'Documents', icon: <DocumentsIcon />, path: '/documents' },
+    { text: 'PROM', icon: <AssignmentIcon />, path: '/prom' },
+    { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
+    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  ];
 
 const getNavButtonStyles = (theme: Theme, drawerOpen: boolean): SxProps<Theme> => ({
   borderRadius: 2,
