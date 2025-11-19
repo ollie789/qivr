@@ -24,7 +24,7 @@ import {
 import { format } from "date-fns";
 import type { ChipProps } from "@mui/material/Chip";
 import apiClient from "../lib/api-client";
-import { PageLoader } from '@qivr/design-system';
+import { PageLoader } from "@qivr/design-system";
 
 interface Evaluation {
   id: string;
@@ -69,7 +69,7 @@ export const EvaluationDetail = () => {
         setLoading(false);
       }
     };
-    
+
     fetchEvaluation();
   }, [id]);
 
@@ -124,7 +124,11 @@ export const EvaluationDetail = () => {
     return (
       <Box>
         <Typography variant="h5">Evaluation not found</Typography>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/evaluations")} sx={{ mt: 2 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate("/evaluations")}
+          sx={{ mt: 2 }}
+        >
           Back to Evaluations
         </Button>
       </Box>
@@ -134,7 +138,14 @@ export const EvaluationDetail = () => {
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ mb: 3, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <IconButton onClick={() => navigate("/evaluations")}>
             <ArrowBackIcon />
@@ -144,7 +155,9 @@ export const EvaluationDetail = () => {
               {evaluation.evaluationNumber}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              {format(new Date(evaluation.date), "MMMM dd, yyyy 'at' h:mm a")}
+              {evaluation.date
+                ? format(new Date(evaluation.date), "MMMM dd, yyyy 'at' h:mm a")
+                : "Date not available"}
             </Typography>
           </Box>
         </Box>
@@ -187,7 +200,14 @@ export const EvaluationDetail = () => {
                   <Typography variant="body2" color="textSecondary">
                     Urgency
                   </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mt: 0.5,
+                    }}
+                  >
                     <Box
                       sx={{
                         width: 10,
@@ -210,12 +230,21 @@ export const EvaluationDetail = () => {
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                  <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    gutterBottom
+                  >
                     Symptoms
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                     {evaluation.symptoms.map((symptom, index) => (
-                      <Chip key={index} label={symptom} size="small" variant="outlined" />
+                      <Chip
+                        key={index}
+                        label={symptom}
+                        size="small"
+                        variant="outlined"
+                      />
                     ))}
                   </Box>
                 </Grid>
@@ -234,7 +263,9 @@ export const EvaluationDetail = () => {
           </Card>
 
           {/* Clinical Details */}
-          {(evaluation.diagnosis || evaluation.treatment || evaluation.notes) && (
+          {(evaluation.diagnosis ||
+            evaluation.treatment ||
+            evaluation.notes) && (
             <Card sx={{ mt: 3 }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom fontWeight={600}>
@@ -244,29 +275,47 @@ export const EvaluationDetail = () => {
 
                 {evaluation.diagnosis && (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      gutterBottom
+                    >
                       Diagnosis
                     </Typography>
-                    <Typography variant="body1">{evaluation.diagnosis}</Typography>
+                    <Typography variant="body1">
+                      {evaluation.diagnosis}
+                    </Typography>
                   </Box>
                 )}
 
                 {evaluation.treatment && (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      gutterBottom
+                    >
                       Treatment Plan
                     </Typography>
-                    <Typography variant="body1">{evaluation.treatment}</Typography>
+                    <Typography variant="body1">
+                      {evaluation.treatment}
+                    </Typography>
                   </Box>
                 )}
 
                 {evaluation.notes && (
                   <Box>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      gutterBottom
+                    >
                       Clinical Notes
                     </Typography>
                     <Paper sx={{ p: 2, bgcolor: "grey.50" }}>
-                      <Typography variant="body2">{evaluation.notes}</Typography>
+                      <Typography variant="body2">
+                        {evaluation.notes}
+                      </Typography>
                     </Paper>
                   </Box>
                 )}
@@ -304,7 +353,13 @@ export const EvaluationDetail = () => {
                   Assessment Score
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Typography variant="h2" fontWeight={600}>
                     {evaluation.score}
                   </Typography>
@@ -387,7 +442,10 @@ export const EvaluationDetail = () => {
                   Scheduled Date
                 </Typography>
                 <Typography variant="body1" fontWeight={500}>
-                  {format(new Date(evaluation.followUpDate), "MMMM dd, yyyy 'at' h:mm a")}
+                  {format(
+                    new Date(evaluation.followUpDate),
+                    "MMMM dd, yyyy 'at' h:mm a",
+                  )}
                 </Typography>
               </CardContent>
             </Card>
@@ -400,7 +458,10 @@ export const EvaluationDetail = () => {
                 Last Updated
               </Typography>
               <Typography variant="body2">
-                {format(new Date(evaluation.lastUpdated), "MMM dd, yyyy 'at' h:mm a")}
+                {format(
+                  new Date(evaluation.lastUpdated),
+                  "MMM dd, yyyy 'at' h:mm a",
+                )}
               </Typography>
             </CardContent>
           </Card>
