@@ -55,6 +55,7 @@ interface MessageComposerProps {
     | "Medical"
     | "Billing"
     | "Administrative";
+  allowPatientSelection?: boolean;
 }
 
 interface Recipient {
@@ -142,6 +143,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   onSent,
   relatedAppointmentId,
   category = "General",
+  allowPatientSelection = false,
 }) => {
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
@@ -149,6 +151,8 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   const [messageCategory, setMessageCategory] = useState<
     "General" | "Appointment" | "Medical" | "Billing" | "Administrative"
   >(category);
+  const [selectedRecipients, setSelectedRecipients] =
+    useState<Recipient[]>(recipients);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [selectedTemplate, setSelectedTemplate] =
@@ -162,6 +166,28 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Fetch patients for selection
+  const { data: patientsData } = useQuery({
+    queryKey: ["patients-for-messaging"],
+    queryFn: async () => {
+      const response = await fetch("/api/patients?limit=200");
+      if (!response.ok) throw new Error("Failed to fetch patients");
+      return response.json();
+    },
+    enabled: allowPatientSelection && open,
+  });
+
+  const patients = useMemo(() => {
+    if (!patientsData?.items) return [];
+    return patientsData.items.map((p: any) => ({
+      id: p.id,
+      name: `${p.firstName} ${p.lastName}`,
+      email: p.email,
+      phone: p.phone,
+      type: "patient" as const,
+    }));
+  }, [patientsData]);
 
   const { data: templateResult, isLoading: templatesLoading } =
     useQuery<MessageTemplateListResult>({
@@ -382,14 +408,16 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   };
 
   const ensureRecipient = (): Recipient | null => {
-    if (!recipients.length) {
-      setError(
-        "Select a recipient from the patient or provider directory (coming soon).",
-      );
+    const recipientList = allowPatientSelection
+      ? selectedRecipients
+      : recipients;
+
+    if (!recipientList.length) {
+      setError("Please select at least one recipient");
       return null;
     }
 
-    const primary = recipients[0];
+    const primary = recipientList[0];
     if (!primary?.id) {
       setError("Recipient is missing an identifier.");
       return null;
@@ -474,22 +502,58 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
 
         <DialogContent>
           {/* Recipients */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Recipients ({recipients.length})
-            </Typography>
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              {recipients.map((recipient) => (
-                <Chip
-                  key={recipient.id}
-                  avatar={<Avatar>{recipient.name[0]}</Avatar>}
-                  label={recipient.name}
-                  size="small"
-                  color={recipient.type === "patient" ? "primary" : "secondary"}
+          {allowPatientSelection && recipients.length === 0 ? (
+            <Autocomplete
+              multiple
+              options={patients}
+              getOptionLabel={(option) => option.name}
+              value={selectedRecipients}
+              onChange={(_, newValue) => setSelectedRecipients(newValue)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Select Patients"
+                  placeholder="Search patients..."
+                  margin="normal"
+                  required
                 />
-              ))}
+              )}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                  const { key, ...tagProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      {...tagProps}
+                      avatar={<Avatar>{option.name[0]}</Avatar>}
+                      label={option.name}
+                      size="small"
+                      color="primary"
+                    />
+                  );
+                })
+              }
+            />
+          ) : (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Recipients ({recipients.length})
+              </Typography>
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                {recipients.map((recipient) => (
+                  <Chip
+                    key={recipient.id}
+                    avatar={<Avatar>{recipient.name[0]}</Avatar>}
+                    label={recipient.name}
+                    size="small"
+                    color={
+                      recipient.type === "patient" ? "primary" : "secondary"
+                    }
+                  />
+                ))}
+              </Box>
             </Box>
-          </Box>
+          )}
 
           {/* Message Category */}
           <TextField

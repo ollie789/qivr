@@ -186,10 +186,9 @@ const Messages: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            disabled={!selectedConversation}
             onClick={handleOpenComposer}
           >
-            Reply
+            {selectedConversation ? "Reply" : "New Message"}
           </Button>
         }
       />
@@ -517,6 +516,7 @@ const Messages: React.FC = () => {
               ]
             : []
         }
+        allowPatientSelection={!selectedConversation}
         defaultType={latestMessageType}
         onSent={handleMessageSent}
       />
