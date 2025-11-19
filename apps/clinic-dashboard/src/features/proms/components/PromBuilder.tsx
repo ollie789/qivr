@@ -425,6 +425,36 @@ export const PromBuilder: React.FC = () => {
   const [questionDialog, setQuestionDialog] = useState(false);
   const [libraryDialog, setLibraryDialog] = useState(false);
   const [previewDialog, setPreviewDialog] = useState(false);
+  const [testScoringDialog, setTestScoringDialog] = useState(false);
+  const [testAnswers, setTestAnswers] = useState<Record<string, any>>({});
+  const [testScore, setTestScore] = useState<number | null>(null);
+
+  const calculateScore = () => {
+    let score = 0;
+    template.questions.forEach((q) => {
+      const answer = testAnswers[q.id];
+      if (answer === undefined) return;
+
+      if (q.type === "scale" || q.type === "number") {
+        const value = Number(answer);
+        const weight = q.scoring?.weight || 1;
+        score += value * weight;
+      } else if (q.type === "radio" && q.scoring?.values) {
+        score += q.scoring.values[answer] || 0;
+      } else if (q.type === "checkbox" && q.scoring?.values) {
+        const selected = Array.isArray(answer) ? answer : [answer];
+        selected.forEach((opt: string) => {
+          score += q.scoring?.values?.[opt] || 0;
+        });
+      }
+    });
+
+    if (template.scoring.method === "average") {
+      score = score / template.questions.length;
+    }
+
+    setTestScore(Math.round(score));
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -870,7 +900,29 @@ export const PromBuilder: React.FC = () => {
                     </CardContent>
                   </Card>
                 ))}
-                <Button variant="outlined" startIcon={<Add />} disabled>
+                <Button
+                  variant="outlined"
+                  startIcon={<Add />}
+                  onClick={() => {
+                    const lastRange =
+                      template.scoring.ranges?.[
+                        template.scoring.ranges.length - 1
+                      ];
+                    const newRange = {
+                      min: lastRange ? lastRange.max + 1 : 0,
+                      max: lastRange ? lastRange.max + 10 : 10,
+                      label: "New Range",
+                      color: "#2196f3",
+                    };
+                    setTemplate({
+                      ...template,
+                      scoring: {
+                        ...template.scoring,
+                        ranges: [...(template.scoring.ranges || []), newRange],
+                      },
+                    });
+                  }}
+                >
                   Add Range
                 </Button>
               </Box>
@@ -997,7 +1049,11 @@ export const PromBuilder: React.FC = () => {
                 variant="outlined"
                 startIcon={<Functions />}
                 size="small"
-                disabled
+                onClick={() => {
+                  setTestAnswers({});
+                  setTestScore(null);
+                  setTestScoringDialog(true);
+                }}
               >
                 Test Scoring
               </Button>
@@ -1005,7 +1061,7 @@ export const PromBuilder: React.FC = () => {
                 variant="outlined"
                 startIcon={<Preview />}
                 size="small"
-                disabled
+                onClick={() => setPreviewDialog(true)}
               >
                 Patient View
               </Button>
@@ -1421,6 +1477,143 @@ export const PromBuilder: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPreviewDialog(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Test Scoring Dialog */}
+      <Dialog
+        open={testScoringDialog}
+        onClose={() => setTestScoringDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Test Scoring</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Answer the questions below to test the scoring calculation
+          </Typography>
+
+          {template.questions.map((question) => (
+            <Box key={question.id} sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                {question.question}{" "}
+                {question.required && <span style={{ color: "red" }}>*</span>}
+              </Typography>
+
+              {question.type === "scale" && (
+                <Box sx={{ px: 2 }}>
+                  <Slider
+                    value={testAnswers[question.id] || question.min || 0}
+                    onChange={(_, value) =>
+                      setTestAnswers({ ...testAnswers, [question.id]: value })
+                    }
+                    min={question.min || 0}
+                    max={question.max || 10}
+                    step={question.step || 1}
+                    marks
+                    valueLabelDisplay="on"
+                  />
+                </Box>
+              )}
+
+              {question.type === "radio" && (
+                <RadioGroup
+                  value={testAnswers[question.id] || ""}
+                  onChange={(e) =>
+                    setTestAnswers({
+                      ...testAnswers,
+                      [question.id]: e.target.value,
+                    })
+                  }
+                >
+                  {question.options?.map((option) => (
+                    <FormControlLabel
+                      key={option}
+                      value={option}
+                      control={<Radio />}
+                      label={option}
+                    />
+                  ))}
+                </RadioGroup>
+              )}
+
+              {question.type === "checkbox" && (
+                <FormGroup>
+                  {question.options?.map((option) => (
+                    <FormControlLabel
+                      key={option}
+                      control={
+                        <Checkbox
+                          checked={(testAnswers[question.id] || []).includes(
+                            option,
+                          )}
+                          onChange={(e) => {
+                            const current = testAnswers[question.id] || [];
+                            const updated = e.target.checked
+                              ? [...current, option]
+                              : current.filter((o: string) => o !== option);
+                            setTestAnswers({
+                              ...testAnswers,
+                              [question.id]: updated,
+                            });
+                          }}
+                        />
+                      }
+                      label={option}
+                    />
+                  ))}
+                </FormGroup>
+              )}
+
+              {question.type === "number" && (
+                <TextField
+                  type="number"
+                  fullWidth
+                  value={testAnswers[question.id] || ""}
+                  onChange={(e) =>
+                    setTestAnswers({
+                      ...testAnswers,
+                      [question.id]: Number(e.target.value),
+                    })
+                  }
+                  InputProps={{
+                    inputProps: {
+                      min: question.min,
+                      max: question.max,
+                      step: question.step,
+                    },
+                  }}
+                />
+              )}
+            </Box>
+          ))}
+
+          {testScore !== null && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="h6">
+                Calculated Score: {testScore}
+              </Typography>
+              {template.scoring.ranges?.map((range) => {
+                if (testScore >= range.min && testScore <= range.max) {
+                  return (
+                    <Typography
+                      key={range.label}
+                      sx={{ color: range.color, fontWeight: "bold" }}
+                    >
+                      Range: {range.label} ({range.min}-{range.max})
+                    </Typography>
+                  );
+                }
+                return null;
+              })}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTestScoringDialog(false)}>Close</Button>
+          <Button variant="contained" onClick={calculateScore}>
+            Calculate Score
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

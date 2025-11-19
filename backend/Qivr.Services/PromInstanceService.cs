@@ -828,13 +828,127 @@ public class PromInstanceService : IPromInstanceService
                 .Sum();
         }
 
-        // Simple default scoring: sum numeric values
-        return answers.Values
-            .Select(v => TryParseDecimal(v))
-            .Where(v => v.HasValue)
-            .Select(v => v!.Value)
-            .DefaultIfEmpty(0m)
-            .Sum();
+        decimal score = 0m;
+        var scoringMethod = template.ScoringMethod?.Type ?? "sum";
+        var scoringRules = template.ScoringRules;
+
+        // Extract question-level scoring rules
+        var questionScoring = new Dictionary<string, Dictionary<string, object>>();
+        if (scoringRules != null && scoringRules.TryGetValue("questions", out var questionsObj))
+        {
+            if (questionsObj is JsonElement questionsElement && questionsElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var qElement in questionsElement.EnumerateArray())
+                {
+                    if (qElement.TryGetProperty("id", out var idProp))
+                    {
+                        var id = idProp.GetString();
+                        if (!string.IsNullOrEmpty(id))
+                        {
+                            var rules = new Dictionary<string, object>();
+                            if (qElement.TryGetProperty("weight", out var weightProp) && weightProp.ValueKind == JsonValueKind.Number)
+                            {
+                                rules["weight"] = weightProp.GetDecimal();
+                            }
+                            if (qElement.TryGetProperty("values", out var valuesProp) && valuesProp.ValueKind == JsonValueKind.Object)
+                            {
+                                var values = new Dictionary<string, decimal>();
+                                foreach (var prop in valuesProp.EnumerateObject())
+                                {
+                                    if (prop.Value.ValueKind == JsonValueKind.Number)
+                                    {
+                                        values[prop.Name] = prop.Value.GetDecimal();
+                                    }
+                                }
+                                rules["values"] = values;
+                            }
+                            questionScoring[id] = rules;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Calculate score based on method
+        foreach (var answer in answers)
+        {
+            var questionId = answer.Key;
+            var answerValue = answer.Value;
+            decimal questionScore = 0m;
+            decimal weight = 1m;
+
+            // Get weight if available
+            if (questionScoring.TryGetValue(questionId, out var rules))
+            {
+                if (rules.TryGetValue("weight", out var weightObj) && weightObj is decimal w)
+                {
+                    weight = w;
+                }
+
+                // Check for value-based scoring (for radio/checkbox)
+                if (rules.TryGetValue("values", out var valuesObj) && valuesObj is Dictionary<string, decimal> valueMap)
+                {
+                    if (answerValue is JsonElement element)
+                    {
+                        if (element.ValueKind == JsonValueKind.String)
+                        {
+                            var strValue = element.GetString();
+                            if (strValue != null && valueMap.TryGetValue(strValue, out var mappedScore))
+                            {
+                                questionScore = mappedScore;
+                            }
+                        }
+                        else if (element.ValueKind == JsonValueKind.Array)
+                        {
+                            // Checkbox - sum all selected values
+                            foreach (var item in element.EnumerateArray())
+                            {
+                                if (item.ValueKind == JsonValueKind.String)
+                                {
+                                    var strValue = item.GetString();
+                                    if (strValue != null && valueMap.TryGetValue(strValue, out var mappedScore))
+                                    {
+                                        questionScore += mappedScore;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (answerValue is string strAnswer && valueMap.TryGetValue(strAnswer, out var mappedScore))
+                    {
+                        questionScore = mappedScore;
+                    }
+                }
+                else
+                {
+                    // Numeric scoring
+                    var numericValue = TryParseDecimal(answerValue);
+                    if (numericValue.HasValue)
+                    {
+                        questionScore = numericValue.Value;
+                    }
+                }
+            }
+            else
+            {
+                // No specific scoring rules - use numeric value
+                var numericValue = TryParseDecimal(answerValue);
+                if (numericValue.HasValue)
+                {
+                    questionScore = numericValue.Value;
+                }
+            }
+
+            score += questionScore * weight;
+        }
+
+        // Apply scoring method
+        if (scoringMethod == "average" && answers.Count > 0)
+        {
+            score = score / answers.Count;
+        }
+
+        return Math.Round(score, 2);
     }
 
     private static decimal? TryParseDecimal(object? value)
