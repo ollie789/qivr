@@ -333,7 +333,9 @@ const DocumentsPage: React.FC = () => {
                       secondary={
                         <Stack spacing={0.5}>
                           <Typography variant="body2" color="text.secondary">
-                            Uploaded {format(parseISO(document.uploadedDate), 'MMM dd, yyyy')} • {document.category}
+                            {document.uploadedDate 
+                              ? `Uploaded ${format(parseISO(document.uploadedDate), 'MMM dd, yyyy')} • ${document.category}`
+                              : document.category}
                           </Typography>
                           {document.requiresReview && (
                             <Chip label="Review required" color="warning" size="small" />
