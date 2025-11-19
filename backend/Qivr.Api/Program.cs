@@ -218,6 +218,8 @@ builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
 builder.Services.AddScoped<IEnhancedAuditService, EnhancedAuditService>();
 builder.Services.AddScoped<IPainMapAnalyticsService, PainMapAnalyticsService>();
 builder.Services.AddScoped<IPainMapExportService, PainMapExportService>();
+builder.Services.AddScoped<IPainPatternRecognitionService, PainPatternRecognitionService>();
+builder.Services.AddScoped<IFhirPainMapService, FhirPainMapService>();
 builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
 builder.Services.AddScoped<INotificationGate, NotificationGate>();
 builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
