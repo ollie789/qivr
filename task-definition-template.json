@@ -35,6 +35,10 @@
           "value": "https://sqs.ap-southeast-2.amazonaws.com/818084701597/qivr-intake-queue"
         },
         {
+          "name": "AWS__OcrQueueUrl",
+          "value": "https://sqs.ap-southeast-2.amazonaws.com/818084701597/qivr-ocr-queue"
+        },
+        {
           "name": "ASPNETCORE_ENVIRONMENT",
           "value": "Production"
         },
