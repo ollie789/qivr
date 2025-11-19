@@ -216,6 +216,7 @@ builder.Services.AddScoped<ISettingsService, SettingsService>();
 // Configure Audit and Notification Services
 builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
 builder.Services.AddScoped<IEnhancedAuditService, EnhancedAuditService>();
+builder.Services.AddScoped<IPainMapAnalyticsService, PainMapAnalyticsService>();
 builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
 builder.Services.AddScoped<INotificationGate, NotificationGate>();
 builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
