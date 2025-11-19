@@ -57,7 +57,7 @@ const menuItems: MenuItemType[] = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Intake Management', icon: <QueueIcon />, path: '/intake', badge: 5 },
   { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
-  { text: 'Patients', icon: <PeopleIcon />, path: '/patients' },
+  { text: 'Patients', icon: <PeopleIcon />, path: '/medical-records' },
   { text: 'Medical Records', icon: <MedicalIcon />, path: '/medical-records' },
   { text: 'Messages', icon: <MessageIcon />, path: '/messages' },
   { text: 'Documents', icon: <DocumentsIcon />, path: '/documents' },

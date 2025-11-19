@@ -24,7 +24,6 @@ import PrivateRoute from './components/Auth/PrivateRoute';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const IntakeManagement = lazy(() => import('./pages/IntakeManagement'));
 const Appointments = lazy(() => import('./pages/Appointments'));
-const Patients = lazy(() => import('./pages/Patients'));
 const PatientDetail = lazy(() => import('./pages/PatientDetail'));
 const PROM = lazy(() => import('./pages/PROM'));
 const Analytics = lazy(() => import('./pages/Analytics'));
@@ -103,7 +102,7 @@ function App() {
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="intake" element={<IntakeManagement />} />
                     <Route path="appointments" element={<Appointments />} />
-                    <Route path="patients" element={<Patients />} />
+                    <Route path="patients" element={<Navigate to="/medical-records" replace />} />
                     <Route path="patients/:id" element={<PatientDetail />} />
                     <Route path="messages" element={<Messages />} />
                     <Route path="documents" element={<Documents />} />

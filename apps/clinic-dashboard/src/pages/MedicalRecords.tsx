@@ -1835,7 +1835,7 @@ const MedicalRecords: React.FC = () => {
             </Grid>
           </Grid>
         </FormDialog>
-          </>
+        </>
         )}
       </Box>
     </LocalizationProvider>
