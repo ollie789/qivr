@@ -184,9 +184,9 @@ const GUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const SCORING_COLORS = {
-  low: 'var(--qivr-palette-success-main)',
-  medium: 'var(--qivr-palette-warning-main)',
-  high: 'var(--qivr-palette-error-main)',
+  low: "var(--qivr-palette-success-main)",
+  medium: "var(--qivr-palette-warning-main)",
+  high: "var(--qivr-palette-error-main)",
 } as const;
 
 const generateGuid = (): string => {
@@ -458,9 +458,10 @@ export const PromBuilder: React.FC = () => {
       ...rest
     } = questionData;
 
-    const newId = providedId && GUID_REGEX.test(providedId)
-      ? providedId.toLowerCase()
-      : generateGuid();
+    const newId =
+      providedId && GUID_REGEX.test(providedId)
+        ? providedId.toLowerCase()
+        : generateGuid();
 
     const label = textLabel ?? questionLabel ?? "";
 
@@ -574,8 +575,8 @@ export const PromBuilder: React.FC = () => {
       const res = await promApi.createTemplate(payload);
       console.log("Template saved successfully:", res);
       alert(`Template "${template.name}" saved successfully!`);
-      
-      queryClient.invalidateQueries({ queryKey: ['prom-templates'] });
+
+      queryClient.invalidateQueries({ queryKey: ["prom-templates"] });
 
       // Reset form after successful save
       setTemplate({
@@ -606,7 +607,12 @@ export const PromBuilder: React.FC = () => {
     } catch (error) {
       console.error("Failed to save template:", error);
       const errorMessage =
-        (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+        (
+          error as {
+            response?: { data?: { message?: string } };
+            message?: string;
+          }
+        )?.response?.data?.message ||
         (error instanceof Error ? error.message : "Failed to save template");
       alert(`Error: ${errorMessage}`);
     }
@@ -758,8 +764,8 @@ export const PromBuilder: React.FC = () => {
 
                 {template.questions.length === 0 ? (
                   <Alert severity="info">
-                    No questions added yet. Click {"\"Add Question\""} or select from
-                    the library.
+                    No questions added yet. Click {'"Add Question"'} or select
+                    from the library.
                   </Alert>
                 ) : (
                   <DndContext
@@ -799,7 +805,11 @@ export const PromBuilder: React.FC = () => {
                         ...template,
                         scoring: {
                           ...template.scoring,
-                          method: e.target.value as "sum" | "average" | "weighted" | "custom",
+                          method: e.target.value as
+                            | "sum"
+                            | "average"
+                            | "weighted"
+                            | "custom",
                         },
                       })
                     }
@@ -860,7 +870,7 @@ export const PromBuilder: React.FC = () => {
                     </CardContent>
                   </Card>
                 ))}
-                <Button variant="outlined" startIcon={<Add />}>
+                <Button variant="outlined" startIcon={<Add />} disabled>
                   Add Range
                 </Button>
               </Box>
@@ -983,10 +993,20 @@ export const PromBuilder: React.FC = () => {
               >
                 Duplicate Template
               </Button>
-              <Button variant="outlined" startIcon={<Functions />} size="small">
+              <Button
+                variant="outlined"
+                startIcon={<Functions />}
+                size="small"
+                disabled
+              >
                 Test Scoring
               </Button>
-              <Button variant="outlined" startIcon={<Preview />} size="small">
+              <Button
+                variant="outlined"
+                startIcon={<Preview />}
+                size="small"
+                disabled
+              >
                 Patient View
               </Button>
             </Box>
@@ -1040,7 +1060,14 @@ export const PromBuilder: React.FC = () => {
                   onChange={(e) =>
                     setEditingQuestion({
                       ...editingQuestion,
-                      type: e.target.value as "text" | "radio" | "checkbox" | "scale" | "date" | "time" | "number",
+                      type: e.target.value as
+                        | "text"
+                        | "radio"
+                        | "checkbox"
+                        | "scale"
+                        | "date"
+                        | "time"
+                        | "number",
                     })
                   }
                   label="Question Type"

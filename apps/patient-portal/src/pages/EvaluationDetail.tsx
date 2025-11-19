@@ -162,10 +162,20 @@ export const EvaluationDetail = () => {
           </Box>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Button startIcon={<DownloadIcon />} variant="outlined" size="small">
+          <Button
+            startIcon={<DownloadIcon />}
+            variant="outlined"
+            size="small"
+            disabled
+          >
             Download
           </Button>
-          <Button startIcon={<PrintIcon />} variant="outlined" size="small">
+          <Button
+            startIcon={<PrintIcon />}
+            variant="outlined"
+            size="small"
+            disabled
+          >
             Print
           </Button>
           <Button startIcon={<ShareIcon />} variant="outlined" size="small">

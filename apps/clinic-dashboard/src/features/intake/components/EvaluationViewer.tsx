@@ -556,7 +556,7 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                       >
                         Approve Summary
                       </Button>
-                      <Button variant="outlined" startIcon={<Edit />}>
+                      <Button variant="outlined" startIcon={<Edit />} disabled>
                         Edit Summary
                       </Button>
                     </Box>
