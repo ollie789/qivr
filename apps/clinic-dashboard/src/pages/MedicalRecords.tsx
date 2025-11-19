@@ -1579,27 +1579,62 @@ const MedicalRecords: React.FC = () => {
                                         ` • ${doc.confidenceScore}% confidence`}
                                     </Typography>
                                   )}
+                                  {doc.extractedText && (
+                                    <Box sx={{ mt: 2 }}>
+                                      <Typography variant="subtitle2" gutterBottom>
+                                        Extracted Text:
+                                      </Typography>
+                                      <Paper
+                                        sx={{
+                                          p: 1.5,
+                                          bgcolor: 'grey.50',
+                                          maxHeight: 200,
+                                          overflow: 'auto',
+                                          fontFamily: 'monospace',
+                                          fontSize: '0.75rem',
+                                          whiteSpace: 'pre-wrap'
+                                        }}
+                                      >
+                                        {doc.extractedText.substring(0, 500)}
+                                        {doc.extractedText.length > 500 && '...'}
+                                      </Paper>
+                                    </Box>
+                                  )}
                                 </Box>
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  onClick={async () => {
-                                    try {
-                                      const { url } =
-                                        await documentApi.getDownloadUrl(
-                                          doc.id,
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={async () => {
+                                      try {
+                                        const { url } =
+                                          await documentApi.getDownloadUrl(
+                                            doc.id,
+                                          );
+                                        window.open(url, "_blank");
+                                      } catch (error) {
+                                        enqueueSnackbar(
+                                          "Failed to download document",
+                                          { variant: "error" },
                                         );
-                                      window.open(url, "_blank");
-                                    } catch (error) {
-                                      enqueueSnackbar(
-                                        "Failed to download document",
-                                        { variant: "error" },
-                                      );
-                                    }
-                                  }}
-                                >
-                                  Download
-                                </Button>
+                                      }
+                                    }}
+                                  >
+                                    Download
+                                  </Button>
+                                  {doc.extractedText && (
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(doc.extractedText || '');
+                                        enqueueSnackbar('Text copied to clipboard', { variant: 'success' });
+                                      }}
+                                    >
+                                      Copy Text
+                                    </Button>
+                                  )}
+                                </Box>
                               </FlexBetween>
                             </CardContent>
                           </Card>
