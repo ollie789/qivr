@@ -26,12 +26,12 @@ const formatDate = (date?: string) => {
 
 const MedicalRecordsPage: React.FC = () => {
   const {
-    summary,
     vitalSigns,
     labGroups,
     medications,
     allergies,
     immunizations,
+    physioHistory,
     loading,
   } = useMedicalRecordsData();
 
@@ -52,16 +52,31 @@ const MedicalRecordsPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Conditions
+                  Medical History
                 </Typography>
-                {summary?.conditions.length ? (
+                {physioHistory.length ? (
                   <List>
-                    {summary.conditions.slice(0, 5).map((condition) => (
-                      <React.Fragment key={condition.id}>
+                    {physioHistory.slice(0, 5).map((history) => (
+                      <React.Fragment key={history.id}>
                         <ListItem>
                           <ListItemText
-                            primary={condition.condition}
-                            secondary={`${condition.status} • Diagnosed ${formatDate(condition.diagnosedDate)}`}
+                            primary={
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                              >
+                                <Typography variant="body2">
+                                  {history.title}
+                                </Typography>
+                                <Chip
+                                  label={history.category}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </Stack>
+                            }
+                            secondary={`${history.status} • ${history.description.substring(0, 50)}${history.description.length > 50 ? "..." : ""}`}
                           />
                         </ListItem>
                         <Divider component="li" />
@@ -70,7 +85,7 @@ const MedicalRecordsPage: React.FC = () => {
                   </List>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    No conditions recorded.
+                    No medical history recorded.
                   </Typography>
                 )}
               </CardContent>

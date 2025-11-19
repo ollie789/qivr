@@ -7,6 +7,7 @@ import {
   MedicalSummary,
   Medication,
   PainAssessment,
+  PhysioHistory,
 } from "../types";
 
 type EnvelopeOrValue<T> = ApiEnvelope<T> | T;
@@ -60,6 +61,13 @@ export async function fetchAllergies(): Promise<Allergy[]> {
 export async function fetchImmunizations(): Promise<Immunization[]> {
   const response = await apiClient.get<EnvelopeOrValue<Immunization[]>>(
     "/api/medical-records/immunizations",
+  );
+  return unwrapEnvelope(response);
+}
+
+export async function fetchPhysioHistory(): Promise<PhysioHistory[]> {
+  const response = await apiClient.get<EnvelopeOrValue<PhysioHistory[]>>(
+    "/api/medical-records/physio-history",
   );
   return unwrapEnvelope(response);
 }

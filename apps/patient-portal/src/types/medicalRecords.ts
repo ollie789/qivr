@@ -140,3 +140,20 @@ export interface MedicalSummary {
     notes?: string;
   }>;
 }
+
+export interface PhysioHistory {
+  id: string;
+  category:
+    | "injury"
+    | "symptom"
+    | "treatment"
+    | "activity"
+    | "occupation"
+    | "goal";
+  title: string;
+  description: string;
+  date?: string | null;
+  status: "active" | "resolved" | "ongoing";
+  severity?: "mild" | "moderate" | "severe" | "critical" | null;
+  notes?: string | null;
+}

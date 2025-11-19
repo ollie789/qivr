@@ -6,6 +6,7 @@ import {
   fetchMedicalSummary,
   fetchMedications,
   fetchPainAssessments,
+  fetchPhysioHistory,
 } from "../../../services/medicalRecordsApi";
 import type {
   Allergy,
@@ -14,6 +15,7 @@ import type {
   MedicalSummary,
   Medication,
   PainAssessment,
+  PhysioHistory,
 } from "../../../types";
 
 type MedicalRecordsData = {
@@ -23,6 +25,7 @@ type MedicalRecordsData = {
   medications: Medication[];
   allergies: Allergy[];
   immunizations: Immunization[];
+  physioHistory: PhysioHistory[];
   loading: boolean;
 };
 
@@ -58,6 +61,11 @@ export function useMedicalRecordsData(): MedicalRecordsData {
       queryFn: fetchImmunizations,
     });
 
+  const { data: physioHistory = [], isLoading: physioLoading } = useQuery({
+    queryKey: ["physioHistory"],
+    queryFn: fetchPhysioHistory,
+  });
+
   return {
     summary: summary ?? null,
     vitalSigns,
@@ -65,12 +73,14 @@ export function useMedicalRecordsData(): MedicalRecordsData {
     medications,
     allergies,
     immunizations,
+    physioHistory,
     loading:
       summaryLoading ||
       vitalsLoading ||
       labsLoading ||
       medsLoading ||
       allergiesLoading ||
-      immunizationsLoading,
+      immunizationsLoading ||
+      physioLoading,
   };
 }
