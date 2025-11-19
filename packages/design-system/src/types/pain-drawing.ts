@@ -1,10 +1,12 @@
-// Pain Drawing Types for Phase 1
+// Pain Drawing Types for Phase 1 & 2
 
 export type AvatarType = 'male' | 'female' | 'child';
 export type ViewOrientation = 'front' | 'back';
 export type BodySubdivision = 'simple' | 'dermatome' | 'myotome';
 export type DepthIndicator = 'superficial' | 'deep';
 export type SubmissionSource = 'portal' | 'mobile' | 'no-login' | 'clinic';
+export type DrawingTool = 'draw' | 'erase' | 'arrow' | 'text' | 'symbol';
+export type SymbolType = 'pin' | 'lightning' | 'star' | 'cross';
 
 export interface PainQuality {
   quality: string;
@@ -33,12 +35,21 @@ export interface Annotation {
   x: number;
   y: number;
   content?: string;
+  // Arrow-specific
+  endX?: number;
+  endY?: number;
+  // Symbol-specific
+  symbolType?: SymbolType;
+  color?: string;
 }
 
 export interface PainDrawingData {
   paths: DrawingPath[];
   annotations: Annotation[];
   heatmapData?: string; // Base64 encoded image
+  zoom?: number;
+  panX?: number;
+  panY?: number;
 }
 
 export interface PainMapData {
@@ -68,9 +79,13 @@ export interface PainDrawingState {
   depthIndicator: DepthIndicator;
   brushSize: number;
   opacity: number;
-  drawingMode: 'draw' | 'erase';
+  drawingTool: DrawingTool;
+  selectedSymbol: SymbolType;
   paths: DrawingPath[];
   annotations: Annotation[];
-  history: DrawingPath[][];
+  history: { paths: DrawingPath[]; annotations: Annotation[] }[];
   historyIndex: number;
+  zoom: number;
+  panX: number;
+  panY: number;
 }

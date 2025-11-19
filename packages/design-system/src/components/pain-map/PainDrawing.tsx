@@ -8,6 +8,9 @@ import {
   type ViewOrientation,
   type DepthIndicator,
   type DrawingPath,
+  type Annotation,
+  type DrawingTool,
+  type SymbolType,
   type PainMapData,
 } from '../../types/pain-drawing';
 
@@ -36,16 +39,21 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
   );
   const [brushSize, setBrushSize] = useState(15);
   const [opacity, setOpacity] = useState(0.7);
-  const [drawingMode, setDrawingMode] = useState<'draw' | 'erase'>('draw');
+  const [drawingTool, setDrawingTool] = useState<DrawingTool>('draw');
+  const [selectedSymbol, setSelectedSymbol] = useState<SymbolType>('pin');
   const [paths, setPaths] = useState<DrawingPath[]>(value?.drawingData?.paths || []);
+  const [annotations, setAnnotations] = useState<Annotation[]>(value?.drawingData?.annotations || []);
 
-  const handlePathsChange = (newPaths: DrawingPath[]) => {
-    setPaths(newPaths);
+  const handleUpdate = (newPaths?: DrawingPath[], newAnnotations?: Annotation[]) => {
+    const updatedPaths = newPaths !== undefined ? newPaths : paths;
+    const updatedAnnotations = newAnnotations !== undefined ? newAnnotations : annotations;
+
+    if (newPaths !== undefined) setPaths(newPaths);
+    if (newAnnotations !== undefined) setAnnotations(newAnnotations);
     
-    // Update parent with new data
     onChange({
       ...value,
-      bodyRegion: 'Multiple regions', // Will be computed from paths
+      bodyRegion: 'Multiple regions',
       painIntensity: intensity,
       painQuality: [selectedQuality.quality],
       avatarType,
@@ -53,8 +61,8 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
       depthIndicator,
       submissionSource: 'portal',
       drawingData: {
-        paths: newPaths,
-        annotations: [],
+        paths: updatedPaths,
+        annotations: updatedAnnotations,
       },
     });
   };
@@ -98,7 +106,7 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
               </Box>
 
               <Typography variant="caption" color="text.secondary">
-                Draw on the body diagram to mark pain locations. Use different colors for different pain qualities.
+                Draw pain areas, add arrows for radiating pain, or place symbols/notes
               </Typography>
 
               <PainDrawingCanvas
@@ -111,9 +119,13 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
                 onBrushSizeChange={setBrushSize}
                 onOpacityChange={setOpacity}
                 paths={paths}
-                onPathsChange={handlePathsChange}
-                drawingMode={drawingMode}
-                onDrawingModeChange={setDrawingMode}
+                onPathsChange={(newPaths) => handleUpdate(newPaths, undefined)}
+                annotations={annotations}
+                onAnnotationsChange={(newAnnotations) => handleUpdate(undefined, newAnnotations)}
+                drawingTool={drawingTool}
+                onDrawingToolChange={setDrawingTool}
+                selectedSymbol={selectedSymbol}
+                onSymbolChange={setSelectedSymbol}
               />
             </Stack>
           </Paper>

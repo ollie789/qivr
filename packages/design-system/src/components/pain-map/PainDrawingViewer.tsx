@@ -44,7 +44,104 @@ export function PainDrawingViewer({ painMapData, width = 400, height = 600 }: Pa
       ctx.stroke(p);
     });
 
+    // Draw annotations
+    if (painMapData.drawingData.annotations) {
+      painMapData.drawingData.annotations.forEach((annotation) => {
+        ctx.globalAlpha = 1;
+        if (annotation.type === 'arrow' && annotation.endX !== undefined && annotation.endY !== undefined) {
+          drawArrow(ctx, annotation.x, annotation.y, annotation.endX, annotation.endY, annotation.color || '#ef4444');
+        } else if (annotation.type === 'symbol' && annotation.symbolType) {
+          drawSymbol(ctx, annotation.x, annotation.y, annotation.symbolType, annotation.color || '#ef4444');
+        } else if (annotation.type === 'text' && annotation.content) {
+          drawText(ctx, annotation.x, annotation.y, annotation.content);
+        }
+      });
+    }
+
     ctx.globalAlpha = 1;
+  };
+
+  const drawArrow = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color: string) => {
+    const headLength = 15;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLength * Math.cos(angle - Math.PI / 6), y2 - headLength * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(x2 - headLength * Math.cos(angle + Math.PI / 6), y2 - headLength * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  };
+
+  const drawSymbol = (ctx: CanvasRenderingContext2D, x: number, y: number, symbol: string, color: string) => {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+
+    switch (symbol) {
+      case 'pin':
+        ctx.beginPath();
+        ctx.arc(x, y - 10, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x, y - 2);
+        ctx.lineTo(x, y + 10);
+        ctx.stroke();
+        break;
+      case 'lightning':
+        ctx.beginPath();
+        ctx.moveTo(x, y - 15);
+        ctx.lineTo(x - 5, y);
+        ctx.lineTo(x + 2, y);
+        ctx.lineTo(x - 3, y + 15);
+        ctx.lineTo(x + 8, y - 5);
+        ctx.lineTo(x + 3, y - 5);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case 'star':
+        const spikes = 5;
+        const outerRadius = 12;
+        const innerRadius = 6;
+        ctx.beginPath();
+        for (let i = 0; i < spikes * 2; i++) {
+          const radius = i % 2 === 0 ? outerRadius : innerRadius;
+          const angle = (i * Math.PI) / spikes - Math.PI / 2;
+          const px = x + Math.cos(angle) * radius;
+          const py = y + Math.sin(angle) * radius;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case 'cross':
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 8);
+        ctx.lineTo(x + 8, y + 8);
+        ctx.moveTo(x + 8, y - 8);
+        ctx.lineTo(x - 8, y + 8);
+        ctx.stroke();
+        break;
+    }
+  };
+
+  const drawText = (ctx: CanvasRenderingContext2D, x: number, y: number, text: string) => {
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#000';
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.strokeText(text, x, y);
+    ctx.fillText(text, x, y);
   };
 
   const getBackgroundImage = () => {

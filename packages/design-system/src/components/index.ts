@@ -13,6 +13,7 @@ export * from './messaging';
 export * from './navigation/Breadcrumbs';
 export * from './navigation/PageHeader';
 export * from './navigation/ThemeToggle';
+export * from './pain-map/AnnotationTools';
 export * from './pain-map/PainDrawing';
 export * from './pain-map/PainDrawingCanvas';
 export * from './pain-map/PainDrawingViewer';
