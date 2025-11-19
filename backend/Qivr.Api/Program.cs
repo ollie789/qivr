@@ -605,16 +605,23 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 // Apply migrations when flagged via configuration
-var applyMigrations = Environment.GetEnvironmentVariable("ApplyMigrations")?.ToLower() != "false";
+var applyMigrations = Environment.GetEnvironmentVariable("APPLY_MIGRATIONS")?.ToLower() != "false";
 if (applyMigrations)
 {
-    // Database initialization disabled - schema already exists
-    // using var scope = app.Services.CreateScope();
-    // var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
+    Log.Information("Applying database migrations...");
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
     
-    // Seed test data
-    // var seeder = new DataSeeder(dbContext);
-    // await seeder.SeedAsync();
+    try
+    {
+        await dbContext.Database.MigrateAsync();
+        Log.Information("✅ Database migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "❌ Failed to apply database migrations");
+        throw;
+    }
 }
 
 Log.Information("Qivr API starting on {Environment} environment", app.Environment.EnvironmentName);
