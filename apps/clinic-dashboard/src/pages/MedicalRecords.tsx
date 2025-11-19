@@ -143,6 +143,10 @@ const MedicalRecords: React.FC = () => {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [editedPatient, setEditedPatient] = useState<Partial<Patient>>({});
+  const [viewMode, setViewMode] = useState<"list" | "detail">("list");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const { data: patientList, isLoading: isPatientsLoading } =
     useQuery<PatientListResponse>({
@@ -725,34 +729,124 @@ const MedicalRecords: React.FC = () => {
           description="Comprehensive patient health information management"
         />
 
-        {/* Patient Selector */}
+        {/* View Mode Toggle */}
         <Paper sx={{ p: 2, mb: 3 }}>
-          <FormControl fullWidth>
-            <InputLabel>Select Patient</InputLabel>
-            <Select
-              value={selectedPatientId}
-              label="Select Patient"
-              onChange={(e) => setSelectedPatientId(e.target.value)}
-              displayEmpty
-            >
-              <MenuItem value="" disabled>
-                {isPatientsLoading ? "Loading patients..." : "Select a patient"}
-              </MenuItem>
-              {patients.map((patientOption) => {
-                const name =
-                  `${patientOption.firstName ?? ""} ${patientOption.lastName ?? ""}`.trim();
-                const label = name.length > 0 ? name : patientOption.email;
-                return (
-                  <MenuItem key={patientOption.id} value={patientOption.id}>
-                    {label || "Unknown patient"}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
+          <FlexBetween>
+            <Tabs value={viewMode} onChange={(_, v) => setViewMode(v)}>
+              <Tab label="Patient List" value="list" />
+              <Tab label="Medical Records" value="detail" />
+            </Tabs>
+            {viewMode === "list" && (
+              <TextField
+                size="small"
+                placeholder="Search patients..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ width: 300 }}
+              />
+            )}
+          </FlexBetween>
         </Paper>
 
-        {selectedPatientId && (
+        {/* Patient List View */}
+        {viewMode === "list" && (
+          <Paper>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Patient</TableCell>
+                    <TableCell>Contact</TableCell>
+                    <TableCell>DOB</TableCell>
+                    <TableCell>Last Visit</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {patients
+                    .filter((p) => {
+                      if (!searchQuery) return true;
+                      const search = searchQuery.toLowerCase();
+                      return (
+                        p.firstName?.toLowerCase().includes(search) ||
+                        p.lastName?.toLowerCase().includes(search) ||
+                        p.email?.toLowerCase().includes(search)
+                      );
+                    })
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((patient) => (
+                      <TableRow key={patient.id} hover>
+                        <TableCell>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                            <Avatar>
+                              {patient.firstName?.[0]}
+                              {patient.lastName?.[0]}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body2" fontWeight={500}>
+                                {patient.firstName} {patient.lastName}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {patient.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">{patient.phone}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          {patient.dateOfBirth
+                            ? format(parseISO(patient.dateOfBirth), "MMM d, yyyy")
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            Last visit data
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Button
+                            size="small"
+                            onClick={() => {
+                              setSelectedPatientId(patient.id);
+                              setViewMode("detail");
+                            }}
+                          >
+                            View Records
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Showing {page * rowsPerPage + 1}-
+                {Math.min((page + 1) * rowsPerPage, patients.length)} of {patients.length}
+              </Typography>
+            </Box>
+          </Paper>
+        )}
+
+        {/* Medical Records Detail View */}
+        {viewMode === "detail" && !selectedPatientId && (
+          <Paper sx={{ p: 4, textAlign: "center" }}>
+            <Typography variant="h6" color="text.secondary">
+              Select a patient from the list to view their medical records
+            </Typography>
+            <Button
+              variant="contained"
+              sx={{ mt: 2 }}
+              onClick={() => setViewMode("list")}
+            >
+              Go to Patient List
+            </Button>
+          </Paper>
+        )}
+
+        {viewMode === "detail" && selectedPatientId && (
           <>
             {/* Patient Info Card */}
             <Card sx={{ mb: 3 }}>
@@ -1741,6 +1835,8 @@ const MedicalRecords: React.FC = () => {
             </Grid>
           </Grid>
         </FormDialog>
+          </>
+        )}
       </Box>
     </LocalizationProvider>
   );
