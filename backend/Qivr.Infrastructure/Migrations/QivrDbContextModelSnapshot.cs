@@ -1785,7 +1785,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_physio_histories");
 
-                    b.ToTable("physio_histories");
+                    b.ToTable("physio_histories", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PromBookingRequest", b =>
@@ -2658,7 +2658,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_pain_maps_evaluations_evaluation_id");
 
-                    b.OwnsOne("Qivr.Core.Entities.PainCoordinates", "Coordinates", b1 =>
+                    b.OwnsOne("Qivr.Core.Entities.PainMap.Coordinates#Qivr.Core.Entities.PainCoordinates", "Coordinates", b1 =>
                         {
                             b1.Property<Guid>("PainMapId")
                                 .HasColumnType("uuid");
@@ -2677,7 +2677,7 @@ namespace Qivr.Infrastructure.Migrations
 
                             b1.HasKey("PainMapId");
 
-                            b1.ToTable("pain_coordinates");
+                            b1.ToTable("pain_coordinates", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("PainMapId");

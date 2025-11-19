@@ -6,6 +6,7 @@ using Npgsql;
 using Qivr.Api.Options;
 using Qivr.Infrastructure.Data;
 using System.Text.Json;
+using System.Linq;
 
 namespace Qivr.Api.Workers;
 
@@ -170,32 +171,51 @@ public class IntakeProcessingWorker : BackgroundService
 
     private async Task ProcessIntake(IntakeQueueMessage intakeData, IServiceScope scope, CancellationToken cancellationToken)
     {
-        // Tenant context is already established by the caller
-        
-        // TODO: Implement actual intake processing logic
-        // This could include:
-        // 1. Triggering AI analysis
-        // 2. Sending confirmation emails
-        // 3. Notifying clinic staff
-        // 4. Creating appointments
-        // 5. Updating patient records
-
         _logger.LogInformation("Processing intake {IntakeId} for evaluation {EvaluationId} (Tenant: {TenantId})", 
             intakeData.IntakeId, intakeData.EvaluationId, intakeData.TenantId);
 
-        // Simulate processing
-        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+        var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
+        
+        // Load evaluation with patient data
+        var evaluation = await dbContext.Evaluations
+            .Include(e => e.Patient)
+            .Include(e => e.PainMaps)
+            .FirstOrDefaultAsync(e => e.Id == intakeData.EvaluationId, cancellationToken);
 
-        // Example: Update intake status
-        // var dbContext = scope.ServiceProvider.GetRequiredService<QivrDbContext>();
-        // await dbContext.Database.ExecuteSqlInterpolatedAsync(
-        //     $"UPDATE qivr.intake_submissions SET status = 'processed' WHERE id = {intakeData.IntakeId}",
-        //     cancellationToken);
+        if (evaluation == null)
+        {
+            _logger.LogWarning("Evaluation {EvaluationId} not found", intakeData.EvaluationId);
+            return;
+        }
 
         if (_featuresOptions.EnableAiAnalysis)
         {
-            _logger.LogInformation("Triggering AI analysis for intake {IntakeId}", intakeData.IntakeId);
-            // TODO: Call AI service
+            _logger.LogInformation("Running AI triage for evaluation {EvaluationId}", intakeData.EvaluationId);
+            
+            var aiTriageService = scope.ServiceProvider.GetRequiredService<Qivr.Services.AI.IAiTriageService>();
+            
+            var triageRequest = new Qivr.Services.AI.TriageRequest
+            {
+                Symptoms = string.Join(", ", evaluation.Symptoms),
+                MedicalHistory = JsonSerializer.Serialize(evaluation.MedicalHistory),
+                ChiefComplaint = evaluation.ChiefComplaint,
+                Duration = evaluation.MedicalHistory.TryGetValue("painOnset", out var onset) ? onset?.ToString() : null,
+                Severity = evaluation.PainMaps.Any() ? evaluation.PainMaps.Max(p => p.Intensity) : 5
+            };
+
+            var triageSummary = await aiTriageService.GenerateTriageSummaryAsync(evaluation.PatientId, triageRequest);
+            
+            // Update evaluation with AI results
+            evaluation.AiSummary = triageSummary.Summary;
+            evaluation.AiRiskFlags = triageSummary.RiskFlags.Select(r => r.Description).ToList();
+            evaluation.Urgency = MapUrgencyLevel(triageSummary.UrgencyAssessment.Level);
+            evaluation.AiProcessedAt = DateTime.UtcNow;
+            evaluation.Status = Qivr.Core.Entities.EvaluationStatus.Triaged;
+            
+            await dbContext.SaveChangesAsync(cancellationToken);
+            
+            _logger.LogInformation("AI triage completed for evaluation {EvaluationId}: Urgency={Urgency}, RiskFlags={RiskCount}", 
+                intakeData.EvaluationId, evaluation.Urgency, evaluation.AiRiskFlags.Count);
         }
 
         if (_featuresOptions.SendEmailNotifications)
@@ -203,6 +223,19 @@ public class IntakeProcessingWorker : BackgroundService
             _logger.LogInformation("Sending confirmation email for intake {IntakeId}", intakeData.IntakeId);
             // TODO: Send email
         }
+    }
+
+    private Qivr.Core.Entities.UrgencyLevel MapUrgencyLevel(string level)
+    {
+        return level.ToLowerInvariant() switch
+        {
+            "low" => Qivr.Core.Entities.UrgencyLevel.Low,
+            "medium" => Qivr.Core.Entities.UrgencyLevel.Medium,
+            "moderate" => Qivr.Core.Entities.UrgencyLevel.Moderate,
+            "high" => Qivr.Core.Entities.UrgencyLevel.High,
+            "urgent" => Qivr.Core.Entities.UrgencyLevel.Urgent,
+            _ => Qivr.Core.Entities.UrgencyLevel.Medium
+        };
     }
 
     private async Task DeleteMessage(Message message, CancellationToken cancellationToken)

@@ -37,6 +37,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISmsService, SmsService>();
         services.AddScoped<IStorageService, S3StorageService>();
         
+        // Add AI services
+        services.AddSingleton<AI.IBedrockService, AI.BedrockService>();
+        services.AddScoped<AI.IDeIdentificationService, AI.DeIdentificationService>();
+        services.AddScoped<AI.IAiTriageService, AI.AiTriageService>();
+        
         // Register PROM service
         services.AddScoped<IPromService, PromService>();
         services.AddScoped<IPromInstanceService, PromInstanceService>();

@@ -17,11 +17,13 @@ import apiClient from "../lib/api-client";
 import PainMapSelector, {
   type PainPoint,
 } from "../components/intake/PainMapSelector";
+import MedicalHistoryStep from "../components/intake/MedicalHistoryStep";
 
 const steps = [
   "Basic Info",
   "Chief Complaint",
   "Pain Map",
+  "Medical History",
   "Symptoms",
   "Review",
 ];
@@ -40,6 +42,14 @@ export const IntakeForm = () => {
     duration: "",
     additionalNotes: "",
     painPoints: [] as PainPoint[],
+    painOnset: "",
+    previousOrthoConditions: [] as string[],
+    currentTreatments: [] as string[],
+    medications: [] as string[],
+    mobilityAids: [] as string[],
+    dailyImpact: [] as string[],
+    additionalHistory: [] as string[],
+    redFlags: [] as string[],
   });
 
   useEffect(() => {
@@ -194,6 +204,15 @@ export const IntakeForm = () => {
         )}
 
         {activeStep === 3 && (
+          <MedicalHistoryStep
+            formData={formData}
+            onChange={(field, value) =>
+              setFormData({ ...formData, [field]: value })
+            }
+          />
+        )}
+
+        {activeStep === 4 && (
           <Box>
             <Typography variant="h6" gutterBottom>
               Symptoms
@@ -235,7 +254,7 @@ export const IntakeForm = () => {
           </Box>
         )}
 
-        {activeStep === 4 && (
+        {activeStep === 5 && (
           <Box>
             <Typography variant="h6" gutterBottom>
               Review Your Information
