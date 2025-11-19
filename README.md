@@ -54,6 +54,7 @@ node scripts/tests/test-frontend-pages.mjs user@clinic.com Password123!
 **Production:** https://clinic.qivr.pro
 
 **Stack:**
+
 - Frontend: React + Vite → S3 + CloudFront
 - Backend: .NET 8 → ECS Fargate
 - Database: PostgreSQL RDS
@@ -80,25 +81,25 @@ npm run dev
 
 ## 🚀 Deployment Status
 
-- **Build #107**: IAM PassRole permission added for ECS task roles
-- **Provider endpoints**: Ready for deployment
+- **Build #530c28d**: Build errors fixed, message category migration added
+- **Recent Updates**: Patients page consolidated into Medical Records, messaging improvements deployed
 
 ## 📊 Features
 
 ✅ Multi-tenant architecture
-✅ Patient management
+✅ Medical records (consolidated patient management)
 ✅ Appointment scheduling
-✅ Medical records
-✅ Document management
-✅ Messaging system
+✅ Document management with OCR
+✅ Messaging system with unread counts
 ✅ Analytics dashboard
-✅ PROM questionnaires
-✅ Intake forms
+✅ PROM questionnaires with scoring
+✅ Intake forms with AI triage
 ✅ Settings management
 
 ## 🔧 Tech Stack
 
 **Frontend:**
+
 - React 18
 - TypeScript
 - Vite
@@ -107,12 +108,14 @@ npm run dev
 - TailwindCSS
 
 **Backend:**
+
 - .NET 8
 - Entity Framework Core
 - PostgreSQL
 - Serilog
 
 **Infrastructure:**
+
 - AWS ECS Fargate
 - AWS RDS PostgreSQL
 - AWS Cognito
