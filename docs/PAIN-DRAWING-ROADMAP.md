@@ -334,34 +334,37 @@ Replace click-based hotspots with new drawing canvas.
 
 ## Current Status
 
-**Phase 1 - COMPLETED ✅**
+**Phase 2 - COMPLETED ✅**
 
-### Completed:
-- [x] Database migration (20251119101931_AddPainDrawingSupport)
-- [x] TypeScript types for pain drawing
-- [x] Core drawing canvas component (PainDrawingCanvas.tsx)
-- [x] Pain quality selector component (PainQualitySelector.tsx)
-- [x] Main PainDrawing component
-- [x] Design system exports
-- [x] Body avatar SVGs (male, female, child - front/back views)
-- [x] Replace existing PainMapSelector in patient portal
-- [x] Patient portal builds successfully
-- [x] PainDrawingViewer component (read-only)
-- [x] Integrate viewer into clinic dashboard EvaluationViewer
-- [x] Apply migration to production database
-- [ ] Test drawing functionality end-to-end
+### Phase 1 Completed:
+- [x] Database migration
+- [x] Core drawing canvas
+- [x] Pain quality selector
+- [x] Body avatar SVGs
+- [x] Patient portal integration
+- [x] Clinic dashboard viewer
+- [x] Production deployment
+
+### Phase 2 Completed:
+- [x] Arrow tool for radiating/referred pain
+- [x] Text annotations with dialog input
+- [x] Symbol library (pin, lightning, star, cross)
+- [x] Zoom controls (50%-300%)
+- [x] Pan with Shift+drag
+- [x] Unified history for paths and annotations
+- [x] AnnotationTools component
+- [x] Updated viewer to render annotations
 
 ### Commits:
-- `7cc7559` - Phase 1 foundation (database schema, core components)
-- `c62dd5e` - Body diagram SVGs and patient portal integration
-- `eb9aab6` - Roadmap update
-- `71ebaa3` - Phase 1 completion summary
-- `624428d` - Pain drawing viewer for clinic dashboard
+- `7cc7559` - Phase 1 foundation
+- `c62dd5e` - Body diagrams & patient portal
+- `624428d` - Clinic dashboard viewer
+- `6a8e7ad` - Phase 2: Advanced tools
 
 ### Next Steps:
-1. **Manual testing:** Submit intake form with pain drawing and verify in clinic dashboard
-2. **Backend update:** Ensure API returns pain map data with drawing_data_json
-3. Begin Phase 2: Advanced drawing tools (annotations, zoom, overlays)
+1. **Phase 3:** Remote data collection (reminders, no-login links)
+2. **Phase 4:** Analytics & heat maps
+3. **Mobile optimization:** Touch gestures, pinch-zoom
 
 ---
 
