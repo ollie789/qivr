@@ -194,6 +194,7 @@ public class DocumentResponse
     public string FileName { get; set; } = string.Empty;
     public long FileSize { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string? ExtractedText { get; set; }
     public string? ExtractedPatientName { get; set; }
     public DateTime? ExtractedDob { get; set; }
     public decimal? ConfidenceScore { get; set; }
@@ -214,6 +215,7 @@ public class DocumentResponse
         FileName = document.FileName;
         FileSize = document.FileSize;
         Status = document.Status;
+        ExtractedText = document.ExtractedText;
         ExtractedPatientName = document.ExtractedPatientName;
         ExtractedDob = document.ExtractedDob;
         ConfidenceScore = document.ConfidenceScore;
