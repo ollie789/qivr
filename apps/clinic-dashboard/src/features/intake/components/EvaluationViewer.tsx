@@ -86,6 +86,10 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [editedSummary, setEditedSummary] = useState(
+    evaluation.aiSummary?.content || "",
+  );
   const [triageNotes, setTriageNotes] = useState(evaluation.triageNotes || "");
   const [internalNotes, setInternalNotes] = useState(
     evaluation.internalNotes || "",
@@ -109,6 +113,18 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
     };
     onUpdate?.(updated);
     setIsEditingNotes(false);
+  };
+
+  const handleSaveSummary = () => {
+    const updated = {
+      ...evaluation,
+      aiSummary: {
+        ...evaluation.aiSummary!,
+        content: editedSummary,
+      },
+    };
+    onUpdate?.(updated);
+    setIsEditingSummary(false);
   };
 
   const getUrgencyColor = (
@@ -507,11 +523,45 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
 
               {evaluation.aiSummary ? (
                 <>
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    <Typography variant="body2">
-                      {evaluation.aiSummary.content}
-                    </Typography>
-                  </Alert>
+                  {isEditingSummary ? (
+                    <Box sx={{ mb: 2 }}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={6}
+                        value={editedSummary}
+                        onChange={(e) => setEditedSummary(e.target.value)}
+                        variant="outlined"
+                      />
+                      <Box sx={{ mt: 1, display: "flex", gap: 1 }}>
+                        <Button
+                          variant="contained"
+                          startIcon={<Save />}
+                          onClick={handleSaveSummary}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          startIcon={<Cancel />}
+                          onClick={() => {
+                            setEditedSummary(
+                              evaluation.aiSummary?.content || "",
+                            );
+                            setIsEditingSummary(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                    </Box>
+                  ) : (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        {evaluation.aiSummary.content}
+                      </Typography>
+                    </Alert>
+                  )}
 
                   {evaluation.aiSummary.riskFlags.length > 0 && (
                     <Box sx={{ mb: 2 }}>
@@ -556,7 +606,14 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                       >
                         Approve Summary
                       </Button>
-                      <Button variant="outlined" startIcon={<Edit />} disabled>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Edit />}
+                        onClick={() => {
+                          setEditedSummary(evaluation.aiSummary?.content || "");
+                          setIsEditingSummary(true);
+                        }}
+                      >
                         Edit Summary
                       </Button>
                     </Box>

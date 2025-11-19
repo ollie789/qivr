@@ -57,6 +57,41 @@ export const EvaluationDetail = () => {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const handleDownload = () => {
+    if (!evaluation) return;
+    const content = `
+EVALUATION REPORT
+${evaluation.evaluationNumber}
+${evaluation.date ? format(new Date(evaluation.date), "MMMM dd, yyyy") : ""}
+
+CHIEF COMPLAINT
+${evaluation.chiefComplaint}
+
+SYMPTOMS
+${evaluation.symptoms.join(", ")}
+
+STATUS: ${evaluation.status.toUpperCase()}
+URGENCY: ${evaluation.urgency.toUpperCase()}
+
+${evaluation.diagnosis ? `DIAGNOSIS\n${evaluation.diagnosis}\n\n` : ""}
+${evaluation.treatment ? `TREATMENT\n${evaluation.treatment}\n\n` : ""}
+${evaluation.notes ? `NOTES\n${evaluation.notes}\n\n` : ""}
+${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("\n")}` : ""}
+    `.trim();
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `evaluation-${evaluation.evaluationNumber}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   useEffect(() => {
     const fetchEvaluation = async () => {
       setLoading(true);
@@ -166,7 +201,7 @@ export const EvaluationDetail = () => {
             startIcon={<DownloadIcon />}
             variant="outlined"
             size="small"
-            disabled
+            onClick={handleDownload}
           >
             Download
           </Button>
@@ -174,7 +209,7 @@ export const EvaluationDetail = () => {
             startIcon={<PrintIcon />}
             variant="outlined"
             size="small"
-            disabled
+            onClick={handlePrint}
           >
             Print
           </Button>
