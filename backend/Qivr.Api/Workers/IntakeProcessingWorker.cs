@@ -200,7 +200,7 @@ public class IntakeProcessingWorker : BackgroundService
                 MedicalHistory = JsonSerializer.Serialize(evaluation.MedicalHistory),
                 ChiefComplaint = evaluation.ChiefComplaint,
                 Duration = evaluation.MedicalHistory.TryGetValue("painOnset", out var onset) ? onset?.ToString() : null,
-                Severity = evaluation.PainMaps.Any() ? evaluation.PainMaps.Max(p => p.Intensity) : 5
+                Severity = evaluation.PainMaps.Any() ? evaluation.PainMaps.Max(p => p.PainIntensity) : 5
             };
 
             var triageSummary = await aiTriageService.GenerateTriageSummaryAsync(evaluation.PatientId, triageRequest);

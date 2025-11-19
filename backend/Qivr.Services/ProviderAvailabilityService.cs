@@ -238,7 +238,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         
         // Get all providers (staff users can be providers) - RLS will filter by tenant
         var query = _context.Users
-            .Where(u => (u.UserType == UserType.Staff || u.UserType == UserType.Admin) && u.IsActive);
+            .Where(u => u.UserType == UserType.Staff || u.UserType == UserType.Admin);
 
         if (!string.IsNullOrEmpty(specialization))
         {

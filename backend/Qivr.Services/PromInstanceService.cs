@@ -829,7 +829,9 @@ public class PromInstanceService : IPromInstanceService
         }
 
         decimal score = 0m;
-        var scoringMethod = template.ScoringMethod?.Type ?? "sum";
+        var scoringMethod = template.ScoringMethod != null && template.ScoringMethod.TryGetValue("type", out var typeObj) 
+            ? typeObj?.ToString() ?? "sum" 
+            : "sum";
         var scoringRules = template.ScoringRules;
 
         // Extract question-level scoring rules
