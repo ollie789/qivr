@@ -147,17 +147,16 @@ const MedicalRecords: React.FC = () => {
   const [editedPatient, setEditedPatient] = useState<Partial<Patient>>({});
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page] = useState(0);
+  const [rowsPerPage] = useState(10);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
 
-  const { data: patientList, isLoading: isPatientsLoading } =
-    useQuery<PatientListResponse>({
-      queryKey: ["medicalRecords", "patients"],
-      queryFn: () => patientApi.getPatients({ limit: 200 }),
-      staleTime: 5 * 60 * 1000,
-      enabled: canMakeApiCalls,
-    });
+  const { data: patientList } = useQuery<PatientListResponse>({
+    queryKey: ["medicalRecords", "patients"],
+    queryFn: () => patientApi.getPatients({ limit: 200 }),
+    staleTime: 5 * 60 * 1000,
+    enabled: canMakeApiCalls,
+  });
 
   const patients: Patient[] = useMemo(
     () => patientList?.data ?? [],
@@ -780,7 +779,13 @@ const MedicalRecords: React.FC = () => {
                     .map((patient) => (
                       <TableRow key={patient.id} hover>
                         <TableCell>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 2,
+                            }}
+                          >
                             <Avatar>
                               {patient.firstName?.[0]}
                               {patient.lastName?.[0]}
@@ -789,18 +794,26 @@ const MedicalRecords: React.FC = () => {
                               <Typography variant="body2" fontWeight={500}>
                                 {patient.firstName} {patient.lastName}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {patient.email}
                               </Typography>
                             </Box>
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">{patient.phone}</Typography>
+                          <Typography variant="body2">
+                            {patient.phone}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           {patient.dateOfBirth
-                            ? format(parseISO(patient.dateOfBirth), "MMM d, yyyy")
+                            ? format(
+                                parseISO(patient.dateOfBirth),
+                                "MMM d, yyyy",
+                              )
                             : "N/A"}
                         </TableCell>
                         <TableCell>
@@ -827,7 +840,8 @@ const MedicalRecords: React.FC = () => {
             <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 Showing {page * rowsPerPage + 1}-
-                {Math.min((page + 1) * rowsPerPage, patients.length)} of {patients.length}
+                {Math.min((page + 1) * rowsPerPage, patients.length)} of{" "}
+                {patients.length}
               </Typography>
             </Box>
           </Paper>
@@ -884,7 +898,7 @@ const MedicalRecords: React.FC = () => {
                       </Typography>
                     </Box>
                   </FlexBetween>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: "flex", gap: 1 }}>
                     <Button
                       variant="outlined"
                       startIcon={<MessageIcon />}
@@ -1593,27 +1607,37 @@ const MedicalRecords: React.FC = () => {
                                   )}
                                   {doc.extractedText && (
                                     <Box sx={{ mt: 2 }}>
-                                      <Typography variant="subtitle2" gutterBottom>
+                                      <Typography
+                                        variant="subtitle2"
+                                        gutterBottom
+                                      >
                                         Extracted Text:
                                       </Typography>
                                       <Paper
                                         sx={{
                                           p: 1.5,
-                                          bgcolor: 'grey.50',
+                                          bgcolor: "grey.50",
                                           maxHeight: 200,
-                                          overflow: 'auto',
-                                          fontFamily: 'monospace',
-                                          fontSize: '0.75rem',
-                                          whiteSpace: 'pre-wrap'
+                                          overflow: "auto",
+                                          fontFamily: "monospace",
+                                          fontSize: "0.75rem",
+                                          whiteSpace: "pre-wrap",
                                         }}
                                       >
                                         {doc.extractedText.substring(0, 500)}
-                                        {doc.extractedText.length > 500 && '...'}
+                                        {doc.extractedText.length > 500 &&
+                                          "..."}
                                       </Paper>
                                     </Box>
                                   )}
                                 </Box>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 1,
+                                  }}
+                                >
                                   <Button
                                     variant="outlined"
                                     size="small"
@@ -1639,8 +1663,13 @@ const MedicalRecords: React.FC = () => {
                                       variant="outlined"
                                       size="small"
                                       onClick={() => {
-                                        navigator.clipboard.writeText(doc.extractedText || '');
-                                        enqueueSnackbar('Text copied to clipboard', { variant: 'success' });
+                                        navigator.clipboard.writeText(
+                                          doc.extractedText || "",
+                                        );
+                                        enqueueSnackbar(
+                                          "Text copied to clipboard",
+                                          { variant: "success" },
+                                        );
                                       }}
                                     >
                                       Copy Text
@@ -1888,11 +1917,14 @@ const MedicalRecords: React.FC = () => {
           <MessageComposer
             open={messageDialogOpen}
             onClose={() => setMessageDialogOpen(false)}
-            recipientId={selectedPatientId}
-            recipientName={`${patient.firstName} ${patient.lastName}`}
+            recipients={[
+              {
+                id: selectedPatientId || "",
+                name: `${patient.firstName} ${patient.lastName}`,
+                type: "patient",
+              },
+            ]}
           />
-        )}
-        </>
         )}
       </Box>
     </LocalizationProvider>

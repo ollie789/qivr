@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Drawer,
@@ -20,13 +20,12 @@ import {
   Tooltip,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   Queue as QueueIcon,
   CalendarMonth as CalendarIcon,
-  People as PeopleIcon,
   Assignment as AssignmentIcon,
   Analytics as AnalyticsIcon,
   Settings as SettingsIcon,
@@ -36,18 +35,18 @@ import {
   Message as MessageIcon,
   FolderOpen as DocumentsIcon,
   LocalHospital as MedicalIcon,
-} from '@mui/icons-material';
-import { useAuthActions, useAuthUser } from '../../stores/authStore';
-import { NotificationBell, TenantSelector } from '../shared';
-import { useThemeMode } from '../../contexts/ThemeContext';
-import { ThemeToggle } from '@qivr/design-system';
-import type { SxProps, Theme } from '@mui/material/styles';
+} from "@mui/icons-material";
+import { useAuthActions, useAuthUser } from "../../stores/authStore";
+import { NotificationBell, TenantSelector } from "../shared";
+import { useThemeMode } from "../../contexts/ThemeContext";
+import { ThemeToggle } from "@qivr/design-system";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 const drawerWidth = 280;
 const drawerWidthCollapsed = 64;
 
-import { useQuery } from '@tanstack/react-query';
-import { messagesApi } from '../../services/messagesApi';
+import { useQuery } from "@tanstack/react-query";
+import { messagesApi } from "../../services/messagesApi";
 
 interface MenuItemType {
   text: string;
@@ -56,53 +55,29 @@ interface MenuItemType {
   badge?: number;
 }
 
-const DashboardLayout: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [drawerOpen, setDrawerOpen] = useState(true);
-  const { user, logout } = useAuthStore();
-  const { darkMode, toggleDarkMode } = useThemeMode();
-
-  // Fetch unread message count
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['unread-messages'],
-    queryFn: messagesApi.getUnreadCount,
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
-  const menuItems: MenuItemType[] = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Intake Management', icon: <QueueIcon />, path: '/intake', badge: 5 },
-    { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments' },
-    { text: 'Patients', icon: <PeopleIcon />, path: '/medical-records' },
-    { text: 'Medical Records', icon: <MedicalIcon />, path: '/medical-records' },
-    { text: 'Messages', icon: <MessageIcon />, path: '/messages', badge: unreadCount },
-    { text: 'Documents', icon: <DocumentsIcon />, path: '/documents' },
-    { text: 'PROM', icon: <AssignmentIcon />, path: '/prom' },
-    { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  ];
-
-const getNavButtonStyles = (theme: Theme, drawerOpen: boolean): SxProps<Theme> => ({
+const getNavButtonStyles = (
+  theme: Theme,
+  drawerOpen: boolean,
+): SxProps<Theme> => ({
   borderRadius: 2,
-  justifyContent: drawerOpen ? 'initial' : 'center',
+  justifyContent: drawerOpen ? "initial" : "center",
   px: drawerOpen ? 2 : 1,
-  '&.Mui-selected': {
+  "&.Mui-selected": {
     backgroundColor: theme.palette.primary.main,
-    color: 'white',
-    '&:hover': {
+    color: "white",
+    "&:hover": {
       backgroundColor: theme.palette.primary.dark,
     },
-    '& .MuiListItemIcon-root': {
-      color: 'white',
+    "& .MuiListItemIcon-root": {
+      color: "white",
     },
   },
 });
 
 const getDrawerToolbarStyles = (drawerOpen: boolean): SxProps<Theme> => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: drawerOpen ? 'space-between' : 'center',
+  display: "flex",
+  alignItems: "center",
+  justifyContent: drawerOpen ? "space-between" : "center",
   px: drawerOpen ? 3 : 1,
 });
 
@@ -110,16 +85,50 @@ const DashboardLayout: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { darkMode, toggleDarkMode } = useThemeMode();
-  
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(!isMobile);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
-  
+  const [notificationAnchor, setNotificationAnchor] =
+    useState<null | HTMLElement>(null);
+
   const user = useAuthUser();
   const { logout } = useAuthActions();
+
+  // Fetch unread message count
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["unread-messages"],
+    queryFn: messagesApi.unreadCount,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const menuItems: MenuItemType[] = [
+    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
+    {
+      text: "Intake Management",
+      icon: <QueueIcon />,
+      path: "/intake",
+      badge: 5,
+    },
+    { text: "Appointments", icon: <CalendarIcon />, path: "/appointments" },
+    {
+      text: "Medical Records",
+      icon: <MedicalIcon />,
+      path: "/medical-records",
+    },
+    {
+      text: "Messages",
+      icon: <MessageIcon />,
+      path: "/messages",
+      badge: unreadCount,
+    },
+    { text: "Documents", icon: <DocumentsIcon />, path: "/documents" },
+    { text: "PROM", icon: <AssignmentIcon />, path: "/prom" },
+    { text: "Analytics", icon: <AnalyticsIcon />, path: "/analytics" },
+    { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
+  ];
 
   const handleDrawerToggle = () => {
     if (isMobile) {
@@ -150,20 +159,27 @@ const DashboardLayout: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <Toolbar sx={getDrawerToolbarStyles(drawerOpen)}>
         {drawerOpen && (
-          <Typography variant="h5" noWrap component="div" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h5"
+            noWrap
+            component="div"
+            sx={{ fontWeight: 700 }}
+          >
             Qivr Clinic
           </Typography>
         )}
         {!isMobile && (
           <IconButton onClick={handleDrawerToggle}>
-            <ChevronLeftIcon sx={{ transform: drawerOpen ? 'rotate(0deg)' : 'rotate(180deg)' }} />
+            <ChevronLeftIcon
+              sx={{ transform: drawerOpen ? "rotate(0deg)" : "rotate(180deg)" }}
+            />
           </IconButton>
         )}
       </Toolbar>
@@ -171,7 +187,7 @@ const DashboardLayout: React.FC = () => {
       <List sx={{ flex: 1, px: 1 }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-            <Tooltip title={!drawerOpen ? item.text : ''} placement="right">
+            <Tooltip title={!drawerOpen ? item.text : ""} placement="right">
               <ListItemButton
                 selected={location.pathname === item.path}
                 onClick={() => handleMenuClick(item.path)}
@@ -180,8 +196,8 @@ const DashboardLayout: React.FC = () => {
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: drawerOpen ? 2 : 'auto',
-                    justifyContent: 'center',
+                    mr: drawerOpen ? 2 : "auto",
+                    justifyContent: "center",
                   }}
                 >
                   {item.badge ? (
@@ -203,8 +219,8 @@ const DashboardLayout: React.FC = () => {
         {drawerOpen ? (
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
+              display: "flex",
+              alignItems: "center",
               gap: 2,
               p: 1,
               borderRadius: 2,
@@ -212,21 +228,21 @@ const DashboardLayout: React.FC = () => {
             }}
           >
             <Avatar sx={{ width: 32, height: 32 }}>
-              {user?.name?.charAt(0) || 'U'}
+              {user?.name?.charAt(0) || "U"}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="body2" noWrap fontWeight={600}>
-                {user?.name || 'User'}
+                {user?.name || "User"}
               </Typography>
               <Typography variant="caption" noWrap color="text.secondary">
-                {user?.clinicName || 'Clinic'}
+                {user?.clinicName || "Clinic"}
               </Typography>
             </Box>
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ display: "flex", justifyContent: "center" }}>
             <Avatar sx={{ width: 32, height: 32 }}>
-              {user?.name?.charAt(0) || 'U'}
+              {user?.name?.charAt(0) || "U"}
             </Avatar>
           </Box>
         )}
@@ -235,14 +251,16 @@ const DashboardLayout: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
+    <Box sx={{ display: "flex", height: "100vh" }}>
       <AppBar
         position="fixed"
         sx={{
-          width: { md: `calc(100% - ${drawerOpen ? drawerWidth : drawerWidthCollapsed}px)` },
+          width: {
+            md: `calc(100% - ${drawerOpen ? drawerWidth : drawerWidthCollapsed}px)`,
+          },
           ml: { md: `${drawerOpen ? drawerWidth : drawerWidthCollapsed}px` },
-          backgroundColor: 'background.paper',
-          color: 'text.primary',
+          backgroundColor: "background.paper",
+          color: "text.primary",
           boxShadow: 1,
         }}
       >
@@ -252,13 +270,14 @@ const DashboardLayout: React.FC = () => {
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{ mr: 2, display: { md: "none" } }}
           >
             <MenuIcon />
           </IconButton>
-          
+
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
+            {menuItems.find((item) => item.path === location.pathname)?.text ||
+              "Dashboard"}
           </Typography>
 
           <Box sx={{ mr: 2 }}>
@@ -267,7 +286,10 @@ const DashboardLayout: React.FC = () => {
 
           <NotificationBell />
 
-          <ThemeToggle mode={darkMode ? 'dark' : 'light'} onToggle={toggleDarkMode} />
+          <ThemeToggle
+            mode={darkMode ? "dark" : "light"}
+            onToggle={toggleDarkMode}
+          />
 
           <IconButton
             edge="end"
@@ -283,7 +305,10 @@ const DashboardLayout: React.FC = () => {
 
       <Box
         component="nav"
-        sx={{ width: { md: drawerOpen ? drawerWidth : drawerWidthCollapsed }, flexShrink: { md: 0 } }}
+        sx={{
+          width: { md: drawerOpen ? drawerWidth : drawerWidthCollapsed },
+          flexShrink: { md: 0 },
+        }}
       >
         {isMobile ? (
           <Drawer
@@ -292,9 +317,9 @@ const DashboardLayout: React.FC = () => {
             onClose={handleDrawerToggle}
             ModalProps={{ keepMounted: true }}
             sx={{
-              display: { xs: 'block', md: 'none' },
-              '& .MuiDrawer-paper': {
-                boxSizing: 'border-box',
+              display: { xs: "block", md: "none" },
+              "& .MuiDrawer-paper": {
+                boxSizing: "border-box",
                 width: drawerWidth,
               },
             }}
@@ -306,15 +331,15 @@ const DashboardLayout: React.FC = () => {
             variant="permanent"
             open={drawerOpen}
             sx={{
-              display: { xs: 'none', md: 'block' },
-              '& .MuiDrawer-paper': {
-                boxSizing: 'border-box',
+              display: { xs: "none", md: "block" },
+              "& .MuiDrawer-paper": {
+                boxSizing: "border-box",
                 width: drawerOpen ? drawerWidth : drawerWidthCollapsed,
-                transition: theme.transitions.create('width', {
+                transition: theme.transitions.create("width", {
                   easing: theme.transitions.easing.sharp,
                   duration: theme.transitions.duration.enteringScreen,
                 }),
-                overflowX: 'hidden',
+                overflowX: "hidden",
               },
             }}
           >
@@ -328,10 +353,12 @@ const DashboardLayout: React.FC = () => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { md: `calc(100% - ${drawerOpen ? drawerWidth : drawerWidthCollapsed}px)` },
+          width: {
+            md: `calc(100% - ${drawerOpen ? drawerWidth : drawerWidthCollapsed}px)`,
+          },
           mt: 8,
-          backgroundColor: 'background.default',
-          minHeight: 'calc(100vh - 64px)',
+          backgroundColor: "background.default",
+          minHeight: "calc(100vh - 64px)",
         }}
       >
         <Outlet />
@@ -342,20 +369,36 @@ const DashboardLayout: React.FC = () => {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleProfileMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/settings'); }}>
-          <ListItemIcon><AccountIcon fontSize="small" /></ListItemIcon>
+        <MenuItem
+          onClick={() => {
+            handleProfileMenuClose();
+            navigate("/settings");
+          }}
+        >
+          <ListItemIcon>
+            <AccountIcon fontSize="small" />
+          </ListItemIcon>
           Profile
         </MenuItem>
-        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/settings'); }}>
-          <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
+        <MenuItem
+          onClick={() => {
+            handleProfileMenuClose();
+            navigate("/settings");
+          }}
+        >
+          <ListItemIcon>
+            <SettingsIcon fontSize="small" />
+          </ListItemIcon>
           Settings
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>
-          <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
           Logout
         </MenuItem>
       </Menu>
@@ -365,8 +408,8 @@ const DashboardLayout: React.FC = () => {
         anchorEl={notificationAnchor}
         open={Boolean(notificationAnchor)}
         onClose={handleNotificationClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
         PaperProps={{ sx: { width: 360, maxHeight: 400 } }}
       >
         <Box sx={{ p: 2 }}>
@@ -375,7 +418,9 @@ const DashboardLayout: React.FC = () => {
         <Divider />
         <MenuItem onClick={handleNotificationClose}>
           <Box>
-            <Typography variant="body2">New patient intake submitted</Typography>
+            <Typography variant="body2">
+              New patient intake submitted
+            </Typography>
             <Typography variant="caption" color="text.secondary">
               John Doe - 5 minutes ago
             </Typography>
