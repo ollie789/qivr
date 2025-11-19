@@ -15,6 +15,7 @@ export * from './navigation/PageHeader';
 export * from './navigation/ThemeToggle';
 export * from './pain-map/PainDrawing';
 export * from './pain-map/PainDrawingCanvas';
+export * from './pain-map/PainDrawingViewer';
 export * from './pain-map/PainQualitySelector';
 export * from './slots/AvailabilitySlot';
 export * from './stats/StatCard';

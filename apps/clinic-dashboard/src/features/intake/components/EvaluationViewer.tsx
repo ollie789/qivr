@@ -27,6 +27,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
+import { PainDrawingViewer, type PainMapData } from "@qivr/design-system";
 import MessageComposer from "../../../components/messaging/MessageComposer";
 
 interface PainPoint {
@@ -50,6 +51,7 @@ interface EvaluationData {
   chiefComplaint: string;
   symptoms: string[];
   painPoints: PainPoint[];
+  painMapData?: PainMapData; // New pain drawing data
   medicalHistory: string[];
   medications: string[];
   allergies: string[];
@@ -181,27 +183,40 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
               <Typography variant="h6" gutterBottom>
                 Pain Assessment
               </Typography>
-              <List dense>
-                {evaluation.painPoints.map((point) => (
-                  <ListItem key={point.id} sx={{ px: 0 }}>
-                    <ListItemText
-                      primary={point.bodyPart}
-                      secondary={`Intensity: ${point.intensity}/10 • ${point.type} • ${point.duration}`}
-                    />
-                    <Chip
-                      label={point.intensity}
-                      size="small"
-                      color={
-                        point.intensity >= 7
-                          ? "error"
-                          : point.intensity >= 4
-                            ? "warning"
-                            : "success"
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
+              
+              {evaluation.painMapData ? (
+                <PainDrawingViewer 
+                  painMapData={evaluation.painMapData}
+                  width={400}
+                  height={600}
+                />
+              ) : evaluation.painPoints && evaluation.painPoints.length > 0 ? (
+                <List dense>
+                  {evaluation.painPoints.map((point) => (
+                    <ListItem key={point.id} sx={{ px: 0 }}>
+                      <ListItemText
+                        primary={point.bodyPart}
+                        secondary={`Intensity: ${point.intensity}/10 • ${point.type} • ${point.duration}`}
+                      />
+                      <Chip
+                        label={point.intensity}
+                        size="small"
+                        color={
+                          point.intensity >= 7
+                            ? "error"
+                            : point.intensity >= 4
+                              ? "warning"
+                              : "success"
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No pain assessment data available
+                </Typography>
+              )}
             </CardContent>
           </Card>
 
