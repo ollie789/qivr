@@ -236,9 +236,9 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     {
         var availableProviders = new List<Provider>();
         
-        // Get all providers (staff users can be providers)
+        // Get all providers (staff users can be providers) - RLS will filter by tenant
         var query = _context.Users
-            .Where(u => u.UserType == UserType.Staff || u.UserType == UserType.Admin);
+            .Where(u => (u.UserType == UserType.Staff || u.UserType == UserType.Admin) && u.IsActive);
 
         if (!string.IsNullOrEmpty(specialization))
         {
@@ -249,22 +249,26 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
         var providers = await query.ToListAsync();
 
+        _logger.LogInformation("Found {Count} providers for date {Date}", providers.Count, date);
+
         // Check each provider's availability
         foreach (var provider in providers)
         {
             var slots = await GetAvailableSlots(provider.Id, date);
-            if (slots.Any())
+            _logger.LogInformation("Provider {ProviderId} ({Name}) has {SlotCount} available slots", 
+                provider.Id, $"{provider.FirstName} {provider.LastName}", slots.Count);
+            
+            // Include provider even if no slots (they can still be selected, slots will be empty)
+            availableProviders.Add(new Provider
             {
-                availableProviders.Add(new Provider
-                {
-                    Id = provider.Id,
-                    Name = $"{provider.FirstName} {provider.LastName}",
-                    Specialization = provider.Roles.FirstOrDefault() ?? "General",
-                    AvailableSlotCount = slots.Count()
-                });
-            }
+                Id = provider.Id,
+                Name = $"{provider.FirstName} {provider.LastName}",
+                Specialization = provider.Roles.FirstOrDefault() ?? "General",
+                AvailableSlotCount = slots.Count
+            });
         }
 
+        _logger.LogInformation("Returning {Count} available providers", availableProviders.Count);
         return availableProviders;
     }
 
