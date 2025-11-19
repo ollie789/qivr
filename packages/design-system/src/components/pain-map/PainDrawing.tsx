@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Grid, Paper, ToggleButton, ToggleButtonGroup, Typography, Stack } from '@mui/material';
-import PainDrawingCanvas from './PainDrawingCanvas';
-import PainQualitySelector from './PainQualitySelector';
+import { PainDrawingCanvas } from './PainDrawingCanvas';
+import { PainQualitySelector } from './PainQualitySelector';
 import {
   PAIN_QUALITIES,
   type AvatarType,
@@ -11,12 +11,20 @@ import {
   type PainMapData,
 } from '../../types/pain-drawing';
 
+// Import SVG diagrams
+import maleFront from '../../assets/body-diagrams/male-front.svg';
+import maleBack from '../../assets/body-diagrams/male-back.svg';
+import femaleFront from '../../assets/body-diagrams/female-front.svg';
+import femaleBack from '../../assets/body-diagrams/female-back.svg';
+import childFront from '../../assets/body-diagrams/child-front.svg';
+import childBack from '../../assets/body-diagrams/child-back.svg';
+
 interface PainDrawingProps {
   value?: PainMapData;
   onChange: (data: PainMapData) => void;
 }
 
-export default function PainDrawing({ value, onChange }: PainDrawingProps) {
+export function PainDrawing({ value, onChange }: PainDrawingProps) {
   const [avatarType, setAvatarType] = useState<AvatarType>(value?.avatarType || 'male');
   const [viewOrientation, setViewOrientation] = useState<ViewOrientation>(
     (value?.viewOrientation as ViewOrientation) || 'front'
@@ -52,8 +60,12 @@ export default function PainDrawing({ value, onChange }: PainDrawingProps) {
   };
 
   const getBackgroundImage = () => {
-    // Placeholder - will be replaced with actual body diagram SVGs
-    return `/body-${avatarType}-${viewOrientation}.png`;
+    const diagrams = {
+      male: { front: maleFront, back: maleBack },
+      female: { front: femaleFront, back: femaleBack },
+      child: { front: childFront, back: childBack },
+    };
+    return diagrams[avatarType][viewOrientation];
   };
 
   return (

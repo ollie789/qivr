@@ -18,7 +18,7 @@ interface PainDrawingCanvasProps {
   onDrawingModeChange: (mode: 'draw' | 'erase') => void;
 }
 
-export default function PainDrawingCanvas({
+export function PainDrawingCanvas({
   width,
   height,
   backgroundImage,

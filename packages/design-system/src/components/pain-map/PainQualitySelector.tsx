@@ -10,7 +10,7 @@ interface PainQualitySelectorProps {
   onDepthChange: (depth: DepthIndicator) => void;
 }
 
-export default function PainQualitySelector({
+export function PainQualitySelector({
   selectedQuality,
   onQualityChange,
   intensity,

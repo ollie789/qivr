@@ -10,13 +10,10 @@ import {
   StepLabel,
   Paper,
 } from "@mui/material";
-import { PageLoader } from "@qivr/design-system";
+import { PageLoader, PainDrawing, type PainMapData } from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
-import PainMapSelector, {
-  type PainPoint,
-} from "../components/intake/PainMapSelector";
 import MedicalHistoryStep from "../components/intake/MedicalHistoryStep";
 
 const steps = [
@@ -41,7 +38,7 @@ export const IntakeForm = () => {
     painLevel: 5,
     duration: "",
     additionalNotes: "",
-    painPoints: [] as PainPoint[],
+    painMapData: undefined as PainMapData | undefined,
     painOnset: "",
     previousOrthoConditions: [] as string[],
     currentTreatments: [] as string[],
@@ -102,17 +99,23 @@ export const IntakeForm = () => {
           duration: formData.duration,
           notes: formData.additionalNotes,
         },
-        painMaps: formData.painPoints.map((p) => ({
-          bodyRegion: p.name,
+        painMaps: formData.painMapData ? [{
+          bodyRegion: formData.painMapData.bodyRegion,
           coordinates: {
-            x: p.x,
-            y: p.y,
+            x: 0,
+            y: 0,
             z: 0,
           },
-          intensity: p.intensity,
-          type: null,
-          qualities: [],
-        })),
+          intensity: formData.painMapData.painIntensity,
+          type: formData.painMapData.painType,
+          qualities: formData.painMapData.painQuality,
+          avatarType: formData.painMapData.avatarType,
+          bodySubdivision: formData.painMapData.bodySubdivision,
+          viewOrientation: formData.painMapData.viewOrientation,
+          depthIndicator: formData.painMapData.depthIndicator,
+          submissionSource: formData.painMapData.submissionSource,
+          drawingDataJson: JSON.stringify(formData.painMapData.drawingData),
+        }] : [],
       });
 
       console.log("Evaluation created:", result);
@@ -192,12 +195,12 @@ export const IntakeForm = () => {
               Pain Map
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
-              Click on the body diagram to mark where you feel pain
+              Draw on the body diagram to mark where you feel pain
             </Typography>
-            <PainMapSelector
-              selectedPoints={formData.painPoints}
-              onChange={(points) =>
-                setFormData({ ...formData, painPoints: points })
+            <PainDrawing
+              value={formData.painMapData}
+              onChange={(data) =>
+                setFormData({ ...formData, painMapData: data })
               }
             />
           </Box>
@@ -266,8 +269,8 @@ export const IntakeForm = () => {
               <strong>Duration:</strong> {formData.duration}
             </Typography>
             <Typography>
-              <strong>Pain Points:</strong> {formData.painPoints.length}{" "}
-              locations marked
+              <strong>Pain Drawing:</strong>{" "}
+              {formData.painMapData?.drawingData?.paths.length || 0} regions marked
             </Typography>
             <Typography>
               <strong>Symptoms:</strong> {formData.symptoms}
