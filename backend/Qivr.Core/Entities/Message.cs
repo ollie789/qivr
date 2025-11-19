@@ -59,6 +59,11 @@ public class Message : TenantEntity
     public string? DirectMessageType { get; set; }
     public string? DirectPriority { get; set; }
     
+    // Category and context
+    public string? Category { get; set; } // medical, appointment, billing, general
+    public string? RelatedEntityType { get; set; } // appointment, evaluation, document
+    public Guid? RelatedEntityId { get; set; }
+    
     [Required]
     public string Content { get; set; }
     
