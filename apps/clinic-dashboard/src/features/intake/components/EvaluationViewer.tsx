@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Paper,
@@ -19,7 +19,7 @@ import {
   ListItem,
   ListItemText,
   Rating,
-} from '@mui/material';
+} from "@mui/material";
 import {
   AccessTime,
   Person,
@@ -33,8 +33,8 @@ import {
   Cancel,
   Flag,
   LocalHospital,
-} from '@mui/icons-material';
-import type { ChipProps } from '@mui/material/Chip';
+} from "@mui/icons-material";
+import type { ChipProps } from "@mui/material/Chip";
 
 interface PainPoint {
   id: string;
@@ -42,7 +42,7 @@ interface PainPoint {
   intensity: number;
   type: string;
   duration: string;
-  side?: 'left' | 'right' | 'bilateral';
+  side?: "left" | "right" | "bilateral";
 }
 
 interface EvaluationData {
@@ -53,8 +53,8 @@ interface EvaluationData {
   patientPhone: string;
   dateOfBirth: string;
   submittedAt: string;
-  status: 'pending' | 'triaged' | 'scheduled' | 'completed';
-  urgency: 'low' | 'medium' | 'high' | 'critical';
+  status: "pending" | "triaged" | "scheduled" | "completed";
+  urgency: "low" | "medium" | "high" | "critical";
   chiefComplaint: string;
   symptoms: string[];
   painPoints: PainPoint[];
@@ -65,7 +65,7 @@ interface EvaluationData {
     content: string;
     riskFlags: string[];
     recommendedActions: string[];
-    status: 'pending' | 'reviewed' | 'approved';
+    status: "pending" | "reviewed" | "approved";
   };
   triageNotes?: string;
   internalNotes?: string;
@@ -86,10 +86,19 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [triageNotes, setTriageNotes] = useState(evaluation.triageNotes || '');
-  const [internalNotes, setInternalNotes] = useState(evaluation.internalNotes || '');
-  const [urgency, setUrgency] = useState<EvaluationData['urgency']>(evaluation.urgency);
-  const urgencyLevels: EvaluationData['urgency'][] = ['low', 'medium', 'high', 'critical'];
+  const [triageNotes, setTriageNotes] = useState(evaluation.triageNotes || "");
+  const [internalNotes, setInternalNotes] = useState(
+    evaluation.internalNotes || "",
+  );
+  const [urgency, setUrgency] = useState<EvaluationData["urgency"]>(
+    evaluation.urgency,
+  );
+  const urgencyLevels: EvaluationData["urgency"][] = [
+    "low",
+    "medium",
+    "high",
+    "critical",
+  ];
 
   const handleSaveNotes = () => {
     const updated = {
@@ -102,16 +111,18 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
     setIsEditingNotes(false);
   };
 
-  const getUrgencyColor = (level: EvaluationData['urgency']): ChipProps['color'] => {
+  const getUrgencyColor = (
+    level: EvaluationData["urgency"],
+  ): ChipProps["color"] => {
     switch (level) {
-      case 'critical':
-        return 'error';
-      case 'high':
-        return 'warning';
-      case 'medium':
-        return 'info';
+      case "critical":
+        return "error";
+      case "high":
+        return "warning";
+      case "medium":
+        return "info";
       default:
-        return 'default';
+        return "default";
     }
   };
 
@@ -120,25 +131,31 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
     return age;
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+    <Paper elevation={2} sx={{ p: 3, height: "100%", overflow: "auto" }}>
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Grid container alignItems="center" spacing={2}>
           <Grid item>
-            <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}>
-              {evaluation.patientName.split(' ').map(n => n[0]).join('')}
+            <Avatar sx={{ width: 56, height: 56, bgcolor: "primary.main" }}>
+              {evaluation.patientName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
             </Avatar>
           </Grid>
           <Grid item xs>
             <Typography variant="h5">{evaluation.patientName}</Typography>
-            <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+            <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
               <Chip
                 icon={<AccessTime />}
                 label={new Date(evaluation.submittedAt).toLocaleString()}
@@ -152,14 +169,14 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
               />
               <Chip
                 label={evaluation.status.toUpperCase()}
-                color={evaluation.status === 'pending' ? 'warning' : 'success'}
+                color={evaluation.status === "pending" ? "warning" : "success"}
                 size="small"
                 variant="outlined"
               />
             </Box>
           </Grid>
           <Grid item>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1 }}>
               <Button
                 variant="contained"
                 color="primary"
@@ -181,7 +198,11 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
       <Divider sx={{ mb: 2 }} />
 
       {/* Tabs */}
-      <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 2 }}>
+      <Tabs
+        value={activeTab}
+        onChange={(_, v) => setActiveTab(v)}
+        sx={{ mb: 2 }}
+      >
         <Tab label="Overview" />
         <Tab label="Pain Assessment" />
         <Tab label="Medical History" />
@@ -195,31 +216,73 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
           {/* Patient Info */}
           <Card sx={{ mb: 2 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>Patient Information</Typography>
+              <Typography variant="h6" gutterBottom>
+                Patient Information
+              </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
                     <Person fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">Age</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Age
+                    </Typography>
                     <Typography variant="body1">
                       {calculateAge(evaluation.dateOfBirth)} years
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
                     <Email fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">Email</Typography>
-                    <Typography variant="body1">{evaluation.patientEmail}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Email
+                    </Typography>
+                    <Typography variant="body1">
+                      {evaluation.patientEmail}
+                    </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
                     <Phone fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">Phone</Typography>
-                    <Typography variant="body1">{evaluation.patientPhone}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Phone
+                    </Typography>
+                    <Typography variant="body1">
+                      {evaluation.patientPhone}
+                    </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
                     <LocationOn fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">Location</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Location
+                    </Typography>
                     <Typography variant="body1">Sydney, NSW</Typography>
                   </Box>
                 </Grid>
@@ -230,13 +293,17 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
           {/* Chief Complaint */}
           <Card sx={{ mb: 2 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>Chief Complaint</Typography>
+              <Typography variant="h6" gutterBottom>
+                Chief Complaint
+              </Typography>
               <Alert severity="info" sx={{ mb: 2 }}>
                 {evaluation.chiefComplaint}
               </Alert>
-              
-              <Typography variant="subtitle2" gutterBottom>Symptoms</Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+
+              <Typography variant="subtitle2" gutterBottom>
+                Symptoms
+              </Typography>
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                 {evaluation.symptoms.map((symptom, idx) => (
                   <Chip key={idx} label={symptom} size="small" />
                 ))}
@@ -248,23 +315,90 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
 
       {activeTab === 1 && (
         <Box>
+          <Card sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Pain Map Visualization
+              </Typography>
+              <Box
+                sx={{
+                  position: "relative",
+                  width: "100%",
+                  maxWidth: 400,
+                  mx: "auto",
+                }}
+              >
+                <Box
+                  component="img"
+                  src="/body-front.png"
+                  sx={{ width: "100%", display: "block" }}
+                />
+                {evaluation.painPoints.map((point) => (
+                  <Box
+                    key={point.id}
+                    sx={{
+                      position: "absolute",
+                      left: `${(point as any).x * 100}%`,
+                      top: `${(point as any).y * 100}%`,
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      bgcolor:
+                        point.intensity >= 7
+                          ? "#f44336"
+                          : point.intensity >= 4
+                            ? "#ff9800"
+                            : "#4caf50",
+                      border: "3px solid white",
+                      boxShadow: 2,
+                      transform: "translate(-50%, -50%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {point.intensity}
+                  </Box>
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>Pain Points</Typography>
+              <Typography variant="h6" gutterBottom>
+                Pain Points
+              </Typography>
               <List>
                 {evaluation.painPoints.map((point) => (
                   <ListItem key={point.id} sx={{ px: 0 }}>
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                        >
                           <Typography variant="subtitle1">
                             {point.bodyPart} {point.side && `(${point.side})`}
                           </Typography>
-                          <Rating value={point.intensity / 2} max={5} readOnly size="small" />
+                          <Rating
+                            value={point.intensity / 2}
+                            max={5}
+                            readOnly
+                            size="small"
+                          />
                           <Chip
                             label={`${point.intensity}/10`}
                             size="small"
-                            color={point.intensity >= 7 ? 'error' : point.intensity >= 4 ? 'warning' : 'default'}
+                            color={
+                              point.intensity >= 7
+                                ? "error"
+                                : point.intensity >= 4
+                                  ? "warning"
+                                  : "default"
+                            }
                           />
                         </Box>
                       }
@@ -290,7 +424,9 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>Medical History</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    Medical History
+                  </Typography>
                   <List dense>
                     {evaluation.medicalHistory.map((item, idx) => (
                       <ListItem key={idx}>
@@ -304,7 +440,9 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>Current Medications</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    Current Medications
+                  </Typography>
                   <List dense>
                     {evaluation.medications.map((med, idx) => (
                       <ListItem key={idx}>
@@ -318,7 +456,9 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>Allergies</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    Allergies
+                  </Typography>
                   <List dense>
                     {evaluation.allergies.map((allergy, idx) => (
                       <ListItem key={idx}>
@@ -337,13 +477,30 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
         <Box>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
                 <Typography variant="h6">AI Analysis</Typography>
                 {evaluation.aiSummary && (
                   <Chip
-                    icon={evaluation.aiSummary.status === 'approved' ? <CheckCircle /> : <Warning />}
+                    icon={
+                      evaluation.aiSummary.status === "approved" ? (
+                        <CheckCircle />
+                      ) : (
+                        <Warning />
+                      )
+                    }
                     label={evaluation.aiSummary.status.toUpperCase()}
-                    color={evaluation.aiSummary.status === 'approved' ? 'success' : 'warning'}
+                    color={
+                      evaluation.aiSummary.status === "approved"
+                        ? "success"
+                        : "warning"
+                    }
                   />
                 )}
               </Box>
@@ -351,13 +508,17 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
               {evaluation.aiSummary ? (
                 <>
                   <Alert severity="info" sx={{ mb: 2 }}>
-                    <Typography variant="body2">{evaluation.aiSummary.content}</Typography>
+                    <Typography variant="body2">
+                      {evaluation.aiSummary.content}
+                    </Typography>
                   </Alert>
 
                   {evaluation.aiSummary.riskFlags.length > 0 && (
                     <Box sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>Risk Flags</Typography>
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Risk Flags
+                      </Typography>
+                      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                         {evaluation.aiSummary.riskFlags.map((flag, idx) => (
                           <Chip
                             key={idx}
@@ -372,19 +533,27 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                   )}
 
                   <Box>
-                    <Typography variant="subtitle2" gutterBottom>Recommended Actions</Typography>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Recommended Actions
+                    </Typography>
                     <List dense>
-                      {evaluation.aiSummary.recommendedActions.map((action, idx) => (
-                        <ListItem key={idx}>
-                          <ListItemText primary={action} />
-                        </ListItem>
-                      ))}
+                      {evaluation.aiSummary.recommendedActions.map(
+                        (action, idx) => (
+                          <ListItem key={idx}>
+                            <ListItemText primary={action} />
+                          </ListItem>
+                        ),
+                      )}
                     </List>
                   </Box>
 
-                  {evaluation.aiSummary.status !== 'approved' && (
-                    <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                      <Button variant="contained" color="success" startIcon={<CheckCircle />}>
+                  {evaluation.aiSummary.status !== "approved" && (
+                    <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<CheckCircle />}
+                      >
                         Approve Summary
                       </Button>
                       <Button variant="outlined" startIcon={<Edit />}>
@@ -407,18 +576,28 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
         <Box>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
                 <Typography variant="h6">Clinical Notes</Typography>
                 {!isEditingNotes ? (
                   <IconButton onClick={() => setIsEditingNotes(true)}>
                     <Edit />
                   </IconButton>
                 ) : (
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: "flex", gap: 1 }}>
                     <IconButton color="success" onClick={handleSaveNotes}>
                       <Save />
                     </IconButton>
-                    <IconButton color="error" onClick={() => setIsEditingNotes(false)}>
+                    <IconButton
+                      color="error"
+                      onClick={() => setIsEditingNotes(false)}
+                    >
                       <Cancel />
                     </IconButton>
                   </Box>
@@ -428,13 +607,19 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
               {isEditingNotes ? (
                 <>
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>Urgency Level</Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Urgency Level
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 1 }}>
                       {urgencyLevels.map((level) => (
                         <Chip
                           key={level}
                           label={level.toUpperCase()}
-                          color={urgency === level ? getUrgencyColor(level) : 'default'}
+                          color={
+                            urgency === level
+                              ? getUrgencyColor(level)
+                              : "default"
+                          }
                           onClick={() => setUrgency(level)}
                           clickable
                         />
@@ -466,7 +651,9 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
               ) : (
                 <>
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>Urgency Level</Typography>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Urgency Level
+                    </Typography>
                     <Chip
                       label={urgency.toUpperCase()}
                       color={getUrgencyColor(urgency)}
@@ -474,16 +661,26 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                   </Box>
 
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>Triage Notes</Typography>
-                    <Typography variant="body2" color={triageNotes ? 'text.primary' : 'text.secondary'}>
-                      {triageNotes || 'No triage notes added yet'}
+                    <Typography variant="subtitle2" gutterBottom>
+                      Triage Notes
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color={triageNotes ? "text.primary" : "text.secondary"}
+                    >
+                      {triageNotes || "No triage notes added yet"}
                     </Typography>
                   </Box>
 
                   <Box>
-                    <Typography variant="subtitle2" gutterBottom>Internal Notes</Typography>
-                    <Typography variant="body2" color={internalNotes ? 'text.primary' : 'text.secondary'}>
-                      {internalNotes || 'No internal notes added yet'}
+                    <Typography variant="subtitle2" gutterBottom>
+                      Internal Notes
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color={internalNotes ? "text.primary" : "text.secondary"}
+                    >
+                      {internalNotes || "No internal notes added yet"}
                     </Typography>
                   </Box>
                 </>

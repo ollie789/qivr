@@ -1,5 +1,6 @@
 import { TextractClient, DetectDocumentTextCommand } from '@aws-sdk/client-textract';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import pg from 'pg';
 
 const { Pool } = pg;
@@ -7,23 +8,40 @@ const { Pool } = pg;
 const region = process.env.AWS_REGION || 'ap-southeast-2';
 const textract = new TextractClient({ region });
 const s3 = new S3Client({ region });
+const secretsManager = new SecretsManagerClient({ region });
 
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false },
-  max: 2,
-});
+let pool;
+
+async function getDbPool() {
+  if (pool) return pool;
+  
+  const secret = await secretsManager.send(new GetSecretValueCommand({
+    SecretId: process.env.DB_SECRET_ARN
+  }));
+  
+  const dbCreds = JSON.parse(secret.SecretString);
+  
+  pool = new Pool({
+    host: dbCreds.host,
+    port: parseInt(dbCreds.port || '5432'),
+    database: dbCreds.database,
+    user: dbCreds.username,
+    password: dbCreds.password,
+    ssl: { rejectUnauthorized: false },
+    max: 2,
+  });
+  
+  return pool;
+}
 
 export const handler = async (event) => {
   console.log('OCR Processor triggered:', JSON.stringify(event, null, 2));
 
   for (const record of event.Records) {
     const message = JSON.parse(record.body);
-    const { documentId, s3Key, bucket } = message;
+    console.log('Parsed message:', JSON.stringify(message));
+    const { documentId, s3Key, s3Bucket } = message;
+    const bucket = s3Bucket || process.env.S3_BUCKET;
 
     console.log(`Processing document: ${documentId}, S3: ${bucket}/${s3Key}`);
 
@@ -36,21 +54,35 @@ export const handler = async (event) => {
 
       const documentBytes = await streamToBuffer(s3Response.Body);
 
-      // Process with Textract
-      const textractResponse = await textract.send(new DetectDocumentTextCommand({
-        Document: { Bytes: documentBytes },
-      }));
+      let extractedText, patientName, dob, confidence;
 
-      // Extract text and metadata
-      const extractedText = extractFullText(textractResponse.Blocks || []);
-      const patientName = extractPatientName(extractedText);
-      const dob = extractDateOfBirth(extractedText);
-      const confidence = calculateConfidence(textractResponse.Blocks || []);
+      // Check if file is plain text
+      if (s3Key.endsWith('.txt')) {
+        extractedText = documentBytes.toString('utf-8');
+        patientName = extractPatientName(extractedText);
+        dob = extractDateOfBirth(extractedText);
+        confidence = 100;
+        console.log(`Text file processed directly: ${extractedText.length} chars`);
+      } else {
+        // Process with Textract for images/PDFs
+        const textractResponse = await textract.send(new DetectDocumentTextCommand({
+          Document: { Bytes: documentBytes },
+        }));
+
+        extractedText = extractFullText(textractResponse.Blocks || []);
+        patientName = extractPatientName(extractedText);
+        dob = extractDateOfBirth(extractedText);
+        confidence = calculateConfidence(textractResponse.Blocks || []);
+        console.log(`Textract processed: ${extractedText.length} chars, confidence: ${confidence}%`);
+      }
 
       console.log(`Extracted: ${extractedText.length} chars, confidence: ${confidence}%`);
 
       // Update database
-      await pool.query(
+      const dbPool = await getDbPool();
+      console.log(`Updating document ${documentId} with text length: ${extractedText?.length}, confidence: ${confidence}`);
+      
+      const result = await dbPool.query(
         `UPDATE documents 
          SET status = $1, 
              extracted_text = $2, 
@@ -62,7 +94,7 @@ export const handler = async (event) => {
         ['ready', extractedText, patientName, dob, confidence, documentId]
       );
 
-      console.log(`Document ${documentId} processed successfully`);
+      console.log(`Document ${documentId} processed successfully, rows updated: ${result.rowCount}`);
 
     } catch (error) {
       console.error(`Error processing document ${documentId}:`, error);
