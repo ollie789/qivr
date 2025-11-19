@@ -1,40 +1,33 @@
 import React, { useState } from "react";
 import {
   Box,
-  Paper,
   Typography,
   Grid,
   Chip,
   Divider,
   Button,
   TextField,
-  IconButton,
   Avatar,
   Card,
   CardContent,
   Alert,
-  Tab,
-  Tabs,
+  Stack,
   List,
   ListItem,
   ListItemText,
-  Rating,
+  IconButton,
 } from "@mui/material";
 import {
-  AccessTime,
-  Person,
-  Phone,
-  Email,
-  LocationOn,
-  Warning,
-  CheckCircle,
-  Edit,
-  Save,
-  Cancel,
-  Flag,
-  LocalHospital,
+  Schedule as ScheduleIcon,
+  Message as MessageIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
-import type { ChipProps } from "@mui/material/Chip";
+import { format } from "date-fns";
+import MessageComposer from "../../../components/messaging/MessageComposer";
 
 interface PainPoint {
   id: string;
@@ -42,7 +35,6 @@ interface PainPoint {
   intensity: number;
   type: string;
   duration: string;
-  side?: "left" | "right" | "bilateral";
 }
 
 interface EvaluationData {
@@ -82,54 +74,14 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
   evaluation,
   onUpdate,
   onSchedule,
-  onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState(0);
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [editedSummary, setEditedSummary] = useState(
     evaluation.aiSummary?.content || "",
   );
-  const [triageNotes, setTriageNotes] = useState(evaluation.triageNotes || "");
-  const [internalNotes, setInternalNotes] = useState(
-    evaluation.internalNotes || "",
-  );
-  const [urgency, setUrgency] = useState<EvaluationData["urgency"]>(
-    evaluation.urgency,
-  );
-  const urgencyLevels: EvaluationData["urgency"][] = [
-    "low",
-    "medium",
-    "high",
-    "critical",
-  ];
+  const [messageOpen, setMessageOpen] = useState(false);
 
-  const handleSaveNotes = () => {
-    const updated = {
-      ...evaluation,
-      triageNotes,
-      internalNotes,
-      urgency,
-    };
-    onUpdate?.(updated);
-    setIsEditingNotes(false);
-  };
-
-  const handleSaveSummary = () => {
-    const updated = {
-      ...evaluation,
-      aiSummary: {
-        ...evaluation.aiSummary!,
-        content: editedSummary,
-      },
-    };
-    onUpdate?.(updated);
-    setIsEditingSummary(false);
-  };
-
-  const getUrgencyColor = (
-    level: EvaluationData["urgency"],
-  ): ChipProps["color"] => {
+  const getUrgencyColor = (level: string) => {
     switch (level) {
       case "critical":
         return "error";
@@ -143,287 +95,108 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
   };
 
   const calculateAge = (dob: string) => {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
+    const age = new Date().getFullYear() - new Date(dob).getFullYear();
     return age;
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3, height: "100%", overflow: "auto" }}>
+    <Box sx={{ height: "100%", overflow: "auto" }}>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Grid container alignItems="center" spacing={2}>
-          <Grid item>
-            <Avatar sx={{ width: 56, height: 56, bgcolor: "primary.main" }}>
-              {evaluation.patientName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </Avatar>
-          </Grid>
-          <Grid item xs>
-            <Typography variant="h5">{evaluation.patientName}</Typography>
-            <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
-              <Chip
-                icon={<AccessTime />}
-                label={new Date(evaluation.submittedAt).toLocaleString()}
-                size="small"
-              />
-              <Chip
-                icon={<Flag />}
-                label={urgency.toUpperCase()}
-                color={getUrgencyColor(urgency)}
-                size="small"
-              />
-              <Chip
-                label={evaluation.status.toUpperCase()}
-                color={evaluation.status === "pending" ? "warning" : "success"}
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-          </Grid>
-          <Grid item>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<LocalHospital />}
-                onClick={onSchedule}
-              >
-                Schedule Appointment
-              </Button>
-              {onClose && (
-                <IconButton onClick={onClose}>
-                  <Cancel />
-                </IconButton>
-              )}
-            </Box>
-          </Grid>
-        </Grid>
-      </Box>
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+        <Avatar sx={{ width: 56, height: 56, bgcolor: "primary.main" }}>
+          {evaluation.patientName
+            .split(" ")
+            .map((n) => n[0])
+            .join("")}
+        </Avatar>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h5">{evaluation.patientName}</Typography>
+          <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+            <Chip
+              label={evaluation.urgency.toUpperCase()}
+              color={getUrgencyColor(evaluation.urgency) as any}
+              size="small"
+            />
+            <Chip
+              label={evaluation.status.toUpperCase()}
+              variant="outlined"
+              size="small"
+            />
+            <Chip
+              label={`Age ${calculateAge(evaluation.dateOfBirth)}`}
+              size="small"
+            />
+          </Stack>
+        </Box>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            startIcon={<MessageIcon />}
+            onClick={() => setMessageOpen(true)}
+          >
+            Message
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<ScheduleIcon />}
+            onClick={onSchedule}
+          >
+            Schedule
+          </Button>
+        </Stack>
+      </Stack>
 
-      <Divider sx={{ mb: 2 }} />
+      <Divider sx={{ mb: 3 }} />
 
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onChange={(_, v) => setActiveTab(v)}
-        sx={{ mb: 2 }}
-      >
-        <Tab label="Overview" />
-        <Tab label="Pain Assessment" />
-        <Tab label="Medical History" />
-        <Tab label="AI Analysis" />
-        <Tab label="Triage Notes" />
-      </Tabs>
-
-      {/* Tab Content */}
-      {activeTab === 0 && (
-        <Box>
-          {/* Patient Info */}
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Patient Information
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <Person fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
-                      Age
-                    </Typography>
-                    <Typography variant="body1">
-                      {calculateAge(evaluation.dateOfBirth)} years
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <Email fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
-                      Email
-                    </Typography>
-                    <Typography variant="body1">
-                      {evaluation.patientEmail}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <Phone fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
-                      Phone
-                    </Typography>
-                    <Typography variant="body1">
-                      {evaluation.patientPhone}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <LocationOn fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
-                      Location
-                    </Typography>
-                    <Typography variant="body1">Sydney, NSW</Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
+      <Grid container spacing={3}>
+        {/* Left Column */}
+        <Grid item xs={12} md={6}>
           {/* Chief Complaint */}
           <Card sx={{ mb: 2 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Chief Complaint
               </Typography>
-              <Alert severity="info" sx={{ mb: 2 }}>
+              <Alert severity="info" icon={<WarningIcon />}>
                 {evaluation.chiefComplaint}
               </Alert>
-
-              <Typography variant="subtitle2" gutterBottom>
-                Symptoms
-              </Typography>
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                {evaluation.symptoms.map((symptom, idx) => (
-                  <Chip key={idx} label={symptom} size="small" />
-                ))}
-              </Box>
+              {evaluation.symptoms.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Symptoms
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {evaluation.symptoms.map((symptom, idx) => (
+                      <Chip key={idx} label={symptom} size="small" />
+                    ))}
+                  </Stack>
+                </Box>
+              )}
             </CardContent>
           </Card>
-        </Box>
-      )}
 
-      {activeTab === 1 && (
-        <Box>
+          {/* Pain Assessment */}
           <Card sx={{ mb: 2 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Pain Map Visualization
+                Pain Assessment
               </Typography>
-              <Box
-                sx={{
-                  position: "relative",
-                  width: "100%",
-                  maxWidth: 400,
-                  mx: "auto",
-                }}
-              >
-                <Box
-                  component="img"
-                  src="/body-front.png"
-                  sx={{ width: "100%", display: "block" }}
-                />
-                {evaluation.painPoints.map((point) => (
-                  <Box
-                    key={point.id}
-                    sx={{
-                      position: "absolute",
-                      left: `${(point as any).x * 100}%`,
-                      top: `${(point as any).y * 100}%`,
-                      width: 24,
-                      height: 24,
-                      borderRadius: "50%",
-                      bgcolor:
-                        point.intensity >= 7
-                          ? "#f44336"
-                          : point.intensity >= 4
-                            ? "#ff9800"
-                            : "#4caf50",
-                      border: "3px solid white",
-                      boxShadow: 2,
-                      transform: "translate(-50%, -50%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontSize: "0.75rem",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {point.intensity}
-                  </Box>
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Pain Points
-              </Typography>
-              <List>
+              <List dense>
                 {evaluation.painPoints.map((point) => (
                   <ListItem key={point.id} sx={{ px: 0 }}>
                     <ListItemText
-                      primary={
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 2 }}
-                        >
-                          <Typography variant="subtitle1">
-                            {point.bodyPart} {point.side && `(${point.side})`}
-                          </Typography>
-                          <Rating
-                            value={point.intensity / 2}
-                            max={5}
-                            readOnly
-                            size="small"
-                          />
-                          <Chip
-                            label={`${point.intensity}/10`}
-                            size="small"
-                            color={
-                              point.intensity >= 7
-                                ? "error"
-                                : point.intensity >= 4
-                                  ? "warning"
-                                  : "default"
-                            }
-                          />
-                        </Box>
-                      }
-                      secondary={
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            Type: {point.type} • Duration: {point.duration}
-                          </Typography>
-                        </Box>
+                      primary={point.bodyPart}
+                      secondary={`Intensity: ${point.intensity}/10 • ${point.type} • ${point.duration}`}
+                    />
+                    <Chip
+                      label={point.intensity}
+                      size="small"
+                      color={
+                        point.intensity >= 7
+                          ? "error"
+                          : point.intensity >= 4
+                            ? "warning"
+                            : "success"
                       }
                     />
                   </ListItem>
@@ -431,321 +204,244 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
               </List>
             </CardContent>
           </Card>
-        </Box>
-      )}
 
-      {activeTab === 2 && (
-        <Box>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Medical History
+          {/* Medical History */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Medical History
+              </Typography>
+
+              {evaluation.medications.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Medications
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    flexWrap="wrap"
+                    useFlexGap
+                    sx={{ mt: 1 }}
+                  >
+                    {evaluation.medications.map((med, idx) => (
+                      <Chip
+                        key={idx}
+                        label={med}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
+              {evaluation.allergies.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" color="error">
+                    Allergies
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    flexWrap="wrap"
+                    useFlexGap
+                    sx={{ mt: 1 }}
+                  >
+                    {evaluation.allergies.map((allergy, idx) => (
+                      <Chip
+                        key={idx}
+                        label={allergy}
+                        size="small"
+                        color="error"
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
+              {evaluation.medicalHistory.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Previous Conditions
                   </Typography>
                   <List dense>
                     {evaluation.medicalHistory.map((item, idx) => (
-                      <ListItem key={idx}>
+                      <ListItem key={idx} sx={{ px: 0 }}>
                         <ListItemText primary={item} />
                       </ListItem>
                     ))}
                   </List>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Current Medications
-                  </Typography>
-                  <List dense>
-                    {evaluation.medications.map((med, idx) => (
-                      <ListItem key={idx}>
-                        <ListItemText primary={med} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Allergies
-                  </Typography>
-                  <List dense>
-                    {evaluation.allergies.map((allergy, idx) => (
-                      <ListItem key={idx}>
-                        <ListItemText primary={allergy} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Box>
-      )}
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
 
-      {activeTab === 3 && (
-        <Box>
-          <Card>
-            <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h6">AI Analysis</Typography>
-                {evaluation.aiSummary && (
-                  <Chip
-                    icon={
-                      evaluation.aiSummary.status === "approved" ? (
-                        <CheckCircle />
-                      ) : (
-                        <Warning />
-                      )
-                    }
-                    label={evaluation.aiSummary.status.toUpperCase()}
-                    color={
-                      evaluation.aiSummary.status === "approved"
-                        ? "success"
-                        : "warning"
-                    }
-                  />
-                )}
-              </Box>
-
-              {evaluation.aiSummary ? (
-                <>
-                  {isEditingSummary ? (
-                    <Box sx={{ mb: 2 }}>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={6}
-                        value={editedSummary}
-                        onChange={(e) => setEditedSummary(e.target.value)}
-                        variant="outlined"
-                      />
-                      <Box sx={{ mt: 1, display: "flex", gap: 1 }}>
-                        <Button
-                          variant="contained"
-                          startIcon={<Save />}
-                          onClick={handleSaveSummary}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          startIcon={<Cancel />}
-                          onClick={() => {
-                            setEditedSummary(
-                              evaluation.aiSummary?.content || "",
-                            );
-                            setIsEditingSummary(false);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </Box>
-                    </Box>
+        {/* Right Column */}
+        <Grid item xs={12} md={6}>
+          {/* AI Analysis */}
+          {evaluation.aiSummary && (
+            <Card sx={{ mb: 2 }}>
+              <CardContent>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ mb: 2 }}
+                >
+                  <Typography variant="h6">AI Triage Analysis</Typography>
+                  {!isEditingSummary ? (
+                    <IconButton
+                      size="small"
+                      onClick={() => setIsEditingSummary(true)}
+                    >
+                      <EditIcon />
+                    </IconButton>
                   ) : (
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      <Typography variant="body2">
-                        {evaluation.aiSummary.content}
-                      </Typography>
-                    </Alert>
+                    <Stack direction="row" spacing={1}>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          onUpdate?.({
+                            ...evaluation,
+                            aiSummary: {
+                              ...evaluation.aiSummary!,
+                              content: editedSummary,
+                            },
+                          });
+                          setIsEditingSummary(false);
+                        }}
+                      >
+                        <SaveIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setEditedSummary(evaluation.aiSummary?.content || "");
+                          setIsEditingSummary(false);
+                        }}
+                      >
+                        <CancelIcon />
+                      </IconButton>
+                    </Stack>
                   )}
+                </Stack>
 
-                  {evaluation.aiSummary.riskFlags.length > 0 && (
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Risk Flags
-                      </Typography>
-                      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                        {evaluation.aiSummary.riskFlags.map((flag, idx) => (
-                          <Chip
-                            key={idx}
-                            icon={<Warning />}
-                            label={flag}
-                            color="error"
-                            size="small"
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
+                {isEditingSummary ? (
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={6}
+                    value={editedSummary}
+                    onChange={(e) => setEditedSummary(e.target.value)}
+                  />
+                ) : (
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                    {evaluation.aiSummary.content}
+                  </Typography>
+                )}
 
-                  <Box>
-                    <Typography variant="subtitle2" gutterBottom>
+                {evaluation.aiSummary.riskFlags.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" color="error" gutterBottom>
+                      Risk Flags
+                    </Typography>
+                    <Stack spacing={1}>
+                      {evaluation.aiSummary.riskFlags.map((flag, idx) => (
+                        <Alert
+                          key={idx}
+                          severity="warning"
+                          icon={<WarningIcon />}
+                        >
+                          {flag}
+                        </Alert>
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+
+                {evaluation.aiSummary.recommendedActions.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      color="success.main"
+                      gutterBottom
+                    >
                       Recommended Actions
                     </Typography>
                     <List dense>
                       {evaluation.aiSummary.recommendedActions.map(
                         (action, idx) => (
-                          <ListItem key={idx}>
+                          <ListItem key={idx} sx={{ px: 0 }}>
+                            <CheckCircleIcon
+                              color="success"
+                              sx={{ mr: 1, fontSize: 20 }}
+                            />
                             <ListItemText primary={action} />
                           </ListItem>
                         ),
                       )}
                     </List>
                   </Box>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-                  {evaluation.aiSummary.status !== "approved" && (
-                    <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
-                      <Button
-                        variant="contained"
-                        color="success"
-                        startIcon={<CheckCircle />}
-                      >
-                        Approve Summary
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<Edit />}
-                        onClick={() => {
-                          setEditedSummary(evaluation.aiSummary?.content || "");
-                          setIsEditingSummary(true);
-                        }}
-                      >
-                        Edit Summary
-                      </Button>
-                    </Box>
-                  )}
-                </>
-              ) : (
-                <Alert severity="warning">
-                  AI analysis pending. This may take a few moments.
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        </Box>
-      )}
-
-      {activeTab === 4 && (
-        <Box>
+          {/* Contact Info */}
           <Card>
             <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h6">Clinical Notes</Typography>
-                {!isEditingNotes ? (
-                  <IconButton onClick={() => setIsEditingNotes(true)}>
-                    <Edit />
-                  </IconButton>
-                ) : (
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <IconButton color="success" onClick={handleSaveNotes}>
-                      <Save />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => setIsEditingNotes(false)}
-                    >
-                      <Cancel />
-                    </IconButton>
-                  </Box>
-                )}
-              </Box>
-
-              {isEditingNotes ? (
-                <>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Urgency Level
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      {urgencyLevels.map((level) => (
-                        <Chip
-                          key={level}
-                          label={level.toUpperCase()}
-                          color={
-                            urgency === level
-                              ? getUrgencyColor(level)
-                              : "default"
-                          }
-                          onClick={() => setUrgency(level)}
-                          clickable
-                        />
-                      ))}
-                    </Box>
-                  </Box>
-
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
-                    label="Triage Notes"
-                    value={triageNotes}
-                    onChange={(e) => setTriageNotes(e.target.value)}
-                    sx={{ mb: 2 }}
-                    helperText="Clinical observations and triage decisions"
-                  />
-
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
-                    label="Internal Notes"
-                    value={internalNotes}
-                    onChange={(e) => setInternalNotes(e.target.value)}
-                    helperText="Internal staff notes (not visible to patient)"
-                  />
-                </>
-              ) : (
-                <>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Urgency Level
-                    </Typography>
-                    <Chip
-                      label={urgency.toUpperCase()}
-                      color={getUrgencyColor(urgency)}
-                    />
-                  </Box>
-
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Triage Notes
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color={triageNotes ? "text.primary" : "text.secondary"}
-                    >
-                      {triageNotes || "No triage notes added yet"}
-                    </Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Internal Notes
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color={internalNotes ? "text.primary" : "text.secondary"}
-                    >
-                      {internalNotes || "No internal notes added yet"}
-                    </Typography>
-                  </Box>
-                </>
-              )}
+              <Typography variant="h6" gutterBottom>
+                Contact Information
+              </Typography>
+              <Stack spacing={1}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Email
+                  </Typography>
+                  <Typography variant="body2">
+                    {evaluation.patientEmail}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Phone
+                  </Typography>
+                  <Typography variant="body2">
+                    {evaluation.patientPhone}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Submitted
+                  </Typography>
+                  <Typography variant="body2">
+                    {format(new Date(evaluation.submittedAt), "PPpp")}
+                  </Typography>
+                </Box>
+              </Stack>
             </CardContent>
           </Card>
-        </Box>
-      )}
-    </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Message Composer */}
+      <MessageComposer
+        open={messageOpen}
+        onClose={() => setMessageOpen(false)}
+        recipients={[
+          {
+            id: evaluation.patientId,
+            name: evaluation.patientName,
+            email: evaluation.patientEmail,
+            phone: evaluation.patientPhone,
+            type: "patient",
+          },
+        ]}
+        category="Medical"
+        onSent={() => setMessageOpen(false)}
+      />
+    </Box>
   );
 };
