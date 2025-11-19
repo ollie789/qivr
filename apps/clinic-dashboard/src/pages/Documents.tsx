@@ -33,6 +33,10 @@ import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { documentApi, Document } from '../services/documentApi';
 import { SearchBar, ConfirmDialog } from '@qivr/design-system';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 
 const DOCUMENT_TYPES = [
   { value: '', label: 'All Types' },
@@ -71,6 +75,7 @@ export default function Documents() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [ocrDialogOpen, setOcrDialogOpen] = useState(false);
 
   // Fetch documents
   const { data: documents = [], isLoading } = useQuery({
@@ -266,6 +271,9 @@ export default function Documents() {
                       {doc.isUrgent && (
                         <Chip label="Urgent" size="small" color="error" sx={{ mt: 0.5 }} />
                       )}
+                      {doc.extractedText && (
+                        <Chip label="OCR Available" size="small" color="info" sx={{ mt: 0.5, ml: 1 }} />
+                      )}
                     </Box>
                   </TableCell>
                   <TableCell>{doc.patientName || 'Unknown'}</TableCell>
@@ -288,6 +296,18 @@ export default function Documents() {
                     {new Date(doc.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell align="right">
+                    {doc.extractedText && (
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setSelectedDocument(doc);
+                          setOcrDialogOpen(true);
+                        }}
+                        title="View OCR Text"
+                      >
+                        <Visibility />
+                      </IconButton>
+                    )}
                     <IconButton
                       size="small"
                       onClick={(e) => handleMenuOpen(e, doc)}
@@ -347,6 +367,68 @@ export default function Documents() {
         severity="error"
         confirmText="Delete"
       />
+
+      {/* OCR Text Dialog */}
+      <Dialog
+        open={ocrDialogOpen}
+        onClose={() => setOcrDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Extracted Text - {selectedDocument?.fileName}
+          {selectedDocument?.confidenceScore && (
+            <Chip
+              label={`${Math.round(selectedDocument.confidenceScore)}% confidence`}
+              size="small"
+              color="success"
+              sx={{ ml: 2 }}
+            />
+          )}
+        </DialogTitle>
+        <DialogContent>
+          <Paper
+            sx={{
+              p: 2,
+              bgcolor: 'grey.50',
+              maxHeight: 500,
+              overflow: 'auto',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              fontSize: '0.875rem'
+            }}
+          >
+            {selectedDocument?.extractedText || 'No text extracted'}
+          </Paper>
+          {selectedDocument?.extractedPatientName && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Extracted Information:
+              </Typography>
+              <Typography variant="body2">
+                Patient Name: {selectedDocument.extractedPatientName}
+              </Typography>
+              {selectedDocument.extractedDob && (
+                <Typography variant="body2">
+                  Date of Birth: {selectedDocument.extractedDob}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOcrDialogOpen(false)}>Close</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              navigator.clipboard.writeText(selectedDocument?.extractedText || '');
+              enqueueSnackbar('Text copied to clipboard', { variant: 'success' });
+            }}
+          >
+            Copy Text
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
