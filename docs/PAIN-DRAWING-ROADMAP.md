@@ -346,19 +346,22 @@ Replace click-based hotspots with new drawing canvas.
 - [x] Body avatar SVGs (male, female, child - front/back views)
 - [x] Replace existing PainMapSelector in patient portal
 - [x] Patient portal builds successfully
-- [ ] Replace existing PainMapSelector in clinic dashboard
-- [ ] Apply migration to production database
+- [x] PainDrawingViewer component (read-only)
+- [x] Integrate viewer into clinic dashboard EvaluationViewer
+- [x] Apply migration to production database
 - [ ] Test drawing functionality end-to-end
 
 ### Commits:
 - `7cc7559` - Phase 1 foundation (database schema, core components)
 - `c62dd5e` - Body diagram SVGs and patient portal integration
+- `eb9aab6` - Roadmap update
+- `71ebaa3` - Phase 1 completion summary
+- `624428d` - Pain drawing viewer for clinic dashboard
 
 ### Next Steps:
-1. Replace PainMapSelector in clinic dashboard (if needed for viewing)
-2. Apply database migration to production
-3. Test end-to-end drawing functionality
-4. Begin Phase 2: Advanced drawing tools
+1. **Manual testing:** Submit intake form with pain drawing and verify in clinic dashboard
+2. **Backend update:** Ensure API returns pain map data with drawing_data_json
+3. Begin Phase 2: Advanced drawing tools (annotations, zoom, overlays)
 
 ---
 
