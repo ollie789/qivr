@@ -9,6 +9,7 @@ export * from './dialogs';
 export * from './feedback';
 export * from './forms';
 export * from './layout';
+export * from './messaging';
 export * from './navigation/Breadcrumbs';
 export * from './navigation/PageHeader';
 export * from './navigation/ThemeToggle';
