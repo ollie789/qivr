@@ -190,20 +190,20 @@ export async function fetchPromInstances(
 ): Promise<PromInstance[]> {
   // Temporarily remove status filter for debugging
   const params = undefined;
-  console.log('[promsApi] DEBUG: Fetching without status filter');
+  console.log("[promsApi] DEBUG: Fetching without status filter");
   const response = await apiClient.get<EnvelopeOrValue<ApiPromInstance[]>>(
     `${PROM_API_BASE}/instances`,
     params,
   );
-  console.log('[promsApi] fetchPromInstances raw response:', response);
-  console.log('[promsApi] fetchPromInstances params:', params);
-  
+  console.log("[promsApi] fetchPromInstances raw response:", response);
+  console.log("[promsApi] fetchPromInstances params:", params);
+
   const unwrapped = unwrapEnvelope(response);
-  console.log('[promsApi] fetchPromInstances unwrapped:', unwrapped);
-  
+  console.log("[promsApi] fetchPromInstances unwrapped:", unwrapped);
+
   const mapped = unwrapped.map(mapPromInstance);
-  console.log('[promsApi] fetchPromInstances mapped:', mapped);
-  
+  console.log("[promsApi] fetchPromInstances mapped:", mapped);
+
   return mapped;
 }
 
@@ -270,11 +270,12 @@ export async function fetchPromTemplate(
 export async function submitPromAnswers(
   instanceId: string,
   answers: Record<string, PromAnswerValue>,
-): Promise<void> {
-  await apiClient.post(
+): Promise<{ score: number; completedAt: string }> {
+  const response = await apiClient.post<{ score: number; completedAt: string }>(
     `${PROM_API_BASE}/instances/${instanceId}/answers`,
     answers,
   );
+  return response;
 }
 
 export type { PromScoringMethod };

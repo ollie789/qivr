@@ -1,16 +1,16 @@
 export type PromQuestionType =
-  | 'radio'
-  | 'checkbox'
-  | 'scale'
-  | 'rating'
-  | 'text'
-  | 'date'
-  | 'time'
-  | 'number'
-  | 'slider'
-  | 'single-choice'
-  | 'multiple-choice'
-  | 'boolean';
+  | "radio"
+  | "checkbox"
+  | "scale"
+  | "rating"
+  | "text"
+  | "date"
+  | "time"
+  | "number"
+  | "slider"
+  | "single-choice"
+  | "multiple-choice"
+  | "boolean";
 
 export type PromAnswerValue = string | number | boolean | string[] | null;
 
@@ -27,7 +27,7 @@ export interface PromQuestion {
   helpText?: string;
 }
 
-export type PromScoringMethod = 'sum' | 'average' | 'weighted' | 'custom';
+export type PromScoringMethod = "sum" | "average" | "weighted" | "custom";
 
 export interface PromTemplate {
   id: string;
@@ -37,10 +37,24 @@ export interface PromTemplate {
   estimatedTime?: number;
   tags?: string[];
   scoringMethod?: PromScoringMethod;
+  scoringRules?: {
+    reactivationThreshold?: number;
+    ranges?: Array<{
+      min: number;
+      max: number;
+      label: string;
+      color: string;
+    }>;
+  };
   questions: PromQuestion[];
 }
 
-export type PromInstanceStatus = 'pending' | 'in-progress' | 'completed' | 'expired' | 'cancelled';
+export type PromInstanceStatus =
+  | "pending"
+  | "in-progress"
+  | "completed"
+  | "expired"
+  | "cancelled";
 
 export interface PromInstance {
   id: string;
@@ -56,7 +70,7 @@ export interface PromInstance {
   totalScore?: number;
   questionCount?: number;
   answeredCount?: number;
-  priority?: 'high' | 'medium' | 'low';
+  priority?: "high" | "medium" | "low";
   responses?: Record<string, PromAnswerValue>;
   template?: PromTemplate;
 }
@@ -68,7 +82,7 @@ export interface PromHistoryEntry {
   score: number;
   maxScore: number;
   percentageScore: number;
-  trend?: 'improving' | 'stable' | 'declining';
+  trend?: "improving" | "stable" | "declining";
 }
 
 export interface PromStats {

@@ -106,6 +106,7 @@ interface PromTemplate {
       label: string;
       color: string;
     }>;
+    reactivationThreshold?: number;
   };
   schedule: {
     triggers: Array<"post-appointment" | "manual" | "recurring">;
@@ -925,6 +926,37 @@ export const PromBuilder: React.FC = () => {
                 >
                   Add Range
                 </Button>
+
+                <Divider sx={{ my: 3 }} />
+
+                <Typography variant="h6" gutterBottom>
+                  Reactivation Booking
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  Prompt patients to book a follow-up appointment if their score
+                  falls below this threshold
+                </Typography>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Reactivation Threshold"
+                  value={template.scoring.reactivationThreshold || 70}
+                  onChange={(e) =>
+                    setTemplate({
+                      ...template,
+                      scoring: {
+                        ...template.scoring,
+                        reactivationThreshold: Number(e.target.value),
+                      },
+                    })
+                  }
+                  InputProps={{ inputProps: { min: 0, max: 100 } }}
+                  helperText="Patients scoring below this will be prompted to book an appointment"
+                />
               </Box>
             )}
 

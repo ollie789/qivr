@@ -22,6 +22,10 @@ import {
   LinearProgress,
   Stack,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -53,6 +57,8 @@ export const CompletePROM = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showBookingPrompt, setShowBookingPrompt] = useState(false);
+  const [completedScore, setCompletedScore] = useState<number | null>(null);
 
   const [promInstance, setPromInstance] = useState<PromInstance | null>(null);
   const [template, setTemplate] = useState<PromTemplate | null>(null);
@@ -158,16 +164,23 @@ export const CompletePROM = () => {
     try {
       setSubmitting(true);
 
-      await submitPromAnswers(id, responses);
+      const result = await submitPromAnswers(id, responses);
 
-      queryClient.invalidateQueries({ queryKey: ['prom'] });
-      
+      queryClient.invalidateQueries({ queryKey: ["prom"] });
+
+      setCompletedScore(result.score);
       setSuccess(true);
 
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        navigate("/proms");
-      }, 2000);
+      // Check if score is below threshold (configurable per template, default 70%)
+      const threshold = template?.scoringRules?.reactivationThreshold || 70;
+      if (result.score < threshold) {
+        setShowBookingPrompt(true);
+      } else {
+        // Redirect after 2 seconds if no booking needed
+        setTimeout(() => {
+          navigate("/proms");
+        }, 2000);
+      }
     } catch (err) {
       console.error("Error submitting PROM:", err);
       setError("Failed to submit assessment. Please try again.");
@@ -518,6 +531,44 @@ export const CompletePROM = () => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* Booking Prompt Dialog */}
+      <Dialog open={showBookingPrompt} maxWidth="sm" fullWidth>
+        <DialogTitle>Schedule a Follow-up Appointment</DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Your score of{" "}
+            {completedScore !== null ? Math.round(completedScore) : 0} indicates
+            you may benefit from a follow-up appointment.
+          </Alert>
+          <Typography variant="body2" paragraph>
+            Based on your responses, we recommend scheduling an appointment with
+            your healthcare provider to discuss your progress and adjust your
+            treatment plan if needed.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Would you like to book an appointment now?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setShowBookingPrompt(false);
+              navigate("/proms");
+            }}
+          >
+            Maybe Later
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              navigate("/appointments/book");
+            }}
+          >
+            Book Appointment
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
