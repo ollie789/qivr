@@ -55,6 +55,14 @@ public class PainMap : TenantEntity
     public DateTime? OnsetDate { get; set; }
     public string? Notes { get; set; }
     
+    // Phase 1: Drawing support fields (stored as JSON)
+    public string? AvatarType { get; set; } // male, female, child
+    public string? BodySubdivision { get; set; } // simple, dermatome, myotome
+    public string? ViewOrientation { get; set; } // front, back, side + zoom state
+    public string? DepthIndicator { get; set; } // superficial, deep
+    public string? SubmissionSource { get; set; } // portal, mobile, no-login, clinic
+    public string? DrawingDataJson { get; set; } // JSON: paths, annotations, heatmap
+    
     // Navigation property
     public virtual Evaluation? Evaluation { get; set; }
 }
