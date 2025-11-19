@@ -17,6 +17,8 @@ import {
   Paper,
   Alert,
   CircularProgress,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -39,6 +41,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import { useAuthGuard } from '../hooks/useAuthGuard';
+import { PainMapHeatMap, PainMapMetrics } from '@qivr/design-system';
+import apiClient from '../lib/api-client';
 import analyticsApi, {
   ClinicAnalytics,
   AppointmentTrend,
@@ -86,6 +90,10 @@ const buildDashboardStats = (analytics?: ClinicAnalytics | null) => {
 
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
+  const [activeTab, setActiveTab] = useState(0);
+  const [painAvatarType, setPainAvatarType] = useState('male');
+  const [painViewOrientation, setPainViewOrientation] = useState('front');
+  
   const user = useAuthUser();
   const { canMakeApiCalls } = useAuthGuard();
   const tenantId = user?.tenantId;
@@ -112,6 +120,35 @@ const Analytics: React.FC = () => {
     },
     enabled: canMakeApiCalls && Boolean(tenantId),
   });
+
+  // Pain map analytics queries
+  const { data: painHeatMap, isLoading: heatMapLoading } = useQuery({
+    queryKey: ['painHeatMap', tenantId, dateRange, painAvatarType, painViewOrientation],
+    queryFn: async () => {
+      const { from, to } = getDateRange();
+      return await apiClient.post('/api/pain-map-analytics/heatmap', {
+        startDate: from.toISOString(),
+        endDate: to.toISOString(),
+        avatarType: painAvatarType,
+        viewOrientation: painViewOrientation,
+      });
+    },
+    enabled: canMakeApiCalls && Boolean(tenantId) && activeTab === 1,
+  });
+
+  const { data: painMetrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ['painMetrics', tenantId, dateRange],
+    queryFn: async () => {
+      const { from, to } = getDateRange();
+      return await apiClient.post('/api/pain-map-analytics/metrics', {
+        startDate: from.toISOString(),
+        endDate: to.toISOString(),
+      });
+    },
+    enabled: canMakeApiCalls && Boolean(tenantId) && activeTab === 1,
+  });
+
+  const loading = isLoading || isFetching;
 
   const dashboardStats = useMemo(() => {
     const stats = buildDashboardStats(clinicAnalytics ?? undefined);
@@ -227,8 +264,6 @@ const Analytics: React.FC = () => {
     refetch();
   };
 
-  const loading = isLoading || isFetching;
-
   return (
     <Box>
       <PageHeader
@@ -261,6 +296,11 @@ const Analytics: React.FC = () => {
         }
       />
 
+      <Tabs value={activeTab} onChange={(_, val) => setActiveTab(val)} sx={{ mb: 3 }}>
+        <Tab label="Clinic Overview" />
+        <Tab label="Pain Analytics" />
+      </Tabs>
+
       {loading && (
         <Box sx={{ mb: 3 }}>
           <LinearProgress />
@@ -279,9 +319,11 @@ const Analytics: React.FC = () => {
         </Alert>
       )}
 
-      <StatCardGrid items={statCards} sx={{ mb: 3 }} />
+      {activeTab === 0 && (
+        <>
+          <StatCardGrid items={statCards} sx={{ mb: 3 }} />
 
-      <Grid container spacing={3}>
+          <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
           <AppointmentTrendCard
             data={appointmentData}
@@ -375,6 +417,56 @@ const Analytics: React.FC = () => {
           </DashboardSectionCard>
         </Grid>
       </Grid>
+        </>
+      )}
+
+      {activeTab === 1 && (
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <InputLabel>Avatar</InputLabel>
+                  <Select
+                    label="Avatar"
+                    value={painAvatarType}
+                    onChange={(e) => setPainAvatarType(e.target.value)}
+                  >
+                    <MenuItem value="male">Male</MenuItem>
+                    <MenuItem value="female">Female</MenuItem>
+                    <MenuItem value="child">Child</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <InputLabel>View</InputLabel>
+                  <Select
+                    label="View"
+                    value={painViewOrientation}
+                    onChange={(e) => setPainViewOrientation(e.target.value)}
+                  >
+                    <MenuItem value="front">Front</MenuItem>
+                    <MenuItem value="back">Back</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <PainMapHeatMap
+              data={painHeatMap}
+              loading={heatMapLoading}
+              width={400}
+              height={600}
+              backgroundImage={`/body-${painAvatarType}-${painViewOrientation}.png`}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <PainMapMetrics data={painMetrics} loading={metricsLoading} />
+          </Grid>
+        </Grid>
+      )}
     </Box>
   );
 };

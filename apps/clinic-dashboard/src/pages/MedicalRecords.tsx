@@ -65,6 +65,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
+import apiClient from "../lib/api-client";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import {
   medicalRecordsApi,
@@ -95,6 +96,7 @@ import {
   FormDialog,
   QivrButton,
   QivrCard,
+  PainMapProgression,
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
 
@@ -171,6 +173,16 @@ const MedicalRecords: React.FC = () => {
 
   // Get patient from the list
   const patient = patients?.find((p) => p.id === selectedPatientId);
+
+  // Fetch pain progression
+  const { data: painProgression } = useQuery({
+    queryKey: ['painProgression', selectedPatientId],
+    queryFn: async () => {
+      if (!selectedPatientId) return [];
+      return await apiClient.get(`/api/pain-map-analytics/progression/${selectedPatientId}`);
+    },
+    enabled: Boolean(selectedPatientId),
+  });
 
   // Initialize edited patient when patient changes
   useEffect(() => {
@@ -1343,6 +1355,16 @@ const MedicalRecords: React.FC = () => {
                       </TableBody>
                     </Table>
                   </TableContainer>
+
+                  {/* Pain Progression Timeline */}
+                  {painProgression && painProgression.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                      <Typography variant="h6" sx={{ mb: 2 }}>
+                        Pain Drawing Progression
+                      </Typography>
+                      <PainMapProgression data={painProgression} />
+                    </Box>
+                  )}
                 </Box>
               </TabPanel>
 
