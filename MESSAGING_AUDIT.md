@@ -14,8 +14,9 @@
 
 **What's Missing:**
 
-- ❌ No integration with patient records (can't message from patient page)
-- ❌ No context about what patient/appointment message relates to
+- ✅ **COMPLETED:** Integration with patient records (Send Message from Medical Records)
+- ✅ **COMPLETED:** Unread message count badge on navigation with auto-refresh
+- ✅ **COMPLETED:** Message category and context fields (database migration added)
 - ❌ No quick actions (schedule appointment, add to medical record)
 - ❌ No message templates for common responses
 - ❌ No file attachments
@@ -52,27 +53,45 @@
 
 ## Critical Integration Gaps
 
-### 1. **Patient Record Integration**
+### 1. **Patient Record Integration** ✅ COMPLETED
 
 **Problem:** Can't message patients directly from their medical record
 **Impact:** Staff must switch between pages, losing context
+**Solution:** Added Send Message button to Medical Records patient detail with MessageComposer dialog
 
-### 2. **Appointment Context**
+### 2. **Medical Records Consolidation** ✅ COMPLETED
+
+**Problem:** Patients page was broken and duplicated Medical Records functionality
+**Impact:** 1,136 lines of duplicate code, confusion about which page to use
+**Solution:** Removed Patients page, consolidated all functionality into Medical Records with list/detail toggle view
+
+### 3. **Document Integration** ✅ COMPLETED
+
+**Problem:** Documents page separate from patient context, OCR text not visible
+**Impact:** Staff must switch pages to view patient documents
+**Solution:**
+
+- Added document cards to Medical Records patient detail view
+- Added OCR text preview with copy functionality
+- Maintained standalone Documents page for bulk operations
+
+### 4. **Appointment Context** ⏳ IN PROGRESS
 
 **Problem:** Messages aren't linked to appointments/evaluations
 **Impact:** Hard to track appointment-related communication
 
-### 3. **Document Sharing**
+### 5. **Document Sharing** ⏳ TODO
 
 **Problem:** Can't attach documents or share medical records
 **Impact:** Patients must use separate upload flow
 
-### 4. **Notification System**
+### 6. **Notification System** ⏳ TODO
 
 **Problem:** No real-time notifications for new messages
 **Impact:** Delayed responses, poor user experience
+**Note:** Unread count badge provides basic notification (30s refresh)
 
-### 5. **Message Categories**
+### 7. **Message Categories UI** ⏳ TODO
 
 **Problem:** All messages mixed together
 **Impact:** Hard to prioritize urgent medical questions vs. admin queries
@@ -81,33 +100,35 @@
 
 ### 🔴 HIGH PRIORITY
 
-#### 1. **Quick Message from Patient Records**
+#### 1. **Quick Message from Patient Records** ✅ COMPLETED
 
 **Implementation:**
 
-- Add "Send Message" button to Medical Records patient detail view
-- Pre-populate recipient and add patient context
-- Show recent message history in patient record
+- ✅ Added "Send Message" button to Medical Records patient detail view
+- ✅ Pre-populated recipient with patient context
+- ✅ MessageComposer dialog integrated into patient detail
 
 **Code Location:**
 
-- `apps/clinic-dashboard/src/pages/MedicalRecords.tsx` - Add message button
-- `apps/clinic-dashboard/src/components/messaging/MessageComposer.tsx` - Accept patient context
+- `apps/clinic-dashboard/src/pages/MedicalRecords.tsx` - Message button and dialog
+- `apps/clinic-dashboard/src/components/messaging/MessageComposer.tsx` - Accepts patient context
 
 **Benefit:** Seamless communication without context switching
 
-#### 2. **Message Context & Categories**
+#### 2. **Message Context & Categories** ✅ COMPLETED (Backend)
 
 **Implementation:**
 
-- Add `category` field: 'appointment', 'medical', 'billing', 'general'
-- Add `relatedEntityId` and `relatedEntityType` (appointment, evaluation, document)
-- Show context chips in message list
-- Filter by category
+- ✅ Added `category` field: 'appointment', 'medical', 'billing', 'general'
+- ✅ Added `relatedEntityId` and `relatedEntityType` (appointment, evaluation, document)
+- ✅ Database migration created: `20251119044638_AddMessageCategoryAndContext`
+- ⏳ TODO: Show context chips in message list
+- ⏳ TODO: Filter by category in UI
 
 **Database:**
 
 ```sql
+-- Migration completed
 ALTER TABLE messages ADD COLUMN category VARCHAR(50);
 ALTER TABLE messages ADD COLUMN related_entity_type VARCHAR(50);
 ALTER TABLE messages ADD COLUMN related_entity_id UUID;
@@ -115,7 +136,22 @@ ALTER TABLE messages ADD COLUMN related_entity_id UUID;
 
 **Benefit:** Better organization, easier to find relevant messages
 
-#### 3. **Document Attachments**
+#### 3. **Unread Message Count Badge** ✅ COMPLETED
+
+**Implementation:**
+
+- ✅ Added unread count query to DashboardLayout
+- ✅ Badge displays on Messages navigation item
+- ✅ Auto-refreshes every 30 seconds
+- ✅ Updates when navigating to Messages page
+
+**Code Location:**
+
+- `apps/clinic-dashboard/src/components/Layout/DashboardLayout.tsx`
+
+**Benefit:** Staff immediately see when new messages arrive
+
+#### 4. **Document Attachments** ⏳ TODO
 
 **Implementation:**
 
@@ -133,7 +169,7 @@ ALTER TABLE messages ADD COLUMN related_entity_id UUID;
 
 ### 🟡 MEDIUM PRIORITY
 
-#### 4. **Message Templates**
+#### 5. **Message Templates** ⏳ TODO
 
 **Implementation:**
 
