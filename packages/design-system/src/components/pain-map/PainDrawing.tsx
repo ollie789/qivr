@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Grid, Paper, ToggleButton, ToggleButtonGroup, Typography, Stack } from '@mui/material';
+import { Box, Grid, Paper, ToggleButton, ToggleButtonGroup, Typography, Stack, FormControlLabel, Checkbox } from '@mui/material';
 import { PainDrawingCanvas } from './PainDrawingCanvas';
 import { PainQualitySelector } from './PainQualitySelector';
 import {
@@ -21,6 +21,8 @@ import femaleFront from '../../assets/body-diagrams/female-front.svg';
 import femaleBack from '../../assets/body-diagrams/female-back.svg';
 import childFront from '../../assets/body-diagrams/child-front.svg';
 import childBack from '../../assets/body-diagrams/child-back.svg';
+import dermatomeFront from '../../assets/overlays/dermatome-front.svg';
+import dermatomeBack from '../../assets/overlays/dermatome-back.svg';
 
 interface PainDrawingProps {
   value?: PainMapData;
@@ -43,6 +45,7 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
   const [selectedSymbol, setSelectedSymbol] = useState<SymbolType>('pin');
   const [paths, setPaths] = useState<DrawingPath[]>(value?.drawingData?.paths || []);
   const [annotations, setAnnotations] = useState<Annotation[]>(value?.drawingData?.annotations || []);
+  const [showDermatome, setShowDermatome] = useState(false);
 
   const handleUpdate = (newPaths?: DrawingPath[], newAnnotations?: Annotation[]) => {
     const updatedPaths = newPaths !== undefined ? newPaths : paths;
@@ -76,6 +79,11 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
     return diagrams[avatarType][viewOrientation];
   };
 
+  const getOverlayImage = () => {
+    if (!showDermatome) return undefined;
+    return viewOrientation === 'front' ? dermatomeFront : dermatomeBack;
+  };
+
   return (
     <Box>
       <Grid container spacing={3}>
@@ -105,14 +113,27 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
                 </ToggleButtonGroup>
               </Box>
 
-              <Typography variant="caption" color="text.secondary">
-                Draw pain areas, add arrows for radiating pain, or place symbols/notes
-              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Draw pain areas, add arrows for radiating pain, or place symbols/notes
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={showDermatome}
+                      onChange={(e) => setShowDermatome(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label={<Typography variant="caption">Show Dermatomes</Typography>}
+                />
+              </Box>
 
               <PainDrawingCanvas
                 width={600}
                 height={800}
                 backgroundImage={getBackgroundImage()}
+                overlayImage={getOverlayImage()}
                 selectedQuality={selectedQuality}
                 brushSize={brushSize}
                 opacity={opacity}

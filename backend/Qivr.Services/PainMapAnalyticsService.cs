@@ -9,6 +9,7 @@ public interface IPainMapAnalyticsService
     Task<PainMapHeatMapData> GenerateHeatMapAsync(Guid tenantId, PainMapFilter filter, CancellationToken cancellationToken = default);
     Task<PainMapMetrics> GetMetricsAsync(Guid tenantId, PainMapFilter filter, CancellationToken cancellationToken = default);
     Task<List<PainMapProgression>> GetProgressionAsync(Guid patientId, CancellationToken cancellationToken = default);
+    Task<BilateralSymmetryAnalysis> AnalyzeBilateralSymmetryAsync(Guid tenantId, PainMapFilter filter, CancellationToken cancellationToken = default);
 }
 
 public class PainMapAnalyticsService : IPainMapAnalyticsService
@@ -157,6 +158,70 @@ public class PainMapAnalyticsService : IPainMapAnalyticsService
         }).ToList();
     }
 
+    public async Task<BilateralSymmetryAnalysis> AnalyzeBilateralSymmetryAsync(Guid tenantId, PainMapFilter filter, CancellationToken cancellationToken = default)
+    {
+        var query = _context.PainMaps
+            .Where(pm => pm.TenantId == tenantId);
+
+        if (filter.StartDate.HasValue)
+            query = query.Where(pm => pm.CreatedAt >= filter.StartDate.Value);
+        
+        if (filter.EndDate.HasValue)
+            query = query.Where(pm => pm.CreatedAt <= filter.EndDate.Value);
+
+        var painMaps = await query.ToListAsync(cancellationToken);
+
+        var leftSideIntensity = 0.0;
+        var rightSideIntensity = 0.0;
+        var leftCount = 0;
+        var rightCount = 0;
+
+        foreach (var painMap in painMaps)
+        {
+            if (string.IsNullOrEmpty(painMap.DrawingDataJson)) continue;
+
+            try
+            {
+                var drawingData = System.Text.Json.JsonSerializer.Deserialize<DrawingDataDto>(painMap.DrawingDataJson);
+                if (drawingData?.Paths == null) continue;
+
+                foreach (var path in drawingData.Paths)
+                {
+                    var points = ParseSvgPath(path.PathData);
+                    foreach (var point in points)
+                    {
+                        // Assuming 600px width, center is at 300
+                        if (point.X < 300)
+                        {
+                            leftSideIntensity += painMap.PainIntensity;
+                            leftCount++;
+                        }
+                        else
+                        {
+                            rightSideIntensity += painMap.PainIntensity;
+                            rightCount++;
+                        }
+                    }
+                }
+            }
+            catch { /* Skip invalid data */ }
+        }
+
+        var avgLeftIntensity = leftCount > 0 ? leftSideIntensity / leftCount : 0;
+        var avgRightIntensity = rightCount > 0 ? rightSideIntensity / rightCount : 0;
+        var symmetryScore = 100 - Math.Abs(avgLeftIntensity - avgRightIntensity) * 10; // 0-100 scale
+
+        return new BilateralSymmetryAnalysis
+        {
+            LeftSideIntensity = avgLeftIntensity,
+            RightSideIntensity = avgRightIntensity,
+            SymmetryScore = Math.Max(0, symmetryScore),
+            IsSymmetric = Math.Abs(avgLeftIntensity - avgRightIntensity) < 1.0,
+            LeftSideCount = leftCount,
+            RightSideCount = rightCount
+        };
+    }
+
     private List<(float X, float Y)> ParseSvgPath(string pathData)
     {
         var points = new List<(float X, float Y)>();
@@ -244,4 +309,14 @@ public class DrawingDataDto
 public class PathDto
 {
     public string PathData { get; set; } = string.Empty;
+}
+
+public class BilateralSymmetryAnalysis
+{
+    public double LeftSideIntensity { get; set; }
+    public double RightSideIntensity { get; set; }
+    public double SymmetryScore { get; set; } // 0-100, higher is more symmetric
+    public bool IsSymmetric { get; set; }
+    public int LeftSideCount { get; set; }
+    public int RightSideCount { get; set; }
 }

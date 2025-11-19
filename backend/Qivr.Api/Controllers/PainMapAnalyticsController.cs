@@ -56,4 +56,18 @@ public class PainMapAnalyticsController : ControllerBase
         var progression = await _analyticsService.GetProgressionAsync(patientId, cancellationToken);
         return Ok(progression);
     }
+
+    /// <summary>
+    /// Analyze bilateral symmetry of pain distribution
+    /// </summary>
+    [HttpPost("symmetry")]
+    [ProducesResponseType(typeof(BilateralSymmetryAnalysis), StatusCodes.Status200OK)]
+    public async Task<IActionResult> AnalyzeSymmetry(
+        [FromBody] PainMapFilter filter,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = Guid.Parse(User.FindFirst("tenantId")?.Value ?? throw new UnauthorizedAccessException());
+        var analysis = await _analyticsService.AnalyzeBilateralSymmetryAsync(tenantId, filter, cancellationToken);
+        return Ok(analysis);
+    }
 }

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 600" fill="none">
+  <!-- C2-C4 (Head/Neck) -->
+  <path d="M 128 20 Q 150 10 172 20 Q 180 35 172 50 Q 150 65 128 50 Q 120 35 128 20" 
+        stroke="#FF6B6B" stroke-width="1" fill="#FF6B6B" opacity="0.15"/>
+  <text x="150" y="40" font-size="10" fill="#FF6B6B" text-anchor="middle">C2-C4</text>
+  
+  <!-- C5 (Shoulders) -->
+  <path d="M 95 95 Q 100 85 110 90 L 120 100 Q 115 110 105 105 Z" 
+        stroke="#FFA07A" stroke-width="1" fill="#FFA07A" opacity="0.15"/>
+  <text x="108" y="100" font-size="8" fill="#FFA07A" text-anchor="middle">C5</text>
+  
+  <path d="M 205 95 Q 200 85 190 90 L 180 100 Q 185 110 195 105 Z" 
+        stroke="#FFA07A" stroke-width="1" fill="#FFA07A" opacity="0.15"/>
+  <text x="192" y="100" font-size="8" fill="#FFA07A" text-anchor="middle">C5</text>
+  
+  <!-- C6 (Lateral arms) -->
+  <path d="M 85 120 L 80 180 L 85 185 L 92 180 L 90 120 Z" 
+        stroke="#FFD700" stroke-width="1" fill="#FFD700" opacity="0.15"/>
+  <text x="85" y="155" font-size="8" fill="#FFD700" text-anchor="middle">C6</text>
+  
+  <path d="M 215 120 L 220 180 L 215 185 L 208 180 L 210 120 Z" 
+        stroke="#FFD700" stroke-width="1" fill="#FFD700" opacity="0.15"/>
+  <text x="215" y="155" font-size="8" fill="#FFD700" text-anchor="middle">C6</text>
+  
+  <!-- C7 (Middle fingers) -->
+  <path d="M 75 250 L 73 300 L 77 305 L 79 300 L 78 250 Z" 
+        stroke="#90EE90" stroke-width="1" fill="#90EE90" opacity="0.15"/>
+  <text x="76" y="280" font-size="8" fill="#90EE90" text-anchor="middle">C7</text>
+  
+  <path d="M 225 250 L 227 300 L 223 305 L 221 300 L 222 250 Z" 
+        stroke="#90EE90" stroke-width="1" fill="#90EE90" opacity="0.15"/>
+  <text x="224" y="280" font-size="8" fill="#90EE90" text-anchor="middle">C7</text>
+  
+  <!-- T1-T12 (Chest/Abdomen) -->
+  <path d="M 135 90 L 130 120 L 165 120 L 160 90 Z" 
+        stroke="#87CEEB" stroke-width="1" fill="#87CEEB" opacity="0.15"/>
+  <text x="147" y="108" font-size="8" fill="#87CEEB" text-anchor="middle">T1-T4</text>
+  
+  <path d="M 130 120 L 125 160 L 170 160 L 165 120 Z" 
+        stroke="#4682B4" stroke-width="1" fill="#4682B4" opacity="0.15"/>
+  <text x="147" y="143" font-size="8" fill="#4682B4" text-anchor="middle">T5-T8</text>
+  
+  <path d="M 125 160 L 130 200 L 165 200 L 170 160 Z" 
+        stroke="#6495ED" stroke-width="1" fill="#6495ED" opacity="0.15"/>
+  <text x="147" y="183" font-size="8" fill="#6495ED" text-anchor="middle">T9-T12</text>
+  
+  <!-- L1-L5 (Lower back/Groin) -->
+  <path d="M 130 200 L 135 240 L 160 240 L 165 200 Z" 
+        stroke="#DDA0DD" stroke-width="1" fill="#DDA0DD" opacity="0.15"/>
+  <text x="147" y="223" font-size="8" fill="#DDA0DD" text-anchor="middle">L1-L3</text>
+  
+  <path d="M 135 240 L 140 270 L 155 270 L 160 240 Z" 
+        stroke="#DA70D6" stroke-width="1" fill="#DA70D6" opacity="0.15"/>
+  <text x="147" y="258" font-size="8" fill="#DA70D6" text-anchor="middle">L4-L5</text>
+  
+  <!-- S1-S2 (Posterior thigh/leg) -->
+  <path d="M 135 280 L 136 350 L 143 350 L 142 280 Z" 
+        stroke="#FF69B4" stroke-width="1" fill="#FF69B4" opacity="0.15"/>
+  <text x="139" y="320" font-size="8" fill="#FF69B4" text-anchor="middle">S1</text>
+  
+  <path d="M 160 280 L 164 350 L 157 350 L 158 280 Z" 
+        stroke="#FF69B4" stroke-width="1" fill="#FF69B4" opacity="0.15"/>
+  <text x="161" y="320" font-size="8" fill="#FF69B4" text-anchor="middle">S1</text>
+  
+  <!-- L5/S1 (Lateral leg) -->
+  <path d="M 136 350 L 135 420 L 142 420 L 143 350 Z" 
+        stroke="#FFB6C1" stroke-width="1" fill="#FFB6C1" opacity="0.15"/>
+  <text x="138" y="390" font-size="8" fill="#FFB6C1" text-anchor="middle">L5</text>
+  
+  <path d="M 164 350 L 165 420 L 158 420 L 157 350 Z" 
+        stroke="#FFB6C1" stroke-width="1" fill="#FFB6C1" opacity="0.15"/>
+  <text x="162" y="390" font-size="8" fill="#FFB6C1" text-anchor="middle">L5</text>
+  
+  <!-- S1 (Foot) -->
+  <path d="M 135 490 L 130 525 L 145 525 L 142 490 Z" 
+        stroke="#FFC0CB" stroke-width="1" fill="#FFC0CB" opacity="0.15"/>
+  <text x="137" y="510" font-size="8" fill="#FFC0CB" text-anchor="middle">S1</text>
+  
+  <path d="M 165 490 L 170 525 L 155 525 L 158 490 Z" 
+        stroke="#FFC0CB" stroke-width="1" fill="#FFC0CB" opacity="0.15"/>
+  <text x="163" y="510" font-size="8" fill="#FFC0CB" text-anchor="middle">S1</text>
+</svg>

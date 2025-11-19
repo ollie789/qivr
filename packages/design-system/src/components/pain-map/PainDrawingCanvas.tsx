@@ -8,6 +8,7 @@ interface PainDrawingCanvasProps {
   width: number;
   height: number;
   backgroundImage?: string;
+  overlayImage?: string;
   selectedQuality: PainQuality;
   brushSize: number;
   opacity: number;
@@ -27,6 +28,7 @@ export function PainDrawingCanvas({
   width,
   height,
   backgroundImage,
+  overlayImage,
   selectedQuality,
   brushSize,
   opacity,
@@ -435,6 +437,22 @@ export function PainDrawingCanvas({
               pointerEvents: 'none',
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transformOrigin: '0 0',
+            }}
+          />
+        )}
+        {overlayImage && (
+          <img
+            src={overlayImage}
+            alt="Dermatome overlay"
+            style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              pointerEvents: 'none',
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: '0 0',
+              opacity: 0.6,
             }}
           />
         )}
