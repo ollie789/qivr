@@ -87,7 +87,7 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
   return (
     <Box>
       <Grid container spacing={3}>
-        {/* @ts-expect-error - MUI v7 Grid size prop union type complexity */}
+        {/* @ts-ignore - MUI v7 Grid size prop union type complexity */}
         <Grid size={{ xs: 12, md: 8 }}>
           <Paper sx={{ p: 2 }}>
             <Stack spacing={2}>
@@ -153,7 +153,7 @@ export function PainDrawing({ value, onChange }: PainDrawingProps) {
           </Paper>
         </Grid>
 
-        {/* @ts-expect-error - MUI v7 Grid size prop union type complexity */}
+        {/* @ts-ignore - MUI v7 Grid size prop union type complexity */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 2 }}>
             <PainQualitySelector
