@@ -29,17 +29,17 @@ export const CalendarGridCell: React.FC<CalendarGridCellProps> = ({
 }) => {
   return (
     <Box
-      sx={[
-        calendar.gridCell,
-        isToday && {
+      sx={{
+        ...calendar.gridCell,
+        ...(isToday && {
           bgcolor: 'primary.light',
-        },
-        selected && {
+        }),
+        ...(selected && {
           border: 2,
           borderColor: 'primary.main',
-        },
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
+        }),
+        ...(Array.isArray(sx) ? sx.reduce((acc, s) => ({...acc, ...s}), {}) : sx || {}),
+      }}
       {...props}
     >
       {children}
