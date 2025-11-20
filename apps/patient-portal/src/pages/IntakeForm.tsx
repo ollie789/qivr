@@ -10,7 +10,7 @@ import {
   StepLabel,
   Paper,
 } from "@mui/material";
-import { PageLoader, PainDrawing, type PainMapData } from "@qivr/design-system";
+import { PageLoader, PainMap3D, type PainMapData } from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
@@ -195,12 +195,19 @@ export const IntakeForm = () => {
               Pain Map
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
-              Draw on the body diagram to mark where you feel pain
+              Click on body regions to mark where you feel pain
             </Typography>
-            <PainDrawing
-              value={formData.painMapData}
-              onChange={(data) =>
-                setFormData({ ...formData, painMapData: data })
+            <PainMap3D
+              value={formData.painMapData?.regions || []}
+              onChange={(regions) =>
+                setFormData({ 
+                  ...formData, 
+                  painMapData: { 
+                    regions,
+                    cameraView: 'front',
+                    timestamp: new Date().toISOString()
+                  } 
+                })
               }
             />
           </Box>
