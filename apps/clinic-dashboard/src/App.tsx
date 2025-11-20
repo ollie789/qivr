@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -7,8 +7,8 @@ import {
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { ThemeProvider } from '@mui/material/styles';
-import { theme, darkTheme, PageLoader } from '@qivr/design-system';
+import { Experimental_CssVarsProvider as ThemeProvider, useColorScheme } from '@mui/material/styles';
+import { AuraTheme, PageLoader } from '@qivr/design-system';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { SnackbarProvider } from 'notistack';
@@ -38,8 +38,6 @@ const DocumentUpload = lazy(() => import('./pages/DocumentUpload'));
 const MedicalRecords = lazy(() => import('./pages/MedicalRecords'));
 const ThemeShowcase = lazy(() => import('./pages/ThemeShowcase'));
 
-// NOTE: Theme now provided by @qivr/design-system (see QivrThemeProvider usage).
-
 // Create query client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,80 +49,84 @@ const queryClient = new QueryClient({
   },
 });
 
+function InnerApp() {
+  const { mode, setMode } = useColorScheme();
+
+  const themeContextValue = useMemo(() => ({
+    darkMode: mode === 'dark',
+    toggleDarkMode: () => setMode(mode === 'dark' ? 'light' : 'dark'),
+  }), [mode, setMode]);
+
+  return (
+    <ThemeModeProvider value={themeContextValue}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <SnackbarProvider
+          maxSnack={3}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+        >
+          <CssBaseline />
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+
+                {/* Private routes */}
+                <Route
+                  path="/"
+                  element={
+                    <PrivateRoute>
+                      <DashboardLayout />
+                    </PrivateRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="intake" element={<IntakeManagement />} />
+                  <Route path="appointments" element={<Appointments />} />
+                  <Route path="patients" element={<Navigate to="/medical-records" replace />} />
+                  <Route path="patients/:id" element={<PatientDetail />} />
+                  <Route path="messages" element={<Messages />} />
+                  <Route path="documents" element={<Documents />} />
+                  <Route path="documents/upload" element={<DocumentUpload />} />
+                  <Route path="medical-records" element={<MedicalRecords />} />
+                  <Route path="prom" element={<PROM />} />
+                  <Route path="analytics" element={<Analytics />} />
+                  <Route path="providers" element={<Providers />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="theme" element={<ThemeShowcase />} />
+                  <Route path="clinic-registration" element={<ClinicRegistration />} />
+                </Route>
+
+                {/* Catch all - redirect to dashboard */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </Suspense>
+          </Router>
+        </SnackbarProvider>
+      </LocalizationProvider>
+    </ThemeModeProvider>
+  );
+}
+
 function App() {
   const { checkAuth } = useAuthActions();
-  const [darkMode, setDarkMode] = React.useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved === 'true';
-  });
-  
+
   // Check auth status on app load
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  // Save dark mode preference
-  useEffect(() => {
-    localStorage.setItem('darkMode', String(darkMode));
-  }, [darkMode]);
-  
   console.log('App component rendering');
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeModeProvider value={{ darkMode, toggleDarkMode: () => setDarkMode(!darkMode) }}>
-        <ThemeProvider theme={darkMode ? darkTheme : theme}>
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <SnackbarProvider
-            maxSnack={3}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-          >
-            <CssBaseline />
-            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-
-                  {/* Private routes */}
-                  <Route
-                    path="/"
-                    element={
-                      <PrivateRoute>
-                        <DashboardLayout />
-                      </PrivateRoute>
-                    }
-                  >
-                    <Route index element={<Navigate to="/dashboard" replace />} />
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="intake" element={<IntakeManagement />} />
-                    <Route path="appointments" element={<Appointments />} />
-                    <Route path="patients" element={<Navigate to="/medical-records" replace />} />
-                    <Route path="patients/:id" element={<PatientDetail />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="documents" element={<Documents />} />
-                    <Route path="documents/upload" element={<DocumentUpload />} />
-                    <Route path="medical-records" element={<MedicalRecords />} />
-                    <Route path="prom" element={<PROM />} />
-                    <Route path="analytics" element={<Analytics />} />
-                    <Route path="providers" element={<Providers />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="theme" element={<ThemeShowcase />} />
-                    <Route path="clinic-registration" element={<ClinicRegistration />} />
-                  </Route>
-
-                  {/* Catch all - redirect to dashboard */}
-                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                </Routes>
-              </Suspense>
-            </Router>
-          </SnackbarProvider>
-        </LocalizationProvider>
+      <ThemeProvider theme={AuraTheme.createTheme()}>
+        <InnerApp />
       </ThemeProvider>
-      </ThemeModeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

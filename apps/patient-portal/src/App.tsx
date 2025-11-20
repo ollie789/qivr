@@ -1,7 +1,8 @@
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { CssBaseline } from '@mui/material';
+import { Experimental_CssVarsProvider as ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { theme } from '@qivr/design-system';
+import { AuraTheme } from '@qivr/design-system';
 
 // Initialize Amplify
 import './config/amplify.config';
@@ -24,11 +25,11 @@ const queryClient = new QueryClient({
 
 function App() {
   console.log('App component rendering...');
-  
+
   try {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={theme}>
+        <ThemeProvider theme={AuraTheme.createTheme()}>
           <CssBaseline />
           <AuthProvider>
             <AppContent />
