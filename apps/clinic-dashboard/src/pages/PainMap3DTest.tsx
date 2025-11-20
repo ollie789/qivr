@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Container, Typography, Paper } from '@mui/material';
-import { PainMap3D } from '@qivr/design-system';
+import { PainMap3D, type PainRegion } from '@qivr/design-system';
 
 export default function PainMap3DTest() {
-  const [regions, setRegions] = useState([]);
+  const [regions, setRegions] = useState<PainRegion[]>([]);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>

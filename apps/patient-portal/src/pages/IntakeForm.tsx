@@ -10,7 +10,7 @@ import {
   StepLabel,
   Paper,
 } from "@mui/material";
-import { PageLoader, PainMap3D, type PainMapData } from "@qivr/design-system";
+import { PageLoader, PainMap3D, type PainMap3DData } from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
@@ -38,7 +38,7 @@ export const IntakeForm = () => {
     painLevel: 5,
     duration: "",
     additionalNotes: "",
-    painMapData: undefined as PainMapData | undefined,
+    painMapData: undefined as PainMap3DData | undefined,
     painOnset: "",
     previousOrthoConditions: [] as string[],
     currentTreatments: [] as string[],
