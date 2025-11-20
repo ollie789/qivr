@@ -17,7 +17,7 @@ export const QivrButton = ({
   startIcon,
   ...props
 }: QivrButtonProps) => {
-  const resolvedVariant = variant ?? (emphasize === 'subtle' ? 'soft' : 'contained');
+  const resolvedVariant = variant ?? (emphasize === 'subtle' ? 'text' : 'contained');
   const resolvedColor = color ?? (emphasize === 'secondary' ? 'secondary' : 'primary');
 
   return (

@@ -353,12 +353,12 @@ const SortableQuestionItem: React.FC<{
     >
       <CardContent>
         <Grid container alignItems="center" spacing={2}>
-          <Grid item>
+          <Grid>
             <IconButton {...attributes} {...listeners} size="small">
               <DragIndicator />
             </IconButton>
           </Grid>
-          <Grid item xs>
+          <Grid size="grow">
             <Typography variant="subtitle1">{question.question}</Typography>
             <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
               <Chip label={question.type} size="small" />
@@ -376,7 +376,7 @@ const SortableQuestionItem: React.FC<{
               )}
             </Box>
           </Grid>
-          <Grid item>
+          <Grid>
             <IconButton onClick={onEdit} size="small">
               <Edit />
             </IconButton>
@@ -653,13 +653,13 @@ export const PromBuilder: React.FC = () => {
     <Box>
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3} alignItems="center">
-          <Grid item xs>
+          <Grid size="grow">
             <Typography variant="h5">PROM Template Builder</Typography>
             <Typography variant="body2" color="text.secondary">
               Create and customize patient-reported outcome measures
             </Typography>
           </Grid>
-          <Grid item>
+          <Grid>
             <Button
               variant="outlined"
               startIcon={<Preview />}
@@ -680,7 +680,7 @@ export const PromBuilder: React.FC = () => {
       </Paper>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Paper sx={{ p: 3 }}>
             <Tabs
               value={activeTab}
@@ -860,7 +860,7 @@ export const PromBuilder: React.FC = () => {
                   <Card key={index} sx={{ mb: 2 }}>
                     <CardContent>
                       <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={3}>
+                        <Grid size={3}>
                           <TextField
                             fullWidth
                             type="number"
@@ -869,7 +869,7 @@ export const PromBuilder: React.FC = () => {
                             size="small"
                           />
                         </Grid>
-                        <Grid item xs={3}>
+                        <Grid size={3}>
                           <TextField
                             fullWidth
                             type="number"
@@ -878,7 +878,7 @@ export const PromBuilder: React.FC = () => {
                             size="small"
                           />
                         </Grid>
-                        <Grid item xs={4}>
+                        <Grid size={4}>
                           <TextField
                             fullWidth
                             label="Label"
@@ -886,7 +886,7 @@ export const PromBuilder: React.FC = () => {
                             size="small"
                           />
                         </Grid>
-                        <Grid item xs={2}>
+                        <Grid size={2}>
                           <Box
                             sx={{
                               width: "100%",
@@ -1035,7 +1035,7 @@ export const PromBuilder: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Paper sx={{ p: 3, position: "sticky", top: 20 }}>
             <Typography variant="h6" gutterBottom>
               Template Preview
@@ -1211,7 +1211,7 @@ export const PromBuilder: React.FC = () => {
               {(editingQuestion.type === "scale" ||
                 editingQuestion.type === "number") && (
                 <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={4}>
+                  <Grid size={4}>
                     <TextField
                       fullWidth
                       type="number"
@@ -1225,7 +1225,7 @@ export const PromBuilder: React.FC = () => {
                       }
                     />
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid size={4}>
                     <TextField
                       fullWidth
                       type="number"
@@ -1239,7 +1239,7 @@ export const PromBuilder: React.FC = () => {
                       }
                     />
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid size={4}>
                     <TextField
                       fullWidth
                       type="number"
@@ -1319,11 +1319,11 @@ export const PromBuilder: React.FC = () => {
                   {questions.map((q, index) => (
                     <ListItem
                       key={index}
-                      button
                       onClick={() => {
                         addQuestion(q);
                         setLibraryDialog(false);
                       }}
+                      sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
                     >
                       <ListItemText
                         primary={q.question}

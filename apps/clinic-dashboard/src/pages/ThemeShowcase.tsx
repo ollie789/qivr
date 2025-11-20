@@ -43,25 +43,25 @@ export default function ThemeShowcase() {
         Colors
       </Typography>
       <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper sx={{ p: 3, bgcolor: 'primary.main', color: 'white' }}>
             <Typography variant="h6">Primary</Typography>
             <Typography variant="body2">Main brand color</Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper sx={{ p: 3, bgcolor: 'secondary.main', color: 'white' }}>
             <Typography variant="h6">Secondary</Typography>
             <Typography variant="body2">Accent color</Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper sx={{ p: 3, bgcolor: 'success.main', color: 'white' }}>
             <Typography variant="h6">Success</Typography>
             <Typography variant="body2">Positive actions</Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper sx={{ p: 3, bgcolor: 'error.main', color: 'white' }}>
             <Typography variant="h6">Error</Typography>
             <Typography variant="body2">Destructive actions</Typography>
@@ -93,7 +93,7 @@ export default function ThemeShowcase() {
         Cards
       </Typography>
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -105,7 +105,7 @@ export default function ThemeShowcase() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <QivrCard>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -117,7 +117,7 @@ export default function ThemeShowcase() {
             </CardContent>
           </QivrCard>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <StatCard
             label="Total Patients"
             value="1,234"
@@ -206,13 +206,13 @@ export default function ThemeShowcase() {
         Design System Components
       </Typography>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <EmptyState
             title="No data yet"
             description="Get started by adding your first item"
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <LoadingSpinner size="large" />
           </Box>

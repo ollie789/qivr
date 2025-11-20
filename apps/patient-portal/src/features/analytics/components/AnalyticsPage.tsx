@@ -67,7 +67,7 @@ const AnalyticsPage: React.FC = () => {
         <LinearProgress />
       ) : (
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Key Metrics</Typography>
@@ -105,7 +105,7 @@ const AnalyticsPage: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>PROM Performance</Typography>
@@ -132,7 +132,7 @@ const AnalyticsPage: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Active Goals</Typography>

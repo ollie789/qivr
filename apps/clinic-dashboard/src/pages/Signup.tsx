@@ -119,7 +119,7 @@ const Signup: React.FC = () => {
 
             <form onSubmit={handleSubmit}>
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="First Name"
@@ -129,7 +129,7 @@ const Signup: React.FC = () => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Last Name"
@@ -139,7 +139,7 @@ const Signup: React.FC = () => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="Email Address"
@@ -150,7 +150,7 @@ const Signup: React.FC = () => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="Password"
@@ -162,7 +162,7 @@ const Signup: React.FC = () => {
                     helperText="Minimum 8 characters with uppercase, lowercase, number and special character"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="Confirm Password"

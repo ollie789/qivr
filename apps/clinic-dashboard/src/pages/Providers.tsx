@@ -151,7 +151,7 @@ const Providers: React.FC = () => {
 
       <Grid container spacing={3}>
         {providers.map((provider) => (
-          <Grid item xs={12} md={6} lg={4} key={provider.id}>
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}key={provider.id}>
             <Card>
               <CardContent>
                 <FlexBetween sx={{ mb: 2 }}>
@@ -215,7 +215,7 @@ const Providers: React.FC = () => {
         maxWidth="sm"
       >
         <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <TextField
                 fullWidth
                 label="First Name"
@@ -224,7 +224,7 @@ const Providers: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <TextField
                 fullWidth
                 label="Last Name"
@@ -233,7 +233,7 @@ const Providers: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <TextField
                 fullWidth
                 label="Title"
@@ -242,7 +242,7 @@ const Providers: React.FC = () => {
                 placeholder="Dr., PA, NP, etc."
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <TextField
                 fullWidth
                 label="Specialty"
@@ -250,7 +250,7 @@ const Providers: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Email"
@@ -260,7 +260,7 @@ const Providers: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <TextField
                 fullWidth
                 label="Phone"
@@ -268,7 +268,7 @@ const Providers: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <TextField
                 fullWidth
                 label="License Number"
@@ -277,7 +277,7 @@ const Providers: React.FC = () => {
               />
             </Grid>
             {editingProvider && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControlLabel
                   control={
                     <Switch

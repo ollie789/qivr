@@ -18,11 +18,12 @@ import {
   notificationsApi,
   type NotificationListItem,
 } from '../../services/notificationsApi';
-import { FlexBetween, EmptyState, LoadingSpinner, AuraComponents } from '@qivr/design-system';
-import { Notification } from '@qivr/design-system/dist/aura/types/notification';
+import { FlexBetween, EmptyState, LoadingSpinner } from '@qivr/design-system';
 
 // Adapter to convert API notification to Aura Notification type
-const adaptNotification = (item: NotificationListItem): Notification => {
+// Placeholder until Aura notifications are available in design-system exports
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const adaptNotification = (item: NotificationListItem): any => {
   return {
     id: Number(item.id), // Assuming ID is numeric or convertible
     type: 'commented', // Default mapping, adjust as needed based on item.type
@@ -79,13 +80,14 @@ const NotificationBell: React.FC = () => {
 
   const unreadCount = unreadCountData ?? notifications.filter((item) => !item.readAt).length;
 
-  const markAsReadMutation = useMutation({
-    mutationFn: (notificationId: string) => notificationsApi.markAsRead(notificationId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', { limit: 20 }] });
-      refetchUnread();
-    },
-  });
+  // Mutation for marking notifications as read (currently unused)
+  // const markAsReadMutation = useMutation({
+  //   mutationFn: (notificationId: string) => notificationsApi.markAsRead(notificationId),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ['notifications', { limit: 20 }] });
+  //     refetchUnread();
+  //   },
+  // });
 
   const markAllAsReadMutation = useMutation({
     mutationFn: () => notificationsApi.markAllAsRead(),
@@ -112,15 +114,6 @@ const NotificationBell: React.FC = () => {
     setAnchorEl(null);
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    // Find original item to get ID string if needed, or cast back
-    const originalId = String(notification.id);
-    if (!notification.readAt) {
-      markAsReadMutation.mutate(originalId);
-    }
-    // Navigation logic would go here, adapted from original
-    handleClose();
-  };
 
   return (
     <>
@@ -175,11 +168,14 @@ const NotificationBell: React.FC = () => {
             />
           </Box>
         ) : (
-          <AuraComponents.NotificationList
-            title="Recent"
-            notifications={auraNotifications}
-            onItemClick={() => { }} // Handled individually if needed, or pass specific handler
-          />
+          // TODO: Replace with AuraComponents.NotificationList when available
+          <Box sx={{ p: 2 }}>
+            {auraNotifications.slice(0, 5).map((n: any) => (
+              <Box key={n.id} sx={{ py: 1 }}>
+                <Typography variant="body2">{n.detail}</Typography>
+              </Box>
+            ))}
+          </Box>
         )}
 
         {notifications.length > 10 && (

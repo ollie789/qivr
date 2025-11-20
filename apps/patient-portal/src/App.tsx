@@ -2,7 +2,7 @@ import { CssBaseline } from '@mui/material';
 import { Experimental_CssVarsProvider as ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { AuraTheme } from '@qivr/design-system';
+import { theme } from '@qivr/design-system';
 
 // Initialize Amplify
 import './config/amplify.config';
@@ -29,7 +29,7 @@ function App() {
   try {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={AuraTheme.createTheme()}>
+        <ThemeProvider theme={theme}>
           <CssBaseline />
           <AuthProvider>
             <AppContent />

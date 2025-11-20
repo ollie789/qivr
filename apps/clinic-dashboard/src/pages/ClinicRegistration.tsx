@@ -128,7 +128,7 @@ const ClinicRegistration: React.FC = () => {
 
             <form onSubmit={handleSubmit}>
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="Clinic Name"
@@ -138,7 +138,7 @@ const ClinicRegistration: React.FC = () => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="Phone Number"
@@ -148,7 +148,7 @@ const ClinicRegistration: React.FC = () => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="Address"
@@ -158,7 +158,7 @@ const ClinicRegistration: React.FC = () => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="City"
@@ -168,7 +168,7 @@ const ClinicRegistration: React.FC = () => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12} sm={3}>
+                <Grid size={{ xs: 12, sm: 3 }}>
                   <TextField
                     fullWidth
                     label="State"
@@ -178,7 +178,7 @@ const ClinicRegistration: React.FC = () => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12} sm={3}>
+                <Grid size={{ xs: 12, sm: 3 }}>
                   <TextField
                     fullWidth
                     label="Zip Code"

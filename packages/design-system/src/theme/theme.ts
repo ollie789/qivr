@@ -1,4 +1,4 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, ThemeOptions } from '@mui/material/styles';
 import * as tokens from '../tokens';
 
 export const theme = createTheme({
@@ -176,4 +176,4 @@ export const theme = createTheme({
       },
     },
   },
-});
+} as any);

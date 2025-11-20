@@ -288,7 +288,7 @@ const PROM: React.FC = () => {
 
         {/* Statistics Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -306,7 +306,7 @@ const PROM: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -324,7 +324,7 @@ const PROM: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -342,7 +342,7 @@ const PROM: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -360,7 +360,7 @@ const PROM: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -378,7 +378,7 @@ const PROM: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -396,7 +396,7 @@ const PROM: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -414,7 +414,7 @@ const PROM: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom variant="body2">
@@ -462,7 +462,7 @@ const PROM: React.FC = () => {
               ) : (
                 <Grid container spacing={3}>
                   {templates.map((template) => (
-                    <Grid item xs={12} md={6} lg={4} key={template.id}>
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }}key={template.id}>
                       <Card>
                         <CardContent>
                           <Typography variant="h6" gutterBottom>
@@ -661,7 +661,7 @@ const PROM: React.FC = () => {
           <TabPanel value={currentTab} index={2}>
             {/* Analytics Tab */}
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom>
                     Response Status Distribution
@@ -688,7 +688,7 @@ const PROM: React.FC = () => {
                 </Paper>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom>
                     Completion Trends
@@ -720,7 +720,7 @@ const PROM: React.FC = () => {
                 </Paper>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom>
                     Template Performance

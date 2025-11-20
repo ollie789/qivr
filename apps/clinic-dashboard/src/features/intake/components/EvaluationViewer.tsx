@@ -152,7 +152,7 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
 
       <Grid container spacing={3}>
         {/* Left Column */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           {/* Chief Complaint */}
           <Card sx={{ mb: 2 }}>
             <CardContent>
@@ -294,7 +294,7 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
         </Grid>
 
         {/* Right Column */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           {/* AI Analysis */}
           {evaluation.aiSummary && (
             <Card sx={{ mb: 2 }}>

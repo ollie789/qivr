@@ -932,10 +932,10 @@ const MedicalRecords: React.FC = () => {
 
                 {/* Quick Stats */}
                 <Grid container spacing={2}>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard label="Blood Type" value="O+" compact />
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard
                       label="Allergies"
                       value={
@@ -946,7 +946,7 @@ const MedicalRecords: React.FC = () => {
                       compact
                     />
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard
                       label="Medications"
                       value={
@@ -959,7 +959,7 @@ const MedicalRecords: React.FC = () => {
                       compact
                     />
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard
                       label="Last Visit"
                       value={lastVisitDisplay}
@@ -983,7 +983,7 @@ const MedicalRecords: React.FC = () => {
               <TabPanel value={activeTab} index={0}>
                 <Box sx={{ p: 3 }}>
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Typography variant="h6" gutterBottom>
                         <PersonIcon sx={{ verticalAlign: "middle", mr: 1 }} />
                         Personal Information
@@ -1049,7 +1049,7 @@ const MedicalRecords: React.FC = () => {
                         </FormControl>
                       </Stack>
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Typography variant="h6" gutterBottom>
                         Contact Information
                       </Typography>
@@ -1094,7 +1094,7 @@ const MedicalRecords: React.FC = () => {
                           fullWidth
                         />
                         <Grid container spacing={2}>
-                          <Grid item xs={6}>
+                          <Grid size={6}>
                             <TextField
                               label="City"
                               value={editedPatient?.address?.city || ""}
@@ -1111,7 +1111,7 @@ const MedicalRecords: React.FC = () => {
                               fullWidth
                             />
                           </Grid>
-                          <Grid item xs={3}>
+                          <Grid size={3}>
                             <TextField
                               label="State"
                               value={editedPatient?.address?.state || ""}
@@ -1128,7 +1128,7 @@ const MedicalRecords: React.FC = () => {
                               fullWidth
                             />
                           </Grid>
-                          <Grid item xs={3}>
+                          <Grid size={3}>
                             <TextField
                               label="Zip"
                               value={
@@ -1150,7 +1150,7 @@ const MedicalRecords: React.FC = () => {
                         </Grid>
                       </Stack>
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Typography variant="h6" gutterBottom>
                         Emergency Contact
                       </Typography>
@@ -1180,7 +1180,7 @@ const MedicalRecords: React.FC = () => {
                         />
                       </Stack>
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Typography variant="h6" gutterBottom>
                         Insurance Information
                       </Typography>
@@ -1229,7 +1229,7 @@ const MedicalRecords: React.FC = () => {
                   {/* Latest Pain Assessment */}
                   {vitalSigns.length > 0 && vitalSigns[0] && (
                     <Grid container spacing={2} sx={{ mb: 3 }}>
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{ xs: 12, md: 4 }}>
                         <StatCard
                           label="Overall Pain Level"
                           value={`${vitalSigns[0].overallPainLevel || 0}/10`}
@@ -1243,7 +1243,7 @@ const MedicalRecords: React.FC = () => {
                           }
                         />
                       </Grid>
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{ xs: 12, md: 4 }}>
                         <StatCard
                           label="Functional Impact"
                           value={vitalSigns[0].functionalImpact || "None"}
@@ -1251,7 +1251,7 @@ const MedicalRecords: React.FC = () => {
                           iconColor="primary"
                         />
                       </Grid>
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{ xs: 12, md: 4 }}>
                         <StatCard
                           label="Pain Points"
                           value={`${vitalSigns[0].painPoints?.length || 0} areas`}
@@ -1264,7 +1264,7 @@ const MedicalRecords: React.FC = () => {
 
                   {/* Pain Trend Chart */}
                   <Grid container spacing={3}>
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <QivrCard>
                         <Typography variant="subtitle1" gutterBottom>
                           Pain Level Trend
@@ -1574,7 +1574,7 @@ const MedicalRecords: React.FC = () => {
                   {documents.length > 0 ? (
                     <Grid container spacing={2}>
                       {documents.map((doc) => (
-                        <Grid item xs={12} key={doc.id}>
+                        <Grid size={12}key={doc.id}>
                           <Card>
                             <CardContent>
                               <FlexBetween>
@@ -1732,7 +1732,7 @@ const MedicalRecords: React.FC = () => {
           maxWidth="sm"
         >
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Overall Pain Level
               </Typography>
@@ -1751,7 +1751,7 @@ const MedicalRecords: React.FC = () => {
                 helperText="0 = No pain, 10 = Worst pain imaginable"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControl fullWidth>
                 <InputLabel>Functional Impact</InputLabel>
                 <Select
@@ -1777,7 +1777,7 @@ const MedicalRecords: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Notes"
                 multiline
@@ -1790,7 +1790,7 @@ const MedicalRecords: React.FC = () => {
                 placeholder="Additional observations, pain quality, aggravating/relieving factors..."
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="caption" color="text.secondary">
                 Note: Detailed pain mapping is captured during evaluations. This
                 is for quick pain tracking between sessions.
@@ -1815,7 +1815,7 @@ const MedicalRecords: React.FC = () => {
           maxWidth="sm"
         >
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControl fullWidth>
                 <InputLabel>Category</InputLabel>
                 <Select
@@ -1838,7 +1838,7 @@ const MedicalRecords: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Title"
                 value={newHistory.title}
@@ -1849,7 +1849,7 @@ const MedicalRecords: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Description"
                 multiline
@@ -1862,7 +1862,7 @@ const MedicalRecords: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -1882,7 +1882,7 @@ const MedicalRecords: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <FormControl fullWidth>
                 <InputLabel>Severity</InputLabel>
                 <Select
@@ -1906,7 +1906,7 @@ const MedicalRecords: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <DatePicker
                 label="Date"
                 value={newHistory.date ? parseISO(newHistory.date) : null}
@@ -1919,7 +1919,7 @@ const MedicalRecords: React.FC = () => {
                 slotProps={{ textField: { fullWidth: true } }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Additional Notes"
                 multiline

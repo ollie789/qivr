@@ -129,7 +129,6 @@ export {
   CssBaseline,
   Fade,
   Grow,
-  Hidden,
   NoSsr,
   Portal,
   Slide,

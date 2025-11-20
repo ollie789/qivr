@@ -455,7 +455,7 @@ export default function Settings() {
             </Box>
 
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Clinic Name"
                   fullWidth
@@ -474,7 +474,7 @@ export default function Settings() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Registration Number"
                   fullWidth
@@ -482,7 +482,7 @@ export default function Settings() {
                   disabled={!editMode}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   label="Address"
                   fullWidth
@@ -501,7 +501,7 @@ export default function Settings() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   label="City"
                   fullWidth
@@ -513,7 +513,7 @@ export default function Settings() {
                   disabled={!editMode}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   label="State"
                   fullWidth
@@ -525,7 +525,7 @@ export default function Settings() {
                   disabled={!editMode}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   label="ZIP Code"
                   fullWidth
@@ -537,7 +537,7 @@ export default function Settings() {
                   disabled={!editMode}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Phone"
                   fullWidth
@@ -556,7 +556,7 @@ export default function Settings() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Email"
                   fullWidth
@@ -576,7 +576,7 @@ export default function Settings() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Website"
                   fullWidth
@@ -588,7 +588,7 @@ export default function Settings() {
                   disabled={!editMode}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth disabled={!editMode}>
                   <InputLabel>Timezone</InputLabel>
                   <Select
@@ -642,7 +642,7 @@ export default function Settings() {
             </Box>
 
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Operating Hours</Typography>
@@ -719,12 +719,12 @@ export default function Settings() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Appointment Settings</Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <TextField
                           label="Default Appointment Duration (minutes)"
                           type="number"
@@ -740,7 +740,7 @@ export default function Settings() {
                           disabled={!editMode}
                         />
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <TextField
                           label="Buffer Time Between Appointments (minutes)"
                           type="number"
@@ -756,7 +756,7 @@ export default function Settings() {
                           disabled={!editMode}
                         />
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <TextField
                           label="Maximum Advance Booking (days)"
                           type="number"
@@ -777,7 +777,7 @@ export default function Settings() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Booking Policies</Typography>
@@ -984,10 +984,10 @@ export default function Settings() {
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>Integrations</Typography>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TenantInfo />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
                     <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
@@ -1122,7 +1122,7 @@ export default function Settings() {
         maxWidth="sm"
       >
         <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField 
                 label="First Name" 
                 fullWidth 
@@ -1130,7 +1130,7 @@ export default function Settings() {
                 onChange={(e) => setProviderForm({...providerForm, firstName: e.target.value})}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField 
                 label="Last Name" 
                 fullWidth 
@@ -1138,7 +1138,7 @@ export default function Settings() {
                 onChange={(e) => setProviderForm({...providerForm, lastName: e.target.value})}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField 
                 label="Email" 
                 type="email" 
@@ -1147,7 +1147,7 @@ export default function Settings() {
                 onChange={(e) => setProviderForm({...providerForm, email: e.target.value})}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Specialization</InputLabel>
                 <Select 
@@ -1163,7 +1163,7 @@ export default function Settings() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Department</InputLabel>
                 <Select 

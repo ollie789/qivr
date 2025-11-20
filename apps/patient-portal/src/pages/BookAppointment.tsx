@@ -160,7 +160,7 @@ export const BookAppointment: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {providers.map((provider) => (
-            <Grid item xs={12} md={6} key={provider.id}>
+            <Grid size={{ xs: 12, md: 6 }}key={provider.id}>
               <Card
                 sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
                 onClick={() => handleProviderSelect(provider.id)}
@@ -200,7 +200,7 @@ export const BookAppointment: React.FC = () => {
         Select Date and Time
       </Typography>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <StaticDatePicker
               displayStaticWrapperAs="desktop"
@@ -211,7 +211,7 @@ export const BookAppointment: React.FC = () => {
             />
           </LocalizationProvider>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle1" gutterBottom>
             Available times for {format(selectedDate ?? new Date(), 'MMMM d, yyyy')}
           </Typography>
@@ -224,7 +224,7 @@ export const BookAppointment: React.FC = () => {
           ) : (
             <Grid container spacing={1}>
               {slots.map((slot) => (
-                <Grid item xs={4} key={slot.startTime}>
+                <Grid size={4}key={slot.startTime}>
                   <Button
                     variant={selectedSlot?.startTime === slot.startTime ? 'contained' : 'outlined'}
                     fullWidth
@@ -248,7 +248,7 @@ export const BookAppointment: React.FC = () => {
       </Typography>
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="subtitle2" color="text.secondary">
               Provider
             </Typography>
@@ -257,13 +257,13 @@ export const BookAppointment: React.FC = () => {
               {selectedProvider?.specialty ? ` • ${selectedProvider.specialty}` : ''}
             </Typography>
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="subtitle2" color="text.secondary">
               Date & Time
             </Typography>
             <Typography variant="body1">{appointmentDateTime}</Typography>
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="subtitle2" color="text.secondary">
               Duration
             </Typography>

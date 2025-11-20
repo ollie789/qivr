@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 600" fill="none">
-  <!-- Head (back) -->
+  <!-- Head -->
   <ellipse cx="150" cy="35" rx="22" ry="28" stroke="#8B9DC3" stroke-width="1.5" fill="#F8F9FA"/>
-  <path d="M 135 50 L 135 60" stroke="#8B9DC3" stroke-width="0.5"/>
-  <path d="M 165 50 L 165 60" stroke="#8B9DC3" stroke-width="0.5"/>
+  <path d="M 128 50 Q 128 60 135 63" stroke="#8B9DC3" stroke-width="1" fill="none"/>
+  <path d="M 172 50 Q 172 60 165 63" stroke="#8B9DC3" stroke-width="1" fill="none"/>
   
   <!-- Neck -->
   <path d="M 135 63 L 140 80 L 160 80 L 165 63" stroke="#8B9DC3" stroke-width="1.5" fill="#F8F9FA"/>
@@ -11,73 +11,75 @@
   <path d="M 140 80 Q 120 85 100 95 L 95 105" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <path d="M 160 80 Q 180 85 200 95 L 205 105" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   
-  <!-- Back outline -->
+  <!-- Torso outline -->
   <path d="M 140 80 L 135 120 L 130 180 L 135 240 L 140 260" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <path d="M 160 80 L 165 120 L 170 180 L 165 240 L 160 260" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   
-  <!-- Spine -->
-  <line x1="150" y1="80" x2="150" y2="260" stroke="#8B9DC3" stroke-width="1" stroke-dasharray="3,2"/>
+  <!-- Chest detail -->
+  <ellipse cx="135" cy="110" rx="8" ry="8" stroke="#8B9DC3" stroke-width="1" fill="none"/>
+  <ellipse cx="165" cy="110" rx="8" ry="8" stroke="#8B9DC3" stroke-width="1" fill="none"/>
+  <path d="M 140 95 Q 150 100 160 95" stroke="#8B9DC3" stroke-width="1" fill="none"/>
   
-  <!-- Shoulder blades -->
-  <path d="M 135 100 Q 140 110 140 120 Q 140 130 135 135" stroke="#8B9DC3" stroke-width="1" fill="none"/>
-  <path d="M 165 100 Q 160 110 160 120 Q 160 130 165 135" stroke="#8B9DC3" stroke-width="1" fill="none"/>
-  
-  <!-- Lower back detail -->
-  <path d="M 140 200 Q 145 205 150 205 Q 155 205 160 200" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
-  <path d="M 140 220 Q 145 225 150 225 Q 155 225 160 220" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
+  <!-- Abdomen lines -->
+  <line x1="145" y1="140" x2="155" y2="140" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="145" y1="160" x2="155" y2="160" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="145" y1="180" x2="155" y2="180" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="150" y1="120" x2="150" y2="200" stroke="#8B9DC3" stroke-width="0.5"/>
   
   <!-- Pelvis -->
   <path d="M 140 260 Q 145 270 150 270 Q 155 270 160 260" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <line x1="140" y1="260" x2="140" y2="280" stroke="#8B9DC3" stroke-width="1.5"/>
   <line x1="160" y1="260" x2="160" y2="280" stroke="#8B9DC3" stroke-width="1.5"/>
-  <path d="M 135 250 Q 140 255 145 255" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
-  <path d="M 165 250 Q 160 255 155 255" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
   
   <!-- Arms - Left -->
   <path d="M 95 105 L 85 150 L 80 200 L 78 250" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <path d="M 100 105 L 92 150 L 88 200 L 86 250" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   
-  <!-- Left elbow -->
-  <ellipse cx="82" cy="200" rx="4" ry="6" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
-  
   <!-- Left forearm and hand -->
   <path d="M 78 250 L 75 280 L 73 300" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <path d="M 86 250 L 83 280 L 81 300" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <ellipse cx="77" cy="310" rx="6" ry="12" stroke="#8B9DC3" stroke-width="1.5" fill="#F8F9FA"/>
+  <line x1="74" y1="322" x2="74" y2="330" stroke="#8B9DC3" stroke-width="1"/>
+  <line x1="77" y1="322" x2="77" y2="332" stroke="#8B9DC3" stroke-width="1"/>
+  <line x1="80" y1="322" x2="80" y2="330" stroke="#8B9DC3" stroke-width="1"/>
   
   <!-- Arms - Right -->
   <path d="M 205 105 L 215 150 L 220 200 L 222 250" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <path d="M 200 105 L 208 150 L 212 200 L 214 250" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   
-  <!-- Right elbow -->
-  <ellipse cx="218" cy="200" rx="4" ry="6" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
-  
   <!-- Right forearm and hand -->
   <path d="M 222 250 L 225 280 L 227 300" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <path d="M 214 250 L 217 280 L 219 300" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <ellipse cx="223" cy="310" rx="6" ry="12" stroke="#8B9DC3" stroke-width="1.5" fill="#F8F9FA"/>
+  <line x1="220" y1="322" x2="220" y2="330" stroke="#8B9DC3" stroke-width="1"/>
+  <line x1="223" y1="322" x2="223" y2="332" stroke="#8B9DC3" stroke-width="1"/>
+  <line x1="226" y1="322" x2="226" y2="330" stroke="#8B9DC3" stroke-width="1"/>
   
   <!-- Legs - Left -->
   <path d="M 140 280 L 138 350 L 136 420 L 135 490" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <path d="M 145 280 L 144 350 L 143 420 L 142 490" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   
-  <!-- Left calf -->
-  <path d="M 136 420 Q 133 450 136 480" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
-  <path d="M 143 420 Q 146 450 143 480" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
+  <!-- Left knee -->
+  <ellipse cx="139" cy="420" rx="5" ry="8" stroke="#8B9DC3" stroke-width="1" fill="none"/>
   
-  <!-- Left heel -->
+  <!-- Left foot -->
   <path d="M 135 490 L 133 510 L 130 520 Q 128 525 130 528 L 145 528 Q 142 525 140 520 L 138 510 L 142 490" stroke="#8B9DC3" stroke-width="1.5" fill="#F8F9FA"/>
-  <ellipse cx="137" cy="515" rx="4" ry="6" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
+  <line x1="132" y1="528" x2="132" y2="532" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="135" y1="528" x2="135" y2="533" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="138" y1="528" x2="138" y2="533" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="141" y1="528" x2="141" y2="532" stroke="#8B9DC3" stroke-width="0.5"/>
   
   <!-- Legs - Right -->
   <path d="M 160 280 L 162 350 L 164 420 L 165 490" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   <path d="M 155 280 L 156 350 L 157 420 L 158 490" stroke="#8B9DC3" stroke-width="1.5" fill="none"/>
   
-  <!-- Right calf -->
-  <path d="M 164 420 Q 167 450 164 480" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
-  <path d="M 157 420 Q 154 450 157 480" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
+  <!-- Right knee -->
+  <ellipse cx="161" cy="420" rx="5" ry="8" stroke="#8B9DC3" stroke-width="1" fill="none"/>
   
-  <!-- Right heel -->
+  <!-- Right foot -->
   <path d="M 165 490 L 167 510 L 170 520 Q 172 525 170 528 L 155 528 Q 158 525 160 520 L 162 510 L 158 490" stroke="#8B9DC3" stroke-width="1.5" fill="#F8F9FA"/>
-  <ellipse cx="163" cy="515" rx="4" ry="6" stroke="#8B9DC3" stroke-width="0.5" fill="none"/>
+  <line x1="168" y1="528" x2="168" y2="532" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="165" y1="528" x2="165" y2="533" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="162" y1="528" x2="162" y2="533" stroke="#8B9DC3" stroke-width="0.5"/>
+  <line x1="159" y1="528" x2="159" y2="532" stroke="#8B9DC3" stroke-width="0.5"/>
 </svg>

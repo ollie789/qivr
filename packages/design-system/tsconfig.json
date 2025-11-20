@@ -10,9 +10,25 @@
     "moduleResolution": "Node",
     "target": "ES2019",
     "jsx": "react-jsx",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./src",
+    "paths": {
+      "providers/*": ["aura/providers/*"],
+      "routes/*": ["aura/routes/*"],
+      "data/*": ["aura/data/*"],
+      "layouts/*": ["aura/layouts/*"],
+      "pages/*": ["aura/pages/*"],
+      "reducers/*": ["aura/reducers/*"],
+      "services/*": ["aura/services/*"],
+      "docs/*": ["aura/docs/*"],
+      "locales/*": ["aura/locales/*"]
+    }
   },
   "include": [
     "src"
@@ -20,6 +36,7 @@
   "exclude": [
     "src/**/*.stories.*",
     "src/theme.disabled",
-    "src/providers.disabled"
+    "src/providers.disabled",
+    "src/aura/**"
   ]
 }

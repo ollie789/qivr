@@ -80,7 +80,7 @@ const PromsPage: React.FC = () => {
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {stats.map((stat) => (
-          <Grid item xs={12} md={4} key={stat.label}>
+          <Grid size={{ xs: 12, md: 4 }}key={stat.label}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
@@ -101,7 +101,7 @@ const PromsPage: React.FC = () => {
       </Grid>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
@@ -159,7 +159,7 @@ const PromsPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>

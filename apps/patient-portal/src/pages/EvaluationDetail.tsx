@@ -221,7 +221,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
 
       <Grid container spacing={3}>
         {/* Overview Card */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom fontWeight={600}>
@@ -230,7 +230,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
               <Divider sx={{ mb: 2 }} />
 
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="body2" color="textSecondary">
                     Status
                   </Typography>
@@ -241,7 +241,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                     sx={{ mt: 0.5 }}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="body2" color="textSecondary">
                     Urgency
                   </Typography>
@@ -266,7 +266,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="body2" color="textSecondary">
                     Chief Complaint
                   </Typography>
@@ -274,7 +274,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                     {evaluation.chiefComplaint}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography
                     variant="body2"
                     color="textSecondary"
@@ -294,7 +294,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                   </Box>
                 </Grid>
                 {evaluation.provider && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="body2" color="textSecondary">
                       Provider
                     </Typography>
@@ -389,7 +389,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
         </Grid>
 
         {/* Sidebar */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           {/* Score & Trend */}
           {evaluation.score && (
             <Card>

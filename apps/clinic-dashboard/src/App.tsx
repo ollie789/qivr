@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo } from 'react';
+import { Suspense, lazy, useEffect, useMemo } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,7 +8,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Experimental_CssVarsProvider as ThemeProvider, useColorScheme } from '@mui/material/styles';
-import { AuraTheme, PageLoader } from '@qivr/design-system';
+import { PageLoader, theme } from '@qivr/design-system';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { SnackbarProvider } from 'notistack';
@@ -124,7 +124,7 @@ function App() {
   console.log('App component rendering');
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={AuraTheme.createTheme()}>
+      <ThemeProvider theme={theme}>
         <InnerApp />
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />

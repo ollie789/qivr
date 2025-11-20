@@ -438,7 +438,7 @@ const Appointments: React.FC = () => {
     return (
       <QivrCard elevated sx={{ p: 2, overflowX: 'auto' }}>
         <Grid container spacing={1}>
-          <Grid item xs={1}>
+          <Grid size={1}>
             <Box sx={{ height: 40 }} />
             {hours.map((hour) => (
               <FlexBetween key={hour} sx={{ height: 60, alignItems: 'center' }}>
@@ -449,7 +449,7 @@ const Appointments: React.FC = () => {
             ))}
           </Grid>
           {days.map((day) => (
-            <Grid item key={day.toISOString()} xs>
+            <Grid key={day.toISOString()} size="grow">
               <Box 
                 sx={{
                   ...(calendarStyles.dayHeader as any),
@@ -579,7 +579,7 @@ const Appointments: React.FC = () => {
         <QivrCard sx={{ mb: 3 }}>
           <CardContent>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={3}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Provider</InputLabel>
                   <Select
@@ -596,7 +596,7 @@ const Appointments: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FlexBetween sx={{ justifyContent: 'center', gap: 1 }}>
                   <IconButton onClick={() => navigateDate('prev')}>
                     <ChevronLeftIcon />
@@ -618,7 +618,7 @@ const Appointments: React.FC = () => {
                   </IconButton>
                 </FlexBetween>
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <FlexBetween sx={{ justifyContent: 'flex-end' }}>
                 <ToggleButtonGroup
                   value={viewMode}
@@ -653,7 +653,7 @@ const Appointments: React.FC = () => {
 
         {/* Main Content */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={viewTab === 0 ? 12 : 9}>
+          <Grid size={{ xs: 12, md: viewTab === 0 ? 12 : 9 }}>
             {isLoading ? (
               <QivrCard elevated sx={{ p: 3, textAlign: 'center' }}>
                 <Typography>Loading appointments...</Typography>
@@ -839,7 +839,7 @@ const Appointments: React.FC = () => {
               </>
             )}
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             {/* Today's Summary */}
             <QivrCard>
               <CardContent>
@@ -916,7 +916,7 @@ const Appointments: React.FC = () => {
           <DialogTitle>New Appointment</DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Autocomplete
                   options={patients}
                   value={selectedPatientOption}
@@ -933,7 +933,7 @@ const Appointments: React.FC = () => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Patient Name"
@@ -942,7 +942,7 @@ const Appointments: React.FC = () => {
                   placeholder="Patient name"
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Email"
@@ -952,7 +952,7 @@ const Appointments: React.FC = () => {
                   placeholder="email@example.com"
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Phone"
@@ -961,7 +961,7 @@ const Appointments: React.FC = () => {
                   placeholder="(555) 123-4567"
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Autocomplete
                   options={providerOptions}
                   value={selectedProviderOption}
@@ -978,7 +978,7 @@ const Appointments: React.FC = () => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth>
                   <InputLabel>Appointment Type</InputLabel>
                   <Select
@@ -1006,7 +1006,7 @@ const Appointments: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <DatePicker
                   label="Date"
                   value={newAppointment.date}
@@ -1014,7 +1014,7 @@ const Appointments: React.FC = () => {
                   slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TimePicker
                   label="Start Time"
                   value={newAppointment.startTime}
@@ -1029,7 +1029,7 @@ const Appointments: React.FC = () => {
                   slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TimePicker
                   label="End Time"
                   value={newAppointment.endTime}
@@ -1037,7 +1037,7 @@ const Appointments: React.FC = () => {
                   slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   multiline

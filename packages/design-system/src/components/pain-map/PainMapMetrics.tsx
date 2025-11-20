@@ -1,4 +1,4 @@
-import { Box, Paper, Typography, Grid, Card, CardContent, Chip, Stack, LinearProgress } from '@mui/material';
+import { Box, Grid, Paper, Typography, Card, CardContent, Chip, Stack, LinearProgress } from '@mui/material';
 import { TrendingUp, TrendingDown, Remove } from '@mui/icons-material';
 
 interface RegionFrequency {
@@ -61,7 +61,7 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
     <Box>
       <Grid container spacing={3}>
         {/* Summary Cards */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -72,7 +72,7 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -88,7 +88,7 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
         </Grid>
 
         {/* Most Common Regions */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Most Common Pain Regions
@@ -114,7 +114,7 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
         </Grid>
 
         {/* Pain Quality Distribution */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Pain Quality Distribution
@@ -145,7 +145,7 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
         </Grid>
 
         {/* Intensity Distribution */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Pain Intensity Distribution

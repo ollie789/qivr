@@ -151,7 +151,7 @@ export default function DocumentUpload() {
       </Box>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Paper sx={{ p: 4, borderRadius: 2, boxShadow: 3 }}>
             {uploadedDocument ? (
               <Box>
@@ -309,7 +309,7 @@ export default function DocumentUpload() {
                     </Typography>
 
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           select
                           fullWidth
@@ -325,7 +325,7 @@ export default function DocumentUpload() {
                         </TextField>
                       </Grid>
 
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <FormControlLabel
                           control={
                             <Checkbox
@@ -338,7 +338,7 @@ export default function DocumentUpload() {
                         />
                       </Grid>
 
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <TextField
                           fullWidth
                           multiline
@@ -387,7 +387,7 @@ export default function DocumentUpload() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Paper
             sx={{
               p: 3,

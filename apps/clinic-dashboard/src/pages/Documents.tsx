@@ -183,14 +183,14 @@ export default function Documents() {
 
       <Paper sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <SearchBar
               value={searchTerm}
               onChange={setSearchTerm}
               placeholder="Search documents..."
             />
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               select
               fullWidth
@@ -206,7 +206,7 @@ export default function Documents() {
               ))}
             </TextField>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               select
               fullWidth
@@ -221,7 +221,7 @@ export default function Documents() {
               <MenuItem value="failed">Failed</MenuItem>
             </TextField>
           </Grid>
-          <Grid item xs={12} md={2}>
+          <Grid size={{ xs: 12, md: 2 }}>
             <Button
               fullWidth
               variant="outlined"

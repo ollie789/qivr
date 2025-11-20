@@ -59,7 +59,7 @@ export default function PainMapSelector({
   return (
     <Box>
       <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2 }}>
             <Box
               sx={{
@@ -159,7 +159,7 @@ export default function PainMapSelector({
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Pain Points ({selectedPoints.length})

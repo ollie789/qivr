@@ -8,6 +8,7 @@ import {
   Tab,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   ListItemAvatar,
   Avatar,
@@ -248,9 +249,8 @@ const Messages: React.FC = () => {
                 );
 
                 return (
-                  <ListItem
+                  <ListItemButton
                     key={conversation.participantId}
-                    button
                     selected={isSelected}
                     onClick={() =>
                       setSelectedConversationId(conversation.participantId)
@@ -313,7 +313,7 @@ const Messages: React.FC = () => {
                         </Box>
                       }
                     />
-                  </ListItem>
+                  </ListItemButton>
                 );
               })}
             </List>

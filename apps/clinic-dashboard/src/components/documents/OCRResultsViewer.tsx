@@ -95,7 +95,7 @@ export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
 
         {document.status === "ready" && (
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="caption" color="text.secondary">
                 Extracted Patient Name
               </Typography>
@@ -104,7 +104,7 @@ export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="caption" color="text.secondary">
                 Extracted Date of Birth
               </Typography>
@@ -115,7 +115,7 @@ export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
               </Typography>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="caption" color="text.secondary">
                 Selected Patient
               </Typography>
@@ -128,7 +128,7 @@ export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
               document.patientName &&
               document.extractedPatientName.toLowerCase() !==
                 document.patientName.toLowerCase() && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Alert severity="warning">
                     ⚠️ Extracted name doesn&apos;t match selected patient.
                     Please verify.
@@ -137,7 +137,7 @@ export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
               )}
 
             {document.extractedText && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Typography variant="caption" color="text.secondary">
                   Extracted Text
                 </Typography>

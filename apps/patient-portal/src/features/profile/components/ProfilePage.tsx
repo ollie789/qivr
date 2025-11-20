@@ -231,7 +231,7 @@ export const ProfilePage: React.FC = () => {
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3} alignItems="center">
-          <Grid item>
+          <Grid>
             <Box sx={{ position: 'relative' }}>
               <Avatar src={displayProfile?.photoUrl} sx={{ width: 120, height: 120 }}>
                 {displayProfile?.firstName?.[0]}
@@ -251,7 +251,7 @@ export const ProfilePage: React.FC = () => {
               )}
             </Box>
           </Grid>
-          <Grid item xs>
+          <Grid size="grow">
             <Typography variant="h5">
               {displayProfile?.firstName} {displayProfile?.lastName}
             </Typography>
@@ -267,7 +267,7 @@ export const ProfilePage: React.FC = () => {
               )}
             </Box>
           </Grid>
-          <Grid item>
+          <Grid>
             {!isEditing ? (
               <Button
                 variant="outlined"
@@ -307,7 +307,7 @@ export const ProfilePage: React.FC = () => {
 
         <TabPanel value={tabValue} index={0}>
           <Grid container spacing={3} sx={{ p: 3 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="First Name"
@@ -323,7 +323,7 @@ export const ProfilePage: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Last Name"
@@ -332,7 +332,7 @@ export const ProfilePage: React.FC = () => {
                 disabled={!isEditing}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Email"
@@ -347,7 +347,7 @@ export const ProfilePage: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Phone"
@@ -363,7 +363,7 @@ export const ProfilePage: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Date of Birth"
@@ -374,7 +374,7 @@ export const ProfilePage: React.FC = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth disabled={!isEditing}>
                 <InputLabel>Gender</InputLabel>
                 <Select
@@ -389,7 +389,7 @@ export const ProfilePage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Address"
@@ -405,7 +405,7 @@ export const ProfilePage: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="City"
@@ -414,7 +414,7 @@ export const ProfilePage: React.FC = () => {
                 disabled={!isEditing}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="State"
@@ -423,7 +423,7 @@ export const ProfilePage: React.FC = () => {
                 disabled={!isEditing}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="Postcode"
@@ -437,7 +437,7 @@ export const ProfilePage: React.FC = () => {
 
         <TabPanel value={tabValue} index={1}>
           <Grid container spacing={3} sx={{ p: 3 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth disabled={!isEditing}>
                 <InputLabel>Blood Type</InputLabel>
                 <Select
@@ -465,7 +465,7 @@ export const ProfilePage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 multiline
@@ -486,7 +486,7 @@ export const ProfilePage: React.FC = () => {
                 helperText="Separate multiple allergies with commas"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 multiline
@@ -507,7 +507,7 @@ export const ProfilePage: React.FC = () => {
                 helperText="Separate multiple medications with commas"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 multiline
@@ -533,12 +533,12 @@ export const ProfilePage: React.FC = () => {
 
         <TabPanel value={tabValue} index={2}>
           <Grid container spacing={3} sx={{ p: 3 }}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Alert severity="info">
                 Emergency contact information will be used in case of medical emergencies
               </Alert>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Contact Name"
@@ -556,7 +556,7 @@ export const ProfilePage: React.FC = () => {
                 disabled={!isEditing}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Relationship"
@@ -574,7 +574,7 @@ export const ProfilePage: React.FC = () => {
                 disabled={!isEditing}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Contact Phone"

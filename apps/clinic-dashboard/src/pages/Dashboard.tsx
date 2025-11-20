@@ -272,7 +272,7 @@ const Dashboard: React.FC = () => {
       {/* Main Content Grid */}
       <Grid container spacing={3}>
         {/* Upcoming Appointments */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <QivrCard elevated>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -336,7 +336,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Recent Intakes */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <DashboardSectionCard
             header={
               <Typography variant="h6" gutterBottom>
@@ -409,7 +409,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Analytics Charts */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <AppointmentTrendCard
             data={appointmentTrends}
             headerAction={
@@ -428,7 +428,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* PROM Response Rate */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <PromCompletionCard
             data={promCompletionData}
             summaryFormatter={(average, { isEmpty }) =>
@@ -438,7 +438,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Patient Conditions Distribution */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TopDiagnosesCard
             title="Patient Conditions Distribution"
             data={conditionData}
@@ -447,7 +447,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Clinic Performance Metrics */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <QivrCard elevated>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -479,7 +479,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Weekly Activity Heatmap */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <QivrCard elevated>
             <CardContent>
               <Typography variant="h6" gutterBottom>

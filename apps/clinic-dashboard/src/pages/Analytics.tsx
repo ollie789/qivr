@@ -324,7 +324,7 @@ const Analytics: React.FC = () => {
           <StatCardGrid items={statCards} sx={{ mb: 3 }} />
 
           <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <AppointmentTrendCard
             data={appointmentData}
             showLegend
@@ -336,7 +336,7 @@ const Analytics: React.FC = () => {
           />
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <PromCompletionCard
             data={promCompletionData}
             summaryFormatter={(average, { isEmpty }) =>
@@ -345,7 +345,7 @@ const Analytics: React.FC = () => {
           />
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TopDiagnosesCard
             title="Top Diagnoses"
             data={conditionData}
@@ -353,7 +353,7 @@ const Analytics: React.FC = () => {
           />
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TableSection
             header={<Typography variant="h6">Provider Performance</Typography>}
           >
@@ -392,7 +392,7 @@ const Analytics: React.FC = () => {
           </TableSection>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={12}>
           <DashboardSectionCard
             header={
               <FlexBetween>
@@ -422,7 +422,7 @@ const Analytics: React.FC = () => {
 
       {activeTab === 1 && (
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Paper sx={{ p: 2, mb: 2 }}>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <FormControl size="small" sx={{ minWidth: 120 }}>
@@ -452,7 +452,7 @@ const Analytics: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <PainMapHeatMap
               data={painHeatMap}
               loading={heatMapLoading}
@@ -462,7 +462,7 @@ const Analytics: React.FC = () => {
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <PainMapMetrics data={painMetrics} loading={metricsLoading} />
           </Grid>
         </Grid>

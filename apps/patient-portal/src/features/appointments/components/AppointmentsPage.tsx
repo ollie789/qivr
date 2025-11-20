@@ -132,16 +132,16 @@ const AppointmentsPage: React.FC = () => {
             const start = parseISO(appointment.scheduledStart);
             const upcoming = isFuture(start);
             return (
-              <Grid item xs={12} key={appointment.id}>
+              <Grid size={12}key={appointment.id}>
                 <Card>
                   <CardContent>
                     <Grid container spacing={2} alignItems="center">
-                      <Grid item>
+                      <Grid>
                         <Avatar sx={{ bgcolor: 'primary.main' }}>
                           <PersonIcon />
                         </Avatar>
                       </Grid>
-                      <Grid item xs>
+                      <Grid size="grow">
                         <Typography variant="h6">{appointment.providerName}</Typography>
                         <Typography variant="body2" color="text.secondary">
                           {appointment.providerSpecialty} • {appointment.appointmentType}
@@ -150,21 +150,21 @@ const AppointmentsPage: React.FC = () => {
                           {format(start, 'MMM dd, yyyy • h:mm a')} ({upcoming ? 'Upcoming' : 'Past'})
                         </Typography>
                       </Grid>
-                      <Grid item>
+                      <Grid>
                         <Chip
                           label={appointment.status}
                           color={statusChipColor(appointment.status)}
                           size="small"
                         />
                       </Grid>
-                      <Grid item>
+                      <Grid>
                         <Chip
                           icon={appointment.isVirtual ? <VideoCallIcon /> : <LocationIcon />}
                           label={appointment.isVirtual ? 'Virtual' : 'In person'}
                           size="small"
                         />
                       </Grid>
-                      <Grid item>
+                      <Grid>
                         <IconButton onClick={(event) => handleMenuOpen(event, appointment)}>
                           <MoreVertIcon />
                         </IconButton>

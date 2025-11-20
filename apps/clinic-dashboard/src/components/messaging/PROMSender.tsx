@@ -225,7 +225,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                 const frequencyLabel = templateDetail?.frequency;
 
                 return (
-                  <Grid item xs={12} md={6} key={template.id}>
+                  <Grid size={{ xs: 12, md: 6 }}key={template.id}>
                     <Card
                       sx={{
                         cursor: 'pointer',
@@ -286,7 +286,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
             {/* Search and Filters */}
             <Paper sx={{ p: 2, mb: 3 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     placeholder="Search patients..."
@@ -301,7 +301,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                   <FormControl fullWidth>
                     <InputLabel>Filter</InputLabel>
                     <Select
@@ -315,7 +315,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                   <Button
                     fullWidth
                     variant="outlined"
@@ -434,7 +434,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
             {scheduleType === 'recurring' && (
               <Box sx={{ mt: 3 }}>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Frequency</InputLabel>
                       <Select
@@ -450,7 +450,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       type="number"
@@ -462,7 +462,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                       }}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <FormControl>
                       <RadioGroup
                         value={recurringConfig.endType}
@@ -475,7 +475,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                     </FormControl>
                   </Grid>
                   {recurringConfig.endType === 'date' && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <LocalizationProvider dateAdapter={AdapterDateFns}>
                       <DateTimePicker
                         label="End Date"
@@ -487,7 +487,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                     </Grid>
                   )}
                   {recurringConfig.endType === 'occurrences' && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <TextField
                         fullWidth
                         type="number"
@@ -624,7 +624,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
             </Typography>
             
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Paper sx={{ p: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     <AssignmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
@@ -639,7 +639,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                 </Paper>
               </Grid>
               
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Paper sx={{ p: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     <PersonIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
@@ -656,7 +656,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                 </Paper>
               </Grid>
               
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Paper sx={{ p: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     <ScheduleIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
@@ -675,7 +675,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                 </Paper>
               </Grid>
               
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Paper sx={{ p: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     <NotificationIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
@@ -695,7 +695,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               </Grid>
               
               {notificationSettings.customMessage && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Paper sx={{ p: 3 }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Custom Message

@@ -32,7 +32,7 @@ const StatCardGrid: React.FC<StatCardGridProps> = ({
     <Grid container spacing={spacing} sx={sx}>
       {loading
         ? Array.from({ length: placeholders }).map((_, index) => (
-            <Grid item key={`stat-skeleton-${index}`} {...itemSizes}>
+            <Grid key={`stat-skeleton-${index}`} size={itemSizes}>
               <QivrCard elevated>
                 <CardContent>
                   <Skeleton variant="rectangular" height={80} />
@@ -41,7 +41,7 @@ const StatCardGrid: React.FC<StatCardGridProps> = ({
             </Grid>
           ))
         : items.map((item) => (
-            <Grid item key={item.id} {...itemSizes}>
+            <Grid key={item.id} size={itemSizes}>
               <StatCard
                 label={item.title}
                 value={item.value}

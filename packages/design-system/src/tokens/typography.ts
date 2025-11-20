@@ -1,4 +1,4 @@
-import type { TypographyOptions } from '@mui/material/styles/createTypography';
+import type { TypographyStyleOptions } from '@mui/material/styles/createTypography';
 
 export const fontStacks = {
   display: [
@@ -14,7 +14,7 @@ export const fontStacks = {
   mono: '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
 };
 
-export const typography: TypographyOptions = {
+export const typography: TypographyStyleOptions = {
   fontFamily: fontStacks.display,
   h1: {
     fontWeight: 700,

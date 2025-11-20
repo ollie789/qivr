@@ -376,7 +376,7 @@ const IntakeManagement: React.FC = () => {
 
       {/* Statistics Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <Card>
             <CardContent sx={{ textAlign: "center", py: 2 }}>
               <Typography variant="h4">{stats.total}</Typography>
@@ -386,7 +386,7 @@ const IntakeManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <Card>
             <CardContent sx={{ textAlign: "center", py: 2 }}>
               <Typography variant="h4">{stats.pending}</Typography>
@@ -396,7 +396,7 @@ const IntakeManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <Card>
             <CardContent sx={{ textAlign: "center", py: 2 }}>
               <Typography variant="h4" color="info.main">
@@ -408,7 +408,7 @@ const IntakeManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <Card>
             <CardContent sx={{ textAlign: "center", py: 2 }}>
               <Typography variant="h4" color="success.main">
@@ -420,7 +420,7 @@ const IntakeManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <Card>
             <CardContent sx={{ textAlign: "center", py: 2 }}>
               <Typography variant="h4" color="error.main">
@@ -432,7 +432,7 @@ const IntakeManagement: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <Card>
             <CardContent sx={{ textAlign: "center", py: 2 }}>
               <Typography variant="h4" color="primary.main">
@@ -449,14 +449,14 @@ const IntakeManagement: React.FC = () => {
       {/* Filters and Actions */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <SearchBar
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder="Search by name, email, or condition..."
             />
           </Grid>
-          <Grid item xs={12} md={2}>
+          <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Status</InputLabel>
               <Select
@@ -473,7 +473,7 @@ const IntakeManagement: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={2}>
+          <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Urgency</InputLabel>
               <Select
@@ -489,11 +489,7 @@ const IntakeManagement: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid
-            item
-            xs={12}
-            md={5}
-            sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}
+          <Grid size={{ xs: 12, md: 5 }}sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}
           >
             <Button
               startIcon={<PersonAddIcon />}
