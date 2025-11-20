@@ -1,8 +1,11 @@
 import { Suspense, useEffect } from 'react';
-import { Canvas, useLoader, useThree } from '@react-three/fiber';
+import { Canvas, useLoader, useThree, extend } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Box, Stack, Typography, Chip, CircularProgress } from '@mui/material';
 import * as THREE from 'three';
+
+// Extend Three.js types for React Three Fiber
+extend(THREE);
 import { PAIN_QUALITIES, type PainRegion } from '../../types/pain-drawing';
 import { getRegionDisplayName } from '../../types/anatomical-regions';
 
@@ -61,6 +64,7 @@ function BodyModelViewer({
     });
   }, [regions, gltf.scene]);
 
+  // @ts-ignore - React Three Fiber JSX elements
   return <primitive object={gltf.scene} />;
 }
 
@@ -83,8 +87,11 @@ export function PainMap3DViewer({
       >
         <Canvas camera={{ fov: 50 }}>
           <Suspense fallback={null}>
+            {/* @ts-ignore - React Three Fiber JSX elements */}
             <ambientLight intensity={0.5} />
+            {/* @ts-ignore */}
             <directionalLight position={[10, 10, 5]} intensity={1} />
+            {/* @ts-ignore */}
             <directionalLight position={[-10, 10, -5]} intensity={0.5} />
             <BodyModelViewer regions={regions} cameraView={cameraView} />
           </Suspense>

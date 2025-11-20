@@ -92,7 +92,10 @@
     "swr": "^2.3.6",
     "wavesurfer.js": "^7.11.0",
     "yet-another-react-lightbox": "^3.25.0",
-    "yup": "^1.7.0"
+    "yup": "^1.7.0",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "three": "^0.181.2"
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",
@@ -105,11 +108,7 @@
     "@types/mapbox-gl": "^3.4.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.181.0",
     "typescript": "^5.4.0"
-  },
-  "dependencies": {
-    "@react-three/drei": "^9.122.0",
-    "@react-three/fiber": "^8.18.0",
-    "three": "^0.181.2"
   }
 }

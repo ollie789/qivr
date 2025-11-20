@@ -1,8 +1,11 @@
 import { Suspense, useRef, useState, useEffect } from 'react';
-import { Canvas, useLoader, useThree } from '@react-three/fiber';
+import { Canvas, useLoader, useThree, extend } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography, Slider, CircularProgress, Chip } from '@mui/material';
 import * as THREE from 'three';
+
+// Extend Three.js types for React Three Fiber
+extend(THREE);
 import { PAIN_QUALITIES, type PainQuality } from '../../types/pain-drawing';
 import { getRegionDisplayName, getRegionSnomedCode } from '../../types/anatomical-regions';
 
@@ -50,8 +53,30 @@ function BodyModel({
     }
   };
 
+  // Apply materials to meshes based on selected regions
+  useEffect(() => {
+    gltf.scene.traverse((child: any) => {
+      if (child.isMesh) {
+        const selected = selectedRegions.find(r => r.meshName === child.name);
+        if (selected) {
+          const quality = PAIN_QUALITIES.find(q => q.id === selected.quality);
+          if (quality) {
+            child.material = new THREE.MeshStandardMaterial({
+              color: quality.color,
+              transparent: true,
+              opacity: selected.intensity / 10,
+              emissive: quality.color,
+              emissiveIntensity: 0.3
+            });
+          }
+        }
+      }
+    });
+  }, [selectedRegions, gltf.scene]);
+
   return (
-    <primitive 
+    // @ts-ignore - React Three Fiber JSX elements
+    <primitive
       object={gltf.scene} 
       onClick={handleClick}
       onPointerOver={(e: any) => {
@@ -61,25 +86,7 @@ function BodyModel({
       onPointerOut={() => {
         document.body.style.cursor = 'default';
       }}
-    >
-      {gltf.scene.traverse((child: any) => {
-        if (child.isMesh) {
-          const selected = selectedRegions.find(r => r.meshName === child.name);
-          if (selected) {
-            const quality = PAIN_QUALITIES.find(q => q.id === selected.quality);
-            if (quality) {
-              child.material = new THREE.MeshStandardMaterial({
-                color: quality.color,
-                transparent: true,
-                opacity: selected.intensity / 10,
-                emissive: quality.color,
-                emissiveIntensity: 0.3
-              });
-            }
-          }
-        }
-      })}
-    </primitive>
+    />
   );
 }
 
@@ -186,8 +193,11 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
       >
         <Canvas camera={{ fov: 50 }}>
           <Suspense fallback={null}>
+            {/* @ts-ignore - React Three Fiber JSX elements */}
             <ambientLight intensity={0.5} />
+            {/* @ts-ignore */}
             <directionalLight position={[10, 10, 5]} intensity={1} />
+            {/* @ts-ignore */}
             <directionalLight position={[-10, 10, -5]} intensity={0.5} />
             <BodyModel 
               selectedRegions={selectedRegions}
