@@ -214,6 +214,24 @@ public class AiTriageService : IAiTriageService
     {
         try
         {
+            // Build pain map context if available
+            var painMapContext = "";
+            if (data.PainMapData?.Regions?.Any() == true)
+            {
+                var regions = data.PainMapData.Regions
+                    .OrderByDescending(r => r.Intensity)
+                    .Select(r => $"{r.AnatomicalName ?? r.MeshName}: {r.Quality} pain (intensity {r.Intensity}/10)")
+                    .ToList();
+                
+                painMapContext = $@"
+                Pain Map Analysis:
+                - Number of affected regions: {data.PainMapData.Regions.Count}
+                - Pain locations: {string.Join(", ", regions)}
+                - Maximum intensity: {data.PainMapData.Regions.Max(r => r.Intensity)}/10
+                - Pain patterns: {AnalyzePainPattern(data.PainMapData.Regions)}
+                ";
+            }
+
             var prompt = $@"
                 Assess the urgency level for this patient presentation.
                 Return JSON with format:
@@ -230,6 +248,7 @@ public class AiTriageService : IAiTriageService
                 Severity: {data.Severity}
                 Age: {data.Age}
                 Vital Signs: {JsonSerializer.Serialize(data.VitalSigns)}
+                {painMapContext}
             ";
 
             var systemPrompt = @"You are an emergency triage expert. Assess urgency based on:
@@ -238,6 +257,9 @@ public class AiTriageService : IAiTriageService
                 - Vital sign abnormalities
                 - Age-related risk factors
                 - Potential for rapid deterioration
+                - Pain location, quality, and intensity patterns
+                - Bilateral vs unilateral pain distribution
+                - Dermatomal patterns suggesting nerve involvement
                 Use standard emergency department triage categories.";
 
             var response = await _bedrockService.InvokeClaudeWithStructuredOutputAsync(
@@ -756,6 +778,47 @@ public class AiTriageService : IAiTriageService
             return list.Select(item => item?.ToString() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToList();
         }
         return new List<string>();
+    }
+
+    private string AnalyzePainPattern(List<PainRegion> regions)
+    {
+        var patterns = new List<string>();
+
+        // Check for bilateral pain (left/right symmetry)
+        var leftRegions = regions.Where(r => r.MeshName.Contains("left")).ToList();
+        var rightRegions = regions.Where(r => r.MeshName.Contains("right")).ToList();
+        if (leftRegions.Any() && rightRegions.Any())
+        {
+            patterns.Add("bilateral distribution");
+        }
+
+        // Check for radiating pain (multiple connected regions)
+        if (regions.Count >= 3)
+        {
+            patterns.Add("multiple regions affected");
+        }
+
+        // Check for high intensity pain
+        var maxIntensity = regions.Max(r => r.Intensity);
+        if (maxIntensity >= 8)
+        {
+            patterns.Add("severe pain (8+/10)");
+        }
+
+        // Check for specific pain qualities
+        var qualities = regions.Select(r => r.Quality.ToLower()).Distinct().ToList();
+        if (qualities.Contains("sharp") || qualities.Contains("burning"))
+        {
+            patterns.Add("neuropathic characteristics");
+        }
+
+        // Check for spinal/back involvement
+        if (regions.Any(r => r.MeshName.Contains("back") || r.MeshName.Contains("spine")))
+        {
+            patterns.Add("spinal involvement");
+        }
+
+        return patterns.Any() ? string.Join(", ", patterns) : "localized pain";
     }
 }
 

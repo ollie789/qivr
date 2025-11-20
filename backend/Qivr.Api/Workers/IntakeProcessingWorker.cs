@@ -194,13 +194,51 @@ public class IntakeProcessingWorker : BackgroundService
             
             var aiTriageService = scope.ServiceProvider.GetRequiredService<Qivr.Services.AI.IAiTriageService>();
             
+            // Extract pain map data from first pain map if available
+            Qivr.Services.AI.PainMapData? painMapData = null;
+            var firstPainMap = evaluation.PainMaps.FirstOrDefault();
+            if (firstPainMap?.DrawingDataJson != null)
+            {
+                try
+                {
+                    var drawingData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(firstPainMap.DrawingDataJson);
+                    if (drawingData != null && drawingData.ContainsKey("regions"))
+                    {
+                        var regions = JsonSerializer.Deserialize<List<Qivr.Services.AI.PainRegion>>(
+                            drawingData["regions"].GetRawText()
+                        );
+                        
+                        if (regions != null && regions.Any())
+                        {
+                            painMapData = new Qivr.Services.AI.PainMapData
+                            {
+                                Regions = regions,
+                                CameraView = drawingData.ContainsKey("cameraView") 
+                                    ? drawingData["cameraView"].GetString() ?? "front"
+                                    : "front",
+                                Timestamp = drawingData.ContainsKey("timestamp")
+                                    ? drawingData["timestamp"].GetString() ?? ""
+                                    : ""
+                            };
+                            
+                            _logger.LogInformation("Loaded {RegionCount} pain regions for AI analysis", regions.Count);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse pain map data for evaluation {EvaluationId}", intakeData.EvaluationId);
+                }
+            }
+            
             var triageRequest = new Qivr.Services.AI.TriageRequest
             {
                 Symptoms = string.Join(", ", evaluation.Symptoms),
                 MedicalHistory = JsonSerializer.Serialize(evaluation.MedicalHistory),
                 ChiefComplaint = evaluation.ChiefComplaint,
                 Duration = evaluation.MedicalHistory.TryGetValue("painOnset", out var onset) ? onset?.ToString() : null,
-                Severity = evaluation.PainMaps.Any() ? evaluation.PainMaps.Max(p => p.PainIntensity) : 5
+                Severity = evaluation.PainMaps.Any() ? evaluation.PainMaps.Max(p => p.PainIntensity) : 5,
+                PainMapData = painMapData // NEW: Include 3D pain regions
             };
 
             var triageSummary = await aiTriageService.GenerateTriageSummaryAsync(evaluation.PatientId, triageRequest);
@@ -214,8 +252,8 @@ public class IntakeProcessingWorker : BackgroundService
             
             await dbContext.SaveChangesAsync(cancellationToken);
             
-            _logger.LogInformation("AI triage completed for evaluation {EvaluationId}: Urgency={Urgency}, RiskFlags={RiskCount}", 
-                intakeData.EvaluationId, evaluation.Urgency, evaluation.AiRiskFlags.Count);
+            _logger.LogInformation("AI triage completed for evaluation {EvaluationId}: Urgency={Urgency}, RiskFlags={RiskCount}, PainRegions={RegionCount}", 
+                intakeData.EvaluationId, evaluation.Urgency, evaluation.AiRiskFlags.Count, painMapData?.Regions.Count ?? 0);
         }
 
         if (_featuresOptions.SendEmailNotifications)

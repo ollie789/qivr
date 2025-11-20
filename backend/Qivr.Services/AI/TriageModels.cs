@@ -12,6 +12,7 @@ public class TriageRequest
     public List<string>? Allergies { get; set; }
     public int? Age { get; set; }
     public VitalSigns? VitalSigns { get; set; }
+    public PainMapData? PainMapData { get; set; } // NEW: 3D pain regions
 }
 
 public class TriageData
@@ -26,6 +27,24 @@ public class TriageData
     public List<string>? Allergies { get; set; }
     public int? Age { get; set; }
     public DateTime Timestamp { get; set; }
+    public PainMapData? PainMapData { get; set; } // NEW: 3D pain regions
+}
+
+// NEW: Pain map data structures
+public class PainMapData
+{
+    public List<PainRegion> Regions { get; set; } = new();
+    public string CameraView { get; set; } = "front";
+    public string Timestamp { get; set; } = "";
+}
+
+public class PainRegion
+{
+    public string MeshName { get; set; } = "";
+    public string? AnatomicalName { get; set; }
+    public string Quality { get; set; } = "";
+    public int Intensity { get; set; }
+    public string? SnomedCode { get; set; }
 }
 
 public class VitalSigns

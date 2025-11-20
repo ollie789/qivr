@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3D Pain Map Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { margin-bottom: 20px; color: #333; }
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .control-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #555;
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 20px;
+      border: 2px solid #ddd;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    button:hover { background: #f0f0f0; }
+    button.active {
+      background: #2196f3;
+      color: white;
+      border-color: #2196f3;
+    }
+    .quality-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .color-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+    #canvas {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      width: 100%;
+      height: 600px;
+    }
+    .selected-regions {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .region-item {
+      padding: 12px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .region-name { flex: 1; font-weight: 500; }
+    .badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #ddd;
+      outline: none;
+    }
+    .intensity-value {
+      display: inline-block;
+      margin-left: 10px;
+      font-weight: 600;
+      color: #2196f3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 3D Pain Map - Interactive Demo</h1>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label>Camera View</label>
+        <div class="btn-group">
+          <button class="view-btn active" data-view="front">Front</button>
+          <button class="view-btn" data-view="back">Back</button>
+          <button class="view-btn" data-view="left">Left Side</button>
+          <button class="view-btn" data-view="right">Right Side</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Pain Type</label>
+        <div class="btn-group">
+          <button class="quality-btn active" data-quality="burning" data-color="#ef4444">
+            <span class="color-dot" style="background: #ef4444"></span>
+            Burning
+          </button>
+          <button class="quality-btn" data-quality="throbbing" data-color="#f97316">
+            <span class="color-dot" style="background: #f97316"></span>
+            Throbbing
+          </button>
+          <button class="quality-btn" data-quality="sharp" data-color="#eab308">
+            <span class="color-dot" style="background: #eab308"></span>
+            Sharp
+          </button>
+          <button class="quality-btn" data-quality="dull" data-color="#22c55e">
+            <span class="color-dot" style="background: #22c55e"></span>
+            Dull/Aching
+          </button>
+          <button class="quality-btn" data-quality="numbness" data-color="#3b82f6">
+            <span class="color-dot" style="background: #3b82f6"></span>
+            Numbness
+          </button>
+          <button class="quality-btn" data-quality="tingling" data-color="#8b5cf6">
+            <span class="color-dot" style="background: #8b5cf6"></span>
+            Tingling
+          </button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Pain Intensity <span class="intensity-value" id="intensityValue">5/10</span></label>
+        <input type="range" id="intensity" min="1" max="10" value="5">
+      </div>
+    </div>
+
+    <div id="canvas"></div>
+
+    <div class="selected-regions">
+      <h3>Selected Pain Regions (<span id="regionCount">0</span>)</h3>
+      <div id="regionList" style="margin-top: 15px;">
+        <p style="color: #999;">Click on body parts to mark pain areas</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const REGION_NAMES = {
+      'back_head': 'Back of Head', 'front_head': 'Front of Head',
+      'back_neck': 'Back of Neck', 'front_neck': 'Front of Neck',
+      'back_left_shoulder': 'Left Shoulder (Back)', 'back_right_shoulder': 'Right Shoulder (Back)',
+      'front_left_shoulder': 'Left Shoulder (Front)', 'front_right_shoulder': 'Right Shoulder (Front)',
+      'back_left_upper_back': 'Left Upper Back', 'back_right_upper_back': 'Right Upper Back',
+      'back_left_mid_back': 'Left Mid Back', 'back_right_mid_back': 'Right Mid Back',
+      'back_left_lower_back': 'Left Lower Back', 'back_right_lower_back': 'Right Lower Back',
+      'front_left_upper_chest': 'Left Upper Chest', 'front_right_upper_chest': 'Right Upper Chest',
+      'front_left_lower_chest': 'Left Lower Chest', 'front_right_lower_chest': 'Right Lower Chest',
+      'front_left_upper_abdomen': 'Left Upper Abdomen', 'front_right_upper_abdomen': 'Right Upper Abdomen',
+      'front_left_lower_abdomen': 'Left Lower Abdomen', 'front_right_lower_abdomen': 'Right Lower Abdomen',
+      'back_left_buttocks': 'Left Buttock', 'back_right_buttocks': 'Right Buttock',
+      'front_left_pelvis': 'Left Pelvis', 'front_right_pelvis': 'Right Pelvis',
+      'back_left_upper_arm': 'Left Upper Arm (Back)', 'back_right_upper_arm': 'Right Upper Arm (Back)',
+      'front_left_upper_arm': 'Left Upper Arm (Front)', 'front_right_upper_arm': 'Right Upper Arm (Front)',
+      'back_left_lower_arm': 'Left Forearm (Back)', 'back_right_lower_arm': 'Right Forearm (Back)',
+      'front_left_lower_arm': 'Left Forearm (Front)', 'front_right_lower_arm': 'Right Forearm (Front)',
+      'front_left_hand': 'Left Hand', 'front_right_hand': 'Right Hand',
+      'back_left_thigh': 'Left Thigh (Back)', 'back_right_thigh': 'Right Thigh (Back)',
+      'front_left_thigh': 'Left Thigh (Front)', 'front_right_thigh': 'Right Thigh (Front)',
+      'back_left_knee': 'Left Knee (Back)', 'back_right_knee': 'Right Knee (Back)',
+      'front_left_knee': 'Left Knee (Front)', 'front_right_knee': 'Right Knee (Front)',
+      'back_left_shin': 'Left Shin (Back)', 'back_right_shin': 'Right Shin (Back)',
+      'front_left_shin': 'Left Shin (Front)', 'front_right_shin': 'Right Shin (Front)',
+      'back_left_foot': 'Left Foot (Back)', 'back_right_foot': 'Right Foot (Back)',
+      'front_left_foot': 'Left Foot (Front)', 'front_right_foot': 'Right Foot (Front)'
+    };
+
+    let scene, camera, renderer, controls, model;
+    let selectedRegions = [];
+    let currentQuality = 'burning';
+    let currentColor = '#ef4444';
+    let currentIntensity = 5;
+    let meshes = [];
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+      camera = new THREE.PerspectiveCamera(50, 800/600, 0.1, 2000);
+      camera.position.set(0, 200, 400);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(800, 600);
+      document.getElementById('canvas').appendChild(renderer.domElement);
+
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 200, 0);
+      controls.enableRotate = false;
+      controls.enablePan = false;
+      controls.update();
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight1.position.set(10, 10, 5);
+      scene.add(directionalLight1);
+
+      const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+      directionalLight2.position.set(-10, 10, -5);
+      scene.add(directionalLight2);
+
+      const loader = new GLTFLoader();
+      loader.load('CHOIRZONE.glb', (gltf) => {
+        model = gltf.scene;
+        scene.add(model);
+
+        model.traverse((child) => {
+          if (child.isMesh) {
+            meshes.push(child);
+            child.userData.originalMaterial = child.material.clone();
+            child.userData.originalMaterial.color = new THREE.Color(0xe0e0e0);
+            child.material = child.userData.originalMaterial.clone();
+          }
+        });
+
+        animate();
+      });
+
+      renderer.domElement.addEventListener('click', onCanvasClick);
+      window.addEventListener('resize', onResize);
+    }
+
+    function onCanvasClick(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(meshes);
+
+      if (intersects.length > 0) {
+        const mesh = intersects[0].object;
+        toggleRegion(mesh);
+      }
+    }
+
+    function toggleRegion(mesh) {
+      const existing = selectedRegions.findIndex(r => r.meshName === mesh.name);
+
+      if (existing >= 0) {
+        selectedRegions.splice(existing, 1);
+        mesh.material = mesh.userData.originalMaterial.clone();
+      } else {
+        selectedRegions.push({
+          meshName: mesh.name,
+          quality: currentQuality,
+          color: currentColor,
+          intensity: currentIntensity
+        });
+        mesh.material = new THREE.MeshStandardMaterial({
+          color: currentColor,
+          transparent: true,
+          opacity: currentIntensity / 10,
+          emissive: currentColor,
+          emissiveIntensity: 0.3
+        });
+      }
+
+      updateRegionList();
+    }
+
+    function updateRegionList() {
+      const list = document.getElementById('regionList');
+      const count = document.getElementById('regionCount');
+      count.textContent = selectedRegions.length;
+
+      if (selectedRegions.length === 0) {
+        list.innerHTML = '<p style="color: #999;">Click on body parts to mark pain areas</p>';
+        return;
+      }
+
+      list.innerHTML = selectedRegions.map(region => `
+        <div class="region-item">
+          <span class="color-dot" style="background: ${region.color}"></span>
+          <span class="region-name">${REGION_NAMES[region.meshName] || region.meshName}</span>
+          <span class="badge" style="background: ${region.color}; color: white;">${region.quality}</span>
+          <span class="badge" style="border: 2px solid #ddd;">${region.intensity}/10</span>
+        </div>
+      `).join('');
+    }
+
+    function setView(view) {
+      const positions = {
+        front: [0, 200, 400],
+        back: [0, 200, -400],
+        left: [-400, 200, 0],
+        right: [400, 200, 0]
+      };
+      const pos = positions[view];
+      camera.position.set(pos[0], pos[1], pos[2]);
+      controls.target.set(0, 200, 0);
+      controls.update();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    function onResize() {
+      camera.aspect = 800 / 600;
+      camera.updateProjectionMatrix();
+      renderer.setSize(800, 600);
+    }
+
+    // Event listeners
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setView(btn.dataset.view);
+      });
+    });
+
+    document.querySelectorAll('.quality-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentQuality = btn.dataset.quality;
+        currentColor = btn.dataset.color;
+      });
+    });
+
+    document.getElementById('intensity').addEventListener('input', (e) => {
+      currentIntensity = parseInt(e.target.value);
+      document.getElementById('intensityValue').textContent = `${currentIntensity}/10`;
+    });
+
+    init();
+  </script>
+</body>
+</html>

@@ -10,7 +10,7 @@ import {
   StepLabel,
   Paper,
 } from "@mui/material";
-import { PageLoader, PainDrawing, type PainMapData } from "@qivr/design-system";
+import { PageLoader, PainMap3D, type PainMap3DData } from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
@@ -38,7 +38,7 @@ export const IntakeForm = () => {
     painLevel: 5,
     duration: "",
     additionalNotes: "",
-    painMapData: undefined as PainMapData | undefined,
+    painMapData: undefined as PainMap3DData | undefined,
     painOnset: "",
     previousOrthoConditions: [] as string[],
     currentTreatments: [] as string[],
@@ -99,22 +99,22 @@ export const IntakeForm = () => {
           duration: formData.duration,
           notes: formData.additionalNotes,
         },
-        painMaps: formData.painMapData ? [{
-          bodyRegion: formData.painMapData.bodyRegion,
+        painMaps: formData.painMapData?.regions ? [{
+          bodyRegion: formData.painMapData.regions[0]?.anatomicalName || 'Multiple regions',
           coordinates: {
             x: 0,
             y: 0,
             z: 0,
           },
-          intensity: formData.painMapData.painIntensity,
-          type: formData.painMapData.painType,
-          qualities: formData.painMapData.painQuality,
-          avatarType: formData.painMapData.avatarType,
-          bodySubdivision: formData.painMapData.bodySubdivision,
-          viewOrientation: formData.painMapData.viewOrientation,
-          depthIndicator: formData.painMapData.depthIndicator,
-          submissionSource: formData.painMapData.submissionSource,
-          drawingDataJson: JSON.stringify(formData.painMapData.drawingData),
+          intensity: Math.max(...formData.painMapData.regions.map(r => r.intensity)),
+          type: formData.painMapData.regions[0]?.quality || 'pain',
+          qualities: formData.painMapData.regions.map(r => r.quality),
+          avatarType: 'male',
+          bodySubdivision: 'simple',
+          viewOrientation: formData.painMapData.cameraView,
+          depthIndicator: 'superficial',
+          submissionSource: 'portal',
+          drawingDataJson: JSON.stringify(formData.painMapData),
         }] : [],
       });
 
@@ -195,12 +195,19 @@ export const IntakeForm = () => {
               Pain Map
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
-              Draw on the body diagram to mark where you feel pain
+              Click on body regions to mark where you feel pain
             </Typography>
-            <PainDrawing
-              value={formData.painMapData}
-              onChange={(data) =>
-                setFormData({ ...formData, painMapData: data })
+            <PainMap3D
+              value={formData.painMapData?.regions || []}
+              onChange={(regions) =>
+                setFormData({ 
+                  ...formData, 
+                  painMapData: { 
+                    regions,
+                    cameraView: 'front',
+                    timestamp: new Date().toISOString()
+                  } 
+                })
               }
             />
           </Box>
@@ -270,7 +277,7 @@ export const IntakeForm = () => {
             </Typography>
             <Typography>
               <strong>Pain Drawing:</strong>{" "}
-              {formData.painMapData?.drawingData?.paths.length || 0} regions marked
+              {formData.painMapData?.regions?.length || 0} regions marked
             </Typography>
             <Typography>
               <strong>Symptoms:</strong> {formData.symptoms}

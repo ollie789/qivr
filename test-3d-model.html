@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3D Body Model Inspector</title>
+  <style>
+    body { margin: 0; font-family: Arial; }
+    #canvas { width: 100vw; height: 100vh; }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.9);
+      padding: 15px;
+      border-radius: 8px;
+      max-height: 90vh;
+      overflow-y: auto;
+      max-width: 300px;
+    }
+    .mesh-item { padding: 4px; cursor: pointer; }
+    .mesh-item:hover { background: #e3f2fd; }
+    .selected { background: #2196f3; color: white; }
+  </style>
+</head>
+<body>
+  <div id="canvas"></div>
+  <div id="info">
+    <h3>Body Model Meshes</h3>
+    <div id="meshList"></div>
+    <hr>
+    <div id="selected"></div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f5f5);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.set(0, 200, 400);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas').appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 200, 0);
+    controls.update();
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 10, 5);
+    scene.add(directionalLight);
+
+    const loader = new GLTFLoader();
+    let meshes = [];
+    let selectedMesh = null;
+
+    loader.load('CHOIRZONE.glb', (gltf) => {
+      scene.add(gltf.scene);
+
+      // Extract all meshes
+      gltf.scene.traverse((child) => {
+        if (child.isMesh) {
+          meshes.push(child);
+          child.userData.originalMaterial = child.material.clone();
+        }
+      });
+
+      // Display mesh list
+      const meshList = document.getElementById('meshList');
+      meshList.innerHTML = '<strong>Total Meshes: ' + meshes.length + '</strong><br><br>';
+      
+      meshes.forEach((mesh, i) => {
+        const div = document.createElement('div');
+        div.className = 'mesh-item';
+        div.textContent = `${i}: ${mesh.name || 'unnamed'}`;
+        div.onclick = () => selectMesh(mesh, div);
+        meshList.appendChild(div);
+      });
+
+      console.log('Mesh Names:', meshes.map(m => m.name));
+    });
+
+    function selectMesh(mesh, element) {
+      // Reset previous selection
+      if (selectedMesh) {
+        selectedMesh.material = selectedMesh.userData.originalMaterial;
+      }
+      document.querySelectorAll('.mesh-item').forEach(el => el.classList.remove('selected'));
+
+      // Highlight new selection
+      selectedMesh = mesh;
+      mesh.material = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        transparent: true,
+        opacity: 0.7
+      });
+      element.classList.add('selected');
+
+      // Show info
+      document.getElementById('selected').innerHTML = `
+        <strong>Selected:</strong><br>
+        Name: ${mesh.name || 'unnamed'}<br>
+        Vertices: ${mesh.geometry.attributes.position.count}<br>
+        Triangles: ${mesh.geometry.index ? mesh.geometry.index.count / 3 : 'N/A'}
+      `;
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

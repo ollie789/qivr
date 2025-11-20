@@ -27,7 +27,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
-import { PainDrawingViewer, type PainMapData } from "@qivr/design-system";
+import { PainMap3DViewer, type PainMap3DData } from "@qivr/design-system";
 import MessageComposer from "../../../components/messaging/MessageComposer";
 
 interface PainPoint {
@@ -51,7 +51,7 @@ interface EvaluationData {
   chiefComplaint: string;
   symptoms: string[];
   painPoints: PainPoint[];
-  painMapData?: PainMapData; // New pain drawing data
+  painMapData?: PainMap3DData; // New pain drawing data
   medicalHistory: string[];
   medications: string[];
   allergies: string[];
@@ -184,9 +184,10 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                 Pain Assessment
               </Typography>
               
-              {evaluation.painMapData ? (
-                <PainDrawingViewer 
-                  painMapData={evaluation.painMapData}
+              {evaluation.painMapData?.regions ? (
+                <PainMap3DViewer 
+                  regions={evaluation.painMapData.regions}
+                  cameraView={evaluation.painMapData.cameraView || 'front'}
                   width={400}
                   height={600}
                 />

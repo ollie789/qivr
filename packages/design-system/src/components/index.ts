@@ -17,6 +17,8 @@ export * from './pain-map/AnnotationTools';
 export * from './pain-map/PainDrawing';
 export * from './pain-map/PainDrawingCanvas';
 export * from './pain-map/PainDrawingViewer';
+export * from './pain-map/PainMap3D';
+export * from './pain-map/PainMap3DViewer';
 export * from './pain-map/PainMapHeatMap';
 export * from './pain-map/PainMapMetrics';
 export * from './pain-map/PainMapProgression';
