@@ -41,7 +41,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import { PainMapHeatMap, PainMapMetrics } from '@qivr/design-system';
+import { PainMapMetrics } from '@qivr/design-system';
 import apiClient from '../lib/api-client';
 import analyticsApi, {
   ClinicAnalytics,
@@ -452,17 +452,40 @@ const Analytics: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <PainMapHeatMap
-              data={painHeatMap}
-              loading={heatMapLoading}
-              width={400}
-              height={600}
-              backgroundImage={`/body-${painAvatarType}-${painViewOrientation}.png`}
-            />
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Pain Region Heat Map
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Aggregated pain data from all patients showing most commonly affected regions
+              </Typography>
+              
+              {heatMapLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : painHeatMap && painHeatMap.length > 0 ? (
+                <Box sx={{ 
+                  bgcolor: '#f5f5f5', 
+                  borderRadius: 1, 
+                  p: 2,
+                  display: 'flex',
+                  justifyContent: 'center'
+                }}>
+                  <Typography variant="body2" color="text.secondary">
+                    3D heat map visualization coming soon. Currently showing {painHeatMap.length} data points.
+                  </Typography>
+                </Box>
+              ) : (
+                <Alert severity="info">
+                  No pain map data available for the selected filters
+                </Alert>
+              )}
+            </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
             <PainMapMetrics data={painMetrics} loading={metricsLoading} />
           </Grid>
         </Grid>
