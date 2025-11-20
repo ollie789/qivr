@@ -16,6 +16,7 @@ import {
   Warning as WarningIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { IntakeSubmission } from "../../services/intakeApi";
 
 interface IntakeKanbanProps {
@@ -33,10 +34,19 @@ const COLUMNS = [
   { id: "archived", title: "Archived", statuses: ["archived", "rejected"] },
 ];
 
+const STATUS_MAP: Record<string, string> = {
+  pending: "pending",
+  reviewing: "reviewing",
+  scheduling: "scheduling",
+  scheduled: "scheduled",
+  archived: "archived",
+};
+
 export const IntakeKanban: React.FC<IntakeKanbanProps> = ({
   intakes,
   onViewDetails,
   onSchedule,
+  onStatusChange,
 }) => {
   const getColumnIntakes = (statuses: string[]) => {
     return intakes.filter((intake) =>
@@ -57,47 +67,83 @@ export const IntakeKanban: React.FC<IntakeKanbanProps> = ({
     }
   };
 
-  return (
-    <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
-      {COLUMNS.map((column) => {
-        const columnIntakes = getColumnIntakes(column.statuses);
+  const handleDragEnd = (result: any) => {
+    const { destination, source, draggableId } = result;
 
-        return (
-          <Paper
-            key={column.id}
-            sx={{
-              minWidth: 320,
-              maxWidth: 320,
-              bgcolor: "grey.50",
-              p: 2,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <Box
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId) return;
+
+    const newStatus = STATUS_MAP[destination.droppableId];
+    if (newStatus) {
+      onStatusChange(draggableId, newStatus);
+    }
+  };
+
+  return (
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
+        {COLUMNS.map((column) => {
+          const columnIntakes = getColumnIntakes(column.statuses);
+
+          return (
+            <Paper
+              key={column.id}
               sx={{
+                minWidth: 320,
+                maxWidth: 320,
+                bgcolor: "grey.50",
+                p: 2,
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2,
+                flexDirection: "column",
               }}
             >
-              <Typography variant="h6" fontWeight={600}>
-                {column.title}
-              </Typography>
-              <Chip label={columnIntakes.length} size="small" />
-            </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
+                <Typography variant="h6" fontWeight={600}>
+                  {column.title}
+                </Typography>
+                <Chip label={columnIntakes.length} size="small" />
+              </Box>
 
-            <Stack
-              spacing={2}
-              sx={{ overflowY: "auto", maxHeight: "calc(100vh - 300px)" }}
-            >
-              {columnIntakes.map((intake) => (
-                <Card
-                  key={intake.id}
-                  sx={{ cursor: "pointer" }}
-                  onClick={() => onViewDetails(intake)}
-                >
+              <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
+                  <Stack
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    spacing={2}
+                    sx={{
+                      overflowY: "auto",
+                      maxHeight: "calc(100vh - 300px)",
+                      bgcolor: snapshot.isDraggingOver ? "action.hover" : "transparent",
+                      borderRadius: 1,
+                      p: 0.5,
+                      minHeight: 100,
+                    }}
+                  >
+                    {columnIntakes.map((intake, index) => (
+                      <Draggable
+                        key={intake.id}
+                        draggableId={intake.id}
+                        index={index}
+                      >
+                        {(provided, snapshot) => (
+                          <Card
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            sx={{
+                              cursor: snapshot.isDragging ? "grabbing" : "grab",
+                              bgcolor: snapshot.isDragging ? "action.selected" : "background.paper",
+                              boxShadow: snapshot.isDragging ? 4 : 1,
+                            }}
+                            onClick={() => onViewDetails(intake)}
+                          >
                   <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
                     <Box
                       sx={{
@@ -233,19 +279,25 @@ export const IntakeKanban: React.FC<IntakeKanbanProps> = ({
                     </Box>
                   </CardContent>
                 </Card>
-              ))}
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
 
-              {columnIntakes.length === 0 && (
-                <Box sx={{ textAlign: "center", py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No items
-                  </Typography>
-                </Box>
-              )}
-            </Stack>
-          </Paper>
-        );
-      })}
-    </Box>
+                    {columnIntakes.length === 0 && (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No items
+                        </Typography>
+                      </Box>
+                    )}
+                  </Stack>
+                )}
+              </Droppable>
+            </Paper>
+          );
+        })}
+      </Box>
+    </DragDropContext>
   );
 };
