@@ -137,6 +137,46 @@ export const IntakeKanban: React.FC<IntakeKanbanProps> = ({
                       {intake.conditionType}
                     </Typography>
 
+                    {/* Pain Level & Regions */}
+                    {(intake.painLevel || intake.bodyMap?.painPoints) && (
+                      <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
+                        {intake.painLevel && (
+                          <Chip
+                            label={`Pain: ${intake.painLevel}/10`}
+                            size="small"
+                            color={intake.painLevel >= 7 ? "error" : intake.painLevel >= 4 ? "warning" : "default"}
+                            sx={{ height: 20, fontSize: "0.7rem" }}
+                          />
+                        )}
+                        {intake.bodyMap?.painPoints && intake.bodyMap.painPoints.length > 0 && (
+                          <Chip
+                            label={`${intake.bodyMap.painPoints.length} regions`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: "0.7rem" }}
+                          />
+                        )}
+                      </Box>
+                    )}
+
+                    {/* Symptoms */}
+                    {intake.symptoms && intake.symptoms.length > 0 && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          display: "block",
+                          mb: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap"
+                        }}
+                      >
+                        {intake.symptoms.slice(0, 2).join(", ")}
+                        {intake.symptoms.length > 2 && ` +${intake.symptoms.length - 2}`}
+                      </Typography>
+                    )}
+
                     <Box
                       sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}
                     >
@@ -151,6 +191,7 @@ export const IntakeKanban: React.FC<IntakeKanbanProps> = ({
                           icon={<WarningIcon sx={{ fontSize: 14 }} />}
                           label="AI Triaged"
                           size="small"
+                          color="primary"
                           sx={{ height: 20, fontSize: "0.7rem" }}
                         />
                       )}
