@@ -168,8 +168,41 @@ public class IntakeController : ControllerBase
                 )", cancellationToken);
             
             // Store pain map data if provided
-            if (request.PainPoints != null && request.PainPoints.Any())
+            if (request.PainMapData != null && request.PainMapData.Regions.Any())
             {
+                // Store 3D region-based pain map
+                var painMapId = Guid.NewGuid();
+                var drawingDataJson = JsonSerializer.Serialize(new
+                {
+                    regions = request.PainMapData.Regions,
+                    cameraView = request.PainMapData.CameraView,
+                    timestamp = request.PainMapData.Timestamp
+                });
+
+                // Get primary region for body_region field (most intense)
+                var primaryRegion = request.PainMapData.Regions
+                    .OrderByDescending(r => r.Intensity)
+                    .FirstOrDefault();
+
+                await intakeContext.Database.ExecuteSqlInterpolatedAsync($@"
+                    INSERT INTO qivr.pain_maps (
+                        id, tenant_id, evaluation_id, body_region, anatomical_code,
+                        pain_intensity, drawing_data_json, avatar_type, view_orientation,
+                        created_at, updated_at
+                    ) VALUES (
+                        {painMapId}, {tenantId}, {evaluationId},
+                        {primaryRegion?.AnatomicalName ?? "Multiple regions"},
+                        {primaryRegion?.SnomedCode},
+                        {primaryRegion?.Intensity ?? 0},
+                        {drawingDataJson}::jsonb,
+                        'male',
+                        {request.PainMapData.CameraView},
+                        {now}, {now}
+                    )", cancellationToken);
+            }
+            else if (request.PainPoints != null && request.PainPoints.Any())
+            {
+                // Legacy: Store old pain points format
                 foreach (var painPoint in request.PainPoints)
                 {
                     var painMapId = Guid.NewGuid();
@@ -349,9 +382,27 @@ public class IntakeSubmissionRequest
     public int PainLevel { get; set; }
     public string Duration { get; set; } = string.Empty;
     public List<PainPointDto> PainPoints { get; set; } = new();
+    public PainMapDataDto? PainMapData { get; set; } // NEW: 3D pain map support
     public Dictionary<string, object> QuestionnaireResponses { get; set; } = new();
     public IntakeMedicalHistoryDto MedicalHistory { get; set; } = new();
     public ConsentDto Consent { get; set; } = new();
+}
+
+// NEW: 3D Pain Map DTOs
+public class PainMapDataDto
+{
+    public List<PainRegionDto> Regions { get; set; } = new();
+    public string CameraView { get; set; } = "front";
+    public string Timestamp { get; set; } = string.Empty;
+}
+
+public class PainRegionDto
+{
+    public string MeshName { get; set; } = string.Empty;
+    public string? AnatomicalName { get; set; }
+    public string Quality { get; set; } = string.Empty;
+    public int Intensity { get; set; }
+    public string? SnomedCode { get; set; }
 }
 
 public class PersonalInfoDto
