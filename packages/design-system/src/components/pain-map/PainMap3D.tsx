@@ -1,11 +1,8 @@
 import { Suspense, useRef, useState, useEffect } from 'react';
-import { Canvas, useLoader, useThree, extend } from '@react-three/fiber';
+import { Canvas, useLoader, useThree } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography, Slider, CircularProgress, Chip } from '@mui/material';
 import * as THREE from 'three';
-
-// Extend Three.js types for React Three Fiber
-extend(THREE);
 import { PAIN_QUALITIES, type PainQuality } from '../../types/pain-drawing';
 import { getRegionDisplayName, getRegionSnomedCode } from '../../types/anatomical-regions';
 

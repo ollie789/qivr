@@ -49,6 +49,8 @@
     "@mui/lab": "^7.0.0-beta.18",
     "@mui/x-data-grid": "^8.0.0",
     "@mui/x-date-pickers": "^8.14.0",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^9.4.0",
     "@tiptap/core": "^3.7.2",
     "@tiptap/extension-image": "^3.7.2",
     "@tiptap/extension-placeholder": "^3.7.2",
@@ -90,12 +92,10 @@
     "svelte-gantt": "^4.5.0",
     "swiper": "^12.0.2",
     "swr": "^2.3.6",
+    "three": "^0.181.2",
     "wavesurfer.js": "^7.11.0",
     "yet-another-react-lightbox": "^3.25.0",
-    "yup": "^1.7.0",
-    "@react-three/drei": "^9.122.0",
-    "@react-three/fiber": "^8.18.0",
-    "three": "^0.181.2"
+    "yup": "^1.7.0"
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",
