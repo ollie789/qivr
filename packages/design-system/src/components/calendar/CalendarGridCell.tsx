@@ -28,6 +28,7 @@ export const CalendarGridCell: React.FC<CalendarGridCellProps> = ({
   ...props
 }) => {
   return (
+    // @ts-ignore - Complex union type from sx prop spreading
     <Box
       sx={{
         ...calendar.gridCell,
