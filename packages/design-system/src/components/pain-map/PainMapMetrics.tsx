@@ -1,4 +1,4 @@
-import { Box, Grid, Paper, Typography, Card, CardContent, Chip, Stack, LinearProgress } from '@mui/material';
+import { Box, Grid, Paper, Typography, Chip, Stack, LinearProgress } from '@mui/material';
 import { TrendingUp, TrendingDown, Remove } from '@mui/icons-material';
 
 interface RegionFrequency {
@@ -63,30 +63,26 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
         {/* Summary Cards */}
         {/* @ts-ignore - MUI v7 Grid size prop union type complexity */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Total Pain Drawings
-              </Typography>
-              <Typography variant="h3">{data.totalMaps}</Typography>
-            </CardContent>
-          </Card>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Total Pain Drawings
+            </Typography>
+            <Typography variant="h3">{data.totalMaps}</Typography>
+          </Paper>
         </Grid>
 
         {/* @ts-ignore - MUI v7 Grid size prop union type complexity */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Average Intensity
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="h3">{data.averageIntensity.toFixed(1)}</Typography>
-                <Typography variant="h6" color="text.secondary">/10</Typography>
-                {getTrendIcon(data.averageIntensity)}
-              </Box>
-            </CardContent>
-          </Card>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Average Intensity
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h3">{data.averageIntensity.toFixed(1)}</Typography>
+              <Typography variant="h6" color="text.secondary">/10</Typography>
+              {getTrendIcon(data.averageIntensity)}
+            </Box>
+          </Paper>
         </Grid>
 
         {/* Most Common Regions */}
