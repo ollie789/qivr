@@ -7,8 +7,6 @@ import {
   Button,
   Box,
   Typography,
-  Card,
-  CardContent,
   Radio,
   RadioGroup,
   FormControlLabel,
@@ -40,7 +38,7 @@ import type {
 } from '../../services/promApi';
 import { promApi } from '../../services/promApi';
 import { useSnackbar } from 'notistack';
-import { FlexBetween, LoadingSpinner } from '@qivr/design-system';
+import { FlexBetween, LoadingSpinner, InfoCard } from '@qivr/design-system';
 
 interface PromPreviewProps {
   open: boolean;
@@ -300,38 +298,33 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
         ) : preview ? (
           <Box>
             {/* Header Info */}
-            <Card sx={{ mb: 3, bgcolor: 'primary.50' }}>
-              <CardContent>
-                <Typography variant="h5" gutterBottom>
-                  {preview.templateName}
+            <InfoCard title={preview.templateName} sx={{ mb: 3, bgcolor: 'primary.50' }}>
+              {preview.description && (
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  {preview.description}
                 </Typography>
-                {preview.description && (
-                  <Typography variant="body2" color="text.secondary" paragraph>
-                    {preview.description}
-                  </Typography>
-                )}
-                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                  <Chip
-                    icon={<TimerIcon />}
-                    label={`~${preview.estimatedTimeMinutes} minutes`}
-                    variant="outlined"
-                    size="small"
-                  />
-                  <Chip
-                    label={`${preview.questionCount} questions`}
-                    variant="outlined"
-                    size="small"
-                  />
-                  <Chip
-                    icon={<CheckCircleIcon />}
-                    label={`${getCompletionPercentage()}% complete`}
-                    variant="outlined"
-                    size="small"
-                    color={getCompletionPercentage() === 100 ? 'success' : 'default'}
-                  />
-                </Box>
-              </CardContent>
-            </Card>
+              )}
+              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                <Chip
+                  icon={<TimerIcon />}
+                  label={`~${preview.estimatedTimeMinutes} minutes`}
+                  variant="outlined"
+                  size="small"
+                />
+                <Chip
+                  label={`${preview.questionCount} questions`}
+                  variant="outlined"
+                  size="small"
+                />
+                <Chip
+                  icon={<CheckCircleIcon />}
+                  label={`${getCompletionPercentage()}% complete`}
+                  variant="outlined"
+                  size="small"
+                  color={getCompletionPercentage() === 100 ? 'success' : 'default'}
+                />
+              </Box>
+            </InfoCard>
 
             {/* Progress Bar */}
             <LinearProgress 
@@ -358,24 +351,13 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
               // Show all questions
               <Box>
                 {preview.questions.map((question, index) => (
-                  <Card key={question.id} sx={{ mb: 2 }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'start', gap: 2, mb: 2 }}>
-                        <Chip label={`Q${index + 1}`} size="small" color="primary" />
-                        <Box flex={1}>
-                          <Typography variant="subtitle1" gutterBottom>
-                            {question.text}
-                            {question.required && (
-                              <Typography component="span" color="error" sx={{ ml: 0.5 }}>
-                                *
-                              </Typography>
-                            )}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      {renderQuestion(question)}
-                    </CardContent>
-                  </Card>
+                  <InfoCard 
+                    key={question.id} 
+                    title={`Q${index + 1}: ${question.text}${question.required ? ' *' : ''}`}
+                    sx={{ mb: 2 }}
+                  >
+                    {renderQuestion(question)}
+                  </InfoCard>
                 ))}
               </Box>
             ) : (
@@ -389,27 +371,24 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
                   ))}
                 </Stepper>
 
-                <Card sx={{ minHeight: 250 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'start', gap: 2, mb: 3 }}>
-                      <Chip 
-                        label={`Question ${currentStep + 1} of ${preview.questions.length}`} 
-                        color="primary"
-                      />
-                      {preview.questions[currentStep]?.required && (
-                        <Chip label="Required" color="error" size="small" />
-                      )}
-                    </Box>
-                    
-                    <Typography variant="h6" gutterBottom>
-                      {preview.questions[currentStep]?.text}
-                    </Typography>
-                    
-                    <Box sx={{ mt: 3 }}>
-                      {preview.questions[currentStep] && renderQuestion(preview.questions[currentStep])}
-                    </Box>
-                  </CardContent>
-                </Card>
+                <InfoCard 
+                  title={preview.questions[currentStep]?.text || ''}
+                  sx={{ minHeight: 250 }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'start', gap: 2, mb: 3 }}>
+                    <Chip 
+                      label={`Question ${currentStep + 1} of ${preview.questions.length}`} 
+                      color="primary"
+                    />
+                    {preview.questions[currentStep]?.required && (
+                      <Chip label="Required" color="error" size="small" />
+                    )}
+                  </Box>
+                  
+                  <Box sx={{ mt: 3 }}>
+                    {preview.questions[currentStep] && renderQuestion(preview.questions[currentStep])}
+                  </Box>
+                </InfoCard>
 
                 <FlexBetween sx={{ mt: 3 }}>
                   <Button
