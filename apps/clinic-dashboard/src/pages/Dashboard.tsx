@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 import {
   Box,
   Grid,
-  CardContent,
-  Typography,
   Avatar,
   Chip,
   List,
@@ -57,12 +55,12 @@ import type {
 } from "../features/analytics";
 import { 
   QivrButton, 
-  QivrCard, 
   EmptyState, 
   SkeletonLoader,
   AuraStatCard,
   GreetingCard,
-  InfoCard
+  InfoCard,
+  AuraChartCard
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -454,72 +452,62 @@ const Dashboard: React.FC = () => {
 
         {/* Clinic Performance Metrics */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <QivrCard elevated>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Clinic Performance Metrics
-              </Typography>
-              <ResponsiveContainer width="100%" height={250}>
-                <RadarChart
-                  data={
-                    providerPerformanceRadar.length > 0
-                      ? providerPerformanceRadar
-                      : [{ metric: "No Data", value: 0 }]
-                  }
-                >
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="metric" />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                  <Radar
-                    name="Performance"
-                    dataKey="value"
-                    stroke="var(--qivr-palette-primary-main)"
-                    fill="var(--qivr-palette-primary-main)"
-                    fillOpacity={0.6}
-                  />
-                  <Tooltip />
-                </RadarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </QivrCard>
+          <AuraChartCard title="Clinic Performance Metrics">
+            <ResponsiveContainer width="100%" height={250}>
+              <RadarChart
+                data={
+                  providerPerformanceRadar.length > 0
+                    ? providerPerformanceRadar
+                    : [{ metric: "No Data", value: 0 }]
+                }
+              >
+                <PolarGrid />
+                <PolarAngleAxis dataKey="metric" />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                <Radar
+                  name="Performance"
+                  dataKey="value"
+                  stroke="var(--qivr-palette-primary-main)"
+                  fill="var(--qivr-palette-primary-main)"
+                  fillOpacity={0.6}
+                />
+                <Tooltip />
+              </RadarChart>
+            </ResponsiveContainer>
+          </AuraChartCard>
         </Grid>
 
         {/* Weekly Activity Heatmap */}
         <Grid size={12}>
-          <QivrCard elevated>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Weekly Activity Overview
-              </Typography>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart
-                  data={
-                    appointmentTrends.length > 0
-                      ? appointmentTrends
-                      : [{ name: "No Data", appointments: 0, completed: 0 }]
-                  }
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="appointments"
-                    stroke="var(--qivr-palette-primary-main)"
-                    strokeWidth={2}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="completed"
-                    stroke="var(--qivr-palette-success-main)"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </QivrCard>
+          <AuraChartCard title="Weekly Activity Overview">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart
+                data={
+                  appointmentTrends.length > 0
+                    ? appointmentTrends
+                    : [{ name: "No Data", appointments: 0, completed: 0 }]
+                }
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="appointments"
+                  stroke="var(--qivr-palette-primary-main)"
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="completed"
+                  stroke="var(--qivr-palette-success-main)"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </AuraChartCard>
         </Grid>
       </Grid>
     </Box>

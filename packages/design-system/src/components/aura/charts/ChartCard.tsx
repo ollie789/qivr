@@ -1,28 +1,27 @@
-import { Paper, Stack, Typography } from '@mui/material';
-import { ReactNode } from 'react';
+import React from 'react';
+import { Card, CardContent, Typography, Box } from '@mui/material';
 
-export interface ChartCardProps {
+export interface AuraChartCardProps {
   title: string;
   subtitle?: string;
-  action?: ReactNode;
-  legend?: ReactNode;
-  children: ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  elevated?: boolean;
 }
 
-export const ChartCard = ({ title, subtitle, action, legend, children }: ChartCardProps) => {
+export const AuraChartCard: React.FC<AuraChartCardProps> = ({
+  title,
+  subtitle,
+  action,
+  children,
+  elevated = true,
+}) => {
   return (
-    <Paper sx={{ p: { xs: 3, md: 5 }, height: 1 }}>
-      <Stack direction="column" sx={{ rowGap: 4, height: 1 }}>
-        <Stack
-          sx={{
-            columnGap: { xs: 5, lg: 2, xl: 5 },
-            rowGap: 3,
-            flexWrap: { xs: 'wrap', sm: 'nowrap' },
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <Typography variant="h6" mb={1}>
+    <Card elevation={elevated ? 2 : 0}>
+      <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box>
+            <Typography variant="h6" gutterBottom={!!subtitle}>
               {title}
             </Typography>
             {subtitle && (
@@ -30,27 +29,11 @@ export const ChartCard = ({ title, subtitle, action, legend, children }: ChartCa
                 {subtitle}
               </Typography>
             )}
-          </div>
-
-          {legend && (
-            <Stack
-              sx={{
-                flex: 1,
-                flexBasis: { xs: '100%', sm: 0 },
-                order: { xs: 1, sm: 0 },
-                alignSelf: 'flex-end',
-                gap: 2,
-              }}
-            >
-              {legend}
-            </Stack>
-          )}
-
-          {action}
-        </Stack>
-
+          </Box>
+          {action && <Box>{action}</Box>}
+        </Box>
         {children}
-      </Stack>
-    </Paper>
+      </CardContent>
+    </Card>
   );
 };
