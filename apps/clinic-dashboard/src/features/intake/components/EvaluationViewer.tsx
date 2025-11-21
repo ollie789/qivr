@@ -8,8 +8,6 @@ import {
   Button,
   TextField,
   Avatar,
-  Card,
-  CardContent,
   Alert,
   Stack,
   List,
@@ -27,7 +25,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
-import { PainMap3DViewer, type PainMap3DData } from "@qivr/design-system";
+import { PainMap3DViewer, type PainMap3DData, InfoCard } from "@qivr/design-system";
 import MessageComposer from "../../../components/messaging/MessageComposer";
 
 interface PainPoint {
@@ -154,32 +152,26 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
         {/* Left Column */}
         <Grid size={{ xs: 12, md: 6 }}>
           {/* Chief Complaint */}
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Chief Complaint
-              </Typography>
-              <Alert severity="info" icon={<WarningIcon />}>
-                {evaluation.chiefComplaint}
-              </Alert>
-              {evaluation.symptoms.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Symptoms
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    {evaluation.symptoms.map((symptom, idx) => (
-                      <Chip key={idx} label={symptom} size="small" />
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
+          <InfoCard title="Chief Complaint" sx={{ mb: 2 }}>
+            <Alert severity="info" icon={<WarningIcon />}>
+              {evaluation.chiefComplaint}
+            </Alert>
+            {evaluation.symptoms.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Symptoms
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {evaluation.symptoms.map((symptom, idx) => (
+                    <Chip key={idx} label={symptom} size="small" />
+                  ))}
+                </Stack>
+              </Box>
+            )}
+          </InfoCard>
 
           {/* Pain Assessment */}
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
+          <InfoCard title="Pain Assessment" sx={{ mb: 2 }}>
               <Typography variant="h6" gutterBottom>
                 Pain Assessment
               </Typography>
@@ -218,15 +210,10 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                   No pain assessment data available
                 </Typography>
               )}
-            </CardContent>
-          </Card>
+          </InfoCard>
 
           {/* Medical History */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Medical History
-              </Typography>
+          <InfoCard title="Medical History">
 
               {evaluation.medications.length > 0 && (
                 <Box sx={{ mb: 2 }}>
@@ -290,63 +277,57 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                   </List>
                 </Box>
               )}
-            </CardContent>
-          </Card>
+          </InfoCard>
         </Grid>
 
         {/* Right Column */}
         <Grid size={{ xs: 12, md: 6 }}>
           {/* AI Analysis */}
           {evaluation.aiSummary && (
-            <Card sx={{ mb: 2 }}>
-              <CardContent>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  sx={{ mb: 2 }}
-                >
-                  <Typography variant="h6">AI Triage Analysis</Typography>
-                  {!isEditingSummary ? (
+            <InfoCard 
+              title="AI Triage Analysis" 
+              sx={{ mb: 2 }}
+              action={
+                !isEditingSummary ? (
+                  <IconButton
+                    size="small"
+                    onClick={() => setIsEditingSummary(true)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                ) : (
+                  <Stack direction="row" spacing={1}>
                     <IconButton
                       size="small"
-                      onClick={() => setIsEditingSummary(true)}
+                      onClick={() => {
+                        onUpdate?.({
+                          ...evaluation,
+                          aiSummary: {
+                            ...evaluation.aiSummary!,
+                            content: editedSummary,
+                          },
+                        });
+                        setIsEditingSummary(false);
+                      }}
                     >
-                      <EditIcon />
+                      <SaveIcon />
                     </IconButton>
-                  ) : (
-                    <Stack direction="row" spacing={1}>
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          onUpdate?.({
-                            ...evaluation,
-                            aiSummary: {
-                              ...evaluation.aiSummary!,
-                              content: editedSummary,
-                            },
-                          });
-                          setIsEditingSummary(false);
-                        }}
-                      >
-                        <SaveIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setEditedSummary(evaluation.aiSummary?.content || "");
-                          setIsEditingSummary(false);
-                        }}
-                      >
-                        <CancelIcon />
-                      </IconButton>
-                    </Stack>
-                  )}
-                </Stack>
-
-                {isEditingSummary ? (
-                  <TextField
-                    fullWidth
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setEditedSummary(evaluation.aiSummary?.content || "");
+                        setIsEditingSummary(false);
+                      }}
+                    >
+                      <CancelIcon />
+                    </IconButton>
+                  </Stack>
+                )
+              }
+            >
+              {isEditingSummary ? (
+                <TextField
+                  fullWidth
                     multiline
                     rows={6}
                     value={editedSummary}
@@ -401,16 +382,11 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                     </List>
                   </Box>
                 )}
-              </CardContent>
-            </Card>
+            </InfoCard>
           )}
 
           {/* Contact Info */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Contact Information
-              </Typography>
+          <InfoCard title="Contact Information">
               <Stack spacing={1}>
                 <Box>
                   <Typography variant="caption" color="text.secondary">
@@ -437,8 +413,7 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                   </Typography>
                 </Box>
               </Stack>
-            </CardContent>
-          </Card>
+          </InfoCard>
         </Grid>
       </Grid>
 
