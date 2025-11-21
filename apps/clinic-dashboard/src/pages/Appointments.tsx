@@ -4,7 +4,6 @@ import {
   Autocomplete,
   Avatar,
   Box,
-  CardContent,
   Dialog,
   DialogActions,
   DialogContent,
@@ -121,7 +120,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
-import { AvailabilitySlot, FlexBetween, PageHeader, QivrButton, QivrCard, CalendarGridCell, AppointmentChip, calendar as calendarStyles, StatusBadge, AuraButton } from '@qivr/design-system';
+import { AvailabilitySlot, FlexBetween, PageHeader, QivrButton, CalendarGridCell, AppointmentChip, calendar as calendarStyles, StatusBadge, AuraButton, InfoCard } from '@qivr/design-system';
 
 interface Appointment {
   id: string;
@@ -359,11 +358,10 @@ const Appointments: React.FC = () => {
     );
 
     return (
-      <QivrCard elevated sx={{ p: 2, height: 600, overflowY: 'auto' }}>
-        <Typography variant="h6" gutterBottom>
-          {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
+      <InfoCard 
+        title={format(selectedDate, 'EEEE, MMMM d, yyyy')}
+        sx={{ height: 600, overflowY: 'auto' }}
+      >
         {hours.map((hour) => {
           const hourAppointments = dayAppointments.filter((apt: Appointment) => 
             parseISO(apt.scheduledStart).getHours() === hour
@@ -377,31 +375,34 @@ const Appointments: React.FC = () => {
               <Box sx={{ flex: 1 }}>
                 {hourAppointments.length > 0 ? (
                   hourAppointments.map((apt: Appointment) => (
-                    <QivrCard 
+                    <Box
                       key={apt.id} 
                       sx={{ 
-                        mb: 1, 
+                        mb: 1,
+                        p: 1.5,
+                        borderRadius: 1,
+                        bgcolor: 'background.paper',
+                        border: 1,
+                        borderColor: 'divider',
                         borderLeft: 4, 
-                        borderColor: getAppointmentColor(apt.appointmentType),
+                        borderLeftColor: getAppointmentColor(apt.appointmentType),
                         cursor: 'pointer',
                         '&:hover': { boxShadow: 2 }
                       }}
                       onClick={() => setSelectedAppointment(apt)}
                     >
-                      <CardContent sx={{ py: 1 }}>
-                        <FlexBetween>
-                          <Box>
-                            <Typography variant="subtitle2">
-                              {apt.patientName}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {appointmentTypes.find(t => t.value === apt.appointmentType)?.label} • {apt.providerName}
-                            </Typography>
-                          </Box>
-                          <StatusBadge status={apt.status} />
-                        </FlexBetween>
-                      </CardContent>
-                    </QivrCard>
+                      <FlexBetween>
+                        <Box>
+                          <Typography variant="subtitle2">
+                            {apt.patientName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {appointmentTypes.find(t => t.value === apt.appointmentType)?.label} • {apt.providerName}
+                          </Typography>
+                        </Box>
+                        <StatusBadge status={apt.status} />
+                      </FlexBetween>
+                    </Box>
                   ))
                 ) : (
                   <AvailabilitySlot
@@ -426,7 +427,7 @@ const Appointments: React.FC = () => {
             </FlexBetween>
           );
         })}
-      </QivrCard>
+      </InfoCard>
     );
   };
 
@@ -436,7 +437,7 @@ const Appointments: React.FC = () => {
     const hours = Array.from({ length: 12 }, (_, i) => i + 8);
 
     return (
-      <QivrCard elevated sx={{ p: 2, overflowX: 'auto' }}>
+      <InfoCard title="Week View" sx={{ overflowX: 'auto' }}>
         <Grid container spacing={1}>
           <Grid size={1}>
             <Box sx={{ height: 40 }} />
@@ -498,13 +499,13 @@ const Appointments: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-      </QivrCard>
+      </InfoCard>
     );
   };
 
   const renderMonthView = () => {
     return (
-      <QivrCard elevated sx={{ p: 2 }}>
+      <InfoCard title="Month View">
         <DateCalendar
           value={selectedDate}
           onChange={(newDate) => newDate && setSelectedDate(newDate)}
@@ -554,7 +555,7 @@ const Appointments: React.FC = () => {
             },
           }}
         />
-      </QivrCard>
+      </InfoCard>
     );
   };
 
@@ -576,8 +577,7 @@ const Appointments: React.FC = () => {
         />
 
         {/* Controls */}
-        <QivrCard sx={{ mb: 3 }}>
-          <CardContent>
+        <InfoCard title="Calendar Controls">
             <Grid container spacing={2} alignItems="center">
               <Grid size={{ xs: 12, md: 3 }}>
                 <FormControl fullWidth size="small">
@@ -639,31 +639,29 @@ const Appointments: React.FC = () => {
                 </FlexBetween>
               </Grid>
             </Grid>
-          </CardContent>
-        </QivrCard>
+        </InfoCard>
 
         {/* View Tabs */}
-        <QivrCard sx={{ mb: 3 }}>
+        <Box sx={{ mb: 3, bgcolor: 'background.paper', borderRadius: 1 }}>
           <Tabs value={viewTab} onChange={(_e, v) => setViewTab(v)}>
             <Tab icon={<CalendarMonthIcon />} label="Calendar View" />
             <Tab icon={<ViewModuleIcon />} label="Grid View" />
             <Tab icon={<ViewListIcon />} label="List View" />
           </Tabs>
-        </QivrCard>
+        </Box>
 
         {/* Main Content */}
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: viewTab === 0 ? 12 : 9 }}>
             {isLoading ? (
-              <QivrCard elevated sx={{ p: 3, textAlign: 'center' }}>
+              <InfoCard title="Loading">
                 <Typography>Loading appointments...</Typography>
-              </QivrCard>
+              </InfoCard>
             ) : (
               <>
                 {viewTab === 0 ? (
                   // FullCalendar View
-                  <QivrCard elevated>
-                    <CardContent sx={{ height: 700 }}>
+                  <InfoCard title="Calendar" sx={{ height: 700 }}>
                       <FullCalendar
                         ref={calendarRef}
                         plugins={[
@@ -755,8 +753,7 @@ const Appointments: React.FC = () => {
                           }
                         }}
                       />
-                    </CardContent>
-                  </QivrCard>
+                  </InfoCard>
                 ) : viewTab === 1 ? (
                 // Grid View
                 <>
@@ -766,8 +763,7 @@ const Appointments: React.FC = () => {
                   </>
                 ) : (
                   // List View
-                  <QivrCard elevated>
-                    <CardContent>
+                  <InfoCard title="Appointments List">
                       <List>
                         {appointments
                           .sort((a: Appointment, b: Appointment) => 
@@ -833,19 +829,14 @@ const Appointments: React.FC = () => {
                             </React.Fragment>
                           ))}
                       </List>
-                    </CardContent>
-                  </QivrCard>
+                  </InfoCard>
                 )}
               </>
             )}
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             {/* Today's Summary */}
-            <QivrCard>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Today{"'"}s Summary
-                </Typography>
+            <InfoCard title="Today's Summary">
                 <Stack spacing={1}>
                   <FlexBetween>
                     <Typography variant="body2" color="text.secondary">Total</Typography>
@@ -870,15 +861,10 @@ const Appointments: React.FC = () => {
                     </Typography>
                   </FlexBetween>
                 </Stack>
-              </CardContent>
-            </QivrCard>
+            </InfoCard>
 
             {/* Upcoming Appointments */}
-            <QivrCard sx={{ mt: 2 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Upcoming Today
-                </Typography>
+            <InfoCard title="Upcoming Today" sx={{ mt: 2 }}>
                 <List dense>
                   {appointments
                     .filter((apt: Appointment) => 
@@ -906,8 +892,7 @@ const Appointments: React.FC = () => {
                     </Typography>
                   )}
                 </List>
-              </CardContent>
-            </QivrCard>
+            </InfoCard>
           </Grid>
         </Grid>
 
