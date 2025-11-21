@@ -121,7 +121,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
-import { AvailabilitySlot, FlexBetween, PageHeader, QivrButton, QivrCard, CalendarGridCell, AppointmentChip, calendar as calendarStyles, StatusBadge } from '@qivr/design-system';
+import { AvailabilitySlot, FlexBetween, PageHeader, QivrButton, QivrCard, CalendarGridCell, AppointmentChip, calendar as calendarStyles, StatusBadge, AuraButton } from '@qivr/design-system';
 
 interface Appointment {
   id: string;
@@ -565,13 +565,13 @@ const Appointments: React.FC = () => {
           title="Appointments"
           description="Manage clinic appointments and schedules"
           actions={
-            <QivrButton
+            <AuraButton
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => setCreateDialogOpen(true)}
             >
               New Appointment
-            </QivrButton>
+            </AuraButton>
           }
         />
 
