@@ -17,7 +17,12 @@ import { Add, Edit, Delete, Person } from '@mui/icons-material';
 import { useQueryClient } from '@tanstack/react-query';
 import { providerApi, Provider, CreateProviderData, UpdateProviderData } from '../services/providerApi';
 import { useAuthStore } from '../stores/authStore';
-import { PageHeader, FlexBetween, LoadingSpinner, FormDialog } from '@qivr/design-system';
+import { 
+  PageHeader, 
+  FlexBetween, 
+  LoadingSpinner, 
+  FormDialog,
+} from '@qivr/design-system';
 
 const Providers: React.FC = () => {
   const queryClient = useQueryClient();

@@ -59,7 +59,12 @@ import { PROMSender } from '../components/messaging';
 import { PromBuilder } from '../features/proms/components/PromBuilder';
 import { PromPreview } from '../components/messaging/PromPreview';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
-import { PageHeader, FlexBetween, SectionLoader, StatusBadge } from '@qivr/design-system';
+import { 
+  PageHeader, 
+  FlexBetween, 
+  SectionLoader, 
+  StatusBadge,
+} from '@qivr/design-system';
 
 interface TabPanelProps {
   children?: React.ReactNode;

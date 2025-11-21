@@ -64,7 +64,13 @@ import { useAuthGuard } from '../hooks/useAuthGuard';
 import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
 import api from '../lib/api-client';
 import { TenantInfo } from '../components/shared';
-import { PageHeader, TabPanel as DesignTabPanel, SectionLoader, ConfirmDialog, FormDialog } from '@qivr/design-system';
+import { 
+  PageHeader, 
+  TabPanel as DesignTabPanel, 
+  SectionLoader, 
+  ConfirmDialog, 
+  FormDialog,
+} from '@qivr/design-system';
 
 interface ClinicSettings {
   clinic: {

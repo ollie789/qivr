@@ -32,7 +32,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { documentApi, Document } from '../services/documentApi';
-import { SearchBar, ConfirmDialog } from '@qivr/design-system';
+import { 
+  SearchBar, 
+  ConfirmDialog,
+} from '@qivr/design-system';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
