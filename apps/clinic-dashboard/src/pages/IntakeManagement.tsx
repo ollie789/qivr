@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Grid,
   Chip,
@@ -67,6 +65,7 @@ import {
   TabPanel as DesignTabPanel,
   SearchBar,
   StatusBadge,
+  AuraStatCard,
 } from "@qivr/design-system";
 
 const IntakeManagement: React.FC = () => {
@@ -377,72 +376,52 @@ const IntakeManagement: React.FC = () => {
       {/* Statistics Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <Card>
-            <CardContent sx={{ textAlign: "center", py: 2 }}>
-              <Typography variant="h4">{stats.total}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total Intakes
-              </Typography>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Total Intakes"
+            value={stats.total.toString()}
+            icon={<QueueIcon />}
+            iconColor="primary.main"
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <Card>
-            <CardContent sx={{ textAlign: "center", py: 2 }}>
-              <Typography variant="h4">{stats.pending}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Pending Review
-              </Typography>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Pending Review"
+            value={stats.pending.toString()}
+            icon={<AssessmentIcon />}
+            iconColor="warning.main"
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <Card>
-            <CardContent sx={{ textAlign: "center", py: 2 }}>
-              <Typography variant="h4" color="info.main">
-                {stats.reviewing}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Under Review
-              </Typography>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Under Review"
+            value={stats.reviewing.toString()}
+            icon={<AssessmentIcon />}
+            iconColor="info.main"
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <Card>
-            <CardContent sx={{ textAlign: "center", py: 2 }}>
-              <Typography variant="h4" color="success.main">
-                {stats.processed}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Processed
-              </Typography>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Processed"
+            value={stats.processed.toString()}
+            icon={<AssessmentIcon />}
+            iconColor="success.main"
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <Card>
-            <CardContent sx={{ textAlign: "center", py: 2 }}>
-              <Typography variant="h4" color="error.main">
-                {stats.critical}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Critical Cases
-              </Typography>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Critical Cases"
+            value={stats.critical.toString()}
+            icon={<WarningIcon />}
+            iconColor="error.main"
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <Card>
-            <CardContent sx={{ textAlign: "center", py: 2 }}>
-              <Typography variant="h4" color="primary.main">
-                {stats.todayIntakes}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Today{"'s"} Intakes
-              </Typography>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Today's Intakes"
+            value={stats.todayIntakes.toString()}
+            icon={<QueueIcon />}
+            iconColor="primary.main"
+          />
         </Grid>
       </Grid>
 

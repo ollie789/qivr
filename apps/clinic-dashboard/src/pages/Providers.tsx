@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Button,
-  Card,
-  CardContent,
   Grid,
-  IconButton,
   TextField,
   Typography,
   Switch,
@@ -13,15 +9,17 @@ import {
   Alert,
   Chip
 } from '@mui/material';
-import { Add, Edit, Delete, Person } from '@mui/icons-material';
+import { Add, Edit, Delete } from '@mui/icons-material';
 import { useQueryClient } from '@tanstack/react-query';
 import { providerApi, Provider, CreateProviderData, UpdateProviderData } from '../services/providerApi';
 import { useAuthStore } from '../stores/authStore';
 import { 
   PageHeader, 
-  FlexBetween, 
   LoadingSpinner, 
   FormDialog,
+  InfoCard,
+  AuraButton,
+  AuraIconButton,
 } from '@qivr/design-system';
 
 const Providers: React.FC = () => {
@@ -138,13 +136,13 @@ const Providers: React.FC = () => {
       <PageHeader
         title="Providers"
         actions={
-          <Button
+          <AuraButton
             variant="contained"
             startIcon={<Add />}
             onClick={() => handleOpenDialog()}
           >
             Add Provider
-          </Button>
+          </AuraButton>
         }
       />
 
@@ -156,35 +154,19 @@ const Providers: React.FC = () => {
 
       <Grid container spacing={3}>
         {providers.map((provider) => (
-          <Grid size={{ xs: 12, md: 6, lg: 4 }}key={provider.id}>
-            <Card>
-              <CardContent>
-                <FlexBetween sx={{ mb: 2 }}>
-                  <FlexBetween sx={{ gap: 1 }}>
-                    <Person color="primary" />
-                    <Typography variant="h6">{provider.fullName}</Typography>
-                  </FlexBetween>
-                  <Box>
-                    <Chip 
-                      label={provider.isActive ? 'Active' : 'Inactive'} 
-                      color={provider.isActive ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </Box>
-                </FlexBetween>
-                
-                {provider.title && (
-                  <Typography variant="body2" color="text.secondary">
-                    {provider.title}
-                  </Typography>
-                )}
-                
-                {provider.specialty && (
-                  <Typography variant="body2" color="text.secondary">
-                    Specialty: {provider.specialty}
-                  </Typography>
-                )}
-                
+          <Grid size={{ xs: 12, md: 6, lg: 4 }} key={provider.id}>
+            <InfoCard
+              title={provider.fullName}
+              subtitle={provider.title || provider.specialty}
+              action={
+                <Chip 
+                  label={provider.isActive ? 'Active' : 'Inactive'} 
+                  color={provider.isActive ? 'success' : 'default'}
+                  size="small"
+                />
+              }
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {provider.email && (
                   <Typography variant="body2" color="text.secondary">
                     {provider.email}
@@ -197,16 +179,23 @@ const Providers: React.FC = () => {
                   </Typography>
                 )}
 
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                  <IconButton onClick={() => handleOpenDialog(provider)}>
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                  <AuraIconButton
+                    tooltip="Edit provider"
+                    onClick={() => handleOpenDialog(provider)}
+                  >
                     <Edit />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(provider.id)} color="error">
+                  </AuraIconButton>
+                  <AuraIconButton
+                    tooltip="Delete provider"
+                    onClick={() => handleDelete(provider.id)}
+                    color="error"
+                  >
                     <Delete />
-                  </IconButton>
+                  </AuraIconButton>
                 </Box>
-              </CardContent>
-            </Card>
+              </Box>
+            </InfoCard>
           </Grid>
         ))}
       </Grid>
