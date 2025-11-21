@@ -12,7 +12,6 @@ import {
   Tabs,
   Tab,
   Chip,
-  Avatar,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -64,6 +63,8 @@ import {
   FlexBetween, 
   SectionLoader, 
   StatusBadge,
+  AuraStatCard,
+  InfoCard,
 } from '@qivr/design-system';
 
 interface TabPanelProps {
@@ -294,148 +295,80 @@ const PROM: React.FC = () => {
         {/* Statistics Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom variant="body2">
-                      Total Responses
-                    </Typography>
-                    <Typography variant="h4">{statistics.total}</Typography>
-                  </Box>
-                  <Avatar sx={{ bgcolor: 'primary.main' }}>
-                    <AssignmentIcon />
-                  </Avatar>
-                </Box>
-              </CardContent>
-            </Card>
+            <AuraStatCard
+              title="Total Responses"
+              value={statistics.total.toString()}
+              icon={<AssignmentIcon />}
+              iconColor="primary.main"
+            />
           </Grid>
           
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom variant="body2">
-                      Completion Rate
-                    </Typography>
-                    <Typography variant="h4">{completionRate.toFixed(1)}%</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <Typography variant="caption">Loading...</Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <AuraStatCard
+              title="Completion Rate"
+              value={`${completionRate.toFixed(1)}%`}
+              icon={<ChartIcon />}
+              iconColor="success.main"
+            />
           </Grid>
           
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom variant="body2">
-                      Pending
-                    </Typography>
-                    <Typography variant="h4">{statistics.pending}</Typography>
-                  </Box>
-                  <Avatar sx={{ bgcolor: 'warning.main' }}>
-                    <PendingIcon />
-                  </Avatar>
-                </Box>
-              </CardContent>
-            </Card>
+            <AuraStatCard
+              title="Pending"
+              value={statistics.pending.toString()}
+              icon={<PendingIcon />}
+              iconColor="warning.main"
+            />
           </Grid>
           
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom variant="body2">
-                      Active Templates
-                    </Typography>
-                    <Typography variant="h4">{templates.length}</Typography>
-                  </Box>
-                  <Avatar sx={{ bgcolor: 'info.main' }}>
-                    <QuestionIcon />
-                  </Avatar>
-                </Box>
-              </CardContent>
-            </Card>
+            <AuraStatCard
+              title="Active Templates"
+              value={templates.length.toString()}
+              icon={<QuestionIcon />}
+              iconColor="info.main"
+            />
+          </Grid>
+          
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <AuraStatCard
+              title="In Progress"
+              value={statistics.inProgress.toString()}
+              icon={<ScheduleIcon />}
+              iconColor="secondary.main"
+            />
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom variant="body2">
-                      In Progress
-                    </Typography>
-                    <Typography variant="h4">{statistics.inProgress}</Typography>
-                  </Box>
-                  <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                    <ScheduleIcon />
-                  </Avatar>
-                </Box>
-              </CardContent>
-            </Card>
+            <AuraStatCard
+              title="Cancelled"
+              value={statistics.cancelled.toString()}
+              icon={<CancelIcon />}
+              iconColor="grey.600"
+            />
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom variant="body2">
-                      Cancelled
-                    </Typography>
-                    <Typography variant="h4">{statistics.cancelled}</Typography>
-                  </Box>
-                  <Avatar sx={{ bgcolor: 'grey.600' }}>
-                    <CancelIcon />
-                  </Avatar>
-                </Box>
-              </CardContent>
-            </Card>
+            <AuraStatCard
+              title="Average Score"
+              value={averageScore.toFixed(1)}
+              icon={<AssessmentIcon />}
+              iconColor="info.main"
+            />
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom variant="body2">
-                      Average Score
-                    </Typography>
-                    <Typography variant="h4">{averageScore.toFixed(1)}%</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <Typography variant="caption">Loading...</Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom variant="body2">
-                  Upcoming & Streak
+            <InfoCard title="Upcoming & Streak">
+              <Stack spacing={1}>
+                <Typography variant="body2">
+                  <strong>Next Due:</strong> {formatDate(nextDueDate)}
                 </Typography>
-                <Stack spacing={1}>
-                  <Typography variant="body2">
-                    <strong>Next Due:</strong> {formatDate(nextDueDate)}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Last Completed:</strong> {formatDate(lastCompletedDate)}
-                  </Typography>
-                  <Chip label={`Streak: ${streak} day${streak === 1 ? '' : 's'}`} color={streak > 0 ? 'success' : 'default'} size="small" />
-                </Stack>
-              </CardContent>
-            </Card>
+                <Typography variant="body2">
+                  <strong>Last Completed:</strong> {formatDate(lastCompletedDate)}
+                </Typography>
+                <Chip label={`Streak: ${streak} day${streak === 1 ? '' : 's'}`} color={streak > 0 ? 'success' : 'default'} size="small" />
+              </Stack>
+            </InfoCard>
           </Grid>
         </Grid>
 
