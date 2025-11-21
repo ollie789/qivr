@@ -6,8 +6,6 @@ import {
   StepLabel,
   Button,
   Typography,
-  Card,
-  CardContent,
   Grid,
   TextField,
   FormControl,
@@ -36,7 +34,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { FlexBetween } from '@qivr/design-system';
+import { FlexBetween, InfoCard } from '@qivr/design-system';
 import {
   Send as SendIcon,
   Schedule as ScheduleIcon,
@@ -225,21 +223,18 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                 const frequencyLabel = templateDetail?.frequency;
 
                 return (
-                  <Grid size={{ xs: 12, md: 6 }}key={template.id}>
-                    <Card
+                  <Grid size={{ xs: 12, md: 6 }} key={template.id}>
+                    <Box
                       sx={{
                         cursor: 'pointer',
                         border: isSelected ? 2 : 1,
                         borderColor: isSelected ? 'primary.main' : 'divider',
+                        borderRadius: 1,
                         '&:hover': { borderColor: 'primary.main' },
                       }}
                       onClick={() => setSelectedTemplateId(template.id)}
                     >
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <AssignmentIcon color="primary" sx={{ mr: 1 }} />
-                          <Typography variant="h6">{template.name}</Typography>
-                        </Box>
+                      <InfoCard title={template.name}>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
                           {template.description || 'No description provided'}
                         </Typography>
@@ -266,8 +261,8 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                             Select to preview questions and metadata
                           </Typography>
                         )}
-                      </CardContent>
-                    </Card>
+                      </InfoCard>
+                    </Box>
                   </Grid>
                 );
               })}
