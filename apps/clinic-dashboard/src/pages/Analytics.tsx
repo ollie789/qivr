@@ -51,15 +51,20 @@ import analyticsApi, {
 import {
   AppointmentTrendCard,
   PromCompletionCard,
-  StatCardGrid,
   TopDiagnosesCard,
 } from '../features/analytics';
-import { DashboardSectionCard, FlexBetween, QivrButton, TableSection, PageHeader } from '@qivr/design-system';
+import { 
+  DashboardSectionCard, 
+  FlexBetween, 
+  QivrButton, 
+  TableSection, 
+  PageHeader,
+  AuraMetricCard,
+} from '@qivr/design-system';
 import type {
   AppointmentTrendDatum,
   DiagnosisDatum,
   PromCompletionDatum,
-  StatCardItem,
 } from '../features/analytics';
 import { useAuthUser } from '../stores/authStore';
 
@@ -221,42 +226,46 @@ const Analytics: React.FC = () => {
     ];
   }, [clinicAnalytics]);
 
-  const statCards: StatCardItem[] = [
+  const statCards = [
     {
       id: 'total-patients',
-      title: 'Total Patients',
+      label: 'Total Patients',
       value: dashboardStats.activePatients.toLocaleString(),
       change: 12.5,
+      changeLabel: 'vs last period',
       icon: <PeopleIcon />,
-      avatarColor: 'primary.main',
+      color: 'primary.main',
     },
     {
       id: 'appointments-period',
-      title: 'Appointments This Period',
+      label: 'Appointments This Period',
       value: clinicAnalytics
         ? clinicAnalytics.appointmentMetrics.totalScheduled.toLocaleString()
         : dashboardStats.todayAppointments.toLocaleString(),
       change: 8.3,
+      changeLabel: 'vs last period',
       icon: <CalendarIcon />,
-      avatarColor: 'secondary.main',
+      color: 'secondary.main',
     },
     {
       id: 'revenue',
-      title: 'Revenue',
+      label: 'Revenue',
       value: clinicAnalytics
         ? `$${clinicAnalytics.revenueMetrics.totalCollected.toLocaleString()}`
         : '$0',
       change: 15.2,
+      changeLabel: 'vs last period',
       icon: <MoneyIcon />,
-      avatarColor: 'success.main',
+      color: 'success.main',
     },
     {
       id: 'patient-satisfaction',
-      title: 'Patient Satisfaction',
+      label: 'Patient Satisfaction',
       value: `${dashboardStats.patientSatisfaction.toFixed(1)}/5`,
       change: 2.1,
+      changeLabel: 'vs last period',
       icon: <AssessmentIcon />,
-      avatarColor: 'warning.main',
+      color: 'warning.main',
     },
   ];
 
@@ -321,7 +330,20 @@ const Analytics: React.FC = () => {
 
       {activeTab === 0 && (
         <>
-          <StatCardGrid items={statCards} sx={{ mb: 3 }} />
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            {statCards.map((stat) => (
+              <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 3 }}>
+                <AuraMetricCard
+                  label={stat.label}
+                  value={stat.value}
+                  change={stat.change}
+                  changeLabel={stat.changeLabel}
+                  icon={stat.icon}
+                  color={stat.color}
+                />
+              </Grid>
+            ))}
+          </Grid>
 
           <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 8 }}>
