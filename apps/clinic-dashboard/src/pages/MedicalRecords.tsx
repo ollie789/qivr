@@ -5,8 +5,6 @@ import {
   Typography,
   Button,
   Grid,
-  Card,
-  CardContent,
   TextField,
   FormControl,
   InputLabel,
@@ -95,7 +93,8 @@ import {
   FlexBetween,
   FormDialog,
   QivrButton,
-  QivrCard,
+  InfoCard,
+  AuraChartCard,
   PainMapProgression,
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
@@ -878,86 +877,85 @@ const MedicalRecords: React.FC = () => {
         {viewMode === "detail" && selectedPatientId && (
           <>
             {/* Patient Info Card */}
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <FlexBetween sx={{ mb: 2 }}>
-                  <FlexBetween sx={{ gap: 2 }}>
-                    <Avatar
-                      sx={{ width: 64, height: 64, bgcolor: "primary.main" }}
-                    >
-                      {patient?.firstName?.[0]}
-                      {patient?.lastName?.[0]}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h5">
-                        {patient?.firstName} {patient?.lastName}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Age:{" "}
-                        {patient?.dateOfBirth
-                          ? differenceInYears(
-                              new Date(),
-                              parseISO(patient.dateOfBirth),
-                            )
-                          : "N/A"}{" "}
-                        •{patient?.gender} • DOB:{" "}
-                        {patient?.dateOfBirth
-                          ? format(parseISO(patient.dateOfBirth), "MMM d, yyyy")
-                          : "N/A"}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {patient?.email} • {patient?.phone}
-                      </Typography>
-                    </Box>
-                  </FlexBetween>
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<MessageIcon />}
-                      onClick={() => setMessageDialogOpen(true)}
-                    >
-                      Send Message
-                    </Button>
-                    <Button
-                      variant={editMode ? "contained" : "outlined"}
-                      startIcon={editMode ? <SaveIcon /> : <EditIcon />}
-                      onClick={() =>
-                        editMode ? handleSavePatient() : setEditMode(true)
-                      }
-                    >
-                      {editMode ? "Save Changes" : "Edit Info"}
-                    </Button>
+            <InfoCard title="Patient Information">
+              <FlexBetween sx={{ mb: 2 }}>
+                <FlexBetween sx={{ gap: 2 }}>
+                  <Avatar
+                    sx={{ width: 64, height: 64, bgcolor: "primary.main" }}
+                  >
+                    {patient?.firstName?.[0]}
+                    {patient?.lastName?.[0]}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h5">
+                      {patient?.firstName} {patient?.lastName}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Age:{" "}
+                      {patient?.dateOfBirth
+                        ? differenceInYears(
+                            new Date(),
+                            parseISO(patient.dateOfBirth),
+                          )
+                        : "N/A"}{" "}
+                      •{patient?.gender} • DOB:{" "}
+                      {patient?.dateOfBirth
+                        ? format(parseISO(patient.dateOfBirth), "MMM d, yyyy")
+                        : "N/A"}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {patient?.email} • {patient?.phone}
+                    </Typography>
                   </Box>
                 </FlexBetween>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<MessageIcon />}
+                    onClick={() => setMessageDialogOpen(true)}
+                  >
+                    Send Message
+                  </Button>
+                  <Button
+                    variant={editMode ? "contained" : "outlined"}
+                    startIcon={editMode ? <SaveIcon /> : <EditIcon />}
+                    onClick={() =>
+                      editMode ? handleSavePatient() : setEditMode(true)
+                    }
+                  >
+                    {editMode ? "Save Changes" : "Edit Info"}
+                  </Button>
+                </Box>
+              </FlexBetween>
 
-                {/* Quick Stats */}
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 6, md: 3 }}>
-                    <StatCard label="Blood Type" value="O+" compact />
-                  </Grid>
-                  <Grid size={{ xs: 6, md: 3 }}>
-                    <StatCard
-                      label="Allergies"
-                      value={
-                        medicalHistory.filter(
-                          (h: MedicalHistory) => h.category === "allergy",
-                        ).length
-                      }
-                      compact
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 6, md: 3 }}>
-                    <StatCard
-                      label="Medications"
-                      value={
-                        medicalHistory.filter(
-                          (h: MedicalHistory) =>
-                            h.category === "medication" &&
-                            h.status === "active",
-                        ).length
-                      }
-                      compact
-                    />
+              {/* Quick Stats */}
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <StatCard label="Blood Type" value="O+" compact />
+                </Grid>
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <StatCard
+                    label="Allergies"
+                    value={
+                      medicalHistory.filter(
+                        (h: MedicalHistory) => h.category === "allergy",
+                      ).length
+                    }
+                    compact
+                  />
+                </Grid>
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <StatCard
+                    label="Medications"
+                    value={
+                      medicalHistory.filter(
+                        (h: MedicalHistory) =>
+                          h.category === "medication" &&
+                          h.status === "active",
+                      ).length
+                    }
+                    compact
+                  />
                   </Grid>
                   <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard
@@ -967,8 +965,7 @@ const MedicalRecords: React.FC = () => {
                     />
                   </Grid>
                 </Grid>
-              </CardContent>
-            </Card>
+            </InfoCard>
 
             {/* Main Content Tabs */}
             <Paper>
@@ -1265,10 +1262,7 @@ const MedicalRecords: React.FC = () => {
                   {/* Pain Trend Chart */}
                   <Grid container spacing={3}>
                     <Grid size={12}>
-                      <QivrCard>
-                        <Typography variant="subtitle1" gutterBottom>
-                          Pain Level Trend
-                        </Typography>
+                      <AuraChartCard title="Pain Level Trend">
                         <ResponsiveContainer width="100%" height={200}>
                           <LineChart
                             data={vitalSigns.map((v) => ({
@@ -1288,7 +1282,7 @@ const MedicalRecords: React.FC = () => {
                             />
                           </LineChart>
                         </ResponsiveContainer>
-                      </QivrCard>
+                      </AuraChartCard>
                     </Grid>
                   </Grid>
 
@@ -1574,133 +1568,128 @@ const MedicalRecords: React.FC = () => {
                   {documents.length > 0 ? (
                     <Grid container spacing={2}>
                       {documents.map((doc) => (
-                        <Grid size={12}key={doc.id}>
-                          <Card>
-                            <CardContent>
-                              <FlexBetween>
-                                <Box>
-                                  <Typography variant="h6">
-                                    {doc.fileName}
+                        <Grid size={12} key={doc.id}>
+                          <InfoCard title={doc.fileName}>
+                            <FlexBetween>
+                              <Box>
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  sx={{ mt: 1 }}
+                                >
+                                  <Chip
+                                    label={doc.documentType}
+                                    size="small"
+                                    color="primary"
+                                    variant="outlined"
+                                  />
+                                  <Chip
+                                    label={doc.status}
+                                    size="small"
+                                    color={
+                                      doc.status === "ready"
+                                        ? "success"
+                                        : doc.status === "processing"
+                                          ? "warning"
+                                          : "default"
+                                    }
+                                  />
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {format(
+                                      parseISO(doc.createdAt),
+                                      "MMM d, yyyy",
+                                    )}
                                   </Typography>
-                                  <Stack
-                                    direction="row"
-                                    spacing={1}
+                                </Stack>
+                                {doc.extractedPatientName && (
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
                                     sx={{ mt: 1 }}
                                   >
-                                    <Chip
-                                      label={doc.documentType}
-                                      size="small"
-                                      color="primary"
-                                      variant="outlined"
-                                    />
-                                    <Chip
-                                      label={doc.status}
-                                      size="small"
-                                      color={
-                                        doc.status === "ready"
-                                          ? "success"
-                                          : doc.status === "processing"
-                                            ? "warning"
-                                            : "default"
-                                      }
-                                    />
+                                    Extracted: {doc.extractedPatientName}
+                                    {doc.extractedDob &&
+                                      ` • DOB: ${doc.extractedDob}`}
+                                    {doc.confidenceScore &&
+                                      ` • ${doc.confidenceScore}% confidence`}
+                                  </Typography>
+                                )}
+                                {doc.extractedText && (
+                                  <Box sx={{ mt: 2 }}>
                                     <Typography
-                                      variant="caption"
-                                      color="text.secondary"
+                                      variant="subtitle2"
+                                      gutterBottom
                                     >
-                                      {format(
-                                        parseISO(doc.createdAt),
-                                        "MMM d, yyyy",
-                                      )}
+                                      Extracted Text:
                                     </Typography>
-                                  </Stack>
-                                  {doc.extractedPatientName && (
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                      sx={{ mt: 1 }}
+                                    <Paper
+                                      sx={{
+                                        p: 1.5,
+                                        bgcolor: "grey.50",
+                                        maxHeight: 200,
+                                        overflow: "auto",
+                                        fontFamily: "monospace",
+                                        fontSize: "0.75rem",
+                                        whiteSpace: "pre-wrap",
+                                      }}
                                     >
-                                      Extracted: {doc.extractedPatientName}
-                                      {doc.extractedDob &&
-                                        ` • DOB: ${doc.extractedDob}`}
-                                      {doc.confidenceScore &&
-                                        ` • ${doc.confidenceScore}% confidence`}
-                                    </Typography>
-                                  )}
-                                  {doc.extractedText && (
-                                    <Box sx={{ mt: 2 }}>
-                                      <Typography
-                                        variant="subtitle2"
-                                        gutterBottom
-                                      >
-                                        Extracted Text:
-                                      </Typography>
-                                      <Paper
-                                        sx={{
-                                          p: 1.5,
-                                          bgcolor: "grey.50",
-                                          maxHeight: 200,
-                                          overflow: "auto",
-                                          fontFamily: "monospace",
-                                          fontSize: "0.75rem",
-                                          whiteSpace: "pre-wrap",
-                                        }}
-                                      >
-                                        {doc.extractedText.substring(0, 500)}
-                                        {doc.extractedText.length > 500 &&
-                                          "..."}
-                                      </Paper>
-                                    </Box>
-                                  )}
-                                </Box>
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 1,
+                                      {doc.extractedText.substring(0, 500)}
+                                      {doc.extractedText.length > 500 &&
+                                        "..."}
+                                    </Paper>
+                                  </Box>
+                                )}
+                              </Box>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 1,
+                                }}
+                              >
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={async () => {
+                                    try {
+                                      const { url } =
+                                        await documentApi.getDownloadUrl(
+                                          doc.id,
+                                        );
+                                      window.open(url, "_blank");
+                                    } catch (error) {
+                                      enqueueSnackbar(
+                                        "Failed to download document",
+                                        { variant: "error" },
+                                      );
+                                    }
                                   }}
                                 >
+                                  Download
+                                </Button>
+                                {doc.extractedText && (
                                   <Button
                                     variant="outlined"
                                     size="small"
-                                    onClick={async () => {
-                                      try {
-                                        const { url } =
-                                          await documentApi.getDownloadUrl(
-                                            doc.id,
-                                          );
-                                        window.open(url, "_blank");
-                                      } catch (error) {
-                                        enqueueSnackbar(
-                                          "Failed to download document",
-                                          { variant: "error" },
-                                        );
-                                      }
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(
+                                        doc.extractedText || "",
+                                      );
+                                      enqueueSnackbar(
+                                        "Text copied to clipboard",
+                                        { variant: "success" },
+                                      );
                                     }}
                                   >
-                                    Download
+                                    Copy Text
                                   </Button>
-                                  {doc.extractedText && (
-                                    <Button
-                                      variant="outlined"
-                                      size="small"
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(
-                                          doc.extractedText || "",
-                                        );
-                                        enqueueSnackbar(
-                                          "Text copied to clipboard",
-                                          { variant: "success" },
-                                        );
-                                      }}
-                                    >
-                                      Copy Text
-                                    </Button>
-                                  )}
-                                </Box>
-                              </FlexBetween>
-                            </CardContent>
-                          </Card>
+                                )}
+                              </Box>
+                            </FlexBetween>
+                          </InfoCard>
                         </Grid>
                       ))}
                     </Grid>

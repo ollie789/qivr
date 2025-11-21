@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import React from "react";
+import { Card, CardContent, Typography, Box } from "@mui/material";
 
 export interface AuraChartCardProps {
   title: string;
@@ -19,7 +19,14 @@ export const AuraChartCard: React.FC<AuraChartCardProps> = ({
   return (
     <Card elevation={elevated ? 2 : 0}>
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 2,
+          }}
+        >
           <Box>
             <Typography variant="h6" gutterBottom={!!subtitle}>
               {title}
