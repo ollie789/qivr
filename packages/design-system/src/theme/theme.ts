@@ -1,4 +1,4 @@
-import { createTheme, ThemeOptions } from '@mui/material/styles';
+import { createTheme } from '@mui/material/styles';
 import * as tokens from '../tokens';
 
 export const theme = createTheme({
@@ -25,76 +25,149 @@ export const theme = createTheme({
     info: {
       main: tokens.ColorInfoMain,
     },
+    background: {
+      default: '#fafafa',
+      paper: '#ffffff',
+    },
+    divider: 'rgba(0, 0, 0, 0.08)',
   },
   typography: {
-    fontFamily: tokens.TypographyFontFamilyBase,
-    fontSize: parseInt(tokens.TypographyFontSizeMd),
-    fontWeightRegular: parseInt(tokens.TypographyFontWeightRegular),
-    fontWeightMedium: parseInt(tokens.TypographyFontWeightMedium),
-    fontWeightBold: parseInt(tokens.TypographyFontWeightBold),
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: 14,
+    fontWeightRegular: 400,
+    fontWeightMedium: 500,
+    fontWeightBold: 700,
     h1: {
-      fontSize: tokens.TypographyFontSizeXxl + 'px',
-      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      fontSize: '2.5rem',
+      fontWeight: 700,
+      lineHeight: 1.2,
     },
     h2: {
-      fontSize: tokens.TypographyFontSizeXl + 'px',
-      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      fontSize: '2rem',
+      fontWeight: 700,
+      lineHeight: 1.3,
     },
     h3: {
-      fontSize: tokens.TypographyFontSizeLg + 'px',
-      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      fontSize: '1.75rem',
+      fontWeight: 700,
+      lineHeight: 1.3,
     },
     h4: {
-      fontSize: tokens.TypographyFontSizeMd + 'px',
-      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      fontSize: '1.5rem',
+      fontWeight: 500,
+      lineHeight: 1.4,
     },
     h5: {
-      fontSize: tokens.TypographyFontSizeSm + 'px',
-      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      fontSize: '1.25rem',
+      fontWeight: 500,
+      lineHeight: 1.4,
     },
     h6: {
-      fontSize: tokens.TypographyFontSizeXs + 'px',
-      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      fontSize: '1rem',
+      fontWeight: 700,
+      lineHeight: 1.5,
+    },
+    subtitle1: {
+      fontSize: '1rem',
+      fontWeight: 500,
+      lineHeight: 1.5,
+    },
+    subtitle2: {
+      fontSize: '0.875rem',
+      fontWeight: 600,
+      lineHeight: 1.5,
+    },
+    body1: {
+      fontSize: '1rem',
+      fontWeight: 400,
+      lineHeight: 1.5,
+    },
+    body2: {
+      fontSize: '0.875rem',
+      fontWeight: 400,
+      lineHeight: 1.5,
     },
     button: {
       textTransform: 'none',
-      fontWeight: parseInt(tokens.TypographyFontWeightMedium),
+      fontWeight: 600,
+    },
+    caption: {
+      fontSize: '0.75rem',
+      fontWeight: 400,
+      lineHeight: 1.5,
     },
   },
-  spacing: parseInt(tokens.SpacingSm),
+  spacing: 8,
   shape: {
     borderRadius: 8,
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
           borderRadius: 8,
-          fontWeight: parseInt(tokens.TypographyFontWeightMedium),
-          padding: `${tokens.SpacingXs}px ${tokens.SpacingMd}px`,
+          fontWeight: 600,
+          padding: '8px 24px',
         },
         contained: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+          boxShadow: 'none',
           '&:hover': {
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            boxShadow: 'none',
           },
         },
         sizeSmall: {
-          padding: `${tokens.SpacingXs}px ${tokens.SpacingSm}px`,
-          fontSize: tokens.TypographyFontSizeSm + 'px',
+          padding: '6px 16px',
+          fontSize: '0.875rem',
         },
         sizeLarge: {
-          padding: `${tokens.SpacingSm}px ${tokens.SpacingLg}px`,
-          fontSize: tokens.TypographyFontSizeLg + 'px',
+          padding: '10px 32px',
+          fontSize: '1rem',
         },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        },
+        elevation: {
+          boxShadow: 'none',
+          border: '1px solid',
+          borderColor: 'rgba(0, 0, 0, 0.08)',
+        },
+        elevation1: {
+          boxShadow: 'none',
+        },
+        elevation2: {
+          boxShadow: 'none',
+        },
+        elevation3: {
+          boxShadow: 'none',
+        },
+        rounded: {
+          borderRadius: 8,
+        },
+      },
+      defaultProps: {
+        elevation: 0,
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          borderRadius: 8,
+          border: '1px solid',
+          borderColor: 'rgba(0, 0, 0, 0.08)',
+          boxShadow: 'none',
         },
       },
     },
@@ -102,7 +175,7 @@ export const theme = createTheme({
       styleOverrides: {
         paper: {
           borderRadius: 12,
-          boxShadow: '0 24px 48px rgba(0,0,0,0.15)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
         },
       },
     },
@@ -118,27 +191,8 @@ export const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 4,
-          fontWeight: parseInt(tokens.TypographyFontWeightMedium),
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-        },
-        elevation1: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-        },
-        elevation2: {
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        },
-        elevation3: {
-          boxShadow: '0 10px 20px rgba(0,0,0,0.15)',
-        },
-        rounded: {
-          borderRadius: 8,
+          borderRadius: 6,
+          fontWeight: 500,
         },
       },
     },
@@ -152,10 +206,10 @@ export const theme = createTheme({
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
         },
         head: {
-          fontWeight: parseInt(tokens.TypographyFontWeightBold),
+          fontWeight: 700,
           backgroundColor: '#fafafa',
         },
       },
@@ -164,16 +218,24 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
-          fontWeight: parseInt(tokens.TypographyFontWeightMedium),
+          fontWeight: 600,
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+          boxShadow: 'none',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+        },
+      },
+    },
+    MuiDivider: {
+      styleOverrides: {
+        root: {
+          borderColor: 'rgba(0, 0, 0, 0.08)',
         },
       },
     },
   },
-} as any);
+});
