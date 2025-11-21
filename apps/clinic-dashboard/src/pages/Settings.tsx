@@ -70,6 +70,7 @@ import {
   SectionLoader, 
   ConfirmDialog, 
   FormDialog,
+  AuraButton,
 } from '@qivr/design-system';
 
 interface ClinicSettings {
@@ -437,25 +438,25 @@ export default function Settings() {
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
               <Typography variant="h6">Clinic Information</Typography>
               {!editMode ? (
-                <Button startIcon={<EditIcon />} onClick={() => setEditMode(true)}>
+                <AuraButton startIcon={<EditIcon />} onClick={() => setEditMode(true)}>
                   Edit
-                </Button>
+                </AuraButton>
               ) : (
                 <Box>
-                  <Button 
+                  <AuraButton 
                     startIcon={<CancelIcon />} 
                     onClick={() => setEditMode(false)}
                     sx={{ mr: 1 }}
                   >
                     Cancel
-                  </Button>
-                  <Button 
+                  </AuraButton>
+                  <AuraButton 
                     variant="contained" 
                     startIcon={<SaveIcon />}
                     onClick={handleSaveSettings}
                   >
                     Save Changes
-                  </Button>
+                  </AuraButton>
                 </Box>
               )}
             </Box>

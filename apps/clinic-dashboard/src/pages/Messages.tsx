@@ -36,6 +36,7 @@ import {
   FlexBetween,
   SearchBar,
   SectionLoader,
+  AuraButton,
 } from "@qivr/design-system";
 
 const Messages: React.FC = () => {
@@ -184,13 +185,13 @@ const Messages: React.FC = () => {
       <PageHeader
         title="Messages"
         actions={
-          <Button
+          <AuraButton
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenComposer}
           >
             {selectedConversation ? "Reply" : "New Message"}
-          </Button>
+          </AuraButton>
         }
       />
 
