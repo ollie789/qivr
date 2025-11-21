@@ -35,6 +35,8 @@ import { documentApi, Document } from '../services/documentApi';
 import { 
   SearchBar, 
   ConfirmDialog,
+  PageHeader,
+  AuraButton,
 } from '@qivr/design-system';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -164,25 +166,21 @@ export default function Documents() {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1600, mx: 'auto' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={600} gutterBottom>
-            Documents
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage and organize patient documents
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<Add />}
-          onClick={() => navigate('/documents/upload')}
-          sx={{ px: 3, py: 1.5, fontWeight: 600 }}
-        >
-          Upload Document
-        </Button>
-      </Box>
+      <PageHeader
+        title="Documents"
+        description="Manage and organize patient documents"
+        actions={
+          <AuraButton
+            variant="contained"
+            size="large"
+            startIcon={<Add />}
+            onClick={() => navigate('/documents/upload')}
+            sx={{ px: 3, py: 1.5, fontWeight: 600 }}
+          >
+            Upload Document
+          </AuraButton>
+        }
+      />
 
       <Paper sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: 2 }}>
         <Grid container spacing={2} alignItems="center">
