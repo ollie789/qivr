@@ -48,16 +48,22 @@ import analyticsApi, { ClinicAnalytics } from "../services/analyticsApi";
 import {
   AppointmentTrendCard,
   PromCompletionCard,
-  StatCardGrid,
   TopDiagnosesCard,
 } from "../features/analytics";
 import type {
   AppointmentTrendDatum,
   DiagnosisDatum,
   PromCompletionDatum,
-  StatCardItem,
 } from "../features/analytics";
-import { DashboardSectionCard, QivrButton, QivrCard, EmptyState, SkeletonLoader } from "@qivr/design-system";
+import { 
+  DashboardSectionCard, 
+  QivrButton, 
+  QivrCard, 
+  EmptyState, 
+  SkeletonLoader,
+  AuraStatCard,
+  GreetingCard
+} from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -201,7 +207,7 @@ const Dashboard: React.FC = () => {
     };
   }, [clinicAnalytics, statsData]);
 
-  const stats = React.useMemo<StatCardItem[]>(
+  const stats = React.useMemo(
     () => [
       {
         id: "appointments-today",
@@ -253,24 +259,35 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Welcome back, {user?.name || "Doctor"}
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Here&apos;s your clinic overview for today
-      </Typography>
-
-      {/* Stats Grid */}
-      <StatCardGrid
-        items={stats}
-        loading={isStatsLoading}
-        skeletonCount={6}
-        itemSizes={{ xs: 12, sm: 6, md: 2 }}
-        sx={{ mb: 3 }}
+      <GreetingCard
+        title={`Welcome back, ${user?.name || "Doctor"}`}
+        subtitle="Here's your clinic overview for today"
       />
 
+      {/* Stats Grid */}
+      <Grid container spacing={3} sx={{ mt: 3 }}>
+        {isStatsLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+              <SkeletonLoader type="card" />
+            </Grid>
+          ))
+        ) : (
+          stats.map((stat) => (
+            <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+              <AuraStatCard
+                title={stat.title}
+                value={stat.value}
+                icon={stat.icon}
+                iconColor={stat.avatarColor}
+              />
+            </Grid>
+          ))
+        )}
+      </Grid>
+
       {/* Main Content Grid */}
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Upcoming Appointments */}
         <Grid size={{ xs: 12, md: 6 }}>
           <QivrCard elevated>
