@@ -21,8 +21,6 @@ import {
   Paper,
   Typography,
   Grid,
-  Card,
-  CardContent,
   Button,
   IconButton,
   TextField,
@@ -345,13 +343,18 @@ const SortableQuestionItem: React.FC<{
   };
 
   return (
-    <Card
+    <Paper
       ref={setNodeRef}
       style={style}
-      sx={{ mb: 2, cursor: "move" }}
+      sx={{ 
+        mb: 2, 
+        p: 2,
+        cursor: "move",
+        border: 1,
+        borderColor: 'divider'
+      }}
       elevation={isDragging ? 4 : 1}
     >
-      <CardContent>
         <Grid container alignItems="center" spacing={2}>
           <Grid>
             <IconButton {...attributes} {...listeners} size="small">
@@ -385,8 +388,7 @@ const SortableQuestionItem: React.FC<{
             </IconButton>
           </Grid>
         </Grid>
-      </CardContent>
-    </Card>
+    </Paper>
   );
 };
 
@@ -857,8 +859,7 @@ export const PromBuilder: React.FC = () => {
                   Score Ranges
                 </Typography>
                 {template.scoring.ranges?.map((range, index) => (
-                  <Card key={index} sx={{ mb: 2 }}>
-                    <CardContent>
+                  <Paper key={index} sx={{ mb: 2, p: 2, border: 1, borderColor: 'divider' }}>
                       <Grid container spacing={2} alignItems="center">
                         <Grid size={3}>
                           <TextField
@@ -898,8 +899,7 @@ export const PromBuilder: React.FC = () => {
                           />
                         </Grid>
                       </Grid>
-                    </CardContent>
-                  </Card>
+                  </Paper>
                 ))}
                 <Button
                   variant="outlined"
