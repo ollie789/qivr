@@ -56,13 +56,13 @@ import type {
   PromCompletionDatum,
 } from "../features/analytics";
 import { 
-  DashboardSectionCard, 
   QivrButton, 
   QivrCard, 
   EmptyState, 
   SkeletonLoader,
   AuraStatCard,
-  GreetingCard
+  GreetingCard,
+  InfoCard
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -290,77 +290,66 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Upcoming Appointments */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <QivrCard elevated>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Today&apos;s Appointments
-              </Typography>
-              <List>
-                {appointmentsLoading ? (
-                  <SkeletonLoader type="list" count={3} />
-                ) : appointmentsData?.length ? (
-                  appointmentsData.map((apt) => (
-                    <ListItem key={apt.id} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar>
-                          {apt.patientName
-                            .split(" ")
-                            .map((segment) => segment[0])
-                            .join("")}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={apt.patientName}
-                        secondary={`${apt.time} - ${apt.type}`}
-                      />
-                      <Chip
-                        label={apt.status}
-                        size="small"
-                        color={
-                          apt.status === "completed"
-                            ? "success"
-                            : apt.status === "in-progress"
-                              ? "info"
-                              : apt.status === "scheduled"
-                                ? "default"
-                                : "warning"
-                        }
-                        variant="outlined"
-                      />
-                    </ListItem>
-                  ))
-                ) : (
-                  <EmptyState
-                    icon={<CalendarIcon />}
-                    title="No appointments today"
-                    description="Your schedule is clear for today."
-                    actionText="Schedule New"
-                    onAction={() => navigate("/appointments")}
-                    sx={{ py: 3 }}
-                  />
-                )}
-              </List>
-              <QivrButton
-                fullWidth
-                variant="outlined"
-                sx={{ mt: 2 }}
-                onClick={() => navigate("/appointments")}
-              >
-                View All Appointments
-              </QivrButton>
-            </CardContent>
-          </QivrCard>
+          <InfoCard title="Today's Appointments">
+            <List>
+              {appointmentsLoading ? (
+                <SkeletonLoader type="list" count={3} />
+              ) : appointmentsData?.length ? (
+                appointmentsData.map((apt) => (
+                  <ListItem key={apt.id} sx={{ px: 0 }}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        {apt.patientName
+                          .split(" ")
+                          .map((segment) => segment[0])
+                          .join("")}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={apt.patientName}
+                      secondary={`${apt.time} - ${apt.type}`}
+                    />
+                    <Chip
+                      label={apt.status}
+                      size="small"
+                      color={
+                        apt.status === "completed"
+                          ? "success"
+                          : apt.status === "in-progress"
+                            ? "info"
+                            : apt.status === "scheduled"
+                              ? "default"
+                              : "warning"
+                      }
+                      variant="outlined"
+                    />
+                  </ListItem>
+                ))
+              ) : (
+                <EmptyState
+                  icon={<CalendarIcon />}
+                  title="No appointments today"
+                  description="Your schedule is clear for today."
+                  actionText="Schedule New"
+                  onAction={() => navigate("/appointments")}
+                  sx={{ py: 3 }}
+                />
+              )}
+            </List>
+            <QivrButton
+              fullWidth
+              variant="outlined"
+              sx={{ mt: 2 }}
+              onClick={() => navigate("/appointments")}
+            >
+              View All Appointments
+            </QivrButton>
+          </InfoCard>
         </Grid>
 
         {/* Recent Intakes */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <DashboardSectionCard
-            header={
-              <Typography variant="h6" gutterBottom>
-                Recent Intake Submissions
-              </Typography>
-            }
-          >
+          <InfoCard title="Recent Intake Submissions">
             <List>
                 {activityLoading ? (
                   <SkeletonLoader type="list" count={3} />
@@ -422,7 +411,7 @@ const Dashboard: React.FC = () => {
             >
               Review Intake Queue
             </QivrButton>
-          </DashboardSectionCard>
+          </InfoCard>
         </Grid>
 
         {/* Analytics Charts */}
