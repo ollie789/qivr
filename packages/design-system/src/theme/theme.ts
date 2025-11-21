@@ -154,6 +154,13 @@ export const theme = createTheme({
         },
       },
     },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: parseInt(tokens.BorderRadiusMd),
+        },
+      },
+    },
     MuiPaper: {
       styleOverrides: {
         root: {
@@ -199,12 +206,49 @@ export const theme = createTheme({
         },
       },
     },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          fontWeight: parseInt(tokens.TypographyFontWeightBold),
+          fontSize: '1.25rem',
+          padding: `${tokens.SpacingLg}px ${tokens.SpacingLg}px ${tokens.SpacingMd}px`,
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          padding: `${tokens.SpacingMd}px ${tokens.SpacingLg}px`,
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          padding: `${tokens.SpacingMd}px ${tokens.SpacingLg}px ${tokens.SpacingLg}px`,
+        },
+      },
+    },
     MuiTextField: {
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
             borderRadius: parseInt(tokens.BorderRadiusMd),
           },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: parseInt(tokens.BorderRadiusMd),
+        },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          fontWeight: parseInt(tokens.TypographyFontWeightMedium),
         },
       },
     },
@@ -217,6 +261,27 @@ export const theme = createTheme({
       },
     },
     MuiAlert: {
+      styleOverrides: {
+        root: {
+          borderRadius: parseInt(tokens.BorderRadiusMd),
+        },
+      },
+    },
+    MuiList: {
+      styleOverrides: {
+        root: {
+          padding: 0,
+        },
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          borderRadius: parseInt(tokens.BorderRadiusMd),
+        },
+      },
+    },
+    MuiListItemButton: {
       styleOverrides: {
         root: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
@@ -242,6 +307,13 @@ export const theme = createTheme({
         },
       },
     },
+    MuiTabs: {
+      styleOverrides: {
+        root: {
+          borderBottom: `1px solid ${tokens.ColorDivider}`,
+        },
+      },
+    },
     MuiAppBar: {
       styleOverrides: {
         root: {
@@ -254,6 +326,36 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderColor: tokens.ColorDivider,
+        },
+      },
+    },
+    MuiAvatar: {
+      styleOverrides: {
+        root: {
+          fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
+        },
+      },
+    },
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: {
+          borderRadius: parseInt(tokens.BorderRadiusMd),
+          fontSize: tokens.TypographyFontSizeSm + 'px',
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          borderRadius: parseInt(tokens.BorderRadiusMd),
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          borderRadius: parseInt(tokens.BorderRadiusSm),
+          margin: `0 ${tokens.SpacingXs}px`,
         },
       },
     },
