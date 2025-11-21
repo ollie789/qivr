@@ -41,7 +41,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import { PainMapMetrics } from '@qivr/design-system';
+import { PainMapMetrics, InfoCard } from '@qivr/design-system';
 import apiClient from '../lib/api-client';
 import analyticsApi, {
   ClinicAnalytics,
@@ -475,14 +475,10 @@ const Analytics: React.FC = () => {
           </Grid>
 
           <Grid size={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Pain Region Heat Map
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Aggregated pain data from all patients showing most commonly affected regions
-              </Typography>
-              
+            <InfoCard 
+              title="Pain Region Heat Map"
+              subtitle="Aggregated pain data from all patients showing most commonly affected regions"
+            >
               {heatMapLoading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                   <CircularProgress />
@@ -504,7 +500,7 @@ const Analytics: React.FC = () => {
                   No pain map data available for the selected filters
                 </Alert>
               )}
-            </Paper>
+            </InfoCard>
           </Grid>
 
           <Grid size={12}>
