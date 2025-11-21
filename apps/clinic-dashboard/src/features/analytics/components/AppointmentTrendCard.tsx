@@ -42,11 +42,11 @@ const AppointmentTrendCard: React.FC<AppointmentTrendCardProps> = ({
     <DashboardSectionCard
       header={
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <Typography variant="h6">{title}</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>
           {headerAction}
         </Box>
       }
-      headerProps={{ sx: { borderBottom: 'none', px: 3, py: 2 } }}
+      headerProps={{ sx: { borderBottom: 'none' } }}
       sx={{ p: 0 }}
     >
       <Box sx={{ px: 3, pb: 3 }}>

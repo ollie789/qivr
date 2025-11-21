@@ -1,21 +1,20 @@
 import { forwardRef } from 'react';
 import type { BoxProps } from '@mui/material/Box';
 import Box from '@mui/material/Box';
-import type { QivrCardProps } from '../QivrCard';
-import { QivrCard } from '../QivrCard';
+import { Paper, type PaperProps } from '@mui/material';
 
-export interface DashboardSectionCardProps extends QivrCardProps {
+export interface DashboardSectionCardProps extends Omit<PaperProps, 'elevation'> {
   header?: React.ReactNode;
   headerProps?: BoxProps;
 }
 
 export const DashboardSectionCard = forwardRef<HTMLDivElement, DashboardSectionCardProps>(
   ({ children, header, headerProps, sx, ...rest }, ref) => (
-    <QivrCard ref={ref} elevated sx={{ p: 0, overflow: 'hidden', ...sx }} {...rest}>
+    <Paper ref={ref} sx={{ p: 0, overflow: 'hidden', ...sx }} {...rest}>
       {header ? (
         <Box
           sx={{
-            px: 3,
+            px: { xs: 3, md: 5 },
             py: 2,
             borderBottom: '1px solid',
             borderColor: 'divider',
@@ -29,8 +28,8 @@ export const DashboardSectionCard = forwardRef<HTMLDivElement, DashboardSectionC
           {header}
         </Box>
       ) : null}
-      <Box sx={{ p: 3 }}>{children}</Box>
-    </QivrCard>
+      <Box sx={{ p: { xs: 3, md: 5 } }}>{children}</Box>
+    </Paper>
   )
 );
 

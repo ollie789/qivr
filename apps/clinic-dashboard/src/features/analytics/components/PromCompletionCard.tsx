@@ -46,8 +46,8 @@ const PromCompletionCard: React.FC<PromCompletionCardProps> = ({
 
   return (
     <DashboardSectionCard
-      header={<Typography variant="h6">{title}</Typography>}
-      headerProps={{ sx: { borderBottom: 'none', px: 3, py: 2 } }}
+      header={<Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>}
+      headerProps={{ sx: { borderBottom: 'none' } }}
       sx={{ p: 0 }}
     >
       <Box sx={{ px: 3, pb: 3 }}>
