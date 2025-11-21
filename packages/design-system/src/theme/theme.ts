@@ -15,91 +15,111 @@ export const theme = createTheme({
     },
     success: {
       main: tokens.ColorSuccessMain,
+      light: tokens.ColorSuccessLight,
+      dark: tokens.ColorSuccessDark,
     },
     error: {
       main: tokens.ColorErrorMain,
+      light: tokens.ColorErrorLight,
+      dark: tokens.ColorErrorDark,
     },
     warning: {
       main: tokens.ColorWarningMain,
+      light: tokens.ColorWarningLight,
+      dark: tokens.ColorWarningDark,
     },
     info: {
       main: tokens.ColorInfoMain,
+      light: tokens.ColorInfoLight,
+      dark: tokens.ColorInfoDark,
     },
     background: {
-      default: '#fafafa',
-      paper: '#ffffff',
+      default: tokens.ColorBackgroundDefault,
+      paper: tokens.ColorBackgroundPaper,
     },
-    divider: 'rgba(0, 0, 0, 0.08)',
+    grey: {
+      50: tokens.ColorGrey50,
+      100: tokens.ColorGrey100,
+      200: tokens.ColorGrey200,
+      300: tokens.ColorGrey300,
+      400: tokens.ColorGrey400,
+      500: tokens.ColorGrey500,
+      600: tokens.ColorGrey600,
+      700: tokens.ColorGrey700,
+      800: tokens.ColorGrey800,
+      900: tokens.ColorGrey900,
+    },
+    divider: tokens.ColorDivider,
   },
   typography: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    fontSize: 14,
-    fontWeightRegular: 400,
-    fontWeightMedium: 500,
-    fontWeightBold: 700,
+    fontFamily: tokens.TypographyFontFamilyBase,
+    fontSize: parseInt(tokens.TypographyFontSizeSm),
+    fontWeightRegular: parseInt(tokens.TypographyFontWeightRegular),
+    fontWeightMedium: parseInt(tokens.TypographyFontWeightMedium),
+    fontWeightBold: parseInt(tokens.TypographyFontWeightBold),
     h1: {
       fontSize: '2.5rem',
-      fontWeight: 700,
-      lineHeight: 1.2,
+      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      lineHeight: parseFloat(tokens.TypographyLineHeightTight),
     },
     h2: {
       fontSize: '2rem',
-      fontWeight: 700,
-      lineHeight: 1.3,
+      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      lineHeight: parseFloat(tokens.TypographyLineHeightTight),
     },
     h3: {
       fontSize: '1.75rem',
-      fontWeight: 700,
-      lineHeight: 1.3,
+      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      lineHeight: parseFloat(tokens.TypographyLineHeightTight),
     },
     h4: {
       fontSize: '1.5rem',
-      fontWeight: 500,
-      lineHeight: 1.4,
+      fontWeight: parseInt(tokens.TypographyFontWeightMedium),
+      lineHeight: parseFloat(tokens.TypographyLineHeightNormal),
     },
     h5: {
       fontSize: '1.25rem',
-      fontWeight: 500,
-      lineHeight: 1.4,
+      fontWeight: parseInt(tokens.TypographyFontWeightMedium),
+      lineHeight: parseFloat(tokens.TypographyLineHeightNormal),
     },
     h6: {
       fontSize: '1rem',
-      fontWeight: 700,
-      lineHeight: 1.5,
+      fontWeight: parseInt(tokens.TypographyFontWeightBold),
+      lineHeight: parseFloat(tokens.TypographyLineHeightNormal),
     },
     subtitle1: {
       fontSize: '1rem',
-      fontWeight: 500,
-      lineHeight: 1.5,
+      fontWeight: parseInt(tokens.TypographyFontWeightMedium),
+      lineHeight: parseFloat(tokens.TypographyLineHeightNormal),
     },
     subtitle2: {
-      fontSize: '0.875rem',
-      fontWeight: 600,
-      lineHeight: 1.5,
+      fontSize: tokens.TypographyFontSizeSm + 'px',
+      fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
+      lineHeight: parseFloat(tokens.TypographyLineHeightNormal),
     },
     body1: {
       fontSize: '1rem',
-      fontWeight: 400,
-      lineHeight: 1.5,
+      fontWeight: parseInt(tokens.TypographyFontWeightRegular),
+      lineHeight: parseFloat(tokens.TypographyLineHeightNormal),
     },
     body2: {
-      fontSize: '0.875rem',
-      fontWeight: 400,
-      lineHeight: 1.5,
+      fontSize: tokens.TypographyFontSizeSm + 'px',
+      fontWeight: parseInt(tokens.TypographyFontWeightRegular),
+      lineHeight: parseFloat(tokens.TypographyLineHeightNormal),
     },
     button: {
       textTransform: 'none',
-      fontWeight: 600,
+      fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
     },
     caption: {
-      fontSize: '0.75rem',
-      fontWeight: 400,
-      lineHeight: 1.5,
+      fontSize: tokens.TypographyFontSizeXs + 'px',
+      fontWeight: parseInt(tokens.TypographyFontWeightRegular),
+      lineHeight: parseFloat(tokens.TypographyLineHeightNormal),
     },
   },
-  spacing: 8,
+  spacing: parseInt(tokens.SpacingSm),
   shape: {
-    borderRadius: 8,
+    borderRadius: parseInt(tokens.BorderRadiusMd),
   },
   components: {
     MuiCssBaseline: {
@@ -114,9 +134,9 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 8,
-          fontWeight: 600,
-          padding: '8px 24px',
+          borderRadius: parseInt(tokens.BorderRadiusMd),
+          fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
+          padding: `${tokens.SpacingSm}px ${tokens.SpacingLg}px`,
         },
         contained: {
           boxShadow: 'none',
@@ -125,12 +145,12 @@ export const theme = createTheme({
           },
         },
         sizeSmall: {
-          padding: '6px 16px',
-          fontSize: '0.875rem',
+          padding: `${tokens.SpacingXs}px ${tokens.SpacingMd}px`,
+          fontSize: tokens.TypographyFontSizeSm + 'px',
         },
         sizeLarge: {
-          padding: '10px 32px',
-          fontSize: '1rem',
+          padding: `${tokens.SpacingSm}px ${tokens.SpacingXl}px`,
+          fontSize: tokens.TypographyFontSizeMd + 'px',
         },
       },
     },
@@ -142,7 +162,7 @@ export const theme = createTheme({
         elevation: {
           boxShadow: 'none',
           border: '1px solid',
-          borderColor: 'rgba(0, 0, 0, 0.08)',
+          borderColor: tokens.ColorDivider,
         },
         elevation1: {
           boxShadow: 'none',
@@ -154,7 +174,7 @@ export const theme = createTheme({
           boxShadow: 'none',
         },
         rounded: {
-          borderRadius: 8,
+          borderRadius: parseInt(tokens.BorderRadiusMd),
         },
       },
       defaultProps: {
@@ -164,9 +184,9 @@ export const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
+          borderRadius: parseInt(tokens.BorderRadiusMd),
           border: '1px solid',
-          borderColor: 'rgba(0, 0, 0, 0.08)',
+          borderColor: tokens.ColorDivider,
           boxShadow: 'none',
         },
       },
@@ -174,7 +194,7 @@ export const theme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: 12,
+          borderRadius: parseInt(tokens.BorderRadiusLg),
           boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
         },
       },
@@ -183,7 +203,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: 8,
+            borderRadius: parseInt(tokens.BorderRadiusMd),
           },
         },
       },
@@ -191,26 +211,26 @@ export const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 6,
-          fontWeight: 500,
+          borderRadius: parseInt(tokens.BorderRadiusSm) + 2,
+          fontWeight: parseInt(tokens.TypographyFontWeightMedium),
         },
       },
     },
     MuiAlert: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
+          borderRadius: parseInt(tokens.BorderRadiusMd),
         },
       },
     },
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+          borderBottom: `1px solid ${tokens.ColorDivider}`,
         },
         head: {
-          fontWeight: 700,
-          backgroundColor: '#fafafa',
+          fontWeight: parseInt(tokens.TypographyFontWeightBold),
+          backgroundColor: tokens.ColorGrey50,
         },
       },
     },
@@ -218,7 +238,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
-          fontWeight: 600,
+          fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
         },
       },
     },
@@ -226,14 +246,14 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           boxShadow: 'none',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+          borderBottom: `1px solid ${tokens.ColorDivider}`,
         },
       },
     },
     MuiDivider: {
       styleOverrides: {
         root: {
-          borderColor: 'rgba(0, 0, 0, 0.08)',
+          borderColor: tokens.ColorDivider,
         },
       },
     },

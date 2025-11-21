@@ -2,7 +2,7 @@
   "typography": {
     "fontFamily": {
       "base": {
-        "value": "Roboto",
+        "value": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
         "type": "fontFamilies"
       }
     },
@@ -24,11 +24,11 @@
         "type": "fontSizes"
       },
       "xl": {
-        "value": "24",
+        "value": "20",
         "type": "fontSizes"
       },
       "xxl": {
-        "value": "32",
+        "value": "24",
         "type": "fontSizes"
       }
     },
@@ -41,9 +41,27 @@
         "value": "500",
         "type": "fontWeights"
       },
+      "semibold": {
+        "value": "600",
+        "type": "fontWeights"
+      },
       "bold": {
         "value": "700",
         "type": "fontWeights"
+      }
+    },
+    "lineHeight": {
+      "tight": {
+        "value": "1.2",
+        "type": "lineHeights"
+      },
+      "normal": {
+        "value": "1.5",
+        "type": "lineHeights"
+      },
+      "relaxed": {
+        "value": "1.75",
+        "type": "lineHeights"
       }
     }
   }

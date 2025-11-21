@@ -2,55 +2,150 @@
   "color": {
     "primary": {
       "main": {
-        "value": "#1976d2",
-        "type": "color"
+        "value": "#3385F0",
+        "type": "color",
+        "description": "Aura UI primary blue"
       },
       "light": {
-        "value": "#42a5f5",
+        "value": "#589BF3",
         "type": "color"
       },
       "dark": {
-        "value": "#1565c0",
+        "value": "#2B71CC",
         "type": "color"
       }
     },
     "secondary": {
       "main": {
-        "value": "#dc004e",
-        "type": "color"
+        "value": "#A641FA",
+        "type": "color",
+        "description": "Aura UI purple"
       },
       "light": {
-        "value": "#f50057",
+        "value": "#B663FB",
         "type": "color"
       },
       "dark": {
-        "value": "#c51162",
+        "value": "#8D37D5",
         "type": "color"
       }
     },
     "success": {
       "main": {
-        "value": "#2e7d32",
+        "value": "#099F69",
+        "type": "color",
+        "description": "Aura UI green"
+      },
+      "light": {
+        "value": "#35B084",
+        "type": "color"
+      },
+      "dark": {
+        "value": "#088759",
         "type": "color"
       }
     },
     "error": {
       "main": {
-        "value": "#d32f2f",
+        "value": "#D02241",
+        "type": "color",
+        "description": "Aura UI red"
+      },
+      "light": {
+        "value": "#D84A63",
+        "type": "color"
+      },
+      "dark": {
+        "value": "#B11D37",
         "type": "color"
       }
     },
     "warning": {
       "main": {
-        "value": "#ed6c02",
+        "value": "#F68D2A",
+        "type": "color",
+        "description": "Aura UI orange"
+      },
+      "light": {
+        "value": "#F8A250",
+        "type": "color"
+      },
+      "dark": {
+        "value": "#D17824",
         "type": "color"
       }
     },
     "info": {
       "main": {
-        "value": "#0288d1",
+        "value": "#0DA6D6",
+        "type": "color",
+        "description": "Aura UI light blue"
+      },
+      "light": {
+        "value": "#39B6DD",
+        "type": "color"
+      },
+      "dark": {
+        "value": "#0B8DB6",
         "type": "color"
       }
+    },
+    "grey": {
+      "50": {
+        "value": "#F7FAFC",
+        "type": "color"
+      },
+      "100": {
+        "value": "#EBF2F5",
+        "type": "color"
+      },
+      "200": {
+        "value": "#DBE6EB",
+        "type": "color"
+      },
+      "300": {
+        "value": "#C3D3DB",
+        "type": "color"
+      },
+      "400": {
+        "value": "#9CAEB8",
+        "type": "color"
+      },
+      "500": {
+        "value": "#77878F",
+        "type": "color"
+      },
+      "600": {
+        "value": "#4D595E",
+        "type": "color"
+      },
+      "700": {
+        "value": "#262D30",
+        "type": "color"
+      },
+      "800": {
+        "value": "#1B2124",
+        "type": "color"
+      },
+      "900": {
+        "value": "#111417",
+        "type": "color"
+      }
+    },
+    "background": {
+      "default": {
+        "value": "#F7FAFC",
+        "type": "color",
+        "description": "Aura UI grey.50"
+      },
+      "paper": {
+        "value": "#ffffff",
+        "type": "color"
+      }
+    },
+    "divider": {
+      "value": "rgba(0, 0, 0, 0.08)",
+      "type": "color"
     }
   }
 }
