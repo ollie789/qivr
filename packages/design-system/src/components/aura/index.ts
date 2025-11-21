@@ -3,6 +3,8 @@ export * from './cards/GreetingCard';
 export * from './cards/InfoCard';
 export * from './charts/ChartCard';
 export * from './charts/ChartLegend';
+export * from './feedback/EmptyState';
 export * from './feedback/StatusBadge';
 export * from './menus/ActionMenu';
 export * from './stats/StatCard';
+export * from './table/DataTable';
