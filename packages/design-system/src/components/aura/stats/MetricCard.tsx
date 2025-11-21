@@ -1,63 +1,69 @@
-import { Paper, Stack, Typography, Box } from '@mui/material';
+import { Paper, Stack, Typography } from '@mui/material';
 import { ReactNode } from 'react';
-import { TrendingUp, TrendingDown } from '@mui/icons-material';
 
 export interface AuraMetricCardProps {
-  label: string;
+  title: string;
   value: string | number;
   change?: number;
   changeLabel?: string;
+  trend?: 'up' | 'down';
   icon?: ReactNode;
-  color?: string;
+  iconColor?: string;
 }
 
 export const AuraMetricCard = ({ 
-  label, 
+  title, 
   value, 
   change, 
   changeLabel,
-  icon, 
-  color = 'primary.main' 
+  trend,
+  icon,
+  iconColor 
 }: AuraMetricCardProps) => {
-  const isPositive = change !== undefined && change >= 0;
-  
   return (
-    <Paper sx={{ p: 3, height: '100%' }}>
-      <Stack spacing={2}>
+    <Paper sx={{ p: { xs: 3, md: 5 }, height: 1 }}>
+      <Typography variant="subtitle1" noWrap sx={{ fontWeight: 700, mb: 2 }}>
+        {title}
+      </Typography>
+      <Stack
+        sx={{
+          gap: 1,
+          flexDirection: { xs: 'column', md: 'row', lg: 'column' },
+          justifyContent: 'space-between',
+        }}
+      >
         {icon && (
-          <Box sx={{ color, fontSize: 32 }}>
+          <Stack
+            sx={{
+              flexShrink: 0,
+              order: { md: 1, lg: 0 },
+              fontSize: 48,
+              color: iconColor || 'primary.main',
+              '& > svg': {
+                fontSize: 48,
+              },
+            }}
+          >
             {icon}
-          </Box>
-        )}
-        <div>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            {label}
-          </Typography>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
-            {value}
-          </Typography>
-        </div>
-        {change !== undefined && (
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            {isPositive ? (
-              <TrendingUp fontSize="small" color="success" />
-            ) : (
-              <TrendingDown fontSize="small" color="error" />
-            )}
-            <Typography 
-              variant="caption" 
-              color={isPositive ? 'success.main' : 'error.main'}
-              fontWeight={600}
-            >
-              {Math.abs(change)}%
-            </Typography>
-            {changeLabel && (
-              <Typography variant="caption" color="text.secondary">
-                {changeLabel}
-              </Typography>
-            )}
           </Stack>
         )}
+        <div>
+          <Typography variant="h4" sx={{ fontWeight: 500, mb: 0.5 }}>
+            {value}
+          </Typography>
+          {(change !== undefined || changeLabel) && (
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontWeight: 500, 
+                color: trend === 'up' ? 'success.main' : trend === 'down' ? 'error.main' : 'text.secondary' 
+              }}
+            >
+              {change !== undefined && `${change > 0 ? '+' : ''}${change}%`}
+              {changeLabel && ` ${changeLabel}`}
+            </Typography>
+          )}
+        </div>
       </Stack>
     </Paper>
   );

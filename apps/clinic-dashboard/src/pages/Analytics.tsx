@@ -334,12 +334,12 @@ const Analytics: React.FC = () => {
             {statCards.map((stat) => (
               <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 3 }}>
                 <AuraMetricCard
-                  label={stat.label}
+                  title={stat.label}
                   value={stat.value}
                   change={stat.change}
                   changeLabel={stat.changeLabel}
                   icon={stat.icon}
-                  color={stat.color}
+                  iconColor={stat.color}
                 />
               </Grid>
             ))}

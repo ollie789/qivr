@@ -1,40 +1,26 @@
-import { PropsWithChildren, ReactNode } from 'react';
-import { Box, Stack, Typography, SxProps } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import { ReactNode } from 'react';
 
-interface CardHeaderProps {
+export interface CardHeaderProps {
   title: string;
   subtitle?: string;
   action?: ReactNode;
-  sx?: SxProps;
 }
 
-export const CardHeader = ({ title, subtitle, action, sx }: CardHeaderProps) => {
+export const CardHeader = ({ title, subtitle, action }: CardHeaderProps) => {
   return (
-    <Stack
-      direction="row"
-      justifyContent="space-between"
-      alignItems="flex-start"
-      sx={{ mb: 3, ...sx }}
-    >
+    <Box sx={{ mb: subtitle ? 2 : 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <Box>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: subtitle ? 0.5 : 0 }}>
           {title}
         </Typography>
         {subtitle && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary' }}>
             {subtitle}
           </Typography>
         )}
       </Box>
-      {action && <Box sx={{ mx: '-10px' }}>{action}</Box>}
-    </Stack>
+      {action && <Box>{action}</Box>}
+    </Box>
   );
-};
-
-interface CardHeaderActionProps {
-  sx?: SxProps;
-}
-
-export const CardHeaderAction = ({ children, sx }: PropsWithChildren<CardHeaderActionProps>) => {
-  return <Box sx={{ mx: '-10px', ...sx }}>{children}</Box>;
 };
