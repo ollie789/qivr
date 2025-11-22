@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   Box,
   Container,
@@ -8,38 +8,39 @@ import {
   TextField,
   Menu,
   MenuItem,
-  Card,
-  CardContent,
   Grid,
   Avatar,
   Chip,
   IconButton,
-} from '@mui/material';
+  Paper,
+} from "@mui/material";
 import {
   Person as PersonIcon,
   MoreVert as MoreVertIcon,
   VideoCall as VideoCallIcon,
   LocationOn as LocationIcon,
   Cancel as CancelIcon,
-} from '@mui/icons-material';
-import { parseISO, format, isFuture } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
-import { useAppointmentsData } from '../hooks/useAppointmentsData';
-import type { AppointmentDto } from '../types';
-import { FormDialog } from '@qivr/design-system';
+} from "@mui/icons-material";
+import { parseISO, format, isFuture } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { useAppointmentsData } from "../hooks/useAppointmentsData";
+import type { AppointmentDto } from "../types";
+import { FormDialog } from "@qivr/design-system";
 
-const statusChipColor = (status: string): 'success' | 'info' | 'default' | 'warning' | 'error' => {
+const statusChipColor = (
+  status: string,
+): "success" | "info" | "default" | "warning" | "error" => {
   switch (status) {
-    case 'confirmed':
-      return 'success';
-    case 'scheduled':
-      return 'info';
-    case 'no-show':
-      return 'warning';
-    case 'cancelled':
-      return 'error';
+    case "confirmed":
+      return "success";
+    case "scheduled":
+      return "info";
+    case "no-show":
+      return "warning";
+    case "cancelled":
+      return "error";
     default:
-      return 'default';
+      return "default";
   }
 };
 
@@ -47,31 +48,40 @@ const AppointmentsPage: React.FC = () => {
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentDto | null>(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<AppointmentDto | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [cancelReason, setCancelReason] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const filters = useMemo(() => ({
-    upcoming: tabValue === 0,
-    past: tabValue === 1,
-  }), [tabValue]);
+  const filters = useMemo(
+    () => ({
+      upcoming: tabValue === 0,
+      past: tabValue === 1,
+    }),
+    [tabValue],
+  );
 
-  const { appointments, isLoading, cancel, reschedule } = useAppointmentsData(filters);
+  const { appointments, isLoading, cancel, reschedule } =
+    useAppointmentsData(filters);
 
-  console.log('[AppointmentsPage] appointments:', appointments);
-  console.log('[AppointmentsPage] isLoading:', isLoading);
-  console.log('[AppointmentsPage] filters:', filters);
+  console.log("[AppointmentsPage] appointments:", appointments);
+  console.log("[AppointmentsPage] isLoading:", isLoading);
+  console.log("[AppointmentsPage] filters:", filters);
 
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    return appointments.filter((apt) =>
-      apt.providerName.toLowerCase().includes(term) ||
-      apt.appointmentType.toLowerCase().includes(term)
+    return appointments.filter(
+      (apt) =>
+        apt.providerName.toLowerCase().includes(term) ||
+        apt.appointmentType.toLowerCase().includes(term),
     );
   }, [appointments, searchTerm]);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, appointment: AppointmentDto) => {
+  const handleMenuOpen = (
+    event: React.MouseEvent<HTMLElement>,
+    appointment: AppointmentDto,
+  ) => {
     setAnchorEl(event.currentTarget);
     setSelectedAppointment(appointment);
   };
@@ -84,7 +94,7 @@ const AppointmentsPage: React.FC = () => {
     if (selectedAppointment && cancelReason) {
       await cancel({ id: selectedAppointment.id, reason: cancelReason });
       setCancelDialogOpen(false);
-      setCancelReason('');
+      setCancelReason("");
     }
   };
 
@@ -107,12 +117,23 @@ const AppointmentsPage: React.FC = () => {
         </Typography>
       </Box>
 
-      <Tabs value={tabValue} onChange={(_, value) => setTabValue(value)} sx={{ mb: 3 }}>
+      <Tabs
+        value={tabValue}
+        onChange={(_, value) => setTabValue(value)}
+        sx={{ mb: 3 }}
+      >
         <Tab label="Upcoming" />
         <Tab label="Past" />
       </Tabs>
 
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 2,
+          mb: 3,
+          flexDirection: { xs: "column", md: "row" },
+        }}
+      >
         <TextField
           label="Search"
           size="small"
@@ -123,62 +144,80 @@ const AppointmentsPage: React.FC = () => {
       </Box>
 
       {isLoading ? (
-        <Typography variant="body2" color="text.secondary">Loading appointments…</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Loading appointments…
+        </Typography>
       ) : filtered.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">No appointments found.</Typography>
+        <Typography variant="body2" color="text.secondary">
+          No appointments found.
+        </Typography>
       ) : (
         <Grid container spacing={2}>
           {filtered.map((appointment) => {
             const start = parseISO(appointment.scheduledStart);
             const upcoming = isFuture(start);
             return (
-              <Grid size={12}key={appointment.id}>
-                <Card>
-                  <CardContent>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          <PersonIcon />
-                        </Avatar>
-                      </Grid>
-                      <Grid size="grow">
-                        <Typography variant="h6">{appointment.providerName}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {appointment.providerSpecialty} • {appointment.appointmentType}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {format(start, 'MMM dd, yyyy • h:mm a')} ({upcoming ? 'Upcoming' : 'Past'})
-                        </Typography>
-                      </Grid>
-                      <Grid>
-                        <Chip
-                          label={appointment.status}
-                          color={statusChipColor(appointment.status)}
-                          size="small"
-                        />
-                      </Grid>
-                      <Grid>
-                        <Chip
-                          icon={appointment.isVirtual ? <VideoCallIcon /> : <LocationIcon />}
-                          label={appointment.isVirtual ? 'Virtual' : 'In person'}
-                          size="small"
-                        />
-                      </Grid>
-                      <Grid>
-                        <IconButton onClick={(event) => handleMenuOpen(event, appointment)}>
-                          <MoreVertIcon />
-                        </IconButton>
-                      </Grid>
+              <Grid size={12} key={appointment.id}>
+                <Paper sx={{ p: { xs: 3, md: 5 } }}>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid>
+                      <Avatar sx={{ bgcolor: "primary.main" }}>
+                        <PersonIcon />
+                      </Avatar>
                     </Grid>
-                  </CardContent>
-                </Card>
+                    <Grid size="grow">
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        {appointment.providerName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {appointment.providerSpecialty} •{" "}
+                        {appointment.appointmentType}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {format(start, "MMM dd, yyyy • h:mm a")} (
+                        {upcoming ? "Upcoming" : "Past"})
+                      </Typography>
+                    </Grid>
+                    <Grid>
+                      <Chip
+                        label={appointment.status}
+                        color={statusChipColor(appointment.status)}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid>
+                      <Chip
+                        icon={
+                          appointment.isVirtual ? (
+                            <VideoCallIcon />
+                          ) : (
+                            <LocationIcon />
+                          )
+                        }
+                        label={appointment.isVirtual ? "Virtual" : "In person"}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid>
+                      <IconButton
+                        onClick={(event) => handleMenuOpen(event, appointment)}
+                      >
+                        <MoreVertIcon />
+                      </IconButton>
+                    </Grid>
+                  </Grid>
+                </Paper>
               </Grid>
             );
           })}
         </Grid>
       )}
 
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
         <MenuItem onClick={handleReschedule}>Reschedule</MenuItem>
         <MenuItem
           onClick={() => {

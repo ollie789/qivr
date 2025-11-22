@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Alert,
   Avatar,
@@ -23,7 +23,7 @@ import {
   Tabs,
   TextField,
   Typography,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Cancel as CancelIcon,
   CheckCircle as CheckCircleIcon,
@@ -39,16 +39,16 @@ import {
   PhotoCamera as PhotoCameraIcon,
   Save as SaveIcon,
   Security as SecurityIcon,
-} from '@mui/icons-material';
-import { handleApiError } from '../../../lib/api-client';
-import { useProfileData } from '../hooks';
-import { PageLoader, FormDialog } from '@qivr/design-system';
+} from "@mui/icons-material";
+import { handleApiError } from "../../../lib/api-client";
+import { useProfileData } from "../hooks";
+import { PageLoader, FormDialog } from "@qivr/design-system";
 import type {
   EmergencyContact,
   MedicalInfo,
   NotificationPreferences,
   UserProfile,
-} from '../../../types';
+} from "../../../types";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -72,7 +72,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const cloneProfile = (profile: UserProfile): UserProfile =>
-  typeof structuredClone === 'function'
+  typeof structuredClone === "function"
     ? structuredClone(profile)
     : (JSON.parse(JSON.stringify(profile)) as UserProfile);
 
@@ -92,15 +92,17 @@ const createDefaultMedicalInfo = (info?: MedicalInfo): MedicalInfo => ({
   conditions: [...(info?.conditions ?? [])],
 });
 
-const createDefaultEmergencyContact = (contact?: EmergencyContact): EmergencyContact => ({
-  name: contact?.name ?? '',
-  relationship: contact?.relationship ?? '',
-  phone: contact?.phone ?? '',
+const createDefaultEmergencyContact = (
+  contact?: EmergencyContact,
+): EmergencyContact => ({
+  name: contact?.name ?? "",
+  relationship: contact?.relationship ?? "",
+  phone: contact?.phone ?? "",
 });
 
 const parseCommaSeparated = (value: string): string[] =>
   value
-    .split(',')
+    .split(",")
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
 
@@ -121,10 +123,17 @@ export const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [passwords, setPasswords] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
-  const displayProfile = isEditing ? editedProfile : profile ?? null;
+  const displayProfile = isEditing ? editedProfile : (profile ?? null);
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -144,7 +153,10 @@ export const ProfilePage: React.FC = () => {
     setEditedProfile(null);
   };
 
-  const handleFieldChange = <K extends keyof UserProfile>(field: K, value: UserProfile[K]) => {
+  const handleFieldChange = <K extends keyof UserProfile>(
+    field: K,
+    value: UserProfile[K],
+  ) => {
     if (!editedProfile) {
       return;
     }
@@ -161,31 +173,48 @@ export const ProfilePage: React.FC = () => {
 
     try {
       await updateProfile(editedProfile);
-      setFeedback({ type: 'success', message: 'Profile updated successfully.' });
+      setFeedback({
+        type: "success",
+        message: "Profile updated successfully.",
+      });
       setIsEditing(false);
       setEditedProfile(null);
     } catch (err) {
-      setFeedback({ type: 'error', message: handleApiError(err, 'Failed to update profile.') });
+      setFeedback({
+        type: "error",
+        message: handleApiError(err, "Failed to update profile."),
+      });
     }
   };
 
   const handlePasswordChange = async () => {
     if (passwords.new !== passwords.confirm) {
-      setFeedback({ type: 'error', message: 'Passwords do not match.' });
+      setFeedback({ type: "error", message: "Passwords do not match." });
       return;
     }
 
     try {
-      await changePassword({ currentPassword: passwords.current, newPassword: passwords.new });
-      setFeedback({ type: 'success', message: 'Password updated successfully.' });
+      await changePassword({
+        currentPassword: passwords.current,
+        newPassword: passwords.new,
+      });
+      setFeedback({
+        type: "success",
+        message: "Password updated successfully.",
+      });
       setPasswordDialogOpen(false);
-      setPasswords({ current: '', new: '', confirm: '' });
+      setPasswords({ current: "", new: "", confirm: "" });
     } catch (err) {
-      setFeedback({ type: 'error', message: handleApiError(err, 'Failed to update password.') });
+      setFeedback({
+        type: "error",
+        message: handleApiError(err, "Failed to update password."),
+      });
     }
   };
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -193,12 +222,15 @@ export const ProfilePage: React.FC = () => {
 
     try {
       await uploadPhoto(file);
-      setFeedback({ type: 'success', message: 'Profile photo updated.' });
+      setFeedback({ type: "success", message: "Profile photo updated." });
     } catch (err) {
-      setFeedback({ type: 'error', message: handleApiError(err, 'Failed to upload profile photo.') });
+      setFeedback({
+        type: "error",
+        message: handleApiError(err, "Failed to upload profile photo."),
+      });
     } finally {
       // Allow selecting the same file again if needed
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
@@ -209,7 +241,7 @@ export const ProfilePage: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
           My Profile
         </Typography>
         <Typography variant="body1" color="text.secondary">
@@ -229,11 +261,14 @@ export const ProfilePage: React.FC = () => {
         </Alert>
       )}
 
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ p: { xs: 3, md: 5 }, mb: 3 }}>
         <Grid container spacing={3} alignItems="center">
           <Grid>
-            <Box sx={{ position: 'relative' }}>
-              <Avatar src={displayProfile?.photoUrl} sx={{ width: 120, height: 120 }}>
+            <Box sx={{ position: "relative" }}>
+              <Avatar
+                src={displayProfile?.photoUrl}
+                sx={{ width: 120, height: 120 }}
+              >
                 {displayProfile?.firstName?.[0]}
                 {displayProfile?.lastName?.[0]}
               </Avatar>
@@ -242,28 +277,48 @@ export const ProfilePage: React.FC = () => {
                   color="primary"
                   aria-label="upload picture"
                   component="label"
-                  sx={{ position: 'absolute', bottom: 0, right: 0, bgcolor: 'background.paper' }}
+                  sx={{
+                    position: "absolute",
+                    bottom: 0,
+                    right: 0,
+                    bgcolor: "background.paper",
+                  }}
                   disabled={uploadPhotoStatus.isPending}
                 >
-                  <input hidden accept="image/*" type="file" onChange={handlePhotoUpload} />
+                  <input
+                    hidden
+                    accept="image/*"
+                    type="file"
+                    onChange={handlePhotoUpload}
+                  />
                   <PhotoCameraIcon />
                 </IconButton>
               )}
             </Box>
           </Grid>
           <Grid size="grow">
-            <Typography variant="h5">
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
               {displayProfile?.firstName} {displayProfile?.lastName}
             </Typography>
             <Typography color="text.secondary" gutterBottom>
               {displayProfile?.email}
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+            <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
               {displayProfile?.emailVerified && (
-                <Chip icon={<CheckCircleIcon />} label="Email Verified" color="success" size="small" />
+                <Chip
+                  icon={<CheckCircleIcon />}
+                  label="Email Verified"
+                  color="success"
+                  size="small"
+                />
               )}
               {displayProfile?.phoneVerified && (
-                <Chip icon={<CheckCircleIcon />} label="Phone Verified" color="success" size="small" />
+                <Chip
+                  icon={<CheckCircleIcon />}
+                  label="Phone Verified"
+                  color="success"
+                  size="small"
+                />
               )}
             </Box>
           </Grid>
@@ -278,7 +333,7 @@ export const ProfilePage: React.FC = () => {
                 Edit Profile
               </Button>
             ) : (
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ display: "flex", gap: 1 }}>
                 <Button
                   variant="contained"
                   startIcon={<SaveIcon />}
@@ -287,7 +342,11 @@ export const ProfilePage: React.FC = () => {
                 >
                   Save
                 </Button>
-                <Button variant="outlined" startIcon={<CancelIcon />} onClick={handleCancel}>
+                <Button
+                  variant="outlined"
+                  startIcon={<CancelIcon />}
+                  onClick={handleCancel}
+                >
                   Cancel
                 </Button>
               </Box>
@@ -311,8 +370,10 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="First Name"
-                value={displayProfile?.firstName || ''}
-                onChange={(event) => handleFieldChange('firstName', event.target.value)}
+                value={displayProfile?.firstName || ""}
+                onChange={(event) =>
+                  handleFieldChange("firstName", event.target.value)
+                }
                 disabled={!isEditing}
                 InputProps={{
                   startAdornment: (
@@ -327,8 +388,10 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Last Name"
-                value={displayProfile?.lastName || ''}
-                onChange={(event) => handleFieldChange('lastName', event.target.value)}
+                value={displayProfile?.lastName || ""}
+                onChange={(event) =>
+                  handleFieldChange("lastName", event.target.value)
+                }
                 disabled={!isEditing}
               />
             </Grid>
@@ -336,7 +399,7 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Email"
-                value={displayProfile?.email || ''}
+                value={displayProfile?.email || ""}
                 disabled
                 InputProps={{
                   startAdornment: (
@@ -351,8 +414,10 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Phone"
-                value={displayProfile?.phone || ''}
-                onChange={(event) => handleFieldChange('phone', event.target.value)}
+                value={displayProfile?.phone || ""}
+                onChange={(event) =>
+                  handleFieldChange("phone", event.target.value)
+                }
                 disabled={!isEditing}
                 InputProps={{
                   startAdornment: (
@@ -368,8 +433,10 @@ export const ProfilePage: React.FC = () => {
                 fullWidth
                 label="Date of Birth"
                 type="date"
-                value={displayProfile?.dateOfBirth || ''}
-                onChange={(event) => handleFieldChange('dateOfBirth', event.target.value)}
+                value={displayProfile?.dateOfBirth || ""}
+                onChange={(event) =>
+                  handleFieldChange("dateOfBirth", event.target.value)
+                }
                 disabled={!isEditing}
                 InputLabelProps={{ shrink: true }}
               />
@@ -378,14 +445,18 @@ export const ProfilePage: React.FC = () => {
               <FormControl fullWidth disabled={!isEditing}>
                 <InputLabel>Gender</InputLabel>
                 <Select
-                  value={displayProfile?.gender || ''}
-                  onChange={(event) => handleFieldChange('gender', event.target.value)}
+                  value={displayProfile?.gender || ""}
+                  onChange={(event) =>
+                    handleFieldChange("gender", event.target.value)
+                  }
                   label="Gender"
                 >
                   <MenuItem value="male">Male</MenuItem>
                   <MenuItem value="female">Female</MenuItem>
                   <MenuItem value="other">Other</MenuItem>
-                  <MenuItem value="prefer-not-to-say">Prefer not to say</MenuItem>
+                  <MenuItem value="prefer-not-to-say">
+                    Prefer not to say
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -393,8 +464,10 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Address"
-                value={displayProfile?.address || ''}
-                onChange={(event) => handleFieldChange('address', event.target.value)}
+                value={displayProfile?.address || ""}
+                onChange={(event) =>
+                  handleFieldChange("address", event.target.value)
+                }
                 disabled={!isEditing}
                 InputProps={{
                   startAdornment: (
@@ -409,8 +482,10 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="City"
-                value={displayProfile?.city || ''}
-                onChange={(event) => handleFieldChange('city', event.target.value)}
+                value={displayProfile?.city || ""}
+                onChange={(event) =>
+                  handleFieldChange("city", event.target.value)
+                }
                 disabled={!isEditing}
               />
             </Grid>
@@ -418,8 +493,10 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="State"
-                value={displayProfile?.state || ''}
-                onChange={(event) => handleFieldChange('state', event.target.value)}
+                value={displayProfile?.state || ""}
+                onChange={(event) =>
+                  handleFieldChange("state", event.target.value)
+                }
                 disabled={!isEditing}
               />
             </Grid>
@@ -427,8 +504,10 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Postcode"
-                value={displayProfile?.postcode || ''}
-                onChange={(event) => handleFieldChange('postcode', event.target.value)}
+                value={displayProfile?.postcode || ""}
+                onChange={(event) =>
+                  handleFieldChange("postcode", event.target.value)
+                }
                 disabled={!isEditing}
               />
             </Grid>
@@ -441,13 +520,15 @@ export const ProfilePage: React.FC = () => {
               <FormControl fullWidth disabled={!isEditing}>
                 <InputLabel>Blood Type</InputLabel>
                 <Select
-                  value={displayProfile?.medicalInfo?.bloodType || ''}
+                  value={displayProfile?.medicalInfo?.bloodType || ""}
                   onChange={(event) => {
                     if (!editedProfile) {
                       return;
                     }
-                    const medicalInfo = createDefaultMedicalInfo(editedProfile.medicalInfo);
-                    handleFieldChange('medicalInfo', {
+                    const medicalInfo = createDefaultMedicalInfo(
+                      editedProfile.medicalInfo,
+                    );
+                    handleFieldChange("medicalInfo", {
                       ...medicalInfo,
                       bloodType: event.target.value,
                     });
@@ -471,13 +552,15 @@ export const ProfilePage: React.FC = () => {
                 multiline
                 rows={3}
                 label="Allergies"
-                value={displayProfile?.medicalInfo?.allergies?.join(', ') || ''}
+                value={displayProfile?.medicalInfo?.allergies?.join(", ") || ""}
                 onChange={(event) => {
                   if (!editedProfile) {
                     return;
                   }
-                  const medicalInfo = createDefaultMedicalInfo(editedProfile.medicalInfo);
-                  handleFieldChange('medicalInfo', {
+                  const medicalInfo = createDefaultMedicalInfo(
+                    editedProfile.medicalInfo,
+                  );
+                  handleFieldChange("medicalInfo", {
                     ...medicalInfo,
                     allergies: parseCommaSeparated(event.target.value),
                   });
@@ -492,13 +575,17 @@ export const ProfilePage: React.FC = () => {
                 multiline
                 rows={3}
                 label="Current Medications"
-                value={displayProfile?.medicalInfo?.medications?.join(', ') || ''}
+                value={
+                  displayProfile?.medicalInfo?.medications?.join(", ") || ""
+                }
                 onChange={(event) => {
                   if (!editedProfile) {
                     return;
                   }
-                  const medicalInfo = createDefaultMedicalInfo(editedProfile.medicalInfo);
-                  handleFieldChange('medicalInfo', {
+                  const medicalInfo = createDefaultMedicalInfo(
+                    editedProfile.medicalInfo,
+                  );
+                  handleFieldChange("medicalInfo", {
                     ...medicalInfo,
                     medications: parseCommaSeparated(event.target.value),
                   });
@@ -513,13 +600,17 @@ export const ProfilePage: React.FC = () => {
                 multiline
                 rows={3}
                 label="Medical Conditions"
-                value={displayProfile?.medicalInfo?.conditions?.join(', ') || ''}
+                value={
+                  displayProfile?.medicalInfo?.conditions?.join(", ") || ""
+                }
                 onChange={(event) => {
                   if (!editedProfile) {
                     return;
                   }
-                  const medicalInfo = createDefaultMedicalInfo(editedProfile.medicalInfo);
-                  handleFieldChange('medicalInfo', {
+                  const medicalInfo = createDefaultMedicalInfo(
+                    editedProfile.medicalInfo,
+                  );
+                  handleFieldChange("medicalInfo", {
                     ...medicalInfo,
                     conditions: parseCommaSeparated(event.target.value),
                   });
@@ -535,20 +626,23 @@ export const ProfilePage: React.FC = () => {
           <Grid container spacing={3} sx={{ p: 3 }}>
             <Grid size={12}>
               <Alert severity="info">
-                Emergency contact information will be used in case of medical emergencies
+                Emergency contact information will be used in case of medical
+                emergencies
               </Alert>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Contact Name"
-                value={displayProfile?.emergencyContact?.name || ''}
+                value={displayProfile?.emergencyContact?.name || ""}
                 onChange={(event) => {
                   if (!editedProfile) {
                     return;
                   }
-                  const contact = createDefaultEmergencyContact(editedProfile.emergencyContact);
-                  handleFieldChange('emergencyContact', {
+                  const contact = createDefaultEmergencyContact(
+                    editedProfile.emergencyContact,
+                  );
+                  handleFieldChange("emergencyContact", {
                     ...contact,
                     name: event.target.value,
                   });
@@ -560,13 +654,15 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Relationship"
-                value={displayProfile?.emergencyContact?.relationship || ''}
+                value={displayProfile?.emergencyContact?.relationship || ""}
                 onChange={(event) => {
                   if (!editedProfile) {
                     return;
                   }
-                  const contact = createDefaultEmergencyContact(editedProfile.emergencyContact);
-                  handleFieldChange('emergencyContact', {
+                  const contact = createDefaultEmergencyContact(
+                    editedProfile.emergencyContact,
+                  );
+                  handleFieldChange("emergencyContact", {
                     ...contact,
                     relationship: event.target.value,
                   });
@@ -578,13 +674,15 @@ export const ProfilePage: React.FC = () => {
               <TextField
                 fullWidth
                 label="Contact Phone"
-                value={displayProfile?.emergencyContact?.phone || ''}
+                value={displayProfile?.emergencyContact?.phone || ""}
                 onChange={(event) => {
                   if (!editedProfile) {
                     return;
                   }
-                  const contact = createDefaultEmergencyContact(editedProfile.emergencyContact);
-                  handleFieldChange('emergencyContact', {
+                  const contact = createDefaultEmergencyContact(
+                    editedProfile.emergencyContact,
+                  );
+                  handleFieldChange("emergencyContact", {
                     ...contact,
                     phone: event.target.value,
                   });
@@ -611,13 +709,17 @@ export const ProfilePage: React.FC = () => {
                 />
                 <Switch
                   edge="end"
-                  checked={displayProfile?.preferences?.emailNotifications || false}
+                  checked={
+                    displayProfile?.preferences?.emailNotifications || false
+                  }
                   onChange={(event) => {
                     if (!editedProfile) {
                       return;
                     }
-                    const preferences = createDefaultPreferences(editedProfile.preferences);
-                    handleFieldChange('preferences', {
+                    const preferences = createDefaultPreferences(
+                      editedProfile.preferences,
+                    );
+                    handleFieldChange("preferences", {
                       ...preferences,
                       emailNotifications: event.target.checked,
                     });
@@ -635,13 +737,17 @@ export const ProfilePage: React.FC = () => {
                 />
                 <Switch
                   edge="end"
-                  checked={displayProfile?.preferences?.smsNotifications || false}
+                  checked={
+                    displayProfile?.preferences?.smsNotifications || false
+                  }
                   onChange={(event) => {
                     if (!editedProfile) {
                       return;
                     }
-                    const preferences = createDefaultPreferences(editedProfile.preferences);
-                    handleFieldChange('preferences', {
+                    const preferences = createDefaultPreferences(
+                      editedProfile.preferences,
+                    );
+                    handleFieldChange("preferences", {
                       ...preferences,
                       smsNotifications: event.target.checked,
                     });
@@ -659,13 +765,17 @@ export const ProfilePage: React.FC = () => {
                 />
                 <Switch
                   edge="end"
-                  checked={displayProfile?.preferences?.appointmentReminders || false}
+                  checked={
+                    displayProfile?.preferences?.appointmentReminders || false
+                  }
                   onChange={(event) => {
                     if (!editedProfile) {
                       return;
                     }
-                    const preferences = createDefaultPreferences(editedProfile.preferences);
-                    handleFieldChange('preferences', {
+                    const preferences = createDefaultPreferences(
+                      editedProfile.preferences,
+                    );
+                    handleFieldChange("preferences", {
                       ...preferences,
                       appointmentReminders: event.target.checked,
                     });
@@ -677,16 +787,23 @@ export const ProfilePage: React.FC = () => {
                 <ListItemIcon>
                   <EmailIcon />
                 </ListItemIcon>
-                <ListItemText primary="Marketing Emails" secondary="Receive news and promotions" />
+                <ListItemText
+                  primary="Marketing Emails"
+                  secondary="Receive news and promotions"
+                />
                 <Switch
                   edge="end"
-                  checked={displayProfile?.preferences?.marketingEmails || false}
+                  checked={
+                    displayProfile?.preferences?.marketingEmails || false
+                  }
                   onChange={(event) => {
                     if (!editedProfile) {
                       return;
                     }
-                    const preferences = createDefaultPreferences(editedProfile.preferences);
-                    handleFieldChange('preferences', {
+                    const preferences = createDefaultPreferences(
+                      editedProfile.preferences,
+                    );
+                    handleFieldChange("preferences", {
                       ...preferences,
                       marketingEmails: event.target.checked,
                     });
@@ -708,8 +825,14 @@ export const ProfilePage: React.FC = () => {
                 <ListItemIcon>
                   <LockIcon />
                 </ListItemIcon>
-                <ListItemText primary="Password" secondary="Change your account password" />
-                <Button variant="outlined" onClick={() => setPasswordDialogOpen(true)}>
+                <ListItemText
+                  primary="Password"
+                  secondary="Change your account password"
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => setPasswordDialogOpen(true)}
+                >
                   Change Password
                 </Button>
               </ListItem>
@@ -721,8 +844,8 @@ export const ProfilePage: React.FC = () => {
                   primary="Email Verification"
                   secondary={
                     displayProfile?.emailVerified
-                      ? 'Your email is verified'
-                      : 'Please verify your email'
+                      ? "Your email is verified"
+                      : "Please verify your email"
                   }
                 />
               </ListItem>
@@ -734,8 +857,8 @@ export const ProfilePage: React.FC = () => {
                   primary="Phone Verification"
                   secondary={
                     displayProfile?.phoneVerified
-                      ? 'Your phone is verified'
-                      : 'Please verify your phone number'
+                      ? "Your phone is verified"
+                      : "Please verify your phone number"
                   }
                 />
               </ListItem>
@@ -766,7 +889,9 @@ export const ProfilePage: React.FC = () => {
             type="password"
             label="Current Password"
             value={passwords.current}
-            onChange={(event) => setPasswords({ ...passwords, current: event.target.value })}
+            onChange={(event) =>
+              setPasswords({ ...passwords, current: event.target.value })
+            }
             sx={{ mb: 2 }}
           />
           <TextField
@@ -774,7 +899,9 @@ export const ProfilePage: React.FC = () => {
             type="password"
             label="New Password"
             value={passwords.new}
-            onChange={(event) => setPasswords({ ...passwords, new: event.target.value })}
+            onChange={(event) =>
+              setPasswords({ ...passwords, new: event.target.value })
+            }
             sx={{ mb: 2 }}
           />
           <TextField
@@ -782,10 +909,16 @@ export const ProfilePage: React.FC = () => {
             type="password"
             label="Confirm New Password"
             value={passwords.confirm}
-            onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })}
-            error={passwords.confirm !== '' && passwords.new !== passwords.confirm}
+            onChange={(event) =>
+              setPasswords({ ...passwords, confirm: event.target.value })
+            }
+            error={
+              passwords.confirm !== "" && passwords.new !== passwords.confirm
+            }
             helperText={
-              passwords.confirm !== '' && passwords.new !== passwords.confirm ? 'Passwords do not match' : ''
+              passwords.confirm !== "" && passwords.new !== passwords.confirm
+                ? "Passwords do not match"
+                : ""
             }
           />
         </Box>

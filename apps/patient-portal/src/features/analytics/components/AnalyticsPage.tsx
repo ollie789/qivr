@@ -1,8 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Grid,
   Chip,
@@ -18,10 +16,14 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-} from '@mui/material';
-import { TrendingUp as TrendingUpIcon, TrendingDown as TrendingDownIcon } from '@mui/icons-material';
-import { useAnalyticsDashboardData } from '../hooks/useAnalyticsDashboardData';
-import type { HealthGoal, HealthMetric } from '../../../types';
+} from "@mui/material";
+import {
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+} from "@mui/icons-material";
+import { useAnalyticsDashboardData } from "../hooks/useAnalyticsDashboardData";
+import type { HealthGoal, HealthMetric } from "../../../types";
+import { InfoCard } from "@qivr/design-system";
 
 const formatMetricValue = (metric: HealthMetric) => {
   const value = metric.value.toLocaleString();
@@ -29,7 +31,7 @@ const formatMetricValue = (metric: HealthMetric) => {
 };
 
 const AnalyticsPage: React.FC = () => {
-  const [timeRange, setTimeRange] = useState('30days');
+  const [timeRange, setTimeRange] = useState("30days");
   const { healthMetrics, promAnalytics, healthGoals, correlations, loading } =
     useAnalyticsDashboardData(timeRange);
 
@@ -38,9 +40,15 @@ const AnalyticsPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} sx={{ mb: 4 }}>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        justifyContent="space-between"
+        alignItems={{ xs: "stretch", md: "center" }}
+        sx={{ mb: 4 }}
+      >
         <Box>
-          <Typography variant="h4" gutterBottom>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
             Health Analytics
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -68,104 +76,108 @@ const AnalyticsPage: React.FC = () => {
       ) : (
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Key Metrics</Typography>
-                {topMetrics.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No metrics available.
-                  </Typography>
-                ) : (
-                  <List>
-                    {topMetrics.map((metric) => (
-                      <React.Fragment key={metric.id}>
-                        <ListItem>
-                          <ListItemText
-                            primary={metric.name}
-                            secondary={formatMetricValue(metric)}
+            <InfoCard title="Key Metrics">
+              {topMetrics.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No metrics available.
+                </Typography>
+              ) : (
+                <List>
+                  {topMetrics.map((metric) => (
+                    <React.Fragment key={metric.id}>
+                      <ListItem>
+                        <ListItemText
+                          primary={metric.name}
+                          secondary={formatMetricValue(metric)}
+                        />
+                        <ListItemSecondaryAction>
+                          <Chip
+                            size="small"
+                            icon={
+                              metric.trend === "up" ? (
+                                <TrendingUpIcon />
+                              ) : metric.trend === "down" ? (
+                                <TrendingDownIcon />
+                              ) : undefined
+                            }
+                            label={`${metric.percentageChange > 0 ? "+" : ""}${metric.percentageChange}%`}
+                            color={
+                              metric.status === "good"
+                                ? "success"
+                                : metric.status === "warning"
+                                  ? "warning"
+                                  : "error"
+                            }
                           />
-                          <ListItemSecondaryAction>
-                            <Chip
-                              size="small"
-                              icon={
-                                metric.trend === 'up' ? <TrendingUpIcon /> :
-                                metric.trend === 'down' ? <TrendingDownIcon /> : undefined
-                              }
-                              label={`${metric.percentageChange > 0 ? '+' : ''}${metric.percentageChange}%`}
-                              color={metric.status === 'good' ? 'success' : metric.status === 'warning' ? 'warning' : 'error'}
-                            />
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                        <Divider component="li" />
-                      </React.Fragment>
-                    ))}
-                  </List>
-                )}
-              </CardContent>
-            </Card>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                      <Divider component="li" />
+                    </React.Fragment>
+                  ))}
+                </List>
+              )}
+            </InfoCard>
           </Grid>
 
           <Grid size={{ xs: 12, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>PROM Performance</Typography>
-                {promAnalytics.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No PROM analytics available.
-                  </Typography>
-                ) : (
-                  <List>
-                    {promAnalytics.slice(0, 3).map((prom) => (
-                      <React.Fragment key={prom.templateName}>
-                        <ListItem>
-                          <ListItemText
-                            primary={prom.templateName}
-                            secondary={`Completion ${prom.completionRate}% • Average score ${prom.averageScore}%`}
-                          />
-                        </ListItem>
-                        <Divider component="li" />
-                      </React.Fragment>
-                    ))}
-                  </List>
-                )}
-              </CardContent>
-            </Card>
+            <InfoCard title="PROM Performance">
+              {promAnalytics.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No PROM analytics available.
+                </Typography>
+              ) : (
+                <List>
+                  {promAnalytics.slice(0, 3).map((prom) => (
+                    <React.Fragment key={prom.templateName}>
+                      <ListItem>
+                        <ListItemText
+                          primary={prom.templateName}
+                          secondary={`Completion ${prom.completionRate}% • Average score ${prom.averageScore}%`}
+                        />
+                      </ListItem>
+                      <Divider component="li" />
+                    </React.Fragment>
+                  ))}
+                </List>
+              )}
+            </InfoCard>
           </Grid>
 
           <Grid size={{ xs: 12, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Active Goals</Typography>
-                {topGoals.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No goals defined.
-                  </Typography>
-                ) : (
-                  <List>
-                    {topGoals.map((goal: HealthGoal) => (
-                      <React.Fragment key={goal.id}>
-                        <ListItem alignItems="flex-start">
-                          <ListItemText
-                            primary={goal.title}
-                            secondary={`${goal.current}/${goal.target} ${goal.unit} • ${goal.status}`}
-                          />
-                        </ListItem>
-                        <Divider component="li" />
-                      </React.Fragment>
-                    ))}
-                  </List>
-                )}
-                {healthGoals.length > 3 && (
-                  <Button sx={{ mt: 2 }} size="small">View all goals</Button>
-                )}
-              </CardContent>
-            </Card>
+            <InfoCard title="Active Goals">
+              {topGoals.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No goals defined.
+                </Typography>
+              ) : (
+                <List>
+                  {topGoals.map((goal: HealthGoal) => (
+                    <React.Fragment key={goal.id}>
+                      <ListItem alignItems="flex-start">
+                        <ListItemText
+                          primary={goal.title}
+                          secondary={`${goal.current}/${goal.target} ${goal.unit} • ${goal.status}`}
+                        />
+                      </ListItem>
+                      <Divider component="li" />
+                    </React.Fragment>
+                  ))}
+                </List>
+              )}
+              {healthGoals.length > 3 && (
+                <Button sx={{ mt: 2 }} size="small">
+                  View all goals
+                </Button>
+              )}
+            </InfoCard>
           </Grid>
         </Grid>
       )}
 
       <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" gutterBottom>Correlations</Typography>
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 700 }}>
+          Correlations
+        </Typography>
         {correlations.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
             No correlations available.
@@ -173,7 +185,9 @@ const AnalyticsPage: React.FC = () => {
         ) : (
           <List>
             {correlations.slice(0, 5).map((correlation) => (
-              <React.Fragment key={`${correlation.metric1}-${correlation.metric2}`}>
+              <React.Fragment
+                key={`${correlation.metric1}-${correlation.metric2}`}
+              >
                 <ListItem>
                   <ListItemText
                     primary={`${correlation.metric1} ↔ ${correlation.metric2}`}

@@ -1,8 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Grid,
   Button,
@@ -14,42 +12,53 @@ import {
   Chip,
   LinearProgress,
   Divider,
-} from '@mui/material';
-import { CheckCircle as CheckCircleIcon, PlayArrow as StartIcon } from '@mui/icons-material';
-import { format, isPast, parseISO } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
-import { usePromDashboardData } from '../hooks/usePromDashboardData';
-import type { PromHistoryEntry, PromInstance, PromStats } from '../../../types';
+} from "@mui/material";
+import {
+  CheckCircle as CheckCircleIcon,
+  PlayArrow as StartIcon,
+  Assignment as AssignmentIcon,
+} from "@mui/icons-material";
+import { format, isPast, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { usePromDashboardData } from "../hooks/usePromDashboardData";
+import type { PromHistoryEntry, PromInstance, PromStats } from "../../../types";
+import { InfoCard, AuraStatCard } from "@qivr/design-system";
 
 const formatDate = (date?: string) => {
-  if (!date) return 'No due date';
+  if (!date) return "No due date";
   try {
-    return format(parseISO(date), 'MMM dd, yyyy');
+    return format(parseISO(date), "MMM dd, yyyy");
   } catch {
     return date;
   }
 };
 
-const getStatusColor = (instance: PromInstance): 'default' | 'warning' | 'error' => {
-  if (instance.status === 'in-progress') return 'warning';
-  if (instance.dueDate && isPast(parseISO(instance.dueDate))) return 'error';
-  return 'default';
+const getStatusColor = (
+  instance: PromInstance,
+): "default" | "warning" | "error" => {
+  if (instance.status === "in-progress") return "warning";
+  if (instance.dueDate && isPast(parseISO(instance.dueDate))) return "error";
+  return "default";
 };
 
 const buildStats = (stats?: PromStats) => [
   {
-    label: 'Pending',
+    label: "Pending",
     value: stats?.pending ?? 0,
-    helper: stats?.nextDue ? `Next due ${formatDate(stats.nextDue)}` : undefined,
+    helper: stats?.nextDue
+      ? `Next due ${formatDate(stats.nextDue)}`
+      : undefined,
   },
   {
-    label: 'Completed',
+    label: "Completed",
     value: stats?.completed ?? 0,
-    helper: stats?.lastCompleted ? `Last completed ${formatDate(stats.lastCompleted)}` : undefined,
+    helper: stats?.lastCompleted
+      ? `Last completed ${formatDate(stats.lastCompleted)}`
+      : undefined,
   },
   {
-    label: 'Average Score',
-    value: stats ? `${Math.round(stats.averageScore)}%` : '—',
+    label: "Average Score",
+    value: stats ? `${Math.round(stats.averageScore)}%` : "—",
     helper: `Streak ${stats?.streak ?? 0} days`,
   },
 ];
@@ -70,128 +79,121 @@ const PromsPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
           Patient Reported Outcomes
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Track assigned questionnaires, completion progress, and recent history.
+          Track assigned questionnaires, completion progress, and recent
+          history.
         </Typography>
       </Box>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {stats.map((stat) => (
-          <Grid size={{ xs: 12, md: 4 }}key={stat.label}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" gutterBottom>
-                  {stat.label}
-                </Typography>
-                <Typography variant="h4">
-                  {statsLoading ? '—' : stat.value}
-                </Typography>
-                {stat.helper && (
-                  <Typography variant="caption" color="text.secondary">
-                    {stat.helper}
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
+          <Grid size={{ xs: 12, md: 4 }} key={stat.label}>
+            <AuraStatCard
+              title={stat.label}
+              value={statsLoading ? "—" : stat.value}
+              subtitle={stat.helper}
+              icon={<AssignmentIcon />}
+            />
           </Grid>
         ))}
       </Grid>
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                <Typography variant="h6">Pending PROMs</Typography>
-                <Chip label={`${pendingProms.length} active`} color="primary" size="small" />
-              </Box>
-
-              {pendingLoading ? (
-                <LinearProgress />
-              ) : pendingProms.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No pending questionnaires.
-                </Typography>
-              ) : (
-                <List>
-                  {pendingProms.map((instance) => (
-                    <React.Fragment key={instance.id}>
-                      <ListItem alignItems="flex-start">
-                        <ListItemText
-                          primary={instance.templateName}
-                          secondary={
-                            <>
-                              <Typography variant="body2" color="text.secondary">
-                                Assigned {formatDate(instance.assignedDate)}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                Due {formatDate(instance.dueDate)}
-                              </Typography>
-                            </>
-                          }
-                        />
-                        <ListItemSecondaryAction>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <Chip
-                              label={instance.status.replace('-', ' ')}
-                              color={getStatusColor(instance)}
-                              size="small"
-                            />
-                            <Button
-                              variant="contained"
-                              startIcon={<StartIcon />}
-                              onClick={() => navigate(`/proms/${instance.id}/complete`)}
-                            >
-                              Start
-                            </Button>
-                          </Box>
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                      <Divider component="li" />
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
-            </CardContent>
-          </Card>
+          <InfoCard
+            title="Pending PROMs"
+            action={
+              <Chip
+                label={`${pendingProms.length} active`}
+                color="primary"
+                size="small"
+              />
+            }
+          >
+            {pendingLoading ? (
+              <LinearProgress />
+            ) : pendingProms.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No pending questionnaires.
+              </Typography>
+            ) : (
+              <List>
+                {pendingProms.map((instance) => (
+                  <React.Fragment key={instance.id}>
+                    <ListItem alignItems="flex-start">
+                      <ListItemText
+                        primary={instance.templateName}
+                        secondary={
+                          <>
+                            <Typography variant="body2" color="text.secondary">
+                              Assigned {formatDate(instance.assignedDate)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Due {formatDate(instance.dueDate)}
+                            </Typography>
+                          </>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Chip
+                            label={instance.status.replace("-", " ")}
+                            color={getStatusColor(instance)}
+                            size="small"
+                          />
+                          <Button
+                            variant="contained"
+                            startIcon={<StartIcon />}
+                            onClick={() =>
+                              navigate(`/proms/${instance.id}/complete`)
+                            }
+                          >
+                            Start
+                          </Button>
+                        </Box>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                    <Divider component="li" />
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </InfoCard>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                <Typography variant="h6">Recent Completions</Typography>
-                <Chip label={`${promHistory.length}`} size="small" />
-              </Box>
-              {historyLoading ? (
-                <LinearProgress />
-              ) : promHistory.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No completed questionnaires yet.
-                </Typography>
-              ) : (
-                <List>
-                  {promHistory.slice(0, 5).map((history: PromHistoryEntry) => (
-                    <React.Fragment key={history.id}>
-                      <ListItem>
-                        <ListItemIcon>
-                          <CheckCircleIcon color="success" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={history.templateName}
-                          secondary={`Completed ${formatDate(history.completedDate)} • Score ${Math.round(history.percentageScore)}%`}
-                        />
-                      </ListItem>
-                      <Divider component="li" />
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
-            </CardContent>
-          </Card>
+          <InfoCard
+            title="Recent Completions"
+            action={<Chip label={`${promHistory.length}`} size="small" />}
+          >
+            {historyLoading ? (
+              <LinearProgress />
+            ) : promHistory.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No completed questionnaires yet.
+              </Typography>
+            ) : (
+              <List>
+                {promHistory.slice(0, 5).map((history: PromHistoryEntry) => (
+                  <React.Fragment key={history.id}>
+                    <ListItem>
+                      <ListItemIcon>
+                        <CheckCircleIcon color="success" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={history.templateName}
+                        secondary={`Completed ${formatDate(history.completedDate)} • Score ${Math.round(history.percentageScore)}%`}
+                      />
+                    </ListItem>
+                    <Divider component="li" />
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </InfoCard>
         </Grid>
       </Grid>
     </Box>

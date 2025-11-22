@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Container,
-  Paper,
   Box,
   TextField,
   Button,
@@ -13,21 +12,22 @@ import {
   IconButton,
   InputAdornment,
   CircularProgress,
-} from '@mui/material';
+  Paper,
+} from "@mui/material";
 import {
   Visibility,
   VisibilityOff,
   Google as GoogleIcon,
   Facebook as FacebookIcon,
-} from '@mui/icons-material';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '../contexts/AuthContext';
+} from "@mui/icons-material";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "../contexts/AuthContext";
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -40,7 +40,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const from = location.state?.from?.pathname || "/dashboard";
 
   const {
     register,
@@ -60,29 +60,35 @@ export const Login: React.FC = () => {
       if (result.success) {
         navigate(from, { replace: true });
       } else {
-        setError(result.error || 'Invalid email or password');
+        setError(result.error || "Invalid email or password");
       }
     } catch (err: unknown) {
-      console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Invalid email or password');
+      console.error("Login error:", err);
+      setError(
+        err instanceof Error ? err.message : "Invalid email or password",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+  const handleSocialLogin = async (provider: "google" | "facebook") => {
     setError(null);
     setIsLoading(true);
 
     try {
-      if (provider === 'google') {
+      if (provider === "google") {
         await signInWithGoogle();
       } else {
         await signInWithFacebook();
       }
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : `Failed to sign in with ${provider}`);
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to sign in with ${provider}`,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -93,14 +99,19 @@ export const Login: React.FC = () => {
       <Box
         sx={{
           marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Typography component="h1" variant="h4" gutterBottom>
+        <Paper sx={{ p: { xs: 3, md: 5 }, width: "100%" }}>
+          <Box sx={{ textAlign: "center", mb: 3 }}>
+            <Typography
+              component="h1"
+              variant="h4"
+              gutterBottom
+              sx={{ fontWeight: 700 }}
+            >
               Welcome Back
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -109,13 +120,21 @@ export const Login: React.FC = () => {
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+              onClose={() => setError(null)}
+            >
               {error}
-              {error.includes('verify your email') && (
+              {error.includes("verify your email") && (
                 <Box sx={{ mt: 1 }}>
                   <Button
                     size="small"
-                    onClick={() => navigate('/confirm-email', { state: { email: getValues('email') } })}
+                    onClick={() =>
+                      navigate("/confirm-email", {
+                        state: { email: getValues("email") },
+                      })
+                    }
                   >
                     Go to Email Verification
                   </Button>
@@ -135,19 +154,19 @@ export const Login: React.FC = () => {
               autoFocus
               error={!!errors.email}
               helperText={errors.email?.message}
-              {...register('email')}
+              {...register("email")}
             />
             <TextField
               margin="normal"
               required
               fullWidth
               label="Password"
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               id="password"
               autoComplete="current-password"
               error={!!errors.password}
               helperText={errors.password?.message}
-              {...register('password')}
+              {...register("password")}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -163,8 +182,20 @@ export const Login: React.FC = () => {
               }}
             />
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, mb: 2 }}>
-              <Link component={RouterLink} to="/forgot-password" variant="body2">
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mt: 1,
+                mb: 2,
+              }}
+            >
+              <Link
+                component={RouterLink}
+                to="/forgot-password"
+                variant="body2"
+              >
                 Forgot password?
               </Link>
             </Box>
@@ -176,17 +207,17 @@ export const Login: React.FC = () => {
               sx={{ mt: 1, mb: 2, py: 1.5 }}
               disabled={isLoading}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+              {isLoading ? <CircularProgress size={24} /> : "Sign In"}
             </Button>
 
             <Divider sx={{ my: 3 }}>OR</Divider>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Button
                 fullWidth
                 variant="outlined"
                 startIcon={<GoogleIcon />}
-                onClick={() => handleSocialLogin('google')}
+                onClick={() => handleSocialLogin("google")}
                 disabled={isLoading}
                 sx={{ py: 1.5 }}
               >
@@ -196,7 +227,7 @@ export const Login: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 startIcon={<FacebookIcon />}
-                onClick={() => handleSocialLogin('facebook')}
+                onClick={() => handleSocialLogin("facebook")}
                 disabled={isLoading}
                 sx={{ py: 1.5 }}
               >
@@ -204,9 +235,9 @@ export const Login: React.FC = () => {
               </Button>
             </Box>
 
-            <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Box sx={{ mt: 3, textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
-                Don't have an account?{' '}
+                Don't have an account?{" "}
                 <Link component={RouterLink} to="/register" variant="body2">
                   Sign up
                 </Link>
@@ -215,12 +246,17 @@ export const Login: React.FC = () => {
           </Box>
         </Paper>
 
-        <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 3 }}>
-          By signing in, you agree to our{' '}
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          align="center"
+          sx={{ mt: 3 }}
+        >
+          By signing in, you agree to our{" "}
           <Link href="/terms" target="_blank">
             Terms of Service
-          </Link>{' '}
-          and{' '}
+          </Link>{" "}
+          and{" "}
           <Link href="/privacy" target="_blank">
             Privacy Policy
           </Link>

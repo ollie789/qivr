@@ -99,23 +99,31 @@ export const IntakeForm = () => {
           duration: formData.duration,
           notes: formData.additionalNotes,
         },
-        painMaps: formData.painMapData?.regions ? [{
-          bodyRegion: formData.painMapData.regions[0]?.anatomicalName || 'Multiple regions',
-          coordinates: {
-            x: 0,
-            y: 0,
-            z: 0,
-          },
-          intensity: Math.max(...formData.painMapData.regions.map(r => r.intensity)),
-          type: formData.painMapData.regions[0]?.quality || 'pain',
-          qualities: formData.painMapData.regions.map(r => r.quality),
-          avatarType: 'male',
-          bodySubdivision: 'simple',
-          viewOrientation: formData.painMapData.cameraView,
-          depthIndicator: 'superficial',
-          submissionSource: 'portal',
-          drawingDataJson: JSON.stringify(formData.painMapData),
-        }] : [],
+        painMaps: formData.painMapData?.regions
+          ? [
+              {
+                bodyRegion:
+                  formData.painMapData.regions[0]?.anatomicalName ||
+                  "Multiple regions",
+                coordinates: {
+                  x: 0,
+                  y: 0,
+                  z: 0,
+                },
+                intensity: Math.max(
+                  ...formData.painMapData.regions.map((r) => r.intensity),
+                ),
+                type: formData.painMapData.regions[0]?.quality || "pain",
+                qualities: formData.painMapData.regions.map((r) => r.quality),
+                avatarType: "male",
+                bodySubdivision: "simple",
+                viewOrientation: formData.painMapData.cameraView,
+                depthIndicator: "superficial",
+                submissionSource: "portal",
+                drawingDataJson: JSON.stringify(formData.painMapData),
+              },
+            ]
+          : [],
       });
 
       console.log("Evaluation created:", result);
@@ -137,7 +145,7 @@ export const IntakeForm = () => {
 
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", p: 3 }}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
         Patient Intake Form
       </Typography>
 
@@ -149,7 +157,7 @@ export const IntakeForm = () => {
         ))}
       </Stepper>
 
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: { xs: 3, md: 5 } }}>
         {activeStep === 0 && (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -200,13 +208,13 @@ export const IntakeForm = () => {
             <PainMap3D
               value={formData.painMapData?.regions || []}
               onChange={(regions) =>
-                setFormData({ 
-                  ...formData, 
-                  painMapData: { 
+                setFormData({
+                  ...formData,
+                  painMapData: {
                     regions,
-                    cameraView: 'front',
-                    timestamp: new Date().toISOString()
-                  } 
+                    cameraView: "front",
+                    timestamp: new Date().toISOString(),
+                  },
                 })
               }
             />

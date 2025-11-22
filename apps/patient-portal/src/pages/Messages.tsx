@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Box, Paper, Typography, Button, Tabs, Tab } from "@mui/material";
+import { Box, Typography, Button, Tabs, Tab, Paper } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -118,7 +118,7 @@ export default function MessagesPage() {
       }}
     >
       {/* Header */}
-      <Paper sx={{ p: 2, borderRadius: 0 }}>
+      <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: 0 }}>
         <Box
           sx={{
             display: "flex",
@@ -127,7 +127,7 @@ export default function MessagesPage() {
             mb: 2,
           }}
         >
-          <Typography variant="h5" fontWeight={600}>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
             Messages
           </Typography>
           <Button

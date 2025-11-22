@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Button,
   CircularProgress,
@@ -26,6 +24,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Paper,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -462,25 +461,23 @@ export const CompletePROM = () => {
       </Box>
 
       {/* Progress */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={1}
-          >
-            <Typography variant="body2">
-              Progress: {Math.round(getProgress())}%
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {Object.keys(responses).length} of {template.questions.length}{" "}
-              questions answered
-            </Typography>
-          </Box>
-          <LinearProgress variant="determinate" value={getProgress()} />
-        </CardContent>
-      </Card>
+      <Paper sx={{ p: { xs: 3, md: 5 }, mb: 3 }}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={1}
+        >
+          <Typography variant="body2">
+            Progress: {Math.round(getProgress())}%
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {Object.keys(responses).length} of {template.questions.length}{" "}
+            questions answered
+          </Typography>
+        </Box>
+        <LinearProgress variant="determinate" value={getProgress()} />
+      </Paper>
 
       {/* Stepper for multi-step form */}
       {totalSteps > 1 && (
@@ -494,43 +491,41 @@ export const CompletePROM = () => {
       )}
 
       {/* Questions */}
-      <Card>
-        <CardContent>
-          {stepQuestions.map(renderQuestion)}
+      <Paper sx={{ p: { xs: 3, md: 5 } }}>
+        {stepQuestions.map(renderQuestion)}
 
-          {/* Navigation buttons */}
-          <Box display="flex" justifyContent="space-between" mt={4}>
+        {/* Navigation buttons */}
+        <Box display="flex" justifyContent="space-between" mt={4}>
+          <Button
+            disabled={activeStep === 0}
+            onClick={handleBack}
+            startIcon={<ArrowBackIcon />}
+          >
+            Previous
+          </Button>
+
+          {isLastStep ? (
             <Button
-              disabled={activeStep === 0}
-              onClick={handleBack}
-              startIcon={<ArrowBackIcon />}
+              variant="contained"
+              onClick={handleSubmit}
+              disabled={submitting}
+              startIcon={
+                submitting ? <CircularProgress size={20} /> : <SaveIcon />
+              }
             >
-              Previous
+              {submitting ? "Submitting..." : "Submit Assessment"}
             </Button>
-
-            {isLastStep ? (
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={submitting}
-                startIcon={
-                  submitting ? <CircularProgress size={20} /> : <SaveIcon />
-                }
-              >
-                {submitting ? "Submitting..." : "Submit Assessment"}
-              </Button>
-            ) : (
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                endIcon={<ArrowForwardIcon />}
-              >
-                Next
-              </Button>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              endIcon={<ArrowForwardIcon />}
+            >
+              Next
+            </Button>
+          )}
+        </Box>
+      </Paper>
 
       {/* Booking Prompt Dialog */}
       <Dialog open={showBookingPrompt} maxWidth="sm" fullWidth>
