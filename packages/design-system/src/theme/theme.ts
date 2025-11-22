@@ -123,18 +123,18 @@ export const theme = createTheme({
   },
   transitions: {
     duration: {
-      shortest: 150,
-      shorter: 200,
+      shortest: parseInt(tokens.TransitionDurationFast),
+      shorter: parseInt(tokens.TransitionDurationNormal),
       short: 250,
-      standard: 300,
+      standard: parseInt(tokens.TransitionDurationSlow),
       complex: 375,
       enteringScreen: 225,
       leavingScreen: 195,
     },
     easing: {
-      easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
-      easeOut: 'cubic-bezier(0.0, 0, 0.2, 1)',
-      easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
+      easeInOut: tokens.TransitionEasingStandard,
+      easeOut: tokens.TransitionEasingEaseOut,
+      easeIn: tokens.TransitionEasingEaseIn,
       sharp: 'cubic-bezier(0.4, 0, 0.6, 1)',
     },
   },
@@ -164,9 +164,9 @@ export const theme = createTheme({
           borderRadius: parseInt(tokens.BorderRadiusMd),
           fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
           padding: `${tokens.SpacingSm}px ${tokens.SpacingLg}px`,
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: `all ${tokens.TransitionDurationNormal}ms ${tokens.TransitionEasingStandard}`,
           '&:hover': {
-            transform: 'translateY(-1px)',
+            transform: `translateY(${tokens.AnimationHoverLift})`,
           },
           '&:active': {
             transform: 'translateY(0)',
@@ -175,7 +175,7 @@ export const theme = createTheme({
         contained: {
           boxShadow: 'none',
           '&:hover': {
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: tokens.AnimationShadowHover,
           },
         },
         sizeSmall: {
@@ -192,10 +192,10 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: `all ${tokens.TransitionDurationNormal}ms ${tokens.TransitionEasingStandard}`,
           '&:hover': {
             backgroundColor: tokens.ColorGrey100,
-            transform: 'scale(1.05)',
+            transform: `scale(${tokens.AnimationHoverScale})`,
           },
         },
       },
@@ -204,7 +204,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: `all ${tokens.TransitionDurationNormal}ms ${tokens.TransitionEasingStandard}`,
         },
         elevation: {
           boxShadow: 'none',
@@ -238,11 +238,11 @@ export const theme = createTheme({
           border: '1px solid',
           borderColor: tokens.ColorDivider,
           boxShadow: 'none',
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: `all ${tokens.TransitionDurationNormal}ms ${tokens.TransitionEasingStandard}`,
           '&:hover': {
             borderColor: tokens.ColorGrey300,
-            transform: 'translateY(-2px)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            transform: `translateY(${tokens.AnimationHoverLiftCard})`,
+            boxShadow: tokens.AnimationShadowCard,
           },
         },
       },
@@ -251,7 +251,7 @@ export const theme = createTheme({
       styleOverrides: {
         paper: {
           borderRadius: parseInt(tokens.BorderRadiusLg),
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          boxShadow: tokens.AnimationShadowDialog,
         },
       },
     },
@@ -430,7 +430,7 @@ export const theme = createTheme({
       styleOverrides: {
         paper: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          boxShadow: tokens.AnimationShadowMenu,
         },
       },
     },
@@ -439,10 +439,10 @@ export const theme = createTheme({
         root: {
           borderRadius: parseInt(tokens.BorderRadiusSm),
           margin: `0 ${tokens.SpacingXs}px`,
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: `all ${tokens.TransitionDurationNormal}ms ${tokens.TransitionEasingStandard}`,
           '&:hover': {
             backgroundColor: tokens.ColorGrey100,
-            transform: 'translateX(4px)',
+            transform: `translateX(${tokens.AnimationHoverSlide})`,
           },
         },
       },

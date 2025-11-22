@@ -1,0 +1,84 @@
+{
+  "transition": {
+    "duration": {
+      "fast": {
+        "value": "150",
+        "type": "duration",
+        "description": "Fast transitions"
+      },
+      "normal": {
+        "value": "200",
+        "type": "duration",
+        "description": "Normal transitions"
+      },
+      "slow": {
+        "value": "300",
+        "type": "duration",
+        "description": "Slow transitions"
+      }
+    },
+    "easing": {
+      "standard": {
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "type": "cubicBezier",
+        "description": "Standard easing"
+      },
+      "easeOut": {
+        "value": "cubic-bezier(0.0, 0, 0.2, 1)",
+        "type": "cubicBezier",
+        "description": "Ease out"
+      },
+      "easeIn": {
+        "value": "cubic-bezier(0.4, 0, 1, 1)",
+        "type": "cubicBezier",
+        "description": "Ease in"
+      }
+    }
+  },
+  "animation": {
+    "hover": {
+      "lift": {
+        "value": "-1px",
+        "type": "dimension",
+        "description": "Lift on hover"
+      },
+      "liftCard": {
+        "value": "-2px",
+        "type": "dimension",
+        "description": "Card lift on hover"
+      },
+      "slide": {
+        "value": "4px",
+        "type": "dimension",
+        "description": "Slide on hover"
+      },
+      "scale": {
+        "value": "1.05",
+        "type": "number",
+        "description": "Scale on hover"
+      }
+    },
+    "shadow": {
+      "hover": {
+        "value": "0 4px 12px rgba(0,0,0,0.15)",
+        "type": "boxShadow",
+        "description": "Shadow on hover"
+      },
+      "card": {
+        "value": "0 4px 12px rgba(0,0,0,0.08)",
+        "type": "boxShadow",
+        "description": "Card shadow on hover"
+      },
+      "menu": {
+        "value": "0 4px 20px rgba(0,0,0,0.1)",
+        "type": "boxShadow",
+        "description": "Menu shadow"
+      },
+      "dialog": {
+        "value": "0 8px 32px rgba(0,0,0,0.12)",
+        "type": "boxShadow",
+        "description": "Dialog shadow"
+      }
+    }
+  }
+}
