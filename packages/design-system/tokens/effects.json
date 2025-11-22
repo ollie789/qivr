@@ -1,0 +1,55 @@
+{
+  "glass": {
+    "blur": {
+      "sm": {
+        "value": "4px",
+        "type": "blur",
+        "description": "Small blur for glassmorphism"
+      },
+      "md": {
+        "value": "8px",
+        "type": "blur",
+        "description": "Medium blur for glassmorphism"
+      },
+      "lg": {
+        "value": "12px",
+        "type": "blur",
+        "description": "Large blur for glassmorphism"
+      }
+    },
+    "background": {
+      "light": {
+        "value": "rgba(255, 255, 255, 0.7)",
+        "type": "color",
+        "description": "Light glass background"
+      },
+      "medium": {
+        "value": "rgba(255, 255, 255, 0.5)",
+        "type": "color",
+        "description": "Medium glass background"
+      },
+      "dark": {
+        "value": "rgba(255, 255, 255, 0.3)",
+        "type": "color",
+        "description": "Dark glass background"
+      }
+    },
+    "border": {
+      "value": "rgba(255, 255, 255, 0.2)",
+      "type": "color",
+      "description": "Glass border color"
+    }
+  },
+  "backdrop": {
+    "blur": {
+      "value": "4px",
+      "type": "blur",
+      "description": "Backdrop blur"
+    },
+    "background": {
+      "value": "rgba(0, 0, 0, 0.3)",
+      "type": "color",
+      "description": "Backdrop background"
+    }
+  }
+}

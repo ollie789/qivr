@@ -6,6 +6,7 @@ export * from './buttons/IconButton';
 export * from './cards/CardHeader';
 export * from './cards/GreetingCard';
 export * from './cards/InfoCard';
+export * from './cards/GlassCard';
 
 // Charts
 export * from './charts/ChartCard';

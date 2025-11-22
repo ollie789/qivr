@@ -201,6 +201,16 @@ export const theme = createTheme({
       },
     },
     MuiPaper: {
+      variants: [
+        {
+          props: { variant: 'elevation' as any },
+          style: {
+            boxShadow: 'none',
+            border: '1px solid',
+            borderColor: tokens.ColorDivider,
+          },
+        },
+      ],
       styleOverrides: {
         root: {
           backgroundImage: 'none',
@@ -252,6 +262,17 @@ export const theme = createTheme({
         paper: {
           borderRadius: parseInt(tokens.BorderRadiusLg),
           boxShadow: tokens.AnimationShadowDialog,
+          backgroundColor: tokens.GlassBackgroundLight,
+          backdropFilter: `blur(${tokens.GlassBlurMd})`,
+          border: `1px solid ${tokens.GlassBorder}`,
+        },
+      },
+    },
+    MuiBackdrop: {
+      styleOverrides: {
+        root: {
+          backgroundColor: tokens.BackdropBackground,
+          backdropFilter: `blur(${tokens.BackdropBlur})`,
         },
       },
     },
