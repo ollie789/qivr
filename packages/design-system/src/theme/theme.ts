@@ -121,12 +121,39 @@ export const theme = createTheme({
   shape: {
     borderRadius: parseInt(tokens.BorderRadiusMd),
   },
+  transitions: {
+    duration: {
+      shortest: 150,
+      shorter: 200,
+      short: 250,
+      standard: 300,
+      complex: 375,
+      enteringScreen: 225,
+      leavingScreen: 195,
+    },
+    easing: {
+      easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
+      easeOut: 'cubic-bezier(0.0, 0, 0.2, 1)',
+      easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
+      sharp: 'cubic-bezier(0.4, 0, 0.6, 1)',
+    },
+  },
   components: {
     MuiCssBaseline: {
       styleOverrides: {
         body: {
           WebkitFontSmoothing: 'antialiased',
           MozOsxFontSmoothing: 'grayscale',
+        },
+        // Smooth autofill transitions
+        'input:-webkit-autofill': {
+          transition: 'background-color 5000s ease-in-out 0s',
+        },
+        'input:-webkit-autofill:hover': {
+          transition: 'background-color 5000s ease-in-out 0s',
+        },
+        'input:-webkit-autofill:focus': {
+          transition: 'background-color 5000s ease-in-out 0s',
         },
       },
     },
@@ -137,11 +164,18 @@ export const theme = createTheme({
           borderRadius: parseInt(tokens.BorderRadiusMd),
           fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
           padding: `${tokens.SpacingSm}px ${tokens.SpacingLg}px`,
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            transform: 'translateY(-1px)',
+          },
+          '&:active': {
+            transform: 'translateY(0)',
+          },
         },
         contained: {
           boxShadow: 'none',
           '&:hover': {
-            boxShadow: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
           },
         },
         sizeSmall: {
@@ -158,6 +192,11 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            backgroundColor: tokens.ColorGrey100,
+            transform: 'scale(1.05)',
+          },
         },
       },
     },
@@ -165,11 +204,15 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         },
         elevation: {
           boxShadow: 'none',
           border: '1px solid',
           borderColor: tokens.ColorDivider,
+          '&:hover': {
+            borderColor: tokens.ColorGrey300,
+          },
         },
         elevation1: {
           boxShadow: 'none',
@@ -195,6 +238,12 @@ export const theme = createTheme({
           border: '1px solid',
           borderColor: tokens.ColorDivider,
           boxShadow: 'none',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            borderColor: tokens.ColorGrey300,
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          },
         },
       },
     },
@@ -234,6 +283,17 @@ export const theme = createTheme({
         root: {
           '& .MuiOutlinedInput-root': {
             borderRadius: parseInt(tokens.BorderRadiusMd),
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: tokens.ColorGrey400,
+              },
+            },
+            '&.Mui-focused': {
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderWidth: '2px',
+              },
+            },
           },
         },
       },
@@ -242,6 +302,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       },
     },
@@ -257,6 +318,15 @@ export const theme = createTheme({
         root: {
           borderRadius: parseInt(tokens.BorderRadiusSm) + 2,
           fontWeight: parseInt(tokens.TypographyFontWeightMedium),
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            transform: 'scale(1.05)',
+          },
+        },
+        clickable: {
+          '&:hover': {
+            backgroundColor: tokens.ColorGrey200,
+          },
         },
       },
     },
@@ -278,6 +348,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       },
     },
@@ -285,6 +356,11 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            backgroundColor: tokens.ColorGrey100,
+            transform: 'translateX(4px)',
+          },
         },
       },
     },
@@ -304,6 +380,10 @@ export const theme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            color: tokens.ColorPrimaryMain,
+          },
         },
       },
     },
@@ -333,6 +413,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           fontWeight: parseInt(tokens.TypographyFontWeightSemibold),
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       },
     },
@@ -341,6 +422,7 @@ export const theme = createTheme({
         tooltip: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
           fontSize: tokens.TypographyFontSizeSm + 'px',
+          backgroundColor: tokens.ColorGrey800,
         },
       },
     },
@@ -348,6 +430,7 @@ export const theme = createTheme({
       styleOverrides: {
         paper: {
           borderRadius: parseInt(tokens.BorderRadiusMd),
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
         },
       },
     },
@@ -356,6 +439,11 @@ export const theme = createTheme({
         root: {
           borderRadius: parseInt(tokens.BorderRadiusSm),
           margin: `0 ${tokens.SpacingXs}px`,
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            backgroundColor: tokens.ColorGrey100,
+            transform: 'translateX(4px)',
+          },
         },
       },
     },
