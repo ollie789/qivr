@@ -5,3 +5,4 @@ export * from './StatusBadge';
 export * from './StatCardSkeleton';
 export * from './FilterChips';
 export * from './AuraConfirmDialog';
+export * from './InfoTooltip';

@@ -9,8 +9,9 @@ import {
   Step,
   StepLabel,
   Paper,
+  Stack,
 } from "@mui/material";
-import { PageLoader, PainMap3D, type PainMap3DData } from "@qivr/design-system";
+import { PageLoader, PainMap3D, InfoTooltip, type PainMap3DData } from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
@@ -32,6 +33,7 @@ export const IntakeForm = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     chiefComplaint: "",
     symptoms: "",
@@ -66,7 +68,36 @@ export const IntakeForm = () => {
     fetchUserInfo();
   }, [enqueueSnackbar]);
 
-  const handleNext = () => setActiveStep((prev) => prev + 1);
+  const validateStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    if (step === 1) {
+      if (!formData.chiefComplaint.trim()) {
+        newErrors.chiefComplaint = "Please describe your chief complaint";
+      }
+      if (!formData.duration.trim()) {
+        newErrors.duration = "Please specify how long you've had this issue";
+      }
+    }
+    
+    if (step === 4) {
+      if (!formData.symptoms.trim()) {
+        newErrors.symptoms = "Please list at least one symptom";
+      }
+      if (formData.painLevel < 1 || formData.painLevel > 10) {
+        newErrors.painLevel = "Pain level must be between 1 and 10";
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(activeStep)) {
+      setActiveStep((prev) => prev + 1);
+    }
+  };
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -171,28 +202,40 @@ export const IntakeForm = () => {
 
         {activeStep === 1 && (
           <Box>
-            <Typography variant="h6" gutterBottom>
-              Chief Complaint
-            </Typography>
+            <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="h6">
+                Chief Complaint
+              </Typography>
+              <InfoTooltip title="Describe the main reason for your visit in your own words" />
+            </Stack>
             <TextField
               fullWidth
               label="What brings you in today?"
               value={formData.chiefComplaint}
-              onChange={(e) =>
-                setFormData({ ...formData, chiefComplaint: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, chiefComplaint: e.target.value });
+                setErrors({ ...errors, chiefComplaint: "" });
+              }}
               multiline
               rows={3}
               sx={{ mb: 2 }}
               required
+              error={!!errors.chiefComplaint}
+              helperText={errors.chiefComplaint}
             />
             <TextField
               fullWidth
               label="How long have you had this issue?"
               value={formData.duration}
-              onChange={(e) =>
-                setFormData({ ...formData, duration: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, duration: e.target.value });
+                setErrors({ ...errors, duration: "" });
+              }}
+              placeholder="e.g., 2 weeks, 3 months"
+              sx={{ mb: 2 }}
+              required
+              error={!!errors.duration}
+              helperText={errors.duration}
             />
           </Box>
         )}
@@ -232,32 +275,41 @@ export const IntakeForm = () => {
 
         {activeStep === 4 && (
           <Box>
-            <Typography variant="h6" gutterBottom>
-              Symptoms
-            </Typography>
+            <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="h6">
+                Symptoms
+              </Typography>
+              <InfoTooltip title="List all symptoms you're experiencing, even if they seem unrelated" />
+            </Stack>
             <TextField
               fullWidth
               label="List your symptoms (comma separated)"
               value={formData.symptoms}
-              onChange={(e) =>
-                setFormData({ ...formData, symptoms: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, symptoms: e.target.value });
+                setErrors({ ...errors, symptoms: "" });
+              }}
               placeholder="e.g., Pain, Stiffness, Swelling"
               sx={{ mb: 2 }}
+              error={!!errors.symptoms}
+              helperText={errors.symptoms}
             />
             <TextField
               fullWidth
               type="number"
               label="Pain Level (1-10)"
               value={formData.painLevel}
-              onChange={(e) =>
+              onChange={(e) => {
                 setFormData({
                   ...formData,
-                  painLevel: parseInt(e.target.value),
-                })
-              }
+                  painLevel: parseInt(e.target.value) || 0,
+                });
+                setErrors({ ...errors, painLevel: "" });
+              }}
               inputProps={{ min: 1, max: 10 }}
               sx={{ mb: 2 }}
+              error={!!errors.painLevel}
+              helperText={errors.painLevel}
             />
             <TextField
               fullWidth
