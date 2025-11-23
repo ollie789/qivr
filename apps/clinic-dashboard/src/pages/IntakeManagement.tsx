@@ -66,6 +66,9 @@ import {
   SearchBar,
   StatusBadge,
   AuraStatCard,
+  StatCardSkeleton,
+  AuraEmptyState,
+  FilterChips,
 } from "@qivr/design-system";
 
 const IntakeManagement: React.FC = () => {
@@ -375,8 +378,16 @@ const IntakeManagement: React.FC = () => {
 
       {/* Statistics Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <AuraStatCard
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Grid key={i} size={{ xs: 12, sm: 6, md: 2 }}>
+              <StatCardSkeleton />
+            </Grid>
+          ))
+        ) : (
+          <>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <AuraStatCard
             title="Total Intakes"
             value={stats.total.toString()}
             icon={<QueueIcon />}
@@ -423,6 +434,8 @@ const IntakeManagement: React.FC = () => {
             iconColor="primary.main"
           />
         </Grid>
+          </>
+        )}
       </Grid>
 
       {/* Filters and Actions */}
@@ -502,6 +515,29 @@ const IntakeManagement: React.FC = () => {
             </Menu>
           </Grid>
         </Grid>
+
+        {/* Active Filters */}
+        {(searchQuery || filterStatus !== "all" || filterUrgency !== "all") && (
+          <Box sx={{ mt: 2 }}>
+            <FilterChips
+              filters={[
+                ...(searchQuery ? [{ key: "search", label: `Search: ${searchQuery}` }] : []),
+                ...(filterStatus !== "all" ? [{ key: "status", label: `Status: ${filterStatus}` }] : []),
+                ...(filterUrgency !== "all" ? [{ key: "urgency", label: `Urgency: ${filterUrgency}` }] : []),
+              ]}
+              onRemove={(key) => {
+                if (key === "search") setSearchQuery("");
+                if (key === "status") setFilterStatus("all");
+                if (key === "urgency") setFilterUrgency("all");
+              }}
+              onClearAll={() => {
+                setSearchQuery("");
+                setFilterStatus("all");
+                setFilterUrgency("all");
+              }}
+            />
+          </Box>
+        )}
       </Paper>
 
       {/* Kanban or Table View */}
@@ -587,7 +623,20 @@ const IntakeManagement: React.FC = () => {
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
-                  <TableBody>{pendingIntakes.map(renderIntakeRow)}</TableBody>
+                  <TableBody>
+                    {pendingIntakes.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ border: 0, p: 0 }}>
+                          <AuraEmptyState
+                            title="No pending intakes"
+                            description="All intakes have been reviewed"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      pendingIntakes.map(renderIntakeRow)
+                    )}
+                  </TableBody>
                 </Table>
               </TableContainer>
             )}
@@ -612,7 +661,20 @@ const IntakeManagement: React.FC = () => {
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
-                  <TableBody>{reviewingIntakes.map(renderIntakeRow)}</TableBody>
+                  <TableBody>
+                    {reviewingIntakes.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ border: 0, p: 0 }}>
+                          <AuraEmptyState
+                            title="No intakes under review"
+                            description="Move intakes here to start reviewing"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      reviewingIntakes.map(renderIntakeRow)
+                    )}
+                  </TableBody>
                 </Table>
               </TableContainer>
             )}
@@ -637,7 +699,20 @@ const IntakeManagement: React.FC = () => {
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
-                  <TableBody>{processedIntakes.map(renderIntakeRow)}</TableBody>
+                  <TableBody>
+                    {processedIntakes.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ border: 0, p: 0 }}>
+                          <AuraEmptyState
+                            title="No processed intakes"
+                            description="Completed intakes will appear here"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      processedIntakes.map(renderIntakeRow)
+                    )}
+                  </TableBody>
                 </Table>
               </TableContainer>
             )}
