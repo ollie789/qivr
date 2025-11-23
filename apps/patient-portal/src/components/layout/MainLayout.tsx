@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Container,
@@ -15,7 +15,7 @@ import {
   ListItemButton,
   Divider,
   Avatar,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
@@ -28,22 +28,24 @@ import {
   ExitToApp as LogoutIcon,
   LocalHospital as HospitalIcon,
   Assessment as AssessmentIcon,
-} from '@mui/icons-material';
-import { useAuth } from '../../contexts/AuthContext';
-import TenantSelector from '../shared/TenantSelector';
-import { QivrButton } from '@qivr/design-system';
+  Message as MessageIcon,
+} from "@mui/icons-material";
+import { useAuth } from "../../contexts/AuthContext";
+import TenantSelector from "../shared/TenantSelector";
+import { QivrButton } from "@qivr/design-system";
 
 const drawerWidth = 280;
 
 const menuItems = [
-  { title: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
-  { title: 'Medical Records', path: '/medical-records', icon: <MedicalIcon /> },
-  { title: 'Documents', path: '/documents', icon: <FolderIcon /> },
-  { title: 'Health Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
-  { title: 'Appointments', path: '/appointments', icon: <EventIcon /> },
-  { title: 'Assessments', path: '/proms', icon: <AssignmentIcon /> },
-  { title: 'Evaluations', path: '/evaluations', icon: <AssessmentIcon /> },
-  { title: 'Profile', path: '/profile', icon: <PersonIcon /> },
+  { title: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
+  { title: "Medical Records", path: "/medical-records", icon: <MedicalIcon /> },
+  { title: "Documents", path: "/documents", icon: <FolderIcon /> },
+  { title: "Health Analytics", path: "/analytics", icon: <AnalyticsIcon /> },
+  { title: "Appointments", path: "/appointments", icon: <EventIcon /> },
+  { title: "Messages", path: "/messages", icon: <MessageIcon /> },
+  { title: "Assessments", path: "/proms", icon: <AssignmentIcon /> },
+  { title: "Evaluations", path: "/evaluations", icon: <AssessmentIcon /> },
+  { title: "Profile", path: "/profile", icon: <PersonIcon /> },
 ];
 
 export const MainLayout: React.FC = () => {
@@ -58,23 +60,23 @@ export const MainLayout: React.FC = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const drawer = (
     <Box>
       <Toolbar sx={{ px: 2 }}>
-        <HospitalIcon sx={{ mr: 2, color: 'primary.main' }} />
+        <HospitalIcon sx={{ mr: 2, color: "primary.main" }} />
         <Typography variant="h6" noWrap component="div">
           Patient Portal
         </Typography>
       </Toolbar>
       <Divider />
-      
+
       {/* User Info */}
       <Box sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+          <Avatar sx={{ mr: 2, bgcolor: "primary.main" }}>
             {user?.email?.charAt(0).toUpperCase()}
           </Avatar>
           <Box>
@@ -100,7 +102,14 @@ export const MainLayout: React.FC = () => {
                 setMobileOpen(false);
               }}
             >
-              <ListItemIcon sx={{ color: location.pathname === item.path ? 'primary.main' : 'inherit' }}>
+              <ListItemIcon
+                sx={{
+                  color:
+                    location.pathname === item.path
+                      ? "primary.main"
+                      : "inherit",
+                }}
+              >
                 {item.icon}
               </ListItemIcon>
               <ListItemText primary={item.title} />
@@ -111,7 +120,7 @@ export const MainLayout: React.FC = () => {
 
       <Box sx={{ flexGrow: 1 }} />
       <Divider />
-      
+
       {/* Logout */}
       <List>
         <ListItem disablePadding>
@@ -127,7 +136,7 @@ export const MainLayout: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: "flex", minHeight: "100vh" }}>
       {/* App Bar */}
       <AppBar
         position="fixed"
@@ -141,12 +150,13 @@ export const MainLayout: React.FC = () => {
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ mr: 2, display: { sm: "none" } }}
           >
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find(item => item.path === location.pathname)?.title || 'Patient Portal'}
+            {menuItems.find((item) => item.path === location.pathname)?.title ||
+              "Patient Portal"}
           </Typography>
           <Box sx={{ mr: 2 }}>
             <TenantSelector />
@@ -155,7 +165,7 @@ export const MainLayout: React.FC = () => {
             emphasize="subtle"
             size="small"
             color="secondary"
-            onClick={() => window.open('https://widget.qivr.health', '_blank')}
+            onClick={() => window.open("https://widget.qivr.health", "_blank")}
           >
             New Evaluation
           </QivrButton>
@@ -175,8 +185,11 @@ export const MainLayout: React.FC = () => {
             keepMounted: true, // Better open performance on mobile.
           }}
           sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            display: { xs: "block", sm: "none" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: drawerWidth,
+            },
           }}
         >
           {drawer}
@@ -184,8 +197,11 @@ export const MainLayout: React.FC = () => {
         <Drawer
           variant="permanent"
           sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            display: { xs: "none", sm: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: drawerWidth,
+            },
           }}
           open
         >
@@ -200,7 +216,7 @@ export const MainLayout: React.FC = () => {
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          backgroundColor: 'background.default',
+          backgroundColor: "background.default",
         }}
       >
         <Toolbar />

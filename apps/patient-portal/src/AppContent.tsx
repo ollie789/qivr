@@ -1,33 +1,39 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
 // Layouts
-import { MainLayout } from './components/layout';
-import { AuthLayout } from './layouts/AuthLayout';
+import { MainLayout } from "./components/layout";
+import { AuthLayout } from "./layouts/AuthLayout";
 
 // Pages
-import Dashboard from './pages/Dashboard';
-import { Evaluations } from './pages/Evaluations';
-import { EvaluationDetail } from './pages/EvaluationDetail';
-import { IntakeForm } from './pages/IntakeForm';
-import Appointments from './pages/Appointments';
-import { BookAppointment } from './pages/BookAppointment';
-import PROMEnhanced from './pages/PROMEnhanced';
-import { CompletePROM } from './pages/CompletePROM';
-import Profile from './pages/Profile';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-import VerifyEmail from './pages/VerifyEmail';
-import { ConfirmEmail } from './pages/ConfirmEmail';
-import MedicalRecordsEnhanced from './pages/MedicalRecordsEnhanced';
-import DocumentsEnhanced from './pages/DocumentsEnhanced';
-import DocumentChecklist from './pages/DocumentChecklist';
-import AnalyticsEnhanced from './pages/AnalyticsEnhanced';
+import Dashboard from "./pages/Dashboard";
+import { Evaluations } from "./pages/Evaluations";
+import { EvaluationDetail } from "./pages/EvaluationDetail";
+import { IntakeForm } from "./pages/IntakeForm";
+import Appointments from "./pages/Appointments";
+import { BookAppointment } from "./pages/BookAppointment";
+import PROMEnhanced from "./pages/PROMEnhanced";
+import { CompletePROM } from "./pages/CompletePROM";
+import Profile from "./pages/Profile";
+import { Login } from "./pages/Login";
+import { Register } from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
+import { ConfirmEmail } from "./pages/ConfirmEmail";
+import MedicalRecordsEnhanced from "./pages/MedicalRecordsEnhanced";
+import DocumentsEnhanced from "./pages/DocumentsEnhanced";
+import DocumentChecklist from "./pages/DocumentChecklist";
+import AnalyticsEnhanced from "./pages/AnalyticsEnhanced";
+import Messages from "./pages/Messages";
 
 // Auth
-import { useAuth } from './contexts/AuthContext';
-import { PrivateRoute } from './components/auth/PrivateRoute';
-import { LoadingScreen } from './components/shared/LoadingScreen';
+import { useAuth } from "./contexts/AuthContext";
+import { PrivateRoute } from "./components/auth/PrivateRoute";
+import { LoadingScreen } from "./components/shared/LoadingScreen";
 
 export const AppContent: React.FC = () => {
   const { loading } = useAuth();
@@ -48,33 +54,42 @@ export const AppContent: React.FC = () => {
         </Route>
 
         {/* Protected Routes */}
-        <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+        <Route
+          element={
+            <PrivateRoute>
+              <MainLayout />
+            </PrivateRoute>
+          }
+        >
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          
+
           {/* Medical Records */}
           <Route path="/medical-records" element={<MedicalRecordsEnhanced />} />
-          
+
           {/* Documents */}
           <Route path="/documents" element={<DocumentsEnhanced />} />
           <Route path="/documents/checklist" element={<DocumentChecklist />} />
-          
+
           {/* Analytics */}
           <Route path="/analytics" element={<AnalyticsEnhanced />} />
-          
+
           {/* Evaluations */}
           <Route path="/evaluations" element={<Evaluations />} />
           <Route path="/evaluations/:id" element={<EvaluationDetail />} />
           <Route path="/evaluations/new" element={<IntakeForm />} />
-          
+
           {/* Appointments */}
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/appointments/book" element={<BookAppointment />} />
-          
+
           {/* PROMs */}
           <Route path="/proms" element={<PROMEnhanced />} />
           <Route path="/proms/:id/complete" element={<CompletePROM />} />
-          
+
+          {/* Messages */}
+          <Route path="/messages" element={<Messages />} />
+
           {/* Profile */}
           <Route path="/profile" element={<Profile />} />
         </Route>
