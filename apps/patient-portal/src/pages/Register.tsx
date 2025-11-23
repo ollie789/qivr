@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Box,
   Container,
@@ -13,10 +13,10 @@ import {
   Stepper,
   Step,
   StepLabel,
-} from '@mui/material';
-import { useAuth } from '../contexts/AuthContext';
-import { Email as EmailIcon } from '@mui/icons-material';
-import { api, handleApiError } from '../services/api';
+} from "@mui/material";
+import { useAuth } from "../contexts/AuthContext";
+import { Email as EmailIcon } from "@mui/icons-material";
+import { api, handleApiError } from "../services/api";
 
 interface EmailVerificationResponse {
   success: boolean;
@@ -28,48 +28,53 @@ export const Register = () => {
   const navigate = useNavigate();
   const { register: signUp } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [infoMessage, setInfoMessage] = useState('');
+  const [error, setError] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    phoneNumber: '',
+    email: "",
+    password: "",
+    confirmPassword: "",
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
   });
 
-  const steps = ['Create Account', 'Verify Email', 'Complete'];
+  const steps = ["Create Account", "Verify Email", "Complete"];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError('');
-    setInfoMessage('');
+    setError("");
+    setInfoMessage("");
   };
 
   const validateForm = () => {
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
-      setError('Please fill in all required fields');
+    if (
+      !formData.email ||
+      !formData.password ||
+      !formData.firstName ||
+      !formData.lastName
+    ) {
+      setError("Please fill in all required fields");
       return false;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return false;
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError("Password must be at least 8 characters long");
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       return false;
     }
 
@@ -84,7 +89,7 @@ export const Register = () => {
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const result = await signUp(
@@ -93,29 +98,37 @@ export const Register = () => {
         formData.email,
         formData.phoneNumber,
         formData.firstName,
-        formData.lastName
+        formData.lastName,
       );
 
-      const isSignUpComplete = (result as { isSignUpComplete?: boolean })?.isSignUpComplete ?? false;
+      const isSignUpComplete =
+        (result as { isSignUpComplete?: boolean })?.isSignUpComplete ?? false;
 
       if (isSignUpComplete) {
         // User is already confirmed (shouldn't happen with email verification)
-        navigate('/login');
+        navigate("/login");
       } else {
         // Redirect to confirmation page with email
         setStep(1);
-        setInfoMessage('Registration successful! Please check your email for the verification code.');
-        localStorage.setItem('pendingVerificationEmail', formData.email);
-        navigate('/confirm-email', { 
-          state: { 
+        setInfoMessage(
+          "Registration successful! Please check your email for the verification code.",
+        );
+        localStorage.setItem("pendingVerificationEmail", formData.email);
+        navigate("/confirm-email", {
+          state: {
             email: formData.email,
-            message: 'Registration successful! Please check your email for the verification code.'
-          } 
+            message:
+              "Registration successful! Please check your email for the verification code.",
+          },
         });
       }
     } catch (err: unknown) {
-      console.error('Registration error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.');
+      console.error("Registration error:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create account. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -123,27 +136,30 @@ export const Register = () => {
 
   const handleResendVerification = async () => {
     if (!formData.email) {
-      setError('Please enter your email address first.');
+      setError("Please enter your email address first.");
       return;
     }
 
     setLoading(true);
-    setError('');
-    setInfoMessage('');
+    setError("");
+    setInfoMessage("");
     try {
       const response = await api.post<EmailVerificationResponse>(
-        '/api/EmailVerification/resend',
+        "/api/EmailVerification/resend",
         { email: formData.email },
       );
 
       if (response.success) {
-        setInfoMessage(response.message ?? 'Verification email resent. Please check your inbox.');
+        setInfoMessage(
+          response.message ??
+            "Verification email resent. Please check your inbox.",
+        );
       } else {
-        setError(response.error ?? 'Failed to resend verification email');
+        setError(response.error ?? "Failed to resend verification email");
       }
     } catch (err: unknown) {
-      console.error('Resend verification email error:', err);
-      setError(handleApiError(err, 'Failed to resend verification email'));
+      console.error("Resend verification email error:", err);
+      setError(handleApiError(err, "Failed to resend verification email"));
     } finally {
       setLoading(false);
     }
@@ -152,11 +168,11 @@ export const Register = () => {
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 8, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
+        <Paper sx={{ p: { xs: 3, md: 5 } }}>
           <Typography variant="h4" align="center" gutterBottom>
             Create Your Account
           </Typography>
-          
+
           <Stepper activeStep={step} sx={{ mb: 4 }}>
             {steps.map((label) => (
               <Step key={label}>
@@ -168,7 +184,7 @@ export const Register = () => {
           {step === 0 && (
             <Box component="form" onSubmit={handleSubmit}>
               {(error || infoMessage) && (
-                <Alert severity={error ? 'error' : 'success'} sx={{ mb: 2 }}>
+                <Alert severity={error ? "error" : "success"} sx={{ mb: 2 }}>
                   {error || infoMessage}
                 </Alert>
               )}
@@ -252,14 +268,14 @@ export const Register = () => {
                 sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Create Account'}
+                {loading ? <CircularProgress size={24} /> : "Create Account"}
               </Button>
 
               <Divider sx={{ my: 2 }} />
 
               <Typography align="center">
-                Already have an account?{' '}
-                <Link to="/login" style={{ textDecoration: 'none' }}>
+                Already have an account?{" "}
+                <Link to="/login" style={{ textDecoration: "none" }}>
                   Sign In
                 </Link>
               </Typography>
@@ -267,45 +283,47 @@ export const Register = () => {
           )}
 
           {step === 1 && (
-            <Box sx={{ textAlign: 'center' }}>
-              <EmailIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
-              
+            <Box sx={{ textAlign: "center" }}>
+              <EmailIcon sx={{ fontSize: 64, color: "primary.main", mb: 2 }} />
+
               <Typography variant="h5" gutterBottom>
                 Verify Your Email
               </Typography>
-              
+
               <Typography color="text.secondary" sx={{ mb: 3 }}>
                 We've sent a verification email to:
               </Typography>
-              
+
               <Typography variant="h6" sx={{ mb: 3 }}>
                 {formData.email}
               </Typography>
-              
-              <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
-                Please check your inbox and click the verification link to activate your account.
-                The link will expire in 24 hours.
+
+              <Alert severity="info" sx={{ mb: 3, textAlign: "left" }}>
+                Please check your inbox and click the verification link to
+                activate your account. The link will expire in 24 hours.
               </Alert>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <Button
                   variant="outlined"
                   onClick={handleResendVerification}
                   disabled={loading}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Resend Verification Email'}
+                  {loading ? (
+                    <CircularProgress size={24} />
+                  ) : (
+                    "Resend Verification Email"
+                  )}
                 </Button>
-                
-                <Button
-                  variant="contained"
-                  onClick={() => navigate('/login')}
-                >
+
+                <Button variant="contained" onClick={() => navigate("/login")}>
                   Go to Login
                 </Button>
               </Box>
-              
+
               <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-                Didn't receive the email? Check your spam folder or click resend.
+                Didn't receive the email? Check your spam folder or click
+                resend.
               </Typography>
             </Box>
           )}

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
@@ -8,10 +8,10 @@ import {
   CircularProgress,
   Button,
   Alert,
-} from '@mui/material';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import api, { handleApiError } from '../lib/api-client';
+} from "@mui/material";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import api, { handleApiError } from "../lib/api-client";
 
 interface VerifyEmailResponse {
   success: boolean;
@@ -22,33 +22,50 @@ interface VerifyEmailResponse {
 const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('');
-  const token = searchParams.get('token');
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading",
+  );
+  const [message, setMessage] = useState("");
+  const token = searchParams.get("token");
 
   useEffect(() => {
     const verifyEmail = async () => {
       if (!token) {
-        setStatus('error');
-        setMessage('Invalid verification link. Please check your email for the correct link.');
+        setStatus("error");
+        setMessage(
+          "Invalid verification link. Please check your email for the correct link.",
+        );
         return;
       }
 
       try {
-        const response = await api.post<VerifyEmailResponse>('/api/EmailVerification/verify', {
-          token,
-        });
+        const response = await api.post<VerifyEmailResponse>(
+          "/api/EmailVerification/verify",
+          {
+            token,
+          },
+        );
 
         if (response.success) {
-          setStatus('success');
-          setMessage(response.message ?? 'Your email has been verified successfully! You can now log in.');
+          setStatus("success");
+          setMessage(
+            response.message ??
+              "Your email has been verified successfully! You can now log in.",
+          );
         } else {
-          setStatus('error');
-          setMessage(response.error || 'Verification failed. Please try again.');
+          setStatus("error");
+          setMessage(
+            response.error || "Verification failed. Please try again.",
+          );
         }
       } catch (error: unknown) {
-        setStatus('error');
-        setMessage(handleApiError(error, 'An error occurred during verification. Please try again later.'));
+        setStatus("error");
+        setMessage(
+          handleApiError(
+            error,
+            "An error occurred during verification. Please try again later.",
+          ),
+        );
       }
     };
 
@@ -56,20 +73,29 @@ const VerifyEmail: React.FC = () => {
   }, [token]);
 
   const handleNavigateToLogin = () => {
-    navigate('/login');
+    navigate("/login");
   };
 
   const handleResendEmail = async () => {
     // This would need the user's email, which could be stored in localStorage
     // or obtained through a form
-    const email = localStorage.getItem('pendingVerificationEmail');
+    const email = localStorage.getItem("pendingVerificationEmail");
     if (email) {
       try {
-        await api.post<VerifyEmailResponse>('/api/EmailVerification/resend', { email });
-        setMessage('A new verification email has been sent. Please check your inbox.');
+        await api.post<VerifyEmailResponse>("/api/EmailVerification/resend", {
+          email,
+        });
+        setMessage(
+          "A new verification email has been sent. Please check your inbox.",
+        );
       } catch (error: unknown) {
-        console.error('Failed to resend verification email:', error);
-        setMessage(handleApiError(error, 'Failed to resend verification email. Please try again later.'));
+        console.error("Failed to resend verification email:", error);
+        setMessage(
+          handleApiError(
+            error,
+            "Failed to resend verification email. Please try again later.",
+          ),
+        );
       }
     }
   };
@@ -77,8 +103,8 @@ const VerifyEmail: React.FC = () => {
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 8, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
-          {status === 'loading' && (
+        <Paper sx={{ p: { xs: 3, md: 5 }, textAlign: "center" }}>
+          {status === "loading" && (
             <>
               <CircularProgress size={60} sx={{ mb: 3 }} />
               <Typography variant="h5" gutterBottom>
@@ -90,10 +116,10 @@ const VerifyEmail: React.FC = () => {
             </>
           )}
 
-          {status === 'success' && (
+          {status === "success" && (
             <>
               <CheckCircleOutlineIcon
-                sx={{ fontSize: 80, color: 'success.main', mb: 2 }}
+                sx={{ fontSize: 80, color: "success.main", mb: 2 }}
               />
               <Typography variant="h4" gutterBottom>
                 Email Verified!
@@ -113,18 +139,18 @@ const VerifyEmail: React.FC = () => {
             </>
           )}
 
-          {status === 'error' && (
+          {status === "error" && (
             <>
               <ErrorOutlineIcon
-                sx={{ fontSize: 80, color: 'error.main', mb: 2 }}
+                sx={{ fontSize: 80, color: "error.main", mb: 2 }}
               />
               <Typography variant="h4" gutterBottom>
                 Verification Failed
               </Typography>
-              <Alert severity="error" sx={{ mb: 3, textAlign: 'left' }}>
+              <Alert severity="error" sx={{ mb: 3, textAlign: "left" }}>
                 {message}
               </Alert>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <Button
                   variant="contained"
                   color="primary"

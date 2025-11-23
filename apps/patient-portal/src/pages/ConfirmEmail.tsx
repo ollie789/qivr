@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Container,
   Paper,
@@ -9,17 +9,18 @@ import {
   Typography,
   Alert,
   CircularProgress,
-} from '@mui/material';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import authService from '../services/cognitoAuthService';
+} from "@mui/material";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import authService from "../services/cognitoAuthService";
 
-const DEV_AUTH_ENABLED = (import.meta.env.VITE_ENABLE_DEV_AUTH ?? 'false') === 'true';
+const DEV_AUTH_ENABLED =
+  (import.meta.env.VITE_ENABLE_DEV_AUTH ?? "false") === "true";
 
 const confirmSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  code: z.string().length(6, 'Confirmation code must be 6 digits'),
+  email: z.string().email("Invalid email address"),
+  code: z.string().length(6, "Confirmation code must be 6 digits"),
 });
 
 type ConfirmFormData = z.infer<typeof confirmSchema>;
@@ -33,8 +34,8 @@ export const ConfirmEmail: React.FC = () => {
   const [isResending, setIsResending] = useState(false);
 
   // Get email and message from location state if available
-  const defaultEmail = location.state?.email || '';
-  const initialMessage = location.state?.message || '';
+  const defaultEmail = location.state?.email || "";
+  const initialMessage = location.state?.message || "";
 
   const {
     register,
@@ -58,24 +59,25 @@ export const ConfirmEmail: React.FC = () => {
         await authService.confirmSignUp(data.email, data.code);
       }
 
-      setSuccess('Email verified successfully! Redirecting to login...');
-      
+      setSuccess("Email verified successfully! Redirecting to login...");
+
       // Wait a moment to show success message
       setTimeout(() => {
-        navigate('/login', { 
-          state: { 
+        navigate("/login", {
+          state: {
             email: data.email,
-            message: 'Email verified successfully! Please sign in.' 
-          } 
+            message: "Email verified successfully! Please sign in.",
+          },
         });
       }, 2000);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to verify email';
-      
-      if (errorMessage.includes('CodeMismatchException')) {
-        setError('Invalid verification code. Please check and try again.');
-      } else if (errorMessage.includes('ExpiredCodeException')) {
-        setError('Verification code has expired. Please request a new one.');
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to verify email";
+
+      if (errorMessage.includes("CodeMismatchException")) {
+        setError("Invalid verification code. Please check and try again.");
+      } else if (errorMessage.includes("ExpiredCodeException")) {
+        setError("Verification code has expired. Please request a new one.");
       } else {
         setError(errorMessage);
       }
@@ -85,10 +87,10 @@ export const ConfirmEmail: React.FC = () => {
   };
 
   const handleResendCode = async () => {
-    const email = getValues('email');
-    
+    const email = getValues("email");
+
     if (!email) {
-      setError('Please enter your email address first');
+      setError("Please enter your email address first");
       return;
     }
 
@@ -100,9 +102,13 @@ export const ConfirmEmail: React.FC = () => {
       if (!DEV_AUTH_ENABLED) {
         await authService.resendConfirmationCode(email);
       }
-      setSuccess('Verification code sent! Please check your email.');
+      setSuccess("Verification code sent! Please check your email.");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to resend verification code');
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to resend verification code",
+      );
     } finally {
       setIsResending(false);
     }
@@ -113,13 +119,13 @@ export const ConfirmEmail: React.FC = () => {
       <Box
         sx={{
           marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
+        <Paper sx={{ p: { xs: 3, md: 5 }, width: "100%" }}>
+          <Box sx={{ textAlign: "center", mb: 3 }}>
             <Typography component="h1" variant="h4" gutterBottom>
               Verify Your Email
             </Typography>
@@ -129,7 +135,11 @@ export const ConfirmEmail: React.FC = () => {
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+              onClose={() => setError(null)}
+            >
               {error}
             </Alert>
           )}
@@ -151,9 +161,9 @@ export const ConfirmEmail: React.FC = () => {
               autoFocus={!defaultEmail}
               error={!!errors.email}
               helperText={errors.email?.message}
-              {...register('email')}
+              {...register("email")}
             />
-            
+
             <TextField
               margin="normal"
               required
@@ -164,13 +174,15 @@ export const ConfirmEmail: React.FC = () => {
               autoComplete="one-time-code"
               autoFocus={!!defaultEmail}
               error={!!errors.code}
-              helperText={errors.code?.message || 'Enter the 6-digit code from your email'}
+              helperText={
+                errors.code?.message || "Enter the 6-digit code from your email"
+              }
               inputProps={{
                 maxLength: 6,
-                pattern: '[0-9]*',
-                inputMode: 'numeric',
+                pattern: "[0-9]*",
+                inputMode: "numeric",
               }}
-              {...register('code')}
+              {...register("code")}
             />
 
             <Button
@@ -180,7 +192,7 @@ export const ConfirmEmail: React.FC = () => {
               sx={{ mt: 3, mb: 2, py: 1.5 }}
               disabled={isLoading}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Verify Email'}
+              {isLoading ? <CircularProgress size={24} /> : "Verify Email"}
             </Button>
 
             <Button
@@ -190,16 +202,13 @@ export const ConfirmEmail: React.FC = () => {
               disabled={isResending}
               sx={{ mb: 2 }}
             >
-              {isResending ? <CircularProgress size={24} /> : 'Resend Code'}
+              {isResending ? <CircularProgress size={24} /> : "Resend Code"}
             </Button>
 
-            <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
-                Already verified?{' '}
-                <Button
-                  size="small"
-                  onClick={() => navigate('/login')}
-                >
+                Already verified?{" "}
+                <Button size="small" onClick={() => navigate("/login")}>
                   Back to Login
                 </Button>
               </Typography>
