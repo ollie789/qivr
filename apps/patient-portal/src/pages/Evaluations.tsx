@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Grid,
   Chip,
@@ -20,7 +18,6 @@ import {
   CircularProgress,
   Menu,
   MenuItem,
-  Avatar,
 } from "@mui/material";
 import {
   Assessment as AssessmentIcon,
@@ -40,7 +37,7 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import type { ChipProps } from "@mui/material/Chip";
 import apiClient from "../lib/api-client";
-import { SearchBar } from '@qivr/design-system';
+import { SearchBar, AuraStatCard } from "@qivr/design-system";
 
 interface Evaluation {
   id: string;
@@ -100,11 +97,11 @@ const mockEvaluations: Evaluation[] = [
 export const Evaluations = () => {
   const navigate = useNavigate();
   const { data: evaluations = [], isLoading: loading } = useQuery({
-    queryKey: ['evaluations'],
+    queryKey: ["evaluations"],
     queryFn: async () => {
       try {
         const data = await apiClient.get<Evaluation[]>("/api/evaluations");
-        console.log('Evaluations fetched:', data);
+        console.log("Evaluations fetched:", data);
         return data;
       } catch (error) {
         console.error("Error fetching evaluations:", error);
@@ -225,14 +222,21 @@ export const Evaluations = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
           My Evaluations
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/evaluations/new')}
+          onClick={() => navigate("/evaluations/new")}
         >
           New Intake
         </Button>
@@ -241,122 +245,48 @@ export const Evaluations = () => {
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography
-                    color="textSecondary"
-                    gutterBottom
-                    variant="body2"
-                  >
-                    Total Evaluations
-                  </Typography>
-                  <Typography variant="h4">{evaluations.length}</Typography>
-                </Box>
-                <Avatar
-                  sx={{ bgcolor: "primary.light", width: 48, height: 48 }}
-                >
-                  <AssessmentIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Total Evaluations"
+            value={evaluations.length}
+            icon={<AssessmentIcon />}
+            iconColor="primary"
+          />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography
-                    color="textSecondary"
-                    gutterBottom
-                    variant="body2"
-                  >
-                    Completed
-                  </Typography>
-                  <Typography variant="h4">
-                    {evaluations.filter((e) => e.status === "completed").length}
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{ bgcolor: "success.light", width: 48, height: 48 }}
-                >
-                  <CheckCircleIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Completed"
+            value={evaluations.filter((e) => e.status === "completed").length}
+            icon={<CheckCircleIcon />}
+            iconColor="success"
+          />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography
-                    color="textSecondary"
-                    gutterBottom
-                    variant="body2"
-                  >
-                    In Progress
-                  </Typography>
-                  <Typography variant="h4">
-                    {
-                      evaluations.filter((e) => e.status === "in-progress")
-                        .length
-                    }
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{ bgcolor: "warning.light", width: 48, height: 48 }}
-                >
-                  <ScheduleIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="In Progress"
+            value={evaluations.filter((e) => e.status === "in-progress").length}
+            icon={<ScheduleIcon />}
+            iconColor="warning"
+          />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography
-                    color="textSecondary"
-                    gutterBottom
-                    variant="body2"
-                  >
-                    Pending Review
-                  </Typography>
-                  <Typography variant="h4">
-                    {evaluations.filter((e) => e.status === "pending").length}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: "info.light", width: 48, height: 48 }}>
-                  <InfoIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
+          <AuraStatCard
+            title="Pending Review"
+            value={evaluations.filter((e) => e.status === "pending").length}
+            icon={<InfoIcon />}
+            iconColor="info"
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <AuraStatCard
+            title="Scheduled"
+            value={evaluations.filter((e) => e.followUpDate).length}
+            icon={<ScheduleIcon />}
+            iconColor="warning"
+          />
         </Grid>
       </Grid>
 
