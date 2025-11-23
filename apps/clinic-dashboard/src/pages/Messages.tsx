@@ -37,6 +37,7 @@ import {
   SearchBar,
   SectionLoader,
   AuraButton,
+  AuraEmptyState,
 } from "@qivr/design-system";
 
 const Messages: React.FC = () => {
@@ -227,10 +228,11 @@ const Messages: React.FC = () => {
               Failed to load conversations
             </Alert>
           ) : conversations.length === 0 ? (
-            <Box sx={{ p: 3, textAlign: "center" }}>
-              <Typography color="text.secondary">
-                No conversations yet
-              </Typography>
+            <Box sx={{ p: 3 }}>
+              <AuraEmptyState
+                title="No conversations yet"
+                description="Messages will appear here when patients contact you"
+              />
             </Box>
           ) : (
             <List sx={{ p: 0 }}>
