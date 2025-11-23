@@ -50,7 +50,13 @@ import {
   requestDocumentReview,
   completeDocumentReview,
 } from "../../../services/documentsApi";
-import { SearchBar, InfoCard, AuraStatCard } from "@qivr/design-system";
+import {
+  SearchBar,
+  InfoCard,
+  AuraStatCard,
+  StatCardSkeleton,
+  AuraEmptyState,
+} from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 
 interface UploadDialogProps {
@@ -347,54 +353,93 @@ const DocumentsPage: React.FC = () => {
       </Stack>
 
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <AuraStatCard
-            title="Total"
-            value={stats.total}
-            icon={<DescriptionIcon />}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <AuraStatCard
-            title="Medical"
-            value={stats.medical}
-            icon={<MedicalIcon />}
-            iconColor="primary"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <AuraStatCard
-            title="Verified"
-            value={stats.verified}
-            icon={<VerifiedIcon />}
-            iconColor="success"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <AuraStatCard
-            title="Pending Review"
-            value={stats.pendingReview}
-            icon={<ReviewIcon />}
-            iconColor="warning"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <AuraStatCard
-            title="Shared"
-            value={stats.shared}
-            icon={<ShareIcon />}
-            iconColor="info"
-          />
-        </Grid>
+        {documentsLoading ? (
+          <>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+          </>
+        ) : (
+          <>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <AuraStatCard
+                title="Total"
+                value={stats.total}
+                icon={<DescriptionIcon />}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <AuraStatCard
+                title="Medical"
+                value={stats.medical}
+                icon={<MedicalIcon />}
+                iconColor="primary"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <AuraStatCard
+                title="Verified"
+                value={stats.verified}
+                icon={<VerifiedIcon />}
+                iconColor="success"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <AuraStatCard
+                title="Pending Review"
+                value={stats.pendingReview}
+                icon={<ReviewIcon />}
+                iconColor="warning"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <AuraStatCard
+                title="Shared"
+                value={stats.shared}
+                icon={<ShareIcon />}
+                iconColor="info"
+              />
+            </Grid>
+          </>
+        )}
       </Grid>
 
       <InfoCard title="Document Library">
         {documentsLoading ? (
-          <LinearProgress />
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <Typography variant="body2" color="text.secondary">
+              Loading documents…
+            </Typography>
+          </Box>
         ) : filteredDocuments.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            No documents found.
-          </Typography>
+          <AuraEmptyState
+            title="No documents found"
+            description={
+              searchTerm || category !== "all"
+                ? "Try adjusting your search or filters"
+                : "Upload your first document to get started"
+            }
+            actionText={
+              searchTerm || category !== "all" ? undefined : "Upload Document"
+            }
+            onAction={
+              searchTerm || category !== "all"
+                ? undefined
+                : () => setUploadDialogOpen(true)
+            }
+          />
         ) : (
           <List>
             {filteredDocuments.map((document) => (

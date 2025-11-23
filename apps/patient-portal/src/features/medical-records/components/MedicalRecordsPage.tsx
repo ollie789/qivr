@@ -44,7 +44,11 @@ const MedicalRecordsPage: React.FC = () => {
       </Typography>
 
       {loading ? (
-        <Typography variant="body2">Loading medical data…</Typography>
+        <Box sx={{ textAlign: "center", py: 8 }}>
+          <Typography variant="body2" color="text.secondary">
+            Loading medical data…
+          </Typography>
+        </Box>
       ) : (
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 4 }}>

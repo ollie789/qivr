@@ -6,6 +6,7 @@ import {
   MessageList,
   MessageThread,
   MessageComposer,
+  AuraEmptyState,
   type MessageListItem,
   type ThreadMessage,
 } from "@qivr/design-system";
@@ -156,9 +157,18 @@ export default function MessagesPage() {
         <Paper sx={{ width: 360, borderRadius: 0, overflow: "auto" }}>
           {isLoading ? (
             <Box sx={{ p: 3, textAlign: "center" }}>
-              <Typography color="text.secondary">
+              <Typography variant="body2" color="text.secondary">
                 Loading messages...
               </Typography>
+            </Box>
+          ) : messageListItems.length === 0 ? (
+            <Box sx={{ p: 3 }}>
+              <AuraEmptyState
+                title="No messages"
+                description="Start a conversation with your care team"
+                actionText="New Message"
+                onAction={() => setComposerOpen(true)}
+              />
             </Box>
           ) : (
             <MessageList

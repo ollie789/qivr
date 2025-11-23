@@ -25,7 +25,7 @@ import { parseISO, format, isFuture } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useAppointmentsData } from "../hooks/useAppointmentsData";
 import type { AppointmentDto } from "../types";
-import { FormDialog } from "@qivr/design-system";
+import { FormDialog, AuraEmptyState } from "@qivr/design-system";
 
 const statusChipColor = (
   status: string,
@@ -144,13 +144,36 @@ const AppointmentsPage: React.FC = () => {
       </Box>
 
       {isLoading ? (
-        <Typography variant="body2" color="text.secondary">
-          Loading appointments…
-        </Typography>
+        <Box sx={{ textAlign: "center", py: 8 }}>
+          <Typography variant="body2" color="text.secondary">
+            Loading appointments…
+          </Typography>
+        </Box>
       ) : filtered.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
-          No appointments found.
-        </Typography>
+        <AuraEmptyState
+          title={
+            searchTerm
+              ? "No appointments found"
+              : tabValue === 0
+                ? "No upcoming appointments"
+                : "No past appointments"
+          }
+          description={
+            searchTerm
+              ? "Try adjusting your search"
+              : tabValue === 0
+                ? "Book your first appointment to get started"
+                : "You haven't had any appointments yet"
+          }
+          actionText={
+            !searchTerm && tabValue === 0 ? "Book Appointment" : undefined
+          }
+          onAction={
+            !searchTerm && tabValue === 0
+              ? () => navigate("/book-appointment")
+              : undefined
+          }
+        />
       ) : (
         <Grid container spacing={2}>
           {filtered.map((appointment) => {

@@ -15,7 +15,6 @@ import {
   TableRow,
   Paper,
   TablePagination,
-  CircularProgress,
   Menu,
   MenuItem,
 } from "@mui/material";
@@ -37,7 +36,13 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import type { ChipProps } from "@mui/material/Chip";
 import apiClient from "../lib/api-client";
-import { SearchBar, AuraStatCard } from "@qivr/design-system";
+import {
+  SearchBar,
+  AuraStatCard,
+  AuraEmptyState,
+  AuraErrorState,
+  StatCardSkeleton,
+} from "@qivr/design-system";
 
 interface Evaluation {
   id: string;
@@ -54,61 +59,21 @@ interface Evaluation {
   lastUpdated: string;
 }
 
-const mockEvaluations: Evaluation[] = [
-  {
-    id: "1",
-    evaluationNumber: "EVL-2024-001",
-    date: "2024-01-15T10:00:00",
-    chiefComplaint: "Lower back pain",
-    symptoms: ["Pain", "Stiffness", "Limited mobility"],
-    status: "completed",
-    urgency: "medium",
-    provider: "Dr. Sarah Johnson",
-    score: 75,
-    trend: "improving",
-    lastUpdated: "2024-01-15T14:30:00",
-  },
-  {
-    id: "2",
-    evaluationNumber: "EVL-2024-002",
-    date: "2024-01-20T14:00:00",
-    chiefComplaint: "Knee injury follow-up",
-    symptoms: ["Swelling", "Pain on movement"],
-    status: "in-progress",
-    urgency: "high",
-    provider: "Dr. Michael Chen",
-    followUpDate: "2024-02-01T10:00:00",
-    score: 60,
-    trend: "stable",
-    lastUpdated: "2024-01-20T15:45:00",
-  },
-  {
-    id: "3",
-    evaluationNumber: "EVL-2024-003",
-    date: "2024-01-22T09:00:00",
-    chiefComplaint: "Shoulder assessment",
-    symptoms: ["Limited range of motion", "Weakness"],
-    status: "pending",
-    urgency: "low",
-    lastUpdated: "2024-01-22T09:00:00",
-  },
-];
-
 export const Evaluations = () => {
   const navigate = useNavigate();
-  const { data: evaluations = [], isLoading: loading } = useQuery({
+  const {
+    data: evaluations = [],
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["evaluations"],
     queryFn: async () => {
-      try {
-        const data = await apiClient.get<Evaluation[]>("/api/evaluations");
-        console.log("Evaluations fetched:", data);
-        return data;
-      } catch (error) {
-        console.error("Error fetching evaluations:", error);
-        return mockEvaluations;
-      }
+      const data = await apiClient.get<Evaluation[]>("/api/evaluations");
+      console.log("Evaluations fetched:", data);
+      return data;
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
 
@@ -207,15 +172,17 @@ export const Evaluations = () => {
     return matchesSearch && matchesFilter;
   });
 
-  if (loading) {
+  if (error) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="60vh"
-      >
-        <CircularProgress />
+      <Box>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
+          My Evaluations
+        </Typography>
+        <AuraErrorState
+          title="Failed to load evaluations"
+          description="We couldn't load your evaluations. Please try again."
+          onAction={() => refetch()}
+        />
       </Box>
     );
   }
@@ -244,50 +211,64 @@ export const Evaluations = () => {
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AuraStatCard
-            title="Total Evaluations"
-            value={evaluations.length}
-            icon={<AssessmentIcon />}
-            iconColor="primary"
-          />
-        </Grid>
+        {loading ? (
+          <>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+          </>
+        ) : (
+          <>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <AuraStatCard
+                title="Total Evaluations"
+                value={evaluations.length}
+                icon={<AssessmentIcon />}
+                iconColor="primary"
+              />
+            </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AuraStatCard
-            title="Completed"
-            value={evaluations.filter((e) => e.status === "completed").length}
-            icon={<CheckCircleIcon />}
-            iconColor="success"
-          />
-        </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <AuraStatCard
+                title="Completed"
+                value={
+                  evaluations.filter((e) => e.status === "completed").length
+                }
+                icon={<CheckCircleIcon />}
+                iconColor="success"
+              />
+            </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AuraStatCard
-            title="In Progress"
-            value={evaluations.filter((e) => e.status === "in-progress").length}
-            icon={<ScheduleIcon />}
-            iconColor="warning"
-          />
-        </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <AuraStatCard
+                title="In Progress"
+                value={
+                  evaluations.filter((e) => e.status === "in-progress").length
+                }
+                icon={<ScheduleIcon />}
+                iconColor="warning"
+              />
+            </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AuraStatCard
-            title="Pending Review"
-            value={evaluations.filter((e) => e.status === "pending").length}
-            icon={<InfoIcon />}
-            iconColor="info"
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AuraStatCard
-            title="Scheduled"
-            value={evaluations.filter((e) => e.followUpDate).length}
-            icon={<ScheduleIcon />}
-            iconColor="warning"
-          />
-        </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <AuraStatCard
+                title="Pending Review"
+                value={evaluations.filter((e) => e.status === "pending").length}
+                icon={<InfoIcon />}
+                iconColor="info"
+              />
+            </Grid>
+          </>
+        )}
       </Grid>
 
       {/* Search and Filter */}
@@ -340,97 +321,124 @@ export const Evaluations = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredEvaluations
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((evaluation) => (
-                <TableRow
-                  key={evaluation.id}
-                  hover
-                  sx={{ cursor: "pointer" }}
-                  onClick={() => handleViewDetails(evaluation.id)}
-                >
-                  <TableCell>
-                    <Typography variant="body2" fontWeight="medium">
-                      {evaluation.evaluationNumber}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(evaluation.date), "MMM dd, yyyy")}
-                  </TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2">
-                        {evaluation.chiefComplaint}
+            {filteredEvaluations.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} sx={{ border: 0, p: 0 }}>
+                  <AuraEmptyState
+                    title="No evaluations found"
+                    description={
+                      searchTerm || filterStatus !== "all"
+                        ? "Try adjusting your search or filters"
+                        : "Start your first intake evaluation to begin tracking your health journey"
+                    }
+                    actionText={
+                      searchTerm || filterStatus !== "all"
+                        ? undefined
+                        : "New Intake"
+                    }
+                    onAction={
+                      searchTerm || filterStatus !== "all"
+                        ? undefined
+                        : () => navigate("/evaluations/new")
+                    }
+                  />
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredEvaluations
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((evaluation) => (
+                  <TableRow
+                    key={evaluation.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onClick={() => handleViewDetails(evaluation.id)}
+                  >
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {evaluation.evaluationNumber}
                       </Typography>
-                      <Box sx={{ display: "flex", gap: 0.5, mt: 0.5 }}>
-                        {evaluation.symptoms
-                          .slice(0, 2)
-                          .map((symptom, index) => (
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(evaluation.date), "MMM dd, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2">
+                          {evaluation.chiefComplaint}
+                        </Typography>
+                        <Box sx={{ display: "flex", gap: 0.5, mt: 0.5 }}>
+                          {evaluation.symptoms
+                            .slice(0, 2)
+                            .map((symptom, index) => (
+                              <Chip
+                                key={index}
+                                label={symptom}
+                                size="small"
+                                variant="outlined"
+                              />
+                            ))}
+                          {evaluation.symptoms.length > 2 && (
                             <Chip
-                              key={index}
-                              label={symptom}
+                              label={`+${evaluation.symptoms.length - 2}`}
                               size="small"
                               variant="outlined"
                             />
-                          ))}
-                        {evaluation.symptoms.length > 2 && (
-                          <Chip
-                            label={`+${evaluation.symptoms.length - 2}`}
-                            size="small"
-                            variant="outlined"
-                          />
-                        )}
+                          )}
+                        </Box>
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={evaluation.status.replace("-", " ")}
-                      color={getStatusColor(evaluation.status)}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          bgcolor: getUrgencyColor(evaluation.urgency),
-                        }}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={evaluation.status.replace("-", " ")}
+                        color={getStatusColor(evaluation.status)}
+                        size="small"
                       />
-                      <Typography variant="body2" textTransform="capitalize">
-                        {evaluation.urgency}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{evaluation.provider || "-"}</TableCell>
-                  <TableCell>
-                    {evaluation.score && (
+                    </TableCell>
+                    <TableCell>
                       <Box
                         sx={{ display: "flex", alignItems: "center", gap: 1 }}
                       >
-                        <Typography variant="body2">
-                          {evaluation.score}
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            bgcolor: getUrgencyColor(evaluation.urgency),
+                          }}
+                        />
+                        <Typography variant="body2" textTransform="capitalize">
+                          {evaluation.urgency}
                         </Typography>
-                        {getTrendIcon(evaluation.trend)}
                       </Box>
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMenuClick(e, evaluation);
-                      }}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>{evaluation.provider || "-"}</TableCell>
+                    <TableCell>
+                      {evaluation.score && (
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <Typography variant="body2">
+                            {evaluation.score}
+                          </Typography>
+                          {getTrendIcon(evaluation.trend)}
+                        </Box>
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuClick(e, evaluation);
+                        }}
+                      >
+                        <MoreVertIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+            )}
           </TableBody>
         </Table>
         <TablePagination

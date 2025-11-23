@@ -4,7 +4,6 @@ import {
   Typography,
   Grid,
   Chip,
-  LinearProgress,
   Stack,
   Button,
   List,
@@ -72,7 +71,11 @@ const AnalyticsPage: React.FC = () => {
       </Stack>
 
       {loading ? (
-        <LinearProgress />
+        <Box sx={{ textAlign: "center", py: 8 }}>
+          <Typography variant="body2" color="text.secondary">
+            Loading analytics…
+          </Typography>
+        </Box>
       ) : (
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 4 }}>

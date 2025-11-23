@@ -22,7 +22,12 @@ import { format, isPast, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { usePromDashboardData } from "../hooks/usePromDashboardData";
 import type { PromHistoryEntry, PromInstance, PromStats } from "../../../types";
-import { InfoCard, AuraStatCard } from "@qivr/design-system";
+import {
+  InfoCard,
+  AuraStatCard,
+  StatCardSkeleton,
+  AuraEmptyState,
+} from "@qivr/design-system";
 
 const formatDate = (date?: string) => {
   if (!date) return "No due date";
@@ -89,16 +94,30 @@ const PromsPage: React.FC = () => {
       </Box>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {stats.map((stat) => (
-          <Grid size={{ xs: 12, md: 4 }} key={stat.label}>
-            <AuraStatCard
-              title={stat.label}
-              value={statsLoading ? "—" : stat.value}
-              subtitle={stat.helper}
-              icon={<AssignmentIcon />}
-            />
-          </Grid>
-        ))}
+        {statsLoading ? (
+          <>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <StatCardSkeleton />
+            </Grid>
+          </>
+        ) : (
+          stats.map((stat) => (
+            <Grid size={{ xs: 12, md: 4 }} key={stat.label}>
+              <AuraStatCard
+                title={stat.label}
+                value={stat.value}
+                subtitle={stat.helper}
+                icon={<AssignmentIcon />}
+              />
+            </Grid>
+          ))
+        )}
       </Grid>
 
       <Grid container spacing={3}>
@@ -114,11 +133,16 @@ const PromsPage: React.FC = () => {
             }
           >
             {pendingLoading ? (
-              <LinearProgress />
+              <Box sx={{ textAlign: "center", py: 4 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Loading questionnaires…
+                </Typography>
+              </Box>
             ) : pendingProms.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No pending questionnaires.
-              </Typography>
+              <AuraEmptyState
+                title="No pending questionnaires"
+                description="You're all caught up! Check back later for new assessments."
+              />
             ) : (
               <List>
                 {pendingProms.map((instance) => (
