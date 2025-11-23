@@ -56,6 +56,7 @@ import {
   AuraStatCard,
   StatCardSkeleton,
   AuraEmptyState,
+  FilterChips,
 } from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 
@@ -351,6 +352,26 @@ const DocumentsPage: React.FC = () => {
           </Button>
         </Stack>
       </Stack>
+
+      {/* Active Filters */}
+      {(searchTerm || category !== "all") && (
+        <Box sx={{ mb: 3 }}>
+          <FilterChips
+            filters={[
+              ...(searchTerm ? [{ key: "search", label: `Search: ${searchTerm}` }] : []),
+              ...(category !== "all" ? [{ key: "category", label: `Category: ${category}` }] : []),
+            ]}
+            onRemove={(key) => {
+              if (key === "search") setSearchTerm("");
+              if (key === "category") setCategory("all");
+            }}
+            onClearAll={() => {
+              setSearchTerm("");
+              setCategory("all");
+            }}
+          />
+        </Box>
+      )}
 
       <Grid container spacing={3} sx={{ mb: 3 }}>
         {documentsLoading ? (

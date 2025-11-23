@@ -42,6 +42,7 @@ import {
   AuraEmptyState,
   AuraErrorState,
   StatCardSkeleton,
+  FilterChips,
 } from "@qivr/design-system";
 
 interface Evaluation {
@@ -272,37 +273,57 @@ export const Evaluations = () => {
       </Grid>
 
       {/* Search and Filter */}
-      <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap" }}>
-        <Box sx={{ flexGrow: 1, maxWidth: 400 }}>
-          <SearchBar
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Search evaluations..."
-          />
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
+          <Box sx={{ flexGrow: 1, maxWidth: 400 }}>
+            <SearchBar
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Search evaluations..."
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Chip
+              label="All"
+              color={filterStatus === "all" ? "primary" : "default"}
+              onClick={() => setFilterStatus("all")}
+            />
+            <Chip
+              label="Completed"
+              color={filterStatus === "completed" ? "primary" : "default"}
+              onClick={() => setFilterStatus("completed")}
+            />
+            <Chip
+              label="In Progress"
+              color={filterStatus === "in-progress" ? "primary" : "default"}
+              onClick={() => setFilterStatus("in-progress")}
+            />
+            <Chip
+              label="Pending"
+              color={filterStatus === "pending" ? "primary" : "default"}
+              onClick={() => setFilterStatus("pending")}
+            />
+          </Box>
         </Box>
 
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Chip
-            label="All"
-            color={filterStatus === "all" ? "primary" : "default"}
-            onClick={() => setFilterStatus("all")}
+        {/* Active Filters */}
+        {(searchTerm || filterStatus !== "all") && (
+          <FilterChips
+            filters={[
+              ...(searchTerm ? [{ key: "search", label: `Search: ${searchTerm}` }] : []),
+              ...(filterStatus !== "all" ? [{ key: "status", label: `Status: ${filterStatus}` }] : []),
+            ]}
+            onRemove={(key) => {
+              if (key === "search") setSearchTerm("");
+              if (key === "status") setFilterStatus("all");
+            }}
+            onClearAll={() => {
+              setSearchTerm("");
+              setFilterStatus("all");
+            }}
           />
-          <Chip
-            label="Completed"
-            color={filterStatus === "completed" ? "primary" : "default"}
-            onClick={() => setFilterStatus("completed")}
-          />
-          <Chip
-            label="In Progress"
-            color={filterStatus === "in-progress" ? "primary" : "default"}
-            onClick={() => setFilterStatus("in-progress")}
-          />
-          <Chip
-            label="Pending"
-            color={filterStatus === "pending" ? "primary" : "default"}
-            onClick={() => setFilterStatus("pending")}
-          />
-        </Box>
+        )}
       </Box>
 
       {/* Evaluations Table */}
