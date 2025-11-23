@@ -55,9 +55,10 @@ import type {
 } from "../features/analytics";
 import { 
   QivrButton, 
-  EmptyState, 
+  AuraEmptyState, 
   SkeletonLoader,
   AuraStatCard,
+  StatCardSkeleton,
   GreetingCard,
   InfoCard,
   AuraChartCard
@@ -267,7 +268,7 @@ const Dashboard: React.FC = () => {
         {isStatsLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
-              <SkeletonLoader type="card" />
+              <StatCardSkeleton />
             </Grid>
           ))
         ) : (
@@ -324,7 +325,7 @@ const Dashboard: React.FC = () => {
                   </ListItem>
                 ))
               ) : (
-                <EmptyState
+                <AuraEmptyState
                   icon={<CalendarIcon />}
                   title="No appointments today"
                   description="Your schedule is clear for today."
@@ -391,7 +392,7 @@ const Dashboard: React.FC = () => {
                       </ListItem>
                     ))
                 ) : (
-                  <EmptyState
+                  <AuraEmptyState
                     icon={<AssignmentIcon />}
                     title="No recent intakes"
                     description="No intake submissions to review."

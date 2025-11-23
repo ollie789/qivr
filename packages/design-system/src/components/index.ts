@@ -12,6 +12,8 @@ export * from './feedback/PageLoader';
 export * from './feedback/SectionLoader';
 export * from './feedback/LoadingSpinner';
 export * from './feedback/SkeletonLoader';
+export * from './feedback/StatusBadge';
+export * from './feedback/EmptyState';
 export * from './forms';
 export * from './layout';
 export * from './messaging';
