@@ -37,6 +37,8 @@ import {
   ConfirmDialog,
   PageHeader,
   AuraButton,
+  AuraEmptyState,
+  FilterChips,
 } from '@qivr/design-system';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -233,6 +235,29 @@ export default function Documents() {
             </Button>
           </Grid>
         </Grid>
+
+        {/* Active Filters */}
+        {(searchTerm || documentType || status) && (
+          <Box sx={{ mt: 2 }}>
+            <FilterChips
+              filters={[
+                ...(searchTerm ? [{ key: "search", label: `Search: ${searchTerm}` }] : []),
+                ...(documentType ? [{ key: "type", label: `Type: ${DOCUMENT_TYPES.find(t => t.value === documentType)?.label}` }] : []),
+                ...(status ? [{ key: "status", label: `Status: ${status}` }] : []),
+              ]}
+              onRemove={(key) => {
+                if (key === "search") setSearchTerm("");
+                if (key === "type") setDocumentType("");
+                if (key === "status") setStatus("");
+              }}
+              onClearAll={() => {
+                setSearchTerm("");
+                setDocumentType("");
+                setStatus("");
+              }}
+            />
+          </Box>
+        )}
       </Paper>
 
       <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
@@ -251,14 +276,19 @@ export default function Documents() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
-                  Loading...
+                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Loading documents…
+                  </Typography>
                 </TableCell>
               </TableRow>
             ) : paginatedDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
-                  No documents found
+                <TableCell colSpan={7} sx={{ border: 0, p: 0 }}>
+                  <AuraEmptyState
+                    title="No documents found"
+                    description={searchTerm || documentType || status ? "Try adjusting your filters" : "No documents have been uploaded yet"}
+                  />
                 </TableCell>
               </TableRow>
             ) : (

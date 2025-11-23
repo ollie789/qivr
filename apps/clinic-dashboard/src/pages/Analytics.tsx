@@ -60,6 +60,7 @@ import {
   TableSection, 
   PageHeader,
   AuraMetricCard,
+  StatCardSkeleton,
 } from '@qivr/design-system';
 import type {
   AppointmentTrendDatum,
@@ -331,18 +332,26 @@ const Analytics: React.FC = () => {
       {activeTab === 0 && (
         <>
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            {statCards.map((stat) => (
-              <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 3 }}>
-                <AuraMetricCard
-                  title={stat.label}
-                  value={stat.value}
-                  change={stat.change}
-                  changeLabel={stat.changeLabel}
-                  icon={stat.icon}
-                  iconColor={stat.color}
-                />
-              </Grid>
-            ))}
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+                  <StatCardSkeleton />
+                </Grid>
+              ))
+            ) : (
+              statCards.map((stat) => (
+                <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 3 }}>
+                  <AuraMetricCard
+                    title={stat.label}
+                    value={stat.value}
+                    change={stat.change}
+                    changeLabel={stat.changeLabel}
+                    icon={stat.icon}
+                    iconColor={stat.color}
+                  />
+                </Grid>
+              ))
+            )}
           </Grid>
 
           <Grid container spacing={3}>
