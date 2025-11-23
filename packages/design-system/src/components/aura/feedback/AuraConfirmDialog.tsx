@@ -7,7 +7,7 @@ import {
   Typography,
 } from '@mui/material';
 
-export interface ConfirmDialogProps {
+export interface AuraConfirmDialogProps {
   open: boolean;
   title: string;
   message: string;
@@ -18,7 +18,7 @@ export interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-export const ConfirmDialog = ({
+export const AuraConfirmDialog = ({
   open,
   title,
   message,
@@ -27,7 +27,7 @@ export const ConfirmDialog = ({
   confirmColor = 'primary',
   onConfirm,
   onCancel,
-}: ConfirmDialogProps) => {
+}: AuraConfirmDialogProps) => {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ fontWeight: 700 }}>{title}</DialogTitle>

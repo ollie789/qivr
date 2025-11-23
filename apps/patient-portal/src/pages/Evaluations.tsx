@@ -205,6 +205,7 @@ export const Evaluations = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => navigate("/evaluations/new")}
+          aria-label="Create new intake evaluation"
         >
           New Intake
         </Button>
@@ -372,7 +373,10 @@ export const Evaluations = () => {
                   <TableRow
                     key={evaluation.id}
                     hover
-                    sx={{ cursor: "pointer" }}
+                    sx={{ 
+                      cursor: "pointer",
+                      '& td': { py: { xs: 2, md: 1.5 } }
+                    }}
                     onClick={() => handleViewDetails(evaluation.id)}
                   >
                     <TableCell>
@@ -453,6 +457,7 @@ export const Evaluations = () => {
                           e.stopPropagation();
                           handleMenuClick(e, evaluation);
                         }}
+                        aria-label={`Actions for evaluation ${evaluation.evaluationNumber}`}
                       >
                         <MoreVertIcon />
                       </IconButton>
