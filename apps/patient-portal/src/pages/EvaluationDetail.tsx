@@ -21,7 +21,7 @@ import {
 import { format } from "date-fns";
 import type { ChipProps } from "@mui/material/Chip";
 import apiClient from "../lib/api-client";
-import { PageLoader, InfoCard } from "@qivr/design-system";
+import { PageLoader, InfoCard, Breadcrumbs } from "@qivr/design-system";
 
 interface Evaluation {
   id: string;
@@ -169,6 +169,16 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
 
   return (
     <Box>
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Home', onClick: () => navigate('/') },
+          { label: 'Evaluations', onClick: () => navigate('/evaluations') },
+          { label: evaluation.evaluationNumber },
+        ]}
+        sx={{ mb: 2 }}
+      />
+      
       {/* Header */}
       <Box
         sx={{
