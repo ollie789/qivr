@@ -26,12 +26,14 @@ import {
   Healing as HealingIcon,
   Schedule as ScheduleIcon,
   TrendingUp as TrendingIcon,
+  EventAvailable as EventAvailableIcon,
+  AssignmentTurnedIn as AssignmentTurnedInIcon,
 } from "@mui/icons-material";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useDashboardData } from "../hooks";
-import { AuraStatCard, InfoCard } from "@qivr/design-system";
+import { AuraStatCard, InfoCard, StatCardSkeleton, AuraEmptyState } from "@qivr/design-system";
 
 const formatAppointmentTime = (isoDate: string) => {
   const date = parseISO(isoDate);
@@ -96,16 +98,33 @@ export const DashboardPage: React.FC = () => {
       {isLoading && <LinearProgress sx={{ mb: 3 }} />}
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AuraStatCard
-            title="Upcoming Appointments"
-            value={stats?.upcomingAppointments ?? 0}
-            icon={<CalendarIcon />}
-            iconColor="primary"
-          />
-        </Grid>
+        {isLoading ? (
+          <>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <StatCardSkeleton />
+            </Grid>
+          </>
+        ) : (
+          <>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <AuraStatCard
+                title="Upcoming Appointments"
+                value={stats?.upcomingAppointments ?? 0}
+                icon={<CalendarIcon />}
+                iconColor="primary"
+              />
+            </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AuraStatCard
             title="Pending Assessments"
             value={stats?.pendingProms ?? 0}
@@ -131,6 +150,8 @@ export const DashboardPage: React.FC = () => {
             iconColor="info"
           />
         </Grid>
+          </>
+        )}
       </Grid>
 
       <Grid container spacing={3}>
@@ -148,9 +169,13 @@ export const DashboardPage: React.FC = () => {
             }
           >
             {displayedAppointments.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No appointments scheduled.
-              </Typography>
+              <AuraEmptyState
+                icon={<EventAvailableIcon />}
+                title="No appointments scheduled"
+                description="Book your first appointment to get started"
+                actionText="Book Appointment"
+                onAction={() => navigate('/appointments/book')}
+              />
             ) : (
               <List>
                 {displayedAppointments.map((appointment) => (
@@ -226,9 +251,11 @@ export const DashboardPage: React.FC = () => {
             }
           >
             {displayedProms.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No pending assessments.
-              </Typography>
+              <AuraEmptyState
+                icon={<AssignmentTurnedInIcon />}
+                title="No pending assessments"
+                description="All caught up! Check back later for new assessments"
+              />
             ) : (
               <List>
                 {displayedProms.map((prom) => (
