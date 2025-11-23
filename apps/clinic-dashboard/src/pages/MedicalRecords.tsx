@@ -96,6 +96,8 @@ import {
   InfoCard,
   AuraChartCard,
   PainMapProgression,
+  AuraEmptyState,
+  StatCardSkeleton,
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
 
@@ -175,10 +177,12 @@ const MedicalRecords: React.FC = () => {
 
   // Fetch pain progression
   const { data: painProgression } = useQuery({
-    queryKey: ['painProgression', selectedPatientId],
+    queryKey: ["painProgression", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return [];
-      return await apiClient.get(`/api/pain-map-analytics/progression/${selectedPatientId}`);
+      return await apiClient.get(
+        `/api/pain-map-analytics/progression/${selectedPatientId}`,
+      );
     },
     enabled: Boolean(selectedPatientId),
   });
@@ -198,7 +202,7 @@ const MedicalRecords: React.FC = () => {
   };
 
   // Fetch vital signs
-  const { data: medicalSummary } = useQuery({
+  const { data: medicalSummary, isLoading: isSummaryLoading } = useQuery({
     queryKey: ["medicalSummary", selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return null;
@@ -776,75 +780,101 @@ const MedicalRecords: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {patients
-                    .filter((p) => {
-                      if (!searchQuery) return true;
-                      const search = searchQuery.toLowerCase();
-                      return (
-                        p.firstName?.toLowerCase().includes(search) ||
-                        p.lastName?.toLowerCase().includes(search) ||
-                        p.email?.toLowerCase().includes(search)
-                      );
-                    })
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((patient) => (
-                      <TableRow key={patient.id} hover>
-                        <TableCell>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 2,
-                            }}
-                          >
-                            <Avatar>
-                              {patient.firstName?.[0]}
-                              {patient.lastName?.[0]}
-                            </Avatar>
-                            <Box>
-                              <Typography variant="body2" fontWeight={500}>
-                                {patient.firstName} {patient.lastName}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {patient.email}
-                              </Typography>
+                  {patients.filter((p) => {
+                    if (!searchQuery) return true;
+                    const search = searchQuery.toLowerCase();
+                    return (
+                      p.firstName?.toLowerCase().includes(search) ||
+                      p.lastName?.toLowerCase().includes(search) ||
+                      p.email?.toLowerCase().includes(search)
+                    );
+                  }).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} sx={{ border: 0, p: 0 }}>
+                        <AuraEmptyState
+                          title="No patients found"
+                          description={
+                            searchQuery
+                              ? "Try adjusting your search"
+                              : "No patients in the system yet"
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    patients
+                      .filter((p) => {
+                        if (!searchQuery) return true;
+                        const search = searchQuery.toLowerCase();
+                        return (
+                          p.firstName?.toLowerCase().includes(search) ||
+                          p.lastName?.toLowerCase().includes(search) ||
+                          p.email?.toLowerCase().includes(search)
+                        );
+                      })
+                      .slice(
+                        page * rowsPerPage,
+                        page * rowsPerPage + rowsPerPage,
+                      )
+                      .map((patient) => (
+                        <TableRow key={patient.id} hover>
+                          <TableCell>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
+                            >
+                              <Avatar>
+                                {patient.firstName?.[0]}
+                                {patient.lastName?.[0]}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {patient.firstName} {patient.lastName}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {patient.email}
+                                </Typography>
+                              </Box>
                             </Box>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {patient.phone}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {patient.dateOfBirth
-                            ? format(
-                                parseISO(patient.dateOfBirth),
-                                "MMM d, yyyy",
-                              )
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            Last visit data
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Button
-                            size="small"
-                            onClick={() => {
-                              setSelectedPatientId(patient.id);
-                              setViewMode("detail");
-                            }}
-                          >
-                            View Records
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {patient.phone}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {patient.dateOfBirth
+                              ? format(
+                                  parseISO(patient.dateOfBirth),
+                                  "MMM d, yyyy",
+                                )
+                              : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              Last visit data
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Button
+                              size="small"
+                              onClick={() => {
+                                setSelectedPatientId(patient.id);
+                                setViewMode("detail");
+                              }}
+                            >
+                              View Records
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -929,33 +959,49 @@ const MedicalRecords: React.FC = () => {
               </FlexBetween>
 
               {/* Quick Stats */}
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 6, md: 3 }}>
-                  <StatCard label="Blood Type" value="O+" compact />
+              {isSummaryLoading ? (
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <StatCardSkeleton />
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <StatCardSkeleton />
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <StatCardSkeleton />
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <StatCardSkeleton />
+                  </Grid>
                 </Grid>
-                <Grid size={{ xs: 6, md: 3 }}>
-                  <StatCard
-                    label="Allergies"
-                    value={
-                      medicalHistory.filter(
-                        (h: MedicalHistory) => h.category === "allergy",
-                      ).length
-                    }
-                    compact
-                  />
-                </Grid>
-                <Grid size={{ xs: 6, md: 3 }}>
-                  <StatCard
-                    label="Medications"
-                    value={
-                      medicalHistory.filter(
-                        (h: MedicalHistory) =>
-                          h.category === "medication" &&
-                          h.status === "active",
-                      ).length
-                    }
-                    compact
-                  />
+              ) : (
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <StatCard label="Blood Type" value="O+" compact />
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <StatCard
+                      label="Allergies"
+                      value={
+                        medicalHistory.filter(
+                          (h: MedicalHistory) => h.category === "allergy",
+                        ).length
+                      }
+                      compact
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 3 }}>
+                    <StatCard
+                      label="Medications"
+                      value={
+                        medicalHistory.filter(
+                          (h: MedicalHistory) =>
+                            h.category === "medication" &&
+                            h.status === "active",
+                        ).length
+                      }
+                      compact
+                    />
                   </Grid>
                   <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard
@@ -965,6 +1011,7 @@ const MedicalRecords: React.FC = () => {
                     />
                   </Grid>
                 </Grid>
+              )}
             </InfoCard>
 
             {/* Main Content Tabs */}
@@ -1637,8 +1684,7 @@ const MedicalRecords: React.FC = () => {
                                       }}
                                     >
                                       {doc.extractedText.substring(0, 500)}
-                                      {doc.extractedText.length > 500 &&
-                                        "..."}
+                                      {doc.extractedText.length > 500 && "..."}
                                     </Paper>
                                   </Box>
                                 )}

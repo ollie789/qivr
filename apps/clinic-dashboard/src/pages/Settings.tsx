@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Card,
@@ -32,7 +32,7 @@ import {
   TableHead,
   TableRow,
   InputAdornment,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Business as BusinessIcon,
   Security as SecurityIcon,
@@ -57,21 +57,25 @@ import {
   Warning as WarningIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-} from '@mui/icons-material';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSnackbar } from 'notistack';
-import { useAuthGuard } from '../hooks/useAuthGuard';
-import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
-import api from '../lib/api-client';
-import { TenantInfo } from '../components/shared';
-import { 
-  PageHeader, 
-  TabPanel as DesignTabPanel, 
-  SectionLoader, 
-  ConfirmDialog, 
+} from "@mui/icons-material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSnackbar } from "notistack";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import {
+  notificationsApi,
+  type NotificationPreferences,
+} from "../services/notificationsApi";
+import api from "../lib/api-client";
+import { TenantInfo } from "../components/shared";
+import {
+  PageHeader,
+  TabPanel as DesignTabPanel,
+  SectionLoader,
+  ConfirmDialog,
   FormDialog,
   AuraButton,
-} from '@qivr/design-system';
+  AuraEmptyState,
+} from "@qivr/design-system";
 
 interface ClinicSettings {
   clinic: {
@@ -158,7 +162,7 @@ interface ProviderMember {
   email: string;
   role: string;
   department: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   lastLogin: string;
 }
 
@@ -170,39 +174,40 @@ export default function Settings() {
   const [editMode, setEditMode] = useState(false);
   const [addProviderDialog, setAddProviderDialog] = useState(false);
   const [providerForm, setProviderForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    specialization: '',
-    department: ''
+    firstName: "",
+    lastName: "",
+    email: "",
+    specialization: "",
+    department: "",
   });
   const [showApiKey, setShowApiKey] = useState(false);
   const [newApiKeyDialog, setNewApiKeyDialog] = useState(false);
-  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences | null>(null);
-  
+  const [notificationPreferences, setNotificationPreferences] =
+    useState<NotificationPreferences | null>(null);
+
   const [settings, setSettings] = useState<ClinicSettings>({
     clinic: {
-      name: 'Springfield Medical Center',
-      registrationNumber: 'SMC-2024-001',
-      address: '123 Healthcare Blvd',
-      city: 'Springfield',
-      state: 'IL',
-      zipCode: '62701',
-      phone: '(555) 123-4567',
-      email: 'info@springfieldmedical.com',
-      website: 'www.springfieldmedical.com',
-      timezone: 'America/Chicago',
-      currency: 'USD',
+      name: "Springfield Medical Center",
+      registrationNumber: "SMC-2024-001",
+      address: "123 Healthcare Blvd",
+      city: "Springfield",
+      state: "IL",
+      zipCode: "62701",
+      phone: "(555) 123-4567",
+      email: "info@springfieldmedical.com",
+      website: "www.springfieldmedical.com",
+      timezone: "America/Chicago",
+      currency: "USD",
     },
     operations: {
       workingHours: {
-        monday: { open: '08:00', close: '18:00', closed: false },
-        tuesday: { open: '08:00', close: '18:00', closed: false },
-        wednesday: { open: '08:00', close: '18:00', closed: false },
-        thursday: { open: '08:00', close: '18:00', closed: false },
-        friday: { open: '08:00', close: '17:00', closed: false },
-        saturday: { open: '09:00', close: '13:00', closed: false },
-        sunday: { open: '', close: '', closed: true },
+        monday: { open: "08:00", close: "18:00", closed: false },
+        tuesday: { open: "08:00", close: "18:00", closed: false },
+        wednesday: { open: "08:00", close: "18:00", closed: false },
+        thursday: { open: "08:00", close: "18:00", closed: false },
+        friday: { open: "08:00", close: "17:00", closed: false },
+        saturday: { open: "09:00", close: "13:00", closed: false },
+        sunday: { open: "", close: "", closed: true },
       },
       appointmentDuration: 30,
       bufferTime: 5,
@@ -224,29 +229,29 @@ export default function Settings() {
     billing: {
       taxRate: 8.5,
       paymentTerms: 30,
-      acceptedPaymentMethods: ['cash', 'credit', 'insurance'],
-      insuranceProviders: ['BlueCross', 'Aetna', 'UnitedHealth', 'Cigna'],
-      defaultBillingCode: 'CPT-99213',
+      acceptedPaymentMethods: ["cash", "credit", "insurance"],
+      insuranceProviders: ["BlueCross", "Aetna", "UnitedHealth", "Cigna"],
+      defaultBillingCode: "CPT-99213",
     },
     integrations: {
       ehr: {
         enabled: true,
-        provider: 'Epic',
-        apiKey: 'sk_live_...',
-        lastSync: '2024-01-15T10:30:00',
+        provider: "Epic",
+        apiKey: "sk_live_...",
+        lastSync: "2024-01-15T10:30:00",
       },
       lab: {
         enabled: true,
-        provider: 'LabCorp',
-        accountId: 'LC-12345',
+        provider: "LabCorp",
+        accountId: "LC-12345",
       },
       pharmacy: {
         enabled: false,
-        provider: '',
+        provider: "",
       },
       telehealth: {
         enabled: true,
-        provider: 'Zoom for Healthcare',
+        provider: "Zoom for Healthcare",
       },
     },
     security: {
@@ -260,16 +265,16 @@ export default function Settings() {
   });
 
   const { data: providerMembers = [], isLoading: providersLoading } = useQuery({
-    queryKey: ['providers'],
+    queryKey: ["providers"],
     queryFn: async () => {
-      const response = await api.get('/api/clinic-management/providers');
+      const response = await api.get("/api/clinic-management/providers");
       return response.map((provider: any) => ({
         id: provider.id,
         name: `${provider.firstName} ${provider.lastName}`,
         email: provider.email,
-        role: provider.specialization || 'Provider',
-        department: provider.department || 'General',
-        status: provider.isActive ? 'active' : 'inactive',
+        role: provider.specialization || "Provider",
+        department: provider.department || "General",
+        status: provider.isActive ? "active" : "inactive",
         lastLogin: provider.lastLogin || new Date().toISOString(),
       }));
     },
@@ -278,18 +283,18 @@ export default function Settings() {
 
   // TODO: Add these endpoints to backend
   const { data: operationsSettings } = useQuery({
-    queryKey: ['operations-settings'],
+    queryKey: ["operations-settings"],
     queryFn: async () => {
-      const response = await api.get('/api/settings/operations');
+      const response = await api.get("/api/settings/operations");
       return response.data;
     },
     enabled: canMakeApiCalls,
   });
 
   const { data: clinicSettings } = useQuery({
-    queryKey: ['clinic-settings'],
+    queryKey: ["clinic-settings"],
     queryFn: async () => {
-      const response = await api.get('/api/settings/clinic');
+      const response = await api.get("/api/settings/clinic");
       return response.data;
     },
     enabled: canMakeApiCalls,
@@ -298,12 +303,12 @@ export default function Settings() {
   // Update settings when operations data is loaded
   useEffect(() => {
     if (operationsSettings) {
-      setSettings(prev => ({
+      setSettings((prev) => ({
         ...prev,
         operations: {
           ...prev.operations,
-          ...operationsSettings
-        }
+          ...operationsSettings,
+        },
       }));
     }
   }, [operationsSettings]);
@@ -311,21 +316,18 @@ export default function Settings() {
   // Update settings when clinic data is loaded
   useEffect(() => {
     if (clinicSettings) {
-      setSettings(prev => ({
+      setSettings((prev) => ({
         ...prev,
         clinic: {
           ...prev.clinic,
-          ...clinicSettings
-        }
+          ...clinicSettings,
+        },
       }));
     }
   }, [clinicSettings]);
 
-  const {
-    data: preferencesData,
-    isLoading: preferencesLoading,
-  } = useQuery({
-    queryKey: ['notification-preferences'],
+  const { data: preferencesData, isLoading: preferencesLoading } = useQuery({
+    queryKey: ["notification-preferences"],
     queryFn: notificationsApi.getPreferences,
     enabled: canMakeApiCalls,
   });
@@ -345,17 +347,25 @@ export default function Settings() {
   }, [preferencesData]);
 
   const updatePreferencesMutation = useMutation({
-    mutationFn: (prefs: NotificationPreferences) => notificationsApi.updatePreferences(prefs),
+    mutationFn: (prefs: NotificationPreferences) =>
+      notificationsApi.updatePreferences(prefs),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-      enqueueSnackbar('Notification preferences updated', { variant: 'success' });
+      queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
+      enqueueSnackbar("Notification preferences updated", {
+        variant: "success",
+      });
     },
     onError: () => {
-      enqueueSnackbar('Failed to update notification preferences', { variant: 'error' });
+      enqueueSnackbar("Failed to update notification preferences", {
+        variant: "error",
+      });
     },
   });
 
-  const handleNotificationPreferenceToggle = (key: 'emailEnabled' | 'smsEnabled', value: boolean) => {
+  const handleNotificationPreferenceToggle = (
+    key: "emailEnabled" | "smsEnabled",
+    value: boolean,
+  ) => {
     setSettings((prev) => ({
       ...prev,
       notifications: {
@@ -383,21 +393,21 @@ export default function Settings() {
 
   const handleSaveSettings = async () => {
     try {
-      await api.post('/api/settings/clinic', settings.clinic);
-      await api.post('/api/settings/operations', settings.operations);
-      
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-      enqueueSnackbar('Settings saved successfully', { variant: 'success' });
+      await api.post("/api/settings/clinic", settings.clinic);
+      await api.post("/api/settings/operations", settings.operations);
+
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      enqueueSnackbar("Settings saved successfully", { variant: "success" });
       setEditMode(false);
     } catch (error) {
-      console.error('Error saving settings:', error);
-      enqueueSnackbar('Failed to save settings', { variant: 'error' });
+      console.error("Error saving settings:", error);
+      enqueueSnackbar("Failed to save settings", { variant: "error" });
     }
   };
 
   const handleGenerateApiKey = () => {
     // TODO: Implement API key generation
-    const newKey = 'sk_live_' + Math.random().toString(36).substr(2, 32);
+    const newKey = "sk_live_" + Math.random().toString(36).substr(2, 32);
     setSettings({
       ...settings,
       integrations: {
@@ -409,20 +419,25 @@ export default function Settings() {
       },
     });
     setNewApiKeyDialog(false);
-    enqueueSnackbar('New API key generated', { variant: 'success' });
+    enqueueSnackbar("New API key generated", { variant: "success" });
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    enqueueSnackbar('Copied to clipboard', { variant: 'info' });
+    enqueueSnackbar("Copied to clipboard", { variant: "info" });
   };
 
   return (
     <Box>
       <PageHeader title="Clinic Settings" />
 
-      <Paper sx={{ width: '100%' }}>
-        <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+      <Paper sx={{ width: "100%" }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+        >
           <Tab icon={<BusinessIcon />} label="Clinic Info" />
           <Tab icon={<ScheduleIcon />} label="Operations" />
           <Tab icon={<PeopleIcon />} label="Providers" />
@@ -435,23 +450,31 @@ export default function Settings() {
         {/* Clinic Info Tab */}
         <DesignTabPanel value={tabValue} index={0}>
           <Box sx={{ p: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
               <Typography variant="h6">Clinic Information</Typography>
               {!editMode ? (
-                <AuraButton startIcon={<EditIcon />} onClick={() => setEditMode(true)}>
+                <AuraButton
+                  startIcon={<EditIcon />}
+                  onClick={() => setEditMode(true)}
+                >
                   Edit
                 </AuraButton>
               ) : (
                 <Box>
-                  <AuraButton 
-                    startIcon={<CancelIcon />} 
+                  <AuraButton
+                    startIcon={<CancelIcon />}
                     onClick={() => setEditMode(false)}
                     sx={{ mr: 1 }}
                   >
                     Cancel
                   </AuraButton>
-                  <AuraButton 
-                    variant="contained" 
+                  <AuraButton
+                    variant="contained"
                     startIcon={<SaveIcon />}
                     onClick={handleSaveSettings}
                   >
@@ -467,10 +490,12 @@ export default function Settings() {
                   label="Clinic Name"
                   fullWidth
                   value={settings.clinic.name}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    clinic: { ...settings.clinic, name: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      clinic: { ...settings.clinic, name: e.target.value },
+                    })
+                  }
                   disabled={!editMode}
                   InputProps={{
                     startAdornment: (
@@ -494,10 +519,12 @@ export default function Settings() {
                   label="Address"
                   fullWidth
                   value={settings.clinic.address}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    clinic: { ...settings.clinic, address: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      clinic: { ...settings.clinic, address: e.target.value },
+                    })
+                  }
                   disabled={!editMode}
                   InputProps={{
                     startAdornment: (
@@ -513,10 +540,12 @@ export default function Settings() {
                   label="City"
                   fullWidth
                   value={settings.clinic.city}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    clinic: { ...settings.clinic, city: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      clinic: { ...settings.clinic, city: e.target.value },
+                    })
+                  }
                   disabled={!editMode}
                 />
               </Grid>
@@ -525,10 +554,12 @@ export default function Settings() {
                   label="State"
                   fullWidth
                   value={settings.clinic.state}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    clinic: { ...settings.clinic, state: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      clinic: { ...settings.clinic, state: e.target.value },
+                    })
+                  }
                   disabled={!editMode}
                 />
               </Grid>
@@ -537,10 +568,12 @@ export default function Settings() {
                   label="ZIP Code"
                   fullWidth
                   value={settings.clinic.zipCode}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    clinic: { ...settings.clinic, zipCode: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      clinic: { ...settings.clinic, zipCode: e.target.value },
+                    })
+                  }
                   disabled={!editMode}
                 />
               </Grid>
@@ -549,10 +582,12 @@ export default function Settings() {
                   label="Phone"
                   fullWidth
                   value={settings.clinic.phone}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    clinic: { ...settings.clinic, phone: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      clinic: { ...settings.clinic, phone: e.target.value },
+                    })
+                  }
                   disabled={!editMode}
                   InputProps={{
                     startAdornment: (
@@ -569,10 +604,12 @@ export default function Settings() {
                   fullWidth
                   type="email"
                   value={settings.clinic.email}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    clinic: { ...settings.clinic, email: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      clinic: { ...settings.clinic, email: e.target.value },
+                    })
+                  }
                   disabled={!editMode}
                   InputProps={{
                     startAdornment: (
@@ -588,10 +625,12 @@ export default function Settings() {
                   label="Website"
                   fullWidth
                   value={settings.clinic.website}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    clinic: { ...settings.clinic, website: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      clinic: { ...settings.clinic, website: e.target.value },
+                    })
+                  }
                   disabled={!editMode}
                 />
               </Grid>
@@ -601,15 +640,22 @@ export default function Settings() {
                   <Select
                     value={settings.clinic.timezone}
                     label="Timezone"
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      clinic: { ...settings.clinic, timezone: e.target.value }
-                    })}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        clinic: {
+                          ...settings.clinic,
+                          timezone: e.target.value,
+                        },
+                      })
+                    }
                   >
                     <MenuItem value="America/New_York">Eastern Time</MenuItem>
                     <MenuItem value="America/Chicago">Central Time</MenuItem>
                     <MenuItem value="America/Denver">Mountain Time</MenuItem>
-                    <MenuItem value="America/Los_Angeles">Pacific Time</MenuItem>
+                    <MenuItem value="America/Los_Angeles">
+                      Pacific Time
+                    </MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -619,26 +665,34 @@ export default function Settings() {
 
         {/* Operations Tab - Rest of the tabs continue similarly... */}
         {/* For brevity, I'll add placeholder content for other tabs */}
-        
+
         <DesignTabPanel value={tabValue} index={1}>
           <Box sx={{ p: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
               <Typography variant="h6">Operations Settings</Typography>
               {!editMode ? (
-                <Button startIcon={<EditIcon />} onClick={() => setEditMode(true)}>
+                <Button
+                  startIcon={<EditIcon />}
+                  onClick={() => setEditMode(true)}
+                >
                   Edit
                 </Button>
               ) : (
                 <Box>
-                  <Button 
-                    startIcon={<CancelIcon />} 
+                  <Button
+                    startIcon={<CancelIcon />}
                     onClick={() => setEditMode(false)}
                     sx={{ mr: 1 }}
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    variant="contained" 
+                  <Button
+                    variant="contained"
                     startIcon={<SaveIcon />}
                     onClick={handleSaveSettings}
                   >
@@ -652,76 +706,103 @@ export default function Settings() {
               <Grid size={12}>
                 <Card>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>Operating Hours</Typography>
-                    {Object.entries(settings.operations.workingHours).map(([day, hours]) => (
-                      <Box key={day} display="flex" alignItems="center" mb={2}>
-                        <Box sx={{ minWidth: 120 }}>
-                          <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
-                            {day}
-                          </Typography>
+                    <Typography variant="h6" gutterBottom>
+                      Operating Hours
+                    </Typography>
+                    {Object.entries(settings.operations.workingHours).map(
+                      ([day, hours]) => (
+                        <Box
+                          key={day}
+                          display="flex"
+                          alignItems="center"
+                          mb={2}
+                        >
+                          <Box sx={{ minWidth: 120 }}>
+                            <Typography
+                              variant="body1"
+                              sx={{ textTransform: "capitalize" }}
+                            >
+                              {day}
+                            </Typography>
+                          </Box>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={!hours.closed}
+                                onChange={(e) =>
+                                  setSettings({
+                                    ...settings,
+                                    operations: {
+                                      ...settings.operations,
+                                      workingHours: {
+                                        ...settings.operations.workingHours,
+                                        [day]: {
+                                          ...hours,
+                                          closed: !e.target.checked,
+                                        },
+                                      },
+                                    },
+                                  })
+                                }
+                                disabled={!editMode}
+                              />
+                            }
+                            label="Open"
+                            sx={{ mr: 2 }}
+                          />
+                          {!hours.closed && (
+                            <>
+                              <TextField
+                                type="time"
+                                label="Open"
+                                value={hours.open}
+                                onChange={(e) =>
+                                  setSettings({
+                                    ...settings,
+                                    operations: {
+                                      ...settings.operations,
+                                      workingHours: {
+                                        ...settings.operations.workingHours,
+                                        [day]: {
+                                          ...hours,
+                                          open: e.target.value,
+                                        },
+                                      },
+                                    },
+                                  })
+                                }
+                                disabled={!editMode}
+                                sx={{ mr: 2, width: 120 }}
+                                InputLabelProps={{ shrink: true }}
+                              />
+                              <TextField
+                                type="time"
+                                label="Close"
+                                value={hours.close}
+                                onChange={(e) =>
+                                  setSettings({
+                                    ...settings,
+                                    operations: {
+                                      ...settings.operations,
+                                      workingHours: {
+                                        ...settings.operations.workingHours,
+                                        [day]: {
+                                          ...hours,
+                                          close: e.target.value,
+                                        },
+                                      },
+                                    },
+                                  })
+                                }
+                                disabled={!editMode}
+                                sx={{ width: 120 }}
+                                InputLabelProps={{ shrink: true }}
+                              />
+                            </>
+                          )}
                         </Box>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={!hours.closed}
-                              onChange={(e) => setSettings({
-                                ...settings,
-                                operations: {
-                                  ...settings.operations,
-                                  workingHours: {
-                                    ...settings.operations.workingHours,
-                                    [day]: { ...hours, closed: !e.target.checked }
-                                  }
-                                }
-                              })}
-                              disabled={!editMode}
-                            />
-                          }
-                          label="Open"
-                          sx={{ mr: 2 }}
-                        />
-                        {!hours.closed && (
-                          <>
-                            <TextField
-                              type="time"
-                              label="Open"
-                              value={hours.open}
-                              onChange={(e) => setSettings({
-                                ...settings,
-                                operations: {
-                                  ...settings.operations,
-                                  workingHours: {
-                                    ...settings.operations.workingHours,
-                                    [day]: { ...hours, open: e.target.value }
-                                  }
-                                }
-                              })}
-                              disabled={!editMode}
-                              sx={{ mr: 2, width: 120 }}
-                              InputLabelProps={{ shrink: true }}
-                            />
-                            <TextField
-                              type="time"
-                              label="Close"
-                              value={hours.close}
-                              onChange={(e) => setSettings({
-                                ...settings,
-                                operations: {
-                                  ...settings.operations,
-                                  workingHours: {
-                                    ...settings.operations.workingHours,
-                                    [day]: { ...hours, close: e.target.value }
-                                  }
-                                }
-                              })}
-                              disabled={!editMode}
-                              sx={{ width: 120 }}
-                              InputLabelProps={{ shrink: true }}
-                            />
-                          </>
-                        )}
-                      </Box>
-                    ))}
+                      ),
+                    )}
                   </CardContent>
                 </Card>
               </Grid>
@@ -729,7 +810,9 @@ export default function Settings() {
               <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>Appointment Settings</Typography>
+                    <Typography variant="h6" gutterBottom>
+                      Appointment Settings
+                    </Typography>
                     <Grid container spacing={2}>
                       <Grid size={12}>
                         <TextField
@@ -737,13 +820,16 @@ export default function Settings() {
                           type="number"
                           fullWidth
                           value={settings.operations.appointmentDuration}
-                          onChange={(e) => setSettings({
-                            ...settings,
-                            operations: {
-                              ...settings.operations,
-                              appointmentDuration: parseInt(e.target.value) || 30
-                            }
-                          })}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              operations: {
+                                ...settings.operations,
+                                appointmentDuration:
+                                  parseInt(e.target.value) || 30,
+                              },
+                            })
+                          }
                           disabled={!editMode}
                         />
                       </Grid>
@@ -753,13 +839,15 @@ export default function Settings() {
                           type="number"
                           fullWidth
                           value={settings.operations.bufferTime}
-                          onChange={(e) => setSettings({
-                            ...settings,
-                            operations: {
-                              ...settings.operations,
-                              bufferTime: parseInt(e.target.value) || 5
-                            }
-                          })}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              operations: {
+                                ...settings.operations,
+                                bufferTime: parseInt(e.target.value) || 5,
+                              },
+                            })
+                          }
                           disabled={!editMode}
                         />
                       </Grid>
@@ -769,13 +857,16 @@ export default function Settings() {
                           type="number"
                           fullWidth
                           value={settings.operations.maxAdvanceBooking}
-                          onChange={(e) => setSettings({
-                            ...settings,
-                            operations: {
-                              ...settings.operations,
-                              maxAdvanceBooking: parseInt(e.target.value) || 90
-                            }
-                          })}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              operations: {
+                                ...settings.operations,
+                                maxAdvanceBooking:
+                                  parseInt(e.target.value) || 90,
+                              },
+                            })
+                          }
                           disabled={!editMode}
                         />
                       </Grid>
@@ -787,42 +878,50 @@ export default function Settings() {
               <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>Booking Policies</Typography>
+                    <Typography variant="h6" gutterBottom>
+                      Booking Policies
+                    </Typography>
                     <List>
                       <ListItem>
-                        <ListItemText 
+                        <ListItemText
                           primary="Auto-confirm Appointments"
                           secondary="Automatically confirm new appointments"
                         />
                         <ListItemSecondaryAction>
                           <Switch
-                            checked={settings.operations.autoConfirmAppointments}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              operations: {
-                                ...settings.operations,
-                                autoConfirmAppointments: e.target.checked
-                              }
-                            })}
+                            checked={
+                              settings.operations.autoConfirmAppointments
+                            }
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                operations: {
+                                  ...settings.operations,
+                                  autoConfirmAppointments: e.target.checked,
+                                },
+                              })
+                            }
                             disabled={!editMode}
                           />
                         </ListItemSecondaryAction>
                       </ListItem>
                       <ListItem>
-                        <ListItemText 
+                        <ListItemText
                           primary="Send Reminders"
                           secondary="Send appointment reminders to patients"
                         />
                         <ListItemSecondaryAction>
                           <Switch
                             checked={settings.operations.sendReminders}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              operations: {
-                                ...settings.operations,
-                                sendReminders: e.target.checked
-                              }
-                            })}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                operations: {
+                                  ...settings.operations,
+                                  sendReminders: e.target.checked,
+                                },
+                              })
+                            }
                             disabled={!editMode}
                           />
                         </ListItemSecondaryAction>
@@ -834,13 +933,15 @@ export default function Settings() {
                         type="number"
                         fullWidth
                         value={settings.operations.reminderTiming}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          operations: {
-                            ...settings.operations,
-                            reminderTiming: parseInt(e.target.value) || 24
-                          }
-                        })}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            operations: {
+                              ...settings.operations,
+                              reminderTiming: parseInt(e.target.value) || 24,
+                            },
+                          })
+                        }
                         disabled={!editMode}
                         sx={{ mt: 2 }}
                       />
@@ -854,17 +955,22 @@ export default function Settings() {
 
         <DesignTabPanel value={tabValue} index={2}>
           <Box sx={{ p: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
               <Typography variant="h6">Provider Management</Typography>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setAddProviderDialog(true)}
               >
                 Add Provider
               </Button>
             </Box>
-            
+
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>
@@ -886,46 +992,57 @@ export default function Settings() {
                     </TableRow>
                   ) : providerMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        No providers found
+                      <TableCell colSpan={6} sx={{ border: 0, p: 0 }}>
+                        <AuraEmptyState
+                          title="No providers found"
+                          description="Add providers to your clinic team"
+                        />
                       </TableCell>
                     </TableRow>
                   ) : (
                     providerMembers.map((provider: ProviderMember) => (
-                    <TableRow key={provider.id}>
-                      <TableCell>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <Avatar sx={{ width: 32, height: 32 }}>
-                            {provider.name.charAt(0)}
-                          </Avatar>
-                          {provider.name}
-                        </Box>
-                      </TableCell>
-                      <TableCell>{provider.email}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={provider.role} 
-                          size="small"
-                          color={provider.role === 'Physician' ? 'primary' : 'default'}
-                        />
-                      </TableCell>
-                      <TableCell>{provider.department}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={provider.status} 
-                          size="small"
-                          color={provider.status === 'active' ? 'success' : 'default'}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton size="small">
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton size="small" color="error">
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
+                      <TableRow key={provider.id}>
+                        <TableCell>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Avatar sx={{ width: 32, height: 32 }}>
+                              {provider.name.charAt(0)}
+                            </Avatar>
+                            {provider.name}
+                          </Box>
+                        </TableCell>
+                        <TableCell>{provider.email}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={provider.role}
+                            size="small"
+                            color={
+                              provider.role === "Physician"
+                                ? "primary"
+                                : "default"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>{provider.department}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={provider.status}
+                            size="small"
+                            color={
+                              provider.status === "active"
+                                ? "success"
+                                : "default"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton size="small">
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton size="small" color="error">
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
                 </TableBody>
@@ -936,7 +1053,9 @@ export default function Settings() {
 
         <DesignTabPanel value={tabValue} index={3}>
           <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Notification Settings</Typography>
+            <Typography variant="h6" gutterBottom>
+              Notification Settings
+            </Typography>
             <Card>
               <CardContent>
                 <List>
@@ -944,15 +1063,23 @@ export default function Settings() {
                     <ListItemIcon>
                       <EmailIcon />
                     </ListItemIcon>
-                    <ListItemText 
+                    <ListItemText
                       primary="Email Notifications"
                       secondary="Send notifications via email"
                     />
                     <ListItemSecondaryAction>
                       <Switch
                         checked={settings.notifications.emailEnabled}
-                        onChange={(e) => handleNotificationPreferenceToggle('emailEnabled', e.target.checked)}
-                        disabled={preferencesLoading || updatePreferencesMutation.isPending}
+                        onChange={(e) =>
+                          handleNotificationPreferenceToggle(
+                            "emailEnabled",
+                            e.target.checked,
+                          )
+                        }
+                        disabled={
+                          preferencesLoading ||
+                          updatePreferencesMutation.isPending
+                        }
                       />
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -960,15 +1087,23 @@ export default function Settings() {
                     <ListItemIcon>
                       <PhoneIcon />
                     </ListItemIcon>
-                    <ListItemText 
+                    <ListItemText
                       primary="SMS Notifications"
                       secondary="Send notifications via SMS"
                     />
                     <ListItemSecondaryAction>
                       <Switch
                         checked={settings.notifications.smsEnabled}
-                        onChange={(e) => handleNotificationPreferenceToggle('smsEnabled', e.target.checked)}
-                        disabled={preferencesLoading || updatePreferencesMutation.isPending}
+                        onChange={(e) =>
+                          handleNotificationPreferenceToggle(
+                            "smsEnabled",
+                            e.target.checked,
+                          )
+                        }
+                        disabled={
+                          preferencesLoading ||
+                          updatePreferencesMutation.isPending
+                        }
                       />
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -980,7 +1115,9 @@ export default function Settings() {
 
         <DesignTabPanel value={tabValue} index={4}>
           <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Billing & Payment Settings</Typography>
+            <Typography variant="h6" gutterBottom>
+              Billing & Payment Settings
+            </Typography>
             <Alert severity="info" sx={{ mb: 2 }}>
               Configure billing rates, payment methods, and insurance providers
             </Alert>
@@ -989,7 +1126,9 @@ export default function Settings() {
 
         <DesignTabPanel value={tabValue} index={5}>
           <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Integrations</Typography>
+            <Typography variant="h6" gutterBottom>
+              Integrations
+            </Typography>
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TenantInfo />
@@ -997,31 +1136,68 @@ export default function Settings() {
               <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
-                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                      <Typography variant="subtitle1">EHR Integration</Typography>
-                      <Chip 
-                        label={settings.integrations.ehr.enabled ? 'Connected' : 'Disconnected'}
-                        color={settings.integrations.ehr.enabled ? 'success' : 'default'}
-                        icon={settings.integrations.ehr.enabled ? <CheckCircleIcon /> : <WarningIcon />}
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      mb={2}
+                    >
+                      <Typography variant="subtitle1">
+                        EHR Integration
+                      </Typography>
+                      <Chip
+                        label={
+                          settings.integrations.ehr.enabled
+                            ? "Connected"
+                            : "Disconnected"
+                        }
+                        color={
+                          settings.integrations.ehr.enabled
+                            ? "success"
+                            : "default"
+                        }
+                        icon={
+                          settings.integrations.ehr.enabled ? (
+                            <CheckCircleIcon />
+                          ) : (
+                            <WarningIcon />
+                          )
+                        }
                       />
                     </Box>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
                       Provider: {settings.integrations.ehr.provider}
                     </Typography>
                     <Box display="flex" alignItems="center" gap={1} mt={2}>
                       <TextField
                         label="API Key"
                         fullWidth
-                        type={showApiKey ? 'text' : 'password'}
+                        type={showApiKey ? "text" : "password"}
                         value={settings.integrations.ehr.apiKey}
                         disabled
                         InputProps={{
                           endAdornment: (
                             <InputAdornment position="end">
-                              <IconButton onClick={() => setShowApiKey(!showApiKey)}>
-                                {showApiKey ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                              <IconButton
+                                onClick={() => setShowApiKey(!showApiKey)}
+                              >
+                                {showApiKey ? (
+                                  <VisibilityOffIcon />
+                                ) : (
+                                  <VisibilityIcon />
+                                )}
                               </IconButton>
-                              <IconButton onClick={() => copyToClipboard(settings.integrations.ehr.apiKey)}>
+                              <IconButton
+                                onClick={() =>
+                                  copyToClipboard(
+                                    settings.integrations.ehr.apiKey,
+                                  )
+                                }
+                              >
                                 <CopyIcon />
                               </IconButton>
                             </InputAdornment>
@@ -1029,8 +1205,8 @@ export default function Settings() {
                         }}
                       />
                     </Box>
-                    <Button 
-                      startIcon={<RefreshIcon />} 
+                    <Button
+                      startIcon={<RefreshIcon />}
                       sx={{ mt: 2 }}
                       onClick={() => setNewApiKeyDialog(true)}
                     >
@@ -1045,7 +1221,9 @@ export default function Settings() {
 
         <DesignTabPanel value={tabValue} index={6}>
           <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>Security Settings</Typography>
+            <Typography variant="h6" gutterBottom>
+              Security Settings
+            </Typography>
             <Card>
               <CardContent>
                 <List>
@@ -1053,20 +1231,22 @@ export default function Settings() {
                     <ListItemIcon>
                       <SecurityIcon />
                     </ListItemIcon>
-                    <ListItemText 
+                    <ListItemText
                       primary="Multi-Factor Authentication"
                       secondary="Require MFA for all provider accounts"
                     />
                     <ListItemSecondaryAction>
                       <Switch
                         checked={settings.security.mfaRequired}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          security: {
-                            ...settings.security,
-                            mfaRequired: e.target.checked
-                          }
-                        })}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            security: {
+                              ...settings.security,
+                              mfaRequired: e.target.checked,
+                            },
+                          })
+                        }
                       />
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -1074,7 +1254,7 @@ export default function Settings() {
                     <ListItemIcon>
                       <KeyIcon />
                     </ListItemIcon>
-                    <ListItemText 
+                    <ListItemText
                       primary="Password Expiry"
                       secondary={`Passwords expire every ${settings.security.passwordExpiry} days`}
                     />
@@ -1083,7 +1263,7 @@ export default function Settings() {
                     <ListItemIcon>
                       <ScheduleIcon />
                     </ListItemIcon>
-                    <ListItemText 
+                    <ListItemText
                       primary="Session Timeout"
                       secondary={`Auto-logout after ${settings.security.sessionTimeout} minutes of inactivity`}
                     />
@@ -1102,92 +1282,122 @@ export default function Settings() {
         title="Add Provider"
         onSubmit={async () => {
           try {
-            if (!providerForm.firstName || !providerForm.lastName || !providerForm.email) {
-              enqueueSnackbar('Please fill in all required fields', { variant: 'error' });
+            if (
+              !providerForm.firstName ||
+              !providerForm.lastName ||
+              !providerForm.email
+            ) {
+              enqueueSnackbar("Please fill in all required fields", {
+                variant: "error",
+              });
               return;
             }
-            
-            await api.post('/api/clinic-management/providers', {
+
+            await api.post("/api/clinic-management/providers", {
               firstName: providerForm.firstName,
               lastName: providerForm.lastName,
               email: providerForm.email,
-              specialization: providerForm.specialization || 'General Practice',
-              department: providerForm.department || 'Primary Care',
-              isActive: true
+              specialization: providerForm.specialization || "General Practice",
+              department: providerForm.department || "Primary Care",
+              isActive: true,
             });
-            
-            queryClient.invalidateQueries({ queryKey: ['providers'] });
+
+            queryClient.invalidateQueries({ queryKey: ["providers"] });
             setAddProviderDialog(false);
-            setProviderForm({ firstName: '', lastName: '', email: '', specialization: '', department: '' });
-            enqueueSnackbar('Provider added successfully', { variant: 'success' });
+            setProviderForm({
+              firstName: "",
+              lastName: "",
+              email: "",
+              specialization: "",
+              department: "",
+            });
+            enqueueSnackbar("Provider added successfully", {
+              variant: "success",
+            });
           } catch (error) {
-            console.error('Error adding provider:', error);
-            enqueueSnackbar('Failed to add provider', { variant: 'error' });
+            console.error("Error adding provider:", error);
+            enqueueSnackbar("Failed to add provider", { variant: "error" });
           }
         }}
         submitLabel="Add Provider"
         maxWidth="sm"
       >
         <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField 
-                label="First Name" 
-                fullWidth 
-                value={providerForm.firstName}
-                onChange={(e) => setProviderForm({...providerForm, firstName: e.target.value})}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField 
-                label="Last Name" 
-                fullWidth 
-                value={providerForm.lastName}
-                onChange={(e) => setProviderForm({...providerForm, lastName: e.target.value})}
-              />
-            </Grid>
-            <Grid size={12}>
-              <TextField 
-                label="Email" 
-                type="email" 
-                fullWidth 
-                value={providerForm.email}
-                onChange={(e) => setProviderForm({...providerForm, email: e.target.value})}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Specialization</InputLabel>
-                <Select 
-                  label="Specialization"
-                  value={providerForm.specialization}
-                  onChange={(e) => setProviderForm({...providerForm, specialization: e.target.value})}
-                >
-                  <MenuItem value="General Practice">General Practice</MenuItem>
-                  <MenuItem value="Cardiology">Cardiology</MenuItem>
-                  <MenuItem value="Pediatrics">Pediatrics</MenuItem>
-                  <MenuItem value="Orthopedics">Orthopedics</MenuItem>
-                  <MenuItem value="Dermatology">Dermatology</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Department</InputLabel>
-                <Select 
-                  label="Department"
-                  value={providerForm.department}
-                  onChange={(e) => setProviderForm({...providerForm, department: e.target.value})}
-                >
-                  <MenuItem value="Primary Care">Primary Care</MenuItem>
-                  <MenuItem value="Cardiology">Cardiology</MenuItem>
-                  <MenuItem value="Pediatrics">Pediatrics</MenuItem>
-                  <MenuItem value="Orthopedics">Orthopedics</MenuItem>
-                  <MenuItem value="Administration">Administration</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              label="First Name"
+              fullWidth
+              value={providerForm.firstName}
+              onChange={(e) =>
+                setProviderForm({ ...providerForm, firstName: e.target.value })
+              }
+            />
           </Grid>
-        </FormDialog>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              label="Last Name"
+              fullWidth
+              value={providerForm.lastName}
+              onChange={(e) =>
+                setProviderForm({ ...providerForm, lastName: e.target.value })
+              }
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              label="Email"
+              type="email"
+              fullWidth
+              value={providerForm.email}
+              onChange={(e) =>
+                setProviderForm({ ...providerForm, email: e.target.value })
+              }
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel>Specialization</InputLabel>
+              <Select
+                label="Specialization"
+                value={providerForm.specialization}
+                onChange={(e) =>
+                  setProviderForm({
+                    ...providerForm,
+                    specialization: e.target.value,
+                  })
+                }
+              >
+                <MenuItem value="General Practice">General Practice</MenuItem>
+                <MenuItem value="Cardiology">Cardiology</MenuItem>
+                <MenuItem value="Pediatrics">Pediatrics</MenuItem>
+                <MenuItem value="Orthopedics">Orthopedics</MenuItem>
+                <MenuItem value="Dermatology">Dermatology</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel>Department</InputLabel>
+              <Select
+                label="Department"
+                value={providerForm.department}
+                onChange={(e) =>
+                  setProviderForm({
+                    ...providerForm,
+                    department: e.target.value,
+                  })
+                }
+              >
+                <MenuItem value="Primary Care">Primary Care</MenuItem>
+                <MenuItem value="Cardiology">Cardiology</MenuItem>
+                <MenuItem value="Pediatrics">Pediatrics</MenuItem>
+                <MenuItem value="Orthopedics">Orthopedics</MenuItem>
+                <MenuItem value="Administration">Administration</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </FormDialog>
 
       {/* Generate API Key Dialog */}
       <ConfirmDialog
