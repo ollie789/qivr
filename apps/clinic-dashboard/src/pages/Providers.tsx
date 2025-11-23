@@ -20,6 +20,7 @@ import {
   InfoCard,
   AuraButton,
   AuraIconButton,
+  AuraEmptyState,
 } from '@qivr/design-system';
 
 const Providers: React.FC = () => {
@@ -153,7 +154,17 @@ const Providers: React.FC = () => {
       )}
 
       <Grid container spacing={3}>
-        {providers.map((provider) => (
+        {providers.length === 0 && !loading ? (
+          <Grid size={12}>
+            <AuraEmptyState
+              title="No providers yet"
+              description="Add your first provider to get started"
+              actionText="Add Provider"
+              onAction={() => handleOpenDialog()}
+            />
+          </Grid>
+        ) : (
+          providers.map((provider) => (
           <Grid size={{ xs: 12, md: 6, lg: 4 }} key={provider.id}>
             <InfoCard
               title={provider.fullName}
@@ -197,7 +208,8 @@ const Providers: React.FC = () => {
               </Box>
             </InfoCard>
           </Grid>
-        ))}
+          ))
+        )}
       </Grid>
 
       <FormDialog
