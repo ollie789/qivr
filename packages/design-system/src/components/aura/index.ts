@@ -11,6 +11,9 @@ export * from './cards/GlassCard';
 // Charts
 export * from './charts/ChartCard';
 export * from './charts/ChartLegend';
+export * from './charts/types';
+export * from './charts/SimpleLineChart';
+export * from './charts/SimpleBarChart';
 
 // Feedback
 export * from './feedback';

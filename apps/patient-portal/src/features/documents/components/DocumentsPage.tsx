@@ -22,6 +22,7 @@ import {
   Stack,
   Divider,
   Chip,
+  Checkbox,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
@@ -178,6 +179,7 @@ const DocumentsPage: React.FC = () => {
   const [category, setCategory] = useState<DocumentCategory | "all">("all");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   const [shareDialog, setShareDialog] = useState({
     open: false,
     documentId: "",
@@ -437,7 +439,19 @@ const DocumentsPage: React.FC = () => {
         )}
       </Grid>
 
-      <InfoCard title="Document Library">
+      <InfoCard 
+        title="Document Library"
+        action={selectedDocs.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              {selectedDocs.length} selected
+            </Typography>
+            <Button size="small" onClick={() => setSelectedDocs([])}>
+              Clear
+            </Button>
+          </Box>
+        ) : undefined}
+      >
         {documentsLoading ? (
           <Box sx={{ textAlign: "center", py: 4 }}>
             <Typography variant="body2" color="text.secondary">
@@ -466,6 +480,17 @@ const DocumentsPage: React.FC = () => {
             {filteredDocuments.map((document) => (
               <React.Fragment key={document.id}>
                 <ListItem alignItems="flex-start">
+                  <Checkbox
+                    checked={selectedDocs.includes(document.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedDocs([...selectedDocs, document.id]);
+                      } else {
+                        setSelectedDocs(selectedDocs.filter(id => id !== document.id));
+                      }
+                    }}
+                    sx={{ mr: 2 }}
+                  />
                   <ListItemText
                     primary={document.name}
                     secondary={

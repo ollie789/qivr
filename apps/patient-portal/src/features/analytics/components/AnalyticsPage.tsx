@@ -22,7 +22,7 @@ import {
 } from "@mui/icons-material";
 import { useAnalyticsDashboardData } from "../hooks/useAnalyticsDashboardData";
 import type { HealthGoal, HealthMetric } from "../../../types";
-import { InfoCard } from "@qivr/design-system";
+import { InfoCard, SimpleLineChart, SimpleBarChart } from "@qivr/design-system";
 
 const formatMetricValue = (metric: HealthMetric) => {
   const value = metric.value.toLocaleString();
@@ -172,6 +172,34 @@ const AnalyticsPage: React.FC = () => {
                   View all goals
                 </Button>
               )}
+            </InfoCard>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Charts Section */}
+      {!loading && healthMetrics.length > 0 && (
+        <Grid container spacing={3} sx={{ mt: 2 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <InfoCard title="Metrics Trend">
+              <SimpleLineChart
+                data={healthMetrics.slice(0, 5).map(m => ({
+                  name: m.name.substring(0, 10),
+                  value: m.value
+                }))}
+                height={250}
+              />
+            </InfoCard>
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <InfoCard title="PROM Completion Rates">
+              <SimpleBarChart
+                data={promAnalytics.slice(0, 5).map(p => ({
+                  name: p.templateName.substring(0, 10),
+                  value: p.completionRate
+                }))}
+                height={250}
+              />
             </InfoCard>
           </Grid>
         </Grid>
