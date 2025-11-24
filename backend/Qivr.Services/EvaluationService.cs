@@ -114,6 +114,8 @@ public class EvaluationService : IEvaluationService
             e.EvaluationNumber,
             e.PatientId,
             e.Patient?.FullName ?? "Unknown",
+            e.Patient?.Email,
+            e.Patient?.PhoneNumber,
             e.ChiefComplaint ?? "",
             e.Symptoms,
             e.Status.ToString(),

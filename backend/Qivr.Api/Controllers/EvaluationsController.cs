@@ -119,6 +119,9 @@ public class EvaluationsController : BaseApiController
         {
             id = e.Id.ToString(),
             evaluationNumber = e.EvaluationNumber,
+            patientName = e.PatientName,
+            patientEmail = e.PatientEmail ?? "n/a@unknown",
+            patientPhone = e.PatientPhone ?? "000-000-0000",
             date = e.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
             chiefComplaint = e.ChiefComplaint,
             symptoms = e.Symptoms ?? new List<string>(),

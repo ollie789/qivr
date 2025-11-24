@@ -132,6 +132,8 @@ public record EvaluationDto(
     string EvaluationNumber,
     Guid PatientId,
     string PatientName,
+    string? PatientEmail,
+    string? PatientPhone,
     string ChiefComplaint,
     List<string> Symptoms,
     string Status,
