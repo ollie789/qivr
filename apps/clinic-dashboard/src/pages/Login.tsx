@@ -97,9 +97,33 @@ export default function Login() {
           alignItems: "center",
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            width: "100%",
+            borderRadius: 3,
+            border: "1px solid",
+            borderColor: "divider",
+            background:
+              "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
+          }}
+        >
           <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
-            <ClinicIcon sx={{ fontSize: 48, color: "primary.main" }} />
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: 2,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
+                boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
+              }}
+            >
+              <ClinicIcon sx={{ fontSize: 36, color: "white" }} />
+            </Box>
           </Box>
 
           <Typography component="h1" variant="h4" align="center" gutterBottom>

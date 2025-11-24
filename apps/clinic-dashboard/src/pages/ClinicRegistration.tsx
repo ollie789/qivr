@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Card,
@@ -9,10 +9,11 @@ import {
   Alert,
   Grid,
   Container,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api-client';
-import { useAuthStore } from '../stores/authStore';
+} from "@mui/material";
+import { BusinessCenter as ClinicIcon } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { api } from "../lib/api-client";
+import { useAuthStore } from "../stores/authStore";
 
 interface ClinicData {
   clinicName: string;
@@ -27,14 +28,14 @@ const ClinicRegistration: React.FC = () => {
   const navigate = useNavigate();
 
   const { user } = useAuthStore();
-  
+
   const [clinicData, setClinicData] = useState<ClinicData>({
-    clinicName: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    phone: '',
+    clinicName: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    phone: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,29 +43,29 @@ const ClinicRegistration: React.FC = () => {
   // Redirect if user is not authenticated
   useEffect(() => {
     if (!user) {
-      navigate('/login', { 
-        state: { 
-          message: 'Please log in first to complete your clinic registration.',
-          redirectTo: '/clinic-registration'
-        }
+      navigate("/login", {
+        state: {
+          message: "Please log in first to complete your clinic registration.",
+          redirectTo: "/clinic-registration",
+        },
       });
     }
   }, [user, navigate]);
 
-  const handleChange = (field: keyof ClinicData) => (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setClinicData(prev => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
-  };
+  const handleChange =
+    (field: keyof ClinicData) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setClinicData((prev) => ({
+        ...prev,
+        [field]: event.target.value,
+      }));
+    };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    
+
     if (!user) {
-      setError('You must be logged in to register a clinic');
+      setError("You must be logged in to register a clinic");
       return;
     }
 
@@ -72,26 +73,31 @@ const ClinicRegistration: React.FC = () => {
     setError(null);
 
     try {
-      const response = await api.post('/api/tenant-onboarding/register-clinic', {
-        CognitoSub: user.id,
-        ClinicName: clinicData.clinicName,
-        Email: user.email,
-        Phone: clinicData.phone,
-        FirstName: user.name.split(' ')[0] || '',
-        LastName: user.name.split(' ').slice(1).join(' ') || '',
-        Address: clinicData.address,
-        City: clinicData.city,
-        State: clinicData.state,
-        ZipCode: clinicData.zipCode,
-        country: 'Australia',
-      });
+      const response = await api.post(
+        "/api/tenant-onboarding/register-clinic",
+        {
+          CognitoSub: user.id,
+          ClinicName: clinicData.clinicName,
+          Email: user.email,
+          Phone: clinicData.phone,
+          FirstName: user.name.split(" ")[0] || "",
+          LastName: user.name.split(" ").slice(1).join(" ") || "",
+          Address: clinicData.address,
+          City: clinicData.city,
+          State: clinicData.state,
+          ZipCode: clinicData.zipCode,
+          country: "Australia",
+        },
+      );
 
       if (response) {
         // Redirect to dashboard after successful registration
-        navigate('/dashboard');
+        navigate("/dashboard");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Clinic registration failed');
+      setError(
+        err instanceof Error ? err.message : "Clinic registration failed",
+      );
     } finally {
       setLoading(false);
     }
@@ -111,13 +117,53 @@ const ClinicRegistration: React.FC = () => {
         minHeight="100vh"
         py={4}
       >
-        <Card sx={{ width: '100%', maxWidth: 600 }}>
+        <Card
+          elevation={0}
+          sx={{
+            width: "100%",
+            maxWidth: 600,
+            borderRadius: 3,
+            border: "1px solid",
+            borderColor: "divider",
+            background:
+              "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
+          }}
+        >
           <CardContent sx={{ p: 4 }}>
-            <Typography variant="h4" component="h1" gutterBottom align="center">
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background:
+                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
+                  boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
+                }}
+              >
+                <ClinicIcon sx={{ fontSize: 28, color: "white" }} />
+              </Box>
+            </Box>
+            <Typography
+              variant="h4"
+              component="h1"
+              gutterBottom
+              align="center"
+              sx={{ fontWeight: 700 }}
+            >
               Complete Your Clinic Setup
             </Typography>
-            <Typography variant="body1" color="text.secondary" align="center" mb={4}>
-              Welcome {user.name.split(' ')[0]}! Please provide your clinic details to get started.
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              align="center"
+              mb={4}
+            >
+              Welcome {user.name.split(" ")[0]}! Please provide your clinic
+              details to get started.
             </Typography>
 
             {error && (
@@ -133,7 +179,7 @@ const ClinicRegistration: React.FC = () => {
                     fullWidth
                     label="Clinic Name"
                     value={clinicData.clinicName}
-                    onChange={handleChange('clinicName')}
+                    onChange={handleChange("clinicName")}
                     required
                     variant="outlined"
                   />
@@ -143,7 +189,7 @@ const ClinicRegistration: React.FC = () => {
                     fullWidth
                     label="Phone Number"
                     value={clinicData.phone}
-                    onChange={handleChange('phone')}
+                    onChange={handleChange("phone")}
                     required
                     variant="outlined"
                   />
@@ -153,7 +199,7 @@ const ClinicRegistration: React.FC = () => {
                     fullWidth
                     label="Address"
                     value={clinicData.address}
-                    onChange={handleChange('address')}
+                    onChange={handleChange("address")}
                     required
                     variant="outlined"
                   />
@@ -163,7 +209,7 @@ const ClinicRegistration: React.FC = () => {
                     fullWidth
                     label="City"
                     value={clinicData.city}
-                    onChange={handleChange('city')}
+                    onChange={handleChange("city")}
                     required
                     variant="outlined"
                   />
@@ -173,7 +219,7 @@ const ClinicRegistration: React.FC = () => {
                     fullWidth
                     label="State"
                     value={clinicData.state}
-                    onChange={handleChange('state')}
+                    onChange={handleChange("state")}
                     required
                     variant="outlined"
                   />
@@ -183,7 +229,7 @@ const ClinicRegistration: React.FC = () => {
                     fullWidth
                     label="Zip Code"
                     value={clinicData.zipCode}
-                    onChange={handleChange('zipCode')}
+                    onChange={handleChange("zipCode")}
                     required
                     variant="outlined"
                   />
@@ -198,7 +244,7 @@ const ClinicRegistration: React.FC = () => {
                 disabled={loading}
                 sx={{ mt: 3 }}
               >
-                {loading ? 'Setting up your clinic...' : 'Complete Setup'}
+                {loading ? "Setting up your clinic..." : "Complete Setup"}
               </Button>
             </form>
           </CardContent>
