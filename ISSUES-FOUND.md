@@ -1,7 +1,27 @@
 # Issues Found - Test Results 2025-11-24
 
+**UPDATED: 2025-11-25** - OpenTelemetry crash issue fixed
+
 **Test Run:** Browser-based feature test with admin credentials  
 **Total Issues:** 7 Critical/High + 43 Console Errors + 15 Network Errors
+
+---
+
+## ⚠️ CRITICAL UPDATE - App Crash Fixed (2025-11-25)
+
+### Root Cause Discovered
+
+The application was experiencing continuous crashes due to `UriFormatException` in OpenTelemetry configuration. The `OPENTELEMETRY_ENDPOINT` environment variable was set to an empty string `""` in the ECS task definition, causing the app to crash on startup before it could handle any requests.
+
+### Fix Applied
+
+1. ✅ Disabled OpenTelemetry by default (`OpenTelemetry:Enabled = false`)
+2. ✅ Removed empty `OPENTELEMETRY_ENDPOINT` from task definitions
+3. ✅ Added proper AWS X-Ray instrumentation (ready to enable)
+4. ✅ Created comprehensive setup documentation
+5. ✅ Deployed fix via CodePipeline (execution: 208604ed-c9f2-4451-94b5-f8b8b0f56f72)
+
+**Status:** Deployment in progress - app should start successfully now
 
 ---
 
