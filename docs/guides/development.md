@@ -4,16 +4,16 @@ Use this guide for the routines and conventions we expect on day-to-day feature 
 
 ## Tooling & scripts
 
-| Task | Command |
-| --- | --- |
-| Install dependencies | `npm install` |
-| Start all dev servers | `npm run backend:dev`, `npm run clinic:dev`, `npm run patient:dev`, `npm run widget:dev` |
-| Build everything | `npm run build` |
-| Clean node modules & caches | `npm run clean` |
-| Apply database migrations | `npm run db:migrate` |
-| Run lint across workspaces | `npm run lint` |
-| Format staged files | `npx lint-staged` (runs pre-commit) |
-| Toggle mock auth | Set `DevAuth:Enabled` / `VITE_ENABLE_DEV_AUTH` (see [authentication.md](./authentication.md)) |
+| Task                        | Command                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------- |
+| Install dependencies        | `npm install`                                                                                 |
+| Start all dev servers       | `npm run backend:dev`, `npm run clinic:dev`, `npm run patient:dev`, `npm run widget:dev`      |
+| Build everything            | `npm run build`                                                                               |
+| Clean node modules & caches | `npm run clean`                                                                               |
+| Apply database migrations   | `npm run db:migrate`                                                                          |
+| Run lint across workspaces  | `npm run lint`                                                                                |
+| Format staged files         | `npx lint-staged` (runs pre-commit)                                                           |
+| Toggle mock auth            | Set `DevAuth:Enabled` / `VITE_ENABLE_DEV_AUTH` (see [authentication.md](./authentication.md)) |
 
 Turbo handles workspaces; the scripts above fan out to each app/service as needed.
 
@@ -42,6 +42,7 @@ Turbo handles workspaces; the scripts above fan out to each app/service as neede
 ## Documentation touchpoints
 
 When you add or change functionality:
+
 1. Update the relevant document under `/docs`. The [docs README](./README.md) shows where content should live.
 2. Mention the update in your PR description so reviewers know new instructions exist.
 3. Archive docs that no longer reflect reality rather than letting them rot in place.

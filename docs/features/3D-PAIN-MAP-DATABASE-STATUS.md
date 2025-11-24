@@ -31,7 +31,7 @@ CREATE TABLE qivr.pain_maps (
     pain_quality TEXT[],
     onset_date TIMESTAMP,
     notes TEXT,
-    
+
     -- ✅ 3D Pain Map Fields (Already Exist)
     avatar_type TEXT,                  -- male, female, child
     body_subdivision TEXT,             -- simple, dermatome, myotome
@@ -39,11 +39,11 @@ CREATE TABLE qivr.pain_maps (
     depth_indicator TEXT,              -- superficial, deep
     submission_source TEXT,            -- portal, mobile, clinic
     drawing_data_json TEXT,            -- ✅ Stores 3D regions here
-    
+
     -- Timestamps
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    
+
     -- Foreign keys
     FOREIGN KEY (tenant_id) REFERENCES qivr.tenants(id),
     FOREIGN KEY (evaluation_id) REFERENCES qivr.evaluations(id)
@@ -61,8 +61,9 @@ CREATE TABLE qivr.pain_maps (
 **Applied:** November 19, 2025 at 10:35:29 UTC
 
 **Changes:**
+
 ```sql
-ALTER TABLE qivr.pain_maps 
+ALTER TABLE qivr.pain_maps
 ADD COLUMN avatar_type TEXT,
 ADD COLUMN body_subdivision TEXT,
 ADD COLUMN view_orientation TEXT,
@@ -124,7 +125,7 @@ Old pain points stored in `coordinates` JSONB:
 
 ```sql
 -- Check if migration was applied
-SELECT * FROM qivr.__efmigrationshistory 
+SELECT * FROM qivr.__efmigrationshistory
 WHERE migration_id = '20251119101931_AddPainDrawingSupport';
 
 -- Result:
@@ -138,7 +139,7 @@ WHERE migration_id = '20251119101931_AddPainDrawingSupport';
 -- Verify drawing_data_json column exists
 SELECT column_name, data_type, is_nullable
 FROM information_schema.columns
-WHERE table_schema = 'qivr' 
+WHERE table_schema = 'qivr'
   AND table_name = 'pain_maps'
   AND column_name = 'drawing_data_json';
 
@@ -152,7 +153,7 @@ WHERE table_schema = 'qivr'
 
 ```sql
 -- Count pain maps with 3D region data
-SELECT 
+SELECT
     COUNT(*) as total_pain_maps,
     COUNT(drawing_data_json) as with_3d_data,
     COUNT(drawing_data_json) * 100.0 / COUNT(*) as percentage_3d
@@ -216,11 +217,12 @@ SSL Mode=Require;
 ### Potential Optimizations (Not Required Now)
 
 1. **JSONB Type**
+
    ```sql
    -- Could change from TEXT to JSONB for better querying
-   ALTER TABLE qivr.pain_maps 
+   ALTER TABLE qivr.pain_maps
    ALTER COLUMN drawing_data_json TYPE JSONB USING drawing_data_json::jsonb;
-   
+
    -- Benefits:
    -- - Faster JSON queries
    -- - GIN indexes for region searches
@@ -228,13 +230,14 @@ SSL Mode=Require;
    ```
 
 2. **Indexes**
+
    ```sql
    -- Index for region queries
-   CREATE INDEX idx_pain_maps_regions 
+   CREATE INDEX idx_pain_maps_regions
    ON qivr.pain_maps USING GIN ((drawing_data_json::jsonb));
-   
+
    -- Index for specific region searches
-   CREATE INDEX idx_pain_maps_mesh_names 
+   CREATE INDEX idx_pain_maps_mesh_names
    ON qivr.pain_maps USING GIN (
        (drawing_data_json::jsonb -> 'regions')
    );
@@ -244,7 +247,7 @@ SSL Mode=Require;
    ```sql
    -- Pre-aggregate pain regions for analytics
    CREATE MATERIALIZED VIEW qivr.pain_region_summary AS
-   SELECT 
+   SELECT
        region->>'meshName' as mesh_name,
        region->>'anatomicalName' as anatomical_name,
        COUNT(*) as report_count,
@@ -264,7 +267,7 @@ SSL Mode=Require;
 
 ```sql
 -- Monitor 3D pain map adoption
-SELECT 
+SELECT
     DATE(created_at) as date,
     COUNT(*) as total_submissions,
     COUNT(drawing_data_json) as with_3d_map,
@@ -279,7 +282,7 @@ ORDER BY date DESC;
 
 ```sql
 -- Check drawing_data_json storage size
-SELECT 
+SELECT
     pg_size_pretty(SUM(pg_column_size(drawing_data_json))) as json_size,
     COUNT(*) as record_count,
     pg_size_pretty(AVG(pg_column_size(drawing_data_json))) as avg_size
@@ -292,21 +295,25 @@ WHERE drawing_data_json IS NOT NULL;
 ## Summary
 
 ✅ **No Migration Needed**
+
 - All fields already exist
 - Migration applied Nov 19, 2025
 - Production database ready
 
 ✅ **Schema Complete**
+
 - `drawing_data_json` stores 3D regions
 - `avatar_type`, `view_orientation` for metadata
 - `anatomical_code` for SNOMED CT
 
 ✅ **Backward Compatible**
+
 - Legacy `coordinates` still supported
 - No breaking changes
 - Gradual migration path
 
 ✅ **Production Ready**
+
 - Database available
 - API integrated
 - Worker processing

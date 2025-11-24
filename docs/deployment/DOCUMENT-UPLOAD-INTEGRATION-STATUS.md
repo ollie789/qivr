@@ -3,6 +3,7 @@
 ## ✅ Backend → Database Integration
 
 ### Database Schema
+
 ```sql
 ✅ documents table created
 ✅ document_audit_log table created
@@ -12,6 +13,7 @@
 ```
 
 ### Backend Entities
+
 ```csharp
 ✅ Document.cs entity
 ✅ DocumentAuditLog.cs entity
@@ -20,6 +22,7 @@
 ```
 
 ### Services
+
 ```csharp
 ✅ S3Service - File storage operations
 ✅ TextractService - OCR extraction
@@ -28,6 +31,7 @@
 ```
 
 ### API Endpoints
+
 ```
 ✅ POST   /api/documents/upload
 ✅ GET    /api/documents
@@ -47,6 +51,7 @@
 ### Clinic Dashboard
 
 **API Service:**
+
 ```typescript
 ✅ documentApi.ts created
 ✅ All 7 endpoints wrapped
@@ -56,6 +61,7 @@
 ```
 
 **Components:**
+
 ```typescript
 ✅ DocumentUploader.tsx - Drag-and-drop
 ✅ OCRResultsViewer.tsx - Display results
@@ -64,6 +70,7 @@
 ```
 
 **Routes:**
+
 ```typescript
 ✅ /documents - List page
 ✅ /documents/upload - Upload page
@@ -74,6 +81,7 @@
 ### Patient Portal
 
 **API Service:**
+
 ```typescript
 ✅ documentApi.ts created
 ✅ Upload endpoint wrapped
@@ -82,11 +90,13 @@
 ```
 
 **Components:**
+
 ```typescript
 ✅ DocumentChecklist.tsx - Checklist page
 ```
 
 **Routes:**
+
 ```typescript
 ✅ /documents - Existing page
 ✅ /documents/checklist - New checklist page
@@ -99,6 +109,7 @@
 ## 🔄 Data Flow
 
 ### Upload Flow (Clinic Dashboard)
+
 ```
 1. User selects patient → Frontend
 2. User uploads file → Frontend
@@ -112,6 +123,7 @@
 ```
 
 ### Upload Flow (Patient Portal)
+
 ```
 1. User views checklist → Frontend
 2. User clicks upload → Dialog opens
@@ -124,6 +136,7 @@
 ```
 
 ### Download Flow
+
 ```
 1. User clicks download → Frontend
 2. Request presigned URL → GET /api/documents/{id}/download
@@ -137,6 +150,7 @@
 ## 🔐 Security Integration
 
 ### Authentication
+
 ```
 ✅ JWT tokens from Cognito
 ✅ Bearer token in API requests
@@ -145,6 +159,7 @@
 ```
 
 ### Authorization
+
 ```
 ✅ Tenant isolation enforced
 ✅ Role-based access (Admin/Staff/Patient)
@@ -153,6 +168,7 @@
 ```
 
 ### Audit Trail
+
 ```
 ✅ All uploads logged
 ✅ All downloads logged
@@ -166,6 +182,7 @@
 ## 📊 Integration Test Results
 
 ### Backend Tests
+
 ```bash
 ✅ Database connection
 ✅ S3 upload/download
@@ -176,6 +193,7 @@
 ```
 
 ### Frontend Tests
+
 ```bash
 ✅ API service methods
 ✅ File upload with FormData
@@ -185,6 +203,7 @@
 ```
 
 ### End-to-End Flow
+
 ```bash
 ⏳ PENDING - Requires deployment
 - Upload document
@@ -199,11 +218,13 @@
 ## 🚧 Deployment Requirements
 
 ### Database
+
 ```bash
 ⏳ Run migration: 20251115_create_documents_tables.sql
 ```
 
 ### AWS Resources
+
 ```bash
 ⏳ Create S3 bucket: qivr-documents-prod
 ⏳ Configure IAM permissions
@@ -211,6 +232,7 @@
 ```
 
 ### Backend
+
 ```bash
 ⏳ Deploy via CodeBuild
 ⏳ Update appsettings.Production.json
@@ -218,6 +240,7 @@
 ```
 
 ### Frontend
+
 ```bash
 ⏳ Build clinic-dashboard
 ⏳ Build patient-portal
@@ -230,6 +253,7 @@
 ## ✅ Integration Checklist
 
 ### Backend
+
 - [x] Database schema created
 - [x] Entities defined
 - [x] Services implemented
@@ -239,6 +263,7 @@
 - [ ] Deployed to production
 
 ### Frontend - Clinic Dashboard
+
 - [x] API service created
 - [x] Components built
 - [x] Routes configured
@@ -247,6 +272,7 @@
 - [ ] Deployed to production
 
 ### Frontend - Patient Portal
+
 - [x] API service created
 - [x] Components built
 - [x] Routes configured
@@ -255,6 +281,7 @@
 - [ ] Deployed to production
 
 ### Infrastructure
+
 - [ ] S3 bucket created
 - [ ] IAM permissions configured
 - [ ] Textract enabled
@@ -266,12 +293,14 @@
 ## 🎯 Integration Status Summary
 
 **Code Integration:** ✅ 100% COMPLETE
+
 - Backend ↔ Database: ✅ COMPLETE
 - Frontend ↔ Backend: ✅ COMPLETE
 - Routes configured: ✅ COMPLETE
 - Services wired up: ✅ COMPLETE
 
 **Deployment:** ⏳ PENDING
+
 - Database migration: ⏳ NOT RUN
 - AWS resources: ⏳ NOT CREATED
 - Backend deployment: ⏳ NOT DEPLOYED

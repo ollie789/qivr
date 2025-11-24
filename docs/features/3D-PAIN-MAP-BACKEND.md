@@ -24,7 +24,7 @@ CREATE TABLE qivr.pain_maps (
     pain_quality TEXT[],
     onset_date TIMESTAMP,
     notes TEXT,
-    
+
     -- 3D Pain Map Fields
     avatar_type TEXT,                  -- male, female, child
     body_subdivision TEXT,             -- simple, dermatome, myotome
@@ -32,7 +32,7 @@ CREATE TABLE qivr.pain_maps (
     depth_indicator TEXT,              -- superficial, deep
     submission_source TEXT,            -- portal, mobile, clinic
     drawing_data_json TEXT,            -- ✅ Stores 3D regions here
-    
+
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -186,7 +186,7 @@ INSERT INTO qivr.pain_maps (
 SELECT e.id, e.patient_id, pm.pain_intensity
 FROM qivr.evaluations e
 JOIN qivr.pain_maps pm ON pm.evaluation_id = e.id
-WHERE pm.drawing_data_json::jsonb @> 
+WHERE pm.drawing_data_json::jsonb @>
     '{"regions": [{"meshName": "back_left_lower_back"}]}'::jsonb;
 ```
 
@@ -197,7 +197,7 @@ WHERE pm.drawing_data_json::jsonb @>
 SELECT e.id, e.patient_id, pm.body_region
 FROM qivr.evaluations e
 JOIN qivr.pain_maps pm ON pm.evaluation_id = e.id
-WHERE pm.drawing_data_json::jsonb @> 
+WHERE pm.drawing_data_json::jsonb @>
     '{"regions": [{"quality": "sharp"}]}'::jsonb;
 ```
 
@@ -205,7 +205,7 @@ WHERE pm.drawing_data_json::jsonb @>
 
 ```sql
 -- Count pain reports by anatomical region
-SELECT 
+SELECT
     region->>'anatomicalName' as region_name,
     COUNT(*) as report_count,
     AVG((region->>'intensity')::int) as avg_intensity
@@ -234,13 +234,13 @@ const [formData, setFormData] = useState({
 <PainMap3D
   value={formData.painMapData?.regions || []}
   onChange={(regions) =>
-    setFormData({ 
-      ...formData, 
-      painMapData: { 
+    setFormData({
+      ...formData,
+      painMapData: {
         regions,
         cameraView: 'front',
         timestamp: new Date().toISOString()
-      } 
+      }
     })
   }
 />
@@ -250,7 +250,7 @@ const [formData, setFormData] = useState({
 
 ```typescript
 {evaluation.painMapData?.regions ? (
-  <PainMap3DViewer 
+  <PainMap3DViewer
     regions={evaluation.painMapData.regions}
     cameraView={evaluation.painMapData.cameraView || 'front'}
     width={400}
@@ -300,7 +300,7 @@ curl -X POST https://api.qivr.pro/api/intake/submit \
 ### Verify Database
 
 ```sql
-SELECT 
+SELECT
     id,
     body_region,
     anatomical_code,
@@ -315,17 +315,20 @@ WHERE evaluation_id = 'YOUR_EVALUATION_ID';
 ## Migration Strategy
 
 ### Phase 1: Dual Support (Current)
+
 - ✅ Accept both `painMapData` (new) and `painPoints` (legacy)
 - ✅ Store new format in `drawing_data_json`
 - ✅ Frontend uses new 3D component
 - ✅ Backward compatible with old data
 
 ### Phase 2: Data Migration (Future)
+
 - Convert existing `painPoints` to region format
 - Map old body parts to mesh names
 - Preserve intensity and quality data
 
 ### Phase 3: Deprecation (Future)
+
 - Remove legacy `painPoints` support
 - All submissions use 3D regions
 - Clean up old coordinate-based data

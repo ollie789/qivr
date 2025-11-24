@@ -22,13 +22,13 @@ All 3D pain map features have been successfully deployed to production.
 
 ### Latest Builds
 
-| Workflow | Status | Commit | Time |
-|----------|--------|--------|------|
-| Deploy to AWS | ✅ Success | c742691 | 13s |
-| CI Pipeline | ❌ Failure | c742691 | 1m43s |
-| Deploy to AWS | ✅ Success | 0c8adec | 13s |
-| Deploy to AWS | ✅ Success | d8ab19c | 13s |
-| Deploy to AWS | ✅ Success | 90cea5d | 14s |
+| Workflow      | Status     | Commit  | Time  |
+| ------------- | ---------- | ------- | ----- |
+| Deploy to AWS | ✅ Success | c742691 | 13s   |
+| CI Pipeline   | ❌ Failure | c742691 | 1m43s |
+| Deploy to AWS | ✅ Success | 0c8adec | 13s   |
+| Deploy to AWS | ✅ Success | d8ab19c | 13s   |
+| Deploy to AWS | ✅ Success | 90cea5d | 14s   |
 
 **Note:** CI Pipeline failures are non-blocking (TypeScript/ESLint issues). Deployments succeeded.
 
@@ -41,6 +41,7 @@ All 3D pain map features have been successfully deployed to production.
 **Endpoint:** https://api.qivr.pro
 
 **Health Check:**
+
 ```json
 {
   "status": "Healthy",
@@ -58,6 +59,7 @@ All 3D pain map features have been successfully deployed to production.
 ```
 
 **Status:** ✅ Healthy
+
 - Database connection: ✅ Working
 - Response time: ~0.7ms
 - ECS tasks: 3 running
@@ -67,6 +69,7 @@ All 3D pain map features have been successfully deployed to production.
 **Endpoint:** https://clinic.qivr.pro
 
 **Status:** ✅ Online
+
 - HTTP 200 OK
 - Last modified: Nov 19, 2025 11:44:24 GMT
 - CloudFront serving
@@ -76,6 +79,7 @@ All 3D pain map features have been successfully deployed to production.
 **Instance:** qivr-dev-db.ctueyqyqmqmz.ap-southeast-2.rds.amazonaws.com
 
 **Status:** ✅ Available
+
 - Engine: PostgreSQL 15.7
 - Storage: 20 GB (gp3)
 - Backup: 7 days retention
@@ -88,6 +92,7 @@ All 3D pain map features have been successfully deployed to production.
 ### 1. Frontend Components
 
 ✅ **PainMap3D** - Interactive 3D body model selector
+
 - 48 anatomical regions
 - 6 pain quality types
 - Intensity slider (1-10)
@@ -95,17 +100,20 @@ All 3D pain map features have been successfully deployed to production.
 - Real-time region selection
 
 ✅ **PainMap3DViewer** - Read-only clinic dashboard viewer
+
 - Displays selected regions with colors
 - Shows anatomical names
 - Pain quality badges
 - Intensity indicators
 
 ✅ **IntakeForm Integration**
+
 - Replaced SVG drawing with 3D selector
 - Step 3: Pain Map uses new component
 - Submits structured region data
 
 ✅ **EvaluationViewer Integration**
+
 - Displays 3D pain map
 - Shows AI analysis with pain patterns
 - Risk flags include pain-based warnings
@@ -113,18 +121,21 @@ All 3D pain map features have been successfully deployed to production.
 ### 2. Backend API
 
 ✅ **IntakeController**
+
 - Accepts `PainMapDataDto` with regions
 - Stores in `drawing_data_json` field
 - Extracts primary region for `body_region`
 - Stores SNOMED CT codes
 
 ✅ **AI Triage Service**
+
 - Analyzes pain patterns (bilateral, dermatomal, neuropathic)
 - Includes pain regions in urgency assessment
 - Detects spinal involvement
 - Generates anatomical insights
 
 ✅ **Intake Queue Worker**
+
 - Extracts regions from `drawing_data_json`
 - Passes to AI triage service
 - Logs region counts
@@ -133,6 +144,7 @@ All 3D pain map features have been successfully deployed to production.
 ### 3. Database
 
 ✅ **Schema Ready**
+
 - All fields exist (migration applied Nov 19)
 - `drawing_data_json` stores 3D regions
 - `anatomical_code` for SNOMED CT
@@ -179,6 +191,7 @@ Authorization: Bearer {token}
 ```
 
 **Response includes:**
+
 ```json
 {
   "id": "...",
@@ -250,6 +263,7 @@ curl -X POST https://api.qivr.pro/api/intake/submit \
 **Log Group:** `/aws/ecs/qivr-api`
 
 **Recent Logs:**
+
 ```
 [INFO] Intake submission received from test@example.com
 [INFO] Loaded 3 pain regions for AI analysis
@@ -262,6 +276,7 @@ curl -X POST https://api.qivr.pro/api/intake/submit \
 **Cluster:** qivr_cluster
 
 **Running Tasks:** 3
+
 - Task: 333eed1428754044b1c8728592a69308
 - Status: RUNNING
 - Health: Healthy
@@ -283,6 +298,7 @@ curl -X POST https://api.qivr.pro/api/intake/submit \
 **Impact:** None - deployments succeed despite CI failures
 
 **Errors:**
+
 - `CalendarGridCell.tsx`: Union type too complex
 - `PainMap3D.tsx`: Import parsing errors (false positive)
 
@@ -373,6 +389,7 @@ aws ecs update-service \
 ## Summary
 
 ✅ **All Features Deployed**
+
 - 3D pain map selector
 - Region-based data storage
 - AI pattern analysis
@@ -380,12 +397,14 @@ aws ecs update-service \
 - Dashboard visualization
 
 ✅ **Production Healthy**
+
 - API: Healthy
 - Database: Available
 - Frontend: Online
 - ECS: 3 tasks running
 
 ✅ **End-to-End Working**
+
 - Patient can submit 3D pain map
 - Data stored in database
 - AI analyzes patterns

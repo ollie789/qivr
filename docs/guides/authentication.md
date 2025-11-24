@@ -12,6 +12,7 @@ Use the sections below to switch between modes and to understand how the fronten
 ## 1. Development auth (optional for offline work)
 
 Enable development auth when you need a local-only workflow by setting (or exporting):
+
 - `ASPNETCORE_ENVIRONMENT=Development`, and
 - `DevAuth:Enabled=true` (see `backend/Qivr.Api/appsettings.Development.json`).
 
@@ -75,11 +76,11 @@ Disable the mock provider when you need to exercise the hosted login flow or whe
 
 The React apps read the access token from Amplify, send it to the API, and the API hydrates user claims (tenant, role) via `AuthenticationExtensions.cs`. The controller layer continues to set secure cookies to keep the dashboard aligned with the new proxy endpoints.
 
-| Claim source | Usage |
-| --- | --- |
-| `custom:custom:tenant_id` → fallback to `custom:tenant_id` | Sets the `X-Tenant-Id` header for API calls |
-| `custom:custom:clinic_id` → fallback to `custom:clinic_id` | Populates clinic context in the dashboard |
-| `sub` | Provides the authenticated patient/user identifier |
+| Claim source                                               | Usage                                              |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| `custom:custom:tenant_id` → fallback to `custom:tenant_id` | Sets the `X-Tenant-Id` header for API calls        |
+| `custom:custom:clinic_id` → fallback to `custom:clinic_id` | Populates clinic context in the dashboard          |
+| `sub`                                                      | Provides the authenticated patient/user identifier |
 
 The frontends read these values directly from the ID token, so no hard-coded tenant, clinic, or patient IDs are required.
 
@@ -91,12 +92,12 @@ Provisioning steps, CLI snippets, and pool IDs are captured in [AWS_COGNITO_SETU
 
 ## 3. Mixed-mode testing tips
 
-| Scenario | How to run |
-| --- | --- |
-| FAST local dev without Cognito | Set `DevAuth:Enabled=true` and `VITE_ENABLE_DEV_AUTH=true` |
-| Validate Cognito login locally | Keep `DevAuth:Enabled=false`, `VITE_ENABLE_DEV_AUTH=false`, and ensure the frontend `.env` files contain valid pool/client IDs |
-| Automated API tests | Default settings use the same connection string as the application. Override `TEST_CONNECTION_STRING` to point at a disposable database when needed |
-| Switching modes | Stop the API, clear browser storage, update the env flags, then restart affected services |
+| Scenario                       | How to run                                                                                                                                          |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FAST local dev without Cognito | Set `DevAuth:Enabled=true` and `VITE_ENABLE_DEV_AUTH=true`                                                                                          |
+| Validate Cognito login locally | Keep `DevAuth:Enabled=false`, `VITE_ENABLE_DEV_AUTH=false`, and ensure the frontend `.env` files contain valid pool/client IDs                      |
+| Automated API tests            | Default settings use the same connection string as the application. Override `TEST_CONNECTION_STRING` to point at a disposable database when needed |
+| Switching modes                | Stop the API, clear browser storage, update the env flags, then restart affected services                                                           |
 
 ---
 

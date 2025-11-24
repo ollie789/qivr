@@ -1,12 +1,15 @@
 # Cache Invalidation Fix - Implementation Summary
 
 ## Problem
+
 UI not refreshing after creating/updating data (PROM templates, evaluations, responses, etc.)
 
 ## Root Cause
+
 React Query cache not being invalidated after mutations, causing stale data to persist in the UI.
 
 ## Solution
+
 Implemented proper cache invalidation using `queryClient.invalidateQueries()` pattern across both applications.
 
 ## Changes Made
@@ -65,16 +68,16 @@ Implemented proper cache invalidation using `queryClient.invalidateQueries()` pa
 ## Pattern to Follow
 
 ```tsx
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from "@tanstack/react-query";
 
 const MyComponent = () => {
   const queryClient = useQueryClient();
 
   const handleSave = async () => {
-    await apiClient.post('/api/resource', data);
-    
+    await apiClient.post("/api/resource", data);
+
     // Invalidate to trigger refetch
-    queryClient.invalidateQueries({ queryKey: ['resource-list'] });
+    queryClient.invalidateQueries({ queryKey: ["resource-list"] });
   };
 };
 ```
@@ -97,6 +100,7 @@ const MyComponent = () => {
 ## Testing Checklist
 
 After this fix, verify:
+
 - ✅ Creating PROM template → Templates list updates immediately
 - ✅ Sending PROM → Responses list updates immediately
 - ✅ Submitting intake form → Evaluations list updates immediately
@@ -111,9 +115,11 @@ After this fix, verify:
 ## Coverage
 
 ### Clinic Dashboard
+
 - ✅ 10/10 components with mutations now use cache invalidation
 
 ### Patient Portal
+
 - ✅ 3/3 components with mutations now use cache invalidation
 
 ## Documentation
@@ -123,12 +129,14 @@ See `/docs/REACT-QUERY-PATTERNS.md` for comprehensive patterns and examples.
 ## Future Development
 
 **ALWAYS** use this pattern when:
+
 - Creating new resources (POST)
 - Updating existing resources (PUT/PATCH)
 - Deleting resources (DELETE)
 - Any mutation that changes server state
 
 **NEVER**:
+
 - Pass refetch callbacks through props
 - Use `window.location.reload()`
 - Forget to invalidate queries after mutations
@@ -139,4 +147,3 @@ See `/docs/REACT-QUERY-PATTERNS.md` for comprehensive patterns and examples.
 - Deploy: ✅ Deployed to S3
 - Cache: ✅ CloudFront invalidated
 - Status: **COMPLETE**
-

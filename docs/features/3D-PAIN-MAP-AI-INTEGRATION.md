@@ -47,6 +47,7 @@ The AI now detects and analyzes:
 ## AI Triage Prompt Enhancement
 
 ### Before (Text Only)
+
 ```
 Symptoms: Lower back pain, radiating to left leg
 Duration: 2 weeks
@@ -54,6 +55,7 @@ Severity: 7/10
 ```
 
 ### After (With 3D Pain Map)
+
 ```
 Symptoms: Lower back pain, radiating to left leg
 Duration: 2 weeks
@@ -61,7 +63,7 @@ Severity: 7/10
 
 Pain Map Analysis:
 - Number of affected regions: 3
-- Pain locations: 
+- Pain locations:
   * Left Lower Back: sharp pain (intensity 8/10)
   * Left Thigh (Back): sharp pain (intensity 6/10)
   * Left Shin (Back): tingling pain (intensity 4/10)
@@ -121,18 +123,18 @@ The AI can now detect:
   <Card>
     <CardContent>
       <Typography variant="h6">AI Triage Analysis</Typography>
-      
+
       {/* AI Summary with pain pattern insights */}
       <Typography>{evaluation.aiSummary.content}</Typography>
-      
+
       {/* Risk Flags including pain-based flags */}
       {evaluation.aiSummary.riskFlags.map(flag => (
-        <Chip 
+        <Chip
           label={flag.description}
           color={flag.severity === 'critical' ? 'error' : 'warning'}
         />
       ))}
-      
+
       {/* Urgency Assessment */}
       <Alert severity={getUrgencySeverity(evaluation.urgency)}>
         {evaluation.aiSummary.urgencyRationale}
@@ -143,7 +145,7 @@ The AI can now detect:
 
 {/* 3D Pain Map Visualization */}
 {evaluation.painMapData?.regions && (
-  <PainMap3DViewer 
+  <PainMap3DViewer
     regions={evaluation.painMapData.regions}
     cameraView={evaluation.painMapData.cameraView}
   />
@@ -187,6 +189,7 @@ The AI can now detect:
 ### Example 1: Radicular Pain
 
 **Input:**
+
 ```
 Regions:
 - back_left_lower_back: sharp (8/10)
@@ -197,16 +200,18 @@ Pattern: Dermatomal distribution, neuropathic characteristics
 ```
 
 **AI Output:**
+
 ```
-"Classic L5-S1 radiculopathy pattern with sharp pain radiating from 
-lower back through posterior thigh to shin. Tingling in shin suggests 
-nerve root irritation. Recommend urgent imaging and neurological 
+"Classic L5-S1 radiculopathy pattern with sharp pain radiating from
+lower back through posterior thigh to shin. Tingling in shin suggests
+nerve root irritation. Recommend urgent imaging and neurological
 examination to assess for disc herniation or spinal stenosis."
 ```
 
 ### Example 2: Bilateral Inflammatory
 
 **Input:**
+
 ```
 Regions:
 - front_left_shoulder: dull (6/10)
@@ -218,17 +223,19 @@ Pattern: Bilateral distribution, multiple regions
 ```
 
 **AI Output:**
+
 ```
-"Bilateral symmetrical joint pain affecting shoulders and knees suggests 
-systemic inflammatory arthropathy. Throbbing quality indicates active 
-inflammation. Consider rheumatoid arthritis, psoriatic arthritis, or 
-other autoimmune conditions. Recommend rheumatology referral and 
+"Bilateral symmetrical joint pain affecting shoulders and knees suggests
+systemic inflammatory arthropathy. Throbbing quality indicates active
+inflammation. Consider rheumatoid arthritis, psoriatic arthritis, or
+other autoimmune conditions. Recommend rheumatology referral and
 inflammatory markers (ESR, CRP, RF)."
 ```
 
 ### Example 3: Neuropathic Pain
 
 **Input:**
+
 ```
 Regions:
 - front_left_hand: burning (7/10)
@@ -238,11 +245,12 @@ Pattern: Neuropathic characteristics
 ```
 
 **AI Output:**
+
 ```
-"Burning and tingling pain in hand and forearm suggests peripheral 
-neuropathy or nerve entrapment. Distribution consistent with median 
-nerve involvement (carpal tunnel syndrome). Recommend nerve conduction 
-studies and assessment for diabetes, vitamin deficiencies, or 
+"Burning and tingling pain in hand and forearm suggests peripheral
+neuropathy or nerve entrapment. Distribution consistent with median
+nerve involvement (carpal tunnel syndrome). Recommend nerve conduction
+studies and assessment for diabetes, vitamin deficiencies, or
 compressive neuropathy."
 ```
 
@@ -334,18 +342,21 @@ private string AnalyzePainPattern(List<PainRegion> regions)
 ## Future Enhancements
 
 ### Phase 1 (Current)
+
 - ✅ Basic pain pattern analysis
 - ✅ Bilateral detection
 - ✅ Neuropathic characteristics
 - ✅ Spinal involvement
 
 ### Phase 2 (Planned)
+
 - ⬜ Dermatomal mapping (C2-S5 nerve roots)
 - ⬜ Myotomal analysis (muscle weakness patterns)
 - ⬜ Visceral referred pain detection
 - ⬜ Temporal pattern analysis (progression over time)
 
 ### Phase 3 (Future)
+
 - ⬜ ML model trained on pain patterns
 - ⬜ Condition prediction based on pain distribution
 - ⬜ Treatment response prediction

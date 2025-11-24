@@ -5,6 +5,7 @@ Complete testing documentation for the Qivr clinic dashboard.
 ## Overview
 
 The test suite validates the entire application stack with live Cognito authentication:
+
 - ✅ Auth proxy system (httpOnly cookies)
 - ✅ Per-tenant Cognito pools
 - ✅ Tenant isolation
@@ -15,6 +16,7 @@ The test suite validates the entire application stack with live Cognito authenti
 ## Quick Start
 
 ### Run All Tests
+
 ```bash
 # Test production with new test clinic
 ./scripts/run-tests.sh production
@@ -27,6 +29,7 @@ The test suite validates the entire application stack with live Cognito authenti
 ```
 
 ### Run Individual Tests
+
 ```bash
 # Live system test (creates new clinic)
 node scripts/tests/test-live-system.mjs production
@@ -41,9 +44,11 @@ node scripts/tests/test-frontend-pages.mjs user@clinic.com Password123! producti
 ## Test Suites
 
 ### 1. Live System Test
+
 **File:** `scripts/tests/test-live-system.mjs`
 
 **What it tests:**
+
 - ✅ Clinic registration (creates per-tenant Cognito pool)
 - ✅ User login (auth proxy with httpOnly cookies)
 - ✅ Auth check endpoint
@@ -55,6 +60,7 @@ node scripts/tests/test-frontend-pages.mjs user@clinic.com Password123! producti
 - ✅ Logout
 
 **Output:**
+
 ```
 📋 Test 1: Health Check
   ✅ Backend is healthy
@@ -89,9 +95,11 @@ node scripts/tests/test-frontend-pages.mjs user@clinic.com Password123! producti
 ---
 
 ### 2. API Endpoint Test
+
 **File:** `scripts/tests/test-api-endpoints.mjs`
 
 **What it tests:**
+
 - ✅ 20+ API endpoints
 - ✅ Authentication flow
 - ✅ Tenant header validation
@@ -99,6 +107,7 @@ node scripts/tests/test-frontend-pages.mjs user@clinic.com Password123! producti
 - ✅ Data isolation
 
 **Endpoints:**
+
 ```
 Auth:
   POST /auth/login
@@ -156,9 +165,11 @@ Notifications:
 ---
 
 ### 3. Frontend Page Test
+
 **File:** `scripts/tests/test-frontend-pages.mjs`
 
 **What it tests:**
+
 - ✅ Login flow
 - ✅ All 10 pages load
 - ✅ No console errors
@@ -167,6 +178,7 @@ Notifications:
 - ✅ Content renders
 
 **Pages:**
+
 ```
 ✅ Dashboard         - Stats, activity, appointments
 ✅ Patients          - List, create, edit, view
@@ -181,11 +193,13 @@ Notifications:
 ```
 
 **Requirements:**
+
 ```bash
 npm install -D playwright
 ```
 
 **Output:**
+
 - Screenshots: `/tmp/test-*.png`
 - Console logs for each page
 - API call validation
@@ -200,18 +214,18 @@ All tests create isolated test data:
 
 ```javascript
 // Unique clinic
-clinicName: `Test Clinic ${timestamp}`
-email: `test${timestamp}@clinic.test`
+clinicName: `Test Clinic ${timestamp}`;
+email: `test${timestamp}@clinic.test`;
 
 // Test patient
-firstName: 'John'
-lastName: 'Doe'
-email: `patient${timestamp}@test.com`
+firstName: "John";
+lastName: "Doe";
+email: `patient${timestamp}@test.com`;
 
 // Test appointment
-appointmentType: 'Consultation'
-startTime: tomorrow
-status: 'Scheduled'
+appointmentType: "Consultation";
+startTime: tomorrow;
+status: "Scheduled";
 ```
 
 **Cleanup:** Test data can be manually deleted or left for debugging.
@@ -221,6 +235,7 @@ status: 'Scheduled'
 ## Environments
 
 ### Production
+
 ```bash
 Frontend: https://clinic.qivr.pro
 Backend:  https://clinic.qivr.pro/api
@@ -228,6 +243,7 @@ Auth:     Auth proxy (httpOnly cookies)
 ```
 
 ### Local
+
 ```bash
 Frontend: http://localhost:5173
 Backend:  http://localhost:5050/api
@@ -239,6 +255,7 @@ Auth:     Auth proxy (httpOnly cookies)
 ## CI/CD Integration
 
 ### GitHub Actions
+
 ```yaml
 name: Test Suite
 
@@ -249,25 +266,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-      
+          node-version: "18"
+
       - name: Run Live System Test
         run: node scripts/tests/test-live-system.mjs production
-      
+
       - name: Run API Endpoint Test
         run: |
           node scripts/tests/test-api-endpoints.mjs \
             ${{ secrets.TEST_EMAIL }} \
             ${{ secrets.TEST_PASSWORD }} \
             production
-      
+
       - name: Install Playwright
         run: npm install -D playwright
-      
+
       - name: Run Frontend Page Test
         run: |
           node scripts/tests/test-frontend-pages.mjs \
@@ -283,31 +300,37 @@ jobs:
 ### Test Failures
 
 **"Registration failed"**
+
 - Check backend is running
 - Verify database connection
 - Check Cognito permissions
 
 **"Login failed"**
+
 - Verify credentials are correct
 - Check Cognito pool exists
 - Review auth proxy logs
 
 **"No auth cookie"**
+
 - Ensure cookies are enabled
 - Check CORS configuration
 - Verify domain settings
 
 **"Tenant isolation failed"**
+
 - Check X-Tenant-Id header
 - Verify backend filtering
 - Review database queries
 
 **"API call failed"**
+
 - Check backend health
 - Verify ALB is running
 - Review CloudFront config
 
 **"Page not found"**
+
 - Ensure frontend is deployed
 - Check CloudFront distribution
 - Verify S3 bucket
@@ -315,13 +338,14 @@ jobs:
 ### Debug Mode
 
 Add debug logging:
+
 ```javascript
 // In test scripts
 const DEBUG = true;
 
 if (DEBUG) {
-  console.log('Request:', { url, headers, body });
-  console.log('Response:', { status, headers, data });
+  console.log("Request:", { url, headers, body });
+  console.log("Response:", { status, headers, data });
 }
 ```
 
@@ -330,26 +354,31 @@ if (DEBUG) {
 ## Best Practices
 
 ### 1. Test Isolation
+
 - Each test creates its own data
 - Tests don't depend on each other
 - Clean state for each run
 
 ### 2. Realistic Data
+
 - Use valid email formats
 - Use strong passwords
 - Use realistic names and dates
 
 ### 3. Error Handling
+
 - Tests fail fast on errors
 - Clear error messages
 - Helpful debugging info
 
 ### 4. Performance
+
 - Tests run in parallel where possible
 - Minimal wait times
 - Efficient API calls
 
 ### 5. Maintenance
+
 - Update tests when APIs change
 - Keep test data current
 - Document new test cases
@@ -359,16 +388,17 @@ if (DEBUG) {
 ## Adding New Tests
 
 ### 1. Add to Live System Test
+
 ```javascript
 // In test-live-system.mjs
 async testNewFeature() {
   console.log('\n📋 Test X: New Feature');
-  
+
   const response = await makeRequest('/new-endpoint', {
     method: 'POST',
     body: JSON.stringify({ data })
   });
-  
+
   assert(response.ok, 'Feature works');
   const data = await response.json();
   assert(data.result, 'Expected result');
@@ -376,22 +406,24 @@ async testNewFeature() {
 ```
 
 ### 2. Add to API Endpoint Test
+
 ```javascript
 // In test-api-endpoints.mjs
-{ 
-  method: 'GET', 
-  path: '/new-endpoint', 
-  name: 'New Feature' 
+{
+  method: 'GET',
+  path: '/new-endpoint',
+  name: 'New Feature'
 }
 ```
 
 ### 3. Add to Frontend Page Test
+
 ```javascript
 // In test-frontend-pages.mjs
-{ 
-  path: '/new-page', 
-  name: 'New Page', 
-  dataCheck: '.new-component' 
+{
+  path: '/new-page',
+  name: 'New Page',
+  dataCheck: '.new-component'
 }
 ```
 

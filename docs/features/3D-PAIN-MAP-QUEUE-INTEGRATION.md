@@ -63,21 +63,21 @@ if (firstPainMap?.DrawingDataJson != null)
     var drawingData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
         firstPainMap.DrawingDataJson
     );
-    
+
     if (drawingData != null && drawingData.ContainsKey("regions"))
     {
         var regions = JsonSerializer.Deserialize<List<PainRegion>>(
             drawingData["regions"].GetRawText()
         );
-        
+
         painMapData = new PainMapData
         {
             Regions = regions,
             CameraView = drawingData["cameraView"].GetString() ?? "front",
             Timestamp = drawingData["timestamp"].GetString() ?? ""
         };
-        
-        _logger.LogInformation("Loaded {RegionCount} pain regions for AI analysis", 
+
+        _logger.LogInformation("Loaded {RegionCount} pain regions for AI analysis",
             regions.Count);
     }
 }
@@ -91,17 +91,17 @@ var triageRequest = new TriageRequest
     Symptoms = string.Join(", ", evaluation.Symptoms),
     MedicalHistory = JsonSerializer.Serialize(evaluation.MedicalHistory),
     ChiefComplaint = evaluation.ChiefComplaint,
-    Duration = evaluation.MedicalHistory.TryGetValue("painOnset", out var onset) 
-        ? onset?.ToString() 
+    Duration = evaluation.MedicalHistory.TryGetValue("painOnset", out var onset)
+        ? onset?.ToString()
         : null,
-    Severity = evaluation.PainMaps.Any() 
-        ? evaluation.PainMaps.Max(p => p.PainIntensity) 
+    Severity = evaluation.PainMaps.Any()
+        ? evaluation.PainMaps.Max(p => p.PainIntensity)
         : 5,
     PainMapData = painMapData // ✅ Includes 3D regions
 };
 
 var triageSummary = await aiTriageService.GenerateTriageSummaryAsync(
-    evaluation.PatientId, 
+    evaluation.PatientId,
     triageRequest
 );
 ```
@@ -120,8 +120,8 @@ await dbContext.SaveChangesAsync();
 
 _logger.LogInformation(
     "AI triage completed: Urgency={Urgency}, RiskFlags={RiskCount}, PainRegions={RegionCount}",
-    evaluation.Urgency, 
-    evaluation.AiRiskFlags.Count, 
+    evaluation.Urgency,
+    evaluation.AiRiskFlags.Count,
     painMapData?.Regions.Count ?? 0
 );
 ```
@@ -149,6 +149,7 @@ _logger.LogInformation(
 ```
 
 **Message Attributes:**
+
 - `IntakeId`: Intake submission ID
 - `TenantId`: Clinic tenant ID
 - `MessageType`: "IntakeSubmission"
@@ -177,9 +178,9 @@ var response = await _sqsClient.ReceiveMessageAsync(receiveRequest);
 
 ```csharp
 // Prevent duplicate processing
-INSERT INTO qivr.intake_dedupe(message_id) 
-VALUES(@messageId) 
-ON CONFLICT DO NOTHING 
+INSERT INTO qivr.intake_dedupe(message_id)
+VALUES(@messageId)
+ON CONFLICT DO NOTHING
 RETURNING 1;
 ```
 
@@ -216,7 +217,7 @@ var regions = JsonSerializer.Deserialize<List<PainRegion>>(
 
 ```csharp
 var triageSummary = await aiTriageService.GenerateTriageSummaryAsync(
-    patientId, 
+    patientId,
     triageRequest
 );
 ```
@@ -250,8 +251,8 @@ try
 }
 catch (Exception ex)
 {
-    _logger.LogWarning(ex, 
-        "Failed to parse pain map data for evaluation {EvaluationId}", 
+    _logger.LogWarning(ex,
+        "Failed to parse pain map data for evaluation {EvaluationId}",
         evaluationId
     );
     // Continue processing without pain map data
@@ -264,7 +265,7 @@ catch (Exception ex)
 // Worker handles missing pain maps gracefully
 if (firstPainMap?.DrawingDataJson == null)
 {
-    _logger.LogInformation("No pain map data for evaluation {EvaluationId}", 
+    _logger.LogInformation("No pain map data for evaluation {EvaluationId}",
         evaluationId);
     // AI triage proceeds without pain map analysis
 }
@@ -413,7 +414,7 @@ aws sqs send-message \
 
 ```sql
 -- Check evaluation was updated
-SELECT 
+SELECT
     id,
     status,
     urgency,
@@ -424,7 +425,7 @@ FROM qivr.evaluations
 WHERE id = 'test-eval-456';
 
 -- Check pain map data
-SELECT 
+SELECT
     id,
     body_region,
     pain_intensity,
@@ -442,29 +443,29 @@ WHERE evaluation_id = 'test-eval-456';
 ```typescript
 // IntakeKanban.tsx
 <Card>
-  <CardHeader 
+  <CardHeader
     title={evaluation.chiefComplaint}
     subheader={`Urgency: ${evaluation.urgency}`}
   />
   <CardContent>
     {/* AI Summary Badge */}
     {evaluation.aiSummary && (
-      <Chip 
+      <Chip
         icon={<SmartToyIcon />}
         label="AI Analyzed"
         color="primary"
       />
     )}
-    
+
     {/* Pain Map Badge */}
     {evaluation.painMapData?.regions && (
-      <Chip 
+      <Chip
         icon={<PainIcon />}
         label={`${evaluation.painMapData.regions.length} regions`}
         color="secondary"
       />
     )}
-    
+
     {/* Risk Flags */}
     {evaluation.aiRiskFlags.map(flag => (
       <Chip label={flag} color="error" size="small" />
@@ -488,6 +489,7 @@ WHERE evaluation_id = 'test-eval-456';
 ## Summary
 
 ✅ **Queue Integration Complete**
+
 - Worker extracts 3D pain regions from drawing_data_json
 - Passes to AI triage service
 - AI analyzes pain patterns
@@ -495,18 +497,21 @@ WHERE evaluation_id = 'test-eval-456';
 - Clinician sees in Kanban + EvaluationViewer
 
 ✅ **Error Handling**
+
 - Graceful JSON parsing failures
 - Missing pain map handling
 - Automatic retry on failures
 - Idempotency protection
 
 ✅ **Monitoring**
+
 - CloudWatch logs with pain region counts
 - Processing time metrics
 - Error rate tracking
 - Custom pain map metrics
 
 ✅ **Production Ready**
+
 - Deployed to ECS
 - Processing live intakes
 - AI analyzing pain patterns

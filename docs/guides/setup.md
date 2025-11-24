@@ -4,13 +4,13 @@ Follow this walkthrough when you are provisioning a new laptop or need to rebuil
 
 ## 1. Prerequisites
 
-| Tool | Version | Notes |
-| --- | --- | --- |
-| Node.js | 20.x | npm 10 ships with Node 20 – keep both in sync |
-| .NET SDK | 8.0.x | Install ASP.NET runtime alongside the SDK |
-| Docker Desktop | Latest stable | Required for Postgres, Redis, MinIO, Mailhog |
-| PostgreSQL client | 15+ | Optional but handy for running `psql` commands |
-| AWS CLI (v2) | — | Only needed when touching Cognito or deployment secrets |
+| Tool              | Version       | Notes                                                   |
+| ----------------- | ------------- | ------------------------------------------------------- |
+| Node.js           | 20.x          | npm 10 ships with Node 20 – keep both in sync           |
+| .NET SDK          | 8.0.x         | Install ASP.NET runtime alongside the SDK               |
+| Docker Desktop    | Latest stable | Required for Postgres, Redis, MinIO, Mailhog            |
+| PostgreSQL client | 15+           | Optional but handy for running `psql` commands          |
+| AWS CLI (v2)      | —             | Only needed when touching Cognito or deployment secrets |
 
 > One-liner install: run `./install.sh` on macOS to verify the required tooling.
 
@@ -88,16 +88,16 @@ To stop everything, run `npm run docker:down` and `Ctrl+C` any watch processes. 
 
 ### Ports at a glance
 
-| Service | Port | Notes |
-| --- | --- | --- |
-| Backend API | 5050 | Swagger UI served at `/swagger` |
-| Clinic Dashboard | 3010 | Vite dev server, opens automatically |
-| Patient Portal | 3005 | Cognito by default; enable dev auth via env flag |
-| Widget | 3000 | Embeddable booking widget |
-| PostgreSQL | 5432 | User: `qivr_user`, Database: `qivr` |
-| Redis | 6379 | Ephemeral cache |
-| MinIO | 9000 (API), 9001 (console) | Credentials default to `minioadmin/minioadmin` |
-| Mailhog | 1025 (SMTP), 8025 (UI) | Useful for email testing |
+| Service          | Port                       | Notes                                            |
+| ---------------- | -------------------------- | ------------------------------------------------ |
+| Backend API      | 5050                       | Swagger UI served at `/swagger`                  |
+| Clinic Dashboard | 3010                       | Vite dev server, opens automatically             |
+| Patient Portal   | 3005                       | Cognito by default; enable dev auth via env flag |
+| Widget           | 3000                       | Embeddable booking widget                        |
+| PostgreSQL       | 5432                       | User: `qivr_user`, Database: `qivr`              |
+| Redis            | 6379                       | Ephemeral cache                                  |
+| MinIO            | 9000 (API), 9001 (console) | Credentials default to `minioadmin/minioadmin`   |
+| Mailhog          | 1025 (SMTP), 8025 (UI)     | Useful for email testing                         |
 
 ## 5. Database helpers
 
@@ -115,10 +115,10 @@ docker compose exec postgres psql -U qivr_user -d qivr -f database/seed-data.sql
 
 Local fixtures seed the following users when you run the seed script:
 
-| Role | Email | Password | Notes |
-| --- | --- | --- | --- |
+| Role         | Email                    | Password         | Notes                                         |
+| ------------ | ------------------------ | ---------------- | --------------------------------------------- |
 | Clinic staff | `test.doctor@clinic.com` | `ClinicTest123!` | Tenant `b6c55eef-b8ac-4b8e-8b5f-7d3a7c9e4f11` |
-| Patient | `patient@qivr.health` | `Patient123!` | Assign PROMs from the dashboard first |
+| Patient      | `patient@qivr.health`    | `Patient123!`    | Assign PROMs from the dashboard first         |
 
 If the credentials fail, rerun the seed SQL or invite yourself through Cognito.
 

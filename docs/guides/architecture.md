@@ -30,6 +30,7 @@ qivr/
 - **Configuration** – environment-specific settings live in `backend/Qivr.Api/appsettings*.json`; use user secrets or environment variables for secrets.
 
 Key middleware:
+
 - `TenantMiddleware` resolves the tenant from headers/subdomains.
 - `ExceptionHandlingMiddleware` ensures consistent API error envelopes.
 - `Authentication` wires either the DevAuth mock provider (local default) or Cognito JWT validation depending on configuration.
@@ -39,17 +40,20 @@ Key middleware:
 All three apps share the same tooling stack: TypeScript, React Router, React Query, Material UI, and the `@qivr/http` client for authenticated requests.
 
 ### Clinic dashboard (`apps/clinic-dashboard`)
+
 - `src/features/*` house domain-specific UI modules (analytics, appointments, proms, intake).
 - `src/services` wraps API consumption using the shared client and typed DTOs.
 - Zustand manages auth session state (bridging Cognito to UI) under `src/stores`.
 - Layout primitives (`DashboardLayout`, navigation) live under `src/components`.
 
 ### Patient portal (`apps/patient-portal`)
+
 - Mirrors the dashboard structure – the recent refactor moved appointments, dashboard, and profile into `src/features`.
 - `src/lib/api-client.ts` centralises Amplify session handling and attaches tenant/patient headers.
 - Routes are declared in `src/AppContent.tsx`; `PrivateRoute` guards authenticated sections.
 
 ### Widget (`apps/widget`)
+
 - Minimal React app exposing embeddable components and hooks for booking/PROM flows.
 - Shares util code via `packages/http` and cross-app DTOs where applicable.
 

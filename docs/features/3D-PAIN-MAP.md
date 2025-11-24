@@ -12,6 +12,7 @@ Replaced freehand SVG drawing with professional 3D region-based pain mapping usi
 ## Key Improvements
 
 ### Before (SVG Drawing)
+
 - ❌ Freehand drawing anywhere on 2D diagram
 - ❌ Unstructured data (SVG paths)
 - ❌ Low-quality stick figures
@@ -19,6 +20,7 @@ Replaced freehand SVG drawing with professional 3D region-based pain mapping usi
 - ❌ Hard to query/analyze
 
 ### After (3D Region Selection)
+
 - ✅ Click only on defined anatomical regions
 - ✅ Structured data with mesh names
 - ✅ Professional 3D anatomical model
@@ -75,10 +77,12 @@ Replaced freehand SVG drawing with professional 3D region-based pain mapping usi
 ## 48 Anatomical Regions
 
 ### Head & Neck (4)
+
 - back_head, front_head
 - back_neck, front_neck
 
 ### Back - Left (11)
+
 - back_left_buttocks
 - back_left_foot
 - back_left_knee
@@ -92,6 +96,7 @@ Replaced freehand SVG drawing with professional 3D region-based pain mapping usi
 - back_left_upper_back
 
 ### Back - Right (11)
+
 - back_right_buttocks
 - back_right_foot
 - back_right_knee
@@ -105,6 +110,7 @@ Replaced freehand SVG drawing with professional 3D region-based pain mapping usi
 - back_right_upper_back
 
 ### Front - Left (11)
+
 - front_left_foot
 - front_left_hand
 - front_left_knee
@@ -120,6 +126,7 @@ Replaced freehand SVG drawing with professional 3D region-based pain mapping usi
 - front_left_upper_chest
 
 ### Front - Right (11)
+
 - front_right_foot
 - front_right_hand
 - front_right_knee
@@ -139,12 +146,14 @@ Replaced freehand SVG drawing with professional 3D region-based pain mapping usi
 ## Integration Points
 
 ### Patient Portal
+
 - **IntakeForm.tsx** - Step 3: Pain Map
 - Patients click on 3D body regions
 - Select pain quality and intensity
 - Data saved to evaluation
 
 ### Clinic Dashboard
+
 - **EvaluationViewer.tsx** - Pain Map section
 - Clinicians see selected regions highlighted
 - View anatomical names and pain details
@@ -191,6 +200,7 @@ apps/clinic-dashboard/
 ## Testing
 
 **Patient Portal:** http://localhost:3005
+
 1. Navigate to Intake Form
 2. Go to Step 3: Pain Map
 3. Click on body regions to select
@@ -198,6 +208,7 @@ apps/clinic-dashboard/
 5. Submit form
 
 **Clinic Dashboard:** https://clinic.qivr.pro
+
 1. View patient evaluation
 2. See 3D pain map with highlighted regions
 3. Review anatomical names and pain details
@@ -207,6 +218,7 @@ apps/clinic-dashboard/
 ## Database Schema
 
 Existing `drawing_data_json` field stores:
+
 ```json
 {
   "regions": [...],

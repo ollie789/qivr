@@ -3,6 +3,7 @@
 ## 🚀 Quick Deployment
 
 ### Manual Deployment
+
 ```bash
 # Deploy everything
 npm run deploy
@@ -18,6 +19,7 @@ npm run status
 ```
 
 ### Direct Script Usage
+
 ```bash
 # Full deployment
 ./deploy.sh
@@ -41,6 +43,7 @@ The GitHub Actions workflow (`.github/workflows/deploy-streamlined.yml`) automat
 3. **Health Check**: Verifies deployments are successful
 
 ### Required GitHub Secrets
+
 ```
 AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY
@@ -76,12 +79,14 @@ AWS_SECRET_ACCESS_KEY
 ## 🔧 Current Infrastructure
 
 ### Backend
+
 - **ECS Cluster**: `qivr_cluster`
 - **ECS Service**: `qivr-api`
 - **ECR Repository**: `qivr-api`
 - **Region**: `ap-southeast-2`
 
 ### Frontend
+
 - **Clinic Dashboard**:
   - S3 Bucket: `qivr-clinic-dashboard-staging`
   - CloudFront: `E1S9SAZB57T3C3`
@@ -95,6 +100,7 @@ AWS_SECRET_ACCESS_KEY
 ## 🔍 Monitoring
 
 ### Check Deployment Status
+
 ```bash
 # Quick status check
 npm run status
@@ -110,6 +116,7 @@ aws cloudfront list-invalidations --distribution-id E1S9SAZB57T3C3 --region ap-s
 ```
 
 ### Health Endpoints
+
 - **Frontend Health**: Check if URLs load successfully
 - **Backend Health**: ECS service health checks (internal)
 
@@ -118,18 +125,21 @@ aws cloudfront list-invalidations --distribution-id E1S9SAZB57T3C3 --region ap-s
 ### Common Issues
 
 1. **ECS Deployment Stuck**
+
    ```bash
    # Force new deployment
    aws ecs update-service --cluster qivr_cluster --service qivr-api --force-new-deployment --region ap-southeast-2
    ```
 
 2. **CloudFront Cache Issues**
+
    ```bash
    # Create invalidation
    aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*" --region ap-southeast-2
    ```
 
 3. **Docker Build Issues**
+
    ```bash
    # Clean Docker cache
    docker system prune -a
@@ -156,10 +166,11 @@ aws cloudfront list-invalidations --distribution-id E1S9SAZB57T3C3 --region ap-s
 If deployment fails:
 
 1. **ECS Rollback**:
+
    ```bash
    # Get previous task definition
    aws ecs describe-services --cluster qivr_cluster --services qivr-api --region ap-southeast-2
-   
+
    # Update to previous revision
    aws ecs update-service --cluster qivr_cluster --service qivr-api --task-definition qivr-api:PREVIOUS_REVISION --region ap-southeast-2
    ```

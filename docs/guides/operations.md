@@ -7,11 +7,13 @@
 ## 🔗 Quick Access
 
 ### Production URLs
+
 - **Clinic Dashboard:** https://dwmqwnt4dy1td.cloudfront.net
 - **Patient Portal:** https://d1jw6e1qiegavd.cloudfront.net
 - **API:** https://qivr-alb-1257648623.ap-southeast-2.elb.amazonaws.com (Note: HTTPS not yet configured)
 
 ### AWS Console
+
 - **CloudWatch Alarms:** https://console.aws.amazon.com/cloudwatch/home?region=ap-southeast-2#alarmsV2:
 - **ECS Service:** https://console.aws.amazon.com/ecs/v2/clusters/qivr_cluster/services/qivr-api
 - **RDS Database:** https://console.aws.amazon.com/rds/home?region=ap-southeast-2#database:id=qivr-dev-db
@@ -22,12 +24,14 @@
 ## 🚀 Common Operations
 
 ### Deploy Backend
+
 ```bash
 cd /Users/oliver/Projects/qivr
 ./infrastructure/deploy.sh
 ```
 
 ### Deploy Frontends
+
 ```bash
 # Clinic Dashboard
 cd apps/clinic-dashboard
@@ -43,6 +47,7 @@ aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*"
 ```
 
 ### View Logs
+
 ```bash
 # API logs (live tail)
 aws logs tail /ecs/qivr_cluster/qivr-api --follow --region ap-southeast-2
@@ -52,11 +57,13 @@ aws logs tail /ecs/qivr_cluster/qivr-api --since 1h --region ap-southeast-2 | gr
 ```
 
 ### Check System Status
+
 ```bash
 ./infrastructure/verify-alignment.sh
 ```
 
 ### Seed Sample Data
+
 ```bash
 # Get JWT token from browser after login, then:
 cd infrastructure
@@ -93,25 +100,26 @@ RDS PostgreSQL
 
 ## 🔧 Key Resources
 
-| Resource | Identifier | Region |
-|----------|-----------|--------|
-| ECS Cluster | qivr_cluster | ap-southeast-2 |
-| ECS Service | qivr-api | ap-southeast-2 |
-| RDS Instance | qivr-dev-db | ap-southeast-2 |
-| ALB | qivr-alb | ap-southeast-2 |
-| Clinic S3 | qivr-clinic-dashboard-staging | ap-southeast-2 |
-| Patient S3 | qivr-patient-portal-staging | ap-southeast-2 |
-| Clinic CloudFront | E1S9SAZB57T3C3 | Global |
-| Patient CloudFront | E39OVJDZIZ22QL | Global |
-| Clinic Cognito | ap-southeast-2_jbutB4tj1 | ap-southeast-2 |
-| Patient Cognito | ap-southeast-2_ZMcriKNGJ | ap-southeast-2 |
-| SNS Alerts | qivr-staging-alerts | ap-southeast-2 |
+| Resource           | Identifier                    | Region         |
+| ------------------ | ----------------------------- | -------------- |
+| ECS Cluster        | qivr_cluster                  | ap-southeast-2 |
+| ECS Service        | qivr-api                      | ap-southeast-2 |
+| RDS Instance       | qivr-dev-db                   | ap-southeast-2 |
+| ALB                | qivr-alb                      | ap-southeast-2 |
+| Clinic S3          | qivr-clinic-dashboard-staging | ap-southeast-2 |
+| Patient S3         | qivr-patient-portal-staging   | ap-southeast-2 |
+| Clinic CloudFront  | E1S9SAZB57T3C3                | Global         |
+| Patient CloudFront | E39OVJDZIZ22QL                | Global         |
+| Clinic Cognito     | ap-southeast-2_jbutB4tj1      | ap-southeast-2 |
+| Patient Cognito    | ap-southeast-2_ZMcriKNGJ      | ap-southeast-2 |
+| SNS Alerts         | qivr-staging-alerts           | ap-southeast-2 |
 
 ---
 
 ## 📈 Monitoring
 
 ### CloudWatch Alarms (7 active)
+
 - qivr-api-5xx-errors (> 10 in 5 min)
 - qivr-api-response-time (> 2 seconds)
 - qivr-db-connections-high (> 80)
@@ -123,6 +131,7 @@ RDS PostgreSQL
 **Alerts sent to:** oliver@qivr.io
 
 ### Check Alarm Status
+
 ```bash
 aws cloudwatch describe-alarms --region ap-southeast-2 --alarm-name-prefix "qivr-"
 ```
@@ -132,6 +141,7 @@ aws cloudwatch describe-alarms --region ap-southeast-2 --alarm-name-prefix "qivr
 ## 🐛 Troubleshooting
 
 ### Backend Not Responding
+
 ```bash
 # Check ECS service
 aws ecs describe-services --cluster qivr_cluster --services qivr-api --region ap-southeast-2
@@ -144,6 +154,7 @@ aws logs tail /ecs/qivr_cluster/qivr-api --since 30m --region ap-southeast-2
 ```
 
 ### Frontend Not Loading
+
 ```bash
 # Check S3 bucket
 aws s3 ls s3://qivr-clinic-dashboard-staging/
@@ -156,6 +167,7 @@ aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
 ```
 
 ### Database Issues
+
 ```bash
 # Check RDS status
 aws rds describe-db-instances --db-instance-identifier qivr-dev-db --region ap-southeast-2
@@ -173,6 +185,7 @@ aws cloudwatch get-metric-statistics \
 ```
 
 ### 401 Unauthorized Errors
+
 - Auto-user creation middleware should handle this
 - Check logs for "Creating user" or "Found user"
 - Verify Cognito token is valid (not expired)
@@ -183,6 +196,7 @@ aws cloudwatch get-metric-statistics \
 ## 🔐 Security
 
 ### Database Connection
+
 - **Host:** qivr-dev-db.ctueyqyqmqmz.ap-southeast-2.rds.amazonaws.com
 - **Port:** 5432
 - **Database:** qivr
@@ -190,11 +204,14 @@ aws cloudwatch get-metric-statistics \
 - **Password:** Stored in appsettings.Production.json (TODO: Move to Secrets Manager)
 
 ### Cognito Pools
+
 **Clinic Dashboard:**
+
 - Pool ID: ap-southeast-2_jbutB4tj1
 - Client ID: 4l510mm689hhpgr12prbuch2og
 
 **Patient Portal:**
+
 - Pool ID: ap-southeast-2_ZMcriKNGJ
 - Client ID: 4kugfmvk56o3otd0grc4gddi8r
 
@@ -203,16 +220,19 @@ aws cloudwatch get-metric-statistics \
 ## 📋 TODO
 
 ### Immediate
+
 - [ ] Test HTTPS URLs
 - [ ] Seed sample data
 - [ ] Test all features end-to-end
 
 ### This Week
+
 - [ ] Update Cognito callbacks to CloudFront URLs
 - [ ] Enable RDS automated backups
 - [ ] Move database password to Secrets Manager
 
 ### Future
+
 - [ ] Custom domains (clinic.qivr.health)
 - [ ] HTTPS on ALB
 - [ ] Separate production environment
@@ -223,6 +243,7 @@ aws cloudwatch get-metric-statistics \
 ## 📞 Support
 
 **Issues?**
+
 1. Check CloudWatch logs
 2. Run `./infrastructure/verify-alignment.sh`
 3. Review alarm status

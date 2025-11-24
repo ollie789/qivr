@@ -5,6 +5,7 @@
 ### ✅ What's Been Built
 
 **Backend (Phase 1)**
+
 - Database schema with documents + audit tables
 - AWS S3 integration for secure file storage
 - AWS Textract integration for OCR
@@ -13,6 +14,7 @@
 - Full audit logging
 
 **Clinic Dashboard (Phase 2)**
+
 - Document upload page with drag-and-drop
 - Patient search and selection
 - OCR results viewer with confidence scores
@@ -20,6 +22,7 @@
 - Download and delete functionality
 
 **Patient Portal (Phase 3)**
+
 - Document checklist with progress tracking
 - Required documents workflow
 - Simple upload interface
@@ -28,12 +31,14 @@
 ## 📋 Pre-Deployment Checklist
 
 ### 1. Database Migration
+
 ```bash
 # Run migration
 psql -h <RDS_HOST> -U <USER> -d qivr_db -f database/migrations/20251115_create_documents_tables.sql
 ```
 
 ### 2. AWS S3 Bucket Setup
+
 ```bash
 # Create S3 bucket
 aws s3 mb s3://qivr-documents-prod --region ap-southeast-2
@@ -62,25 +67,21 @@ aws s3api put-bucket-lifecycle-configuration \
 ```
 
 ### 3. IAM Permissions
+
 Add to ECS task role:
+
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
       "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObject",
-        "s3:DeleteObject"
-      ],
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
       "Resource": "arn:aws:s3:::qivr-documents-prod/*"
     },
     {
       "Effect": "Allow",
-      "Action": [
-        "textract:DetectDocumentText"
-      ],
+      "Action": ["textract:DetectDocumentText"],
       "Resource": "*"
     }
   ]
@@ -88,7 +89,9 @@ Add to ECS task role:
 ```
 
 ### 4. Backend Configuration
+
 Update `appsettings.Production.json`:
+
 ```json
 {
   "AWS": {
@@ -101,7 +104,9 @@ Update `appsettings.Production.json`:
 ```
 
 ### 5. Frontend Routes
+
 Add to clinic dashboard routes:
+
 ```typescript
 // apps/clinic-dashboard/src/App.tsx
 <Route path="/documents" element={<Documents />} />
@@ -109,6 +114,7 @@ Add to clinic dashboard routes:
 ```
 
 Add to patient portal routes:
+
 ```typescript
 // apps/patient-portal/src/App.tsx
 <Route path="/documents" element={<DocumentChecklist />} />
@@ -117,6 +123,7 @@ Add to patient portal routes:
 ## 🔧 Deployment Steps
 
 ### Step 1: Deploy Backend
+
 ```bash
 # Build and deploy via CodeBuild
 aws codebuild start-build \
@@ -125,6 +132,7 @@ aws codebuild start-build \
 ```
 
 ### Step 2: Deploy Frontend
+
 ```bash
 # Clinic Dashboard
 cd apps/clinic-dashboard
@@ -144,6 +152,7 @@ aws cloudfront create-invalidation \
 ```
 
 ### Step 3: Run Database Migration
+
 ```bash
 # Connect to RDS and run migration
 psql -h qivr-db.xxxxx.ap-southeast-2.rds.amazonaws.com \
@@ -153,6 +162,7 @@ psql -h qivr-db.xxxxx.ap-southeast-2.rds.amazonaws.com \
 ```
 
 ### Step 4: Verify Deployment
+
 ```bash
 # Test backend API
 node scripts/tests/test-document-upload.mjs
@@ -167,6 +177,7 @@ aws ecs describe-services \
 ## 🧪 Testing
 
 ### Backend API Tests
+
 ```bash
 # Run comprehensive test
 node scripts/tests/test-document-upload.mjs
@@ -183,6 +194,7 @@ node scripts/tests/test-document-upload.mjs
 ### Frontend Manual Tests
 
 **Clinic Dashboard:**
+
 1. Navigate to /documents/upload
 2. Search and select a patient
 3. Drag-and-drop a PDF file
@@ -195,6 +207,7 @@ node scripts/tests/test-document-upload.mjs
 10. Delete document
 
 **Patient Portal:**
+
 1. Navigate to /documents
 2. View required documents checklist
 3. Click "Upload" on a required document
@@ -206,6 +219,7 @@ node scripts/tests/test-document-upload.mjs
 ## 📊 Monitoring
 
 ### CloudWatch Logs
+
 ```bash
 # View API logs
 aws logs tail /aws/ecs/qivr-api --follow --region ap-southeast-2
@@ -218,11 +232,13 @@ aws logs filter-log-events \
 ```
 
 ### S3 Metrics
+
 - Monitor bucket size
 - Track upload/download requests
 - Check encryption status
 
 ### Textract Usage
+
 - Monitor API calls
 - Track processing time
 - Check confidence scores
@@ -243,16 +259,19 @@ aws logs filter-log-events \
 ## 📈 Performance Optimization
 
 ### S3 Configuration
+
 - Use S3 Transfer Acceleration (optional)
 - Enable S3 Intelligent-Tiering for cost optimization
 - Set lifecycle policies for archival
 
 ### Textract Optimization
+
 - Process OCR asynchronously (already implemented)
 - Don't block upload on OCR completion
 - Poll for results with exponential backoff
 
 ### Frontend Optimization
+
 - Lazy load document list
 - Implement pagination (already done)
 - Cache document metadata
@@ -261,18 +280,21 @@ aws logs filter-log-events \
 ## 🐛 Troubleshooting
 
 ### Upload Fails
+
 1. Check S3 bucket permissions
 2. Verify IAM role attached to ECS task
 3. Check file size < 50MB
 4. Verify file type is supported
 
 ### OCR Not Working
+
 1. Check Textract permissions
 2. Verify S3 bucket in same region as Textract
 3. Check CloudWatch logs for errors
 4. Verify document is text-based (not image-only)
 
 ### Download Fails
+
 1. Check presigned URL expiration
 2. Verify S3 object exists
 3. Check IAM permissions for GetObject
@@ -310,6 +332,7 @@ aws logs filter-log-events \
 ## 📞 Support
 
 For issues or questions:
+
 - Check CloudWatch logs
 - Review audit logs in database
 - Contact DevOps team
