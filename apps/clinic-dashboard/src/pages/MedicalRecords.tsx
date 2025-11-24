@@ -90,14 +90,14 @@ import {
   PageHeader,
   TabPanel,
   StatCard,
-  FlexBetween,
   FormDialog,
-  QivrButton,
+  AuraButton,
   InfoCard,
   AuraChartCard,
   PainMapProgression,
   AuraEmptyState,
   StatCardSkeleton,
+  FlexBetween,
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
 
@@ -1261,13 +1261,13 @@ const MedicalRecords: React.FC = () => {
                     <Typography variant="h6">
                       Pain Assessment History
                     </Typography>
-                    <QivrButton
+                    <AuraButton
                       variant="contained"
                       startIcon={<AddIcon />}
                       onClick={() => setVitalDialogOpen(true)}
                     >
                       Record Assessment
-                    </QivrButton>
+                    </AuraButton>
                   </FlexBetween>
 
                   {/* Latest Pain Assessment */}

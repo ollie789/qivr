@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -19,7 +19,7 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-} from '@mui/material';
+} from "@mui/material";
 import {
   People as PeopleIcon,
   CalendarMonth as CalendarIcon,
@@ -27,7 +27,7 @@ import {
   Assessment as AssessmentIcon,
   Download as DownloadIcon,
   Refresh as RefreshIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 import {
   LineChart,
   Line,
@@ -37,37 +37,36 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
-import { useQuery } from '@tanstack/react-query';
-import { format, subDays } from 'date-fns';
-import { useAuthGuard } from '../hooks/useAuthGuard';
-import { PainMapMetrics, InfoCard } from '@qivr/design-system';
-import apiClient from '../lib/api-client';
+} from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { format, subDays } from "date-fns";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { PainMapMetrics } from "@qivr/design-system";
+import apiClient from "../lib/api-client";
 import analyticsApi, {
   ClinicAnalytics,
   AppointmentTrend,
   PromCompletionBreakdown,
-} from '../services/analyticsApi';
+} from "../services/analyticsApi";
 import {
   AppointmentTrendCard,
   PromCompletionCard,
   TopDiagnosesCard,
-} from '../features/analytics';
-import { 
-  DashboardSectionCard, 
-  FlexBetween, 
-  QivrButton, 
-  TableSection, 
+} from "../features/analytics";
+import {
   PageHeader,
-  AuraMetricCard,
+  AuraStatCard,
   StatCardSkeleton,
-} from '@qivr/design-system';
+  InfoCard,
+  AuraChartCard,
+  AuraButton,
+} from "@qivr/design-system";
 import type {
   AppointmentTrendDatum,
   DiagnosisDatum,
   PromCompletionDatum,
-} from '../features/analytics';
-import { useAuthUser } from '../stores/authStore';
+} from "../features/analytics";
+import { useAuthUser } from "../stores/authStore";
 
 const buildDashboardStats = (analytics?: ClinicAnalytics | null) => {
   if (!analytics) {
@@ -82,11 +81,15 @@ const buildDashboardStats = (analytics?: ClinicAnalytics | null) => {
   }
 
   const totalPatients =
-    analytics.patientMetrics.newPatients + analytics.patientMetrics.returningPatients;
+    analytics.patientMetrics.newPatients +
+    analytics.patientMetrics.returningPatients;
 
   return {
     todayAppointments: analytics.appointmentMetrics.totalScheduled,
-    pendingIntakes: Math.max(analytics.promMetrics.totalSent - analytics.promMetrics.completed, 0),
+    pendingIntakes: Math.max(
+      analytics.promMetrics.totalSent - analytics.promMetrics.completed,
+      0,
+    ),
     activePatients: totalPatients,
     completedToday: analytics.appointmentMetrics.completed,
     averageWaitTime: analytics.appointmentMetrics.averageWaitTime,
@@ -95,11 +98,11 @@ const buildDashboardStats = (analytics?: ClinicAnalytics | null) => {
 };
 
 const Analytics: React.FC = () => {
-  const [dateRange, setDateRange] = useState('30');
+  const [dateRange, setDateRange] = useState("30");
   const [activeTab, setActiveTab] = useState(0);
-  const [painAvatarType, setPainAvatarType] = useState('male');
-  const [painViewOrientation, setPainViewOrientation] = useState('front');
-  
+  const [painAvatarType, setPainAvatarType] = useState("male");
+  const [painViewOrientation, setPainViewOrientation] = useState("front");
+
   const user = useAuthUser();
   const { canMakeApiCalls } = useAuthGuard();
   const tenantId = user?.tenantId;
@@ -111,17 +114,33 @@ const Analytics: React.FC = () => {
     return { from, to };
   };
 
-  const { data: clinicAnalytics, isLoading, isFetching, refetch, error } = useQuery<ClinicAnalytics | null>({
-    queryKey: ['clinicAnalytics', tenantId, dateRange],
+  const {
+    data: clinicAnalytics,
+    isLoading,
+    isFetching,
+    refetch,
+    error,
+  } = useQuery<ClinicAnalytics | null>({
+    queryKey: ["clinicAnalytics", tenantId, dateRange],
     queryFn: async () => {
       if (!tenantId) {
-        console.log('Analytics: No tenantId available');
+        console.log("Analytics: No tenantId available");
         return null;
       }
       const { from, to } = getDateRange();
-      console.log('Analytics: Fetching data for tenantId:', tenantId, 'from:', from, 'to:', to);
-      const result = await analyticsApi.getClinicAnalytics(undefined, { from, to });
-      console.log('Analytics: Received data:', result);
+      console.log(
+        "Analytics: Fetching data for tenantId:",
+        tenantId,
+        "from:",
+        from,
+        "to:",
+        to,
+      );
+      const result = await analyticsApi.getClinicAnalytics(undefined, {
+        from,
+        to,
+      });
+      console.log("Analytics: Received data:", result);
       return result;
     },
     enabled: canMakeApiCalls && Boolean(tenantId),
@@ -129,10 +148,16 @@ const Analytics: React.FC = () => {
 
   // Pain map analytics queries
   const { data: painHeatMap, isLoading: heatMapLoading } = useQuery({
-    queryKey: ['painHeatMap', tenantId, dateRange, painAvatarType, painViewOrientation],
+    queryKey: [
+      "painHeatMap",
+      tenantId,
+      dateRange,
+      painAvatarType,
+      painViewOrientation,
+    ],
     queryFn: async () => {
       const { from, to } = getDateRange();
-      return await apiClient.post('/api/pain-map-analytics/heatmap', {
+      return await apiClient.post("/api/pain-map-analytics/heatmap", {
         startDate: from.toISOString(),
         endDate: to.toISOString(),
         avatarType: painAvatarType,
@@ -143,10 +168,10 @@ const Analytics: React.FC = () => {
   });
 
   const { data: painMetrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ['painMetrics', tenantId, dateRange],
+    queryKey: ["painMetrics", tenantId, dateRange],
     queryFn: async () => {
       const { from, to } = getDateRange();
-      return await apiClient.post('/api/pain-map-analytics/metrics', {
+      return await apiClient.post("/api/pain-map-analytics/metrics", {
         startDate: from.toISOString(),
         endDate: to.toISOString(),
       });
@@ -158,24 +183,26 @@ const Analytics: React.FC = () => {
 
   const dashboardStats = useMemo(() => {
     const stats = buildDashboardStats(clinicAnalytics ?? undefined);
-    console.log('Analytics: Dashboard stats:', stats);
+    console.log("Analytics: Dashboard stats:", stats);
     return stats;
   }, [clinicAnalytics]);
 
   const appointmentData = useMemo<AppointmentTrendDatum[]>(() => {
     if (!clinicAnalytics?.appointmentTrends) {
-      console.log('Analytics: No appointment trends data');
+      console.log("Analytics: No appointment trends data");
       return [];
     }
-    const data = clinicAnalytics.appointmentTrends.map((trend: AppointmentTrend) => ({
-      name: format(new Date(trend.date), 'MMM d'),
-      appointments: trend.appointments,
-      completed: trend.completed,
-      cancellations: trend.cancellations,
-      noShows: trend.noShows,
-      newPatients: trend.newPatients,
-    }));
-    console.log('Analytics: Appointment data:', data);
+    const data = clinicAnalytics.appointmentTrends.map(
+      (trend: AppointmentTrend) => ({
+        name: format(new Date(trend.date), "MMM d"),
+        appointments: trend.appointments,
+        completed: trend.completed,
+        cancellations: trend.cancellations,
+        noShows: trend.noShows,
+        newPatients: trend.newPatients,
+      }),
+    );
+    console.log("Analytics: Appointment data:", data);
     return data;
   }, [clinicAnalytics]);
 
@@ -188,16 +215,19 @@ const Analytics: React.FC = () => {
       value: diagnosis.count,
       percentage: (diagnosis.count / total) * 100,
       color: [
-        'var(--qivr-palette-primary-main)',
-        'var(--qivr-palette-secondary-main)',
-        'var(--qivr-palette-success-main)',
-        'var(--qivr-palette-warning-main)',
-        'var(--qivr-palette-neutral-500, #64748b)',
+        "var(--qivr-palette-primary-main)",
+        "var(--qivr-palette-secondary-main)",
+        "var(--qivr-palette-success-main)",
+        "var(--qivr-palette-warning-main)",
+        "var(--qivr-palette-neutral-500, #64748b)",
       ][index % 5],
     }));
   }, [clinicAnalytics]);
 
-  const practitionerPerformance = useMemo(() => clinicAnalytics?.providerPerformance ?? [], [clinicAnalytics]);
+  const practitionerPerformance = useMemo(
+    () => clinicAnalytics?.providerPerformance ?? [],
+    [clinicAnalytics],
+  );
 
   const promCompletionData = useMemo<PromCompletionDatum[]>(() => {
     const breakdown = clinicAnalytics?.promCompletionBreakdown ?? [];
@@ -217,10 +247,13 @@ const Analytics: React.FC = () => {
       return [] as { month: string; revenue: number; expenses: number }[];
     }
     const { revenueMetrics } = clinicAnalytics;
-    const expenses = Math.max(revenueMetrics.totalBilled - revenueMetrics.totalCollected, 0);
+    const expenses = Math.max(
+      revenueMetrics.totalBilled - revenueMetrics.totalCollected,
+      0,
+    );
     return [
       {
-        month: format(new Date(), 'MMM yyyy'),
+        month: format(new Date(), "MMM yyyy"),
         revenue: revenueMetrics.totalCollected,
         expenses,
       },
@@ -229,44 +262,40 @@ const Analytics: React.FC = () => {
 
   const statCards = [
     {
-      id: 'total-patients',
-      label: 'Total Patients',
+      id: "total-patients",
+      label: "Total Patients",
       value: dashboardStats.activePatients.toLocaleString(),
-      change: 12.5,
-      changeLabel: 'vs last period',
+      trend: { value: 12.5, label: "vs last period", isPositive: true },
       icon: <PeopleIcon />,
-      color: 'primary.main',
+      color: "#A641FA",
     },
     {
-      id: 'appointments-period',
-      label: 'Appointments This Period',
+      id: "appointments-period",
+      label: "Appointments This Period",
       value: clinicAnalytics
         ? clinicAnalytics.appointmentMetrics.totalScheduled.toLocaleString()
         : dashboardStats.todayAppointments.toLocaleString(),
-      change: 8.3,
-      changeLabel: 'vs last period',
+      trend: { value: 8.3, label: "vs last period", isPositive: true },
       icon: <CalendarIcon />,
-      color: 'secondary.main',
+      color: "#3385F0",
     },
     {
-      id: 'revenue',
-      label: 'Revenue',
+      id: "revenue",
+      label: "Revenue",
       value: clinicAnalytics
         ? `$${clinicAnalytics.revenueMetrics.totalCollected.toLocaleString()}`
-        : '$0',
-      change: 15.2,
-      changeLabel: 'vs last period',
+        : "$0",
+      trend: { value: 15.2, label: "vs last period", isPositive: true },
       icon: <MoneyIcon />,
-      color: 'success.main',
+      color: "#26CD82",
     },
     {
-      id: 'patient-satisfaction',
-      label: 'Patient Satisfaction',
+      id: "patient-satisfaction",
+      label: "Patient Satisfaction",
       value: `${dashboardStats.patientSatisfaction.toFixed(1)}/5`,
-      change: 2.1,
-      changeLabel: 'vs last period',
+      trend: { value: 2.1, label: "vs last period", isPositive: true },
       icon: <AssessmentIcon />,
-      color: 'warning.main',
+      color: "#F68D2A",
     },
   ];
 
@@ -280,7 +309,7 @@ const Analytics: React.FC = () => {
         title="Analytics Dashboard"
         description="Track your clinic's performance and patient outcomes"
         actions={
-          <FlexBetween sx={{ gap: 2 }}>
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Range</InputLabel>
               <Select
@@ -293,20 +322,25 @@ const Analytics: React.FC = () => {
                 <MenuItem value="90">90 days</MenuItem>
               </Select>
             </FormControl>
-            <QivrButton
+            <AuraButton
               variant="outlined"
-              emphasize="subtle"
-              startIcon={loading ? <CircularProgress size={18} /> : <RefreshIcon />}
+              startIcon={
+                loading ? <CircularProgress size={18} /> : <RefreshIcon />
+              }
               onClick={handleRefresh}
               disabled={loading}
             >
               Refresh
-            </QivrButton>
-          </FlexBetween>
+            </AuraButton>
+          </Box>
         }
       />
 
-      <Tabs value={activeTab} onChange={(_, val) => setActiveTab(val)} sx={{ mb: 3 }}>
+      <Tabs
+        value={activeTab}
+        onChange={(_, val) => setActiveTab(val)}
+        sx={{ mb: 3 }}
+      >
         <Tab label="Clinic Overview" />
         <Tab label="Pain Analytics" />
       </Tabs>
@@ -319,7 +353,8 @@ const Analytics: React.FC = () => {
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          Failed to load analytics: {error instanceof Error ? error.message : 'Unknown error'}
+          Failed to load analytics:{" "}
+          {error instanceof Error ? error.message : "Unknown error"}
         </Alert>
       )}
 
@@ -332,122 +367,135 @@ const Analytics: React.FC = () => {
       {activeTab === 0 && (
         <>
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            {loading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
-                  <StatCardSkeleton />
-                </Grid>
-              ))
-            ) : (
-              statCards.map((stat) => (
-                <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 3 }}>
-                  <AuraMetricCard
-                    title={stat.label}
-                    value={stat.value}
-                    change={stat.change}
-                    changeLabel={stat.changeLabel}
-                    icon={stat.icon}
-                    iconColor={stat.color}
-                  />
-                </Grid>
-              ))
-            )}
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+                    <StatCardSkeleton />
+                  </Grid>
+                ))
+              : statCards.map((stat) => (
+                  <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 3 }}>
+                    <AuraStatCard
+                      title={stat.label}
+                      value={stat.value}
+                      icon={stat.icon}
+                      iconColor={stat.color}
+                      trend={stat.trend}
+                    />
+                  </Grid>
+                ))}
           </Grid>
 
           <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 8 }}>
-          <AppointmentTrendCard
-            data={appointmentData}
-            showLegend
-            headerAction={
-              <Typography variant="body2" color="text.secondary">
-                Showing {appointmentData.length} data points
-              </Typography>
-            }
-          />
-        </Grid>
+            <Grid size={{ xs: 12, md: 8 }}>
+              <AppointmentTrendCard
+                data={appointmentData}
+                showLegend
+                headerAction={
+                  <Typography variant="body2" color="text.secondary">
+                    Showing {appointmentData.length} data points
+                  </Typography>
+                }
+              />
+            </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
-          <PromCompletionCard
-            data={promCompletionData}
-            summaryFormatter={(average, { isEmpty }) =>
-              isEmpty ? 'No PROM data available' : `Average completion rate: ${average}%`
-            }
-          />
-        </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <PromCompletionCard
+                data={promCompletionData}
+                summaryFormatter={(average, { isEmpty }) =>
+                  isEmpty
+                    ? "No PROM data available"
+                    : `Average completion rate: ${average}%`
+                }
+              />
+            </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TopDiagnosesCard
-            title="Top Diagnoses"
-            data={conditionData}
-            emptyMessage="No diagnosis data available for the selected range"
-          />
-        </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TopDiagnosesCard
+                title="Top Diagnoses"
+                data={conditionData}
+                emptyMessage="No diagnosis data available for the selected range"
+              />
+            </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TableSection
-            header={<Typography variant="h6">Provider Performance</Typography>}
-          >
-            <TableContainer component={Paper}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Provider</TableCell>
-                    <TableCell align="right">Patients</TableCell>
-                    <TableCell align="right">Completed</TableCell>
-                    <TableCell align="right">No-Show %</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {practitionerPerformance.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center">
-                        <Typography variant="body2" color="text.secondary">
-                          No provider data available for the selected range
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    practitionerPerformance.map((provider) => (
-                      <TableRow key={provider.providerId}>
-                        <TableCell>{provider.providerName}</TableCell>
-                        <TableCell align="right">{provider.patients}</TableCell>
-                        <TableCell align="right">{provider.appointmentsCompleted}</TableCell>
-                        <TableCell align="right">{provider.noShowRate.toFixed(2)}%</TableCell>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <InfoCard title="Provider Performance">
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Provider</TableCell>
+                        <TableCell align="right">Patients</TableCell>
+                        <TableCell align="right">Completed</TableCell>
+                        <TableCell align="right">No-Show %</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </TableSection>
-        </Grid>
+                    </TableHead>
+                    <TableBody>
+                      {practitionerPerformance.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center">
+                            <Typography variant="body2" color="text.secondary">
+                              No provider data available for the selected range
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        practitionerPerformance.map((provider) => (
+                          <TableRow key={provider.providerId}>
+                            <TableCell>{provider.providerName}</TableCell>
+                            <TableCell align="right">
+                              {provider.patients}
+                            </TableCell>
+                            <TableCell align="right">
+                              {provider.appointmentsCompleted}
+                            </TableCell>
+                            <TableCell align="right">
+                              {provider.noShowRate.toFixed(2)}%
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </InfoCard>
+            </Grid>
 
-        <Grid size={12}>
-          <DashboardSectionCard
-            header={
-              <FlexBetween>
-                <Typography variant="h6">Revenue Overview</Typography>
-                <QivrButton variant="outlined" size="small" startIcon={<DownloadIcon />} emphasize="subtle">
-                  Export report
-                </QivrButton>
-              </FlexBetween>
-            }
-          >
-              <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="var(--qivr-palette-primary-main)" />
-                  <Line type="monotone" dataKey="expenses" stroke="var(--qivr-palette-error-main)" />
-                </LineChart>
-              </ResponsiveContainer>
-          </DashboardSectionCard>
-        </Grid>
-      </Grid>
+            <Grid size={12}>
+              <AuraChartCard
+                title="Revenue Overview"
+                action={
+                  <AuraButton
+                    variant="outlined"
+                    size="small"
+                    startIcon={<DownloadIcon />}
+                  >
+                    Export report
+                  </AuraButton>
+                }
+              >
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="var(--qivr-palette-primary-main)"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="expenses"
+                      stroke="var(--qivr-palette-error-main)"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </AuraChartCard>
+            </Grid>
+          </Grid>
         </>
       )}
 
@@ -455,7 +503,7 @@ const Analytics: React.FC = () => {
         <Grid container spacing={3}>
           <Grid size={12}>
             <Paper sx={{ p: 2, mb: 2 }}>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
                 <FormControl size="small" sx={{ minWidth: 120 }}>
                   <InputLabel>Avatar</InputLabel>
                   <Select
@@ -484,24 +532,27 @@ const Analytics: React.FC = () => {
           </Grid>
 
           <Grid size={12}>
-            <InfoCard 
+            <InfoCard
               title="Pain Region Heat Map"
               subtitle="Aggregated pain data from all patients showing most commonly affected regions"
             >
               {heatMapLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress />
                 </Box>
               ) : painHeatMap && painHeatMap.length > 0 ? (
-                <Box sx={{ 
-                  bgcolor: '#f5f5f5', 
-                  borderRadius: 1, 
-                  p: 2,
-                  display: 'flex',
-                  justifyContent: 'center'
-                }}>
+                <Box
+                  sx={{
+                    bgcolor: "#f5f5f5",
+                    borderRadius: 1,
+                    p: 2,
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
                   <Typography variant="body2" color="text.secondary">
-                    3D heat map visualization coming soon. Currently showing {painHeatMap.length} data points.
+                    3D heat map visualization coming soon. Currently showing{" "}
+                    {painHeatMap.length} data points.
                   </Typography>
                 </Box>
               ) : (

@@ -126,18 +126,17 @@ import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 import {
   AvailabilitySlot,
-  FlexBetween,
   PageHeader,
-  QivrButton,
+  AuraButton,
   CalendarGridCell,
   AppointmentChip,
   calendar as calendarStyles,
   StatusBadge,
-  AuraButton,
   InfoCard,
   AuraEmptyState,
   StatCardSkeleton,
   FilterChips,
+  FlexBetween,
 } from "@qivr/design-system";
 
 interface Appointment {
@@ -716,13 +715,12 @@ const Appointments: React.FC = () => {
                 <IconButton onClick={() => navigateDate("prev")}>
                   <ChevronLeftIcon />
                 </IconButton>
-                <QivrButton
+                <AuraButton
                   startIcon={<TodayIcon />}
                   onClick={() => setSelectedDate(new Date())}
-                  emphasize="subtle"
                 >
                   Today
-                </QivrButton>
+                </AuraButton>
                 <Typography sx={{ mx: 2, minWidth: 200, textAlign: "center" }}>
                   {viewMode === "day" && format(selectedDate, "MMMM d, yyyy")}
                   {viewMode === "week" &&
@@ -1278,13 +1276,10 @@ const Appointments: React.FC = () => {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <QivrButton
-              emphasize="subtle"
-              onClick={() => setCreateDialogOpen(false)}
-            >
+            <AuraButton onClick={() => setCreateDialogOpen(false)}>
               Cancel
-            </QivrButton>
-            <QivrButton
+            </AuraButton>
+            <AuraButton
               variant="contained"
               onClick={handleCreateAppointment}
               disabled={
@@ -1296,7 +1291,7 @@ const Appointments: React.FC = () => {
               {createAppointmentMutation.isPending
                 ? "Creating…"
                 : "Create Appointment"}
-            </QivrButton>
+            </AuraButton>
           </DialogActions>
         </Dialog>
 
@@ -1377,16 +1372,13 @@ const Appointments: React.FC = () => {
               </Stack>
             </DialogContent>
             <DialogActions>
-              <QivrButton
-                emphasize="subtle"
-                onClick={() => setSelectedAppointment(null)}
-              >
+              <AuraButton onClick={() => setSelectedAppointment(null)}>
                 Close
-              </QivrButton>
-              <QivrButton variant="outlined" color="error" emphasize="subtle">
+              </AuraButton>
+              <AuraButton variant="outlined" color="error">
                 Cancel Appointment
-              </QivrButton>
-              <QivrButton variant="contained">Edit</QivrButton>
+              </AuraButton>
+              <AuraButton variant="contained">Edit</AuraButton>
             </DialogActions>
           </Dialog>
         )}

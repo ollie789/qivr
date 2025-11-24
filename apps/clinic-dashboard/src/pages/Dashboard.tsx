@@ -53,15 +53,15 @@ import type {
   DiagnosisDatum,
   PromCompletionDatum,
 } from "../features/analytics";
-import { 
-  QivrButton, 
-  AuraEmptyState, 
+import {
+  AuraButton,
+  AuraEmptyState,
   SkeletonLoader,
   AuraStatCard,
   StatCardSkeleton,
   GreetingCard,
   InfoCard,
-  AuraChartCard
+  AuraChartCard,
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -149,11 +149,11 @@ const Dashboard: React.FC = () => {
       percentage: (diagnosis.count / total) * 100,
       value: diagnosis.count,
       color: [
-        'var(--qivr-palette-primary-main)',
-        'var(--qivr-palette-secondary-main)',
-        'var(--qivr-palette-success-main)',
-        'var(--qivr-palette-warning-main)',
-        'var(--qivr-palette-neutral-500, #64748b)',
+        "var(--qivr-palette-primary-main)",
+        "var(--qivr-palette-secondary-main)",
+        "var(--qivr-palette-success-main)",
+        "var(--qivr-palette-warning-main)",
+        "var(--qivr-palette-neutral-500, #64748b)",
       ][index % 5],
     }));
   }, [clinicAnalytics]);
@@ -213,7 +213,7 @@ const Dashboard: React.FC = () => {
         title: "Appointments Today",
         value: derivedStats.todayAppointments.toString(),
         icon: <CalendarIcon />,
-        avatarColor: '#3385F0', // Aura blue
+        avatarColor: "#3385F0", // Aura blue
         trend: { value: 8.2, label: "vs yesterday", isPositive: true },
       },
       {
@@ -221,7 +221,7 @@ const Dashboard: React.FC = () => {
         title: "Pending Intakes",
         value: derivedStats.pendingIntakes.toString(),
         icon: <AssignmentIcon />,
-        avatarColor: '#F68D2A', // Aura orange
+        avatarColor: "#F68D2A", // Aura orange
         trend: { value: 3.5, label: "vs yesterday", isPositive: false },
       },
       {
@@ -229,7 +229,7 @@ const Dashboard: React.FC = () => {
         title: "Active Patients",
         value: derivedStats.activePatients.toString(),
         icon: <PeopleIcon />,
-        avatarColor: '#A641FA', // Aura purple
+        avatarColor: "#A641FA", // Aura purple
         trend: { value: 12.3, label: "vs last month", isPositive: true },
       },
       {
@@ -237,7 +237,7 @@ const Dashboard: React.FC = () => {
         title: "Avg Wait Time",
         value: `${derivedStats.averageWaitTime} min`,
         icon: <AccessTimeIcon />,
-        avatarColor: '#26CD82', // Aura green
+        avatarColor: "#26CD82", // Aura green
         trend: { value: 5.1, label: "vs yesterday", isPositive: false },
       },
       {
@@ -245,7 +245,7 @@ const Dashboard: React.FC = () => {
         title: "Completed Today",
         value: derivedStats.completedToday.toString(),
         icon: <CheckCircleIcon />,
-        avatarColor: '#26CD82', // Aura green
+        avatarColor: "#26CD82", // Aura green
         trend: { value: 15.7, label: "vs yesterday", isPositive: true },
       },
       {
@@ -253,7 +253,7 @@ const Dashboard: React.FC = () => {
         title: "Patient Satisfaction",
         value: derivedStats.patientSatisfaction.toFixed(1),
         icon: <StarIcon />,
-        avatarColor: '#F68D2A', // Aura orange
+        avatarColor: "#F68D2A", // Aura orange
         trend: { value: 2.4, label: "vs last week", isPositive: true },
       },
     ],
@@ -271,25 +271,23 @@ const Dashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mt: 3 }}>
-        {isStatsLoading ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
-              <StatCardSkeleton />
-            </Grid>
-          ))
-        ) : (
-          stats.map((stat) => (
-            <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
-              <AuraStatCard
-                title={stat.title}
-                value={stat.value}
-                icon={stat.icon}
-                iconColor={stat.avatarColor}
-                trend={stat.trend}
-              />
-            </Grid>
-          ))
-        )}
+        {isStatsLoading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+                <StatCardSkeleton />
+              </Grid>
+            ))
+          : stats.map((stat) => (
+              <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+                <AuraStatCard
+                  title={stat.title}
+                  value={stat.value}
+                  icon={stat.icon}
+                  iconColor={stat.avatarColor}
+                  trend={stat.trend}
+                />
+              </Grid>
+            ))}
       </Grid>
 
       {/* Main Content Grid */}
@@ -342,14 +340,14 @@ const Dashboard: React.FC = () => {
                 />
               )}
             </List>
-            <QivrButton
+            <AuraButton
               fullWidth
               variant="outlined"
               sx={{ mt: 2 }}
               onClick={() => navigate("/appointments")}
             >
               View All Appointments
-            </QivrButton>
+            </AuraButton>
           </InfoCard>
         </Grid>
 
@@ -357,66 +355,66 @@ const Dashboard: React.FC = () => {
         <Grid size={{ xs: 12, md: 6 }}>
           <InfoCard title="Recent Intake Submissions">
             <List>
-                {activityLoading ? (
-                  <SkeletonLoader type="list" count={3} />
-                ) : activityData?.length ? (
-                  activityData
-                    .filter((activity) => activity.type === "intake")
-                    .slice(0, 3)
-                    .map((activity) => (
-                      <ListItem key={activity.id} sx={{ px: 0 }}>
-                        <ListItemAvatar>
-                          <Avatar
-                            sx={{
-                              bgcolor:
-                                activity.status === "urgent"
-                                  ? 'var(--qivr-palette-error-main)'
-                                  : 'var(--qivr-palette-neutral-500, #6b7280)',
-                            }}
-                          >
-                            {activity.status === "urgent" ? (
-                              <WarningIcon />
-                            ) : (
-                              (activity.patientName?.[0] ?? "?")
-                            )}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={activity.patientName}
-                          secondary={`${activity.description} • ${new Date(activity.timestamp).toLocaleTimeString()}`}
-                        />
-                        <Chip
-                          label={activity.status || "pending"}
-                          size="small"
-                          color={
-                            activity.status === "urgent"
-                              ? "error"
-                              : activity.status === "pending"
-                                ? "warning"
-                                : "default"
-                          }
-                        />
-                      </ListItem>
-                    ))
-                ) : (
-                  <AuraEmptyState
-                    icon={<AssignmentIcon />}
-                    title="No recent intakes"
-                    description="No intake submissions to review."
-                    actionText="View Queue"
-                    onAction={() => navigate("/intake")}
-                    sx={{ py: 3 }}
-                  />
-                )}
+              {activityLoading ? (
+                <SkeletonLoader type="list" count={3} />
+              ) : activityData?.length ? (
+                activityData
+                  .filter((activity) => activity.type === "intake")
+                  .slice(0, 3)
+                  .map((activity) => (
+                    <ListItem key={activity.id} sx={{ px: 0 }}>
+                      <ListItemAvatar>
+                        <Avatar
+                          sx={{
+                            bgcolor:
+                              activity.status === "urgent"
+                                ? "var(--qivr-palette-error-main)"
+                                : "var(--qivr-palette-neutral-500, #6b7280)",
+                          }}
+                        >
+                          {activity.status === "urgent" ? (
+                            <WarningIcon />
+                          ) : (
+                            (activity.patientName?.[0] ?? "?")
+                          )}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={activity.patientName}
+                        secondary={`${activity.description} • ${new Date(activity.timestamp).toLocaleTimeString()}`}
+                      />
+                      <Chip
+                        label={activity.status || "pending"}
+                        size="small"
+                        color={
+                          activity.status === "urgent"
+                            ? "error"
+                            : activity.status === "pending"
+                              ? "warning"
+                              : "default"
+                        }
+                      />
+                    </ListItem>
+                  ))
+              ) : (
+                <AuraEmptyState
+                  icon={<AssignmentIcon />}
+                  title="No recent intakes"
+                  description="No intake submissions to review."
+                  actionText="View Queue"
+                  onAction={() => navigate("/intake")}
+                  sx={{ py: 3 }}
+                />
+              )}
             </List>
-            <QivrButton
+            <AuraButton
               fullWidth
               variant="outlined"
               sx={{ mt: 2 }}
               onClick={() => navigate("/intake")}
             >
               Review Intake Queue
-            </QivrButton>
+            </AuraButton>
           </InfoCard>
         </Grid>
 
@@ -444,7 +442,9 @@ const Dashboard: React.FC = () => {
           <PromCompletionCard
             data={promCompletionData}
             summaryFormatter={(average, { isEmpty }) =>
-              isEmpty ? "No PROM data available" : `Overall response rate: ${average}%`
+              isEmpty
+                ? "No PROM data available"
+                : `Overall response rate: ${average}%`
             }
           />
         </Grid>
