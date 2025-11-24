@@ -85,7 +85,7 @@ public class EvaluationService : IEvaluationService
             evaluation.PatientId,
             evaluation.Patient?.FullName ?? "Unknown",
             evaluation.Patient?.Email,
-            evaluation.Patient?.PhoneNumber,
+            evaluation.Patient?.Phone,
             evaluation.ChiefComplaint ?? "",
             evaluation.Symptoms,
             evaluation.Status.ToString(),
@@ -104,13 +104,13 @@ public class EvaluationService : IEvaluationService
         if (evaluation == null) return null;
 
         var painMaps = evaluation.PainMaps.Select(pm => new PainMapDto(
-            pm.Id,
             pm.BodyRegion,
+            pm.Coordinates.X,
+            pm.Coordinates.Y,
+            pm.Coordinates.Z,
             pm.PainIntensity,
             pm.PainType,
-            pm.PainQuality,
-            pm.OnsetDate,
-            pm.Notes
+            pm.PainQuality
         )).ToList();
 
         return new EvaluationDetailDto(
@@ -119,7 +119,7 @@ public class EvaluationService : IEvaluationService
             evaluation.PatientId,
             evaluation.Patient?.FullName ?? "Unknown",
             evaluation.Patient?.Email,
-            evaluation.Patient?.PhoneNumber,
+            evaluation.Patient?.Phone,
             evaluation.Patient?.DateOfBirth?.ToString("yyyy-MM-dd"),
             evaluation.ChiefComplaint ?? "",
             evaluation.Symptoms,
@@ -159,7 +159,7 @@ public class EvaluationService : IEvaluationService
             e.PatientId,
             e.Patient?.FullName ?? "Unknown",
             e.Patient?.Email,
-            e.Patient?.PhoneNumber,
+            e.Patient?.Phone,
             e.ChiefComplaint ?? "",
             e.Symptoms,
             e.Status.ToString(),
