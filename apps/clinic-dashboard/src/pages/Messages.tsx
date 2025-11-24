@@ -18,6 +18,7 @@ import {
   IconButton,
 } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import { auraColors } from "@qivr/design-system";
 import {
   useInfiniteQuery,
   useQuery,
@@ -248,8 +249,8 @@ const Messages: React.FC = () => {
                 const avatarColor = conversation.participantRole
                   .toLowerCase()
                   .includes("patient")
-                  ? "#3385F0"
-                  : "#A641FA";
+                  ? auraColors.blue.main
+                  : auraColors.purple.main;
                 const lastMessageTime = formatDistanceToNow(
                   new Date(conversation.lastMessageTime),
                   {

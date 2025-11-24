@@ -16,6 +16,7 @@ import {
   Divider,
   Avatar,
 } from "@mui/material";
+import { auraColors } from "@qivr/design-system";
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
@@ -76,7 +77,7 @@ export const MainLayout: React.FC = () => {
       {/* User Info */}
       <Box sx={{ p: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-          <Avatar sx={{ mr: 2, bgcolor: "primary.main" }}>
+          <Avatar sx={{ mr: 2, bgcolor: auraColors.blue.main }}>
             {user?.email?.charAt(0).toUpperCase()}
           </Avatar>
           <Box>

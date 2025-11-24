@@ -9,3 +9,6 @@ export * from './types/pain-drawing';
 // Aura UI exports - import these explicitly when needed
 // export * as AuraTheme from './aura/theme/theme';
 // export * as AuraComponents from './aura/components';
+
+// Aura Colors
+export { auraColors } from './theme/auraColors';

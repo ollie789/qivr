@@ -14,6 +14,7 @@ import {
   IconButton,
   Paper,
 } from "@mui/material";
+import { auraColors } from "@qivr/design-system";
 import {
   Person as PersonIcon,
   MoreVert as MoreVertIcon,
@@ -184,7 +185,7 @@ const AppointmentsPage: React.FC = () => {
                 <Paper sx={{ p: { xs: 3, md: 5 } }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid>
-                      <Avatar sx={{ bgcolor: "primary.main" }}>
+                      <Avatar sx={{ bgcolor: auraColors.blue.main }}>
                         <PersonIcon />
                       </Avatar>
                     </Grid>

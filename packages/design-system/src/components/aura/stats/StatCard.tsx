@@ -1,5 +1,6 @@
 import { Avatar, Box, Paper, Typography, alpha } from '@mui/material';
 import { ReactNode } from 'react';
+import { auraColors } from '../../../theme/auraColors';
 
 export interface AuraStatCardProps {
   title: string;
@@ -34,7 +35,7 @@ export const AuraStatCard = ({
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
           borderColor: iconColor,
-          boxShadow: `0 4px 20px ${alpha(iconColor?.startsWith('#') ? iconColor : '#3385F0', 0.08)}`,
+          boxShadow: `0 4px 20px ${alpha(iconColor?.startsWith('#') ? iconColor : auraColors.blue.main, 0.08)}`,
           transform: 'translateY(-2px)',
         },
       }}
