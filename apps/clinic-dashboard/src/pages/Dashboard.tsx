@@ -263,7 +263,7 @@ const Dashboard: React.FC = () => {
   const isStatsLoading = statsLoading && !clinicAnalytics;
 
   return (
-    <Box>
+    <Box className="page-enter">
       <Box
         sx={{
           animation: 'fadeIn 0.6s ease-out',

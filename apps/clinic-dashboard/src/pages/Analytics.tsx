@@ -304,7 +304,7 @@ const Analytics: React.FC = () => {
   };
 
   return (
-    <Box>
+    <Box className="page-enter">
       <PageHeader
         title="Analytics Dashboard"
         description="Track your clinic's performance and patient outcomes"

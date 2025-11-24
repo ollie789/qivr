@@ -42,7 +42,15 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   const spinnerSize = typeof size === 'string' ? sizeMap[size] : size;
 
   const content = (
-    <>
+    <Box
+      sx={{
+        animation: 'pulse 2s ease-in-out infinite',
+        '@keyframes pulse': {
+          '0%, 100%': { opacity: 1 },
+          '50%': { opacity: 0.6 },
+        },
+      }}
+    >
       <CircularProgress size={spinnerSize} {...progressProps} />
       {message && (
         <Typography
@@ -53,7 +61,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
           {message}
         </Typography>
       )}
-    </>
+    </Box>
   );
 
   if (centered) {

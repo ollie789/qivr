@@ -1,0 +1,66 @@
+/* Page Transitions */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter 0.4s ease-out;
+}
+
+/* Input Focus Glow */
+.MuiTextField-root .MuiOutlinedInput-root {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.MuiTextField-root .MuiOutlinedInput-root:focus-within {
+  box-shadow: 0 0 0 3px rgba(51, 133, 240, 0.1);
+  transform: scale(1.01);
+}
+
+/* Button Ripple Enhancement */
+.MuiButton-root {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.MuiButton-root:active {
+  transform: scale(0.98);
+}
+
+/* Toast Slide In */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notistack-SnackbarContainer {
+  animation: toastSlideIn 0.3s ease-out;
+}
+
+/* Smooth Scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
