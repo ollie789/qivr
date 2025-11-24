@@ -1,2 +1,1 @@
-export { theme } from './theme';
-export { darkTheme } from './darkTheme';
+export * from './auraColors';

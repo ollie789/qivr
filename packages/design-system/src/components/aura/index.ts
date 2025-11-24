@@ -24,6 +24,7 @@ export * from './menus/ActionMenu';
 // Stats
 export * from './stats/MetricCard';
 export * from './stats/StatCard';
+export * from './stats/GradientCard';
 
 // Tables
 export * from './table/DataTable';
