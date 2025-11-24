@@ -253,19 +253,53 @@ const IntakeManagement: React.FC = () => {
             <Typography variant="body2" fontWeight="medium">
               {intake.patientName}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
               {intake.email}
             </Typography>
+            {intake.phone && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+              >
+                {intake.phone}
+              </Typography>
+            )}
           </Box>
         </Box>
       </TableCell>
-      <TableCell>{intake.conditionType}</TableCell>
       <TableCell>
-        <Chip
-          label={intake.severity}
-          color={getSeverityColor(intake.severity)}
-          size="small"
-        />
+        <Box>
+          <Typography variant="body2">{intake.conditionType}</Typography>
+          {intake.symptoms && intake.symptoms.length > 0 && (
+            <Typography variant="caption" color="text.secondary">
+              {intake.symptoms.slice(0, 2).join(", ")}
+              {intake.symptoms.length > 2 && ` +${intake.symptoms.length - 2}`}
+            </Typography>
+          )}
+        </Box>
+      </TableCell>
+      <TableCell>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Chip
+            label={intake.severity}
+            color={getSeverityColor(intake.severity)}
+            size="small"
+          />
+          {intake.aiSummary && (
+            <Tooltip title={intake.aiSummary} arrow>
+              <AssessmentIcon
+                fontSize="small"
+                color="primary"
+                sx={{ cursor: "help" }}
+              />
+            </Tooltip>
+          )}
+        </Box>
       </TableCell>
       <TableCell>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -388,52 +422,52 @@ const IntakeManagement: React.FC = () => {
           <>
             <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <AuraStatCard
-            title="Total Intakes"
-            value={stats.total.toString()}
-            icon={<QueueIcon />}
-            iconColor="primary.main"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <AuraStatCard
-            title="Pending Review"
-            value={stats.pending.toString()}
-            icon={<AssessmentIcon />}
-            iconColor="warning.main"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <AuraStatCard
-            title="Under Review"
-            value={stats.reviewing.toString()}
-            icon={<AssessmentIcon />}
-            iconColor="info.main"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <AuraStatCard
-            title="Processed"
-            value={stats.processed.toString()}
-            icon={<AssessmentIcon />}
-            iconColor="success.main"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <AuraStatCard
-            title="Critical Cases"
-            value={stats.critical.toString()}
-            icon={<WarningIcon />}
-            iconColor="error.main"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <AuraStatCard
-            title="Today's Intakes"
-            value={stats.todayIntakes.toString()}
-            icon={<QueueIcon />}
-            iconColor="primary.main"
-          />
-        </Grid>
+                title="Total Intakes"
+                value={stats.total.toString()}
+                icon={<QueueIcon />}
+                iconColor="primary.main"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <AuraStatCard
+                title="Pending Review"
+                value={stats.pending.toString()}
+                icon={<AssessmentIcon />}
+                iconColor="warning.main"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <AuraStatCard
+                title="Under Review"
+                value={stats.reviewing.toString()}
+                icon={<AssessmentIcon />}
+                iconColor="info.main"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <AuraStatCard
+                title="Processed"
+                value={stats.processed.toString()}
+                icon={<AssessmentIcon />}
+                iconColor="success.main"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <AuraStatCard
+                title="Critical Cases"
+                value={stats.critical.toString()}
+                icon={<WarningIcon />}
+                iconColor="error.main"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <AuraStatCard
+                title="Today's Intakes"
+                value={stats.todayIntakes.toString()}
+                icon={<QueueIcon />}
+                iconColor="primary.main"
+              />
+            </Grid>
           </>
         )}
       </Grid>
@@ -481,7 +515,9 @@ const IntakeManagement: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, md: 5 }}sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}
+          <Grid
+            size={{ xs: 12, md: 5 }}
+            sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}
           >
             <Button
               startIcon={<PersonAddIcon />}
@@ -521,9 +557,15 @@ const IntakeManagement: React.FC = () => {
           <Box sx={{ mt: 2 }}>
             <FilterChips
               filters={[
-                ...(searchQuery ? [{ key: "search", label: `Search: ${searchQuery}` }] : []),
-                ...(filterStatus !== "all" ? [{ key: "status", label: `Status: ${filterStatus}` }] : []),
-                ...(filterUrgency !== "all" ? [{ key: "urgency", label: `Urgency: ${filterUrgency}` }] : []),
+                ...(searchQuery
+                  ? [{ key: "search", label: `Search: ${searchQuery}` }]
+                  : []),
+                ...(filterStatus !== "all"
+                  ? [{ key: "status", label: `Status: ${filterStatus}` }]
+                  : []),
+                ...(filterUrgency !== "all"
+                  ? [{ key: "urgency", label: `Urgency: ${filterUrgency}` }]
+                  : []),
               ]}
               onRemove={(key) => {
                 if (key === "search") setSearchQuery("");
