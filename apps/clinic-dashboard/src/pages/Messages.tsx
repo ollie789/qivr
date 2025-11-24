@@ -248,8 +248,8 @@ const Messages: React.FC = () => {
                 const avatarColor = conversation.participantRole
                   .toLowerCase()
                   .includes("patient")
-                  ? "primary.main"
-                  : "secondary.main";
+                  ? "#3385F0"
+                  : "#A641FA";
                 const lastMessageTime = formatDistanceToNow(
                   new Date(conversation.lastMessageTime),
                   {
