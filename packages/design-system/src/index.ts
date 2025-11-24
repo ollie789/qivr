@@ -12,3 +12,6 @@ export * from './types/pain-drawing';
 
 // Aura Colors
 export { auraColors } from './theme/auraColors';
+
+// Glassmorphism Styles
+export { glassStyles, glassCard } from './styles/glassmorphism';

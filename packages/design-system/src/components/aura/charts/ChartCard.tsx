@@ -1,5 +1,6 @@
 import React from "react";
 import { Paper, Typography, Box, SxProps } from "@mui/material";
+import { glassCard } from '../../../styles/glassmorphism';
 
 export interface AuraChartCardProps {
   title: string;
@@ -23,12 +24,8 @@ export const AuraChartCard: React.FC<AuraChartCardProps> = ({
       sx={{ 
         p: { xs: 3, md: 5 }, 
         height: 1,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        '&:hover': {
-          boxShadow: 4,
-          transform: 'translateY(-2px)',
-        },
-        ...sx 
+        ...glassCard('light'),
+        ...(sx as any),
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: subtitle ? 2 : 3 }}>

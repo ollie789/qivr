@@ -1,6 +1,7 @@
 import { Paper, SxProps } from '@mui/material';
 import { ReactNode } from 'react';
 import { CardHeader } from './CardHeader';
+import { glassCard } from '../../../styles/glassmorphism';
 
 export interface InfoCardProps {
   title: string;
@@ -16,12 +17,8 @@ export const InfoCard = ({ title, subtitle, action, children, sx }: InfoCardProp
       sx={{ 
         p: { xs: 3, md: 5 }, 
         height: 1,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        '&:hover': {
-          boxShadow: 4,
-          transform: 'translateY(-2px)',
-        },
-        ...sx 
+        ...glassCard('light'),
+        ...(sx as any),
       }}
     >
       <CardHeader title={title} subtitle={subtitle} action={action} />
