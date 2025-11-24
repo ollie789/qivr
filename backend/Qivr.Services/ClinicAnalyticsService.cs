@@ -67,6 +67,26 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
             ? (double)weekAppointments.Count(a => a.Status == AppointmentStatus.NoShow) / weekAppointments.Count() * 100
             : 0;
 
+        // Calculate average wait time (ActualStart - ScheduledStart for completed appointments)
+        var appointmentsWithWaitTime = todayAppointments
+            .Where(a => a.ActualStart.HasValue && a.Status == AppointmentStatus.Completed)
+            .ToList();
+        
+        var avgWaitTime = appointmentsWithWaitTime.Any()
+            ? (int)appointmentsWithWaitTime.Average(a => (a.ActualStart!.Value - a.ScheduledStart).TotalMinutes)
+            : 0;
+
+        // Calculate staff utilization (appointments completed vs available slots)
+        var providers = await _context.Users
+            .Where(u => u.TenantId == tenantId && u.UserType == UserType.Staff)
+            .CountAsync(cancellationToken);
+
+        // Assume 8-hour workday, 30-min appointments = 16 slots per provider per day
+        var totalAvailableSlots = providers * 16;
+        var staffUtilization = totalAvailableSlots > 0
+            ? (double)todayAppointments.Count() / totalAvailableSlots * 100
+            : 0;
+
         // Revenue (if you have pricing data)
         var todayRevenue = completedToday * 150; // Placeholder - replace with actual pricing
 
@@ -82,8 +102,8 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
             NewPatientsThisMonth = newPatientsThisMonth,
             EstimatedRevenue = todayRevenue,
             NoShowRate = Math.Round(noShowRate, 1),
-            AverageWaitTime = 15, // TODO: Calculate from actual data
-            StaffUtilization = 85, // TODO: Calculate from provider schedules
+            AverageWaitTime = avgWaitTime,
+            StaffUtilization = (int)Math.Round(staffUtilization),
         };
     }
 
