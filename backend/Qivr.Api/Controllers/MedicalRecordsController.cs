@@ -612,7 +612,7 @@ public class MedicalRecordsController : BaseApiController
             {
                 Id = a.Id,
                 Date = a.ScheduledStart,
-                Provider = a.Provider != null ? a.Provider.FullName.Trim() : "Unknown",
+                Provider = a.Provider != null ? a.Provider.FullName : "Unknown",
                 Type = a.AppointmentType,
                 Status = a.Status.ToString().ToLowerInvariant()
             })
@@ -627,7 +627,7 @@ public class MedicalRecordsController : BaseApiController
             {
                 Id = a.Id,
                 Date = a.ScheduledStart,
-                Provider = a.Provider != null ? a.Provider.FullName.Trim() : "Unknown",
+                Provider = a.Provider != null ? a.Provider.FullName : "Unknown",
                 Facility = a.LocationDetails != null && a.LocationDetails.ContainsKey("address") ? a.LocationDetails["address"].ToString() : "Clinic",
                 Notes = a.Notes
             })
@@ -655,7 +655,7 @@ public class MedicalRecordsController : BaseApiController
         }
         else
         {
-            conditionDtos = GenerateSampleConditions(patient?.FullName.Trim());
+            conditionDtos = GenerateSampleConditions(patient?.FullName ?? "Patient");
         }
 
         return new MedicalSummaryDto

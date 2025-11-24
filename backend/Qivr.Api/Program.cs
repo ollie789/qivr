@@ -216,6 +216,8 @@ builder.Services.AddScoped<ISettingsService, SettingsService>();
 // Configure Audit and Notification Services
 builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
 builder.Services.AddScoped<IEnhancedAuditService, EnhancedAuditService>();
+builder.Services.AddScoped<IClinicAnalyticsService, ClinicAnalyticsService>();
+builder.Services.AddScoped<IPatientAnalyticsService, PatientAnalyticsService>();
 builder.Services.AddScoped<IPainMapAnalyticsService, PainMapAnalyticsService>();
 builder.Services.AddScoped<IPainMapExportService, PainMapExportService>();
 builder.Services.AddScoped<IPainPatternRecognitionService, PainPatternRecognitionService>();
