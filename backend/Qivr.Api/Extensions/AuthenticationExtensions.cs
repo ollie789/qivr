@@ -213,6 +213,9 @@ public static class AuthenticationExtensions
             options.AddPolicy("PatientOnly", policy =>
                 policy.RequireRole("Patient"));
                 
+            options.AddPolicy("StaffOnly", policy =>
+                policy.RequireRole("Clinician", "Admin", "Owner"));
+                
             options.AddPolicy("ClinicianOnly", policy =>
                 policy.RequireRole("Clinician", "Admin", "Owner"));
                 
