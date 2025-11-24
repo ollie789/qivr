@@ -59,7 +59,9 @@ export const AuraStatCard = ({
           sx={{
             width: 36,
             height: 36,
-            bgcolor: (theme) => alpha(iconColor, 0.08),
+            bgcolor: (theme) => iconColor?.startsWith('#') 
+              ? alpha(iconColor, 0.08)
+              : alpha(theme.palette.primary.main, 0.08),
             borderRadius: 1.5,
           }}
         >
