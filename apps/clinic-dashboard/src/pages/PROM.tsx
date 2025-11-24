@@ -78,7 +78,6 @@ import {
 } from "recharts";
 import {
   PageHeader,
-  FlexBetween,
   SectionLoader,
   StatusBadge,
   AuraStatCard,
@@ -488,7 +487,14 @@ const PROM: React.FC = () => {
           <TabPanel value={currentTab} index={0}>
             {/* Templates Tab */}
             <Box>
-              <FlexBetween sx={{ alignItems: "center", mb: 3 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
                 <Typography variant="h6">PROM Templates</Typography>
                 <Button
                   variant="contained"
@@ -497,7 +503,7 @@ const PROM: React.FC = () => {
                 >
                   Send PROM
                 </Button>
-              </FlexBetween>
+              </Box>
 
               {templatesLoading ? (
                 <SectionLoader minHeight={200} />

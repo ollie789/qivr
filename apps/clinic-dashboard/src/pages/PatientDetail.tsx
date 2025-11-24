@@ -16,7 +16,6 @@ import {
   StatCardSkeleton,
   AuraEmptyState,
   InfoCard,
-  FlexBetween,
 } from "@qivr/design-system";
 import { format, parseISO } from "date-fns";
 
@@ -122,15 +121,27 @@ export default function PatientDetail() {
               </Typography>
             </Box>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <FlexBetween>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <Typography variant="body2" color="text.secondary">
                   Phone:
                 </Typography>
                 <Typography variant="body2">
                   {patient.phone || "N/A"}
                 </Typography>
-              </FlexBetween>
-              <FlexBetween>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <Typography variant="body2" color="text.secondary">
                   Date of Birth:
                 </Typography>
@@ -139,21 +150,33 @@ export default function PatientDetail() {
                     ? format(parseISO(patient.dateOfBirth), "MMM d, yyyy")
                     : "N/A"}
                 </Typography>
-              </FlexBetween>
-              <FlexBetween>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <Typography variant="body2" color="text.secondary">
                   Gender:
                 </Typography>
                 <Typography variant="body2">
                   {patient.gender || "N/A"}
                 </Typography>
-              </FlexBetween>
-              <FlexBetween>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <Typography variant="body2" color="text.secondary">
                   Status:
                 </Typography>
                 <Chip label="Active" color="success" size="small" />
-              </FlexBetween>
+              </Box>
             </Box>
           </InfoCard>
         </Grid>

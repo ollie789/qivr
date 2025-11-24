@@ -33,7 +33,6 @@ import {
 } from "../services/messagesApi";
 import {
   PageHeader,
-  FlexBetween,
   SearchBar,
   SectionLoader,
   AuraButton,
@@ -219,7 +218,14 @@ const Messages: React.FC = () => {
         </Box>
       </Paper>
 
-      <FlexBetween sx={{ gap: 3, alignItems: "flex-start" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 3,
+          alignItems: "flex-start",
+        }}
+      >
         <Paper sx={{ width: 320, minHeight: 620, flexShrink: 0 }}>
           {conversationsLoading ? (
             <SectionLoader minHeight={200} />
@@ -499,7 +505,7 @@ const Messages: React.FC = () => {
             </>
           )}
         </Paper>
-      </FlexBetween>
+      </Box>
 
       <MessageComposer
         open={composerOpen}
