@@ -70,13 +70,23 @@ const Dashboard: React.FC = () => {
   const { canMakeApiCalls } = useAuthGuard();
   const [chartPeriod, setChartPeriod] = React.useState("7d");
 
-  // Fetch dashboard stats
-  const { data: statsData, isLoading: statsLoading } = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: dashboardApi.getStats,
+  // Fetch new comprehensive dashboard metrics
+  const { data: dashboardMetrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ["dashboard-metrics"],
+    queryFn: () => analyticsApi.getDashboardMetrics(),
     enabled: canMakeApiCalls,
     refetchInterval: 60000, // Refresh every minute
   });
+
+  // Fetch dashboard stats (legacy - fallback)
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: dashboardApi.getStats,
+    enabled: canMakeApiCalls && !dashboardMetrics,
+    refetchInterval: 60000,
+  });
+
+  const isLoadingStats = metricsLoading || statsLoading;
 
   // Fetch recent activity
   const { data: activityData, isLoading: activityLoading } = useQuery({
@@ -173,6 +183,23 @@ const Dashboard: React.FC = () => {
   }, [providerPerformance]);
 
   const derivedStats = React.useMemo(() => {
+    // Use new comprehensive metrics first
+    if (dashboardMetrics) {
+      return {
+        todayAppointments: dashboardMetrics.todayAppointments,
+        pendingIntakes: dashboardMetrics.pendingIntakes,
+        activePatients: dashboardMetrics.totalPatients,
+        completedToday: dashboardMetrics.completedToday,
+        averageWaitTime: dashboardMetrics.averageWaitTime,
+        patientSatisfaction: 0, // TODO: Add to backend
+        completionRate: dashboardMetrics.completionRate,
+        noShowRate: dashboardMetrics.noShowRate,
+        staffUtilization: dashboardMetrics.staffUtilization,
+        estimatedRevenue: dashboardMetrics.estimatedRevenue,
+      };
+    }
+
+    // Fallback to legacy analytics
     if (clinicAnalytics) {
       const totalPatients =
         clinicAnalytics.patientMetrics.newPatients +
@@ -204,7 +231,7 @@ const Dashboard: React.FC = () => {
       averageWaitTime: 0,
       patientSatisfaction: 0,
     };
-  }, [clinicAnalytics, statsData]);
+  }, [dashboardMetrics, clinicAnalytics, statsData]);
 
   const stats = React.useMemo(
     () => [
@@ -260,14 +287,14 @@ const Dashboard: React.FC = () => {
     [derivedStats],
   );
 
-  const isStatsLoading = statsLoading && !clinicAnalytics;
+  const isStatsLoading = isLoadingStats && !clinicAnalytics;
 
   return (
     <Box className="page-enter">
       <Box
         sx={{
-          animation: 'fadeIn 0.6s ease-out',
-          '@keyframes fadeIn': {
+          animation: "fadeIn 0.6s ease-out",
+          "@keyframes fadeIn": {
             from: { opacity: 0 },
             to: { opacity: 1 },
           },
@@ -291,17 +318,17 @@ const Dashboard: React.FC = () => {
               <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
                 <Box
                   sx={{
-                    animation: 'fadeInUp 0.5s ease-out',
+                    animation: "fadeInUp 0.5s ease-out",
                     animationDelay: `${index * 0.1}s`,
-                    animationFillMode: 'both',
-                    '@keyframes fadeInUp': {
+                    animationFillMode: "both",
+                    "@keyframes fadeInUp": {
                       from: {
                         opacity: 0,
-                        transform: 'translateY(20px)',
+                        transform: "translateY(20px)",
                       },
                       to: {
                         opacity: 1,
-                        transform: 'translateY(0)',
+                        transform: "translateY(0)",
                       },
                     },
                   }}

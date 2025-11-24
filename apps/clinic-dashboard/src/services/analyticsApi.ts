@@ -1,4 +1,4 @@
-import apiClient from '../lib/api-client';
+import apiClient from "../lib/api-client";
 
 type ISODateString = string;
 
@@ -7,6 +7,53 @@ export interface PeriodDto {
   to: ISODateString;
 }
 
+// New comprehensive analytics types
+export interface DashboardMetrics {
+  todayAppointments: number;
+  completedToday: number;
+  cancelledToday: number;
+  noShowToday: number;
+  completionRate: number;
+  pendingIntakes: number;
+  totalPatients: number;
+  newPatientsThisMonth: number;
+  estimatedRevenue: number;
+  noShowRate: number;
+  averageWaitTime: number;
+  staffUtilization: number;
+}
+
+export interface ClinicalAnalytics {
+  averagePromScore: number;
+  totalEvaluations: number;
+  topConditions: Array<{ condition: string; count: number }>;
+  averagePainIntensity: number;
+  bodyRegionDistribution: Array<{
+    region: string;
+    count: number;
+    avgIntensity: number;
+  }>;
+  patientImprovementRate: number;
+  totalPatientsTracked: number;
+}
+
+export interface PainMapAnalytics {
+  totalPainMaps: number;
+  painPoints3D: Array<{
+    x: number;
+    y: number;
+    z: number;
+    intensity: number;
+    bodyRegion: string;
+    painType: string;
+  }>;
+  painTypeDistribution: Array<{ type: string; count: number }>;
+  intensityDistribution: Array<{ range: string; count: number }>;
+  averageIntensity: number;
+  mostCommonRegion: string;
+}
+
+// Legacy types (keep for backward compatibility)
 export interface AppointmentMetrics {
   totalScheduled: number;
   completed: number;
@@ -224,52 +271,60 @@ type ProviderPerformanceDto = {
   AverageWaitTime?: Maybe<number>;
 };
 
-type ClinicAnalyticsResponse = {
-  period: PeriodDtoInternal;
-  appointmentMetrics: AppointmentMetricsDto;
-  patientMetrics: PatientMetricsDto;
-  promMetrics: PromMetricsDto;
-  revenueMetrics: RevenueMetricsDto;
-  topDiagnoses: DiagnosisCountDto[];
-  topProcedures: ProcedureCountDto[];
-  appointmentTrends: AppointmentTrendDto[];
-  promCompletionBreakdown: PromCompletionBreakdownDto[];
-  providerPerformance: ProviderPerformanceDto[];
-} | {
-  Period: PeriodDtoInternal;
-  AppointmentMetrics: AppointmentMetricsDto;
-  PatientMetrics: PatientMetricsDto;
-  PromMetrics: PromMetricsDto;
-  RevenueMetrics: RevenueMetricsDto;
-  TopDiagnoses: DiagnosisCountDto[];
-  TopProcedures: ProcedureCountDto[];
-  AppointmentTrends: AppointmentTrendDto[];
-  PromCompletionBreakdown: PromCompletionBreakdownDto[];
-  ProviderPerformance: ProviderPerformanceDto[];
-};
+type ClinicAnalyticsResponse =
+  | {
+      period: PeriodDtoInternal;
+      appointmentMetrics: AppointmentMetricsDto;
+      patientMetrics: PatientMetricsDto;
+      promMetrics: PromMetricsDto;
+      revenueMetrics: RevenueMetricsDto;
+      topDiagnoses: DiagnosisCountDto[];
+      topProcedures: ProcedureCountDto[];
+      appointmentTrends: AppointmentTrendDto[];
+      promCompletionBreakdown: PromCompletionBreakdownDto[];
+      providerPerformance: ProviderPerformanceDto[];
+    }
+  | {
+      Period: PeriodDtoInternal;
+      AppointmentMetrics: AppointmentMetricsDto;
+      PatientMetrics: PatientMetricsDto;
+      PromMetrics: PromMetricsDto;
+      RevenueMetrics: RevenueMetricsDto;
+      TopDiagnoses: DiagnosisCountDto[];
+      TopProcedures: ProcedureCountDto[];
+      AppointmentTrends: AppointmentTrendDto[];
+      PromCompletionBreakdown: PromCompletionBreakdownDto[];
+      ProviderPerformance: ProviderPerformanceDto[];
+    };
 
-const toNumber = (value: Maybe<number>): number => (value ?? 0);
+const toNumber = (value: Maybe<number>): number => value ?? 0;
 
 const toDecimal = (value: Maybe<number>): number =>
-  typeof value === 'number' ? Number(value) : Number(value ?? 0);
+  typeof value === "number" ? Number(value) : Number(value ?? 0);
 
-const toString = (value: Maybe<string>, fallback = ''): string =>
+const toString = (value: Maybe<string>, fallback = ""): string =>
   value != null ? String(value) : fallback;
 
 // Add unwrap helper function
 const unwrap = <T>(payload: T | { data: T }): T => {
-  if (payload && typeof payload === 'object' && 'data' in (payload as any)) {
+  if (payload && typeof payload === "object" && "data" in (payload as any)) {
     return (payload as any).data as T;
   }
   return payload as T;
 };
 
-const normalizePeriod = (dto: PeriodDtoInternal): { from: ISODateString; to: ISODateString } => ({
-  from: new Date(dto.from ?? dto.From ?? new Date().toISOString()).toISOString(),
+const normalizePeriod = (
+  dto: PeriodDtoInternal,
+): { from: ISODateString; to: ISODateString } => ({
+  from: new Date(
+    dto.from ?? dto.From ?? new Date().toISOString(),
+  ).toISOString(),
   to: new Date(dto.to ?? dto.To ?? new Date().toISOString()).toISOString(),
 });
 
-const mapAppointmentMetrics = (dto: AppointmentMetricsDto): AppointmentMetrics => ({
+const mapAppointmentMetrics = (
+  dto: AppointmentMetricsDto,
+): AppointmentMetrics => ({
   totalScheduled: toNumber(dto.totalScheduled ?? dto.TotalScheduled),
   completed: toNumber(dto.completed ?? dto.Completed),
   noShows: toNumber(dto.noShows ?? dto.NoShows),
@@ -282,9 +337,15 @@ const mapAppointmentMetrics = (dto: AppointmentMetricsDto): AppointmentMetrics =
 const mapPatientMetrics = (dto: PatientMetricsDto): PatientMetrics => ({
   newPatients: toNumber(dto.newPatients ?? dto.NewPatients),
   returningPatients: toNumber(dto.returningPatients ?? dto.ReturningPatients),
-  averageVisitsPerPatient: toDecimal(dto.averageVisitsPerPatient ?? dto.AverageVisitsPerPatient),
-  patientRetentionRate: toDecimal(dto.patientRetentionRate ?? dto.PatientRetentionRate),
-  patientSatisfactionScore: toDecimal(dto.patientSatisfactionScore ?? dto.PatientSatisfactionScore),
+  averageVisitsPerPatient: toDecimal(
+    dto.averageVisitsPerPatient ?? dto.AverageVisitsPerPatient,
+  ),
+  patientRetentionRate: toDecimal(
+    dto.patientRetentionRate ?? dto.PatientRetentionRate,
+  ),
+  patientSatisfactionScore: toDecimal(
+    dto.patientSatisfactionScore ?? dto.PatientSatisfactionScore,
+  ),
 });
 
 const mapPromMetrics = (dto: PromMetricsDto): PromMetrics => ({
@@ -298,9 +359,13 @@ const mapPromMetrics = (dto: PromMetricsDto): PromMetrics => ({
 const mapRevenueMetrics = (dto: RevenueMetricsDto): RevenueMetrics => ({
   totalBilled: toDecimal(dto.totalBilled ?? dto.TotalBilled),
   totalCollected: toDecimal(dto.totalCollected ?? dto.TotalCollected),
-  outstandingBalance: toDecimal(dto.outstandingBalance ?? dto.OutstandingBalance),
+  outstandingBalance: toDecimal(
+    dto.outstandingBalance ?? dto.OutstandingBalance,
+  ),
   collectionRate: toDecimal(dto.collectionRate ?? dto.CollectionRate),
-  averageRevenuePerPatient: toDecimal(dto.averageRevenuePerPatient ?? dto.AverageRevenuePerPatient),
+  averageRevenuePerPatient: toDecimal(
+    dto.averageRevenuePerPatient ?? dto.AverageRevenuePerPatient,
+  ),
 });
 
 const mapDiagnosis = (dto: DiagnosisCountDto): DiagnosisCount => ({
@@ -316,7 +381,9 @@ const mapProcedure = (dto: ProcedureCountDto): ProcedureCount => ({
 });
 
 const mapTrend = (dto: AppointmentTrendDto): AppointmentTrend => ({
-  date: new Date(dto.date ?? dto.Date ?? new Date().toISOString()).toISOString(),
+  date: new Date(
+    dto.date ?? dto.Date ?? new Date().toISOString(),
+  ).toISOString(),
   appointments: toNumber(dto.appointments ?? dto.Appointments),
   completed: toNumber(dto.completed ?? dto.Completed),
   cancellations: toNumber(dto.cancellations ?? dto.Cancellations),
@@ -324,18 +391,24 @@ const mapTrend = (dto: AppointmentTrendDto): AppointmentTrend => ({
   newPatients: toNumber(dto.newPatients ?? dto.NewPatients),
 });
 
-const mapPromBreakdown = (dto: PromCompletionBreakdownDto): PromCompletionBreakdown => ({
+const mapPromBreakdown = (
+  dto: PromCompletionBreakdownDto,
+): PromCompletionBreakdown => ({
   templateName: toString(dto.templateName ?? dto.TemplateName),
   completed: toNumber(dto.completed ?? dto.Completed),
   pending: toNumber(dto.pending ?? dto.Pending),
   completionRate: toDecimal(dto.completionRate ?? dto.CompletionRate),
 });
 
-const mapProviderPerformance = (dto: ProviderPerformanceDto): ProviderPerformance => ({
+const mapProviderPerformance = (
+  dto: ProviderPerformanceDto,
+): ProviderPerformance => ({
   providerId: toString(dto.providerId ?? dto.ProviderId),
   providerName: toString(dto.providerName ?? dto.ProviderName),
   patients: toNumber(dto.patients ?? dto.Patients),
-  appointmentsCompleted: toNumber(dto.appointmentsCompleted ?? dto.AppointmentsCompleted),
+  appointmentsCompleted: toNumber(
+    dto.appointmentsCompleted ?? dto.AppointmentsCompleted,
+  ),
   noShowRate: toDecimal(dto.noShowRate ?? dto.NoShowRate),
   revenue: toDecimal(dto.revenue ?? dto.Revenue),
   satisfaction: toDecimal(dto.satisfaction ?? dto.Satisfaction),
@@ -343,16 +416,33 @@ const mapProviderPerformance = (dto: ProviderPerformanceDto): ProviderPerformanc
 });
 
 const mapClinicAnalytics = (raw: ClinicAnalyticsResponse): ClinicAnalytics => {
-  const periodDto = ('Period' in raw ? raw.Period : raw.period) ?? {};
-  const appointmentMetricsDto = ('AppointmentMetrics' in raw ? raw.AppointmentMetrics : raw.appointmentMetrics) ?? {};
-  const patientMetricsDto = ('PatientMetrics' in raw ? raw.PatientMetrics : raw.patientMetrics) ?? {};
-  const promMetricsDto = ('PromMetrics' in raw ? raw.PromMetrics : raw.promMetrics) ?? {};
-  const revenueMetricsDto = ('RevenueMetrics' in raw ? raw.RevenueMetrics : raw.revenueMetrics) ?? {};
-  const topDiagnosesDto = ('TopDiagnoses' in raw ? raw.TopDiagnoses : raw.topDiagnoses) ?? [];
-  const topProceduresDto = ('TopProcedures' in raw ? raw.TopProcedures : raw.topProcedures) ?? [];
-  const appointmentTrendsDto = ('AppointmentTrends' in raw ? raw.AppointmentTrends : raw.appointmentTrends) ?? [];
-  const promBreakdownDto = ('PromCompletionBreakdown' in raw ? raw.PromCompletionBreakdown : raw.promCompletionBreakdown) ?? [];
-  const providerPerformanceDto = ('ProviderPerformance' in raw ? raw.ProviderPerformance : raw.providerPerformance) ?? [];
+  const periodDto = ("Period" in raw ? raw.Period : raw.period) ?? {};
+  const appointmentMetricsDto =
+    ("AppointmentMetrics" in raw
+      ? raw.AppointmentMetrics
+      : raw.appointmentMetrics) ?? {};
+  const patientMetricsDto =
+    ("PatientMetrics" in raw ? raw.PatientMetrics : raw.patientMetrics) ?? {};
+  const promMetricsDto =
+    ("PromMetrics" in raw ? raw.PromMetrics : raw.promMetrics) ?? {};
+  const revenueMetricsDto =
+    ("RevenueMetrics" in raw ? raw.RevenueMetrics : raw.revenueMetrics) ?? {};
+  const topDiagnosesDto =
+    ("TopDiagnoses" in raw ? raw.TopDiagnoses : raw.topDiagnoses) ?? [];
+  const topProceduresDto =
+    ("TopProcedures" in raw ? raw.TopProcedures : raw.topProcedures) ?? [];
+  const appointmentTrendsDto =
+    ("AppointmentTrends" in raw
+      ? raw.AppointmentTrends
+      : raw.appointmentTrends) ?? [];
+  const promBreakdownDto =
+    ("PromCompletionBreakdown" in raw
+      ? raw.PromCompletionBreakdown
+      : raw.promCompletionBreakdown) ?? [];
+  const providerPerformanceDto =
+    ("ProviderPerformance" in raw
+      ? raw.ProviderPerformance
+      : raw.providerPerformance) ?? [];
 
   return {
     period: normalizePeriod(periodDto),
@@ -371,28 +461,59 @@ const mapClinicAnalytics = (raw: ClinicAnalyticsResponse): ClinicAnalytics => {
 const buildSearchParams = (params?: { from?: Date; to?: Date }) => {
   const search = new URLSearchParams();
   if (params?.from) {
-    search.set('from', params.from.toISOString());
+    search.set("from", params.from.toISOString());
   }
   if (params?.to) {
-    search.set('to', params.to.toISOString());
+    search.set("to", params.to.toISOString());
   }
   return search;
 };
 
 const getClinicAnalytics = async (
   _clinicId?: string,
-  params?: { from?: Date; to?: Date }
+  params?: { from?: Date; to?: Date },
 ): Promise<ClinicAnalytics> => {
   const search = buildSearchParams(params);
   const query = search.toString();
-  const url = `/api/clinic-management/analytics${query ? `?${query}` : ''}`;
-  const response = await apiClient.get<ClinicAnalyticsResponse | { data: ClinicAnalyticsResponse }>(url);
+  const url = `/api/clinic-management/analytics${query ? `?${query}` : ""}`;
+  const response = await apiClient.get<
+    ClinicAnalyticsResponse | { data: ClinicAnalyticsResponse }
+  >(url);
   const payload = unwrap(response);
   return mapClinicAnalytics(payload);
 };
 
+// New comprehensive analytics endpoints
+async function getDashboardMetrics(date?: Date): Promise<DashboardMetrics> {
+  const params = date ? { date: date.toISOString() } : {};
+  return apiClient.get("/api/clinic-analytics/dashboard", { params });
+}
+
+async function getClinicalAnalytics(
+  from?: Date,
+  to?: Date,
+): Promise<ClinicalAnalytics> {
+  const params: any = {};
+  if (from) params.from = from.toISOString();
+  if (to) params.to = to.toISOString();
+  return apiClient.get("/api/clinic-analytics/clinical", { params });
+}
+
+async function getPainMapAnalytics(
+  from?: Date,
+  to?: Date,
+): Promise<PainMapAnalytics> {
+  const params: any = {};
+  if (from) params.from = from.toISOString();
+  if (to) params.to = to.toISOString();
+  return apiClient.get("/api/clinic-analytics/pain-maps", { params });
+}
+
 const analyticsApi = {
   getClinicAnalytics,
+  getDashboardMetrics,
+  getClinicalAnalytics,
+  getPainMapAnalytics,
 };
 
 export { analyticsApi };
