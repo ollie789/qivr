@@ -242,7 +242,23 @@ const ClinicRegistration: React.FC = () => {
                 variant="contained"
                 size="large"
                 disabled={loading}
-                sx={{ mt: 3 }}
+                sx={{
+                  mt: 3,
+                  py: 1.5,
+                  background:
+                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
+                  boxShadow: "0 4px 12px rgba(51, 133, 240, 0.3)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    background:
+                      "linear-gradient(135deg, #2970D9 0%, #8F2FE3 100%)",
+                    boxShadow: "0 6px 20px rgba(51, 133, 240, 0.4)",
+                    transform: "translateY(-2px)",
+                  },
+                  "&:active": {
+                    transform: "translateY(0)",
+                  },
+                }}
               >
                 {loading ? "Setting up your clinic..." : "Complete Setup"}
               </Button>

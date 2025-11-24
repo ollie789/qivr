@@ -199,7 +199,23 @@ export default function Login() {
               fullWidth
               variant="contained"
               size="large"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{
+                mt: 3,
+                mb: 2,
+                py: 1.5,
+                background: "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
+                boxShadow: "0 4px 12px rgba(51, 133, 240, 0.3)",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                "&:hover": {
+                  background:
+                    "linear-gradient(135deg, #2970D9 0%, #8F2FE3 100%)",
+                  boxShadow: "0 6px 20px rgba(51, 133, 240, 0.4)",
+                  transform: "translateY(-2px)",
+                },
+                "&:active": {
+                  transform: "translateY(0)",
+                },
+              }}
               disabled={isLoggingIn}
             >
               {isLoggingIn ? (
