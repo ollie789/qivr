@@ -40,7 +40,10 @@ export default function MessagesPage() {
     staleTime: 30000,
   });
 
-  const messages = messagesResponse?.items || [];
+  const messages = useMemo(
+    () => messagesResponse?.items || [],
+    [messagesResponse?.items],
+  );
 
   // Auto-select first message
   useEffect(() => {

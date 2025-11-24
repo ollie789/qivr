@@ -10,6 +10,7 @@ import {
   Checkbox,
 } from "@mui/material";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface MedicalHistoryStepProps {
   formData: any;
   onChange: (field: string, value: any) => void;
