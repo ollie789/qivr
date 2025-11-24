@@ -84,11 +84,55 @@ public class EvaluationService : IEvaluationService
             evaluation.EvaluationNumber,
             evaluation.PatientId,
             evaluation.Patient?.FullName ?? "Unknown",
+            evaluation.Patient?.Email,
+            evaluation.Patient?.PhoneNumber,
             evaluation.ChiefComplaint ?? "",
             evaluation.Symptoms,
             evaluation.Status.ToString(),
             evaluation.Urgency?.ToString(),
             evaluation.CreatedAt
+        );
+    }
+
+    public async Task<EvaluationDetailDto?> GetEvaluationDetailAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var evaluation = await _context.Evaluations
+            .Include(e => e.Patient)
+            .Include(e => e.PainMaps)
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+
+        if (evaluation == null) return null;
+
+        var painMaps = evaluation.PainMaps.Select(pm => new PainMapDto(
+            pm.Id,
+            pm.BodyRegion,
+            pm.PainIntensity,
+            pm.PainType,
+            pm.PainQuality,
+            pm.OnsetDate,
+            pm.Notes
+        )).ToList();
+
+        return new EvaluationDetailDto(
+            evaluation.Id,
+            evaluation.EvaluationNumber,
+            evaluation.PatientId,
+            evaluation.Patient?.FullName ?? "Unknown",
+            evaluation.Patient?.Email,
+            evaluation.Patient?.PhoneNumber,
+            evaluation.Patient?.DateOfBirth?.ToString("yyyy-MM-dd"),
+            evaluation.ChiefComplaint ?? "",
+            evaluation.Symptoms,
+            evaluation.MedicalHistory,
+            evaluation.QuestionnaireResponses,
+            evaluation.AiSummary,
+            evaluation.AiRiskFlags,
+            evaluation.AiProcessedAt,
+            evaluation.ClinicianNotes,
+            evaluation.Status.ToString(),
+            evaluation.Urgency?.ToString(),
+            evaluation.CreatedAt,
+            painMaps
         );
     }
 

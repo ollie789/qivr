@@ -65,11 +65,11 @@ public class EvaluationsController : BaseApiController
     /// Get evaluation by ID
     /// </summary>
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(EvaluationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(EvaluationDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetEvaluation(Guid id, CancellationToken cancellationToken)
     {
-        var evaluation = await _evaluationService.GetEvaluationAsync(id, cancellationToken);
+        var evaluation = await _evaluationService.GetEvaluationDetailAsync(id, cancellationToken);
         
         if (evaluation == null)
         {

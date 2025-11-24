@@ -141,6 +141,28 @@ public record EvaluationDto(
     DateTime CreatedAt
 );
 
+public record EvaluationDetailDto(
+    Guid Id,
+    string EvaluationNumber,
+    Guid PatientId,
+    string PatientName,
+    string? PatientEmail,
+    string? PatientPhone,
+    string? PatientDateOfBirth,
+    string ChiefComplaint,
+    List<string> Symptoms,
+    Dictionary<string, object> MedicalHistory,
+    Dictionary<string, object> QuestionnaireResponses,
+    string? AiSummary,
+    List<string> AiRiskFlags,
+    DateTime? AiProcessedAt,
+    string? ClinicianNotes,
+    string Status,
+    string? Urgency,
+    DateTime CreatedAt,
+    List<PainMapDto> PainMaps
+);
+
 public record PainMapDto(
     string BodyRegion,
     float X,
