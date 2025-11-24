@@ -373,15 +373,33 @@ const Analytics: React.FC = () => {
                     <StatCardSkeleton />
                   </Grid>
                 ))
-              : statCards.map((stat) => (
+              : statCards.map((stat, index) => (
                   <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 3 }}>
-                    <AuraStatCard
-                      title={stat.label}
-                      value={stat.value}
-                      icon={stat.icon}
-                      iconColor={stat.color}
-                      trend={stat.trend}
-                    />
+                    <Box
+                      sx={{
+                        animation: 'fadeInUp 0.5s ease-out',
+                        animationDelay: `${index * 0.1}s`,
+                        animationFillMode: 'both',
+                        '@keyframes fadeInUp': {
+                          from: {
+                            opacity: 0,
+                            transform: 'translateY(20px)',
+                          },
+                          to: {
+                            opacity: 1,
+                            transform: 'translateY(0)',
+                          },
+                        },
+                      }}
+                    >
+                      <AuraStatCard
+                        title={stat.label}
+                        value={stat.value}
+                        icon={stat.icon}
+                        iconColor={stat.color}
+                        trend={stat.trend}
+                      />
+                    </Box>
                   </Grid>
                 ))}
           </Grid>

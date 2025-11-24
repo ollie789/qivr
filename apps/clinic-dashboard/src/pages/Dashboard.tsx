@@ -264,10 +264,20 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box>
-      <GreetingCard
-        title={`Welcome back, ${user?.name || "Doctor"}`}
-        subtitle="Here's your clinic overview for today"
-      />
+      <Box
+        sx={{
+          animation: 'fadeIn 0.6s ease-out',
+          '@keyframes fadeIn': {
+            from: { opacity: 0 },
+            to: { opacity: 1 },
+          },
+        }}
+      >
+        <GreetingCard
+          title={`Welcome back, ${user?.name || "Doctor"}`}
+          subtitle="Here's your clinic overview for today"
+        />
+      </Box>
 
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mt: 3 }}>
@@ -277,15 +287,33 @@ const Dashboard: React.FC = () => {
                 <StatCardSkeleton />
               </Grid>
             ))
-          : stats.map((stat) => (
+          : stats.map((stat, index) => (
               <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
-                <AuraStatCard
-                  title={stat.title}
-                  value={stat.value}
-                  icon={stat.icon}
-                  iconColor={stat.avatarColor}
-                  trend={stat.trend}
-                />
+                <Box
+                  sx={{
+                    animation: 'fadeInUp 0.5s ease-out',
+                    animationDelay: `${index * 0.1}s`,
+                    animationFillMode: 'both',
+                    '@keyframes fadeInUp': {
+                      from: {
+                        opacity: 0,
+                        transform: 'translateY(20px)',
+                      },
+                      to: {
+                        opacity: 1,
+                        transform: 'translateY(0)',
+                      },
+                    },
+                  }}
+                >
+                  <AuraStatCard
+                    title={stat.title}
+                    value={stat.value}
+                    icon={stat.icon}
+                    iconColor={stat.avatarColor}
+                    trend={stat.trend}
+                  />
+                </Box>
               </Grid>
             ))}
       </Grid>

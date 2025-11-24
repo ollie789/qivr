@@ -18,7 +18,18 @@ export const AuraChartCard: React.FC<AuraChartCardProps> = ({
   sx,
 }) => {
   return (
-    <Paper sx={{ p: { xs: 3, md: 5 }, height: 1, ...sx }}>
+    <Paper 
+      sx={{ 
+        p: { xs: 3, md: 5 }, 
+        height: 1,
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+          boxShadow: 4,
+          transform: 'translateY(-2px)',
+        },
+        ...sx 
+      }}
+    >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: subtitle ? 2 : 3 }}>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: subtitle ? 0.5 : 0 }}>
