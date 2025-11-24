@@ -913,7 +913,7 @@ export const PromBuilder: React.FC = () => {
                       min: lastRange ? lastRange.max + 1 : 0,
                       max: lastRange ? lastRange.max + 10 : 10,
                       label: "New Range",
-                      color: "#2196f3",
+                      color: "#3385F0", // Aura blue
                     };
                     setTemplate({
                       ...template,

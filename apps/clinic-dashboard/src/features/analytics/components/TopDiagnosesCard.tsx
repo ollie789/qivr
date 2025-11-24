@@ -1,8 +1,7 @@
 import React from 'react';
-import { Typography } from '@mui/material';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TopDiagnosisDatum } from '../types';
-import { DashboardSectionCard, EmptyState } from '@qivr/design-system';
+import { AuraChartCard, EmptyState } from '@qivr/design-system';
 import { BarChart as BarChartIcon } from '@mui/icons-material';
 
 export interface TopDiagnosesCardProps {
@@ -21,11 +20,7 @@ const TopDiagnosesCard: React.FC<TopDiagnosesCardProps> = ({
   const isEmpty = data.length === 0;
 
   return (
-    <DashboardSectionCard
-      header={<Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>}
-      headerProps={{ sx: { borderBottom: 'none' } }}
-      sx={{ p: 0 }}
-    >
+    <AuraChartCard title={title}>
       {isEmpty ? (
         <EmptyState
           icon={<BarChartIcon />}
@@ -39,11 +34,11 @@ const TopDiagnosesCard: React.FC<TopDiagnosesCardProps> = ({
             <XAxis type="number" />
             <YAxis dataKey="name" type="category" />
             <Tooltip />
-            <Bar dataKey="count" fill="var(--qivr-palette-primary-main, #1976d2)" />
+            <Bar dataKey="count" fill="var(--qivr-palette-primary-main, #3385F0)" />
           </BarChart>
         </ResponsiveContainer>
       )}
-    </DashboardSectionCard>
+    </AuraChartCard>
   );
 };
 

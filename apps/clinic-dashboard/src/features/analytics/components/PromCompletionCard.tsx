@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { PromCompletionDatum } from '../types';
-import { DashboardSectionCard } from '@qivr/design-system';
+import { AuraChartCard } from '@qivr/design-system';
 
 export interface PromCompletionCardProps {
   title?: string;
@@ -45,11 +45,7 @@ const PromCompletionCard: React.FC<PromCompletionCardProps> = ({
     (isEmpty ? emptyMessage : `Average completion rate: ${average}%`);
 
   return (
-    <DashboardSectionCard
-      header={<Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>}
-      headerProps={{ sx: { borderBottom: 'none' } }}
-      sx={{ p: 0 }}
-    >
+    <AuraChartCard title={title}>
       <Box sx={{ px: 3, pb: 3 }}>
         <ResponsiveContainer width="100%" height={height}>
           <PieChart>
@@ -77,7 +73,7 @@ const PromCompletionCard: React.FC<PromCompletionCardProps> = ({
           </Typography>
         </Box>
       </Box>
-    </DashboardSectionCard>
+    </AuraChartCard>
   );
 };
 

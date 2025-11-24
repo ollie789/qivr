@@ -11,7 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { AppointmentTrendDatum } from '../types';
-import { DashboardSectionCard } from '@qivr/design-system';
+import { AuraChartCard } from '@qivr/design-system';
 
 export interface AppointmentTrendCardProps {
   title?: string;
@@ -39,16 +39,7 @@ const AppointmentTrendCard: React.FC<AppointmentTrendCardProps> = ({
     : [{ name: 'No Data', appointments: 0, completed: 0 }];
 
   return (
-    <DashboardSectionCard
-      header={
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>
-          {headerAction}
-        </Box>
-      }
-      headerProps={{ sx: { borderBottom: 'none' } }}
-      sx={{ p: 0 }}
-    >
+    <AuraChartCard title={title} action={headerAction}>
       <Box sx={{ px: 3, pb: 3 }}>
         <ResponsiveContainer width="100%" height={height}>
           <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -89,7 +80,7 @@ const AppointmentTrendCard: React.FC<AppointmentTrendCardProps> = ({
           </Typography>
         ) : null}
       </Box>
-    </DashboardSectionCard>
+    </AuraChartCard>
   );
 };
 

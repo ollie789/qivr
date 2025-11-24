@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { fetchTenantOptions, type TenantOption } from '../../services/tenantService';
 import { useAuth, useAuthActions } from '../../stores/authStore';
-import { QivrButton, LoadingSpinner } from '@qivr/design-system';
+import { AuraButton, LoadingSpinner } from '@qivr/design-system';
 
 const TenantSelector = () => {
   const { activeTenantId, user } = useAuth();
@@ -88,7 +88,7 @@ const TenantSelector = () => {
 
   return (
     <>
-      <QivrButton
+      <AuraButton
         variant="outlined"
         size="small"
         color="inherit"
@@ -100,7 +100,7 @@ const TenantSelector = () => {
         <Box component="span" sx={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {selectedTenant?.name || selectedTenant?.id || 'Select Tenant'}
         </Box>
-      </QivrButton>
+      </AuraButton>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
         {tenants.map((tenant) => (
           <MenuItem

@@ -35,7 +35,7 @@ import { patientApi, type Patient as PatientSummary } from '../../services/patie
 import { NotificationMethod } from '../../services/promApi';
 import type { PromTemplateSummary } from '../../services/promApi';
 import { handleApiError } from '../../lib/api-client';
-import { DialogSection, FormSection, FormRow, QivrButton } from '@qivr/design-system';
+import { DialogSection, FormSection, FormRow, AuraButton } from '@qivr/design-system';
 
 interface SendPromDialogProps {
   open: boolean;
@@ -427,15 +427,15 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
         </DialogSection>
       </DialogContent>
       <DialogActions>
-        <QivrButton 
+        <AuraButton 
           onClick={onClose} 
           disabled={loading}
           variant="outlined"
-          emphasize="subtle"
+          
         >
           Cancel
-        </QivrButton>
-        <QivrButton
+        </AuraButton>
+        <AuraButton
           variant="contained"
           onClick={handleSend}
           disabled={loading || selectedPatients.length === 0 || !selectedTemplate}
@@ -443,7 +443,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
           startIcon={<SendIcon />}
         >
           Send to {selectedPatients.length} Patient(s)
-        </QivrButton>
+        </AuraButton>
       </DialogActions>
     </Dialog>
   );

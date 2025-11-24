@@ -195,7 +195,7 @@ export default function PainMapSelector({
 }
 
 function getIntensityColor(intensity: number): string {
-  if (intensity <= 3) return "#4caf50";
-  if (intensity <= 6) return "#ff9800";
-  return "#f44336";
+  if (intensity <= 3) return "#26CD82"; // Aura green (low pain)
+  if (intensity <= 6) return "#F68D2A"; // Aura orange (medium pain)
+  return "#EF4444"; // Aura red (high pain)
 }
