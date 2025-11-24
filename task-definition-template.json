@@ -67,10 +67,6 @@
           "value": "qivr-static-assets-production-818084701597"
         },
         {
-          "name": "OPENTELEMETRY_ENDPOINT",
-          "value": ""
-        },
-        {
           "name": "ApplyMigrations",
           "value": "false"
         }
