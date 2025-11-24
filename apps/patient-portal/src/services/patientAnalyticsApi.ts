@@ -53,7 +53,7 @@ async function getProgress(
   const params: Record<string, string> = {};
   if (from) params.from = from.toISOString();
   if (to) params.to = to.toISOString();
-  return apiClient.get("/api/patient-analytics/progress", { params });
+  return apiClient.get("/api/patient-analytics/progress", params);
 }
 
 const patientAnalyticsApi = {

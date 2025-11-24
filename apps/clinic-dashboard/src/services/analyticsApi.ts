@@ -46,8 +46,8 @@ export interface PainMapAnalytics {
 }
 
 async function getDashboardMetrics(date?: Date): Promise<DashboardMetrics> {
-  const params = date ? { date: date.toISOString() } : {};
-  return apiClient.get("/api/clinic-analytics/dashboard", { params });
+  const params = date ? { date: date.toISOString() } : undefined;
+  return apiClient.get("/api/clinic-analytics/dashboard", params);
 }
 
 async function getClinicalAnalytics(
@@ -57,7 +57,7 @@ async function getClinicalAnalytics(
   const params: Record<string, string> = {};
   if (from) params.from = from.toISOString();
   if (to) params.to = to.toISOString();
-  return apiClient.get("/api/clinic-analytics/clinical", { params });
+  return apiClient.get("/api/clinic-analytics/clinical", params);
 }
 
 async function getPainMapAnalytics(
@@ -67,7 +67,7 @@ async function getPainMapAnalytics(
   const params: Record<string, string> = {};
   if (from) params.from = from.toISOString();
   if (to) params.to = to.toISOString();
-  return apiClient.get("/api/clinic-analytics/pain-maps", { params });
+  return apiClient.get("/api/clinic-analytics/pain-maps", params);
 }
 
 const analyticsApi = {
