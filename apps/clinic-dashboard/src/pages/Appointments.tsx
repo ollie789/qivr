@@ -136,7 +136,6 @@ import {
   AuraEmptyState,
   StatCardSkeleton,
   FilterChips,
-  FlexBetween,
 } from "@qivr/design-system";
 
 interface Appointment {
@@ -444,7 +443,15 @@ const Appointments: React.FC = () => {
           );
 
           return (
-            <FlexBetween key={hour} sx={{ alignItems: "flex-start", mb: 2 }}>
+            <Box
+              key={hour}
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                mb: 2,
+              }}
+            >
               <Typography sx={calendarStyles.timeLabel}>
                 {format(setHours(new Date(), hour), "h:mm a")}
               </Typography>
@@ -469,7 +476,13 @@ const Appointments: React.FC = () => {
                       }}
                       onClick={() => setSelectedAppointment(apt)}
                     >
-                      <FlexBetween>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
                         <Box>
                           <Typography variant="subtitle2">
                             {apt.patientName}
@@ -484,7 +497,7 @@ const Appointments: React.FC = () => {
                           </Typography>
                         </Box>
                         <StatusBadge status={apt.status} />
-                      </FlexBetween>
+                      </Box>
                     </Box>
                   ))
                 ) : (
@@ -507,7 +520,7 @@ const Appointments: React.FC = () => {
                   </AvailabilitySlot>
                 )}
               </Box>
-            </FlexBetween>
+            </Box>
           );
         })}
       </InfoCard>
@@ -525,11 +538,19 @@ const Appointments: React.FC = () => {
           <Grid size={1}>
             <Box sx={{ height: 40 }} />
             {hours.map((hour) => (
-              <FlexBetween key={hour} sx={{ height: 60, alignItems: "center" }}>
+              <Box
+                key={hour}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  height: 60,
+                  alignItems: "center",
+                }}
+              >
                 <Typography variant="caption" color="text.secondary">
                   {format(setHours(new Date(), hour), "ha")}
                 </Typography>
-              </FlexBetween>
+              </Box>
             ))}
           </Grid>
           {days.map((day) => (
@@ -622,7 +643,15 @@ const Appointments: React.FC = () => {
                 >
                   <Typography>{format(props.day, "d")}</Typography>
                   {dayAppointments.length > 0 && (
-                    <FlexBetween sx={{ gap: 0.25, mt: 0.5 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 0.25,
+                        mt: 0.5,
+                      }}
+                    >
                       {dayAppointments.slice(0, 3).map((apt, idx) => (
                         <CircleIcon
                           key={idx}
@@ -632,7 +661,7 @@ const Appointments: React.FC = () => {
                           }}
                         />
                       ))}
-                    </FlexBetween>
+                    </Box>
                   )}
                 </Box>
               );
@@ -711,7 +740,14 @@ const Appointments: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <FlexBetween sx={{ justifyContent: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
                 <IconButton onClick={() => navigateDate("prev")}>
                   <ChevronLeftIcon />
                 </IconButton>
@@ -730,10 +766,16 @@ const Appointments: React.FC = () => {
                 <IconButton onClick={() => navigateDate("next")}>
                   <ChevronRightIcon />
                 </IconButton>
-              </FlexBetween>
+              </Box>
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <FlexBetween sx={{ justifyContent: "flex-end" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                }}
+              >
                 <ToggleButtonGroup
                   value={viewMode}
                   exclusive
@@ -750,7 +792,7 @@ const Appointments: React.FC = () => {
                     <CalendarMonthIcon />
                   </ToggleButton>
                 </ToggleButtonGroup>
-              </FlexBetween>
+              </Box>
             </Grid>
           </Grid>
         </InfoCard>
@@ -931,10 +973,17 @@ const Appointments: React.FC = () => {
                               </ListItemAvatar>
                               <ListItemText
                                 primary={
-                                  <FlexBetween sx={{ gap: 1 }}>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      gap: 1,
+                                    }}
+                                  >
                                     <Typography>{apt.patientName}</Typography>
                                     <StatusBadge status={apt.status} />
-                                  </FlexBetween>
+                                  </Box>
                                 }
                                 secondary={
                                   <Box>
@@ -972,7 +1021,14 @@ const Appointments: React.FC = () => {
                                   </Box>
                                 }
                               />
-                              <FlexBetween sx={{ gap: 1 }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
                                 {apt.videoLink && (
                                   <Tooltip title="Video Call">
                                     <IconButton size="small">
@@ -987,7 +1043,7 @@ const Appointments: React.FC = () => {
                                     </IconButton>
                                   </Tooltip>
                                 )}
-                              </FlexBetween>
+                              </Box>
                             </ListItem>
                             <Divider variant="inset" component="li" />
                           </React.Fragment>
@@ -1002,7 +1058,13 @@ const Appointments: React.FC = () => {
             {/* Today's Summary */}
             <InfoCard title="Today's Summary">
               <Stack spacing={1}>
-                <FlexBetween>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Typography variant="body2" color="text.secondary">
                     Total
                   </Typography>
@@ -1013,8 +1075,14 @@ const Appointments: React.FC = () => {
                       ).length
                     }
                   </Typography>
-                </FlexBetween>
-                <FlexBetween>
+                </Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Typography variant="body2" color="text.secondary">
                     Confirmed
                   </Typography>
@@ -1027,8 +1095,14 @@ const Appointments: React.FC = () => {
                       ).length
                     }
                   </Typography>
-                </FlexBetween>
-                <FlexBetween>
+                </Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Typography variant="body2" color="text.secondary">
                     Pending
                   </Typography>
@@ -1041,7 +1115,7 @@ const Appointments: React.FC = () => {
                       ).length
                     }
                   </Typography>
-                </FlexBetween>
+                </Box>
               </Stack>
             </InfoCard>
 

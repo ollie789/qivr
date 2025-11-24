@@ -97,7 +97,6 @@ import {
   PainMapProgression,
   AuraEmptyState,
   StatCardSkeleton,
-  FlexBetween,
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
 
@@ -748,7 +747,13 @@ const MedicalRecords: React.FC = () => {
 
         {/* View Mode Toggle */}
         <Paper sx={{ p: 2, mb: 3 }}>
-          <FlexBetween>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Tabs value={viewMode} onChange={(_, v) => setViewMode(v)}>
               <Tab label="Patient List" value="list" />
               <Tab label="Medical Records" value="detail" />
@@ -762,7 +767,7 @@ const MedicalRecords: React.FC = () => {
                 sx={{ width: 300 }}
               />
             )}
-          </FlexBetween>
+          </Box>
         </Paper>
 
         {/* Patient List View */}
@@ -908,8 +913,22 @@ const MedicalRecords: React.FC = () => {
           <>
             {/* Patient Info Card */}
             <InfoCard title="Patient Information">
-              <FlexBetween sx={{ mb: 2 }}>
-                <FlexBetween sx={{ gap: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 2,
+                  }}
+                >
                   <Avatar
                     sx={{ width: 64, height: 64, bgcolor: "primary.main" }}
                   >
@@ -937,7 +956,7 @@ const MedicalRecords: React.FC = () => {
                       {patient?.email} • {patient?.phone}
                     </Typography>
                   </Box>
-                </FlexBetween>
+                </Box>
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Button
                     variant="outlined"
@@ -956,7 +975,7 @@ const MedicalRecords: React.FC = () => {
                     {editMode ? "Save Changes" : "Edit Info"}
                   </Button>
                 </Box>
-              </FlexBetween>
+              </Box>
 
               {/* Quick Stats */}
               {isSummaryLoading ? (
@@ -1257,7 +1276,14 @@ const MedicalRecords: React.FC = () => {
 
               <TabPanel value={activeTab} index={1}>
                 <Box sx={{ p: 3 }}>
-                  <FlexBetween sx={{ mb: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 3,
+                    }}
+                  >
                     <Typography variant="h6">
                       Pain Assessment History
                     </Typography>
@@ -1268,7 +1294,7 @@ const MedicalRecords: React.FC = () => {
                     >
                       Record Assessment
                     </AuraButton>
-                  </FlexBetween>
+                  </Box>
 
                   {/* Latest Pain Assessment */}
                   {vitalSigns.length > 0 && vitalSigns[0] && (
@@ -1411,7 +1437,14 @@ const MedicalRecords: React.FC = () => {
 
               <TabPanel value={activeTab} index={2}>
                 <Box sx={{ p: 3 }}>
-                  <FlexBetween sx={{ mb: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 3,
+                    }}
+                  >
                     <Typography variant="h6">Medical History</Typography>
                     <Button
                       variant="contained"
@@ -1420,7 +1453,7 @@ const MedicalRecords: React.FC = () => {
                     >
                       Add Entry
                     </Button>
-                  </FlexBetween>
+                  </Box>
 
                   {[
                     { key: "injury", label: "Previous Injuries" },
@@ -1521,7 +1554,14 @@ const MedicalRecords: React.FC = () => {
 
               <TabPanel value={activeTab} index={3}>
                 <Box sx={{ p: 3 }}>
-                  <FlexBetween sx={{ mb: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 3,
+                    }}
+                  >
                     <Typography variant="h6">Medical Timeline</Typography>
                     <FormControl size="small">
                       <Select
@@ -1540,7 +1580,7 @@ const MedicalRecords: React.FC = () => {
                         <MenuItem value="surgery">Surgeries</MenuItem>
                       </Select>
                     </FormControl>
-                  </FlexBetween>
+                  </Box>
 
                   <Timeline position="alternate">
                     {generateTimeline().map((event, index) => (
@@ -1572,7 +1612,14 @@ const MedicalRecords: React.FC = () => {
 
               <TabPanel value={activeTab} index={4}>
                 <Box sx={{ p: 3 }}>
-                  <FlexBetween sx={{ mb: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 3,
+                    }}
+                  >
                     <Typography variant="h6">
                       <DocumentIcon sx={{ verticalAlign: "middle", mr: 1 }} />
                       Medical Documents
@@ -1610,14 +1657,20 @@ const MedicalRecords: React.FC = () => {
                     >
                       Upload Document
                     </Button>
-                  </FlexBetween>
+                  </Box>
 
                   {documents.length > 0 ? (
                     <Grid container spacing={2}>
                       {documents.map((doc) => (
                         <Grid size={12} key={doc.id}>
                           <InfoCard title={doc.fileName}>
-                            <FlexBetween>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
                               <Box>
                                 <Stack
                                   direction="row"
@@ -1734,7 +1787,7 @@ const MedicalRecords: React.FC = () => {
                                   </Button>
                                 )}
                               </Box>
-                            </FlexBetween>
+                            </Box>
                           </InfoCard>
                         </Grid>
                       ))}
