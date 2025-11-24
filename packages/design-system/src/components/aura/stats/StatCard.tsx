@@ -27,7 +27,7 @@ export const AuraStatCard = ({
       elevation={0}
       sx={{
         height: '100%',
-        p: { xs: 2.5, md: 3 },
+        p: 2,
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'divider',
@@ -40,15 +40,15 @@ export const AuraStatCard = ({
       }}
     >
       {/* Header with Icon */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
         <Typography
-          variant="body2"
+          variant="caption"
           sx={{
             fontWeight: 600,
             color: 'text.secondary',
             textTransform: 'uppercase',
             letterSpacing: 0.5,
-            fontSize: '0.75rem',
+            fontSize: '0.7rem',
           }}
         >
           {title}
@@ -57,13 +57,13 @@ export const AuraStatCard = ({
         <Avatar
           variant="rounded"
           sx={{
-            width: 48,
-            height: 48,
+            width: 36,
+            height: 36,
             bgcolor: (theme) => alpha(iconColor, 0.08),
             borderRadius: 1.5,
           }}
         >
-          <Box sx={{ color: iconColor, display: 'flex', fontSize: 24 }}>
+          <Box sx={{ color: iconColor, display: 'flex', fontSize: 20 }}>
             {icon}
           </Box>
         </Avatar>
@@ -71,10 +71,10 @@ export const AuraStatCard = ({
 
       {/* Value */}
       <Typography
-        variant="h4"
+        variant="h5"
         sx={{
           fontWeight: 700,
-          mb: trend || subtitle ? 1.5 : 0,
+          mb: trend || subtitle ? 0.5 : 0,
           color: 'text.primary',
         }}
       >
@@ -92,11 +92,12 @@ export const AuraStatCard = ({
               display: 'flex',
               alignItems: 'center',
               gap: 0.25,
+              fontSize: '0.7rem',
             }}
           >
             {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
             {trend.label}
           </Typography>
         </Box>
@@ -104,7 +105,7 @@ export const AuraStatCard = ({
 
       {/* Subtitle */}
       {subtitle && !trend && (
-        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
           {subtitle}
         </Typography>
       )}

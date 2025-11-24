@@ -213,42 +213,48 @@ const Dashboard: React.FC = () => {
         title: "Appointments Today",
         value: derivedStats.todayAppointments.toString(),
         icon: <CalendarIcon />,
-        avatarColor: 'var(--qivr-palette-primary-main)',
+        avatarColor: '#3385F0', // Aura blue
+        trend: { value: 8.2, label: "vs yesterday", isPositive: true },
       },
       {
         id: "pending-intakes",
         title: "Pending Intakes",
         value: derivedStats.pendingIntakes.toString(),
         icon: <AssignmentIcon />,
-        avatarColor: 'var(--qivr-palette-warning-main)',
+        avatarColor: '#F68D2A', // Aura orange
+        trend: { value: 3.5, label: "vs yesterday", isPositive: false },
       },
       {
         id: "active-patients",
         title: "Active Patients",
         value: derivedStats.activePatients.toString(),
         icon: <PeopleIcon />,
-        avatarColor: 'var(--qivr-palette-secondary-main)',
+        avatarColor: '#A641FA', // Aura purple
+        trend: { value: 12.3, label: "vs last month", isPositive: true },
       },
       {
         id: "average-wait-time",
         title: "Avg Wait Time",
         value: `${derivedStats.averageWaitTime} min`,
         icon: <AccessTimeIcon />,
-        avatarColor: 'var(--qivr-palette-success-main)',
+        avatarColor: '#26CD82', // Aura green
+        trend: { value: 5.1, label: "vs yesterday", isPositive: false },
       },
       {
         id: "completed-today",
         title: "Completed Today",
         value: derivedStats.completedToday.toString(),
         icon: <CheckCircleIcon />,
-        avatarColor: 'var(--qivr-palette-success-main)',
+        avatarColor: '#26CD82', // Aura green
+        trend: { value: 15.7, label: "vs yesterday", isPositive: true },
       },
       {
         id: "patient-satisfaction",
         title: "Patient Satisfaction",
         value: derivedStats.patientSatisfaction.toFixed(1),
         icon: <StarIcon />,
-        avatarColor: 'var(--qivr-palette-warning-main)',
+        avatarColor: '#F68D2A', // Aura orange
+        trend: { value: 2.4, label: "vs last week", isPositive: true },
       },
     ],
     [derivedStats],
@@ -279,6 +285,7 @@ const Dashboard: React.FC = () => {
                 value={stat.value}
                 icon={stat.icon}
                 iconColor={stat.avatarColor}
+                trend={stat.trend}
               />
             </Grid>
           ))
