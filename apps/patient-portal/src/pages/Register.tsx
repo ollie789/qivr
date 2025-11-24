@@ -15,7 +15,10 @@ import {
   StepLabel,
 } from "@mui/material";
 import { useAuth } from "../contexts/AuthContext";
-import { Email as EmailIcon } from "@mui/icons-material";
+import {
+  Email as EmailIcon,
+  PersonAdd as PersonAddIcon,
+} from "@mui/icons-material";
 import { api, handleApiError } from "../services/api";
 
 interface EmailVerificationResponse {
@@ -168,8 +171,39 @@ export const Register = () => {
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 8, mb: 4 }}>
-        <Paper sx={{ p: { xs: 3, md: 5 } }}>
-          <Typography variant="h4" align="center" gutterBottom>
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 3, md: 5 },
+            borderRadius: 3,
+            border: "1px solid",
+            borderColor: "divider",
+            background:
+              "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
+          }}
+        >
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: 2,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
+                boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
+              }}
+            >
+              <PersonAddIcon sx={{ fontSize: 28, color: "white" }} />
+            </Box>
+          </Box>
+          <Typography
+            variant="h4"
+            align="center"
+            gutterBottom
+            sx={{ fontWeight: 700 }}
+          >
             Create Your Account
           </Typography>
 

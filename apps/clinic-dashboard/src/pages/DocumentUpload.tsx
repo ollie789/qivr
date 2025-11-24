@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { DocumentUploader, OCRResultsViewer } from "../components/documents";
 import { documentApi, Document } from "../services/documentApi";
 import { patientApi } from "../services/patientApi";
+import { PageHeader } from "@qivr/design-system";
 
 const DOCUMENT_TYPES = [
   { value: "referral", label: "Referral" },
@@ -140,15 +141,10 @@ export default function DocumentUpload() {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight={600} gutterBottom>
-          Upload Document
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Upload patient documents with automatic OCR extraction and intelligent
-          classification
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Upload Document"
+        description="Upload patient documents with automatic OCR extraction and intelligent classification"
+      />
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }}>

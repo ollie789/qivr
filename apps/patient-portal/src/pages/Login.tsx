@@ -19,6 +19,7 @@ import {
   VisibilityOff,
   Google as GoogleIcon,
   Facebook as FacebookIcon,
+  Favorite as HeartIcon,
 } from "@mui/icons-material";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -104,8 +105,36 @@ export const Login: React.FC = () => {
           alignItems: "center",
         }}
       >
-        <Paper sx={{ p: { xs: 3, md: 5 }, width: "100%" }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 3, md: 5 },
+            width: "100%",
+            borderRadius: 3,
+            border: "1px solid",
+            borderColor: "divider",
+            background:
+              "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
+          }}
+        >
           <Box sx={{ textAlign: "center", mb: 3 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background:
+                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
+                  boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
+                }}
+              >
+                <HeartIcon sx={{ fontSize: 28, color: "white" }} />
+              </Box>
+            </Box>
             <Typography
               component="h1"
               variant="h4"
