@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Paper, Typography, Slider, Stack, Chip } from '@mui/material';
-import { PainDrawingViewer } from './PainDrawingViewer';
-import type { PainMapData } from '../../types/pain-drawing';
+import { PainMap3DViewer } from './PainMap3DViewer';
+import type { PainMap3DData } from '../../types/pain-drawing';
 import { format } from 'date-fns';
 
 interface ProgressionData {
@@ -40,15 +40,8 @@ export function PainMapProgression({ data, loading = false }: PainMapProgression
   }
 
   const currentData = data[selectedIndex];
-  const painMapData: PainMapData | undefined = currentData.drawingDataJson
-    ? {
-        bodyRegion: currentData.bodyRegion,
-        painIntensity: currentData.intensity,
-        painQuality: [],
-        avatarType: currentData.avatarType as any,
-        viewOrientation: currentData.viewOrientation as any,
-        drawingData: JSON.parse(currentData.drawingDataJson),
-      }
+  const painMapData: PainMap3DData | undefined = currentData.drawingDataJson
+    ? JSON.parse(currentData.drawingDataJson)
     : undefined;
 
   // Calculate trend
@@ -119,8 +112,13 @@ export function PainMapProgression({ data, loading = false }: PainMapProgression
         </Stack>
       </Paper>
 
-      {painMapData ? (
-        <PainDrawingViewer painMapData={painMapData} width={400} height={600} />
+      {painMapData?.regions && painMapData.regions.length > 0 ? (
+        <PainMap3DViewer
+          regions={painMapData.regions}
+          cameraView={painMapData.cameraView || 'front'}
+          width={400}
+          height={600}
+        />
       ) : (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography color="text.secondary">
