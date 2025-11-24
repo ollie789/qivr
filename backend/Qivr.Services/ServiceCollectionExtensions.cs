@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IClinicManagementService, ClinicManagementService>();
         services.AddScoped<IClinicAnalyticsService, ClinicAnalyticsService>();
         services.AddScoped<IPatientAnalyticsService, PatientAnalyticsService>();
+        services.AddScoped<IPainMapAnalyticsService, PainMapAnalyticsService>();
         
         // Add infrastructure services
         services.AddScoped<IEmailService, EmailService>();
