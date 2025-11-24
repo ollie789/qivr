@@ -34,7 +34,7 @@ export const AuraStatCard = ({
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
           borderColor: iconColor,
-          boxShadow: (theme) => `0 4px 20px ${alpha(theme.palette.primary.main, 0.08)}`,
+          boxShadow: `0 4px 20px ${alpha(iconColor?.startsWith('#') ? iconColor : '#3385F0', 0.08)}`,
           transform: 'translateY(-2px)',
         },
       }}
