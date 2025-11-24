@@ -110,6 +110,21 @@ const IntakeManagement: React.FC = () => {
 
   const intakes = data?.data || [];
 
+  // Statistics (use unfiltered data)
+  const stats = {
+    total: intakes.length,
+    pending: intakes.filter((i) => i.status === "pending").length,
+    reviewing: intakes.filter((i) => i.status === "reviewing").length,
+    processed: intakes.filter((i) =>
+      ["approved", "rejected", "scheduled"].includes(i.status),
+    ).length,
+    critical: intakes.filter((i) => i.severity === "critical").length,
+    todayIntakes: intakes.filter((i) => {
+      const today = new Date().toDateString();
+      return new Date(i.submittedAt).toDateString() === today;
+    }).length,
+  };
+
   // Filter intakes based on search and filters
   const filteredIntakes = intakes.filter((intake) => {
     const matchesSearch =
@@ -134,19 +149,6 @@ const IntakeManagement: React.FC = () => {
   const processedIntakes = filteredIntakes.filter((i) =>
     ["approved", "rejected", "scheduled"].includes(i.status),
   );
-
-  // Statistics
-  const stats = {
-    total: intakes.length,
-    pending: pendingIntakes.length,
-    reviewing: reviewingIntakes.length,
-    processed: processedIntakes.length,
-    critical: intakes.filter((i) => i.severity === "critical").length,
-    todayIntakes: intakes.filter((i) => {
-      const today = new Date().toDateString();
-      return new Date(i.submittedAt).toDateString() === today;
-    }).length,
-  };
 
   // Show error alert if fetch failed
   React.useEffect(() => {

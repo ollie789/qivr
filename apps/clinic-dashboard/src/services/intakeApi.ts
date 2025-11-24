@@ -112,6 +112,18 @@ function mapEvaluationToIntake(e: any): IntakeSubmission {
     status: statusMap[e.status?.toLowerCase()] || "pending",
     painLevel: (e.painMaps && e.painMaps[0]?.painIntensity) || 5,
     symptoms: e.symptoms || [],
+    aiSummary: e.aiSummary || undefined,
+    bodyMap: e.painMaps
+      ? {
+          painPoints: e.painMaps.map((pm: any) => ({
+            x: 0,
+            y: 0,
+            z: 0,
+            intensity: pm.intensity || 5,
+            bodyPart: pm.bodyRegion || "Unknown",
+          })),
+        }
+      : undefined,
   };
 }
 
