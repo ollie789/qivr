@@ -39,7 +39,6 @@ import {
   type UpsertMessageTemplateInput,
 } from "../../services/messageTemplatesApi";
 import MessageTemplateManager from "./MessageTemplateManager";
-import { FlexBetween } from "@qivr/design-system";
 
 // Type for message send result
 interface MessageComposerProps {
@@ -480,7 +479,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle>
-          <FlexBetween>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="h6">Send Message</Typography>
             <ToggleButtonGroup
               value={messageType}
@@ -497,7 +496,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
                 Email
               </ToggleButton>
             </ToggleButtonGroup>
-          </FlexBetween>
+          </Box>
         </DialogTitle>
 
         <DialogContent>

@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { fetchTenantOptions, type TenantOption } from '../../services/tenantService';
 import { useAuth, useAuthActions } from '../../stores/authStore';
-import { QivrButton, FlexBetween, LoadingSpinner } from '@qivr/design-system';
+import { QivrButton, LoadingSpinner } from '@qivr/design-system';
 
 const TenantSelector = () => {
   const { activeTenantId, user } = useAuth();
@@ -75,12 +75,12 @@ const TenantSelector = () => {
     return (
       <Tooltip title="Active clinic tenant">
         <Box sx={{ px: 1.5, py: 0.75, borderRadius: 1, bgcolor: 'action.hover' }}>
-          <FlexBetween sx={{ gap: 1 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
             <ApartmentIcon fontSize="small" color="action" />
             <Box component="span" sx={{ fontSize: 14, fontWeight: 500 }}>
               {selectedTenant.name || selectedTenant.id}
             </Box>
-          </FlexBetween>
+          </Box>
         </Box>
       </Tooltip>
     );

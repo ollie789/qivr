@@ -32,7 +32,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
 import TenantSelector from "../shared/TenantSelector";
-import { QivrButton } from "@qivr/design-system";
+import { AuraButton } from "@qivr/design-system";
 
 const drawerWidth = 280;
 
@@ -161,14 +161,13 @@ export const MainLayout: React.FC = () => {
           <Box sx={{ mr: 2 }}>
             <TenantSelector />
           </Box>
-          <QivrButton
-            emphasize="subtle"
+          <AuraButton
             size="small"
             color="secondary"
             onClick={() => window.open("https://widget.qivr.health", "_blank")}
           >
             New Evaluation
-          </QivrButton>
+          </AuraButton>
         </Toolbar>
       </AppBar>
 

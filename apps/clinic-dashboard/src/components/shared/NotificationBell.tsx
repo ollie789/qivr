@@ -18,7 +18,7 @@ import {
   notificationsApi,
   type NotificationListItem,
 } from '../../services/notificationsApi';
-import { FlexBetween, EmptyState, LoadingSpinner } from '@qivr/design-system';
+import { EmptyState, LoadingSpinner } from '@qivr/design-system';
 
 // Adapter to convert API notification to Aura Notification type
 // Placeholder until Aura notifications are available in design-system exports
@@ -136,9 +136,9 @@ const NotificationBell: React.FC = () => {
         }}
       >
         <Box sx={{ p: 2 }}>
-          <FlexBetween>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="h6">Notifications</Typography>
-            <FlexBetween sx={{ gap: 1 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
               <IconButton size="small" onClick={() => refetch()}>
                 <RefreshIcon fontSize="small" />
               </IconButton>
@@ -150,8 +150,8 @@ const NotificationBell: React.FC = () => {
                   Mark all read
                 </Button>
               )}
-            </FlexBetween>
-          </FlexBetween>
+            </Box>
+          </Box>
         </Box>
 
         <Divider />

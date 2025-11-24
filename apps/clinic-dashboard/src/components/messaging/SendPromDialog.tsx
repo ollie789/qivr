@@ -35,7 +35,7 @@ import { patientApi, type Patient as PatientSummary } from '../../services/patie
 import { NotificationMethod } from '../../services/promApi';
 import type { PromTemplateSummary } from '../../services/promApi';
 import { handleApiError } from '../../lib/api-client';
-import { DialogSection, FormSection, FormRow, QivrButton, FlexBetween } from '@qivr/design-system';
+import { DialogSection, FormSection, FormRow, QivrButton } from '@qivr/design-system';
 
 interface SendPromDialogProps {
   open: boolean;
@@ -175,10 +175,10 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <FlexBetween sx={{ gap: 1 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
           <SendIcon />
           Send PROM to Patients
-        </FlexBetween>
+        </Box>
       </DialogTitle>
       <DialogContent>
         <DialogSection>
@@ -245,16 +245,16 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
                       secondary={
                         <Box>
                           {option.email && (
-                            <FlexBetween component="span" sx={{ gap: 0.5 }}>
+                            <Box component="span" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 0.5 }}>
                               <EmailIcon fontSize="small" />
                               {option.email}
-                            </FlexBetween>
+                            </Box>
                           )}
                           {option.phone && (
-                            <FlexBetween component="span" sx={{ gap: 0.5 }}>
+                            <Box component="span" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 0.5 }}>
                               <PhoneIcon fontSize="small" />
                               {option.phone}
-                            </FlexBetween>
+                            </Box>
                           )}
                         </Box>
                       }

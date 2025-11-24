@@ -132,15 +132,15 @@ export const Evaluations = () => {
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
       case "critical":
-        return "#d32f2f";
+        return "#EF4444"; // Aura red
       case "high":
-        return "#f57c00";
+        return "#F68D2A"; // Aura orange
       case "medium":
-        return "#fbc02d";
+        return "#F68D2A"; // Aura orange
       case "low":
-        return "#388e3c";
+        return "#26CD82"; // Aura green
       default:
-        return "#757575";
+        return "#64748B"; // Neutral gray
     }
   };
 

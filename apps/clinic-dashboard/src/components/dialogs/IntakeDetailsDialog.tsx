@@ -1,5 +1,6 @@
 import React from 'react';
 import { 
+  Box,
   Dialog, 
   DialogContent,
   DialogTitle,
@@ -7,7 +8,6 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { EvaluationViewer } from '../../features/intake/components/EvaluationViewer';
-import { FlexBetween } from '@qivr/design-system';
 
 interface IntakeData {
   id: string;
@@ -96,12 +96,12 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
       }}
     >
       <DialogTitle>
-        <FlexBetween>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           Intake Evaluation
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
           </IconButton>
-        </FlexBetween>
+        </Box>
       </DialogTitle>
       <DialogContent>
         <EvaluationViewer
