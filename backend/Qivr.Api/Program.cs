@@ -7,6 +7,8 @@ using Microsoft.OpenApi.Models;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using OpenTelemetry.Instrumentation.AWS;
+using OpenTelemetry.ResourceDetectors.AWS;
 using Qivr.Api.Extensions;
 using Qivr.Api.Middleware;
 using Qivr.Api.Services;
@@ -100,19 +102,6 @@ var loggerConfig = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
-
-var otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
-var isValidOtlpEndpoint = !string.IsNullOrWhiteSpace(otlpEndpoint) && 
-                         !otlpEndpoint.Contains("${") && // Skip placeholder values
-                         Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out _);
-
-if (isValidOtlpEndpoint)
-{
-    loggerConfig.WriteTo.OpenTelemetry(options =>
-    {
-        options.Endpoint = otlpEndpoint;
-    });
-}
 
 Log.Logger = loggerConfig.CreateLogger();
 
@@ -345,11 +334,13 @@ builder.Services.AddVersionedSwagger(builder.Configuration);
     });
 });*/
 
-// Configure OpenTelemetry (only if endpoint is configured and valid)
-if (isValidOtlpEndpoint && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var validOtlpUri))
+// Configure OpenTelemetry with AWS X-Ray
+var enableTelemetry = builder.Configuration.GetValue<bool>("OpenTelemetry:Enabled", false);
+if (enableTelemetry)
 {
     var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "qivr-api";
     var serviceVersion = builder.Configuration["OpenTelemetry:ServiceVersion"] ?? "1.0.0";
+    var otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
     
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource
@@ -357,7 +348,6 @@ if (isValidOtlpEndpoint && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var
             .AddAttributes(new Dictionary<string, object>
             {
                 ["deployment.environment"] = builder.Environment.EnvironmentName,
-                ["service.instance.id"] = Environment.MachineName,
                 ["cloud.provider"] = "aws",
                 ["cloud.platform"] = "aws_ecs",
                 ["cloud.region"] = Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-southeast-2"
@@ -374,9 +364,12 @@ if (isValidOtlpEndpoint && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var
                     };
                 })
                 .AddHttpClientInstrumentation()
+                .AddAWSInstrumentation() // AWS SDK instrumentation
+                .AddXRayTraceId() // Use X-Ray trace ID format
                 .AddOtlpExporter(options =>
                 {
-                    options.Endpoint = validOtlpUri;
+                    // AWS X-Ray OTLP endpoint (via ADOT Collector)
+                    options.Endpoint = new Uri(otlpEndpoint ?? "http://localhost:4317");
                 });
         })
         .WithMetrics(metrics =>
@@ -386,20 +379,16 @@ if (isValidOtlpEndpoint && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var
                 .AddHttpClientInstrumentation()
                 .AddOtlpExporter(options =>
                 {
-                    options.Endpoint = validOtlpUri;
+                    options.Endpoint = new Uri(otlpEndpoint ?? "http://localhost:4317");
                 });
         });
     
-    Log.Information("OpenTelemetry enabled - Service: {ServiceName}, Version: {ServiceVersion}, Endpoint: {Endpoint}, Environment: {Environment}", 
-        serviceName, serviceVersion, otlpEndpoint, builder.Environment.EnvironmentName);
-}
-else if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-{
-    Log.Warning("OpenTelemetry disabled: Invalid endpoint format '{Endpoint}'", otlpEndpoint);
+    Log.Information("OpenTelemetry enabled with AWS X-Ray - Service: {ServiceName}, Version: {ServiceVersion}, Environment: {Environment}", 
+        serviceName, serviceVersion, builder.Environment.EnvironmentName);
 }
 else
 {
-    Log.Information("OpenTelemetry disabled: No endpoint configured");
+    Log.Information("OpenTelemetry disabled");
 }
 
 // Add Health Checks
