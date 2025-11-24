@@ -19,6 +19,7 @@ export const AuraChartCard: React.FC<AuraChartCardProps> = ({
 }) => {
   return (
     <Paper 
+      className="chart-enter"
       sx={{ 
         p: { xs: 3, md: 5 }, 
         height: 1,
