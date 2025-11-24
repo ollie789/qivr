@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProviderAvailabilityService, ProviderAvailabilityService>();
         services.AddScoped<IClinicManagementService, ClinicManagementService>();
         services.AddScoped<IClinicAnalyticsService, ClinicAnalyticsService>();
+        services.AddScoped<IPatientAnalyticsService, PatientAnalyticsService>();
         
         // Add infrastructure services
         services.AddScoped<IEmailService, EmailService>();

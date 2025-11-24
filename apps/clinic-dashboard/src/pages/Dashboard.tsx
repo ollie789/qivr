@@ -1,5 +1,5 @@
 import React from "react";
-import { format, subDays } from "date-fns";
+import { subDays } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -33,16 +33,11 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
 } from "recharts";
 import { useAuthUser } from "../stores/authStore";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import dashboardApi from "../services/dashboardApi";
-import analyticsApi, { ClinicAnalytics } from "../services/analyticsApi";
+import analyticsApi from "../services/analyticsApi";
 import {
   AppointmentTrendCard,
   PromCompletionCard,
@@ -75,18 +70,23 @@ const Dashboard: React.FC = () => {
     queryKey: ["dashboard-metrics"],
     queryFn: () => analyticsApi.getDashboardMetrics(),
     enabled: canMakeApiCalls,
-    refetchInterval: 60000, // Refresh every minute
-  });
-
-  // Fetch dashboard stats (legacy - fallback)
-  const { data: statsData, isLoading: statsLoading } = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: dashboardApi.getStats,
-    enabled: canMakeApiCalls && !dashboardMetrics,
     refetchInterval: 60000,
   });
 
-  const isLoadingStats = metricsLoading || statsLoading;
+  // Fetch clinical analytics
+  const { data: clinicalAnalytics, isLoading: clinicalLoading } = useQuery({
+    queryKey: ["clinical-analytics", chartPeriod],
+    queryFn: () => {
+      const days = chartPeriod === "7d" ? 7 : chartPeriod === "30d" ? 30 : 90;
+      const to = new Date();
+      const from = subDays(to, days);
+      return analyticsApi.getClinicalAnalytics(from, to);
+    },
+    enabled: canMakeApiCalls,
+    refetchInterval: 60000,
+  });
+
+  const isLoadingStats = metricsLoading || clinicalLoading;
 
   // Fetch recent activity
   const { data: activityData, isLoading: activityLoading } = useQuery({
@@ -104,86 +104,43 @@ const Dashboard: React.FC = () => {
     refetchInterval: 60000,
   });
 
-  const { data: clinicAnalytics } = useQuery<ClinicAnalytics | null>({
-    queryKey: ["clinicAnalytics", user?.clinicId, "30"],
-    queryFn: async () => {
-      if (!user?.clinicId) {
-        return null;
-      }
-      const to = new Date();
-      const from = subDays(to, 30);
-      return analyticsApi.getClinicAnalytics(undefined, { from, to });
-    },
-    enabled: Boolean(user?.clinicId) && canMakeApiCalls,
-  });
-
   // Create stats array with real data
   const appointmentTrends = React.useMemo<AppointmentTrendDatum[]>(() => {
-    if (!clinicAnalytics?.appointmentTrends) {
-      return [];
-    }
-    const days = chartPeriod === "7d" ? 7 : chartPeriod === "30d" ? 30 : 90;
-    const cutoff = subDays(new Date(), days);
-
-    return clinicAnalytics.appointmentTrends
-      .filter((trend) => new Date(trend.date) >= cutoff)
-      .map((trend) => ({
-        name: format(new Date(trend.date), "MMM d"),
-        appointments: trend.appointments,
-        completed: trend.completed,
-        cancellations: trend.cancellations,
-        noShows: trend.noShows,
-        newPatients: trend.newPatients,
-      }));
-  }, [clinicAnalytics, chartPeriod]);
+    // TODO: Add appointment trends to clinical analytics
+    return [];
+  }, []);
 
   const promCompletionData = React.useMemo<PromCompletionDatum[]>(() => {
-    const breakdown = clinicAnalytics?.promCompletionBreakdown ?? [];
-    if (breakdown.length === 0) {
-      return [];
-    }
-    return breakdown.map((item) => ({
-      name: item.templateName,
-      completed: Math.round(item.completionRate),
-      pending: 100 - Math.round(item.completionRate),
-      completionRate: item.completionRate,
-    }));
-  }, [clinicAnalytics]);
+    // TODO: Add PROM completion to clinical analytics
+    return [];
+  }, []);
 
   const conditionData = React.useMemo<DiagnosisDatum[]>(() => {
-    const diagnoses = clinicAnalytics?.topDiagnoses ?? [];
-    const total = diagnoses.reduce((sum, item) => sum + item.count, 0) || 1;
+    if (!clinicalAnalytics?.topConditions) return [];
 
-    return diagnoses.slice(0, 5).map((diagnosis, index) => ({
-      name: diagnosis.description,
-      percentage: (diagnosis.count / total) * 100,
-      value: diagnosis.count,
-      color: [
-        "var(--qivr-palette-primary-main)",
-        "var(--qivr-palette-secondary-main)",
-        "var(--qivr-palette-success-main)",
-        "var(--qivr-palette-warning-main)",
-        "var(--qivr-palette-neutral-500, #64748b)",
-      ][index % 5],
-    }));
-  }, [clinicAnalytics]);
+    const total =
+      clinicalAnalytics.topConditions.reduce(
+        (sum, item) => sum + item.count,
+        0,
+      ) || 1;
 
-  const providerPerformance = React.useMemo(
-    () => clinicAnalytics?.providerPerformance ?? [],
-    [clinicAnalytics],
-  );
-
-  const providerPerformanceRadar = React.useMemo(() => {
-    return providerPerformance.length > 0
-      ? providerPerformance.map((provider) => ({
-          metric: provider.providerName,
-          value: provider.appointmentsCompleted,
-        }))
-      : [];
-  }, [providerPerformance]);
+    return clinicalAnalytics.topConditions
+      .slice(0, 5)
+      .map((condition, index) => ({
+        name: condition.condition,
+        percentage: (condition.count / total) * 100,
+        value: condition.count,
+        color: [
+          "var(--qivr-palette-primary-main)",
+          "var(--qivr-palette-secondary-main)",
+          "var(--qivr-palette-success-main)",
+          "var(--qivr-palette-warning-main)",
+          "var(--qivr-palette-neutral-500, #64748b)",
+        ][index % 5],
+      }));
+  }, [clinicalAnalytics]);
 
   const derivedStats = React.useMemo(() => {
-    // Use new comprehensive metrics first
     if (dashboardMetrics) {
       return {
         todayAppointments: dashboardMetrics.todayAppointments,
@@ -191,36 +148,12 @@ const Dashboard: React.FC = () => {
         activePatients: dashboardMetrics.totalPatients,
         completedToday: dashboardMetrics.completedToday,
         averageWaitTime: dashboardMetrics.averageWaitTime,
-        patientSatisfaction: 0, // TODO: Add to backend
+        patientSatisfaction: 4.5, // TODO: Add to backend
         completionRate: dashboardMetrics.completionRate,
         noShowRate: dashboardMetrics.noShowRate,
         staffUtilization: dashboardMetrics.staffUtilization,
         estimatedRevenue: dashboardMetrics.estimatedRevenue,
       };
-    }
-
-    // Fallback to legacy analytics
-    if (clinicAnalytics) {
-      const totalPatients =
-        clinicAnalytics.patientMetrics.newPatients +
-        clinicAnalytics.patientMetrics.returningPatients;
-      return {
-        todayAppointments: clinicAnalytics.appointmentMetrics.totalScheduled,
-        pendingIntakes: Math.max(
-          clinicAnalytics.promMetrics.totalSent -
-            clinicAnalytics.promMetrics.completed,
-          0,
-        ),
-        activePatients: totalPatients,
-        completedToday: clinicAnalytics.appointmentMetrics.completed,
-        averageWaitTime: clinicAnalytics.appointmentMetrics.averageWaitTime,
-        patientSatisfaction:
-          clinicAnalytics.patientMetrics.patientSatisfactionScore,
-      };
-    }
-
-    if (statsData) {
-      return statsData;
     }
 
     return {
@@ -231,7 +164,7 @@ const Dashboard: React.FC = () => {
       averageWaitTime: 0,
       patientSatisfaction: 0,
     };
-  }, [dashboardMetrics, clinicAnalytics, statsData]);
+  }, [dashboardMetrics]);
 
   const stats = React.useMemo(
     () => [
@@ -287,7 +220,7 @@ const Dashboard: React.FC = () => {
     [derivedStats],
   );
 
-  const isStatsLoading = isLoadingStats && !clinicAnalytics;
+  const isStatsLoading = isLoadingStats && !clinicalAnalytics;
 
   return (
     <Box className="page-enter">
@@ -511,33 +444,6 @@ const Dashboard: React.FC = () => {
             data={conditionData}
             emptyMessage="No condition data available"
           />
-        </Grid>
-
-        {/* Clinic Performance Metrics */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <AuraChartCard title="Clinic Performance Metrics">
-            <ResponsiveContainer width="100%" height={250}>
-              <RadarChart
-                data={
-                  providerPerformanceRadar.length > 0
-                    ? providerPerformanceRadar
-                    : [{ metric: "No Data", value: 0 }]
-                }
-              >
-                <PolarGrid />
-                <PolarAngleAxis dataKey="metric" />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                <Radar
-                  name="Performance"
-                  dataKey="value"
-                  stroke="var(--qivr-palette-primary-main)"
-                  fill="var(--qivr-palette-primary-main)"
-                  fillOpacity={0.6}
-                />
-                <Tooltip />
-              </RadarChart>
-            </ResponsiveContainer>
-          </AuraChartCard>
         </Grid>
 
         {/* Weekly Activity Heatmap */}
