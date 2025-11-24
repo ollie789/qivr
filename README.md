@@ -70,10 +70,26 @@ node scripts/tests/test-frontend-pages.mjs user@clinic.com Password123!
 
 ## 📚 Documentation
 
-- [Testing Guide](docs/TESTING.md)
-- [API Documentation](docs/API.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [Quick Reference](docs/QUICK-REFERENCE.md)
+**Getting Started:**
+
+- [Setup Guide](docs/guides/setup.md)
+- [Development Guide](docs/guides/development.md)
+- [Quick Reference](docs/guides/QUICK-REFERENCE.md)
+
+**Current Status:**
+
+- [UX Progress](docs/UX-PROGRESS.md) - 97% complete!
+- [UX Improvements Guide](docs/UX-IMPROVEMENTS.md)
+- [API Routes](docs/API-ROUTES.md)
+- [Database Schema](docs/DATABASE-SCHEMA.md)
+
+**Operations:**
+
+- [Deployment Guide](docs/deployment/DEPLOYMENT.md)
+- [Testing Guide](docs/guides/testing.md)
+- [Architecture](docs/guides/architecture.md)
+
+See [docs/README.md](docs/README.md) for complete documentation index.
 
 ## 🛠️ Development
 
@@ -89,8 +105,10 @@ npm run dev
 
 ## 🚀 Deployment Status
 
-- **Build #530c28d**: Build errors fixed, message category migration added
-- **Recent Updates**: Patients page consolidated into Medical Records, messaging improvements deployed
+- **Latest**: Project cleanup & optimization complete (1.5GB saved)
+- **UX**: 97% complete - All active pages improved
+- **Production**: https://clinic.qivr.pro
+- **Recent Updates**: Bundle optimization, documentation reorganization
 
 ## 📊 Features
 
