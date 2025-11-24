@@ -153,7 +153,7 @@ export const intakeApi = {
 
   async getIntakeDetails(id: string): Promise<IntakeDetails> {
     try {
-      const response = await apiClient.get(`/api/evaluations/${id}/detail`);
+      const response = await apiClient.get(`/api/evaluations/${id}`);
       const e = response;
       return {
         id: e.id,
