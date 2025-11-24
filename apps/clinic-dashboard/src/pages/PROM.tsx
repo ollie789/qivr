@@ -232,11 +232,11 @@ const PROM: React.FC = () => {
 
   // Chart data
   const statusChartData = [
-    { name: "Completed", value: statistics.completed, color: "#4caf50" },
-    { name: "Pending", value: statistics.pending, color: "#ff9800" },
-    { name: "In Progress", value: statistics.inProgress, color: "#2196f3" },
-    { name: "Expired", value: statistics.expired, color: "#f44336" },
-    { name: "Cancelled", value: statistics.cancelled, color: "#9e9e9e" },
+    { name: "Completed", value: statistics.completed, color: "#26CD82" }, // Aura green
+    { name: "Pending", value: statistics.pending, color: "#F68D2A" }, // Aura orange
+    { name: "In Progress", value: statistics.inProgress, color: "#3385F0" }, // Aura blue
+    { name: "Expired", value: statistics.expired, color: "#EF4444" }, // Aura red
+    { name: "Cancelled", value: statistics.cancelled, color: "#64748B" }, // Neutral gray
   ];
 
   // Type for trends data accumulator
@@ -763,7 +763,7 @@ const PROM: React.FC = () => {
                         labelLine={false}
                         label={(entry) => `${entry.name}: ${entry.value}`}
                         outerRadius={80}
-                        fill="#8884d8"
+                        fill="#3385F0" // Aura blue
                         dataKey="value"
                       >
                         {statusChartData.map((entry, index) => (
@@ -793,14 +793,14 @@ const PROM: React.FC = () => {
                         yAxisId="left"
                         type="monotone"
                         dataKey="count"
-                        stroke="#8884d8"
+                        stroke="#3385F0" // Aura blue
                         name="Responses"
                       />
                       <Line
                         yAxisId="right"
                         type="monotone"
                         dataKey="avgScore"
-                        stroke="#82ca9d"
+                        stroke="#26CD82" // Aura green
                         name="Avg Score"
                       />
                     </LineChart>

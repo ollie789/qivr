@@ -1350,7 +1350,7 @@ const MedicalRecords: React.FC = () => {
                             <Line
                               type="monotone"
                               dataKey="value"
-                              stroke="#f44336"
+                              stroke="#EF4444" // Aura red
                               strokeWidth={2}
                             />
                           </LineChart>
