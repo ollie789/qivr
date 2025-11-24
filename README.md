@@ -25,19 +25,25 @@ npm run dev
 ```
 qivr/
 ├── apps/                   # Frontend applications
-│   └── clinic-dashboard/   # Main clinic dashboard app
+│   ├── clinic-dashboard/   # Staff portal (React + Vite)
+│   └── patient-portal/     # Patient portal (React + Vite)
 ├── backend/                # .NET Core API
 │   ├── Qivr.Api/          # API controllers
 │   ├── Qivr.Services/     # Business logic
+│   ├── Qivr.Core/         # Domain models
 │   └── Qivr.Infrastructure/ # Data access
+├── packages/               # Shared packages
+│   ├── design-system/     # UI component library
+│   └── http/              # HTTP client utilities
 ├── docs/                   # Documentation
 ├── scripts/                # Utility scripts
 │   └── tests/             # Test suites
 ├── database/               # SQL migrations
 ├── aws/                    # AWS configurations
 └── infrastructure/         # Docker, Terraform
-
 ```
+
+**See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed system architecture.**
 
 ## 🧪 Testing
 
