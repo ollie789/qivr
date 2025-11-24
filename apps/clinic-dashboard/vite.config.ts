@@ -21,7 +21,14 @@ export default defineConfig({
       output: {
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-mui': ['@mui/material', '@mui/icons-material', '@mui/lab', '@mui/system'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-charts': ['recharts', '@fullcalendar/react', '@fullcalendar/core'],
+          'vendor-3d': ['three', '@react-three/fiber', '@react-three/drei'],
+        }
       }
     }
   },
