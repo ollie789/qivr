@@ -1,4 +1,4 @@
-import apiClient from '../lib/api-client';
+import apiClient from "../lib/api-client";
 
 export interface IntakeSubmission {
   id: string;
@@ -7,8 +7,8 @@ export interface IntakeSubmission {
   phone?: string;
   submittedAt: string;
   conditionType: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  status: 'pending' | 'reviewing' | 'approved' | 'rejected' | 'scheduled';
+  severity: "low" | "medium" | "high" | "critical";
+  status: "pending" | "reviewing" | "approved" | "rejected" | "scheduled";
   painLevel: number;
   symptoms?: string[];
   aiSummary?: string;
@@ -84,50 +84,54 @@ export interface IntakeFilters {
 }
 
 function mapEvaluationToIntake(e: any): IntakeSubmission {
-  console.log('Mapping evaluation:', e);
-  const severityMap: Record<string, IntakeSubmission['severity']> = {
-    urgent: 'critical',
-    high: 'high',
-    medium: 'medium',
-    low: 'low',
+  console.log("Mapping evaluation:", e);
+  const severityMap: Record<string, IntakeSubmission["severity"]> = {
+    urgent: "critical",
+    high: "high",
+    medium: "medium",
+    low: "low",
   };
-  const statusMap: Record<string, IntakeSubmission['status']> = {
-    pending: 'pending',
-    reviewed: 'reviewing',
-    triaged: 'approved',
-    archived: 'rejected',
-    Pending: 'pending',
-    Reviewed: 'reviewing',
-    Triaged: 'approved',
-    Archived: 'rejected',
+  const statusMap: Record<string, IntakeSubmission["status"]> = {
+    pending: "pending",
+    reviewed: "reviewing",
+    triaged: "approved",
+    archived: "rejected",
+    Pending: "pending",
+    Reviewed: "reviewing",
+    Triaged: "approved",
+    Archived: "rejected",
   };
   return {
     id: e.id,
-    patientName: e.patientName || 'Unknown Patient',
-    email: e.patientEmail || 'n/a@unknown',
-    phone: e.patientPhone || '',
+    patientName: e.patientName || "Unknown Patient",
+    email: e.patientEmail || "n/a@unknown",
+    phone: e.patientPhone || "",
     submittedAt: e.date || e.createdAt,
-    conditionType: e.chiefComplaint || 'Not specified',
-    severity: severityMap[(e.urgency || '').toLowerCase()] || 'medium',
-    status: statusMap[e.status?.toLowerCase()] || 'pending',
+    conditionType: e.chiefComplaint || "Not specified",
+    severity: severityMap[(e.urgency || "").toLowerCase()] || "medium",
+    status: statusMap[e.status?.toLowerCase()] || "pending",
     painLevel: (e.painMaps && e.painMaps[0]?.painIntensity) || 5,
     symptoms: e.symptoms || [],
   };
 }
 
 export const intakeApi = {
-  async getIntakes(filters?: IntakeFilters): Promise<{ data: IntakeSubmission[]; total: number }> {
+  async getIntakes(
+    filters?: IntakeFilters,
+  ): Promise<{ data: IntakeSubmission[]; total: number }> {
     try {
-      const response = await apiClient.get('/api/evaluations', { params: filters });
-      console.log('Raw evaluations response:', response);
+      const response = await apiClient.get("/api/evaluations", {
+        params: filters,
+      });
+      console.log("Raw evaluations response:", response);
       // Response is already the array, not wrapped in .data
       const list = Array.isArray(response) ? response : [];
-      console.log('Evaluations list:', list);
+      console.log("Evaluations list:", list);
       const data = list.map(mapEvaluationToIntake);
-      console.log('Mapped intakes:', data);
+      console.log("Mapped intakes:", data);
       return { data, total: data.length };
     } catch (error) {
-      console.error('Error fetching intakes:', error);
+      console.error("Error fetching intakes:", error);
       return {
         data: [],
         total: 0,
@@ -137,38 +141,63 @@ export const intakeApi = {
 
   async getIntakeDetails(id: string): Promise<IntakeDetails> {
     try {
-      const response = await apiClient.get(`/api/evaluations/${id}`);
-      const e = response.data;
+      const response = await apiClient.get(`/api/evaluations/${id}/detail`);
+      const e = response;
       return {
         id: e.id,
         patient: {
           name: e.patientName,
-          email: e.patientEmail || '',
-          phone: e.patientPhone || '',
-          dateOfBirth: e.patientDateOfBirth || '',
+          email: e.patientEmail || "",
+          phone: e.patientPhone || "",
+          dateOfBirth: e.patientDateOfBirth || "",
         },
         evaluation: {
           submittedAt: e.createdAt,
           conditionType: e.chiefComplaint,
-          severity: e.urgency || 'Medium',
-          painLevel: (e.painMaps && e.painMaps[0]?.painIntensity) || 5,
-          symptoms: e.supplements?.symptoms || e.symptoms || [],
-          description: e.chiefComplaint || '',
-          duration: e.supplements?.duration || 'unknown',
+          severity: e.urgency || "medium",
+          painLevel: (e.painMaps && e.painMaps[0]?.intensity) || 0,
+          symptoms: e.symptoms || [],
+          description: e.chiefComplaint,
+          duration: e.medicalHistory?.duration || "Not specified",
+          triggers: e.medicalHistory?.triggers || [],
+          previousTreatments: e.medicalHistory?.previousTreatments || [],
         },
+        painMap: e.painMaps
+          ? {
+              bodyParts: e.painMaps.map((pm: any) => ({
+                region: pm.bodyRegion,
+                intensity: pm.intensity,
+                type: pm.type || "aching",
+              })),
+            }
+          : undefined,
+        aiSummary: e.aiSummary
+          ? {
+              content: e.aiSummary,
+              riskFactors: e.aiRiskFlags || [],
+              recommendations: [],
+              approved: !!e.aiProcessedAt,
+              approvedAt: e.aiProcessedAt,
+            }
+          : undefined,
         status: e.status,
+        notes: e.clinicianNotes || "",
       };
     } catch (error) {
-      console.error('Error fetching intake details:', error);
+      console.error("Error fetching intake details:", error);
       throw error;
     }
   },
 
-  async updateIntakeStatus(id: string, status: string, notes?: string): Promise<void> {
+  async updateIntakeStatus(
+    id: string,
+    status: string,
+    notes?: string,
+  ): Promise<void> {
     try {
       await apiClient.patch(`/api/evaluations/${id}/status`, { status, notes });
     } catch (error) {
-      console.error('Error updating intake status:', error);
+      console.error("Error updating intake status:", error);
       throw error;
     }
   },
