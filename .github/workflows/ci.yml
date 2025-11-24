@@ -48,8 +48,9 @@ jobs:
           chmod +x ./apps/check-status.sh
           ./apps/check-status.sh
 
-      - name: Build Storybook
-        run: npm run build-storybook
+      # Storybook build removed - not actively used
+      # - name: Build Storybook
+      #   run: npm run build-storybook
 
       # (Optional) Run unit tests if present
       # - name: Run backend tests
