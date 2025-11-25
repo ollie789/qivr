@@ -1,21 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Typography,
-  IconButton,
-  Chip,
-  Stack
-} from '@mui/material';
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, IconButton, Chip, Stack } from '@mui/material';
 import { Add, ContentCopy, Delete, PowerSettingsNew, Key } from '@mui/icons-material';
+import { glassCard } from '@qivr/design-system';
 import { apiKeysApi } from '../lib/api';
 import { useSnackbar } from 'notistack';
 
@@ -78,75 +65,59 @@ export default function ApiKeys() {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" gutterBottom>API Keys</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage API keys for integrations
-          </Typography>
+          <Typography variant="h4" fontWeight={700} gutterBottom>API Keys</Typography>
+          <Typography variant="body2" color="text.secondary">Manage API keys for integrations</Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => setShowCreateDialog(true)}
-        >
+        <Button variant="contained" startIcon={<Add />} onClick={() => setShowCreateDialog(true)}>
           Create Key
         </Button>
       </Box>
 
       {keys.length === 0 ? (
-        <Card>
-          <CardContent sx={{ textAlign: 'center', py: 8 }}>
-            <Key sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
-            <Typography color="text.secondary">No API keys yet</Typography>
-          </CardContent>
-        </Card>
+        <Box sx={{ ...glassCard, p: 8, textAlign: 'center' }}>
+          <Key sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
+          <Typography color="text.secondary">No API keys yet</Typography>
+        </Box>
       ) : (
         <Stack spacing={2}>
           {keys.map((key: any) => (
-            <Card key={key.id}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Typography variant="h6">{key.name}</Typography>
-                      <Chip label={key.keyPrefix + '...'} size="small" variant="outlined" />
-                      <Chip
-                        label={key.isActive ? 'Active' : 'Inactive'}
-                        size="small"
-                        color={key.isActive ? 'success' : 'default'}
-                      />
-                    </Box>
-                    {key.description && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {key.description}
+            <Box key={key.id} sx={{ ...glassCard, p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography variant="h6" fontWeight={600}>{key.name}</Typography>
+                    <Chip label={key.keyPrefix + '...'} size="small" variant="outlined" />
+                    <Chip label={key.isActive ? 'Active' : 'Inactive'} size="small" color={key.isActive ? 'success' : 'default'} />
+                  </Box>
+                  {key.description && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{key.description}</Typography>
+                  )}
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Created {new Date(key.createdAt).toLocaleDateString()}
+                    </Typography>
+                    {key.lastUsedAt && (
+                      <Typography variant="caption" color="text.secondary">
+                        Last used {new Date(key.lastUsedAt).toLocaleDateString()}
                       </Typography>
                     )}
-                    <Box sx={{ display: 'flex', gap: 2 }}>
+                    {key.expiresAt && (
                       <Typography variant="caption" color="text.secondary">
-                        Created {new Date(key.createdAt).toLocaleDateString()}
+                        Expires {new Date(key.expiresAt).toLocaleDateString()}
                       </Typography>
-                      {key.lastUsedAt && (
-                        <Typography variant="caption" color="text.secondary">
-                          Last used {new Date(key.lastUsedAt).toLocaleDateString()}
-                        </Typography>
-                      )}
-                      {key.expiresAt && (
-                        <Typography variant="caption" color="text.secondary">
-                          Expires {new Date(key.expiresAt).toLocaleDateString()}
-                        </Typography>
-                      )}
-                    </Box>
-                  </Box>
-                  <Box>
-                    <IconButton onClick={() => toggleMutation.mutate(key.id)} size="small">
-                      <PowerSettingsNew />
-                    </IconButton>
-                    <IconButton onClick={() => revokeMutation.mutate(key.id)} size="small">
-                      <Delete />
-                    </IconButton>
+                    )}
                   </Box>
                 </Box>
-              </CardContent>
-            </Card>
+                <Box>
+                  <IconButton onClick={() => toggleMutation.mutate(key.id)} size="small">
+                    <PowerSettingsNew />
+                  </IconButton>
+                  <IconButton onClick={() => revokeMutation.mutate(key.id)} size="small">
+                    <Delete />
+                  </IconButton>
+                </Box>
+              </Box>
+            </Box>
           ))}
         </Stack>
       )}
@@ -160,12 +131,7 @@ export default function ApiKeys() {
                 ⚠️ Save this key now - you won't see it again!
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <TextField
-                  value={newKey}
-                  fullWidth
-                  size="small"
-                  InputProps={{ readOnly: true }}
-                />
+                <TextField value={newKey} fullWidth size="small" InputProps={{ readOnly: true }} />
                 <IconButton onClick={() => copyToClipboard(newKey)}>
                   <ContentCopy />
                 </IconButton>
@@ -173,28 +139,9 @@ export default function ApiKeys() {
             </Box>
           ) : (
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField
-                label="Name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                fullWidth
-              />
-              <TextField
-                label="Description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                fullWidth
-                multiline
-                rows={2}
-              />
-              <TextField
-                label="Expires in days (optional)"
-                value={formData.expiresInDays}
-                onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })}
-                type="number"
-                fullWidth
-              />
+              <TextField label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required fullWidth />
+              <TextField label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} fullWidth multiline rows={2} />
+              <TextField label="Expires in days (optional)" value={formData.expiresInDays} onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })} type="number" fullWidth />
             </Stack>
           )}
         </DialogContent>
@@ -204,11 +151,7 @@ export default function ApiKeys() {
           ) : (
             <>
               <Button onClick={handleClose}>Cancel</Button>
-              <Button
-                onClick={handleCreate}
-                variant="contained"
-                disabled={!formData.name || createMutation.isPending}
-              >
+              <Button onClick={handleCreate} variant="contained" disabled={!formData.name || createMutation.isPending}>
                 Create
               </Button>
             </>
