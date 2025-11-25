@@ -131,7 +131,10 @@ public class EvaluationsController : BaseApiController
             followUpDate = (DateTime?)null, // FollowUpDate not in service DTO
             score = (decimal?)null, // Score not in service DTO
             trend = (string?)null, // Trend not in service DTO
-            lastUpdated = e.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss") // UpdatedAt not in service DTO
+            lastUpdated = e.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"), // UpdatedAt not in service DTO
+            aiSummary = e.AiSummary,
+            aiRiskFlags = e.AiRiskFlags ?? new List<string>(),
+            aiProcessedAt = e.AiProcessedAt?.ToString("yyyy-MM-ddTHH:mm:ss")
         }).ToList();
         
         return Ok(response);

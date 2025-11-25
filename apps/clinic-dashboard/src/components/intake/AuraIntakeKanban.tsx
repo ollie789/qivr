@@ -158,6 +158,41 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
           </Stack>
         )}
 
+        {intake.aiSummary && (
+          <Box
+            sx={{
+              p: 1,
+              bgcolor: "rgba(139, 92, 246, 0.1)",
+              borderRadius: 1,
+              borderLeft: "3px solid #8b5cf6",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>
+              AI: {intake.aiSummary.substring(0, 80)}
+              {intake.aiSummary.length > 80 && "..."}
+            </Typography>
+          </Box>
+        )}
+
+        {intake.aiRiskFlags && intake.aiRiskFlags.length > 0 && (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap">
+            {intake.aiRiskFlags.map((flag, idx) => (
+              <Chip
+                key={idx}
+                label={flag}
+                size="small"
+                sx={{
+                  bgcolor: "#ef4444",
+                  color: "white",
+                  fontSize: "0.65rem",
+                  height: 20,
+                  fontWeight: 600,
+                }}
+              />
+            ))}
+          </Stack>
+        )}
+
         <Stack
           direction="row"
           justifyContent="space-between"

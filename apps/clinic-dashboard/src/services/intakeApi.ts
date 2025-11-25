@@ -12,6 +12,8 @@ export interface IntakeSubmission {
   painLevel: number;
   symptoms?: string[];
   aiSummary?: string;
+  aiRiskFlags?: string[];
+  aiProcessedAt?: string;
   assignedTo?: string;
   notes?: string;
   patientId?: string; // Link to existing patient

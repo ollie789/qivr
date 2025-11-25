@@ -142,7 +142,10 @@ public record EvaluationDto(
     List<string> Symptoms,
     string Status,
     string? Urgency,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? AiSummary,
+    List<string>? AiRiskFlags,
+    DateTime? AiProcessedAt
 );
 
 public record EvaluationDetailDto(

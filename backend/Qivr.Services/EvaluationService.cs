@@ -90,7 +90,10 @@ public class EvaluationService : IEvaluationService
             evaluation.Symptoms,
             evaluation.Status.ToString(),
             evaluation.Urgency?.ToString(),
-            evaluation.CreatedAt
+            evaluation.CreatedAt,
+            evaluation.AiSummary,
+            evaluation.AiRiskFlags,
+            evaluation.AiProcessedAt
         );
     }
 
@@ -164,7 +167,10 @@ public class EvaluationService : IEvaluationService
             e.Symptoms,
             e.Status.ToString(),
             e.Urgency?.ToString(),
-            e.CreatedAt
+            e.CreatedAt,
+            e.AiSummary,
+            e.AiRiskFlags,
+            e.AiProcessedAt
         )).ToList();
     }
 
