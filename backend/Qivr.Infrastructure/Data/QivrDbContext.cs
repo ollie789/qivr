@@ -77,6 +77,8 @@ public class QivrDbContext : DbContext
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+    public DbSet<TreatmentPlan> TreatmentPlans => Set<TreatmentPlan>();
 
     private static Dictionary<string, object> DeserializeJsonSafely(string v)
     {

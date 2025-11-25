@@ -405,22 +405,48 @@ export default function Settings() {
     }
   };
 
-  const handleGenerateApiKey = () => {
-    // TODO: Implement API key generation
-    const newKey = "sk_live_" + Math.random().toString(36).substr(2, 32);
-    setSettings({
-      ...settings,
-      integrations: {
-        ...settings.integrations,
-        ehr: {
-          ...settings.integrations.ehr,
-          apiKey: newKey,
-        },
-      },
-    });
-    setNewApiKeyDialog(false);
-    enqueueSnackbar("New API key generated", { variant: "success" });
+  const [apiKeys, setApiKeys] = React.useState<any[]>([]);
+
+  const { data: apiKeysData } = useQuery({
+    queryKey: ["api-keys"],
+    queryFn: async () => {
+      const response = await api.get("/api/api-keys");
+      return response.data;
+    },
+    enabled: canMakeApiCalls,
+  });
+
+  React.useEffect(() => {
+    if (apiKeysData) {
+      setApiKeys(apiKeysData);
+    }
+  }, [apiKeysData]);
+
+  const handleGenerateApiKey = async () => {
+    try {
+      const response = await api.post("/api/api-keys", {
+        name: "Integration Key",
+        description: "Generated from settings",
+        expiresInDays: 365,
+        scopes: ["read", "write"]
+      });
+      setApiKeys([...apiKeys, response.data]);
+      enqueueSnackbar("API key generated successfully", { variant: "success" });
+    } catch (error) {
+      enqueueSnackbar("Failed to generate API key", { variant: "error" });
+    }
   };
+
+  // Moved to dedicated API Keys page
+  // const handleRevokeApiKey = async (keyId: string) => {
+  //   try {
+  //     await api.delete(`/api/api-keys/${keyId}`);
+  //     setApiKeys(apiKeys.filter(k => k.id !== keyId));
+  //     enqueueSnackbar("API key revoked", { variant: "success" });
+  //   } catch (error) {
+  //     enqueueSnackbar("Failed to revoke API key", { variant: "error" });
+  //   }
+  // };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
