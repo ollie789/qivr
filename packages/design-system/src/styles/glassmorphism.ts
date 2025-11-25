@@ -24,9 +24,12 @@ export const glassStyles = {
 export const glassCard = (intensity: 'light' | 'medium' | 'dark' = 'light'): SxProps => ({
   ...glassStyles[intensity],
   borderRadius: 2,
+  boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+  border: '1px solid rgba(255, 255, 255, 0.18)',
   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
     transform: 'translateY(-2px)',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
 });
