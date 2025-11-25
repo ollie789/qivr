@@ -71,6 +71,7 @@ export interface SendMessagePayload {
   messageType?: MessageCategory;
   relatedAppointmentId?: string;
   parentMessageId?: string;
+  scheduledFor?: string;
 }
 
 const unwrap = <T>(payload: T | { data: T }): T => {

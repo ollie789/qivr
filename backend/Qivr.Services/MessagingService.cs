@@ -449,6 +449,7 @@ public class SendMessageDto
     public Guid? ParentMessageId { get; set; }
     public Guid? RelatedAppointmentId { get; set; }
     public IEnumerable<MessageAttachment>? Attachments { get; set; }
+    public DateTime? ScheduledFor { get; set; }
 }
 
 public class MessageAttachment

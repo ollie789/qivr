@@ -338,6 +338,7 @@ public class MessagesController : BaseApiController
                 Priority = request.Priority?.ToString() ?? "Normal",
                 ParentMessageId = request.ParentMessageId,
                 RelatedAppointmentId = request.RelatedAppointmentId,
+                ScheduledFor = request.ScheduledFor,
                 Attachments = request.Attachments?.Select(a => new MessageAttachment
                 {
                     FileName = a.FileName,
@@ -708,6 +709,7 @@ public class SendMessageRequest
     public Guid? RelatedAppointmentId { get; set; }
     public Guid? ParentMessageId { get; set; }
     public List<MessageAttachmentDto>? Attachments { get; set; }
+    public DateTime? ScheduledFor { get; set; }
 }
 
 public class MessageAttachmentDto

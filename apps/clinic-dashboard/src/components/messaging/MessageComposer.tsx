@@ -18,6 +18,9 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
   Close as CloseIcon,
   Email as EmailIcon,
@@ -165,6 +168,8 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [scheduleFor, setScheduleFor] = useState<Date | null>(null);
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false);
 
   // Fetch patients for selection
   const { data: patientsData } = useQuery({
@@ -443,6 +448,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
         messageType: messageCategory,
         priority: "Normal",
         relatedAppointmentId: relatedAppointmentId,
+        scheduledFor: scheduleFor?.toISOString(),
       });
 
       setSuccess(true);
@@ -726,15 +732,46 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
           <Box sx={{ mt: 2 }}>
             <Button
               startIcon={<ScheduleIcon />}
-              variant="outlined"
+              variant={scheduleFor ? "contained" : "outlined"}
               size="small"
-              onClick={() => {
-                /* TODO: Add date/time picker */
-              }}
+              onClick={() => setShowSchedulePicker(!showSchedulePicker)}
             >
-              Schedule for later
+              {scheduleFor 
+                ? `Scheduled for ${scheduleFor.toLocaleString()}`
+                : "Schedule for later"}
             </Button>
+            {scheduleFor && (
+              <Button
+                size="small"
+                onClick={() => setScheduleFor(null)}
+                sx={{ ml: 1 }}
+              >
+                Clear
+              </Button>
+            )}
           </Box>
+
+          {showSchedulePicker && (
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Box sx={{ mt: 2 }}>
+                <DateTimePicker
+                  label="Schedule send time"
+                  value={scheduleFor}
+                  onChange={(newValue) => {
+                    setScheduleFor(newValue);
+                    setShowSchedulePicker(false);
+                  }}
+                  minDateTime={new Date()}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small"
+                    }
+                  }}
+                />
+              </Box>
+            </LocalizationProvider>
+          )}
 
           {/* Error/Success Messages */}
           {error && (
