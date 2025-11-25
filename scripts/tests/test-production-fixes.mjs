@@ -33,9 +33,6 @@ async function makeRequest(url, options = {}) {
     ...options.headers
   };
 
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
   if (tenantId) {
     headers['X-Tenant-Id'] = tenantId;
   }
@@ -70,14 +67,15 @@ async function testPatientLogin() {
       })
     });
 
-    if (response.ok && data.token) {
-      authToken = data.token;
-      tenantId = data.user?.tenantId;
+    if (response.ok && data.accessToken) {
+      authToken = data.accessToken;
+      tenantId = data.userInfo?.tenantId;
       log('   ✓ Patient login successful', 'green');
-      log(`   ✓ Token received: ${authToken.substring(0, 20)}...`, 'green');
+      log(`   ✓ Tenant ID: ${tenantId}`, 'green');
+      log(`   ✓ User role: ${data.userInfo?.role}`, 'green');
       return true;
     } else {
-      log(`   ✗ Login failed: ${response.status} - ${JSON.stringify(data)}`, 'red');
+      log(`   ✗ Login failed: ${response.status} - ${JSON.stringify(data).substring(0, 100)}`, 'red');
       return false;
     }
   } catch (error) {
