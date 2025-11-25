@@ -72,6 +72,8 @@ export interface IntakeDetails {
     url: string;
     type: string;
   }>;
+  questionnaireResponses?: Record<string, any>;
+  medicalHistory?: Record<string, any>;
 }
 
 export interface IntakeFilters {
@@ -157,6 +159,11 @@ export const intakeApi = {
     try {
       const response = await apiClient.get(`/api/evaluations/${id}`);
       const e = response;
+      
+      // Extract full description from questionnaire responses
+      const questionnaireData = e.questionnaireResponses || {};
+      const medicalHistoryData = e.medicalHistory || {};
+      
       return {
         id: e.id,
         patient: {
@@ -171,10 +178,10 @@ export const intakeApi = {
           severity: e.urgency || "medium",
           painLevel: (e.painMaps && e.painMaps[0]?.intensity) || 0,
           symptoms: e.symptoms || [],
-          description: e.chiefComplaint,
-          duration: e.medicalHistory?.duration || "Not specified",
-          triggers: e.medicalHistory?.triggers || [],
-          previousTreatments: e.medicalHistory?.previousTreatments || [],
+          description: questionnaireData.description || questionnaireData.details || e.chiefComplaint,
+          duration: medicalHistoryData.duration || questionnaireData.duration || "Not specified",
+          triggers: medicalHistoryData.triggers || questionnaireData.triggers || [],
+          previousTreatments: medicalHistoryData.previousTreatments || questionnaireData.previousTreatments || [],
         },
         painMap: e.painMaps
           ? {
@@ -196,6 +203,8 @@ export const intakeApi = {
           : undefined,
         status: e.status,
         notes: e.clinicianNotes || "",
+        questionnaireResponses: questionnaireData,
+        medicalHistory: medicalHistoryData,
       };
     } catch (error) {
       console.error("Error fetching intake details:", error);

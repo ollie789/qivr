@@ -67,7 +67,7 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
         submittedAt: fullEvaluation.evaluation.submittedAt,
         status: fullEvaluation.status as any,
         urgency: fullEvaluation.evaluation.severity as any,
-        chiefComplaint: fullEvaluation.evaluation.conditionType,
+        chiefComplaint: fullEvaluation.evaluation.description || fullEvaluation.evaluation.conditionType,
         symptoms: fullEvaluation.evaluation.symptoms,
         painPoints:
           fullEvaluation.painMap?.bodyParts.map((bp) => ({
