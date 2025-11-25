@@ -11,13 +11,14 @@ import {
   Experimental_CssVarsProvider as ThemeProvider,
   useColorScheme,
 } from "@mui/material/styles";
-import { PageLoader, theme } from "@qivr/design-system";
+import { PageLoader, theme, glassCard } from "@qivr/design-system";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { SnackbarProvider } from "notistack";
 import CssBaseline from "@mui/material/CssBaseline";
 import { useAuthActions } from "./stores/authStore";
 import { ThemeModeProvider } from "./contexts/ThemeContext";
+import { deepmerge } from "@mui/utils";
 
 // Layout components
 import DashboardLayout from "./components/Layout/DashboardLayout";
@@ -46,6 +47,28 @@ const queryClient = new QueryClient({
       retry: 1,
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
+
+// Extend theme with Aura glass effects
+const auraTheme = deepmerge(theme, {
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          ...glassCard,
+          backgroundImage: "none",
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          ...glassCard,
+          backgroundImage: "none",
+        },
+      },
     },
   },
 });
@@ -141,7 +164,7 @@ function App() {
   console.log("App component rendering");
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={auraTheme}>
         <InnerApp />
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
