@@ -26,7 +26,9 @@ import {
   Download,
   Visibility,
   Delete,
-  FilterList
+  FilterList,
+  ViewModule,
+  ViewList,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -40,6 +42,7 @@ import {
   AuraEmptyState,
   FilterChips,
 } from '@qivr/design-system';
+import { AuraDocumentCard } from '../components/aura/AuraDocumentCard';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -79,6 +82,7 @@ export default function Documents() {
   const [documentType, setDocumentType] = useState('');
   const [status, setStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -172,15 +176,41 @@ export default function Documents() {
         title="Documents"
         description="Manage and organize patient documents"
         actions={
-          <AuraButton
-            variant="contained"
-            size="large"
-            startIcon={<Add />}
-            onClick={() => navigate('/documents/upload')}
-            sx={{ px: 3, py: 1.5, fontWeight: 600 }}
-          >
-            Upload Document
-          </AuraButton>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 0.5, bgcolor: 'action.hover', borderRadius: 1, p: 0.5 }}>
+              <IconButton
+                size="small"
+                onClick={() => setViewMode('grid')}
+                sx={{
+                  bgcolor: viewMode === 'grid' ? 'primary.main' : 'transparent',
+                  color: viewMode === 'grid' ? 'white' : 'text.secondary',
+                  '&:hover': { bgcolor: viewMode === 'grid' ? 'primary.dark' : 'action.hover' },
+                }}
+              >
+                <ViewModule fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => setViewMode('list')}
+                sx={{
+                  bgcolor: viewMode === 'list' ? 'primary.main' : 'transparent',
+                  color: viewMode === 'list' ? 'white' : 'text.secondary',
+                  '&:hover': { bgcolor: viewMode === 'list' ? 'primary.dark' : 'action.hover' },
+                }}
+              >
+                <ViewList fontSize="small" />
+              </IconButton>
+            </Box>
+            <AuraButton
+              variant="contained"
+              size="large"
+              startIcon={<Add />}
+              onClick={() => navigate('/documents/upload')}
+              sx={{ px: 3, py: 1.5, fontWeight: 600 }}
+            >
+              Upload Document
+            </AuraButton>
+          </Box>
         }
       />
 
@@ -260,14 +290,70 @@ export default function Documents() {
         )}
       </Paper>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>File Name</TableCell>
-              <TableCell>Patient</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Size</TableCell>
+      {viewMode === 'grid' ? (
+        <Box>
+          {isLoading ? (
+            <Grid container spacing={3}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Grid key={i} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Box sx={{ height: 200, bgcolor: 'action.hover', borderRadius: 2 }} />
+                </Grid>
+              ))}
+            </Grid>
+          ) : paginatedDocuments.length === 0 ? (
+            <Paper sx={{ p: 4, borderRadius: 2 }}>
+              <AuraEmptyState
+                title="No documents found"
+                description={searchTerm || documentType || status ? "Try adjusting your filters" : "No documents have been uploaded yet"}
+              />
+            </Paper>
+          ) : (
+            <Grid container spacing={3}>
+              {paginatedDocuments.map((doc) => (
+                <Grid key={doc.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                  <AuraDocumentCard
+                    id={doc.id}
+                    name={doc.fileName}
+                    type={doc.fileName.split('.').pop() || 'file'}
+                    size={formatFileSize(doc.fileSize)}
+                    uploadedAt={doc.createdAt}
+                    uploadedBy={doc.assignedToName}
+                    category={doc.documentType}
+                    onView={() => {
+                      setSelectedDocument(doc);
+                      if (doc.extractedText) {
+                        setOcrDialogOpen(true);
+                      }
+                    }}
+                    onDownload={() => downloadMutation.mutate(doc.id)}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+            <TablePagination
+              component="div"
+              count={filteredDocuments.length}
+              page={page}
+              onPageChange={(_, newPage) => setPage(newPage)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+            />
+          </Box>
+        </Box>
+      ) : (
+        <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>File Name</TableCell>
+                <TableCell>Patient</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Size</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Uploaded</TableCell>
               <TableCell align="right">Actions</TableCell>
@@ -363,6 +449,7 @@ export default function Documents() {
           }}
         />
       </TableContainer>
+      )}
 
       <Menu
         anchorEl={anchorEl}
