@@ -30,6 +30,7 @@ import {
   ContactPhone as ContactPhoneIcon,
   Email as EmailIcon,
   Edit as EditIcon,
+  FolderShared as FolderSharedIcon,
   LocalHospital as LocalHospitalIcon,
   LocationOn as LocationIcon,
   Lock as LockIcon,
@@ -43,6 +44,7 @@ import {
 import { handleApiError } from "../../../lib/api-client";
 import { useProfileData } from "../hooks";
 import { PageLoader, FormDialog } from "@qivr/design-system";
+import MedicalRecordsPage from "../../medical-records/components/MedicalRecordsPage";
 import type {
   EmergencyContact,
   MedicalInfo,
@@ -362,6 +364,7 @@ export const ProfilePage: React.FC = () => {
           <Tab icon={<ContactPhoneIcon />} label="Emergency Contact" />
           <Tab icon={<NotificationsIcon />} label="Preferences" />
           <Tab icon={<SecurityIcon />} label="Security" />
+          <Tab icon={<FolderSharedIcon />} label="Medical Records" />
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>
@@ -864,6 +867,10 @@ export const ProfilePage: React.FC = () => {
               </ListItem>
             </List>
           </Box>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={5}>
+          <MedicalRecordsPage />
         </TabPanel>
       </Paper>
 

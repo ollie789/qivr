@@ -24,10 +24,9 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import { ConfirmEmail } from "./pages/ConfirmEmail";
-import MedicalRecordsEnhanced from "./pages/MedicalRecordsEnhanced";
 import DocumentsEnhanced from "./pages/DocumentsEnhanced";
 import DocumentChecklist from "./pages/DocumentChecklist";
-import AnalyticsEnhanced from "./pages/AnalyticsEnhanced";
+import HealthProgress from "./pages/HealthProgress";
 import Messages from "./pages/Messages";
 
 // Auth
@@ -64,15 +63,12 @@ export const AppContent: React.FC = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* Medical Records */}
-          <Route path="/medical-records" element={<MedicalRecordsEnhanced />} />
+          {/* Health Progress (Gamified Analytics) */}
+          <Route path="/health-progress" element={<HealthProgress />} />
 
           {/* Documents */}
           <Route path="/documents" element={<DocumentsEnhanced />} />
           <Route path="/documents/checklist" element={<DocumentChecklist />} />
-
-          {/* Analytics */}
-          <Route path="/analytics" element={<AnalyticsEnhanced />} />
 
           {/* Evaluations */}
           <Route path="/evaluations" element={<Evaluations />} />

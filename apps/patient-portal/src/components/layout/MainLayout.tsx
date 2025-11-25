@@ -20,9 +20,8 @@ import { auraColors } from "@qivr/design-system";
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  MedicalServices as MedicalIcon,
   Folder as FolderIcon,
-  Analytics as AnalyticsIcon,
+  TrendingUp as TrendingUpIcon,
   Event as EventIcon,
   Assignment as AssignmentIcon,
   Person as PersonIcon,
@@ -39,9 +38,8 @@ const drawerWidth = 280;
 
 const menuItems = [
   { title: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
-  { title: "Medical Records", path: "/medical-records", icon: <MedicalIcon /> },
+  { title: "Health Progress", path: "/health-progress", icon: <TrendingUpIcon /> },
   { title: "Documents", path: "/documents", icon: <FolderIcon /> },
-  { title: "Health Analytics", path: "/analytics", icon: <AnalyticsIcon /> },
   { title: "Appointments", path: "/appointments", icon: <EventIcon /> },
   { title: "Messages", path: "/messages", icon: <MessageIcon /> },
   { title: "Assessments", path: "/proms", icon: <AssignmentIcon /> },
