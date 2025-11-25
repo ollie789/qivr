@@ -399,7 +399,17 @@ public class AppointmentsController : BaseApiController
         }
 
         if (request.Status.HasValue)
+        {
             appointment.Status = request.Status.Value;
+            
+            // Automatically set ActualStart when checking in or completing
+            if ((request.Status.Value == AppointmentStatus.CheckedIn || 
+                 request.Status.Value == AppointmentStatus.Completed) && 
+                !appointment.ActualStart.HasValue)
+            {
+                appointment.ActualStart = DateTime.UtcNow;
+            }
+        }
 
         if (request.Notes != null)
             appointment.Notes = request.Notes;

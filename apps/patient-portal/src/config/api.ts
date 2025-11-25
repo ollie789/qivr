@@ -1,6 +1,12 @@
 // Centralized API configuration
+const API_URL = import.meta.env.VITE_API_URL;
+
+if (!API_URL) {
+  throw new Error('VITE_API_URL environment variable is required');
+}
+
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://clinic.qivr.pro',
+  BASE_URL: API_URL,
   API_PREFIX: '/api',
   
   // Helper to build full API URLs

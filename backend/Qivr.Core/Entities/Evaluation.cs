@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Qivr.Core.Common;
 
 namespace Qivr.Core.Entities;
@@ -6,7 +7,11 @@ public class Evaluation : TenantEntity
 {
     public Guid PatientId { get; set; }
     public string EvaluationNumber { get; set; } = string.Empty;
-    public string? ChiefComplaint { get; set; }
+    
+    [Required]
+    [MaxLength(500)]
+    public string ChiefComplaint { get; set; } = string.Empty;
+    
     public List<string> Symptoms { get; set; } = new();
     public Dictionary<string, object> MedicalHistory { get; set; } = new();
     public Dictionary<string, object> QuestionnaireResponses { get; set; } = new();

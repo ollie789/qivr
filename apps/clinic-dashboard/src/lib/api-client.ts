@@ -5,7 +5,11 @@ import {
 } from '@qivr/http';
 import { useAuthStore } from '../stores/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_URL environment variable is required');
+}
 
 // Type for API request parameters
 type ApiParams = any;
