@@ -52,7 +52,7 @@ import { PatientInviteDialog } from "../components/dialogs/PatientInviteDialog";
 import { intakeApi, type IntakeSubmission } from "../services/intakeApi";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
 import { IntakeDetailsDialog } from "../components/dialogs";
-import { IntakeKanban } from "../components/intake/IntakeKanban";
+import { AuraIntakeKanban } from "../components/intake/AuraIntakeKanban";
 import {
   downloadCSV,
   downloadExcel,
@@ -590,7 +590,7 @@ const IntakeManagement: React.FC = () => {
           {isLoading ? (
             <LinearProgress />
           ) : (
-            <IntakeKanban
+            <AuraIntakeKanban
               intakes={filteredIntakes}
               onViewDetails={handleViewDetails}
               onSchedule={handleSchedule}
