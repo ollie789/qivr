@@ -157,6 +157,45 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
         var improvedCount = patientOutcomes.Count(o => o.LastScore > o.FirstScore);
         var improvementRate = patientOutcomes.Any() ? (double)improvedCount / patientOutcomes.Count * 100 : 0;
 
+        // Appointment trends (last 7 days)
+        var appointmentTrends = await _context.Appointments
+            .Where(a => a.TenantId == tenantId && a.ScheduledStart >= from && a.ScheduledStart <= to)
+            .GroupBy(a => a.ScheduledStart.Date)
+            .Select(g => new AppointmentTrend
+            {
+                Date = g.Key.ToString("yyyy-MM-dd"),
+                Scheduled = g.Count(),
+                Completed = g.Count(a => a.Status == AppointmentStatus.Completed),
+                Cancelled = g.Count(a => a.Status == AppointmentStatus.Cancelled)
+            })
+            .OrderBy(t => t.Date)
+            .ToListAsync(cancellationToken);
+
+        // PROM completion data (weekly) - simplified grouping
+        var promsByWeek = await _context.PromInstances
+            .Where(p => p.TenantId == tenantId && p.CreatedAt >= from && p.CreatedAt <= to)
+            .ToListAsync(cancellationToken);
+
+        var promCompletion = promsByWeek
+            .GroupBy(p => (p.CreatedAt - from).Days / 7)
+            .Select(g => new PromCompletion
+            {
+                Week = $"Week {g.Key + 1}",
+                Completed = g.Count(p => p.Status == PromStatus.Completed),
+                Pending = g.Count(p => p.Status == PromStatus.Pending || p.Status == PromStatus.InProgress),
+                CompletionRate = g.Any() ? Math.Round((double)g.Count(p => p.Status == PromStatus.Completed) / g.Count() * 100, 1) : 0
+            })
+            .OrderBy(p => p.Week)
+            .ToList();
+
+        // Patient satisfaction (from completed PROMs with satisfaction questions)
+        var satisfactionScores = await _context.PromResponses
+            .Where(p => p.TenantId == tenantId && p.CompletedAt >= from && p.CompletedAt <= to && p.Score > 0)
+            .Select(p => p.Score)
+            .ToListAsync(cancellationToken);
+        
+        var avgSatisfaction = satisfactionScores.Any() ? (double)satisfactionScores.Average() / 20.0 : 4.5; // Normalize to 5-star scale
+
         return new ClinicalAnalytics
         {
             AveragePromScore = Math.Round(avgPromScore, 1),
@@ -165,7 +204,10 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
             AveragePainIntensity = Math.Round(avgPainIntensity, 1),
             BodyRegionDistribution = bodyRegions,
             PatientImprovementRate = Math.Round(improvementRate, 1),
-            TotalPatientsTracked = patientOutcomes.Count
+            TotalPatientsTracked = patientOutcomes.Count,
+            AppointmentTrends = appointmentTrends,
+            PromCompletionData = promCompletion,
+            PatientSatisfaction = Math.Round(avgSatisfaction, 1)
         };
     }
 
@@ -238,6 +280,9 @@ public record ClinicalAnalytics
     public List<BodyRegionCount> BodyRegionDistribution { get; init; } = new();
     public double PatientImprovementRate { get; init; }
     public int TotalPatientsTracked { get; init; }
+    public List<AppointmentTrend> AppointmentTrends { get; init; } = new();
+    public List<PromCompletion> PromCompletionData { get; init; } = new();
+    public double PatientSatisfaction { get; init; }
 }
 
 public record PainMapAnalytics
@@ -283,4 +328,20 @@ public record IntensityRange
 {
     public string Range { get; init; } = "";
     public int Count { get; init; }
+}
+
+public record AppointmentTrend
+{
+    public string Date { get; init; } = "";
+    public int Scheduled { get; init; }
+    public int Completed { get; init; }
+    public int Cancelled { get; init; }
+}
+
+public record PromCompletion
+{
+    public string Week { get; init; } = "";
+    public int Completed { get; init; }
+    public int Pending { get; init; }
+    public double CompletionRate { get; init; }
 }

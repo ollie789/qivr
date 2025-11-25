@@ -106,14 +106,24 @@ const Dashboard: React.FC = () => {
 
   // Create stats array with real data
   const appointmentTrends = React.useMemo<AppointmentTrendDatum[]>(() => {
-    // TODO: Add appointment trends to clinical analytics
-    return [];
-  }, []);
+    if (!clinicalAnalytics?.appointmentTrends) return [];
+    return clinicalAnalytics.appointmentTrends.map(trend => ({
+      name: trend.date,
+      appointments: trend.scheduled,
+      completed: trend.completed,
+      cancellations: trend.cancelled,
+    }));
+  }, [clinicalAnalytics]);
 
   const promCompletionData = React.useMemo<PromCompletionDatum[]>(() => {
-    // TODO: Add PROM completion to clinical analytics
-    return [];
-  }, []);
+    if (!clinicalAnalytics?.promCompletionData) return [];
+    return clinicalAnalytics.promCompletionData.map(prom => ({
+      name: prom.week,
+      completed: prom.completed,
+      pending: prom.pending,
+      completionRate: prom.completionRate,
+    }));
+  }, [clinicalAnalytics]);
 
   const conditionData = React.useMemo<DiagnosisDatum[]>(() => {
     if (!clinicalAnalytics?.topConditions) return [];
@@ -148,7 +158,7 @@ const Dashboard: React.FC = () => {
         activePatients: dashboardMetrics.totalPatients,
         completedToday: dashboardMetrics.completedToday,
         averageWaitTime: dashboardMetrics.averageWaitTime,
-        patientSatisfaction: 4.5, // TODO: Add to backend
+        patientSatisfaction: clinicalAnalytics?.patientSatisfaction ?? 4.5,
         completionRate: dashboardMetrics.completionRate,
         noShowRate: dashboardMetrics.noShowRate,
         staffUtilization: dashboardMetrics.staffUtilization,

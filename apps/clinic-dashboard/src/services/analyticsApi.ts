@@ -27,6 +27,19 @@ export interface ClinicalAnalytics {
   }>;
   patientImprovementRate: number;
   totalPatientsTracked: number;
+  appointmentTrends?: Array<{
+    date: string;
+    scheduled: number;
+    completed: number;
+    cancelled: number;
+  }>;
+  promCompletionData?: Array<{
+    week: string;
+    completed: number;
+    pending: number;
+    completionRate: number;
+  }>;
+  patientSatisfaction?: number;
 }
 
 export interface PainMapAnalytics {
