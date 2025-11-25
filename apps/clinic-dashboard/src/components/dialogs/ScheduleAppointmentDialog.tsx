@@ -21,7 +21,9 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { enAU } from 'date-fns/locale';
 import type { ChipProps } from '@mui/material/Chip';
 import { useSnackbar } from 'notistack';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { StepperDialog, FormSection, FormRow, TimeSlotPicker } from '@qivr/design-system';
+import { appointmentsApi } from '../../services/appointmentsApi';
 
 export interface ScheduleAppointmentDialogProps {
   open: boolean;
@@ -75,8 +77,8 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
   prefilledData,
 }) => {
   const { enqueueSnackbar } = useSnackbar();
+  const queryClient = useQueryClient();
   const [activeStep, setActiveStep] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [appointmentData, setAppointmentData] = useState({
     patientId: patient?.id || '',
     patientName: patient ? `${patient.firstName} ${patient.lastName}` : '',
@@ -94,21 +96,48 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
     ? ['Select Provider', 'Choose Date & Time', 'Confirm']
     : ['Patient Info', 'Select Provider', 'Date & Time', 'Confirm'];
 
-  const handleSchedule = async () => {
-    setLoading(true);
-    try {
-      // TODO: API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  const createAppointmentMutation = useMutation({
+    mutationFn: (data: {
+      patientId: string;
+      providerId: string;
+      scheduledStart: string;
+      scheduledEnd: string;
+      appointmentType: string;
+      reasonForVisit?: string;
+      notes?: string;
+    }) => appointmentsApi.createAppointment(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       enqueueSnackbar('Appointment scheduled successfully!', { variant: 'success' });
       if (intakeId) {
         enqueueSnackbar('Intake status updated', { variant: 'info' });
       }
       onClose();
-    } catch (error) {
-      enqueueSnackbar('Failed to schedule appointment', { variant: 'error' });
-    } finally {
-      setLoading(false);
-    }
+    },
+    onError: (error: any) => {
+      enqueueSnackbar(error?.message || 'Failed to schedule appointment', { variant: 'error' });
+    },
+  });
+
+  const handleSchedule = async () => {
+    if (!appointmentData.date || !appointmentData.timeSlot) return;
+
+    const [hours, minutes] = appointmentData.timeSlot.split(':').map(Number);
+    const scheduledStart = new Date(appointmentData.date);
+    scheduledStart.setHours(hours, minutes, 0, 0);
+
+    const scheduledEnd = new Date(scheduledStart);
+    scheduledEnd.setMinutes(scheduledEnd.getMinutes() + appointmentData.duration);
+
+    createAppointmentMutation.mutate({
+      patientId: appointmentData.patientId,
+      providerId: appointmentData.providerId,
+      scheduledStart: scheduledStart.toISOString(),
+      scheduledEnd: scheduledEnd.toISOString(),
+      appointmentType: appointmentData.appointmentType,
+      reasonForVisit: prefilledData?.chiefComplaint,
+      notes: appointmentData.notes,
+    });
   };
 
   const isStepValid = () => {
@@ -279,7 +308,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
       onBack={() => setActiveStep(prev => prev - 1)}
       onComplete={handleSchedule}
       isStepValid={Boolean(isStepValid())}
-      loading={loading}
+      loading={createAppointmentMutation.isPending}
       completeLabel="Schedule Appointment"
     >
       {renderStep()}

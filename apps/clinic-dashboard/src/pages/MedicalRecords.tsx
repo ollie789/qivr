@@ -193,11 +193,25 @@ const MedicalRecords: React.FC = () => {
     }
   }, [patient]);
 
+  const updatePatientMutation = useMutation({
+    mutationFn: (updates: Partial<Patient>) =>
+      patientApi.updatePatient(selectedPatientId!, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["medicalRecords", "patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patient", selectedPatientId] });
+      enqueueSnackbar("Patient information saved", { variant: "success" });
+      setEditMode(false);
+    },
+    onError: (error: any) => {
+      enqueueSnackbar(error?.message || "Failed to save patient information", {
+        variant: "error",
+      });
+    },
+  });
+
   const handleSavePatient = () => {
-    if (!selectedPatientId) return;
-    // TODO: Call API to save patient data
-    enqueueSnackbar("Patient information saved", { variant: "success" });
-    setEditMode(false);
+    if (!selectedPatientId || !editedPatient) return;
+    updatePatientMutation.mutate(editedPatient);
   };
 
   // Fetch vital signs
