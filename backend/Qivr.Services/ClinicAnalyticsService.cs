@@ -158,18 +158,26 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
         var improvementRate = patientOutcomes.Any() ? (double)improvedCount / patientOutcomes.Count * 100 : 0;
 
         // Appointment trends (last 7 days)
-        var appointmentTrends = await _context.Appointments
+        var appointmentTrendsRaw = await _context.Appointments
             .Where(a => a.TenantId == tenantId && a.ScheduledStart >= from && a.ScheduledStart <= to)
             .GroupBy(a => a.ScheduledStart.Date)
-            .Select(g => new AppointmentTrend
+            .Select(g => new 
             {
-                Date = g.Key.ToString("yyyy-MM-dd"),
+                Date = g.Key,
                 Scheduled = g.Count(),
                 Completed = g.Count(a => a.Status == AppointmentStatus.Completed),
                 Cancelled = g.Count(a => a.Status == AppointmentStatus.Cancelled)
             })
             .OrderBy(t => t.Date)
             .ToListAsync(cancellationToken);
+
+        var appointmentTrends = appointmentTrendsRaw.Select(t => new AppointmentTrend
+        {
+            Date = t.Date.ToString("yyyy-MM-dd"),
+            Scheduled = t.Scheduled,
+            Completed = t.Completed,
+            Cancelled = t.Cancelled
+        }).ToList();
 
         // PROM completion data (weekly) - simplified grouping
         var promsByWeek = await _context.PromInstances
