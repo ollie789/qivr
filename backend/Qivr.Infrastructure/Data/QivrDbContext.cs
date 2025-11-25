@@ -956,6 +956,18 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Complications).HasMaxLength(500);
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
+
+        // TreatmentPlan configuration
+        modelBuilder.Entity<TreatmentPlan>(entity =>
+        {
+            entity.ToTable("treatment_plans");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId });
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.Sessions).HasColumnType("jsonb");
+            entity.Property(e => e.Exercises).HasColumnType("jsonb");
+            entity.HasQueryFilter(e => !e.IsDeleted && e.TenantId == GetTenantId());
+        });
     }
 
     private static string ToSnakeCase(string? input)

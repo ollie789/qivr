@@ -30,7 +30,9 @@ public class ClinicAnalyticsController : BaseApiController
         CancellationToken cancellationToken)
     {
         var tenantId = RequireTenantId();
-        var targetDate = date ?? DateTime.UtcNow;
+        var targetDate = date.HasValue 
+            ? DateTime.SpecifyKind(date.Value, DateTimeKind.Utc) 
+            : DateTime.UtcNow;
         
         var metrics = await _analyticsService.GetDashboardMetricsAsync(tenantId, targetDate, cancellationToken);
         return Ok(metrics);
@@ -47,8 +49,12 @@ public class ClinicAnalyticsController : BaseApiController
         CancellationToken cancellationToken)
     {
         var tenantId = RequireTenantId();
-        var fromDate = from ?? DateTime.UtcNow.AddDays(-30);
-        var toDate = to ?? DateTime.UtcNow;
+        var fromDate = from.HasValue 
+            ? DateTime.SpecifyKind(from.Value, DateTimeKind.Utc) 
+            : DateTime.UtcNow.AddDays(-30);
+        var toDate = to.HasValue 
+            ? DateTime.SpecifyKind(to.Value, DateTimeKind.Utc) 
+            : DateTime.UtcNow;
         
         var analytics = await _analyticsService.GetClinicalAnalyticsAsync(tenantId, fromDate, toDate, cancellationToken);
         return Ok(analytics);
