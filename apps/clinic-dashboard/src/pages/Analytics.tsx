@@ -30,13 +30,13 @@ import analyticsApi from "../services/analyticsApi";
 import { TopDiagnosesCard } from "../features/analytics";
 import {
   PageHeader,
-  AuraStatCard,
   StatCardSkeleton,
   InfoCard,
   AuraButton,
 } from "@qivr/design-system";
 import type { DiagnosisDatum } from "../features/analytics";
 import { useAuthUser } from "../stores/authStore";
+import { AuraGlassStatCard } from "../components/aura/AuraGlassStatCard";
 
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState("30");
@@ -268,11 +268,11 @@ const Analytics: React.FC = () => {
                         },
                       }}
                     >
-                      <AuraStatCard
+                      <AuraGlassStatCard
                         title={stat.label}
                         value={stat.value}
                         icon={stat.icon}
-                        iconColor={stat.color}
+                        color={stat.color}
                         trend={stat.trend}
                       />
                     </Box>
