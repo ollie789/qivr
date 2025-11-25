@@ -1,7 +1,8 @@
-import { Box, Typography, LinearProgress, Stack, Avatar } from '@mui/material';
-import { EmojiEvents, LocalFireDepartment, TrendingUp, CheckCircle, Star } from '@mui/icons-material';
-import { glassCard } from '@qivr/design-system';
+import { Box, Typography, LinearProgress, Stack, Avatar, Alert, CircularProgress } from '@mui/material';
+import { EmojiEvents, LocalFireDepartment, TrendingUp, CheckCircle, Star, Refresh } from '@mui/icons-material';
+import { glassCard, AuraButton } from '@qivr/design-system';
 import { useQuery } from '@tanstack/react-query';
+import api from '../lib/api-client';
 
 const achievements = [
   { id: 1, title: 'First Steps', description: 'Completed intake form', icon: '🎯', unlocked: true },
@@ -12,24 +13,60 @@ const achievements = [
   { id: 6, title: 'Health Hero', description: '30 day streak', icon: '🔥', unlocked: false },
 ];
 
+const calculateHealthScore = (data: any) => {
+  if (!data) return 0;
+  const appointmentScore = Math.min((data.totalAppointments || 0) * 5, 30);
+  const promScore = Math.min((data.completedProms || 0) * 3, 30);
+  const improvementScore = Math.min((data.improvementRate || 0), 40);
+  return Math.min(appointmentScore + promScore + improvementScore, 100);
+};
+
 export default function HealthProgress() {
-  const { data: stats } = useQuery({
-    queryKey: ['health-stats'],
+  const { data: rawData, isLoading, error, refetch } = useQuery({
+    queryKey: ['patient-analytics'],
     queryFn: async () => {
-      return {
-        healthScore: 72,
-        appointmentStreak: 5,
-        promStreak: 3,
-        totalAppointments: 12,
-        completedProms: 8,
-        improvementRate: 35,
-        nextMilestone: { type: 'appointments', current: 12, target: 15 }
-      };
-    }
+      const response: any = await api.get('/api/patient-analytics');
+      return response.data || response;
+    },
+    retry: 2,
   });
+
+  const stats = rawData ? {
+    healthScore: calculateHealthScore(rawData),
+    appointmentStreak: rawData.appointmentStreak || 0,
+    promStreak: rawData.promStreak || 0,
+    totalAppointments: rawData.totalAppointments || 0,
+    completedProms: rawData.completedProms || 0,
+    improvementRate: rawData.improvementRate || 0,
+    nextMilestone: rawData.nextMilestone || { current: 0, target: 15 }
+  } : null;
 
   const healthScore = stats?.healthScore || 0;
   const scoreColor = healthScore >= 80 ? 'success' : healthScore >= 60 ? 'warning' : 'error';
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
+          Health Progress
+        </Typography>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Failed to load your health data. Please try again.
+        </Alert>
+        <AuraButton onClick={() => refetch()} startIcon={<Refresh />}>
+          Retry
+        </AuraButton>
+      </Box>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>

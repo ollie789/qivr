@@ -25,7 +25,6 @@ import { useQuery } from "@tanstack/react-query";
 import { subDays } from "date-fns";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { PainMapMetrics } from "@qivr/design-system";
-import apiClient from "../lib/api-client";
 import analyticsApi from "../services/analyticsApi";
 import { TopDiagnosesCard } from "../features/analytics";
 import {
@@ -82,41 +81,18 @@ const Analytics: React.FC = () => {
     enabled: canMakeApiCalls && Boolean(tenantId),
   });
 
-  const { data: painHeatMap, isLoading: heatMapLoading } = useQuery({
-    queryKey: [
-      "painHeatMap",
-      tenantId,
-      dateRange,
-      painAvatarType,
-      painViewOrientation,
-    ],
-    queryFn: async () => {
+  const { data: painAnalytics, isLoading: painAnalyticsLoading, error: painError } = useQuery({
+    queryKey: ["painAnalytics", tenantId, dateRange],
+    queryFn: () => {
       const { from, to } = getDateRange();
-      return await apiClient.post("/api/pain-map-analytics/heatmap", {
-        startDate: from.toISOString(),
-        endDate: to.toISOString(),
-        avatarType: painAvatarType,
-        viewOrientation: painViewOrientation,
-      });
-    },
-    enabled: canMakeApiCalls && Boolean(tenantId) && activeTab === 1,
-  });
-
-  const { data: painMetrics, isLoading: painMetricsLoading } = useQuery({
-    queryKey: ["painMetrics", tenantId, dateRange],
-    queryFn: async () => {
-      const { from, to } = getDateRange();
-      return await apiClient.post("/api/pain-map-analytics/metrics", {
-        startDate: from.toISOString(),
-        endDate: to.toISOString(),
-      });
+      return analyticsApi.getPainMapAnalytics(from, to);
     },
     enabled: canMakeApiCalls && Boolean(tenantId) && activeTab === 1,
   });
 
   const isLoading = metricsLoading || clinicalLoading;
   const isFetching = metricsFetching || clinicalFetching;
-  const error = metricsError || clinicalError;
+  const error = metricsError || clinicalError || painError;
 
   const refetch = () => {
     refetchMetrics();
@@ -185,6 +161,33 @@ const Analytics: React.FC = () => {
     },
   ];
 
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Failed to load analytics data. Please try again.
+        </Alert>
+        <AuraButton onClick={refetch} startIcon={<RefreshIcon />}>
+          Retry
+        </AuraButton>
+      </Box>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Grid container spacing={3}>
+          {[1, 2, 3, 4].map((i) => (
+            <Grid size={{ xs: 12, md: 3 }} key={i}>
+              <StatCardSkeleton />
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    );
+  }
+
   return (
     <Box className="page-enter">
       <PageHeader
@@ -231,13 +234,6 @@ const Analytics: React.FC = () => {
         <Box sx={{ mb: 3 }}>
           <LinearProgress />
         </Box>
-      )}
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          Failed to load analytics:{" "}
-          {error instanceof Error ? error.message : "Unknown error"}
-        </Alert>
       )}
 
       {activeTab === 0 && (
@@ -378,11 +374,11 @@ const Analytics: React.FC = () => {
               title="Pain Region Heat Map"
               subtitle="Aggregated pain data from all patients showing most commonly affected regions"
             >
-              {heatMapLoading ? (
+              {painAnalyticsLoading ? (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress />
                 </Box>
-              ) : painHeatMap && painHeatMap.length > 0 ? (
+              ) : painAnalytics?.painPoints3D && painAnalytics.painPoints3D.length > 0 ? (
                 <Box
                   sx={{
                     bgcolor: "#f5f5f5",
@@ -394,7 +390,7 @@ const Analytics: React.FC = () => {
                 >
                   <Typography variant="body2" color="text.secondary">
                     3D heat map visualization coming soon. Currently showing{" "}
-                    {painHeatMap.length} data points.
+                    {painAnalytics.painPoints3D.length} data points.
                   </Typography>
                 </Box>
               ) : (
@@ -406,7 +402,10 @@ const Analytics: React.FC = () => {
           </Grid>
 
           <Grid size={12}>
-            <PainMapMetrics data={painMetrics} loading={painMetricsLoading} />
+            <PainMapMetrics 
+              data={painAnalytics as any} 
+              loading={painAnalyticsLoading} 
+            />
           </Grid>
         </Grid>
       )}
