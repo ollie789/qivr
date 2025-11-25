@@ -149,7 +149,13 @@ public class QivrDbContext : DbContext
         }
         // modelBuilder.HasDefaultSchema("qivr");
         
-        // Configure value converters for complex types
+        // Configure value converters and comparers for complex types
+        var jsonComparer = new ValueComparer<Dictionary<string, object>>(
+            (c1, c2) => JsonSerializer.Serialize(c1, (JsonSerializerOptions?)null) == JsonSerializer.Serialize(c2, (JsonSerializerOptions?)null),
+            c => c == null ? 0 : JsonSerializer.Serialize(c, (JsonSerializerOptions?)null).GetHashCode(),
+            c => JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(c, (JsonSerializerOptions?)null), (JsonSerializerOptions?)null) ?? new Dictionary<string, object>()
+        );
+        
         var jsonConverter = new ValueConverter<Dictionary<string, object>, string>(
             v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions?)null),
             v => DeserializeJsonSafely(v)
@@ -160,9 +166,21 @@ public class QivrDbContext : DbContext
             v => DeserializeJsonSafelyNullable(v)
         );
         
+        var stringListComparer = new ValueComparer<List<string>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c == null ? new List<string>() : c.ToList()
+        );
+        
         var stringListConverter = new ValueConverter<List<string>, string[]>(
             v => v == null ? Array.Empty<string>() : v.ToArray(),
             v => v == null ? new List<string>() : v.ToList()
+        );
+
+        var dateTimeListComparer = new ValueComparer<List<DateTime>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c == null ? new List<DateTime>() : c.ToList()
         );
 
         var dateTimeListConverter = new ValueConverter<List<DateTime>, string>(
@@ -251,10 +269,18 @@ public class QivrDbContext : DbContext
             entity.ToTable("evaluations");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.EvaluationNumber }).IsUnique();
-            entity.Property(e => e.Symptoms).HasConversion(stringListConverter);
-            entity.Property(e => e.AiRiskFlags).HasConversion(stringListConverter);
-            entity.Property(e => e.MedicalHistory).HasConversion(jsonConverter);
-            entity.Property(e => e.QuestionnaireResponses).HasConversion(jsonConverter);
+            entity.Property(e => e.Symptoms)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
+            entity.Property(e => e.AiRiskFlags)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
+            entity.Property(e => e.MedicalHistory)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
+            entity.Property(e => e.QuestionnaireResponses)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.Urgency).HasConversion<string>();
             
@@ -300,7 +326,9 @@ public class QivrDbContext : DbContext
             entity.HasIndex(e => new { e.ProviderId, e.ScheduledStart, e.ScheduledEnd })
                 .IsUnique()
                 .HasDatabaseName("no_double_booking");
-            entity.Property(e => e.LocationDetails).HasConversion(jsonConverter);
+            entity.Property(e => e.LocationDetails)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.LocationType).HasConversion<string>();
             
@@ -340,8 +368,12 @@ public class QivrDbContext : DbContext
             entity.ToTable("brand_themes");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
-            entity.Property(e => e.Typography).HasConversion(jsonConverter);
-            entity.Property(e => e.WidgetConfig).HasConversion(jsonConverter);
+            entity.Property(e => e.Typography)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
+            entity.Property(e => e.WidgetConfig)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
             
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.BrandThemes)
@@ -362,7 +394,8 @@ public class QivrDbContext : DbContext
                 .HasColumnType("jsonb")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions)null) ?? new Dictionary<string, object>());
+                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions)null) ?? new Dictionary<string, object>())
+                .Metadata.SetValueComparer(jsonComparer);
             
             entity.HasOne(e => e.Patient)
                 .WithMany()
@@ -392,7 +425,8 @@ public class QivrDbContext : DbContext
                 .HasColumnType("jsonb")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions)null) ?? new Dictionary<string, object>());
+                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions)null) ?? new Dictionary<string, object>())
+                .Metadata.SetValueComparer(jsonComparer);
             
             entity.HasOne(e => e.Document)
                 .WithMany(d => d.AuditLogs)
@@ -716,10 +750,12 @@ public class QivrDbContext : DbContext
                 .HasColumnType("text");
 
             entity.Property(e => e.PreferredDates)
-                .HasConversion(dateTimeListConverter);
+                .HasConversion(dateTimeListConverter)
+                .Metadata.SetValueComparer(dateTimeListComparer);
 
             entity.Property(e => e.Metadata)
-                .HasConversion(jsonConverter);
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
 
             entity.HasIndex(e => new { e.TenantId, e.Status })
                 .HasDatabaseName("ix_appointment_waitlist_entries_tenant_status");
