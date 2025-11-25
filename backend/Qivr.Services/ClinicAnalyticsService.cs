@@ -28,7 +28,7 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
         var startOfDay = date.Date;
         var endOfDay = startOfDay.AddDays(1);
         var startOfWeek = startOfDay.AddDays(-(int)startOfDay.DayOfWeek);
-        var startOfMonth = new DateTime(date.Year, date.Month, 1);
+        var startOfMonth = DateTime.SpecifyKind(new DateTime(date.Year, date.Month, 1), DateTimeKind.Utc);
 
         // Today's appointments
         var todayAppointments = await _context.Appointments
