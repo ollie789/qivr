@@ -73,6 +73,7 @@ import {
   patientApi,
   type PatientListResponse,
   type Patient,
+  type UpdatePatientDto,
 } from "../services/patientApi";
 import { documentApi } from "../services/documentApi";
 import {
@@ -194,7 +195,7 @@ const MedicalRecords: React.FC = () => {
   }, [patient]);
 
   const updatePatientMutation = useMutation({
-    mutationFn: (updates: Partial<Patient>) =>
+    mutationFn: (updates: UpdatePatientDto) =>
       patientApi.updatePatient(selectedPatientId!, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicalRecords", "patients"] });
@@ -211,7 +212,16 @@ const MedicalRecords: React.FC = () => {
 
   const handleSavePatient = () => {
     if (!selectedPatientId || !editedPatient) return;
-    updatePatientMutation.mutate(editedPatient);
+    const updates: UpdatePatientDto = {
+      firstName: editedPatient.firstName,
+      lastName: editedPatient.lastName,
+      email: editedPatient.email,
+      phone: editedPatient.phone,
+      dateOfBirth: editedPatient.dateOfBirth,
+      gender: editedPatient.gender,
+      address: editedPatient.address || undefined,
+    };
+    updatePatientMutation.mutate(updates);
   };
 
   // Fetch vital signs

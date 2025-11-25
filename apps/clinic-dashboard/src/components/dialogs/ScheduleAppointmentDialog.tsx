@@ -120,9 +120,12 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
   });
 
   const handleSchedule = async () => {
-    if (!appointmentData.date || !appointmentData.timeSlot) return;
+    if (!appointmentData.date || !appointmentData.timeSlot || !appointmentData.duration) return;
 
-    const [hours, minutes] = appointmentData.timeSlot.split(':').map(Number);
+    const timeParts = appointmentData.timeSlot.split(':');
+    const hours = parseInt(timeParts[0] || '0', 10);
+    const minutes = parseInt(timeParts[1] || '0', 10);
+    
     const scheduledStart = new Date(appointmentData.date);
     scheduledStart.setHours(hours, minutes, 0, 0);
 
