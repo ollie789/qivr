@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Dialog,
@@ -10,8 +10,10 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
+import { useNavigate } from "react-router-dom";
 import { EvaluationViewer } from "../../features/intake/components/EvaluationViewer";
 import { intakeApi } from "../../services/intakeApi";
 
@@ -55,6 +57,8 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
+  const navigate = useNavigate();
+  const [creatingRecord, setCreatingRecord] = useState(false);
 
   const { data: fullEvaluation, isLoading } = useQuery({
     queryKey: ["intakeDetails", intake?.id],
@@ -123,6 +127,19 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
         >
           Intake Evaluation
           <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              startIcon={<PersonAddIcon />}
+              disabled={creatingRecord}
+              onClick={() => {
+                // Navigate to medical records with pre-filled data
+                navigate(`/medical-records/new?intakeId=${intake?.id}`);
+              }}
+            >
+              Create Record & Plan
+            </Button>
             {onDelete && (
               <Button
                 variant="outlined"
