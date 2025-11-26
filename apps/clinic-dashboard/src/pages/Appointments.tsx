@@ -1,25 +1,127 @@
 import { useState } from "react";
-import { Box, Typography, Button, Stack, Chip } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
-import { glassCard } from "@qivr/design-system";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay } from "date-fns";
-
-// Placeholder - replace with actual API call
-const mockAppointments = [
-  { id: "1", date: new Date(), time: "09:00", patient: "John Doe", type: "Initial Consultation" },
-  { id: "2", date: new Date(), time: "14:00", patient: "Jane Smith", type: "Follow-up" },
-];
+import {
+  Box,
+  Typography,
+  Button,
+  Stack,
+  Chip,
+  IconButton,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider,
+  Avatar,
+  Paper,
+} from "@mui/material";
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Notes as NotesIcon,
+  CheckCircle as CompleteIcon,
+  Cancel as CancelIcon,
+} from "@mui/icons-material";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, parseISO } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSnackbar } from "notistack";
+import { appointmentsApi } from "../services/appointmentsApi";
 
 export default function Appointments() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [sessionNotes, setSessionNotes] = useState("");
+  const queryClient = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  // Fetch appointments
+  const { data: appointments = [], isLoading } = useQuery({
+    queryKey: ["appointments", format(monthStart, "yyyy-MM-dd"), format(monthEnd, "yyyy-MM-dd")],
+    queryFn: () => appointmentsApi.getAppointments({
+      startDate: format(monthStart, "yyyy-MM-dd"),
+      endDate: format(monthEnd, "yyyy-MM-dd"),
+    }),
+  });
+
   const appointmentsForDate = (date: Date) => {
-    return mockAppointments.filter(apt => isSameDay(new Date(apt.date), date));
+    return appointments.filter((apt: any) => 
+      isSameDay(parseISO(apt.scheduledStart), date)
+    );
+  };
+
+  const handleOpenNotes = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setSessionNotes(appointment.notes || "");
+    setNotesDialogOpen(true);
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedAppointment) return;
+    
+    try {
+      await appointmentsApi.updateAppointment(selectedAppointment.id, {
+        notes: sessionNotes,
+      });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      enqueueSnackbar("Notes saved", { variant: "success" });
+      setNotesDialogOpen(false);
+    } catch (err) {
+      enqueueSnackbar("Failed to save notes", { variant: "error" });
+    }
+  };
+
+  const handleCompleteAppointment = async (id: string) => {
+    try {
+      await appointmentsApi.completeAppointment(id, {
+        notes: sessionNotes,
+      });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      enqueueSnackbar("Appointment completed", { variant: "success" });
+      setNotesDialogOpen(false);
+    } catch (err) {
+      enqueueSnackbar("Failed to complete appointment", { variant: "error" });
+    }
+  };
+
+  const handleCancelAppointment = async (id: string) => {
+    if (!confirm("Cancel this appointment?")) return;
+    
+    try {
+      await appointmentsApi.cancelAppointment(id);
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      enqueueSnackbar("Appointment cancelled", { variant: "success" });
+    } catch (err) {
+      enqueueSnackbar("Failed to cancel appointment", { variant: "error" });
+    }
+  };
+
+  const handleDeleteAppointment = async (id: string) => {
+    if (!confirm("Delete this appointment? This cannot be undone.")) return;
+    
+    try {
+      await appointmentsApi.deleteAppointment(id);
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      enqueueSnackbar("Appointment deleted", { variant: "success" });
+    } catch (err) {
+      enqueueSnackbar("Failed to delete appointment", { variant: "error" });
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed": return "success";
+      case "in-progress": return "info";
+      case "cancelled": return "error";
+      case "confirmed": return "primary";
+      default: return "default";
+    }
   };
 
   return (
@@ -35,7 +137,7 @@ export default function Appointments() {
 
       <Box sx={{ display: "flex", gap: 3 }}>
         {/* Calendar */}
-        <Box sx={{ ...glassCard, p: 3, flex: 1 }}>
+        <Paper sx={{ p: 3, flex: 1, borderRadius: 3 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
             <Button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
               Previous
@@ -102,21 +204,23 @@ export default function Appointments() {
               );
             })}
           </Box>
-        </Box>
+        </Paper>
 
         {/* Appointments List */}
-        <Box sx={{ ...glassCard, p: 3, width: 350 }}>
+        <Paper sx={{ p: 3, width: 400, borderRadius: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
             {format(selectedDate, "EEEE, MMMM d")}
           </Typography>
 
-          {appointmentsForDate(selectedDate).length === 0 ? (
+          {isLoading ? (
+            <Typography variant="body2" color="text.secondary">Loading...</Typography>
+          ) : appointmentsForDate(selectedDate).length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               No appointments scheduled
             </Typography>
           ) : (
             <Stack spacing={2}>
-              {appointmentsForDate(selectedDate).map(apt => (
+              {appointmentsForDate(selectedDate).map((apt: any) => (
                 <Box
                   key={apt.id}
                   sx={{
@@ -130,17 +234,121 @@ export default function Appointments() {
                     },
                   }}
                 >
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    {apt.time}
-                  </Typography>
-                  <Typography variant="body2">{apt.patient}</Typography>
-                  <Chip label={apt.type} size="small" sx={{ mt: 1 }} />
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.main" }}>
+                          {apt.patientName?.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            {format(parseISO(apt.scheduledStart), "h:mm a")}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {apt.patientName}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Chip 
+                        label={apt.status} 
+                        size="small" 
+                        color={getStatusColor(apt.status)}
+                      />
+                    </Stack>
+
+                    <Typography variant="body2">{apt.appointmentType}</Typography>
+
+                    {apt.notes && (
+                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                        Notes: {apt.notes.substring(0, 50)}...
+                      </Typography>
+                    )}
+
+                    <Stack direction="row" spacing={0.5}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenNotes(apt)}
+                        sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" } }}
+                      >
+                        <NotesIcon fontSize="small" />
+                      </IconButton>
+                      {apt.status !== "completed" && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleCompleteAppointment(apt.id)}
+                          sx={{ bgcolor: "success.main", color: "white", "&:hover": { bgcolor: "success.dark" } }}
+                        >
+                          <CompleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      {apt.status !== "cancelled" && apt.status !== "completed" && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleCancelAppointment(apt.id)}
+                          sx={{ bgcolor: "warning.main", color: "white", "&:hover": { bgcolor: "warning.dark" } }}
+                        >
+                          <CancelIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteAppointment(apt.id)}
+                        sx={{ bgcolor: "error.main", color: "white", "&:hover": { bgcolor: "error.dark" } }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </Stack>
                 </Box>
               ))}
             </Stack>
           )}
-        </Box>
+        </Paper>
       </Box>
+
+      {/* Session Notes Dialog */}
+      <Dialog open={notesDialogOpen} onClose={() => setNotesDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Session Notes - {selectedAppointment?.patientName}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                {selectedAppointment && format(parseISO(selectedAppointment.scheduledStart), "EEEE, MMMM d, yyyy 'at' h:mm a")}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {selectedAppointment?.appointmentType}
+              </Typography>
+            </Box>
+            <Divider />
+            <TextField
+              label="Session Notes"
+              multiline
+              rows={12}
+              value={sessionNotes}
+              onChange={(e) => setSessionNotes(e.target.value)}
+              placeholder="Document patient progress, treatment provided, observations, and next steps..."
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNotesDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveNotes} variant="contained">
+            Save Notes
+          </Button>
+          {selectedAppointment?.status !== "completed" && (
+            <Button 
+              onClick={() => handleCompleteAppointment(selectedAppointment?.id)} 
+              variant="contained" 
+              color="success"
+            >
+              Complete & Save
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
