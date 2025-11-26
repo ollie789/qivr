@@ -104,112 +104,140 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
       {...attributes}
       {...listeners}
       sx={{
-        ...glassCard,
-        p: 2,
-        mb: 1.5,
+        p: 2.5,
+        mb: 2,
         cursor: "grab",
+        bgcolor: "background.paper",
+        borderRadius: 3,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         border: "1px solid",
         borderColor: "divider",
-        borderRadius: 2,
         "&:active": { cursor: "grabbing" },
         "&:hover": {
-          transform: "translateY(-2px)",
           boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
           borderColor: "primary.main",
+          transform: "translateY(-2px)",
         },
-        transition: "all 0.2s ease",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
-      <Stack spacing={1.5}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="flex-start"
-        >
-          <Typography variant="subtitle2" fontWeight={600}>
+      <Stack spacing={2}>
+        {/* Header */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" fontWeight={600} sx={{ fontSize: "1rem" }}>
             {intake.patientName}
           </Typography>
           {intake.severity && (
             <Chip
-              label={intake.severity}
+              label={intake.severity.toUpperCase()}
               size="small"
               sx={{
                 bgcolor: getSeverityColor(intake.severity),
                 color: "white",
-                fontWeight: 600,
-                fontSize: "0.7rem",
+                fontWeight: 700,
+                fontSize: "0.65rem",
+                height: 24,
+                borderRadius: 1.5,
               }}
             />
           )}
         </Stack>
 
-        <Typography variant="caption" color="text.secondary">
+        {/* Condition */}
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
           {intake.conditionType}
         </Typography>
 
+        {/* Symptoms */}
         {intake.symptoms && intake.symptoms.length > 0 && (
-          <Stack direction="row" spacing={0.5} flexWrap="wrap">
-            {intake.symptoms.slice(0, 2).map((symptom, idx) => (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+            {intake.symptoms.slice(0, 3).map((symptom, idx) => (
               <Chip
                 key={idx}
-                icon={<Warning sx={{ fontSize: 14 }} />}
                 label={symptom}
                 size="small"
-                variant="outlined"
-                sx={{ fontSize: "0.65rem", height: 20 }}
+                sx={{
+                  fontSize: "0.7rem",
+                  height: 24,
+                  bgcolor: "action.hover",
+                  fontWeight: 500,
+                }}
               />
             ))}
+            {intake.symptoms.length > 3 && (
+              <Chip
+                label={`+${intake.symptoms.length - 3}`}
+                size="small"
+                sx={{
+                  fontSize: "0.7rem",
+                  height: 24,
+                  bgcolor: "action.selected",
+                  fontWeight: 600,
+                }}
+              />
+            )}
           </Stack>
         )}
 
+        {/* AI Summary */}
         {intake.aiSummary && (
           <Box
             sx={{
-              p: 1,
-              bgcolor: "rgba(139, 92, 246, 0.1)",
-              borderRadius: 1,
+              p: 1.5,
+              bgcolor: "rgba(139, 92, 246, 0.08)",
+              borderRadius: 2,
               borderLeft: "3px solid #8b5cf6",
             }}
           >
-            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>
-              AI: {intake.aiSummary.substring(0, 80)}
-              {intake.aiSummary.length > 80 && "..."}
+            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+              {intake.aiSummary.substring(0, 100)}
+              {intake.aiSummary.length > 100 && "..."}
             </Typography>
           </Box>
         )}
 
+        {/* Risk Flags */}
         {intake.aiRiskFlags && intake.aiRiskFlags.length > 0 && (
-          <Stack direction="row" spacing={0.5} flexWrap="wrap">
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
             {intake.aiRiskFlags.map((flag, idx) => (
               <Chip
                 key={idx}
                 label={flag}
                 size="small"
+                icon={<Warning sx={{ fontSize: 14 }} />}
                 sx={{
-                  bgcolor: "#ef4444",
-                  color: "white",
-                  fontSize: "0.65rem",
-                  height: 20,
+                  bgcolor: "#fee2e2",
+                  color: "#dc2626",
+                  fontSize: "0.7rem",
+                  height: 24,
                   fontWeight: 600,
+                  borderRadius: 1.5,
+                  "& .MuiChip-icon": { color: "#dc2626" },
                 }}
               />
             ))}
           </Stack>
         )}
 
+        {/* Footer */}
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="center"
+          sx={{ pt: 1, borderTop: "1px solid", borderColor: "divider" }}
         >
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" fontWeight={500}>
             {format(new Date(intake.submittedAt), "MMM d, h:mm a")}
           </Typography>
           <Stack direction="row" spacing={0.5}>
             <IconButton
               size="small"
               onClick={onViewDetails}
-              sx={{ bgcolor: "action.hover" }}
+              sx={{
+                bgcolor: "primary.main",
+                color: "white",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
             >
               <Visibility sx={{ fontSize: 16 }} />
             </IconButton>
@@ -218,7 +246,11 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
               <IconButton
                 size="small"
                 onClick={onSchedule}
-                sx={{ bgcolor: "primary.main", color: "white" }}
+                sx={{
+                  bgcolor: "success.main",
+                  color: "white",
+                  "&:hover": { bgcolor: "success.dark" },
+                }}
               >
                 <Schedule sx={{ fontSize: 16 }} />
               </IconButton>
@@ -237,13 +269,15 @@ const KanbanColumn: React.FC<{
   onSchedule: (intake: IntakeSubmission) => void;
 }> = ({ column, intakes, onViewDetails, onSchedule }) => {
   return (
-    <Box sx={{ minWidth: 320, maxWidth: 320 }}>
+    <Box sx={{ minWidth: 340, maxWidth: 340 }}>
       <Box
         sx={{
-          ...glassCard,
-          p: 2,
+          p: 2.5,
           mb: 2,
-          borderTop: `3px solid ${column.color}`,
+          bgcolor: "background.paper",
+          borderRadius: 3,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          borderTop: `4px solid ${column.color}`,
         }}
       >
         <Stack
@@ -251,7 +285,7 @@ const KanbanColumn: React.FC<{
           justifyContent="space-between"
           alignItems="center"
         >
-          <Typography variant="h6" fontWeight={700}>
+          <Typography variant="h6" fontWeight={700} sx={{ fontSize: "1.1rem" }}>
             {column.title}
           </Typography>
           <Chip
@@ -261,6 +295,10 @@ const KanbanColumn: React.FC<{
               bgcolor: column.color,
               color: "white",
               fontWeight: 700,
+              fontSize: "0.875rem",
+              height: 28,
+              borderRadius: 2,
+              minWidth: 36,
             }}
           />
         </Stack>
