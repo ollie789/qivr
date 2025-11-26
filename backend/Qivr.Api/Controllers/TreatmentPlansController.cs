@@ -82,21 +82,66 @@ public class TreatmentPlansController : BaseApiController
             TenantId = tenantId,
             PatientId = request.PatientId,
             ProviderId = userId,
-            Title = request.Title,
+            Title = request.Title ?? "Treatment Plan",
             Diagnosis = request.Diagnosis,
-            Goals = request.Goals,
-            StartDate = request.StartDate,
-            DurationWeeks = request.DurationWeeks,
-            Status = TreatmentPlanStatus.Draft,
+            Goals = request.Goals ?? string.Join(", ", request.GoalsList ?? new List<string>()),
+            StartDate = request.StartDate != default ? request.StartDate : DateTime.UtcNow,
+            DurationWeeks = request.DurationWeeks > 0 ? request.DurationWeeks : ParseDurationWeeks(request.Duration),
+            Status = TreatmentPlanStatus.Active,
             Sessions = request.Sessions ?? new(),
             Exercises = request.Exercises ?? new(),
-            Notes = request.Notes
+            Notes = BuildNotes(request)
         };
 
         _context.TreatmentPlans.Add(plan);
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(Get), new { id = plan.Id }, plan);
+    }
+
+    private int ParseDurationWeeks(string? duration)
+    {
+        if (string.IsNullOrEmpty(duration)) return 6;
+        
+        var lower = duration.ToLower();
+        if (lower.Contains("week"))
+        {
+            var parts = lower.Split(' ');
+            if (parts.Length > 0 && int.TryParse(parts[0], out int weeks))
+                return weeks;
+        }
+        return 6;
+    }
+
+    private string BuildNotes(CreateTreatmentPlanRequest request)
+    {
+        var notes = new List<string>();
+        
+        if (!string.IsNullOrEmpty(request.Frequency))
+            notes.Add($"Frequency: {request.Frequency}");
+        
+        if (request.SessionLength > 0)
+            notes.Add($"Session Length: {request.SessionLength} minutes");
+        
+        if (request.Modalities?.Any() == true)
+            notes.Add($"Modalities: {string.Join(", ", request.Modalities)}");
+        
+        if (!string.IsNullOrEmpty(request.HomeExercises))
+            notes.Add($"Home Exercises: {request.HomeExercises}");
+        
+        if (!string.IsNullOrEmpty(request.ExpectedOutcomes))
+            notes.Add($"Expected Outcomes: {request.ExpectedOutcomes}");
+        
+        if (!string.IsNullOrEmpty(request.PromSchedule))
+            notes.Add($"PROM Schedule: {request.PromSchedule}");
+        
+        if (request.ReviewMilestones?.Any() == true)
+            notes.Add($"Review Milestones: {string.Join(", ", request.ReviewMilestones)}");
+        
+        if (!string.IsNullOrEmpty(request.Notes))
+            notes.Add(request.Notes);
+        
+        return string.Join("\n\n", notes);
     }
 
     [HttpPut("{id}")]
@@ -143,11 +188,20 @@ public class TreatmentPlansController : BaseApiController
 public class CreateTreatmentPlanRequest
 {
     public Guid PatientId { get; set; }
-    public string Title { get; set; } = string.Empty;
+    public string? Title { get; set; }
     public string? Diagnosis { get; set; }
     public string? Goals { get; set; }
+    public List<string>? GoalsList { get; set; }
     public DateTime StartDate { get; set; }
     public int DurationWeeks { get; set; }
+    public string? Duration { get; set; }
+    public string? Frequency { get; set; }
+    public int SessionLength { get; set; }
+    public List<string>? Modalities { get; set; }
+    public string? HomeExercises { get; set; }
+    public string? ExpectedOutcomes { get; set; }
+    public string? PromSchedule { get; set; }
+    public List<string>? ReviewMilestones { get; set; }
     public List<TreatmentSession>? Sessions { get; set; }
     public List<Exercise>? Exercises { get; set; }
     public string? Notes { get; set; }
