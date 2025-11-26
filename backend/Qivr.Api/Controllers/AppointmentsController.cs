@@ -980,6 +980,29 @@ public class AppointmentsController : BaseApiController
             : dateTime.ToUniversalTime();
     }
 
+    /// <summary>
+    /// Delete an appointment
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteAppointment(Guid id)
+    {
+        var tenantId = RequireTenantId();
+        var appointment = await _context.Appointments
+            .FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId);
+
+        if (appointment == null)
+            return NotFound();
+
+        _context.Appointments.Remove(appointment);
+        await _context.SaveChangesAsync();
+        
+        _logger.LogInformation("Deleted appointment {Id}", id);
+        return NoContent();
+    }
+
     // GetTenantId and GetUserId methods removed - using BaseApiController properties instead
 }
 

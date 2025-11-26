@@ -194,6 +194,10 @@ class AppointmentsApi {
   }) {
     return apiClient.post('/api/appointments/waitlist', data);
   }
+
+  async deleteAppointment(id: string): Promise<void> {
+    return apiClient.delete(`/api/appointments/${id}`);
+  }
 }
 
 export const appointmentsApi = new AppointmentsApi();

@@ -1,6 +1,6 @@
 import React from "react";
 import { subDays } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -14,6 +14,7 @@ import {
   FormControl,
   Select,
   MenuItem,
+  IconButton,
 } from "@mui/material";
 import {
   People as PeopleIcon,
@@ -23,6 +24,7 @@ import {
   AccessTime as AccessTimeIcon,
   CheckCircle as CheckCircleIcon,
   Star as StarIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import {
   LineChart,
@@ -38,6 +40,8 @@ import { useAuthUser } from "../stores/authStore";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import dashboardApi from "../services/dashboardApi";
 import analyticsApi from "../services/analyticsApi";
+import { appointmentsApi } from "../services/appointmentsApi";
+import { useSnackbar } from "notistack";
 import {
   AppointmentTrendCard,
   PromCompletionCard,
@@ -63,6 +67,8 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuthUser();
   const { canMakeApiCalls } = useAuthGuard();
+  const { enqueueSnackbar } = useSnackbar();
+  const queryClient = useQueryClient();
   const [chartPeriod, setChartPeriod] = React.useState("7d");
 
   // Fetch new comprehensive dashboard metrics
@@ -298,12 +304,35 @@ const Dashboard: React.FC = () => {
                 <SkeletonLoader type="list" count={3} />
               ) : appointmentsData?.length ? (
                 appointmentsData.map((apt) => (
-                  <ListItem key={apt.id} sx={{ px: 0 }}>
+                  <ListItem 
+                    key={apt.id} 
+                    sx={{ px: 0 }}
+                    secondaryAction={
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={async () => {
+                          if (confirm("Delete this appointment?")) {
+                            try {
+                              await appointmentsApi.deleteAppointment(apt.id);
+                              queryClient.invalidateQueries({ queryKey: ["today-appointments"] });
+                              enqueueSnackbar("Appointment deleted", { variant: "success" });
+                            } catch (err) {
+                              enqueueSnackbar("Failed to delete appointment", { variant: "error" });
+                            }
+                          }
+                        }}
+                        sx={{ color: "error.main" }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    }
+                  >
                     <ListItemAvatar>
                       <Avatar>
                         {apt.patientName
                           .split(" ")
-                          .map((segment) => segment[0])
+                          .map((segment: string) => segment[0])
                           .join("")}
                       </Avatar>
                     </ListItemAvatar>
@@ -357,9 +386,9 @@ const Dashboard: React.FC = () => {
                 <SkeletonLoader type="list" count={3} />
               ) : activityData?.length ? (
                 activityData
-                  .filter((activity) => activity.type === "intake")
+                  .filter((activity: any) => activity.type === "intake")
                   .slice(0, 3)
-                  .map((activity) => (
+                  .map((activity: any) => (
                     <ListItem key={activity.id} sx={{ px: 0 }}>
                       <ListItemAvatar>
                         <Avatar
