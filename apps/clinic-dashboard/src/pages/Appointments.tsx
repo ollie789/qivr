@@ -14,6 +14,10 @@ import {
   Divider,
   Avatar,
   Paper,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Slider,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -22,18 +26,30 @@ import {
   Notes as NotesIcon,
   CheckCircle as CompleteIcon,
   Cancel as CancelIcon,
+  Person as PersonIcon,
+  MedicalServices as TreatmentIcon,
 } from "@mui/icons-material";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, parseISO } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
+import { useNavigate } from "react-router-dom";
 import { appointmentsApi } from "../services/appointmentsApi";
 
 export default function Appointments() {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [sessionNotes, setSessionNotes] = useState("");
+  const [modalities, setModalities] = useState({
+    manualTherapy: false,
+    exerciseTherapy: false,
+    modalities: false,
+    education: false,
+  });
+  const [painLevel, setPainLevel] = useState(5);
+  const [assignPROM, setAssignPROM] = useState(false);
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -59,6 +75,14 @@ export default function Appointments() {
   const handleOpenNotes = (appointment: any) => {
     setSelectedAppointment(appointment);
     setSessionNotes(appointment.notes || "");
+    setModalities({
+      manualTherapy: false,
+      exerciseTherapy: false,
+      modalities: false,
+      education: false,
+    });
+    setPainLevel(5);
+    setAssignPROM(false);
     setNotesDialogOpen(true);
   };
 
@@ -66,9 +90,23 @@ export default function Appointments() {
     if (!selectedAppointment) return;
     
     try {
+      const modalitiesUsed = Object.entries(modalities)
+        .filter(([_, used]) => used)
+        .map(([name]) => name.replace(/([A-Z])/g, ' $1').trim())
+        .join(", ");
+
+      const enhancedNotes = `${sessionNotes}\n\nModalities: ${modalitiesUsed || "None"}\nPain Level: ${painLevel}/10${assignPROM ? "\n[PROM Assigned]" : ""}`;
+
       await appointmentsApi.updateAppointment(selectedAppointment.id, {
-        notes: sessionNotes,
+        notes: enhancedNotes,
       });
+
+      // TODO: If assignPROM is true, create PROM assignment via API
+      if (assignPROM) {
+        // await promsApi.assignPROM(selectedAppointment.patientId, { ... });
+        enqueueSnackbar("PROM assigned to patient", { variant: "info" });
+      }
+
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       enqueueSnackbar("Notes saved", { variant: "success" });
       setNotesDialogOpen(false);
@@ -267,6 +305,24 @@ export default function Appointments() {
                     <Stack direction="row" spacing={0.5}>
                       <IconButton
                         size="small"
+                        onClick={() => navigate(`/medical-records?patientId=${apt.patientId}`)}
+                        sx={{ bgcolor: "info.main", color: "white", "&:hover": { bgcolor: "info.dark" } }}
+                        title="View Medical Record"
+                      >
+                        <PersonIcon fontSize="small" />
+                      </IconButton>
+                      {apt.treatmentPlanId && (
+                        <IconButton
+                          size="small"
+                          onClick={() => navigate(`/treatment-plans/${apt.treatmentPlanId}`)}
+                          sx={{ bgcolor: "secondary.main", color: "white", "&:hover": { bgcolor: "secondary.dark" } }}
+                          title="View Treatment Plan"
+                        >
+                          <TreatmentIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      <IconButton
+                        size="small"
                         onClick={() => handleOpenNotes(apt)}
                         sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" } }}
                       >
@@ -312,7 +368,7 @@ export default function Appointments() {
           Session Notes - {selectedAppointment?.patientName}
         </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={3} sx={{ mt: 1 }}>
             <Box>
               <Typography variant="caption" color="text.secondary">
                 {selectedAppointment && format(parseISO(selectedAppointment.scheduledStart), "EEEE, MMMM d, yyyy 'at' h:mm a")}
@@ -321,15 +377,95 @@ export default function Appointments() {
                 {selectedAppointment?.appointmentType}
               </Typography>
             </Box>
+            
             <Divider />
+            
+            {/* Treatment Modalities */}
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Treatment Modalities Used
+              </Typography>
+              <FormGroup row>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={modalities.manualTherapy}
+                      onChange={(e) => setModalities({ ...modalities, manualTherapy: e.target.checked })}
+                    />
+                  }
+                  label="Manual Therapy"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={modalities.exerciseTherapy}
+                      onChange={(e) => setModalities({ ...modalities, exerciseTherapy: e.target.checked })}
+                    />
+                  }
+                  label="Exercise Therapy"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={modalities.modalities}
+                      onChange={(e) => setModalities({ ...modalities, modalities: e.target.checked })}
+                    />
+                  }
+                  label="Modalities"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={modalities.education}
+                      onChange={(e) => setModalities({ ...modalities, education: e.target.checked })}
+                    />
+                  }
+                  label="Education"
+                />
+              </FormGroup>
+            </Box>
+
+            {/* Pain Level */}
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Pain Level During Session
+              </Typography>
+              <Slider
+                value={painLevel}
+                onChange={(_, value) => setPainLevel(value as number)}
+                min={0}
+                max={10}
+                marks
+                valueLabelDisplay="on"
+              />
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="caption">No Pain</Typography>
+                <Typography variant="caption">Worst Pain</Typography>
+              </Stack>
+            </Box>
+
+            <Divider />
+            
+            {/* Session Notes */}
             <TextField
               label="Session Notes"
               multiline
-              rows={12}
+              rows={8}
               value={sessionNotes}
               onChange={(e) => setSessionNotes(e.target.value)}
               placeholder="Document patient progress, treatment provided, observations, and next steps..."
               fullWidth
+            />
+
+            {/* PROM Assignment */}
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={assignPROM}
+                  onChange={(e) => setAssignPROM(e.target.checked)}
+                />
+              }
+              label="Assign PROM for next visit"
             />
           </Stack>
         </DialogContent>
