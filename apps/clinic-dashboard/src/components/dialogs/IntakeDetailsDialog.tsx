@@ -58,7 +58,6 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
-  const [creatingRecord, setCreatingRecord] = useState(false);
 
   const { data: fullEvaluation, isLoading } = useQuery({
     queryKey: ["intakeDetails", intake?.id],
@@ -132,7 +131,6 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
               color="primary"
               size="small"
               startIcon={<PersonAddIcon />}
-              disabled={creatingRecord}
               onClick={() => {
                 // Navigate to medical records with pre-filled data
                 navigate(`/medical-records/new?intakeId=${intake?.id}`);

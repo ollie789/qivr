@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Box,
   Paper,
@@ -100,6 +101,7 @@ import {
   StatCardSkeleton,
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
+import { intakeApi } from "../services/intakeApi";
 
 interface MedicalHistory {
   id: string;
@@ -140,6 +142,7 @@ const MedicalRecords: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { canMakeApiCalls } = useAuthGuard();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
 
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [activeTab, setActiveTab] = useState(0);
@@ -148,6 +151,9 @@ const MedicalRecords: React.FC = () => {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [editedPatient, setEditedPatient] = useState<Partial<Patient>>({});
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [prefilledData, setPrefilledData] = useState<any>(null);
+  const [loadingIntake, setLoadingIntake] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [page] = useState(0);
@@ -193,6 +199,46 @@ const MedicalRecords: React.FC = () => {
       setEditedPatient(patient);
     }
   }, [patient]);
+
+  // Handle intake parameter
+  useEffect(() => {
+    const intakeId = searchParams.get('intakeId');
+    if (intakeId && !loadingIntake) {
+      loadIntakeData(intakeId);
+    }
+  }, [searchParams]);
+
+  const loadIntakeData = async (intakeId: string) => {
+    setLoadingIntake(true);
+    try {
+      const intake = await intakeApi.getIntakeDetails(intakeId);
+      const nameParts = intake.patient.name.split(' ');
+      
+      setPrefilledData({
+        intakeId: intakeId,
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
+        email: intake.patient.email,
+        phone: intake.patient.phone,
+        dateOfBirth: intake.patient.dateOfBirth,
+        chiefComplaint: intake.evaluation.chiefComplaint || intake.evaluation.conditionType,
+        medicalHistory: intake.medicalHistory,
+        currentMedications: intake.evaluation.currentMedications,
+        allergies: intake.evaluation.allergies,
+        conditions: intake.evaluation.medicalConditions,
+        baselinePainMap: intake.painMap,
+      });
+      
+      setShowCreateForm(true);
+      setViewMode('detail');
+      enqueueSnackbar('Intake data loaded. Create patient record below.', { variant: 'info' });
+    } catch (error) {
+      console.error('Failed to load intake:', error);
+      enqueueSnackbar('Failed to load intake data', { variant: 'error' });
+    } finally {
+      setLoadingIntake(false);
+    }
+  };
 
   const updatePatientMutation = useMutation({
     mutationFn: (updates: UpdatePatientDto) =>

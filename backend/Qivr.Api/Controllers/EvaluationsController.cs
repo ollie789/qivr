@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
+using Qivr.Core.Entities;
 
 namespace Qivr.Api.Controllers;
 
@@ -206,6 +207,30 @@ public class EvaluationsController : BaseApiController
         _logger.LogInformation("Deleted evaluation {Id}", id);
         return NoContent();
     }
+
+    /// <summary>
+    /// Link evaluation to medical record
+    /// </summary>
+    [HttpPost("{id}/link-medical-record")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> LinkToMedicalRecord(Guid id, [FromBody] LinkMedicalRecordRequest request, CancellationToken cancellationToken)
+    {
+        var tenantId = RequireTenantId();
+        var evaluation = await _context.Evaluations
+            .FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken);
+
+        if (evaluation == null)
+            return NotFound();
+
+        evaluation.PatientId = request.PatientId;
+        evaluation.Status = EvaluationStatus.Archived;
+        await _context.SaveChangesAsync(cancellationToken);
+        
+        _logger.LogInformation("Linked evaluation {Id} to patient {PatientId}", id, request.PatientId);
+        return Ok();
+    }
 }
 
 // Request/Response Models
@@ -249,4 +274,9 @@ public class AnalysisResponse
     public string Summary { get; set; } = string.Empty;
     public string[] RiskFlags { get; set; } = Array.Empty<string>();
     public string[] RecommendedActions { get; set; } = Array.Empty<string>();
+}
+
+public class LinkMedicalRecordRequest
+{
+    public Guid PatientId { get; set; }
 }

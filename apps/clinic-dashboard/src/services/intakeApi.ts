@@ -254,6 +254,12 @@ export const intakeApi = {
   async deleteIntake(id: string): Promise<void> {
     await apiClient.delete(`/api/evaluations/${id}`);
   },
+
+  async linkToMedicalRecord(intakeId: string, patientId: string): Promise<void> {
+    await apiClient.post(`/api/evaluations/${intakeId}/link-medical-record`, {
+      patientId: patientId
+    });
+  },
 };
 
 export default intakeApi;
