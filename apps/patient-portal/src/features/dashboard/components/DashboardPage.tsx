@@ -34,6 +34,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useDashboardData } from "../hooks";
 import { AuraStatCard, InfoCard, StatCardSkeleton, AuraEmptyState } from "@qivr/design-system";
+import { TreatmentPlanCard } from "../../../components/TreatmentPlanCard";
 
 const formatAppointmentTime = (isoDate: string) => {
   const date = parseISO(isoDate);
@@ -155,6 +156,11 @@ export const DashboardPage: React.FC = () => {
       </Grid>
 
       <Grid container spacing={3}>
+        {/* Treatment Plan Card - Full Width */}
+        <Grid size={{ xs: 12 }}>
+          <TreatmentPlanCard />
+        </Grid>
+
         <Grid size={{ xs: 12, md: 6 }}>
           <InfoCard
             title="Upcoming Appointments"

@@ -23,10 +23,12 @@ public class Evaluation : TenantEntity
     public DateTime? ReviewedAt { get; set; }
     public EvaluationStatus Status { get; set; } = EvaluationStatus.Pending;
     public UrgencyLevel? Urgency { get; set; }
+    public Guid? MedicalRecordId { get; set; }
     
     // Navigation properties
     public virtual User? Patient { get; set; }
     public virtual User? Reviewer { get; set; }
+    public virtual User? MedicalRecord { get; set; }
     public virtual ICollection<PainMap> PainMaps { get; set; } = new List<PainMap>();
     public virtual ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 }
