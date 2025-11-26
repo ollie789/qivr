@@ -11,9 +11,7 @@ import {
   Paper,
   FormControl,
   FormLabel,
-  RadioGroup,
   FormControlLabel,
-  Radio,
   Checkbox,
   FormGroup,
   Slider,
@@ -25,12 +23,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
-import { PageLoader } from "../components/shared/LoadingScreen";
-import { PainMap3D } from "../components/PainMap3D";
+import { PainMap3D } from "@qivr/design-system";
 
 const steps = [
-  "Pain Location",
-  "Pain Characteristics",
+  "Pain Location & Characteristics",
   "Pain Timing & Pattern",
   "Aggravating & Relieving Factors",
   "Medical History",
@@ -103,8 +99,8 @@ export const IntakeForm: React.FC = () => {
 
   useEffect(() => {
     const initUser = async () => {
-      if (user?.sub) {
-        setUserId(user.sub);
+      if (user?.username) {
+        setUserId(user.username);
       }
       setLoading(false);
     };
@@ -121,15 +117,12 @@ export const IntakeForm: React.FC = () => {
       if (!formData.chiefComplaint.trim()) {
         newErrors.chiefComplaint = "Please describe your main concern";
       }
-    }
-
-    if (step === 1) {
       if (formData.painQualities.length === 0) {
         newErrors.painQualities = "Please select at least one pain quality";
       }
     }
 
-    if (step === 2) {
+    if (step === 1) {
       if (!formData.onset) {
         newErrors.onset = "Please select when the pain started";
       }
@@ -185,7 +178,7 @@ export const IntakeForm: React.FC = () => {
       if (formData.relievers.position) relievingFactors.push("Position changes");
       if (formData.relievers.other) relievingFactors.push(formData.relievers.other);
 
-      const result = await apiClient.post("/api/evaluations", {
+      await apiClient.post("/api/evaluations", {
         patientId: userId,
         chiefComplaint: formData.chiefComplaint,
         symptoms: formData.painQualities,
@@ -245,7 +238,11 @@ export const IntakeForm: React.FC = () => {
   };
 
   if (loading) {
-    return <PageLoader />;
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}>
+        <Typography>Loading...</Typography>
+      </Box>
+    );
   }
 
   return (
@@ -263,18 +260,20 @@ export const IntakeForm: React.FC = () => {
       </Stepper>
 
       <Paper elevation={2} sx={{ p: 4 }}>
-        {/* Step 1: Pain Location */}
+        {/* Step 1: Pain Location & Characteristics */}
         {activeStep === 0 && (
           <Box>
             <Typography variant="h6" gutterBottom>
-              Where is your pain located?
+              Where is your pain and what does it feel like?
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            
+            {/* 3D Pain Map */}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Click on the 3D body model to mark all areas where you experience pain
             </Typography>
             <PainMap3D
               value={formData.painMapData?.regions || []}
-              onChange={(regions) =>
+              onChange={(regions: any) =>
                 setFormData({
                   ...formData,
                   painMapData: {
@@ -290,6 +289,7 @@ export const IntakeForm: React.FC = () => {
               </Typography>
             )}
 
+            {/* Chief Complaint */}
             <TextField
               fullWidth
               label="What is your main concern or chief complaint?"
@@ -300,20 +300,12 @@ export const IntakeForm: React.FC = () => {
               }}
               multiline
               rows={3}
-              sx={{ mt: 3 }}
+              sx={{ mt: 3, mb: 3 }}
               error={!!errors.chiefComplaint}
               helperText={errors.chiefComplaint}
             />
-          </Box>
-        )}
 
-        {/* Step 2: Pain Characteristics */}
-        {activeStep === 1 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Describe your pain
-            </Typography>
-
+            {/* Pain Intensity */}
             <Box sx={{ mb: 3 }}>
               <Typography gutterBottom>
                 Current pain intensity: {formData.painIntensity}/10
@@ -330,9 +322,10 @@ export const IntakeForm: React.FC = () => {
               />
             </Box>
 
+            {/* Pain Qualities */}
             <FormControl component="fieldset" sx={{ mb: 3 }} error={!!errors.painQualities}>
               <FormLabel>What does your pain feel like? (Select all that apply)</FormLabel>
-              <FormGroup>
+              <FormGroup row>
                 {["Aching", "Sharp", "Burning", "Stabbing", "Throbbing", "Shooting", "Tingling", "Numbness", "Dull", "Cramping"].map((quality) => (
                   <FormControlLabel
                     key={quality}
@@ -359,6 +352,7 @@ export const IntakeForm: React.FC = () => {
               )}
             </FormControl>
 
+            {/* How Pain Started */}
             <TextField
               fullWidth
               label="How did this pain start?"
@@ -373,8 +367,8 @@ export const IntakeForm: React.FC = () => {
           </Box>
         )}
 
-        {/* Step 3: Pain Timing & Pattern */}
-        {activeStep === 2 && (
+        {/* Step 2: Pain Timing & Pattern */}
+        {activeStep === 1 && (
           <Box>
             <Typography variant="h6" gutterBottom>
               When and how often does it hurt?
@@ -490,8 +484,8 @@ export const IntakeForm: React.FC = () => {
           </Box>
         )}
 
-        {/* Step 4: Aggravating & Relieving Factors */}
-        {activeStep === 3 && (
+        {/* Step 3: Aggravating & Relieving Factors */}
+        {activeStep === 2 && (
           <Box>
             <Typography variant="h6" gutterBottom>
               What makes it better or worse?
@@ -575,8 +569,8 @@ export const IntakeForm: React.FC = () => {
           </Box>
         )}
 
-        {/* Step 5: Medical History */}
-        {activeStep === 4 && (
+        {/* Step 4: Medical History */}
+        {activeStep === 3 && (
           <Box>
             <Typography variant="h6" gutterBottom>
               Medical History
@@ -667,8 +661,8 @@ export const IntakeForm: React.FC = () => {
           </Box>
         )}
 
-        {/* Step 6: Review */}
-        {activeStep === 5 && (
+        {/* Step 5: Review */}
+        {activeStep === 4 && (
           <Box>
             <Typography variant="h6" gutterBottom>
               Review Your Information
