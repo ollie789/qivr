@@ -487,6 +487,43 @@ public class PatientsController : TenantAwareController
             return StatusCode(500, "An error occurred while deleting the patient");
         }
     }
+
+    [HttpGet("me/baseline-pain-map")]
+    [Authorize]
+    public async Task<IActionResult> GetBaselinePainMap()
+    {
+        var userId = GetCurrentUserId();
+        var tenantId = GetCurrentTenantId();
+
+        if (!userId.HasValue || !tenantId.HasValue)
+            return Unauthorized();
+
+        var baseline = await _context.PainMaps
+            .Where(p => p.TenantId == tenantId.Value)
+            .Join(_context.Evaluations,
+                pm => pm.EvaluationId,
+                e => e.Id,
+                (pm, e) => new { PainMap = pm, Evaluation = e })
+            .Where(x => x.Evaluation.PatientId == userId.Value)
+            .OrderBy(x => x.PainMap.CreatedAt)
+            .Select(x => new
+            {
+                x.PainMap.Id,
+                x.PainMap.BodyRegion,
+                x.PainMap.Coordinates,
+                Intensity = x.PainMap.PainIntensity,
+                x.PainMap.PainType,
+                x.PainMap.PainQuality,
+                x.PainMap.DrawingDataJson,
+                x.PainMap.CreatedAt
+            })
+            .FirstOrDefaultAsync();
+
+        if (baseline == null)
+            return NotFound(new { message = "No baseline pain map found" });
+
+        return Ok(baseline);
+    }
 }
 
 public class CreatePatientDto

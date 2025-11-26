@@ -20,21 +20,21 @@ import {
   LinearProgress,
   Stack,
   Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Paper,
+  Grid,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
   Check as CheckIcon,
   Save as SaveIcon,
+  TrendingDown as TrendingDownIcon,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { PainMap3D, PainMap3DViewer } from "@qivr/design-system";
+import { RebookingDialog } from "../components/RebookingDialog";
 import {
   fetchPromInstance as fetchPromInstanceById,
   fetchPromTemplate,
@@ -46,6 +46,12 @@ import type {
   PromQuestion,
   PromTemplate,
 } from "../types";
+
+interface SelectedRegion {
+  meshName: string;
+  quality: string;
+  intensity: number;
+}
 
 export const CompletePROM = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +74,24 @@ export const CompletePROM = () => {
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
+  const [currentPainMap, setCurrentPainMap] = useState<SelectedRegion[]>([]);
+
+  // Fetch baseline pain map
+  const { data: baselinePainMap } = useQuery({
+    queryKey: ["baseline-pain-map"],
+    queryFn: async () => {
+      const response = await fetch("/api/patients/me/baseline-pain-map", {
+        credentials: "include",
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      // Convert to PainRegion format for viewer
+      return {
+        regions: data.drawingDataJson ? JSON.parse(data.drawingDataJson) : [],
+        intensity: data.intensity || 0,
+      };
+    },
+  });
 
   const fetchPromInstance = useCallback(async () => {
     try {
@@ -163,7 +187,16 @@ export const CompletePROM = () => {
     try {
       setSubmitting(true);
 
-      const result = await submitPromAnswers(id, responses);
+      // Calculate average pain level from current pain map
+      const avgPainLevel = currentPainMap.length > 0
+        ? currentPainMap.reduce((sum, r) => sum + r.intensity, 0) / currentPainMap.length
+        : null;
+
+      const result = await submitPromAnswers(id, {
+        ...responses,
+        painMapData: JSON.stringify(currentPainMap),
+        painLevel: avgPainLevel,
+      });
 
       queryClient.invalidateQueries({ queryKey: ["prom"] });
 
@@ -369,6 +402,16 @@ export const CompletePROM = () => {
     return (answered / template.questions.length) * 100;
   };
 
+  const calculateImprovement = (baseline: any, current: SelectedRegion[]) => {
+    if (!baseline?.intensity || current.length === 0) return 0;
+    
+    // Calculate average intensity from current pain map
+    const avgCurrentIntensity = current.reduce((sum, r) => sum + r.intensity, 0) / current.length;
+    const reduction = baseline.intensity - avgCurrentIntensity;
+    const improvement = (reduction / baseline.intensity) * 100;
+    return Math.max(0, Math.round(improvement));
+  };
+
   if (loading) {
     return (
       <Box
@@ -490,6 +533,58 @@ export const CompletePROM = () => {
         </Stepper>
       )}
 
+      {/* Pain Map Comparison - Show on first step */}
+      {activeStep === 0 && baselinePainMap && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Pain Assessment
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Compare your current pain to your initial assessment
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Initial Pain (Baseline)
+                </Typography>
+                <PainMap3DViewer 
+                  regions={baselinePainMap.regions} 
+                  width={300}
+                  height={400}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  Pain Level: {baselinePainMap.intensity}/10
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Current Pain
+                </Typography>
+                <Box sx={{ height: 400 }}>
+                  <PainMap3D 
+                    value={currentPainMap} 
+                    onChange={setCurrentPainMap}
+                  />
+                </Box>
+                {currentPainMap.length > 0 && baselinePainMap && (
+                  <Alert 
+                    severity="success" 
+                    icon={<TrendingDownIcon />}
+                    sx={{ mt: 2 }}
+                  >
+                    {calculateImprovement(baselinePainMap, currentPainMap)}% improvement
+                  </Alert>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
+
       {/* Questions */}
       <Paper sx={{ p: { xs: 3, md: 5 } }}>
         {stepQuestions.map(renderQuestion)}
@@ -527,43 +622,20 @@ export const CompletePROM = () => {
         </Box>
       </Paper>
 
-      {/* Booking Prompt Dialog */}
-      <Dialog open={showBookingPrompt} maxWidth="sm" fullWidth>
-        <DialogTitle>Schedule a Follow-up Appointment</DialogTitle>
-        <DialogContent>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Your score of{" "}
-            {completedScore !== null ? Math.round(completedScore) : 0} indicates
-            you may benefit from a follow-up appointment.
-          </Alert>
-          <Typography variant="body2" paragraph>
-            Based on your responses, we recommend scheduling an appointment with
-            your healthcare provider to discuss your progress and adjust your
-            treatment plan if needed.
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Would you like to book an appointment now?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setShowBookingPrompt(false);
-              navigate("/proms");
-            }}
-          >
-            Maybe Later
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              navigate("/appointments/book");
-            }}
-          >
-            Book Appointment
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Rebooking Dialog */}
+      <RebookingDialog
+        open={showBookingPrompt}
+        onClose={() => {
+          setShowBookingPrompt(false);
+          navigate("/proms");
+        }}
+        score={completedScore || 0}
+        painLevel={
+          currentPainMap.length > 0
+            ? currentPainMap.reduce((sum, r) => sum + r.intensity, 0) / currentPainMap.length
+            : undefined
+        }
+      />
     </Box>
   );
 };

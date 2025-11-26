@@ -1003,6 +1003,66 @@ public class AppointmentsController : BaseApiController
         return NoContent();
     }
 
+    [HttpGet("available-slots")]
+    [Authorize]
+    public async Task<IActionResult> GetAvailableSlots([FromQuery] int days = 14)
+    {
+        var tenantId = RequireTenantId();
+        var startDate = DateTime.UtcNow;
+        var endDate = startDate.AddDays(days);
+
+        var providers = await _context.Users
+            .Where(u => u.TenantId == tenantId && u.UserRoles.Any(r => r.Role.Name == "Clinician") && u.DeletedAt == null)
+            .Select(u => new { u.Id, Name = u.FirstName + " " + u.LastName })
+            .ToListAsync();
+
+        var existingAppointments = await _context.Appointments
+            .Where(a => a.TenantId == tenantId 
+                && a.ScheduledStart >= startDate 
+                && a.ScheduledStart <= endDate
+                && a.Status != AppointmentStatus.Cancelled)
+            .Select(a => new { a.ProviderId, a.ScheduledStart, a.ScheduledEnd })
+            .ToListAsync();
+
+        var slots = new List<object>();
+
+        foreach (var provider in providers)
+        {
+            var currentDate = startDate.Date;
+            while (currentDate <= endDate)
+            {
+                if (currentDate.DayOfWeek != DayOfWeek.Saturday && currentDate.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    for (int hour = 9; hour < 17; hour++)
+                    {
+                        var slotStart = currentDate.AddHours(hour);
+                        var slotEnd = slotStart.AddMinutes(30);
+
+                        var isBooked = existingAppointments.Any(a => 
+                            a.ProviderId == provider.Id 
+                            && a.ScheduledStart < slotEnd 
+                            && a.ScheduledEnd > slotStart);
+
+                        if (!isBooked && slotStart > DateTime.UtcNow)
+                        {
+                            slots.Add(new
+                            {
+                                id = Guid.NewGuid().ToString(),
+                                start = slotStart.ToString("o"),
+                                end = slotEnd.ToString("o"),
+                                providerId = provider.Id,
+                                providerName = provider.Name
+                            });
+                        }
+                    }
+                }
+                currentDate = currentDate.AddDays(1);
+            }
+        }
+
+        return Ok(slots.OrderBy(s => ((dynamic)s).start).Take(20));
+    }
+
     // GetTenantId and GetUserId methods removed - using BaseApiController properties instead
 }
 
