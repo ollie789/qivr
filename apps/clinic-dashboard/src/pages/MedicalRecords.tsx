@@ -102,6 +102,8 @@ import {
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
 import { intakeApi } from "../services/intakeApi";
+import { TreatmentPlanDialog } from "../components/dialogs/TreatmentPlanDialog";
+import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
 
 interface MedicalHistory {
   id: string;
@@ -154,6 +156,10 @@ const MedicalRecords: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [prefilledData, setPrefilledData] = useState<any>(null);
   const [loadingIntake, setLoadingIntake] = useState(false);
+  const [treatmentPlanDialogOpen, setTreatmentPlanDialogOpen] = useState(false);
+  const [newPatientForPlan, setNewPatientForPlan] = useState<{id: string, name: string} | null>(null);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [treatmentPlanId, setTreatmentPlanId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [page] = useState(0);
@@ -2104,6 +2110,41 @@ const MedicalRecords: React.FC = () => {
                 type: "patient",
               },
             ]}
+          />
+        )}
+
+        {/* Treatment Plan Dialog */}
+        {newPatientForPlan && (
+          <TreatmentPlanDialog
+            open={treatmentPlanDialogOpen}
+            onClose={() => {
+              setTreatmentPlanDialogOpen(false);
+              setNewPatientForPlan(null);
+            }}
+            patientId={newPatientForPlan.id}
+            patientName={newPatientForPlan.name}
+            prefilledGoals={prefilledData?.chiefComplaint ? [prefilledData.chiefComplaint] : []}
+            onSuccess={(planId) => {
+              setTreatmentPlanId(planId);
+              setScheduleDialogOpen(true);
+            }}
+          />
+        )}
+
+        {/* Schedule Appointment Dialog */}
+        {newPatientForPlan && (
+          <ScheduleAppointmentDialog
+            open={scheduleDialogOpen}
+            onClose={() => {
+              setScheduleDialogOpen(false);
+              setNewPatientForPlan(null);
+              setTreatmentPlanId(null);
+              // Refresh and show the new patient
+              queryClient.invalidateQueries({ queryKey: ['medicalRecords'] });
+            }}
+            patientId={newPatientForPlan.id}
+            treatmentPlanId={treatmentPlanId || undefined}
+            appointmentType="Initial Consultation"
           />
         )}
       </Box>

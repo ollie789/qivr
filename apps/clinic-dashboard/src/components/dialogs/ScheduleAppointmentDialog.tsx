@@ -35,7 +35,10 @@ export interface ScheduleAppointmentDialogProps {
     email: string;
     phone: string;
   };
+  patientId?: string;
   intakeId?: string;
+  treatmentPlanId?: string;
+  appointmentType?: string;
   prefilledData?: {
     chiefComplaint?: string;
     urgency?: string;

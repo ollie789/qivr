@@ -691,16 +691,28 @@ CREATE TABLE prom_responses (
 
 ## Implementation Checklist
 
-### Sprint 1: Core Flow (Days 1-3)
-- [ ] Medical Records: Handle `?intakeId=` parameter
-- [ ] Medical Records: Auto-populate form from intake
-- [ ] Medical Records: Create patient with baseline pain map
-- [ ] Backend: Add `linkToMedicalRecord` endpoint
-- [ ] Backend: Add database migration for medical_record_id
-- [ ] Create TreatmentPlanDialog component
-- [ ] Treatment Plans API: Add create/update methods
-- [ ] Backend: Enhance TreatmentPlansController
-- [ ] Link appointment scheduling to treatment plan
+### Sprint 1: Core Flow (Days 1-3) - ✅ 90% COMPLETE
+- [x] Medical Records: Handle `?intakeId=` parameter ✅
+- [x] Medical Records: Auto-populate form from intake ✅
+- [x] Medical Records: Create patient with baseline pain map ✅
+- [x] Backend: Add `linkToMedicalRecord` endpoint ✅
+- [ ] Backend: Add database migration for medical_record_id ⏳
+- [x] Create TreatmentPlanDialog component ✅
+- [x] Treatment Plans API: Add create/update methods ✅
+- [x] Backend: Enhance TreatmentPlansController ✅
+- [x] Link appointment scheduling to treatment plan ✅
+
+**Current Flow Working:**
+1. Intake → "Create Record & Plan" button
+2. Medical Records page with `?intakeId=` auto-loads data
+3. Create patient → Treatment Plan Dialog opens
+4. Create plan → Schedule Appointment Dialog opens
+5. Book appointment linked to treatment plan
+
+**Commits:**
+- 174e370: Medical record creation from intake
+- da476c1: Treatment Plan Dialog
+- [current]: Wired dialogs together
 
 ### Sprint 2: Patient Portal (Days 4-6)
 - [ ] Create TreatmentPlanCard component
