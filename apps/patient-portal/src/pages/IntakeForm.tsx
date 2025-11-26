@@ -24,6 +24,7 @@ import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
 import { PainMap3D } from "@qivr/design-system";
+import { fetchProfile } from "../services/profileApi";
 
 const steps = [
   "Pain Location & Characteristics",
@@ -99,13 +100,20 @@ export const IntakeForm: React.FC = () => {
 
   useEffect(() => {
     const initUser = async () => {
-      if (user?.username) {
-        setUserId(user.username);
+      try {
+        const profile = await fetchProfile();
+        setUserId(profile.id);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+        enqueueSnackbar("Failed to load user profile", { variant: "error" });
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    initUser();
-  }, [user]);
+    if (user) {
+      initUser();
+    }
+  }, [user, enqueueSnackbar]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};

@@ -176,6 +176,29 @@ public class EvaluationsController : BaseApiController
             RecommendedActions = Array.Empty<string>()
         });
     }
+
+    /// <summary>
+    /// Delete an evaluation
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteEvaluation(Guid id, CancellationToken cancellationToken)
+    {
+        var tenantId = RequireTenantId();
+        var evaluation = await _context.Evaluations
+            .FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken);
+
+        if (evaluation == null)
+            return NotFound();
+
+        _context.Evaluations.Remove(evaluation);
+        await _context.SaveChangesAsync(cancellationToken);
+        
+        _logger.LogInformation("Deleted evaluation {Id}", id);
+        return NoContent();
+    }
 }
 
 // Request/Response Models

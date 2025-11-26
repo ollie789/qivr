@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Typography, Chip, IconButton, Stack } from "@mui/material";
-import { Visibility, Schedule, Warning } from "@mui/icons-material";
+import { Visibility, Schedule, Warning, Delete } from "@mui/icons-material";
 import { format } from "date-fns";
 import {
   DndContext,
@@ -25,6 +25,7 @@ interface AuraIntakeKanbanProps {
   onViewDetails: (intake: IntakeSubmission) => void;
   onSchedule: (intake: IntakeSubmission) => void;
   onStatusChange: (intakeId: string, newStatus: string) => void;
+  onDelete: (intakeId: string) => void;
 }
 
 const COLUMNS = [
@@ -67,12 +68,14 @@ interface IntakeCardProps {
   intake: IntakeSubmission;
   onViewDetails: () => void;
   onSchedule: () => void;
+  onDelete: () => void;
 }
 
 const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
   intake,
   onViewDetails,
   onSchedule,
+  onDelete,
   isDragging,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -223,6 +226,16 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                 <Schedule sx={{ fontSize: 16 }} />
               </IconButton>
             )}
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              sx={{ bgcolor: "error.main", color: "white", "&:hover": { bgcolor: "error.dark" } }}
+            >
+              <Delete sx={{ fontSize: 16 }} />
+            </IconButton>
           </Stack>
         </Stack>
       </Stack>
@@ -235,7 +248,8 @@ const KanbanColumn: React.FC<{
   intakes: IntakeSubmission[];
   onViewDetails: (intake: IntakeSubmission) => void;
   onSchedule: (intake: IntakeSubmission) => void;
-}> = ({ column, intakes, onViewDetails, onSchedule }) => {
+  onDelete: (intakeId: string) => void;
+}> = ({ column, intakes, onViewDetails, onSchedule, onDelete }) => {
   return (
     <Box sx={{ minWidth: 320, maxWidth: 320 }}>
       <Box
@@ -277,6 +291,7 @@ const KanbanColumn: React.FC<{
               intake={intake}
               onViewDetails={() => onViewDetails(intake)}
               onSchedule={() => onSchedule(intake)}
+              onDelete={() => onDelete(intake.id)}
             />
           ))}
         </Box>
@@ -290,6 +305,7 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
   onViewDetails,
   onSchedule,
   onStatusChange,
+  onDelete,
 }) => {
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
@@ -350,6 +366,7 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
             intakes={getColumnIntakes(column.statuses)}
             onViewDetails={onViewDetails}
             onSchedule={onSchedule}
+            onDelete={onDelete}
           />
         ))}
       </Box>
@@ -360,6 +377,7 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
             intake={activeIntake}
             onViewDetails={() => {}}
             onSchedule={() => {}}
+            onDelete={() => {}}
             isDragging
           />
         )}

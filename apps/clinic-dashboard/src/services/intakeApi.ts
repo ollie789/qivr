@@ -250,6 +250,10 @@ export const intakeApi = {
       throw error;
     }
   },
+
+  async deleteIntake(id: string): Promise<void> {
+    await apiClient.delete(`/api/evaluations/${id}`);
+  },
 };
 
 export default intakeApi;
