@@ -605,17 +605,6 @@ const IntakeManagement: React.FC = () => {
                   });
                 }
               }}
-              onDelete={async (id) => {
-                if (confirm("Delete this intake? This cannot be undone.")) {
-                  try {
-                    await intakeApi.deleteIntake(id);
-                    refetch();
-                    enqueueSnackbar("Intake deleted", { variant: "success" });
-                  } catch (err) {
-                    enqueueSnackbar("Failed to delete intake", { variant: "error" });
-                  }
-                }
-              }}
             />
           )}
         </Box>
@@ -787,6 +776,9 @@ const IntakeManagement: React.FC = () => {
             onClose={() => {
               setDetailsOpen(false);
               setSelectedIntake(null);
+            }}
+            onDelete={() => {
+              refetch();
             }}
           />
           <ScheduleAppointmentDialog

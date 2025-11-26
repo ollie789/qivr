@@ -6,9 +6,12 @@ import {
   DialogTitle,
   IconButton,
   CircularProgress,
+  Button,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useQuery } from "@tanstack/react-query";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSnackbar } from "notistack";
 import { EvaluationViewer } from "../../features/intake/components/EvaluationViewer";
 import { intakeApi } from "../../services/intakeApi";
 
@@ -40,6 +43,7 @@ interface IntakeDetailsDialogProps {
   onClose: () => void;
   intake: IntakeData | null;
   onSchedule?: () => void;
+  onDelete?: () => void;
 }
 
 export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
@@ -47,7 +51,11 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
   onClose,
   intake,
   onSchedule,
+  onDelete,
 }) => {
+  const queryClient = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
+
   const { data: fullEvaluation, isLoading } = useQuery({
     queryKey: ["intakeDetails", intake?.id],
     queryFn: () => intakeApi.getIntakeDetails(intake!.id),
@@ -114,9 +122,34 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
           }}
         >
           Intake Evaluation
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            {onDelete && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<DeleteIcon />}
+                onClick={async () => {
+                  if (confirm("Delete this intake? This cannot be undone.")) {
+                    try {
+                      await intakeApi.deleteIntake(intake!.id);
+                      queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
+                      enqueueSnackbar("Intake deleted", { variant: "success" });
+                      onClose();
+                      onDelete();
+                    } catch (err) {
+                      enqueueSnackbar("Failed to delete intake", { variant: "error" });
+                    }
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            )}
+            <IconButton onClick={onClose} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </Box>
       </DialogTitle>
       <DialogContent>
