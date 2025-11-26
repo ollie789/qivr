@@ -50,9 +50,74 @@ The intake questionnaire collects comprehensive pain assessment data aligned wit
 ## Pain Map Data
 Stored in `pain_maps` table with 3D body model data:
 - `body_region`: Anatomical region name
-- `pain_intensity`: 0-10 scale
-- `pain_quality`: Array of qualities
+- `pain_intensity`: 0-10 scale (max intensity from all marked regions)
+- `pain_quality`: Array of qualities from marked regions
 - `drawing_data_json`: Full 3D pain map data including regions, intensities, qualities
+- `avatar_type`: male/female/child
+- `view_orientation`: front/back/side + camera state
+- `submission_source`: portal/mobile/clinic
+
+### 3D Body Map Analytics Integration
+
+**Data Flow:**
+1. Patient marks pain regions on 3D body model in intake form
+2. Each region includes: anatomicalName, intensity (0-10), quality (Sharp, Aching, etc.)
+3. Data stored in `pain_maps.drawing_data_json` as complete 3D model state
+4. Analytics service processes this data for:
+
+**Available Analytics:**
+
+1. **Heat Map Generation** (`/api/pain-map-analytics/heatmap`)
+   - Aggregates all pain drawings into 100x100 grid
+   - Shows frequency and average intensity per body area
+   - Filterable by date range, avatar type, view orientation
+
+2. **Pain Metrics** (`/api/pain-map-analytics/metrics`)
+   - Total pain maps submitted
+   - Average pain intensity across all submissions
+   - Most common body regions affected
+   - Pain intensity distribution (0-10 scale)
+   - Pain quality distribution (Sharp, Aching, Burning, etc.)
+
+3. **Patient Progression** (`/api/pain-map-analytics/progression/{patientId}`)
+   - Tracks individual patient's pain over time
+   - Shows changes in location, intensity, and quality
+   - Useful for treatment effectiveness monitoring
+
+4. **Bilateral Symmetry Analysis** (`/api/pain-map-analytics/symmetry`)
+   - Compares left vs right side pain patterns
+   - Identifies asymmetric pain distributions
+   - Useful for detecting compensation patterns
+
+**Integration with Comprehensive Questionnaire:**
+- Pain map data is linked to evaluation via `evaluation_id`
+- All questionnaire responses (timing, aggravators, relievers) are accessible alongside pain map data
+- Analytics can correlate pain locations with:
+  - Pain qualities from questionnaire
+  - Aggravating factors (sitting, standing, etc.)
+  - Duration and onset patterns
+  - Treatment goals and outcomes
+
+**Example Query:**
+```sql
+SELECT 
+  pm.body_region,
+  pm.pain_intensity,
+  pm.pain_quality,
+  e.questionnaire_responses->>'painQualities' as reported_qualities,
+  e.questionnaire_responses->>'aggravatingFactors' as aggravators,
+  e.questionnaire_responses->>'duration' as duration
+FROM pain_maps pm
+JOIN evaluations e ON pm.evaluation_id = e.id
+WHERE e.tenant_id = :tenant_id
+  AND pm.created_at >= :start_date;
+```
+
+This allows comprehensive analysis of:
+- Which body regions correlate with specific pain qualities
+- How aggravating factors relate to pain locations
+- Pain progression patterns over time
+- Treatment effectiveness by body region
 
 ## AI Integration
 - AI triage analyzes all questionnaire data
