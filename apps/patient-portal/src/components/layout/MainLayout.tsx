@@ -32,7 +32,6 @@ import {
   MedicalServices as MedicalServicesIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
-import TenantSelector from "../shared/TenantSelector";
 import { AuraButton } from "@qivr/design-system";
 
 const drawerWidth = 280;
@@ -159,9 +158,6 @@ export const MainLayout: React.FC = () => {
             {menuItems.find((item) => item.path === location.pathname)?.title ||
               "Patient Portal"}
           </Typography>
-          <Box sx={{ mr: 2 }}>
-            <TenantSelector />
-          </Box>
           <AuraButton
             size="small"
             color="secondary"

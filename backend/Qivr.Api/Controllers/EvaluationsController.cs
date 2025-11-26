@@ -37,6 +37,13 @@ public class EvaluationsController : BaseApiController
     {
         _logger.LogInformation("Creating evaluation for patient {PatientId}", request.PatientId);
         
+        // Get tenant from patient record (patients don't send X-Tenant-Id header)
+        var patient = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.PatientId, cancellationToken);
+        if (patient == null)
+        {
+            return BadRequest("Patient not found");
+        }
+        
         var dto = new CreateEvaluationDto(
             request.PatientId,
             request.ChiefComplaint,
