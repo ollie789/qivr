@@ -590,22 +590,68 @@ const IntakeManagement: React.FC = () => {
           {isLoading ? (
             <LinearProgress />
           ) : (
-            <AuraIntakeKanban
-              intakes={filteredIntakes}
-              onViewDetails={handleViewDetails}
-              onSchedule={handleSchedule}
-              onStatusChange={async (id, status) => {
-                try {
-                  await intakeApi.updateIntakeStatus(id, status);
-                  refetch();
-                  enqueueSnackbar("Status updated", { variant: "success" });
-                } catch (err) {
-                  enqueueSnackbar("Failed to update status", {
-                    variant: "error",
-                  });
-                }
-              }}
-            />
+            <>
+              {/* Stats Summary */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6} md={2}>
+                  <AuraStatCard
+                    title="New"
+                    value={filteredIntakes.filter((i: any) => i.status === "pending").length.toString()}
+                    icon="📥"
+                    iconColor="#3b82f6"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <AuraStatCard
+                    title="Triaged"
+                    value={filteredIntakes.filter((i: any) => ["reviewing", "triaged"].includes(i.status)).length.toString()}
+                    icon="🔍"
+                    iconColor="#8b5cf6"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <AuraStatCard
+                    title="Scheduling"
+                    value={filteredIntakes.filter((i: any) => i.status === "scheduling").length.toString()}
+                    icon="📅"
+                    iconColor="#f59e0b"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <AuraStatCard
+                    title="Scheduled"
+                    value={filteredIntakes.filter((i: any) => ["scheduled", "approved"].includes(i.status)).length.toString()}
+                    icon="✅"
+                    iconColor="#10b981"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <AuraStatCard
+                    title="Archived"
+                    value={filteredIntakes.filter((i: any) => ["archived", "rejected"].includes(i.status)).length.toString()}
+                    icon="📦"
+                    iconColor="#6b7280"
+                  />
+                </Grid>
+              </Grid>
+
+              <AuraIntakeKanban
+                intakes={filteredIntakes}
+                onViewDetails={handleViewDetails}
+                onSchedule={handleSchedule}
+                onStatusChange={async (id, status) => {
+                  try {
+                    await intakeApi.updateIntakeStatus(id, status);
+                    refetch();
+                    enqueueSnackbar("Status updated", { variant: "success" });
+                  } catch (err) {
+                    enqueueSnackbar("Failed to update status", {
+                      variant: "error",
+                    });
+                  }
+                }}
+              />
+            </>
           )}
         </Box>
       ) : (
