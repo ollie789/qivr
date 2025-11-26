@@ -108,10 +108,14 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
         p: 2,
         mb: 1.5,
         cursor: "grab",
+        border: "1px solid",
+        borderColor: "divider",
+        borderRadius: 2,
         "&:active": { cursor: "grabbing" },
         "&:hover": {
           transform: "translateY(-2px)",
           boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          borderColor: "primary.main",
         },
         transition: "all 0.2s ease",
       }}

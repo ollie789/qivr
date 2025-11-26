@@ -47,6 +47,17 @@ export interface IntakeDetails {
     duration: string;
     triggers?: string[];
     previousTreatments?: string[];
+    painStart?: string;
+    onset?: string;
+    pattern?: string;
+    frequency?: string;
+    timeOfDay?: string[];
+    relievingFactors?: string[];
+    currentMedications?: string;
+    allergies?: string;
+    medicalConditions?: string;
+    surgeries?: string;
+    treatmentGoals?: string;
   };
   painMap?: {
     bodyParts: Array<{
@@ -166,7 +177,6 @@ export const intakeApi = {
       
       // Build comprehensive description
       const description = q.description || e.chiefComplaint;
-      const painQualities = Array.isArray(q.painQualities) ? q.painQualities.join(", ") : "";
       const duration = q.duration || medicalHistory.duration || "Not specified";
       
       return {
