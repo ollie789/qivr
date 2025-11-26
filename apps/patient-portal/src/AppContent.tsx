@@ -28,6 +28,7 @@ import DocumentsEnhanced from "./pages/DocumentsEnhanced";
 import DocumentChecklist from "./pages/DocumentChecklist";
 import HealthProgress from "./pages/HealthProgress";
 import Messages from "./pages/Messages";
+import TreatmentPlan from "./pages/TreatmentPlan";
 
 // Auth
 import { useAuth } from "./contexts/AuthContext";
@@ -82,6 +83,9 @@ export const AppContent: React.FC = () => {
           {/* PROMs */}
           <Route path="/proms" element={<PROMEnhanced />} />
           <Route path="/proms/:id/complete" element={<CompletePROM />} />
+
+          {/* Treatment Plan */}
+          <Route path="/treatment-plan" element={<TreatmentPlan />} />
 
           {/* Messages */}
           <Route path="/messages" element={<Messages />} />

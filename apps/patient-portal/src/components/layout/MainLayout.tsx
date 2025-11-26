@@ -29,6 +29,7 @@ import {
   LocalHospital as HospitalIcon,
   Assessment as AssessmentIcon,
   Message as MessageIcon,
+  MedicalServices as MedicalServicesIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
 import TenantSelector from "../shared/TenantSelector";
@@ -43,6 +44,7 @@ const menuItems = [
   { title: "Appointments", path: "/appointments", icon: <EventIcon /> },
   { title: "Messages", path: "/messages", icon: <MessageIcon /> },
   { title: "Assessments", path: "/proms", icon: <AssignmentIcon /> },
+  { title: "Treatment Plan", path: "/treatment-plan", icon: <MedicalServicesIcon /> },
   { title: "Evaluations", path: "/evaluations", icon: <AssessmentIcon /> },
   { title: "Profile", path: "/profile", icon: <PersonIcon /> },
 ];

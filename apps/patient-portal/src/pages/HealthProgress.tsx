@@ -25,7 +25,7 @@ export default function HealthProgress() {
   const { data: rawData, isLoading, error, refetch } = useQuery({
     queryKey: ['patient-analytics'],
     queryFn: async () => {
-      const response: any = await api.get('/api/patient-analytics');
+      const response: any = await api.get('/api/patient-analytics/progress');
       return response.data || response;
     },
     retry: 2,

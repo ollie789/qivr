@@ -35,6 +35,27 @@ public class TreatmentPlansController : BaseApiController
         return Ok(plans);
     }
 
+    [HttpGet("current")]
+    [AllowAnonymous]
+    [Authorize]
+    public async Task<IActionResult> GetCurrent()
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        var plan = await _context.TreatmentPlans
+            .Include(t => t.Provider)
+            .Where(t => t.TenantId == tenantId && t.PatientId == userId && !t.IsDeleted)
+            .Where(t => t.Status == TreatmentPlanStatus.Active)
+            .OrderByDescending(t => t.StartDate)
+            .FirstOrDefaultAsync();
+
+        if (plan == null)
+            return NotFound(new { message = "No active treatment plan found" });
+
+        return Ok(plan);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid id)
     {
