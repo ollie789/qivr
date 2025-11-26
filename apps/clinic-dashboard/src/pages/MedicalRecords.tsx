@@ -805,6 +805,19 @@ const MedicalRecords: React.FC = () => {
     return events.slice(0, 20); // Show last 20 events
   };
 
+  // Fetch comprehensive timeline from backend
+  const { data: comprehensiveTimeline } = useQuery({
+    queryKey: ["patient-timeline", patient?.id],
+    queryFn: async () => {
+      if (!patient?.id) return [];
+      const response = await apiClient.get(
+        `/api/patients/${patient.id}/timeline`
+      );
+      return response.data;
+    },
+    enabled: !!patient?.id,
+  });
+
   const lastVisitDisplay = useMemo(() => {
     const mostRecentVisit = medicalSummary?.recentVisits?.[0];
     if (!mostRecentVisit?.date) {
@@ -1659,29 +1672,54 @@ const MedicalRecords: React.FC = () => {
                   </Box>
 
                   <Timeline position="alternate">
-                    {generateTimeline().map((event, index) => (
-                      <TimelineItem key={index}>
-                        <TimelineOppositeContent color="text.secondary">
-                          {format(parseISO(event.date), "MMM d, yyyy")}
-                        </TimelineOppositeContent>
-                        <TimelineSeparator>
-                          <TimelineDot color={event.color}>
-                            {event.icon}
-                          </TimelineDot>
-                          {index < generateTimeline().length - 1 && (
-                            <TimelineConnector />
-                          )}
-                        </TimelineSeparator>
-                        <TimelineContent>
-                          <Paper sx={{ p: 2 }}>
-                            <Typography variant="h6">{event.title}</Typography>
-                            <Typography variant="body2">
-                              {event.description}
-                            </Typography>
-                          </Paper>
-                        </TimelineContent>
-                      </TimelineItem>
-                    ))}
+                    {(comprehensiveTimeline || generateTimeline()).map((event: any, index: number) => {
+                      const eventIcon = event.type === "appointment" ? <MessageIcon /> :
+                                       event.type === "prom" ? <CheckIcon /> :
+                                       event.type === "treatment_plan" ? <MedicalIcon /> :
+                                       event.type === "document" ? <DocumentIcon /> :
+                                       event.icon || <InfoIcon />;
+                      
+                      const eventColor = event.status === "completed" ? "success" :
+                                        event.status === "cancelled" ? "error" :
+                                        event.color || "primary";
+
+                      return (
+                        <TimelineItem key={index}>
+                          <TimelineOppositeContent color="text.secondary">
+                            {format(parseISO(event.date), "MMM d, yyyy h:mm a")}
+                          </TimelineOppositeContent>
+                          <TimelineSeparator>
+                            <TimelineDot color={eventColor}>
+                              {eventIcon}
+                            </TimelineDot>
+                            {index < (comprehensiveTimeline || generateTimeline()).length - 1 && (
+                              <TimelineConnector />
+                            )}
+                          </TimelineSeparator>
+                          <TimelineContent>
+                            <Paper sx={{ p: 2 }}>
+                              <Typography variant="h6">{event.title}</Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {event.description}
+                              </Typography>
+                              {event.status && (
+                                <Chip 
+                                  label={event.status} 
+                                  size="small" 
+                                  sx={{ mt: 1 }}
+                                  color={eventColor}
+                                />
+                              )}
+                              {event.notes && (
+                                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                                  {event.notes}
+                                </Typography>
+                              )}
+                            </Paper>
+                          </TimelineContent>
+                        </TimelineItem>
+                      );
+                    })}
                   </Timeline>
                 </Box>
               </TabPanel>

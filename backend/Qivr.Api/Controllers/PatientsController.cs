@@ -524,6 +524,140 @@ public class PatientsController : TenantAwareController
 
         return Ok(baseline);
     }
+
+    [HttpGet("{patientId}/timeline")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> GetPatientTimeline(Guid patientId)
+    {
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
+            return Unauthorized();
+
+        var events = new List<object>();
+
+        // Appointments
+        var appointments = await _context.Appointments
+            .Where(a => a.TenantId == tenantId.Value && a.PatientId == patientId)
+            .Include(a => a.Provider)
+            .OrderByDescending(a => a.ScheduledStart)
+            .Take(50)
+            .Select(a => new
+            {
+                type = "appointment",
+                date = a.ScheduledStart,
+                title = $"Appointment - {a.AppointmentType}",
+                description = $"with {a.Provider.FirstName} {a.Provider.LastName}",
+                status = a.Status.ToString(),
+                notes = a.Notes
+            })
+            .ToListAsync();
+        events.AddRange(appointments);
+
+        // PROMs
+        var proms = await _context.PromInstances
+            .Where(p => p.TenantId == tenantId.Value && p.PatientId == patientId && p.CompletedAt != null)
+            .Include(p => p.Template)
+            .OrderByDescending(p => p.CompletedAt)
+            .Take(50)
+            .Select(p => new
+            {
+                type = "prom",
+                date = p.CompletedAt,
+                title = $"PROM - {p.Template.Name}",
+                description = $"Score: {p.Score}",
+                status = p.Status.ToString()
+            })
+            .ToListAsync();
+        events.AddRange(proms);
+
+        // Treatment Plans
+        var plans = await _context.TreatmentPlans
+            .Where(t => t.TenantId == tenantId.Value && t.PatientId == patientId)
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(20)
+            .Select(t => new
+            {
+                type = "treatment_plan",
+                date = t.CreatedAt,
+                title = $"Treatment Plan - {t.Title}",
+                description = t.Goals,
+                status = t.Status.ToString()
+            })
+            .ToListAsync();
+        events.AddRange(plans);
+
+        // Documents
+        var documents = await _context.Documents
+            .Where(d => d.TenantId == tenantId.Value && d.PatientId == patientId)
+            .OrderByDescending(d => d.CreatedAt)
+            .Take(30)
+            .Select(d => new
+            {
+                type = "document",
+                date = d.CreatedAt,
+                title = $"Document - {d.FileName}",
+                description = d.DocumentType,
+                status = "uploaded"
+            })
+            .ToListAsync();
+        events.AddRange(documents);
+
+        return Ok(events.OrderByDescending(e => ((dynamic)e).date).Take(100));
+    }
+
+    [HttpGet("{patientId}/pain-progression")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> GetPainProgression(Guid patientId)
+    {
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
+            return Unauthorized();
+
+        var painMaps = await _context.PainMaps
+            .Where(p => p.TenantId == tenantId.Value)
+            .Join(_context.Evaluations,
+                pm => pm.EvaluationId,
+                e => e.Id,
+                (pm, e) => new { PainMap = pm, Evaluation = e })
+            .Where(x => x.Evaluation.PatientId == patientId)
+            .OrderBy(x => x.PainMap.CreatedAt)
+            .Select(x => new
+            {
+                x.PainMap.Id,
+                x.PainMap.PainIntensity,
+                x.PainMap.DrawingDataJson,
+                x.PainMap.CreatedAt
+            })
+            .ToListAsync();
+
+        if (!painMaps.Any())
+            return NotFound(new { message = "No pain data found" });
+
+        var baseline = painMaps.First();
+        var current = painMaps.Last();
+        var history = painMaps.Select(pm => new
+        {
+            date = pm.CreatedAt,
+            painLevel = pm.PainIntensity
+        }).ToList();
+
+        return Ok(new
+        {
+            baseline = new
+            {
+                intensity = baseline.PainIntensity,
+                drawingDataJson = baseline.DrawingDataJson,
+                createdAt = baseline.CreatedAt
+            },
+            current = new
+            {
+                intensity = current.PainIntensity,
+                drawingDataJson = current.DrawingDataJson,
+                createdAt = current.CreatedAt
+            },
+            history
+        });
+    }
 }
 
 public class CreatePatientDto
