@@ -14,6 +14,7 @@ using Qivr.Api.Middleware;
 using Qivr.Api.Services;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
+using Qivr.Services.AI;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Serilog;
 using Serilog.Events;
@@ -217,6 +218,12 @@ builder.Services.AddScoped<INotificationGate, NotificationGate>();
 builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
 builder.Services.AddScoped<IAppointmentWaitlistService, AppointmentWaitlistService>();
 builder.Services.AddScoped<IMessagingService, MessagingService>();
+
+// AI Services
+builder.Services.AddAWSService<Amazon.BedrockRuntime.IAmazonBedrockRuntime>();
+builder.Services.AddScoped<IBedrockService, BedrockService>();
+builder.Services.AddScoped<IDeIdentificationService, DeIdentificationService>();
+builder.Services.AddScoped<IAiTriageService, AiTriageService>();
 
 // Document Management Services
 builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();

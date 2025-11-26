@@ -16,3 +16,16 @@ export const treatmentPlansApi = {
   update: (id: string, data: any) => api.put(`/api/treatment-plans/${id}`, data),
   delete: (id: string) => api.delete(`/api/treatment-plans/${id}`)
 };
+
+export const aiTriageApi = {
+  analyze: (data: {
+    symptoms?: string;
+    medicalHistory?: string;
+    chiefComplaint?: string;
+    duration?: string;
+    severity?: number;
+    currentMedications?: string[];
+    allergies?: string[];
+    age?: number;
+  }) => api.post('/api/ai-triage/analyze', data)
+};

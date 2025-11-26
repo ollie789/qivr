@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { aiTriageApi } from "../../../lib/api";
 import {
   Box,
   Typography,
@@ -80,6 +82,26 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
     evaluation.aiSummary?.content || "",
   );
   const [messageOpen, setMessageOpen] = useState(false);
+
+  const aiAnalysisMutation = useMutation({
+    mutationFn: () => aiTriageApi.analyze({
+      chiefComplaint: evaluation.chiefComplaint,
+      symptoms: evaluation.symptoms.join(", "),
+      medicalHistory: evaluation.medicalHistory.join(", "),
+      severity: evaluation.urgency === "critical" ? 10 : evaluation.urgency === "high" ? 7 : evaluation.urgency === "medium" ? 4 : 2,
+    }),
+    onSuccess: (data: any) => {
+      onUpdate?.({
+        ...evaluation,
+        aiSummary: {
+          content: data.summaryText || data.summary,
+          riskFlags: data.riskFlags?.map((f: any) => f.description) || [],
+          recommendedActions: data.possibleConditions?.map((c: any) => c.condition) || [],
+          status: "pending" as const,
+        },
+      });
+    },
+  });
 
   const getUrgencyColor = (level: string) => {
     switch (level) {
@@ -283,6 +305,20 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
         {/* Right Column */}
         <Grid size={{ xs: 12, md: 6 }}>
           {/* AI Analysis */}
+          {!evaluation.aiSummary && (
+            <InfoCard title="AI Triage Analysis" sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                No AI analysis available yet. Click below to generate an AI-powered triage summary.
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={() => aiAnalysisMutation.mutate()}
+                disabled={aiAnalysisMutation.isPending}
+              >
+                {aiAnalysisMutation.isPending ? "Analyzing..." : "Generate AI Analysis"}
+              </Button>
+            </InfoCard>
+          )}
           {evaluation.aiSummary && (
             <InfoCard 
               title="AI Triage Analysis" 

@@ -35,6 +35,7 @@ import {
   Message as MessageIcon,
   FolderOpen as DocumentsIcon,
   LocalHospital as MedicalIcon,
+  MedicalServices as TreatmentIcon,
 } from "@mui/icons-material";
 import { useAuthActions, useAuthUser } from "../../stores/authStore";
 import { NotificationBell, TenantSelector } from "../shared";
@@ -118,6 +119,7 @@ const DashboardLayout: React.FC = () => {
       icon: <MedicalIcon />,
       path: "/medical-records",
     },
+    { text: "Treatment Plans", icon: <TreatmentIcon />, path: "/treatment-plans" },
     {
       text: "Messages",
       icon: <MessageIcon />,
