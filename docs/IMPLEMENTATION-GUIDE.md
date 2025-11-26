@@ -691,18 +691,18 @@ CREATE TABLE prom_responses (
 
 ## Implementation Checklist
 
-### Sprint 1: Core Flow (Days 1-3) - ✅ 90% COMPLETE
+### Sprint 1: Core Flow (Days 1-3) - ✅ 100% COMPLETE
 - [x] Medical Records: Handle `?intakeId=` parameter ✅
 - [x] Medical Records: Auto-populate form from intake ✅
 - [x] Medical Records: Create patient with baseline pain map ✅
 - [x] Backend: Add `linkToMedicalRecord` endpoint ✅
-- [ ] Backend: Add database migration for medical_record_id ⏳
+- [x] Backend: Add database migration for medical_record_id ✅
 - [x] Create TreatmentPlanDialog component ✅
 - [x] Treatment Plans API: Add create/update methods ✅
 - [x] Backend: Enhance TreatmentPlansController ✅
 - [x] Link appointment scheduling to treatment plan ✅
 
-**Current Flow Working:**
+**Flow Complete:**
 1. Intake → "Create Record & Plan" button
 2. Medical Records page with `?intakeId=` auto-loads data
 3. Create patient → Treatment Plan Dialog opens
@@ -712,20 +712,33 @@ CREATE TABLE prom_responses (
 **Commits:**
 - 174e370: Medical record creation from intake
 - da476c1: Treatment Plan Dialog
-- [current]: Wired dialogs together
+- 5764380: Wired dialogs together
+- 3ecf4c0: Sprint 1 complete + Sprint 2 started
 
-### Sprint 2: Patient Portal (Days 4-6)
-- [ ] Create TreatmentPlanCard component
-- [ ] Add to patient dashboard
-- [ ] Backend: Add treatment plan patient endpoint
-- [ ] PROM: Add 3D pain map component
-- [ ] PROM: Fetch and display baseline
-- [ ] PROM: Calculate improvement
-- [ ] Create RebookingDialog component
-- [ ] Backend: Add PROM analysis logic
-- [ ] Backend: Add available slots endpoint
+### Sprint 2: Patient Portal (Days 4-6) - ✅ 100% COMPLETE
+- [x] Create TreatmentPlanCard component ✅
+- [x] Add to patient dashboard ✅
+- [x] Backend: Add treatment plan patient endpoint ✅
+- [x] PROM: Add 3D pain map component ✅
+- [x] PROM: Fetch and display baseline ✅
+- [x] PROM: Calculate improvement ✅
+- [x] Create RebookingDialog component ✅
+- [x] Backend: Add PROM analysis logic ✅
+- [x] Backend: Add available slots endpoint ✅
 
-### Sprint 3: Enhancements (Days 7-9)
+**Features Complete:**
+1. TreatmentPlanCard with gradient design on patient dashboard
+2. PROM with side-by-side 3D pain map comparison (baseline vs current)
+3. Real-time improvement percentage calculation
+4. Smart rebooking dialog with severity-based recommendations
+5. Available slots endpoint with conflict checking
+6. Baseline pain map endpoint for patients
+
+**Commits:**
+- 3ecf4c0: TreatmentPlanCard component
+- b1de331: PROM enhancements, RebookingDialog, backend endpoints
+
+### Sprint 3: Enhancements (Days 7-9) - 🔧 IN PROGRESS
 - [ ] Medical Records: Add timeline view
 - [ ] Backend: Add timeline endpoint
 - [ ] Create PainProgressionChart component
@@ -744,5 +757,5 @@ CREATE TABLE prom_responses (
 
 ---
 
-**Last Updated:** 2025-11-26
-**Next Task:** Medical Records - Handle intake parameter
+**Last Updated:** 2025-11-26 14:38
+**Next Task:** Sprint 3 - Medical Records Timeline & Pain Progression
