@@ -218,6 +218,9 @@ builder.Services.AddScoped<INotificationGate, NotificationGate>();
 builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
 builder.Services.AddScoped<IAppointmentWaitlistService, AppointmentWaitlistService>();
 builder.Services.AddScoped<IMessagingService, MessagingService>();
+builder.Services.AddScoped<IPromSchedulingService, PromSchedulingService>();
+builder.Services.AddScoped<ISmartNotificationService, SmartNotificationService>();
+builder.Services.AddHostedService<PromSchedulingBackgroundService>();
 
 // AI Services
 builder.Services.AddAWSService<Amazon.BedrockRuntime.IAmazonBedrockRuntime>();
