@@ -43,6 +43,11 @@ import {
   Assessment as AssessmentIcon,
   ViewKanban as KanbanIcon,
   ViewList as ListIcon,
+  Inbox as InboxIcon,
+  Search as SearchIcon,
+  CalendarMonth as CalendarIcon,
+  CheckCircle as CheckCircleIcon,
+  Archive as ArchiveIcon,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthGuard } from "../hooks/useAuthGuard";
@@ -597,7 +602,7 @@ const IntakeManagement: React.FC = () => {
                   <AuraStatCard
                     title="New"
                     value={filteredIntakes.filter((i: any) => i.status === "pending").length.toString()}
-                    icon="📥"
+                    icon={<InboxIcon />}
                     iconColor="#3b82f6"
                   />
                 </Grid>
@@ -605,7 +610,7 @@ const IntakeManagement: React.FC = () => {
                   <AuraStatCard
                     title="Triaged"
                     value={filteredIntakes.filter((i: any) => ["reviewing", "triaged"].includes(i.status)).length.toString()}
-                    icon="🔍"
+                    icon={<SearchIcon />}
                     iconColor="#8b5cf6"
                   />
                 </Grid>
@@ -613,7 +618,7 @@ const IntakeManagement: React.FC = () => {
                   <AuraStatCard
                     title="Scheduling"
                     value={filteredIntakes.filter((i: any) => i.status === "scheduling").length.toString()}
-                    icon="📅"
+                    icon={<CalendarIcon />}
                     iconColor="#f59e0b"
                   />
                 </Grid>
@@ -621,7 +626,7 @@ const IntakeManagement: React.FC = () => {
                   <AuraStatCard
                     title="Scheduled"
                     value={filteredIntakes.filter((i: any) => ["scheduled", "approved"].includes(i.status)).length.toString()}
-                    icon="✅"
+                    icon={<CheckCircleIcon />}
                     iconColor="#10b981"
                   />
                 </Grid>
@@ -629,7 +634,7 @@ const IntakeManagement: React.FC = () => {
                   <AuraStatCard
                     title="Archived"
                     value={filteredIntakes.filter((i: any) => ["archived", "rejected"].includes(i.status)).length.toString()}
-                    icon="📦"
+                    icon={<ArchiveIcon />}
                     iconColor="#6b7280"
                   />
                 </Grid>
