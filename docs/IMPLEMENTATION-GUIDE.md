@@ -738,17 +738,31 @@ CREATE TABLE prom_responses (
 - 3ecf4c0: TreatmentPlanCard component
 - b1de331: PROM enhancements, RebookingDialog, backend endpoints
 
-### Sprint 3: Enhancements (Days 7-9) - 🔧 IN PROGRESS
-- [ ] Medical Records: Add timeline view
-- [ ] Backend: Add timeline endpoint
-- [ ] Create PainProgressionChart component
-- [ ] Backend: Add pain progression endpoint
-- [ ] Appointments: Link to treatment plan
-- [ ] Appointments: Link to medical record
-- [ ] Session Notes: Add treatment modalities
-- [ ] Session Notes: Add PROM assignment trigger
+### Sprint 3: Enhancements (Days 7-9) - ✅ 100% COMPLETE
+- [x] Medical Records: Add timeline view ✅
+- [x] Backend: Add timeline endpoint ✅
+- [x] Create PainProgressionChart component ✅
+- [x] Backend: Add pain progression endpoint ✅
+- [x] Appointments: Link to treatment plan ✅
+- [x] Appointments: Link to medical record ✅
+- [x] Session Notes: Add treatment modalities ✅
+- [x] Session Notes: Add PROM assignment trigger ✅
 
-### Sprint 4: Polish (Days 10-12)
+**Features Complete:**
+1. Comprehensive timeline showing appointments, PROMs, treatment plans, documents
+2. PainProgressionChart with side-by-side 3D pain maps and trend graph
+3. Appointment cards link to patient medical records and treatment plans
+4. Enhanced session notes with:
+   - Treatment modalities checkboxes (Manual Therapy, Exercise, Modalities, Education)
+   - Pain level slider (0-10)
+   - PROM assignment checkbox
+   - Auto-formatted notes with all session data
+
+**Commits:**
+- 04aa62a: Timeline & Pain Progression endpoints and components
+- 6801403: Appointments enhancements complete
+
+### Sprint 4: Polish (Days 10-12) - 🔧 IN PROGRESS
 - [ ] Automated PROM scheduling
 - [ ] Smart notifications
 - [ ] Progress reports (PDF)
