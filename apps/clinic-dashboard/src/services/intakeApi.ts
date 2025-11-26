@@ -160,9 +160,14 @@ export const intakeApi = {
       const response = await apiClient.get(`/api/evaluations/${id}`);
       const e = response;
       
-      // Extract full description from questionnaire responses
-      const questionnaireData = e.questionnaireResponses || {};
-      const medicalHistoryData = e.medicalHistory || {};
+      // Extract comprehensive questionnaire data
+      const q = e.questionnaireResponses || {};
+      const medicalHistory = e.medicalHistory || {};
+      
+      // Build comprehensive description
+      const description = q.description || e.chiefComplaint;
+      const painQualities = Array.isArray(q.painQualities) ? q.painQualities.join(", ") : "";
+      const duration = q.duration || medicalHistory.duration || "Not specified";
       
       return {
         id: e.id,
@@ -176,12 +181,23 @@ export const intakeApi = {
           submittedAt: e.createdAt,
           conditionType: e.chiefComplaint,
           severity: e.urgency || "medium",
-          painLevel: (e.painMaps && e.painMaps[0]?.intensity) || 0,
-          symptoms: e.symptoms || [],
-          description: questionnaireData.description || questionnaireData.details || e.chiefComplaint,
-          duration: medicalHistoryData.duration || questionnaireData.duration || "Not specified",
-          triggers: medicalHistoryData.triggers || questionnaireData.triggers || [],
-          previousTreatments: medicalHistoryData.previousTreatments || questionnaireData.previousTreatments || [],
+          painLevel: q.painIntensity || (e.painMaps && e.painMaps[0]?.intensity) || 0,
+          symptoms: e.symptoms || q.painQualities || [],
+          description,
+          duration,
+          triggers: q.aggravatingFactors || medicalHistory.triggers || [],
+          previousTreatments: q.previousTreatments || medicalHistory.previousTreatments || "",
+          painStart: q.painStart || "",
+          onset: q.onset || "",
+          pattern: q.pattern || "",
+          frequency: q.frequency || "",
+          timeOfDay: q.timeOfDay || [],
+          relievingFactors: q.relievingFactors || [],
+          currentMedications: q.currentMedications || "",
+          allergies: q.allergies || "",
+          medicalConditions: q.medicalConditions || "",
+          surgeries: q.surgeries || "",
+          treatmentGoals: q.treatmentGoals || "",
         },
         painMap: e.painMaps
           ? {
@@ -203,8 +219,8 @@ export const intakeApi = {
           : undefined,
         status: e.status,
         notes: e.clinicianNotes || "",
-        questionnaireResponses: questionnaireData,
-        medicalHistory: medicalHistoryData,
+        questionnaireResponses: q,
+        medicalHistory: medicalHistory,
       };
     } catch (error) {
       console.error("Error fetching intake details:", error);
