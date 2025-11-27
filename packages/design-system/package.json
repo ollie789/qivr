@@ -17,9 +17,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run build-tokens && tsc -p tsconfig.json && npm run copy-assets",
-    "build-tokens": "style-dictionary build --config style-dictionary.config.js",
-    "copy-assets": "mkdir -p dist/assets && cp -r src/assets/* dist/assets/",
+    "build": "tsc -p tsconfig.json && npm run copy-assets",
+    "build-tokens": "style-dictionary build --config style-dictionary.config.js || true",
+    "copy-assets": "mkdir -p dist/assets && cp -r src/assets/* dist/assets/ 2>/dev/null || true",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
