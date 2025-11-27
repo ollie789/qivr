@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, Chip, Stack } from '@mui/material';
+import { Box, Button, TextField, Typography, Chip, Stack } from '@mui/material';
 import { Add, Description } from '@mui/icons-material';
-import { glassCard } from '@qivr/design-system';
+import { glassCard, FormDialog } from '@qivr/design-system';
 import { treatmentPlansApi } from '../lib/api';
 import { useSnackbar } from 'notistack';
 
@@ -126,26 +126,28 @@ export default function TreatmentPlans() {
         </Stack>
       )}
 
-      <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Treatment Plan</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Patient ID" value={formData.patientId} onChange={(e) => setFormData({ ...formData, patientId: e.target.value })} required fullWidth />
-            <TextField label="Title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required fullWidth />
-            <TextField label="Diagnosis" value={formData.diagnosis} onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })} fullWidth multiline rows={2} />
-            <TextField label="Goals" value={formData.goals} onChange={(e) => setFormData({ ...formData, goals: e.target.value })} fullWidth multiline rows={2} />
-            <TextField label="Start Date" type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} required fullWidth InputLabelProps={{ shrink: true }} />
-            <TextField label="Duration (weeks)" type="number" value={formData.durationWeeks} onChange={(e) => setFormData({ ...formData, durationWeeks: e.target.value })} required fullWidth />
-            <TextField label="Notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} fullWidth multiline rows={3} />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-          <Button onClick={handleCreate} variant="contained" disabled={!formData.patientId || !formData.title || !formData.startDate || !formData.durationWeeks || createMutation.isPending}>
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FormDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onSubmit={handleCreate}
+        title="Create Treatment Plan"
+        maxWidth="sm"
+        formActionsProps={{
+          submitLabel: 'Create',
+          submitLoading: createMutation.isPending,
+          submitDisabled: !formData.patientId || !formData.title || !formData.startDate || !formData.durationWeeks,
+        }}
+      >
+        <Stack spacing={2}>
+          <TextField label="Patient ID" value={formData.patientId} onChange={(e) => setFormData({ ...formData, patientId: e.target.value })} required fullWidth />
+          <TextField label="Title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required fullWidth />
+          <TextField label="Diagnosis" value={formData.diagnosis} onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })} fullWidth multiline rows={2} />
+          <TextField label="Goals" value={formData.goals} onChange={(e) => setFormData({ ...formData, goals: e.target.value })} fullWidth multiline rows={2} />
+          <TextField label="Start Date" type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} required fullWidth InputLabelProps={{ shrink: true }} />
+          <TextField label="Duration (weeks)" type="number" value={formData.durationWeeks} onChange={(e) => setFormData({ ...formData, durationWeeks: e.target.value })} required fullWidth />
+          <TextField label="Notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} fullWidth multiline rows={3} />
+        </Stack>
+      </FormDialog>
     </Box>
   );
 }

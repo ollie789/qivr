@@ -34,7 +34,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { InfoCard } from '@qivr/design-system';
+import { InfoCard, auraStepper } from '@qivr/design-system';
 import {
   Send as SendIcon,
   Schedule as ScheduleIcon,
@@ -733,7 +733,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
 
   return (
     <Box>
-      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+      <Stepper activeStep={activeStep} sx={auraStepper}>
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>

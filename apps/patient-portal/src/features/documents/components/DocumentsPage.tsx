@@ -10,10 +10,6 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   FormControl,
   InputLabel,
@@ -23,6 +19,10 @@ import {
   Divider,
   Chip,
   Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
@@ -58,6 +58,7 @@ import {
   StatCardSkeleton,
   AuraEmptyState,
   FilterChips,
+  FormDialog,
 } from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 
@@ -114,60 +115,57 @@ const UploadDialog: React.FC<UploadDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Upload Document</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <Button
-            component="label"
-            variant="outlined"
-            startIcon={<UploadIcon />}
-          >
-            {file ? file.name : "Select File"}
-            <input type="file" hidden onChange={handleFileChange} />
-          </Button>
-
-          <FormControl fullWidth>
-            <InputLabel id="document-category-label">Category</InputLabel>
-            <Select
-              labelId="document-category-label"
-              label="Category"
-              value={category}
-              onChange={(event) =>
-                setCategory(event.target.value as DocumentCategory)
-              }
-            >
-              {categories.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option.charAt(0).toUpperCase() + option.slice(1)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
-            label="Tags (comma separated)"
-            value={tags}
-            onChange={(event) => setTags(event.target.value)}
-            fullWidth
-          />
-
-          {uploading && (
-            <LinearProgress variant="determinate" value={uploadProgress} />
-          )}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+    <FormDialog
+      open={open}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      title="Upload Document"
+      maxWidth="sm"
+      formActionsProps={{
+        submitLabel: "Upload",
+        submitDisabled: !file || uploading,
+      }}
+    >
+      <Stack spacing={2}>
         <Button
-          onClick={handleSubmit}
-          disabled={!file || uploading}
-          variant="contained"
+          component="label"
+          variant="outlined"
+          startIcon={<UploadIcon />}
         >
-          Upload
+          {file ? file.name : "Select File"}
+          <input type="file" hidden onChange={handleFileChange} />
         </Button>
-      </DialogActions>
-    </Dialog>
+
+        <FormControl fullWidth>
+          <InputLabel id="document-category-label">Category</InputLabel>
+          <Select
+            labelId="document-category-label"
+            label="Category"
+            value={category}
+            onChange={(event) =>
+              setCategory(event.target.value as DocumentCategory)
+            }
+          >
+            {categories.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option.charAt(0).toUpperCase() + option.slice(1)}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <TextField
+          label="Tags (comma separated)"
+          value={tags}
+          onChange={(event) => setTags(event.target.value)}
+          fullWidth
+        />
+
+        {uploading && (
+          <LinearProgress variant="determinate" value={uploadProgress} />
+        )}
+      </Stack>
+    </FormDialog>
   );
 };
 

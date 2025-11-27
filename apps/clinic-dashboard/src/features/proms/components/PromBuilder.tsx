@@ -62,6 +62,7 @@ import {
   ContentCopy,
   ExpandMore,
 } from "@mui/icons-material";
+import { glassCard } from "@qivr/design-system";
 import { promApi, PromTemplateQuestion } from "../../../services/promApi";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -653,7 +654,7 @@ export const PromBuilder: React.FC = () => {
 
   return (
     <Box>
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ p: 3, mb: 3, ...glassCard }}>
         <Grid container spacing={3} alignItems="center">
           <Grid size="grow">
             <Typography variant="h5">PROM Template Builder</Typography>
@@ -683,7 +684,7 @@ export const PromBuilder: React.FC = () => {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper sx={{ p: 3 }}>
+          <Paper sx={{ p: 3, ...glassCard }}>
             <Tabs
               value={activeTab}
               onChange={(_, v) => setActiveTab(v)}

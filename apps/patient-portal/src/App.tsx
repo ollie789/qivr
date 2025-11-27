@@ -1,8 +1,35 @@
 import { CssBaseline } from '@mui/material';
 import { Experimental_CssVarsProvider as ThemeProvider } from '@mui/material/styles';
+import { deepmerge } from '@mui/utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { theme } from '@qivr/design-system';
+import { theme, glassCard } from '@qivr/design-system';
+
+// Enhanced theme with Aura glassmorphism
+const auraTheme = deepmerge(theme, {
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          ...glassCard,
+          backgroundImage: 'none',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          ...glassCard,
+          backgroundImage: 'none',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+        },
+      },
+    },
+  },
+});
 
 // Initialize Amplify
 import './config/amplify.config';
@@ -29,7 +56,7 @@ function App() {
   try {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={theme}>
+        <ThemeProvider theme={auraTheme}>
           <CssBaseline />
           <AuthProvider>
             <AppContent />

@@ -3,6 +3,7 @@ import { Box, Typography, Paper, Grid, Alert } from "@mui/material";
 import { TrendingDown as TrendingDownIcon } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { LineChart } from "@mui/x-charts/LineChart";
+import { auraColors } from "@qivr/design-system";
 import { PainMap3DViewer } from "@qivr/design-system";
 import apiClient from "../lib/api-client";
 
@@ -130,7 +131,7 @@ export const PainProgressionChart: React.FC<PainProgressionChartProps> = ({
               {
                 data: progression.history.map((h: any) => h.painLevel),
                 label: "Pain Level",
-                color: "#667eea",
+                color: auraColors.purple.main,
               },
             ]}
             height={300}

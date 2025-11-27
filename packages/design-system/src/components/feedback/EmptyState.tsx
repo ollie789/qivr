@@ -1,116 +1,67 @@
-import React from 'react';
-import Box, { type BoxProps } from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import { QivrButton } from '../QivrButton';
+import { Box, Button, Stack, Typography, SxProps } from '@mui/material';
+import { ReactNode } from 'react';
 
-export interface EmptyStateProps extends Omit<BoxProps, 'children'> {
-  /**
-   * Icon to display
-   */
-  icon?: React.ReactNode;
-  /**
-   * Title of the empty state
-   */
+export interface AuraEmptyStateProps {
+  icon?: ReactNode;
   title: string;
-  /**
-   * Description text
-   */
   description?: string;
-  /**
-   * Primary action button text
-   */
   actionText?: string;
-  /**
-   * Primary action button handler
-   */
   onAction?: () => void;
-  /**
-   * Secondary action button text
-   */
-  secondaryActionText?: string;
-  /**
-   * Secondary action button handler
-   */
-  onSecondaryAction?: () => void;
+  sx?: SxProps;
 }
 
-/**
- * A consistent empty state component for no-data scenarios
- */
-export const EmptyState: React.FC<EmptyStateProps> = ({
+export const AuraEmptyState = ({
   icon,
   title,
   description,
   actionText,
   onAction,
-  secondaryActionText,
-  onSecondaryAction,
   sx,
-  ...props
-}) => {
+}: AuraEmptyStateProps) => {
   return (
     <Box
-      sx={[
-        {
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          py: 6,
-          px: 3,
-        },
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
-      {...props}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        py: 8,
+        px: 3,
+        textAlign: 'center',
+        ...sx,
+      }}
     >
       {icon && (
         <Box
           sx={{
             fontSize: 64,
-            color: 'text.disabled',
-            mb: 2,
+            color: 'text.secondary',
+            opacity: 0.5,
+            mb: 3,
           }}
         >
           {icon}
         </Box>
       )}
-      
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
-      
-      {description && (
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ mb: 3, maxWidth: 400 }}
-        >
-          {description}
+      <Stack spacing={2} alignItems="center">
+        <Typography variant="h6" color="text.secondary">
+          {title}
         </Typography>
-      )}
-      
-      {(actionText || secondaryActionText) && (
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          {actionText && (
-            <QivrButton
-              variant="contained"
-              onClick={onAction}
-            >
-              {actionText}
-            </QivrButton>
-          )}
-          {secondaryActionText && (
-            <QivrButton
-              variant="outlined"
-              emphasize="subtle"
-              onClick={onSecondaryAction}
-            >
-              {secondaryActionText}
-            </QivrButton>
-          )}
-        </Box>
-      )}
+        {description && (
+          <Typography variant="body2" color="text.secondary">
+            {description}
+          </Typography>
+        )}
+        {actionText && onAction && (
+          <Button variant="contained" onClick={onAction} sx={{ mt: 2 }}>
+            {actionText}
+          </Button>
+        )}
+      </Stack>
     </Box>
   );
 };
+
+// Alias for backward compatibility
+export const EmptyState = AuraEmptyState;
+export type EmptyStateProps = AuraEmptyStateProps;

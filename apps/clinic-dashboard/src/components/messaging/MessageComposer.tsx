@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,6 +17,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { LoadingSpinner } from "@qivr/design-system";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -610,7 +610,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
                     endAdornment: (
                       <>
                         {templatesLoading ? (
-                          <CircularProgress size={18} color="inherit" />
+                          <LoadingSpinner size={18} />
                         ) : null}
                         {params.InputProps.endAdornment}
                       </>
@@ -795,7 +795,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
             onClick={handleSend}
             variant="contained"
             disabled={!canSend() || sending}
-            startIcon={sending ? <CircularProgress size={20} /> : <SendIcon />}
+            startIcon={sending ? <LoadingSpinner size={20} /> : <SendIcon />}
           >
             {sending ? "Sending..." : "Send"}
           </Button>

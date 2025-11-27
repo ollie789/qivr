@@ -38,7 +38,7 @@ import type {
 } from '../../services/promApi';
 import { promApi } from '../../services/promApi';
 import { useSnackbar } from 'notistack';
-import { LoadingSpinner, InfoCard } from '@qivr/design-system';
+import { LoadingSpinner, InfoCard, auraStepper } from '@qivr/design-system';
 
 interface PromPreviewProps {
   open: boolean;
@@ -363,7 +363,7 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
             ) : (
               // Step-by-step view
               <>
-                <Stepper activeStep={currentStep} sx={{ mb: 3 }}>
+                <Stepper activeStep={currentStep} sx={auraStepper}>
                   {preview.questions.map((_, index) => (
                     <Step key={index}>
                       <StepLabel />

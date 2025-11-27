@@ -1,6 +1,6 @@
-import { Box, Typography, LinearProgress, Stack, Avatar, Alert, CircularProgress } from '@mui/material';
+import { Box, Typography, LinearProgress, Stack, Avatar, Alert } from '@mui/material';
 import { EmojiEvents, LocalFireDepartment, TrendingUp, CheckCircle, Star, Refresh } from '@mui/icons-material';
-import { glassCard, AuraButton } from '@qivr/design-system';
+import { glassCard, AuraButton, SectionLoader } from '@qivr/design-system';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api-client';
 
@@ -63,7 +63,7 @@ export default function HealthProgress() {
   if (isLoading) {
     return (
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <CircularProgress size={60} />
+        <SectionLoader />
       </Box>
     );
   }

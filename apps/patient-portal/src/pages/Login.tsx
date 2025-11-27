@@ -114,7 +114,7 @@ export const Login: React.FC = () => {
               </Box>
               <Typography variant="body2" color="text.secondary">
                 New here?{" "}
-                <Link component={RouterLink} to="/register" sx={{ color: "#3385F0", textDecoration: "none" }}>
+                <Link component={RouterLink} to="/register" sx={{ color: "primary.main", textDecoration: "none" }}>
                   Sign up
                 </Link>
               </Typography>
@@ -198,7 +198,7 @@ export const Login: React.FC = () => {
                   <Link
                     component={RouterLink}
                     to="/forgot-password"
-                    sx={{ color: "#3385F0", textDecoration: "none", fontSize: "0.875rem" }}
+                    sx={{ color: "primary.main", textDecoration: "none", fontSize: "0.875rem" }}
                   >
                     Forgot Password?
                   </Link>
@@ -213,9 +213,9 @@ export const Login: React.FC = () => {
                   loadingText="Signing in..."
                   sx={{
                     py: 1.5,
-                    bgcolor: "#3385F0",
+                    bgcolor: "primary.main",
                     "&:hover": {
-                      bgcolor: "#2B71CC",
+                      bgcolor: "primary.dark",
                     },
                   }}
                 >
@@ -229,11 +229,11 @@ export const Login: React.FC = () => {
           <Grid size={12}>
             <Typography variant="body2" color="text.secondary" textAlign="center">
               By signing in, you agree to our{" "}
-              <Link href="/terms" target="_blank" sx={{ color: "#3385F0" }}>
+              <Link href="/terms" target="_blank" sx={{ color: "primary.main" }}>
                 Terms
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" target="_blank" sx={{ color: "#3385F0" }}>
+              <Link href="/privacy" target="_blank" sx={{ color: "primary.main" }}>
                 Privacy Policy
               </Link>
             </Typography>

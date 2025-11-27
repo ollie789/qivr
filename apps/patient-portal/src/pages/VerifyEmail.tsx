@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { LoadingSpinner } from "@qivr/design-system";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
   Typography,
   Paper,
-  CircularProgress,
+  
   Button,
   Alert,
 } from "@mui/material";
@@ -106,7 +107,7 @@ const VerifyEmail: React.FC = () => {
         <Paper sx={{ p: { xs: 3, md: 5 }, textAlign: "center" }}>
           {status === "loading" && (
             <>
-              <CircularProgress size={60} sx={{ mb: 3 }} />
+              <LoadingSpinner size={60} />
               <Typography variant="h5" gutterBottom>
                 Verifying your email...
               </Typography>

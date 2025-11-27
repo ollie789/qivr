@@ -11,6 +11,8 @@ import {
 } from '@mui/material';
 import { QivrButton } from '../QivrButton';
 import { DialogSection } from '../layout/DialogSection';
+import { auraTokens } from '../../theme/auraTokens';
+import { glassCard } from '../../styles/glassmorphism';
 
 export interface StepperDialogProps {
   open: boolean;
@@ -33,6 +35,7 @@ export interface StepperDialogProps {
 
 /**
  * A dialog with built-in stepper for multi-step workflows
+ * Styled with Aura design tokens
  */
 export const StepperDialog: React.FC<StepperDialogProps> = ({
   open,
@@ -56,11 +59,33 @@ export const StepperDialog: React.FC<StepperDialogProps> = ({
   const isFirstStep = activeStep === 0;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth={maxWidth} fullWidth>
-      <DialogTitle>{title}</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth={maxWidth} 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: auraTokens.borderRadius.lg,
+          ...glassCard,
+        }
+      }}
+    >
+      <DialogTitle sx={{ pb: 1 }}>{title}</DialogTitle>
       <DialogContent>
         <DialogSection>
-          <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+          <Stepper 
+            activeStep={activeStep} 
+            sx={{ 
+              mb: 3,
+              '& .MuiStepLabel-root .Mui-completed': {
+                color: 'success.main',
+              },
+              '& .MuiStepLabel-root .Mui-active': {
+                color: 'primary.main',
+              },
+            }}
+          >
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
@@ -70,7 +95,7 @@ export const StepperDialog: React.FC<StepperDialogProps> = ({
           <Box>{children}</Box>
         </DialogSection>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ p: auraTokens.spacing.lg, pt: auraTokens.spacing.md }}>
         <QivrButton
           onClick={onClose}
           disabled={loading}

@@ -9,7 +9,6 @@ import {
   InputLabel,
   LinearProgress,
   Alert,
-  CircularProgress,
   Tabs,
   Tab,
   Paper,
@@ -32,6 +31,9 @@ import {
   AuraButton,
   AuraGlassStatCard,
   auraTokens,
+  LoadingSpinner,
+  SectionLoader,
+  auraColors,
 } from "@qivr/design-system";
 import analyticsApi from "../services/analyticsApi";
 import { TopDiagnosesCard } from "../features/analytics";
@@ -134,7 +136,7 @@ const Analytics: React.FC = () => {
       value: dashboardMetrics?.totalPatients.toLocaleString() || "0",
       trend: { value: 12.5, label: "vs last period", isPositive: true },
       icon: <PeopleIcon />,
-      color: "#A641FA",
+      color: auraColors.purple.main,
     },
     {
       id: "appointments-period",
@@ -142,7 +144,7 @@ const Analytics: React.FC = () => {
       value: dashboardMetrics?.todayAppointments.toLocaleString() || "0",
       trend: { value: 8.3, label: "vs yesterday", isPositive: true },
       icon: <CalendarIcon />,
-      color: "#3385F0",
+      color: auraColors.blue.main,
     },
     {
       id: "revenue",
@@ -150,7 +152,7 @@ const Analytics: React.FC = () => {
       value: `$${dashboardMetrics?.estimatedRevenue.toLocaleString() || "0"}`,
       trend: { value: 15.2, label: "vs last period", isPositive: true },
       icon: <MoneyIcon />,
-      color: "#26CD82",
+      color: auraColors.green.main,
     },
     {
       id: "prom-score",
@@ -158,7 +160,7 @@ const Analytics: React.FC = () => {
       value: clinicalAnalytics?.averagePromScore.toFixed(1) || "0",
       trend: { value: 2.1, label: "vs last period", isPositive: true },
       icon: <AssessmentIcon />,
-      color: "#F68D2A",
+      color: auraColors.orange.main,
     },
   ];
 
@@ -211,7 +213,7 @@ const Analytics: React.FC = () => {
             <AuraButton
               variant="outlined"
               startIcon={
-                loading ? <CircularProgress size={18} /> : <RefreshIcon />
+                loading ? <LoadingSpinner size={18} /> : <RefreshIcon />
               }
               onClick={refetch}
               disabled={loading}
@@ -376,13 +378,11 @@ const Analytics: React.FC = () => {
               subtitle="Aggregated pain data from all patients showing most commonly affected regions"
             >
               {painAnalyticsLoading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                  <CircularProgress />
-                </Box>
+                <SectionLoader />
               ) : painAnalytics?.painPoints3D && painAnalytics.painPoints3D.length > 0 ? (
                 <Box
                   sx={{
-                    bgcolor: "#f5f5f5",
+                    bgcolor: "grey.100",
                     borderRadius: auraTokens.borderRadius.sm,
                     p: 2,
                     display: "flex",

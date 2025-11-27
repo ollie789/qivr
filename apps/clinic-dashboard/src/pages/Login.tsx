@@ -98,7 +98,7 @@ export default function Login() {
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Don't have an account?{" "}
-                <Link to="/signup" style={{ color: "#3385F0", textDecoration: "none" }}>
+                <Link to="/signup" style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none" }}>
                   Sign up
                 </Link>
               </Typography>
@@ -142,7 +142,7 @@ export default function Login() {
                 >
                   <Link
                     to="/forgot-password"
-                    style={{ color: "#3385F0", textDecoration: "none", fontSize: "0.875rem" }}
+                    style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none", fontSize: "0.875rem" }}
                   >
                     Forgot Password?
                   </Link>
@@ -157,9 +157,9 @@ export default function Login() {
                   loadingText="Logging in..."
                   sx={{
                     py: 1.5,
-                    bgcolor: "#3385F0",
+                    bgcolor: "primary.main",
                     "&:hover": {
-                      bgcolor: "#2B71CC",
+                      bgcolor: "primary.dark",
                     },
                   }}
                 >
@@ -179,7 +179,7 @@ export default function Login() {
             <Typography variant="body2" color="text.secondary" textAlign="center">
               <Link
                 to="/signup"
-                style={{ color: "#3385F0", textDecoration: "none" }}
+                style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none" }}
               >
                 Create a new account
               </Link>

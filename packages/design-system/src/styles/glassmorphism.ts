@@ -33,3 +33,27 @@ export const glassCard = (intensity: 'light' | 'medium' | 'dark' = 'light'): SxP
     borderColor: 'rgba(255, 255, 255, 0.25)',
   },
 });
+
+
+// Aura Stepper styles for consistent wizard appearance
+export const auraStepper = {
+  mb: 4,
+  '& .MuiStepLabel-root .Mui-completed': {
+    color: 'success.main',
+  },
+  '& .MuiStepLabel-root .Mui-active': {
+    color: 'primary.main',
+  },
+  '& .MuiStepConnector-line': {
+    borderColor: 'divider',
+  },
+  '& .MuiStepIcon-root': {
+    fontSize: 28,
+  },
+  '& .MuiStepLabel-label': {
+    fontWeight: 500,
+  },
+  '& .MuiStepLabel-label.Mui-active': {
+    fontWeight: 600,
+  },
+};

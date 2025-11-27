@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  CircularProgress,
   Button,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
@@ -14,6 +13,7 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
+import { LoadingSpinner } from "@qivr/design-system";
 import { EvaluationViewer } from "../../features/intake/components/EvaluationViewer";
 import { intakeApi } from "../../services/intakeApi";
 
@@ -177,7 +177,7 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
               height: "100%",
             }}
           >
-            <CircularProgress />
+            <LoadingSpinner />
           </Box>
         ) : evaluationData ? (
           <EvaluationViewer

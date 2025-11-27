@@ -6,8 +6,8 @@ import {
   Chip,
   Box,
   Alert,
-  CircularProgress,
 } from '@mui/material';
+import { LoadingSpinner } from '@qivr/design-system';
 import { api } from '../../lib/api-client';
 import { Cloud, Security, AccountTree } from '@mui/icons-material';
 
@@ -50,7 +50,7 @@ const TenantInfo: React.FC = () => {
       <Card>
         <CardContent>
           <Box display="flex" justifyContent="center" alignItems="center" p={2}>
-            <CircularProgress size={24} />
+            <LoadingSpinner size={24} />
             <Typography variant="body2" sx={{ ml: 2 }}>
               Loading tenant info...
             </Typography>

@@ -23,7 +23,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
-import { PainMap3D } from "@qivr/design-system";
+import { PainMap3D, auraStepper } from "@qivr/design-system";
 import { fetchProfile } from "../services/profileApi";
 
 const steps = [
@@ -259,7 +259,7 @@ export const IntakeForm: React.FC = () => {
         Comprehensive Pain Assessment
       </Typography>
 
-      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+      <Stepper activeStep={activeStep} sx={auraStepper}>
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>

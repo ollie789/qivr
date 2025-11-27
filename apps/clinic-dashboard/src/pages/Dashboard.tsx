@@ -62,6 +62,7 @@ import {
   InfoCard,
   AuraChartCard,
   HelpTooltip,
+  auraColors,
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -190,7 +191,7 @@ const Dashboard: React.FC = () => {
         title: "Appointments Today",
         value: derivedStats.todayAppointments.toString(),
         icon: <CalendarIcon />,
-        avatarColor: "#3385F0", // Aura blue
+        avatarColor: auraColors.blue.main,
         trend: { value: 8.2, label: "vs yesterday", isPositive: true },
       },
       {
@@ -198,7 +199,7 @@ const Dashboard: React.FC = () => {
         title: "Pending Intakes",
         value: derivedStats.pendingIntakes.toString(),
         icon: <AssignmentIcon />,
-        avatarColor: "#F68D2A", // Aura orange
+        avatarColor: auraColors.orange.main,
         trend: { value: 3.5, label: "vs yesterday", isPositive: false },
       },
       {
@@ -206,7 +207,7 @@ const Dashboard: React.FC = () => {
         title: "Active Patients",
         value: derivedStats.activePatients.toString(),
         icon: <PeopleIcon />,
-        avatarColor: "#A641FA", // Aura purple
+        avatarColor: auraColors.purple.main,
         trend: { value: 12.3, label: "vs last month", isPositive: true },
       },
       {
@@ -214,7 +215,7 @@ const Dashboard: React.FC = () => {
         title: "Avg Wait Time",
         value: `${derivedStats.averageWaitTime} min`,
         icon: <AccessTimeIcon />,
-        avatarColor: "#26CD82", // Aura green
+        avatarColor: auraColors.green.main,
         trend: { value: 5.1, label: "vs yesterday", isPositive: false },
       },
       {
@@ -222,7 +223,7 @@ const Dashboard: React.FC = () => {
         title: "Completed Today",
         value: derivedStats.completedToday.toString(),
         icon: <CheckCircleIcon />,
-        avatarColor: "#26CD82", // Aura green
+        avatarColor: auraColors.green.main,
         trend: { value: 15.7, label: "vs yesterday", isPositive: true },
       },
       {
@@ -230,7 +231,7 @@ const Dashboard: React.FC = () => {
         title: "Patient Satisfaction",
         value: derivedStats.patientSatisfaction.toFixed(1),
         icon: <StarIcon />,
-        avatarColor: "#F68D2A", // Aura orange
+        avatarColor: auraColors.orange.main,
         trend: { value: 2.4, label: "vs last week", isPositive: true },
       },
     ],

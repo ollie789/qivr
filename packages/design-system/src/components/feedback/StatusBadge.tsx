@@ -1,45 +1,44 @@
-import { Chip, type ChipProps } from '@mui/material';
+import { Chip, ChipProps } from '@mui/material';
 
-export interface StatusBadgeProps extends Omit<ChipProps, 'color'> {
-  status: string;
-}
+type ChipColor = 'success' | 'error' | 'warning' | 'info' | 'default' | 'primary' | 'secondary';
 
-const statusConfig: Record<string, { color: ChipProps['color']; label?: string }> = {
-  // Generic statuses
-  active: { color: 'success', label: 'Active' },
-  inactive: { color: 'default', label: 'Inactive' },
-  pending: { color: 'warning', label: 'Pending' },
-  success: { color: 'success', label: 'Success' },
-  error: { color: 'error', label: 'Error' },
-  warning: { color: 'warning', label: 'Warning' },
-  
-  // Appointment statuses
-  scheduled: { color: 'info' },
-  confirmed: { color: 'success' },
-  'in-progress': { color: 'warning' },
-  completed: { color: 'primary' },
-  cancelled: { color: 'error' },
-  'no-show': { color: 'error' },
-  
-  // PROM statuses
-  expired: { color: 'error' },
-  
-  // Intake statuses
-  reviewing: { color: 'warning' },
-  approved: { color: 'success' },
-  rejected: { color: 'error' },
+const statusColorMap: Record<string, ChipColor> = {
+  success: 'success',
+  completed: 'success',
+  approved: 'success',
+  error: 'error',
+  rejected: 'error',
+  cancelled: 'error',
+  expired: 'error',
+  warning: 'warning',
+  pending: 'warning',
+  reviewing: 'warning',
+  'in-progress': 'info',
+  scheduled: 'info',
+  info: 'info',
+  default: 'default',
 };
 
-export const StatusBadge = ({ status, label, ...props }: StatusBadgeProps) => {
-  const config = statusConfig[status.toLowerCase()] || { color: 'default' as ChipProps['color'] };
-  const displayLabel = label || config.label || status.charAt(0).toUpperCase() + status.slice(1);
-  
+export interface AuraStatusBadgeProps extends Omit<ChipProps, 'color'> {
+  status: string;
+  label?: string;
+}
+
+export const AuraStatusBadge = ({ status, label, ...props }: AuraStatusBadgeProps) => {
+  const color = statusColorMap[status] || 'default';
+  const displayLabel = label || status.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   return (
     <Chip
       label={displayLabel}
-      color={config.color}
       size="small"
+      color={color}
+      variant="outlined"
+      sx={{ fontWeight: 600, borderRadius: 1.5, ...props.sx }}
       {...props}
     />
   );
 };
+
+// Alias for backward compatibility
+export const StatusBadge = AuraStatusBadge;
+export type StatusBadgeProps = AuraStatusBadgeProps;

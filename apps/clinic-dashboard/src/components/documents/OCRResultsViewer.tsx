@@ -6,9 +6,9 @@ import {
   Chip,
   Grid,
   Alert,
-  CircularProgress,
 } from "@mui/material";
 import { CheckCircle, Warning, Error as ErrorIcon } from "@mui/icons-material";
+import { LoadingSpinner } from "@qivr/design-system";
 import { Document } from "../../services/documentApi";
 
 interface OCRResultsViewerProps {
@@ -18,7 +18,7 @@ interface OCRResultsViewerProps {
 export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
   const getStatusIcon = () => {
     if (document.status === "processing") {
-      return <CircularProgress size={20} />;
+      return <LoadingSpinner size={20} />;
     }
     if (
       document.status === "ready" &&

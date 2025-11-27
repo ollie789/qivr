@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { LoadingSpinner } from "@qivr/design-system";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Container,
@@ -8,7 +9,7 @@ import {
   Button,
   Typography,
   Alert,
-  CircularProgress,
+  
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -192,7 +193,7 @@ export const ConfirmEmail: React.FC = () => {
               sx={{ mt: 3, mb: 2, py: 1.5 }}
               disabled={isLoading}
             >
-              {isLoading ? <CircularProgress size={24} /> : "Verify Email"}
+              {isLoading ? <LoadingSpinner size={24} /> : "Verify Email"}
             </Button>
 
             <Button
@@ -202,7 +203,7 @@ export const ConfirmEmail: React.FC = () => {
               disabled={isResending}
               sx={{ mb: 2 }}
             >
-              {isResending ? <CircularProgress size={24} /> : "Resend Code"}
+              {isResending ? <LoadingSpinner size={24} /> : "Resend Code"}
             </Button>
 
             <Box sx={{ textAlign: "center" }}>

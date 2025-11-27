@@ -14,7 +14,7 @@ import {
   type TableCellProps,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { EmptyState } from '../feedback/EmptyState';
+import { AuraEmptyState as EmptyState } from '../feedback/EmptyState';
 import { SkeletonLoader } from '../feedback/SkeletonLoader';
 
 export interface DataTableColumn<T = any> {

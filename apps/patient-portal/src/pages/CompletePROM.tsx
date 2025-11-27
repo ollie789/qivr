@@ -3,7 +3,7 @@ import {
   Box,
   Typography,
   Button,
-  CircularProgress,
+  
   Alert,
   Stepper,
   Step,
@@ -33,7 +33,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { PainMap3D, PainMap3DViewer, RebookingDialog } from "@qivr/design-system";
+import { PainMap3D, PainMap3DViewer, RebookingDialog, LoadingSpinner, auraStepper } from "@qivr/design-system";
 import {
   fetchPromInstance as fetchPromInstanceById,
   fetchPromTemplate,
@@ -419,7 +419,7 @@ export const CompletePROM = () => {
         alignItems="center"
         minHeight="400px"
       >
-        <CircularProgress />
+        <LoadingSpinner />
       </Box>
     );
   }
@@ -523,7 +523,7 @@ export const CompletePROM = () => {
 
       {/* Stepper for multi-step form */}
       {totalSteps > 1 && (
-        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+        <Stepper activeStep={activeStep} sx={auraStepper}>
           {Array.from({ length: totalSteps }, (_, index) => (
             <Step key={index}>
               <StepLabel>Section {index + 1}</StepLabel>
@@ -604,7 +604,7 @@ export const CompletePROM = () => {
               onClick={handleSubmit}
               disabled={submitting}
               startIcon={
-                submitting ? <CircularProgress size={20} /> : <SaveIcon />
+                submitting ? <LoadingSpinner size={20} /> : <SaveIcon />
               }
             >
               {submitting ? "Submitting..." : "Submit Assessment"}

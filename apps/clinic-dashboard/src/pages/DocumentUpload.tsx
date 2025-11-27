@@ -10,7 +10,7 @@ import {
   Checkbox,
   Grid,
   Autocomplete,
-  CircularProgress,
+  
 } from "@mui/material";
 import { CloudUpload, CheckCircle } from "@mui/icons-material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,9 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { OCRResultsViewer } from "../components/documents";
 import { documentApi, Document } from "../services/documentApi";
 import { patientApi } from "../services/patientApi";
-import { PageHeader, DocumentUploader ,
-  auraTokens,
-} from "@qivr/design-system";
+import { PageHeader, DocumentUploader, auraTokens, LoadingSpinner } from "@qivr/design-system";
 
 const DOCUMENT_TYPES = [
   { value: "referral", label: "Referral" },
@@ -236,7 +234,7 @@ export default function DocumentUpload() {
                           endAdornment: (
                             <>
                               {loadingPatients ? (
-                                <CircularProgress size={20} />
+                                <LoadingSpinner size={20} />
                               ) : null}
                               {params.InputProps.endAdornment}
                             </>
@@ -355,7 +353,7 @@ export default function DocumentUpload() {
                         size="large"
                         startIcon={
                           uploadMutation.isPending ? (
-                            <CircularProgress size={20} color="inherit" />
+                            <LoadingSpinner size={20} />
                           ) : (
                             <CloudUpload />
                           )

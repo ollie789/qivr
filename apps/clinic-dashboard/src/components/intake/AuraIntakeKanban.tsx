@@ -17,6 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { auraColors } from "@qivr/design-system";
 import type { IntakeSubmission } from "../../services/intakeApi";
 
 interface AuraIntakeKanbanProps {
@@ -27,31 +28,11 @@ interface AuraIntakeKanbanProps {
 }
 
 const COLUMNS = [
-  { id: "pending", title: "New", statuses: ["pending"], color: "#3b82f6" },
-  {
-    id: "reviewing",
-    title: "Triaged",
-    statuses: ["reviewing", "triaged"],
-    color: "#8b5cf6",
-  },
-  {
-    id: "scheduling",
-    title: "Scheduling",
-    statuses: ["scheduling"],
-    color: "#f59e0b",
-  },
-  {
-    id: "scheduled",
-    title: "Scheduled",
-    statuses: ["scheduled", "approved"],
-    color: "#10b981",
-  },
-  {
-    id: "archived",
-    title: "Archived",
-    statuses: ["archived", "rejected"],
-    color: "#6b7280",
-  },
+  { id: "pending", title: "New", statuses: ["pending"], color: auraColors.blue.main },
+  { id: "reviewing", title: "Triaged", statuses: ["reviewing", "triaged"], color: auraColors.purple.main },
+  { id: "scheduling", title: "Scheduling", statuses: ["scheduling"], color: auraColors.orange.main },
+  { id: "scheduled", title: "Scheduled", statuses: ["scheduled", "approved"], color: auraColors.green.main },
+  { id: "archived", title: "Archived", statuses: ["archived", "rejected"], color: auraColors.grey[500] },
 ];
 
 const STATUS_MAP: Record<string, string> = {
@@ -86,13 +67,13 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
   const getSeverityColor = (severity: string) => {
     switch (severity?.toLowerCase()) {
       case "critical":
-        return "#ef4444";
+        return auraColors.red.main;
       case "high":
-        return "#f59e0b";
+        return auraColors.orange.main;
       case "medium":
-        return "#3b82f6";
+        return auraColors.blue.main;
       default:
-        return "#6b7280";
+        return auraColors.grey[500];
     }
   };
 
@@ -185,7 +166,7 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
               p: 1.5,
               bgcolor: "rgba(139, 92, 246, 0.08)",
               borderRadius: 2,
-              borderLeft: "3px solid #8b5cf6",
+              borderLeft: `3px solid ${auraColors.purple.main}`,
             }}
           >
             <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
@@ -205,13 +186,13 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                 size="small"
                 icon={<Warning sx={{ fontSize: 14 }} />}
                 sx={{
-                  bgcolor: "#fee2e2",
-                  color: "#dc2626",
+                  bgcolor: auraColors.red[50],
+                  color: auraColors.red.main,
                   fontSize: "0.7rem",
                   height: 24,
                   fontWeight: 600,
                   borderRadius: 1.5,
-                  "& .MuiChip-icon": { color: "#dc2626" },
+                  "& .MuiChip-icon": { color: auraColors.red.main },
                 }}
               />
             ))}

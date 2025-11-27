@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   Autocomplete,
   Box,
@@ -24,7 +20,6 @@ import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
-  Send as SendIcon,
   Person as PersonIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
@@ -35,7 +30,7 @@ import { patientApi, type Patient as PatientSummary } from '../../services/patie
 import { NotificationMethod } from '../../services/promApi';
 import type { PromTemplateSummary } from '../../services/promApi';
 import { handleApiError } from '../../lib/api-client';
-import { DialogSection, FormSection, FormRow, AuraButton } from '@qivr/design-system';
+import { DialogSection, FormSection, FormRow, FormDialog } from '@qivr/design-system';
 
 interface SendPromDialogProps {
   open: boolean;
@@ -173,14 +168,18 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-          <SendIcon />
-          Send PROM to Patients
-        </Box>
-      </DialogTitle>
-      <DialogContent>
+    <FormDialog
+      open={open}
+      onClose={onClose}
+      onSubmit={handleSend}
+      title="Send PROM to Patients"
+      maxWidth="md"
+      formActionsProps={{
+        submitLabel: `Send to ${selectedPatients.length} Patient(s)`,
+        submitLoading: loading,
+        submitDisabled: selectedPatients.length === 0 || !selectedTemplate,
+      }}
+    >
         <DialogSection>
           <FormSection
             title="PROM Selection"
@@ -425,26 +424,6 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
             </Alert>
           )}
         </DialogSection>
-      </DialogContent>
-      <DialogActions>
-        <AuraButton 
-          onClick={onClose} 
-          disabled={loading}
-          variant="outlined"
-          
-        >
-          Cancel
-        </AuraButton>
-        <AuraButton
-          variant="contained"
-          onClick={handleSend}
-          disabled={loading || selectedPatients.length === 0 || !selectedTemplate}
-          loading={loading}
-          startIcon={<SendIcon />}
-        >
-          Send to {selectedPatients.length} Patient(s)
-        </AuraButton>
-      </DialogActions>
-    </Dialog>
+    </FormDialog>
   );
 };

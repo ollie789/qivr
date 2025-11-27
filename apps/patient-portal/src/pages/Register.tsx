@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { LoadingSpinner, auraStepper } from "@qivr/design-system";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Box,
@@ -9,7 +10,7 @@ import {
   Paper,
   Alert,
   Divider,
-  CircularProgress,
+  
   Stepper,
   Step,
   StepLabel,
@@ -207,7 +208,7 @@ export const Register = () => {
             Create Your Account
           </Typography>
 
-          <Stepper activeStep={step} sx={{ mb: 4 }}>
+          <Stepper activeStep={step} sx={auraStepper}>
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
@@ -319,7 +320,7 @@ export const Register = () => {
                 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : "Create Account"}
+                {loading ? <LoadingSpinner size={24} /> : "Create Account"}
               </Button>
 
               <Divider sx={{ my: 2 }} />
@@ -361,7 +362,7 @@ export const Register = () => {
                   disabled={loading}
                 >
                   {loading ? (
-                    <CircularProgress size={24} />
+                    <LoadingSpinner size={24} />
                   ) : (
                     "Resend Verification Email"
                   )}

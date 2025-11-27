@@ -119,7 +119,7 @@ const Signup: React.FC = () => {
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Already have an account?{" "}
-                <Link to="/login" style={{ color: "#3385F0", textDecoration: "none" }}>
+                <Link to="/login" style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none" }}>
                   Log in
                 </Link>
               </Typography>
@@ -189,9 +189,9 @@ const Signup: React.FC = () => {
                   loadingText="Creating account..."
                   sx={{
                     py: 1.5,
-                    bgcolor: "#3385F0",
+                    bgcolor: "primary.main",
                     "&:hover": {
-                      bgcolor: "#2B71CC",
+                      bgcolor: "primary.dark",
                     },
                   }}
                 >
@@ -211,7 +211,7 @@ const Signup: React.FC = () => {
             <Typography variant="body2" color="text.secondary" textAlign="center">
               <Link
                 to="/login"
-                style={{ color: "#3385F0", textDecoration: "none" }}
+                style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none" }}
               >
                 Back to login
               </Link>

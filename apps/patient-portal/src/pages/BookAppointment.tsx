@@ -36,7 +36,7 @@ import {
   fetchAvailableProviders,
   fetchAvailableSlots,
 } from "../services/appointmentsApi";
-import { SectionLoader } from "@qivr/design-system";
+import { SectionLoader, auraStepper } from "@qivr/design-system";
 
 const steps = ["Select Provider", "Pick Date & Time", "Confirm Details"];
 
@@ -346,7 +346,7 @@ export const BookAppointment: React.FC = () => {
         </Typography>
       </Box>
 
-      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+      <Stepper activeStep={activeStep} sx={auraStepper}>
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
