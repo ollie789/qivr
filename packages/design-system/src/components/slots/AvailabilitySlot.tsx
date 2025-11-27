@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import Box, { type BoxProps } from '@mui/material/Box';
+import { auraTokens } from '../../theme/auraTokens';
 
 export interface AvailabilitySlotProps extends BoxProps {
   dashed?: boolean;
@@ -13,7 +14,7 @@ export const AvailabilitySlot = forwardRef<HTMLDivElement, AvailabilitySlotProps
         height: 60,
         border: dashed ? '1px dashed' : '1px solid',
         borderColor: 'divider',
-        borderRadius: 1,
+        borderRadius: auraTokens.borderRadius.sm,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

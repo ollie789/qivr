@@ -32,8 +32,8 @@ import TreatmentPlan from "./pages/TreatmentPlan";
 
 // Auth
 import { useAuth } from "./contexts/AuthContext";
-import { PrivateRoute } from "./components/auth/PrivateRoute";
-import { LoadingScreen } from "./components/shared/LoadingScreen";
+import { PrivateRoute } from "./components/auth";
+import { LoadingScreen } from "@qivr/design-system";
 
 export const AppContent: React.FC = () => {
   const { loading } = useAuth();

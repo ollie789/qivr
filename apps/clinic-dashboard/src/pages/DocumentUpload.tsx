@@ -16,10 +16,12 @@ import { CloudUpload, CheckCircle } from "@mui/icons-material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
-import { DocumentUploader, OCRResultsViewer } from "../components/documents";
+import { OCRResultsViewer } from "../components/documents";
 import { documentApi, Document } from "../services/documentApi";
 import { patientApi } from "../services/patientApi";
-import { PageHeader } from "@qivr/design-system";
+import { PageHeader, DocumentUploader ,
+  auraTokens,
+} from "@qivr/design-system";
 
 const DOCUMENT_TYPES = [
   { value: "referral", label: "Referral" },
@@ -148,7 +150,7 @@ export default function DocumentUpload() {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper sx={{ p: 4, borderRadius: 2, boxShadow: 3 }}>
+          <Paper sx={{ p: 4, borderRadius: auraTokens.borderRadius.md, boxShadow: 3 }}>
             {uploadedDocument ? (
               <Box>
                 <Box
@@ -159,7 +161,7 @@ export default function DocumentUpload() {
                     mb: 3,
                     p: 2,
                     bgcolor: "success.50",
-                    borderRadius: 2,
+                    borderRadius: auraTokens.borderRadius.md,
                     border: "2px solid",
                     borderColor: "success.main",
                   }}
@@ -388,7 +390,7 @@ export default function DocumentUpload() {
             sx={{
               p: 3,
               bgcolor: "primary.50",
-              borderRadius: 2,
+              borderRadius: auraTokens.borderRadius.md,
               boxShadow: 2,
               border: "1px solid",
               borderColor: "primary.100",

@@ -1,3 +1,4 @@
+import { auraTokens } from '../../../theme/auraTokens';
 import { Tooltip, IconButton, TooltipProps } from '@mui/material';
 import { InfoOutlined as InfoIcon } from '@mui/icons-material';
 import { ReactNode } from 'react';

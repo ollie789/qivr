@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   IconButton,
-  Badge,
   Menu,
   Box,
   Divider,
@@ -18,7 +17,7 @@ import {
   notificationsApi,
   type NotificationListItem,
 } from '../../services/notificationsApi';
-import { EmptyState, LoadingSpinner } from '@qivr/design-system';
+import { EmptyState, LoadingSpinner, CountBadge } from '@qivr/design-system';
 
 // Adapter to convert API notification to Aura Notification type
 // Placeholder until Aura notifications are available in design-system exports
@@ -122,9 +121,9 @@ const NotificationBell: React.FC = () => {
         onClick={handleClick}
         sx={{ ml: 1 }}
       >
-        <Badge badgeContent={unreadCount} color="error">
+        <CountBadge count={unreadCount}>
           <NotificationIcon />
-        </Badge>
+        </CountBadge>
       </IconButton>
 
       <Menu

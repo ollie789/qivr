@@ -5,6 +5,7 @@ import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography, Slider, Circul
 import * as THREE from 'three';
 import { PAIN_QUALITIES, type PainQuality } from '../../types/pain-drawing';
 import { getRegionDisplayName, getRegionSnomedCode } from '../../types/anatomical-regions';
+import { auraTokens } from '../../theme/auraTokens';
 
 interface SelectedRegion {
   meshName: string;
@@ -184,7 +185,7 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
           width: '100%',
           height: 600,
           bgcolor: '#f5f5f5',
-          borderRadius: 1,
+          borderRadius: auraTokens.borderRadius.sm,
           overflow: 'hidden'
         }}
       >
@@ -221,7 +222,7 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
                   sx={{
                     p: 1.5,
                     bgcolor: 'background.paper',
-                    borderRadius: 1,
+                    borderRadius: auraTokens.borderRadius.sm,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,

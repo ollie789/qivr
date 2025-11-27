@@ -1,3 +1,4 @@
+import { auraTokens } from '../../../theme/auraTokens';
 import { Box, Paper, Skeleton } from '@mui/material';
 
 export const StatCardSkeleton = () => {

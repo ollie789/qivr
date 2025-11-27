@@ -1,3 +1,4 @@
+import { auraTokens } from "../../theme/auraTokens";
 import React from 'react';
 import {
   ListItem,
@@ -38,7 +39,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         sx={{
           border: 1,
           borderColor: selected ? 'primary.main' : 'divider',
-          borderRadius: 1,
+          borderRadius: auraTokens.borderRadius.sm,
         }}
       >
         <ListItemAvatar>

@@ -1,25 +1,16 @@
+import { PasswordTextField, LoadingButton, auraTokens } from "@qivr/design-system";
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Box,
-  Paper,
   Typography,
-  Button,
   Container,
   TextField,
   Alert,
-  CircularProgress,
-  InputAdornment,
-  IconButton,
   Divider,
+  Stack,
+  Grid,
 } from "@mui/material";
-import {
-  Visibility,
-  VisibilityOff,
-  Email as EmailIcon,
-  Lock as LockIcon,
-  LocalHospital as ClinicIcon,
-} from "@mui/icons-material";
 import { useAuth, useAuthActions } from "../stores/authStore";
 
 export default function Login() {
@@ -28,14 +19,11 @@ export default function Login() {
   const { login } = useAuthActions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
-    // If already authenticated, redirect to dashboard
     if (isAuthenticated) {
-      console.log("Already authenticated, redirecting to dashboard");
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, navigate]);
@@ -54,10 +42,8 @@ export default function Login() {
       await login(email, password);
       navigate("/dashboard");
     } catch (err: unknown) {
-      console.error("Login error:", err);
       const message = err instanceof Error ? err.message : "";
 
-      // Check if user needs to complete clinic registration
       if (
         message.includes("no tenant") ||
         message.includes("no clinic") ||
@@ -68,9 +54,7 @@ export default function Login() {
       }
 
       if (message.includes("not verified")) {
-        setError(
-          "Please verify your email address before logging in. Check your inbox for the verification link.",
-        );
+        setError("Please verify your email address before logging in.");
       } else if (message.includes("Incorrect username or password")) {
         setError("Invalid email or password");
       } else if (message.includes("User does not exist")) {
@@ -83,171 +67,126 @@ export default function Login() {
     }
   };
 
-  const handleClickShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
   return (
     <Container maxWidth="sm">
-      <Box
+      <Stack
         sx={{
-          marginTop: 8,
-          display: "flex",
-          flexDirection: "column",
+          minHeight: "100vh",
           alignItems: "center",
+          justifyContent: "center",
+          py: 4,
         }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            p: 4,
-            width: "100%",
-            borderRadius: 3,
-            border: "1px solid",
-            borderColor: "divider",
-            background:
-              "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
-          }}
-        >
-          <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
-            <Box
+        <Grid container sx={{ maxWidth: "28rem", rowGap: 3 }}>
+          {/* Header */}
+          <Grid size={12}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
               sx={{
-                width: 64,
-                height: 64,
-                borderRadius: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
+                justifyContent: "space-between",
+                alignItems: { xs: "flex-start", sm: "flex-end" },
               }}
             >
-              <ClinicIcon sx={{ fontSize: 36, color: "white" }} />
-            </Box>
-          </Box>
-
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Qivr Clinic Portal
-          </Typography>
-
-          <Typography
-            variant="body1"
-            align="center"
-            color="text.secondary"
-            paragraph
-          >
-            Sign in to manage your clinic
-          </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            <TextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              margin="normal"
-              required
-              autoComplete="email"
-              autoFocus
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EmailIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <TextField
-              fullWidth
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              required
-              autoComplete="current-password"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockIcon color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              sx={{
-                mt: 3,
-                mb: 2,
-                py: 1.5,
-                background: "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                boxShadow: "0 4px 12px rgba(51, 133, 240, 0.3)",
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                "&:hover": {
-                  background:
-                    "linear-gradient(135deg, #2970D9 0%, #8F2FE3 100%)",
-                  boxShadow: "0 6px 20px rgba(51, 133, 240, 0.4)",
-                  transform: "translateY(-2px)",
-                },
-                "&:active": {
-                  transform: "translateY(0)",
-                },
-              }}
-              disabled={isLoggingIn}
-            >
-              {isLoggingIn ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-
-            <Box sx={{ mt: 2, textAlign: "center" }}>
-              <Link to="/forgot-password" style={{ textDecoration: "none" }}>
-                <Typography variant="body2" color="primary">
-                  Forgot password?
+              <Box>
+                <Typography variant="h4" fontWeight={600}>
+                  Log in
                 </Typography>
-              </Link>
-            </Box>
-
-            <Divider sx={{ my: 3 }}>OR</Divider>
-
-            <Box sx={{ textAlign: "center" }}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Don{"'"}t have an account?
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Qivr Clinic Portal
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                Don't have an account?{" "}
+                <Link to="/signup" style={{ color: "#3385F0", textDecoration: "none" }}>
+                  Sign up
+                </Link>
               </Typography>
-              <Link to="/signup" style={{ textDecoration: "none" }}>
-                <Typography variant="body2" color="primary">
-                  Sign up here
-                </Typography>
-              </Link>
+            </Stack>
+          </Grid>
+
+          {/* Form */}
+          <Grid size={12}>
+            <Box component="form" onSubmit={handleSubmit}>
+              {error && (
+                <Alert severity="error" sx={{ mb: 3, borderRadius: auraTokens.borderRadius.sm }}>
+                  {error}
+                </Alert>
+              )}
+
+              <Stack spacing={3}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  autoFocus
+                />
+
+                <PasswordTextField
+                  fullWidth
+                  label="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+
+                <Stack
+                  direction="row"
+                  justifyContent="flex-end"
+                  alignItems="center"
+                >
+                  <Link
+                    to="/forgot-password"
+                    style={{ color: "#3385F0", textDecoration: "none", fontSize: "0.875rem" }}
+                  >
+                    Forgot Password?
+                  </Link>
+                </Stack>
+
+                <LoadingButton
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  loading={isLoggingIn}
+                  loadingText="Logging in..."
+                  sx={{
+                    py: 1.5,
+                    bgcolor: "#3385F0",
+                    "&:hover": {
+                      bgcolor: "#2B71CC",
+                    },
+                  }}
+                >
+                  Log in
+                </LoadingButton>
+              </Stack>
             </Box>
-          </Box>
-        </Paper>
-      </Box>
+          </Grid>
+
+          {/* Divider */}
+          <Grid size={12}>
+            <Divider sx={{ color: "text.secondary" }}>or</Divider>
+          </Grid>
+
+          {/* Footer */}
+          <Grid size={12}>
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Link
+                to="/signup"
+                style={{ color: "#3385F0", textDecoration: "none" }}
+              >
+                Create a new account
+              </Link>
+            </Typography>
+          </Grid>
+        </Grid>
+      </Stack>
     </Container>
   );
 }

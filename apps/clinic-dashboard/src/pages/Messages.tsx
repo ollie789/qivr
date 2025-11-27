@@ -18,7 +18,6 @@ import {
   IconButton,
 } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { auraColors } from "@qivr/design-system";
 import {
   useInfiniteQuery,
   useQuery,
@@ -33,11 +32,13 @@ import {
   type MessageDetail,
 } from "../services/messagesApi";
 import {
+  auraColors,
   PageHeader,
   SearchBar,
   SectionLoader,
   AuraButton,
   AuraEmptyState,
+  auraTokens,
 } from "@qivr/design-system";
 
 const Messages: React.FC = () => {
@@ -406,7 +407,7 @@ const Messages: React.FC = () => {
                           color: isOwnMessage
                             ? "primary.contrastText"
                             : "text.primary",
-                          borderRadius: 2,
+                          borderRadius: auraTokens.borderRadius.md,
                           p: 2,
                         }}
                       >

@@ -1,3 +1,4 @@
+import { auraTokens } from '../../../theme/auraTokens';
 import {
   Dialog,
   DialogTitle,

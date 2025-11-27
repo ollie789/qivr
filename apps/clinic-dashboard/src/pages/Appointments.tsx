@@ -1,3 +1,4 @@
+import { auraTokens } from "@qivr/design-system";
 import { useState } from "react";
 import {
   Box,
@@ -21,7 +22,7 @@ import {
 } from "@mui/material";
 import {
   Add as AddIcon,
-  Edit as EditIcon,
+  
   Delete as DeleteIcon,
   Notes as NotesIcon,
   CheckCircle as CompleteIcon,
@@ -58,7 +59,7 @@ export default function Appointments() {
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   // Fetch appointments
-  const { data: appointments = [], isLoading } = useQuery({
+  const { data: appointmentsData, isLoading } = useQuery({
     queryKey: ["appointments", format(monthStart, "yyyy-MM-dd"), format(monthEnd, "yyyy-MM-dd")],
     queryFn: () => appointmentsApi.getAppointments({
       startDate: format(monthStart, "yyyy-MM-dd"),
@@ -66,8 +67,10 @@ export default function Appointments() {
     }),
   });
 
+  const appointments = appointmentsData?.items ?? appointmentsData ?? [];
+
   const appointmentsForDate = (date: Date) => {
-    return appointments.filter((apt: any) => 
+    return (appointments as any[]).filter((apt: any) => 
       isSameDay(parseISO(apt.scheduledStart), date)
     );
   };
@@ -209,7 +212,7 @@ export default function Appointments() {
                     p: 2,
                     textAlign: "center",
                     cursor: "pointer",
-                    borderRadius: 2,
+                    borderRadius: auraTokens.borderRadius.md,
                     border: "1px solid",
                     borderColor: isSelected ? "primary.main" : "divider",
                     bgcolor: isCurrentDay ? "primary.light" : isSelected ? "primary.50" : "transparent",
@@ -265,7 +268,7 @@ export default function Appointments() {
                     p: 2,
                     border: "1px solid",
                     borderColor: "divider",
-                    borderRadius: 2,
+                    borderRadius: auraTokens.borderRadius.md,
                     "&:hover": {
                       borderColor: "primary.main",
                       bgcolor: "action.hover",

@@ -1,3 +1,4 @@
+import { auraTokens } from "../../theme/auraTokens";
 import React from 'react';
 import Box, { type BoxProps } from '@mui/material/Box';
 import Skeleton, { type SkeletonProps } from '@mui/material/Skeleton';
@@ -44,7 +45,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                   p: 2,
                   border: '1px solid',
                   borderColor: 'divider',
-                  borderRadius: 1,
+                  borderRadius: auraTokens.borderRadius.sm,
                 }}
               >
                 <Skeleton variant="text" width="60%" height={28} />

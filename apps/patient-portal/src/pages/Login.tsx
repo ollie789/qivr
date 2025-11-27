@@ -9,22 +9,18 @@ import {
   Link,
   Alert,
   Divider,
-  IconButton,
-  InputAdornment,
-  CircularProgress,
-  Paper,
+  Stack,
+  Grid,
 } from "@mui/material";
 import {
-  Visibility,
-  VisibilityOff,
   Google as GoogleIcon,
   Facebook as FacebookIcon,
-  Favorite as HeartIcon,
 } from "@mui/icons-material";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../contexts/AuthContext";
+import { PasswordTextField, LoadingButton, auraTokens } from "@qivr/design-system";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -37,7 +33,6 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signInWithGoogle, signInWithFacebook } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -64,10 +59,7 @@ export const Login: React.FC = () => {
         setError(result.error || "Invalid email or password");
       }
     } catch (err: unknown) {
-      console.error("Login error:", err);
-      setError(
-        err instanceof Error ? err.message : "Invalid email or password",
-      );
+      setError(err instanceof Error ? err.message : "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
@@ -85,188 +77,62 @@ export const Login: React.FC = () => {
       }
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : `Failed to sign in with ${provider}`,
-      );
+      setError(err instanceof Error ? err.message : `Failed to sign in with ${provider}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
+    <Container maxWidth="sm">
+      <Stack
         sx={{
-          marginTop: 8,
-          display: "flex",
-          flexDirection: "column",
+          minHeight: "100vh",
           alignItems: "center",
+          justifyContent: "center",
+          py: 4,
         }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 3, md: 5 },
-            width: "100%",
-            borderRadius: 3,
-            border: "1px solid",
-            borderColor: "divider",
-            background:
-              "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
-          }}
-        >
-          <Box sx={{ textAlign: "center", mb: 3 }}>
-            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-              <Box
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background:
-                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                  boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
-                }}
-              >
-                <HeartIcon sx={{ fontSize: 28, color: "white" }} />
-              </Box>
-            </Box>
-            <Typography
-              component="h1"
-              variant="h4"
-              gutterBottom
-              sx={{ fontWeight: 700 }}
-            >
-              Welcome Back
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Sign in to access your health portal
-            </Typography>
-          </Box>
-
-          {error && (
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              onClose={() => setError(null)}
-            >
-              {error}
-              {error.includes("verify your email") && (
-                <Box sx={{ mt: 1 }}>
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      navigate("/confirm-email", {
-                        state: { email: getValues("email") },
-                      })
-                    }
-                  >
-                    Go to Email Verification
-                  </Button>
-                </Box>
-              )}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              autoComplete="email"
-              autoFocus
-              error={!!errors.email}
-              helperText={errors.email?.message}
-              {...register("email")}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              id="password"
-              autoComplete="current-password"
-              error={!!errors.password}
-              helperText={errors.password?.message}
-              {...register("password")}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <Box
+        <Grid container sx={{ maxWidth: "28rem", rowGap: 3 }}>
+          {/* Header */}
+          <Grid size={12}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
               sx={{
-                display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center",
-                mt: 1,
-                mb: 2,
+                alignItems: { xs: "flex-start", sm: "flex-end" },
               }}
             >
-              <Link
-                component={RouterLink}
-                to="/forgot-password"
-                variant="body2"
-              >
-                Forgot password?
-              </Link>
-            </Box>
+              <Box>
+                <Typography variant="h4" fontWeight={600}>
+                  Welcome back
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Sign in to your health portal
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                New here?{" "}
+                <Link component={RouterLink} to="/register" sx={{ color: "#3385F0", textDecoration: "none" }}>
+                  Sign up
+                </Link>
+              </Typography>
+            </Stack>
+          </Grid>
 
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{
-                mt: 1,
-                mb: 2,
-                py: 1.5,
-                background: "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                boxShadow: "0 4px 12px rgba(51, 133, 240, 0.3)",
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                "&:hover": {
-                  background:
-                    "linear-gradient(135deg, #2970D9 0%, #8F2FE3 100%)",
-                  boxShadow: "0 6px 20px rgba(51, 133, 240, 0.4)",
-                  transform: "translateY(-2px)",
-                },
-                "&:active": {
-                  transform: "translateY(0)",
-                },
-              }}
-              disabled={isLoading}
-            >
-              {isLoading ? <CircularProgress size={24} /> : "Sign In"}
-            </Button>
-
-            <Divider sx={{ my: 3 }}>OR</Divider>
-
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {/* Social Auth */}
+          <Grid size={12}>
+            <Stack direction="row" spacing={2}>
               <Button
                 fullWidth
                 variant="outlined"
                 startIcon={<GoogleIcon />}
                 onClick={() => handleSocialLogin("google")}
                 disabled={isLoading}
-                sx={{ py: 1.5 }}
+                sx={{ py: 1.25 }}
               >
-                Continue with Google
+                Google
               </Button>
               <Button
                 fullWidth
@@ -274,39 +140,106 @@ export const Login: React.FC = () => {
                 startIcon={<FacebookIcon />}
                 onClick={() => handleSocialLogin("facebook")}
                 disabled={isLoading}
-                sx={{ py: 1.5 }}
+                sx={{ py: 1.25 }}
               >
-                Continue with Facebook
+                Facebook
               </Button>
-            </Box>
+            </Stack>
+          </Grid>
 
-            <Box sx={{ mt: 3, textAlign: "center" }}>
-              <Typography variant="body2" color="text.secondary">
-                Don't have an account?{" "}
-                <Link component={RouterLink} to="/register" variant="body2">
-                  Sign up
-                </Link>
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+          <Grid size={12}>
+            <Divider sx={{ color: "text.secondary" }}>or use email</Divider>
+          </Grid>
 
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          align="center"
-          sx={{ mt: 3 }}
-        >
-          By signing in, you agree to our{" "}
-          <Link href="/terms" target="_blank">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" target="_blank">
-            Privacy Policy
-          </Link>
-        </Typography>
-      </Box>
+          {/* Form */}
+          <Grid size={12}>
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+              {error && (
+                <Alert
+                  severity="error"
+                  sx={{ mb: 3, borderRadius: auraTokens.borderRadius.sm }}
+                  onClose={() => setError(null)}
+                >
+                  {error}
+                  {error.includes("verify your email") && (
+                    <Button
+                      size="small"
+                      sx={{ mt: 1, display: "block" }}
+                      onClick={() => navigate("/confirm-email", { state: { email: getValues("email") } })}
+                    >
+                      Go to Email Verification
+                    </Button>
+                  )}
+                </Alert>
+              )}
+
+              <Stack spacing={3}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  autoComplete="email"
+                  autoFocus
+                  error={!!errors.email}
+                  helperText={errors.email?.message}
+                  {...register("email")}
+                />
+
+                <PasswordTextField
+                  fullWidth
+                  label="Password"
+                  autoComplete="current-password"
+                  error={!!errors.password}
+                  helperText={errors.password?.message}
+                  {...register("password")}
+                />
+
+                <Stack direction="row" justifyContent="flex-end">
+                  <Link
+                    component={RouterLink}
+                    to="/forgot-password"
+                    sx={{ color: "#3385F0", textDecoration: "none", fontSize: "0.875rem" }}
+                  >
+                    Forgot Password?
+                  </Link>
+                </Stack>
+
+                <LoadingButton
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  loading={isLoading}
+                  loadingText="Signing in..."
+                  sx={{
+                    py: 1.5,
+                    bgcolor: "#3385F0",
+                    "&:hover": {
+                      bgcolor: "#2B71CC",
+                    },
+                  }}
+                >
+                  Log in
+                </LoadingButton>
+              </Stack>
+            </Box>
+          </Grid>
+
+          {/* Footer */}
+          <Grid size={12}>
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              By signing in, you agree to our{" "}
+              <Link href="/terms" target="_blank" sx={{ color: "#3385F0" }}>
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" target="_blank" sx={{ color: "#3385F0" }}>
+                Privacy Policy
+              </Link>
+            </Typography>
+          </Grid>
+        </Grid>
+      </Stack>
     </Container>
   );
 };

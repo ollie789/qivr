@@ -33,8 +33,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { PainMap3D, PainMap3DViewer } from "@qivr/design-system";
-import { RebookingDialog } from "../components/RebookingDialog";
+import { PainMap3D, PainMap3DViewer, RebookingDialog } from "@qivr/design-system";
 import {
   fetchPromInstance as fetchPromInstanceById,
   fetchPromTemplate,

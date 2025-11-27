@@ -1,5 +1,6 @@
 import { Box, Grid, Paper, Typography, Chip, Stack, LinearProgress } from '@mui/material';
 import { TrendingUp, TrendingDown, Remove } from '@mui/icons-material';
+import { auraTokens } from '../../theme/auraTokens';
 
 interface RegionFrequency {
   region: string;
@@ -104,7 +105,7 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
                   <LinearProgress
                     variant="determinate"
                     value={(region.count / maxRegionCount) * 100}
-                    sx={{ height: 8, borderRadius: 1 }}
+                    sx={{ height: 8, borderRadius: auraTokens.borderRadius.sm }}
                   />
                 </Box>
               ))}
@@ -131,7 +132,7 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
                   <LinearProgress
                     variant="determinate"
                     value={(quality.count / maxQualityCount) * 100}
-                    sx={{ height: 8, borderRadius: 1 }}
+                    sx={{ height: 8, borderRadius: auraTokens.borderRadius.sm }}
                     color={
                       quality.quality === 'Burning' ? 'error' :
                       quality.quality === 'Sharp' ? 'warning' :
@@ -171,7 +172,7 @@ export function PainMapMetrics({ data, loading = false }: PainMapMetricsProps) {
                       width: '100%',
                       height: `${(item.count / maxIntensityCount) * 150}px`,
                       bgcolor: item.intensity >= 7 ? 'error.main' : item.intensity >= 4 ? 'warning.main' : 'success.main',
-                      borderRadius: 1,
+                      borderRadius: auraTokens.borderRadius.sm,
                       transition: 'height 0.3s',
                     }}
                   />

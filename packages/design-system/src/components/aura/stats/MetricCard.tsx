@@ -1,3 +1,4 @@
+import { auraTokens } from '../../../theme/auraTokens';
 import { Paper, Stack, Typography } from '@mui/material';
 import { ReactNode } from 'react';
 

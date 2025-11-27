@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography, Card, CardContent } from '@mui/material';
+import { auraTokens } from '../../theme/auraTokens';
 
 export interface StatCardProps {
   /** Label text displayed above value */
@@ -27,7 +28,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 }) => {
   if (compact) {
     return (
-      <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+      <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: auraTokens.borderRadius.sm }}>
         <Typography variant="caption" color="text.secondary">
           {label}
         </Typography>

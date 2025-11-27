@@ -1,3 +1,4 @@
+import { auraTokens } from '../../../theme/auraTokens';
 import { Box, Paper, Typography, alpha } from '@mui/material';
 import { ReactNode } from 'react';
 
@@ -30,7 +31,7 @@ export const AuraGradientCard = ({
       sx={{
         height: '100%',
         p: { xs: 2.5, md: 3 },
-        borderRadius: 2,
+        borderRadius: auraTokens.borderRadius.md,
         background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)`,
         color: 'white',
         position: 'relative',
@@ -107,7 +108,7 @@ export const AuraGradientCard = ({
               bgcolor: alpha('#fff', 0.15),
               px: 1,
               py: 0.5,
-              borderRadius: 1,
+              borderRadius: auraTokens.borderRadius.sm,
             }}
           >
             ↑ {trend.value}%

@@ -99,10 +99,10 @@ import {
   PainMapProgression,
   AuraEmptyState,
   StatCardSkeleton,
+  TreatmentPlanDialog,
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
 import { intakeApi } from "../services/intakeApi";
-import { TreatmentPlanDialog } from "../components/dialogs/TreatmentPlanDialog";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
 
 interface MedicalHistory {
@@ -153,7 +153,7 @@ const MedicalRecords: React.FC = () => {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [editedPatient, setEditedPatient] = useState<Partial<Patient>>({});
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  
   const [prefilledData, setPrefilledData] = useState<any>(null);
   const [loadingIntake, setLoadingIntake] = useState(false);
   const [treatmentPlanDialogOpen, setTreatmentPlanDialogOpen] = useState(false);
@@ -227,7 +227,7 @@ const MedicalRecords: React.FC = () => {
         email: intake.patient.email,
         phone: intake.patient.phone,
         dateOfBirth: intake.patient.dateOfBirth,
-        chiefComplaint: intake.evaluation.chiefComplaint || intake.evaluation.conditionType,
+        chiefComplaint: (intake.evaluation as any).chiefComplaint || intake.evaluation.conditionType,
         medicalHistory: intake.medicalHistory,
         currentMedications: intake.evaluation.currentMedications,
         allergies: intake.evaluation.allergies,
@@ -235,7 +235,6 @@ const MedicalRecords: React.FC = () => {
         baselinePainMap: intake.painMap,
       });
       
-      setShowCreateForm(true);
       setViewMode('detail');
       enqueueSnackbar('Intake data loaded. Create patient record below.', { variant: 'info' });
     } catch (error) {

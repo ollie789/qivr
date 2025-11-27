@@ -33,8 +33,7 @@ import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useDashboardData } from "../hooks";
-import { AuraStatCard, InfoCard, StatCardSkeleton, AuraEmptyState } from "@qivr/design-system";
-import { TreatmentPlanCard } from "../../../components/TreatmentPlanCard";
+import { AuraStatCard, InfoCard, StatCardSkeleton, AuraEmptyState, TreatmentPlanCard } from "@qivr/design-system";
 
 const formatAppointmentTime = (isoDate: string) => {
   const date = parseISO(isoDate);

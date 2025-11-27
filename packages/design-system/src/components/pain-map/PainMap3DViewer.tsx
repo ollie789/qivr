@@ -5,6 +5,7 @@ import { Box, Stack, Typography, Chip, CircularProgress } from '@mui/material';
 import * as THREE from 'three';
 import { PAIN_QUALITIES, type PainRegion } from '../../types/pain-drawing';
 import { getRegionDisplayName } from '../../types/anatomical-regions';
+import { auraTokens } from '../../theme/auraTokens';
 
 interface PainMap3DViewerProps {
   regions: PainRegion[];
@@ -78,7 +79,7 @@ export function PainMap3DViewer({
           width,
           height,
           bgcolor: '#f5f5f5',
-          borderRadius: 1,
+          borderRadius: auraTokens.borderRadius.sm,
           overflow: 'hidden'
         }}
       >
@@ -110,7 +111,7 @@ export function PainMap3DViewer({
                   sx={{
                     p: 1.5,
                     bgcolor: 'background.paper',
-                    borderRadius: 1,
+                    borderRadius: auraTokens.borderRadius.sm,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,

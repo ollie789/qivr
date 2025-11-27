@@ -10,9 +10,6 @@ export * from './dialogs';
 // Shared components
 export * from './shared';
 
-// Form components
-export * from './forms';
-
 // Layout components
 export { default as DashboardLayout } from './Layout/DashboardLayout';
 

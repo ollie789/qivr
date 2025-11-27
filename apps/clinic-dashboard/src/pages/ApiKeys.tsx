@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, IconButton, Chip, Stack } from '@mui/material';
-import { Add, ContentCopy, Delete, PowerSettingsNew, Key } from '@mui/icons-material';
-import { glassCard } from '@qivr/design-system';
+import { Add, Delete, PowerSettingsNew, Key } from '@mui/icons-material';
+import { glassCard, auraTokens, CopyButton } from '@qivr/design-system';
 import { apiKeysApi } from '../lib/api';
 import { useSnackbar } from 'notistack';
 
@@ -41,11 +41,6 @@ export default function ApiKeys() {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
     }
   });
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    enqueueSnackbar('Copied to clipboard', { variant: 'success' });
-  };
 
   const handleCreate = () => {
     createMutation.mutate({
@@ -126,15 +121,13 @@ export default function ApiKeys() {
         <DialogTitle>Create API Key</DialogTitle>
         <DialogContent>
           {newKey ? (
-            <Box sx={{ bgcolor: 'warning.light', p: 2, borderRadius: 1, mt: 1 }}>
+            <Box sx={{ bgcolor: 'warning.light', p: 2, borderRadius: auraTokens.borderRadius.sm, mt: 1 }}>
               <Typography variant="body2" sx={{ mb: 1 }}>
                 ⚠️ Save this key now - you won't see it again!
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <TextField value={newKey} fullWidth size="small" InputProps={{ readOnly: true }} />
-                <IconButton onClick={() => copyToClipboard(newKey)}>
-                  <ContentCopy />
-                </IconButton>
+                <CopyButton text={newKey} tooltip="Copy API key" />
               </Box>
             </Box>
           ) : (

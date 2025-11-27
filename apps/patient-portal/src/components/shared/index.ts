@@ -1,2 +1,2 @@
-export { default as TenantSelector } from './TenantSelector';
-export { LoadingScreen } from './LoadingScreen';
+// Shared components - re-export from design-system as needed
+export { LoadingScreen } from '@qivr/design-system';

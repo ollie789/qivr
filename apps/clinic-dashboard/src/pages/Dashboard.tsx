@@ -61,6 +61,7 @@ import {
   GreetingCard,
   InfoCard,
   AuraChartCard,
+  HelpTooltip,
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -298,7 +299,7 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Upcoming Appointments */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <InfoCard title="Today's Appointments">
+          <InfoCard title="Today's Appointments" action={<HelpTooltip title="Shows appointments scheduled for today. Click on a patient to view details." />}>
             <List>
               {appointmentsLoading ? (
                 <SkeletonLoader type="list" count={3} />

@@ -51,13 +51,13 @@ import {
   Schedule as ScheduleIcon,
   LocalHospital as HospitalIcon,
   Key as KeyIcon,
-  ContentCopy as CopyIcon,
   Refresh as RefreshIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
+import { CopyButton } from "@qivr/design-system";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useAuthGuard } from "../hooks/useAuthGuard";
@@ -447,11 +447,6 @@ export default function Settings() {
   //     enqueueSnackbar("Failed to revoke API key", { variant: "error" });
   //   }
   // };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    enqueueSnackbar("Copied to clipboard", { variant: "info" });
-  };
 
   return (
     <Box>
@@ -1217,15 +1212,7 @@ export default function Settings() {
                                   <VisibilityIcon />
                                 )}
                               </IconButton>
-                              <IconButton
-                                onClick={() =>
-                                  copyToClipboard(
-                                    settings.integrations.ehr.apiKey,
-                                  )
-                                }
-                              >
-                                <CopyIcon />
-                              </IconButton>
+                              <CopyButton text={settings.integrations.ehr.apiKey} tooltip="Copy API key" />
                             </InputAdornment>
                           ),
                         }}

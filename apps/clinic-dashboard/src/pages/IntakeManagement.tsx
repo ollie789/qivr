@@ -43,17 +43,17 @@ import {
   Assessment as AssessmentIcon,
   ViewKanban as KanbanIcon,
   ViewList as ListIcon,
-  Inbox as InboxIcon,
-  Search as SearchIcon,
-  CalendarMonth as CalendarIcon,
-  CheckCircle as CheckCircleIcon,
-  Archive as ArchiveIcon,
+  
+  
+  
+  
+  
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { format } from "date-fns";
 import { useSnackbar } from "notistack";
-import { PatientInviteDialog } from "../components/dialogs/PatientInviteDialog";
+import { PatientInviteDialog } from "@qivr/design-system";
 import { intakeApi, type IntakeSubmission } from "../services/intakeApi";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
 import { IntakeDetailsDialog } from "../components/dialogs";

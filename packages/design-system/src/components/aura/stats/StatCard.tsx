@@ -1,3 +1,4 @@
+import { auraTokens } from '../../../theme/auraTokens';
 import { Avatar, Box, Paper, Typography, alpha } from '@mui/material';
 import { ReactNode } from 'react';
 import { auraColors } from '../../../theme/auraColors';
@@ -29,7 +30,7 @@ export const AuraStatCard = ({
       sx={{
         height: '100%',
         p: 2,
-        borderRadius: 2,
+        borderRadius: auraTokens.borderRadius.md,
         border: '1px solid',
         borderColor: 'divider',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',

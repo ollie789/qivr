@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MessageList,
   MessageThread,
-  MessageComposer,
+  PatientMessageComposer,
   AuraEmptyState,
   type MessageListItem,
   type ThreadMessage,
@@ -224,7 +224,7 @@ export default function MessagesPage() {
       </Box>
 
       {/* Composer */}
-      <MessageComposer
+      <PatientMessageComposer
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
         onSend={handleSendMessage}

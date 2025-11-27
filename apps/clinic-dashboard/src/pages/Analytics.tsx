@@ -24,18 +24,19 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { subDays } from "date-fns";
 import { useAuthGuard } from "../hooks/useAuthGuard";
-import { PainMapMetrics } from "@qivr/design-system";
-import analyticsApi from "../services/analyticsApi";
-import { TopDiagnosesCard } from "../features/analytics";
 import {
+  PainMapMetrics,
   PageHeader,
   StatCardSkeleton,
   InfoCard,
   AuraButton,
+  AuraGlassStatCard,
+  auraTokens,
 } from "@qivr/design-system";
+import analyticsApi from "../services/analyticsApi";
+import { TopDiagnosesCard } from "../features/analytics";
 import type { DiagnosisDatum } from "../features/analytics";
 import { useAuthUser } from "../stores/authStore";
-import { AuraGlassStatCard } from "../components/aura/AuraGlassStatCard";
 
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState("30");
@@ -382,7 +383,7 @@ const Analytics: React.FC = () => {
                 <Box
                   sx={{
                     bgcolor: "#f5f5f5",
-                    borderRadius: 1,
+                    borderRadius: auraTokens.borderRadius.sm,
                     p: 2,
                     display: "flex",
                     justifyContent: "center",

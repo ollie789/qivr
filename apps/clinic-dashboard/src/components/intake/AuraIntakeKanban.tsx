@@ -17,7 +17,6 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { glassCard } from "@qivr/design-system";
 import type { IntakeSubmission } from "../../services/intakeApi";
 
 interface AuraIntakeKanbanProps {

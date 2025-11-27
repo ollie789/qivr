@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Box, Paper, Typography, Stack, CircularProgress } from '@mui/material';
+import { auraTokens } from '../../theme/auraTokens';
 
 interface HeatMapData {
   gridSize: number;
@@ -122,7 +123,7 @@ export function PainMapHeatMap({
             height,
             border: '1px solid',
             borderColor: 'divider',
-            borderRadius: 1,
+            borderRadius: auraTokens.borderRadius.sm,
             overflow: 'hidden',
             mx: 'auto',
           }}
@@ -160,7 +161,7 @@ export function PainMapHeatMap({
               width: 200,
               height: 20,
               background: 'linear-gradient(to right, rgba(255,100,0,0.1), rgba(255,0,0,0.7))',
-              borderRadius: 1,
+              borderRadius: auraTokens.borderRadius.sm,
               border: '1px solid',
               borderColor: 'divider',
             }}

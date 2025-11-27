@@ -41,8 +41,9 @@ import {
   AuraButton,
   AuraEmptyState,
   FilterChips,
+  AuraDocumentCard,
+  auraTokens,
 } from '@qivr/design-system';
-import { AuraDocumentCard } from '../components/aura/AuraDocumentCard';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -177,7 +178,7 @@ export default function Documents() {
         description="Manage and organize patient documents"
         actions={
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', gap: 0.5, bgcolor: 'action.hover', borderRadius: 1, p: 0.5 }}>
+            <Box sx={{ display: 'flex', gap: 0.5, bgcolor: 'action.hover', borderRadius: auraTokens.borderRadius.sm, p: 0.5 }}>
               <IconButton
                 size="small"
                 onClick={() => setViewMode('grid')}
@@ -214,7 +215,7 @@ export default function Documents() {
         }
       />
 
-      <Paper sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: 2 }}>
+      <Paper sx={{ mb: 3, p: 3, borderRadius: auraTokens.borderRadius.md, boxShadow: 2 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid size={{ xs: 12, md: 4 }}>
             <SearchBar
@@ -346,7 +347,7 @@ export default function Documents() {
           </Box>
         </Box>
       ) : (
-        <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+        <TableContainer component={Paper} sx={{ borderRadius: auraTokens.borderRadius.md, boxShadow: 2 }}>
           <Table>
             <TableHead>
               <TableRow>

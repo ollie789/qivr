@@ -1,14 +1,14 @@
+import { PasswordTextField, LoadingButton, auraTokens } from "@qivr/design-system";
 import React, { useState } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   TextField,
-  Button,
   Typography,
   Alert,
   Grid,
   Container,
+  Stack,
+  Divider,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api-client";
@@ -64,13 +64,10 @@ const Signup: React.FC = () => {
       navigate("/login", {
         state: {
           message:
-            "Account created successfully! Please check your email to verify your account, then log in to complete your clinic setup.",
+            "Account created successfully! Please check your email to verify your account.",
         },
       });
     } catch (err: any) {
-      console.error("Signup error:", err);
-
-      // Extract the actual error message from the API response
       let errorMessage = "Registration failed";
 
       if (err?.response?.data?.message) {
@@ -79,18 +76,10 @@ const Signup: React.FC = () => {
         errorMessage = err.message;
       }
 
-      // Handle specific error cases
-      if (
-        errorMessage.includes("User already exists") ||
-        errorMessage.includes("already exists")
-      ) {
-        errorMessage =
-          "An account with this email already exists. Please try logging in instead.";
+      if (errorMessage.includes("already exists")) {
+        errorMessage = "An account with this email already exists.";
       } else if (errorMessage.includes("password")) {
-        errorMessage =
-          "Password does not meet requirements. Please use at least 8 characters with uppercase, lowercase, numbers, and special characters.";
-      } else if (errorMessage.includes("email")) {
-        errorMessage = "Please enter a valid email address.";
+        errorMessage = "Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters.";
       }
 
       setError(errorMessage);
@@ -101,171 +90,135 @@ const Signup: React.FC = () => {
 
   return (
     <Container maxWidth="sm">
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-        py={4}
+      <Stack
+        sx={{
+          minHeight: "100vh",
+          alignItems: "center",
+          justifyContent: "center",
+          py: 4,
+        }}
       >
-        <Card
-          elevation={0}
-          sx={{
-            width: "100%",
-            borderRadius: 3,
-            border: "1px solid",
-            borderColor: "divider",
-            background:
-              "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
-          }}
-        >
-          <CardContent sx={{ p: 4 }}>
-            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-              <Box
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background:
-                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                  boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
-                }}
-              >
-                <Typography
-                  variant="h4"
-                  sx={{ color: "white", fontWeight: 700 }}
-                >
-                  Q
+        <Grid container sx={{ maxWidth: "28rem", rowGap: 3 }}>
+          {/* Header */}
+          <Grid size={12}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              sx={{
+                justifyContent: "space-between",
+                alignItems: { xs: "flex-start", sm: "flex-end" },
+              }}
+            >
+              <Box>
+                <Typography variant="h4" fontWeight={600}>
+                  Sign up
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Create your Qivr account
                 </Typography>
               </Box>
-            </Box>
-            <Typography
-              variant="h4"
-              component="h1"
-              gutterBottom
-              align="center"
-              sx={{ fontWeight: 700 }}
-            >
-              Create Account
-            </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              align="center"
-              mb={4}
-            >
-              Sign up to get started with Qivr
-            </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Already have an account?{" "}
+                <Link to="/login" style={{ color: "#3385F0", textDecoration: "none" }}>
+                  Log in
+                </Link>
+              </Typography>
+            </Stack>
+          </Grid>
 
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
+          {/* Form */}
+          <Grid size={12}>
+            <Box component="form" onSubmit={handleSubmit}>
+              {error && (
+                <Alert severity="error" sx={{ mb: 3, borderRadius: auraTokens.borderRadius.sm }}>
+                  {error}
+                </Alert>
+              )}
 
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, sm: 6 }}>
+              <Stack spacing={3}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <TextField
                     fullWidth
                     label="First Name"
                     value={formData.firstName}
                     onChange={handleChange("firstName")}
                     required
-                    variant="outlined"
                   />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Last Name"
                     value={formData.lastName}
                     onChange={handleChange("lastName")}
                     required
-                    variant="outlined"
                   />
-                </Grid>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Email Address"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange("email")}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange("password")}
-                    required
-                    variant="outlined"
-                    helperText="Minimum 8 characters with uppercase, lowercase, number and special character"
-                  />
-                </Grid>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Confirm Password"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange("confirmPassword")}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-              </Grid>
+                </Stack>
 
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                size="large"
-                disabled={loading}
-                sx={{
-                  mt: 3,
-                  mb: 2,
-                  py: 1.5,
-                  background:
-                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                  boxShadow: "0 4px 12px rgba(51, 133, 240, 0.3)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    background:
-                      "linear-gradient(135deg, #2970D9 0%, #8F2FE3 100%)",
-                    boxShadow: "0 6px 20px rgba(51, 133, 240, 0.4)",
-                    transform: "translateY(-2px)",
-                  },
-                  "&:active": {
-                    transform: "translateY(0)",
-                  },
-                }}
-              >
-                {loading ? "Creating Account..." : "Create Account"}
-              </Button>
-            </form>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange("email")}
+                  required
+                  autoComplete="email"
+                />
 
-            <Box sx={{ textAlign: "center" }}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Already have an account?
-              </Typography>
-              <Link to="/login" style={{ textDecoration: "none" }}>
-                <Typography variant="body2" color="primary">
-                  Sign in here
-                </Typography>
-              </Link>
+                <PasswordTextField
+                  fullWidth
+                  label="Password"
+                  value={formData.password}
+                  onChange={handleChange("password")}
+                  required
+                  helperText="Min 8 chars with uppercase, lowercase, number & special char"
+                />
+
+                <PasswordTextField
+                  fullWidth
+                  label="Confirm Password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange("confirmPassword")}
+                  required
+                />
+
+                <LoadingButton
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  loading={loading}
+                  loadingText="Creating account..."
+                  sx={{
+                    py: 1.5,
+                    bgcolor: "#3385F0",
+                    "&:hover": {
+                      bgcolor: "#2B71CC",
+                    },
+                  }}
+                >
+                  Create Account
+                </LoadingButton>
+              </Stack>
             </Box>
-          </CardContent>
-        </Card>
-      </Box>
+          </Grid>
+
+          {/* Divider */}
+          <Grid size={12}>
+            <Divider sx={{ color: "text.secondary" }}>or</Divider>
+          </Grid>
+
+          {/* Footer */}
+          <Grid size={12}>
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Link
+                to="/login"
+                style={{ color: "#3385F0", textDecoration: "none" }}
+              >
+                Back to login
+              </Link>
+            </Typography>
+          </Grid>
+        </Grid>
+      </Stack>
     </Container>
   );
 };

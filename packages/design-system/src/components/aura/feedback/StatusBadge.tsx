@@ -1,3 +1,4 @@
+import { auraTokens } from '../../../theme/auraTokens';
 import { Chip, ChipProps } from '@mui/material';
 
 export interface AuraStatusBadgeProps extends Omit<ChipProps, 'color'> {

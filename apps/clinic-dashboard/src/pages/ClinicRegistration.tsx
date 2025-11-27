@@ -1,3 +1,4 @@
+import { auraTokens, Callout } from "@qivr/design-system";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -6,7 +7,6 @@ import {
   TextField,
   Button,
   Typography,
-  Alert,
   Grid,
   Container,
 } from "@mui/material";
@@ -122,7 +122,7 @@ const ClinicRegistration: React.FC = () => {
           sx={{
             width: "100%",
             maxWidth: 600,
-            borderRadius: 3,
+            borderRadius: auraTokens.borderRadius.lg,
             border: "1px solid",
             borderColor: "divider",
             background:
@@ -135,7 +135,7 @@ const ClinicRegistration: React.FC = () => {
                 sx={{
                   width: 56,
                   height: 56,
-                  borderRadius: 2,
+                  borderRadius: auraTokens.borderRadius.md,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -167,9 +167,11 @@ const ClinicRegistration: React.FC = () => {
             </Typography>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
+              <Box sx={{ mb: 3 }}>
+                <Callout variant="error" title="Registration Error">
+                  {error}
+                </Callout>
+              </Box>
             )}
 
             <form onSubmit={handleSubmit}>
