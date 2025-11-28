@@ -38,11 +38,11 @@ import {
 } from "@mui/icons-material";
 import { useAuthActions, useAuthUser } from "../../stores/authStore";
 import { NotificationBell, TenantSelector } from "../shared";
-import { ThemeToggle, CountBadge } from "@qivr/design-system";
+import { ThemeToggle, CountBadge, auraTokens } from "@qivr/design-system";
 import type { SxProps, Theme } from "@mui/material/styles";
 
-const drawerWidth = 280;
-const drawerWidthCollapsed = 64;
+const drawerWidth = auraTokens.layout.drawerWidth;
+const drawerWidthCollapsed = auraTokens.layout.drawerWidthCollapsed;
 
 import { useQuery } from "@tanstack/react-query";
 import { messagesApi } from "../../services/messagesApi";
@@ -58,9 +58,9 @@ const getNavButtonStyles = (
   theme: Theme,
   drawerOpen: boolean,
 ): SxProps<Theme> => ({
-  borderRadius: 2,
+  borderRadius: auraTokens.borderRadius.md,
   justifyContent: drawerOpen ? "initial" : "center",
-  px: drawerOpen ? 2 : 1,
+  px: drawerOpen ? auraTokens.spacing.md : auraTokens.spacing.sm,
   "&.Mui-selected": {
     backgroundColor: theme.palette.primary.main,
     color: "white",

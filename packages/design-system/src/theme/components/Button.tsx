@@ -148,6 +148,17 @@ const Button: Components<Omit<Theme, 'components'>>['MuiButton'] = {
       borderRadius: '8px',
       padding: theme.spacing(1, 2),
       lineHeight: 1.429,
+      // Smooth micro-interaction transitions
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      // Subtle press effect
+      '&:active:not(:disabled)': {
+        transform: 'scale(0.98)',
+      },
+      // Enhanced focus ring
+      '&:focus-visible': {
+        outline: `2px solid ${theme.vars.palette.primary.main}`,
+        outlineOffset: 2,
+      },
       ...outlineStyles(theme),
       ...textBtnStyles(theme),
     }),

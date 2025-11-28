@@ -115,7 +115,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #3385F0, #A641FA);
+  background: linear-gradient(90deg, #3391FF, #9D6BFF);
   z-index: 9999;
   animation: progressBar 1.5s ease-in-out infinite;
 }

@@ -34,7 +34,7 @@ const TopDiagnosesCard: React.FC<TopDiagnosesCardProps> = ({
             <XAxis type="number" />
             <YAxis dataKey="name" type="category" />
             <Tooltip />
-            <Bar dataKey="count" fill="var(--qivr-palette-primary-main, #3385F0)" />
+            <Bar dataKey="count" fill="var(--qivr-palette-primary-main, #3391FF)" />
           </BarChart>
         </ResponsiveContainer>
       )}

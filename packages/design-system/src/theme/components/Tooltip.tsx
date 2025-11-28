@@ -118,8 +118,22 @@ const Tooltip: Components<Omit<Theme, 'components'>>['MuiTooltip'] = {
     enterTouchDelay: 0,
   },
   styleOverrides: {
-    popper: ({ theme }) =>
-      placements(theme).reduce(
+    popper: ({ theme }) => ({
+      // Smooth scale + fade animation
+      '&[data-popper-placement]': {
+        animation: 'tooltipFadeIn 0.15s ease-out',
+        '@keyframes tooltipFadeIn': {
+          from: {
+            opacity: 0,
+            transform: 'scale(0.95)',
+          },
+          to: {
+            opacity: 1,
+            transform: 'scale(1)',
+          },
+        },
+      },
+      ...placements(theme).reduce(
         (styles, { placement, borderRadiusProperty, clipPath, positions }) => {
           return {
             ...styles,
@@ -132,10 +146,14 @@ const Tooltip: Components<Omit<Theme, 'components'>>['MuiTooltip'] = {
         },
         {},
       ),
+    }),
     tooltip: ({ theme }) => ({
       backgroundColor: theme.vars.palette.grey[800],
       ...theme.typography.caption,
-      padding: '8px 10px',
+      padding: '8px 12px',
+      borderRadius: 8,
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      maxWidth: 280,
     }),
     arrow: ({ theme }) => ({
       color: theme.vars.palette.grey[800],

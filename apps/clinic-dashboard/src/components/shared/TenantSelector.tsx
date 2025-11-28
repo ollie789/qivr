@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { fetchTenantOptions, type TenantOption } from '../../services/tenantService';
 import { useAuth, useAuthActions } from '../../stores/authStore';
-import { AuraButton, LoadingSpinner } from '@qivr/design-system';
+import { AuraButton, LoadingSpinner, auraTokens } from '@qivr/design-system';
 
 const TenantSelector = () => {
   const { activeTenantId, user } = useAuth();
@@ -74,10 +74,10 @@ const TenantSelector = () => {
   if (tenants.length <= 1 && selectedTenant) {
     return (
       <Tooltip title="Active clinic tenant">
-        <Box sx={{ px: 1.5, py: 0.75, borderRadius: 1, bgcolor: 'action.hover' }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+        <Box sx={{ px: 1.5, py: 0.75, borderRadius: auraTokens.borderRadius.sm, bgcolor: 'action.hover' }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: auraTokens.spacing.sm }}>
             <ApartmentIcon fontSize="small" color="action" />
-            <Box component="span" sx={{ fontSize: 14, fontWeight: 500 }}>
+            <Box component="span" sx={{ fontSize: '0.875rem', fontWeight: auraTokens.fontWeights.medium }}>
               {selectedTenant.name || selectedTenant.id}
             </Box>
           </Box>
@@ -92,7 +92,7 @@ const TenantSelector = () => {
         variant="outlined"
         size="small"
         color="inherit"
-        sx={{ textTransform: 'none', borderRadius: 999, px: 1.5, borderColor: 'divider' }}
+        sx={{ textTransform: 'none', borderRadius: auraTokens.borderRadius.round, px: 1.5, borderColor: 'divider' }}
         onClick={handleOpen}
         endIcon={<ArrowDropDownIcon />}
       >

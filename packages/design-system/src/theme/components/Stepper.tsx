@@ -60,11 +60,23 @@ export const StepIcon: Components<Omit<Theme, 'components'>>['MuiStepIcon'] = {
   styleOverrides: {
     root: ({ theme }) => ({
       color: theme.vars.palette.neutral.lighter,
+      // Smooth color transition
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       [`&.${stepIconClasses.active}`]: {
         color: theme.vars.palette.primary.main,
+        // Subtle scale effect for active step
+        transform: 'scale(1.1)',
+        filter: `drop-shadow(0 0 6px rgba(${theme.vars.palette.primary.mainChannel} / 0.4))`,
       },
       [`&.${stepIconClasses.completed}`]: {
         color: theme.vars.palette.success.main,
+        // Checkmark entrance animation
+        animation: 'stepIconComplete 0.3s ease-out',
+        '@keyframes stepIconComplete': {
+          '0%': { transform: 'scale(0.8)', opacity: 0.5 },
+          '50%': { transform: 'scale(1.15)' },
+          '100%': { transform: 'scale(1)', opacity: 1 },
+        },
       },
       [`&:not(.${stepIconClasses.completed}):not(.${stepIconClasses.active}) .${stepIconClasses.text}`]:
         {
@@ -124,6 +136,18 @@ export const StepConnector: Components<Omit<Theme, 'components'>>['MuiStepConnec
         borderColor: theme.vars.palette.success.main,
       },
     }),
+    line: ({ theme }) => ({
+      borderWidth: 2,
+      // Smooth color transition (line drawing effect)
+      transition: 'border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+    }),
+    lineHorizontal: {
+      borderTopWidth: 2,
+    },
+    lineVertical: {
+      borderLeftWidth: 2,
+      minHeight: 24,
+    },
   },
 };
 

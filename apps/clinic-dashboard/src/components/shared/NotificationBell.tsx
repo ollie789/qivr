@@ -16,7 +16,7 @@ import {
   notificationsApi,
   type NotificationListItem,
 } from '../../services/notificationsApi';
-import { AuraEmptyState, LoadingSpinner, CountBadge, AuraButton } from '@qivr/design-system';
+import { AuraEmptyState, LoadingSpinner, CountBadge, AuraButton, auraTokens } from '@qivr/design-system';
 
 // Adapter to convert API notification to Aura Notification type
 // Placeholder until Aura notifications are available in design-system exports
@@ -130,13 +130,13 @@ const NotificationBell: React.FC = () => {
         open={Boolean(anchorEl)}
         onClose={handleClose}
         PaperProps={{
-          sx: { width: 400, maxHeight: 500, p: 0 }
+          sx: { width: auraTokens.layout.notificationPanel, maxHeight: 500, p: 0 }
         }}
       >
         <Box sx={{ p: 2 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="h6">Notifications</Typography>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+            <Typography variant="h6" fontWeight={auraTokens.fontWeights.semibold}>Notifications</Typography>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: auraTokens.spacing.sm }}>
               <IconButton size="small" onClick={() => refetch()}>
                 <RefreshIcon fontSize="small" />
               </IconButton>

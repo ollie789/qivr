@@ -227,7 +227,7 @@ export const CompletePROM = () => {
           <FormLabel sx={{ mb: 2 }}>
             <Typography variant="body1" fontWeight={500}>
               {question.text}
-              {question.required && <span style={{ color: "red" }}> *</span>}
+              {question.required && <Box component="span" sx={{ color: "error.main" }}> *</Box>}
             </Typography>
             {question.helpText && (
               <Typography

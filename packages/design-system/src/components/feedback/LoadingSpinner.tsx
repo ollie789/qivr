@@ -2,6 +2,7 @@ import React from 'react';
 import Box, { type BoxProps } from '@mui/material/Box';
 import CircularProgress, { type CircularProgressProps } from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
+import { alpha, useTheme } from '@mui/material/styles';
 
 export interface LoadingSpinnerProps extends Omit<BoxProps, 'children'> {
   /**
@@ -20,19 +21,26 @@ export interface LoadingSpinnerProps extends Omit<BoxProps, 'children'> {
    * Props passed to the CircularProgress component
    */
   progressProps?: CircularProgressProps;
+  /**
+   * Use layered (double-ring) style for more visual polish
+   */
+  layered?: boolean;
 }
 
 /**
  * A consistent loading spinner with optional message
+ * Features Aurora-style layered progress rings for enhanced visual feedback
  */
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'medium',
   message,
   centered = false,
   progressProps,
+  layered = true,
   sx,
   ...props
 }) => {
+  const theme = useTheme();
   const sizeMap = {
     small: 24,
     medium: 40,
@@ -40,18 +48,49 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   };
 
   const spinnerSize = typeof size === 'string' ? sizeMap[size] : size;
+  const thickness = spinnerSize > 40 ? 4 : 3;
+
+  // Layered spinner with background track
+  const layeredSpinner = (
+    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+      {/* Background track */}
+      <CircularProgress
+        variant="determinate"
+        value={100}
+        size={spinnerSize}
+        thickness={thickness}
+        sx={{
+          color: alpha(theme.palette.primary.main, 0.12),
+        }}
+      />
+      {/* Animated foreground */}
+      <CircularProgress
+        size={spinnerSize}
+        thickness={thickness}
+        sx={{
+          position: 'absolute',
+          left: 0,
+          color: alpha(theme.palette.primary.main, 0.7),
+        }}
+        {...progressProps}
+      />
+    </Box>
+  );
+
+  // Simple spinner
+  const simpleSpinner = (
+    <CircularProgress size={spinnerSize} thickness={thickness} {...progressProps} />
+  );
 
   const content = (
     <Box
       sx={{
-        animation: 'pulse 2s ease-in-out infinite',
-        '@keyframes pulse': {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0.6 },
-        },
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
       }}
     >
-      <CircularProgress size={spinnerSize} {...progressProps} />
+      {layered ? layeredSpinner : simpleSpinner}
       {message && (
         <Typography
           variant="body2"

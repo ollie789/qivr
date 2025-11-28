@@ -37,10 +37,27 @@ export const TableContainer: Components<Omit<Theme, 'components'>>['MuiTableCont
 export const TableRow: Components<Omit<Theme, 'components'>>['MuiTableRow'] = {
   defaultProps: {},
   styleOverrides: {
-    root: () => ({
+    root: ({ theme }) => ({
+      transition: 'all 0.15s ease-in-out',
       '& td, & th': {
         '&:first-of-type': { paddingLeft: 24 },
         '&:last-of-type': { paddingRight: 24 },
+      },
+      // Enhanced hover effect for body rows
+      [`&.${tableRowClasses.root}:not(.${tableRowClasses.head})`]: {
+        '&:hover': {
+          backgroundColor: theme.vars.palette.action.hover,
+          '& td': {
+            color: theme.vars.palette.text.primary,
+          },
+        },
+      },
+      // Selected row styling
+      '&.Mui-selected': {
+        backgroundColor: `rgba(${theme.vars.palette.primary.mainChannel} / 0.08)`,
+        '&:hover': {
+          backgroundColor: `rgba(${theme.vars.palette.primary.mainChannel} / 0.12)`,
+        },
       },
     }),
   },

@@ -17,7 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { auraColors } from "@qivr/design-system";
+import { auraColors, auraTokens } from "@qivr/design-system";
 import type { IntakeSubmission } from "../../services/intakeApi";
 
 interface AuraIntakeKanbanProps {
@@ -85,26 +85,26 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
       {...listeners}
       sx={{
         p: 2.5,
-        mb: 2,
+        mb: auraTokens.spacing.md,
         cursor: "grab",
         bgcolor: "background.paper",
-        borderRadius: 3,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        borderRadius: auraTokens.borderRadius.lg,
+        boxShadow: auraTokens.shadows.sm,
         border: "1px solid",
         borderColor: "divider",
         "&:active": { cursor: "grabbing" },
         "&:hover": {
-          boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          boxShadow: auraTokens.shadows.lg,
           borderColor: "primary.main",
           transform: "translateY(-2px)",
         },
-        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: auraTokens.transitions.default,
       }}
     >
       <Stack spacing={2}>
         {/* Header */}
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" fontWeight={600} sx={{ fontSize: "1rem" }}>
+          <Typography variant="h6" fontWeight={auraTokens.fontWeights.semibold} sx={{ fontSize: "1rem" }}>
             {intake.patientName}
           </Typography>
           {intake.severity && (
@@ -114,10 +114,10 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
               sx={{
                 bgcolor: getSeverityColor(intake.severity),
                 color: "white",
-                fontWeight: 700,
+                fontWeight: auraTokens.fontWeights.bold,
                 fontSize: "0.65rem",
-                height: 24,
-                borderRadius: 1.5,
+                height: auraTokens.heights.chip.sm,
+                borderRadius: auraTokens.borderRadius.sm,
               }}
             />
           )}
@@ -138,9 +138,9 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                 size="small"
                 sx={{
                   fontSize: "0.7rem",
-                  height: 24,
+                  height: auraTokens.heights.chip.sm,
                   bgcolor: "action.hover",
-                  fontWeight: 500,
+                  fontWeight: auraTokens.fontWeights.medium,
                 }}
               />
             ))}
@@ -150,9 +150,9 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                 size="small"
                 sx={{
                   fontSize: "0.7rem",
-                  height: 24,
+                  height: auraTokens.heights.chip.sm,
                   bgcolor: "action.selected",
-                  fontWeight: 600,
+                  fontWeight: auraTokens.fontWeights.semibold,
                 }}
               />
             )}
@@ -164,8 +164,8 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
           <Box
             sx={{
               p: 1.5,
-              bgcolor: "rgba(139, 92, 246, 0.08)",
-              borderRadius: 2,
+              bgcolor: `${auraColors.purple[50]}14`, // 8% opacity
+              borderRadius: auraTokens.borderRadius.md,
               borderLeft: `3px solid ${auraColors.purple.main}`,
             }}
           >
@@ -189,9 +189,9 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                   bgcolor: auraColors.red[50],
                   color: auraColors.red.main,
                   fontSize: "0.7rem",
-                  height: 24,
-                  fontWeight: 600,
-                  borderRadius: 1.5,
+                  height: auraTokens.heights.chip.sm,
+                  fontWeight: auraTokens.fontWeights.semibold,
+                  borderRadius: auraTokens.borderRadius.sm,
                   "& .MuiChip-icon": { color: auraColors.red.main },
                 }}
               />
@@ -204,9 +204,9 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
           direction="row"
           justifyContent="space-between"
           alignItems="center"
-          sx={{ pt: 1, borderTop: "1px solid", borderColor: "divider" }}
+          sx={{ pt: auraTokens.spacing.sm, borderTop: "1px solid", borderColor: "divider" }}
         >
-          <Typography variant="caption" color="text.secondary" fontWeight={500}>
+          <Typography variant="caption" color="text.secondary" fontWeight={auraTokens.fontWeights.medium}>
             {format(new Date(intake.submittedAt), "MMM d, h:mm a")}
           </Typography>
           <Stack direction="row" spacing={0.5}>
@@ -249,14 +249,14 @@ const KanbanColumn: React.FC<{
   onSchedule: (intake: IntakeSubmission) => void;
 }> = ({ column, intakes, onViewDetails, onSchedule }) => {
   return (
-    <Box sx={{ minWidth: 340, maxWidth: 340 }}>
+    <Box sx={{ minWidth: auraTokens.layout.kanbanColumn, maxWidth: auraTokens.layout.kanbanColumn }}>
       <Box
         sx={{
           p: 2.5,
-          mb: 2,
+          mb: auraTokens.spacing.md,
           bgcolor: "background.paper",
-          borderRadius: 3,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          borderRadius: auraTokens.borderRadius.lg,
+          boxShadow: auraTokens.shadows.sm,
           borderTop: `4px solid ${column.color}`,
         }}
       >
@@ -265,7 +265,7 @@ const KanbanColumn: React.FC<{
           justifyContent="space-between"
           alignItems="center"
         >
-          <Typography variant="h6" fontWeight={700} sx={{ fontSize: "1.1rem" }}>
+          <Typography variant="h6" fontWeight={auraTokens.fontWeights.bold} sx={{ fontSize: "1.1rem" }}>
             {column.title}
           </Typography>
           <Chip
@@ -274,10 +274,10 @@ const KanbanColumn: React.FC<{
             sx={{
               bgcolor: column.color,
               color: "white",
-              fontWeight: 700,
+              fontWeight: auraTokens.fontWeights.bold,
               fontSize: "0.875rem",
-              height: 28,
-              borderRadius: 2,
+              height: auraTokens.heights.chip.md,
+              borderRadius: auraTokens.borderRadius.md,
               minWidth: 36,
             }}
           />

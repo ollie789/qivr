@@ -5,6 +5,11 @@ const OutlinedInput: Components<Omit<Theme, 'components'>>['MuiOutlinedInput'] =
   styleOverrides: {
     root: ({ theme }) => ({
       borderRadius: 8,
+      // Smooth transition for focus states
+      transition: 'box-shadow 0.2s ease-in-out',
+      [`& .${outlinedInputClasses.notchedOutline}`]: {
+        transition: 'border-color 0.2s ease-in-out',
+      },
       ':hover': {
         [`&:not(&.${outlinedInputClasses.focused},.${outlinedInputClasses.disabled},.${outlinedInputClasses.error})`]:
           {
@@ -12,6 +17,17 @@ const OutlinedInput: Components<Omit<Theme, 'components'>>['MuiOutlinedInput'] =
               borderColor: theme.vars.palette.action.disabled,
             },
           },
+      },
+      // Enhanced focus state with soft glow
+      [`&.${outlinedInputClasses.focused}`]: {
+        boxShadow: `0 0 0 3px rgba(${theme.vars.palette.primary.mainChannel} / 0.12)`,
+        [`& .${outlinedInputClasses.notchedOutline}`]: {
+          borderWidth: '2px !important',
+        },
+      },
+      // Error state with red glow
+      [`&.${outlinedInputClasses.error}.${outlinedInputClasses.focused}`]: {
+        boxShadow: `0 0 0 3px rgba(${theme.vars.palette.error.mainChannel} / 0.12)`,
       },
       [`&.${outlinedInputClasses.disabled}`]: {
         [`& .${outlinedInputClasses.notchedOutline}`]: {

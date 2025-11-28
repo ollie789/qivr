@@ -18,12 +18,20 @@ const Accordion: Components<Omit<Theme, 'components'>>['MuiAccordion'] = {
       padding: 0,
       outline: 'none',
       borderRadius: '1.5rem !important',
+      // Smooth transitions for expand/collapse
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 
       '&:hover': {
         backgroundColor: theme.vars.palette.background.elevation1,
       },
       '&:before': {
         display: 'none',
+      },
+
+      // Expanded state styling
+      [`&.${accordionClasses.expanded}`]: {
+        backgroundColor: theme.vars.palette.background.elevation1,
+        boxShadow: `0 4px 12px rgba(${theme.vars.palette.primary.mainChannel} / 0.08)`,
       },
 
       [`&.${accordionClasses.disabled}`]: {
@@ -50,6 +58,8 @@ export const AccordionSummary: Components<Omit<Theme, 'components'>>['MuiAccordi
       gap: theme.spacing(1),
       flexDirection: 'row-reverse',
       padding: theme.spacing(3),
+      // Smooth hover transition
+      transition: 'background-color 0.2s ease',
 
       [`& .${accordionSummaryClasses.content}`]: {
         margin: 0,
@@ -63,8 +73,15 @@ export const AccordionSummary: Components<Omit<Theme, 'components'>>['MuiAccordi
         },
       },
 
+      // Expand icon rotation animation
       [`& .${accordionSummaryClasses.expandIconWrapper}`]: {
         color: theme.vars.palette.text.primary,
+        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      },
+      [`&.${accordionSummaryClasses.expanded}`]: {
+        [`& .${accordionSummaryClasses.expandIconWrapper}`]: {
+          transform: 'rotate(180deg)',
+        },
       },
 
       [`&.${accordionSummaryClasses.disabled}`]: {

@@ -132,9 +132,8 @@ const ClinicRegistration: React.FC = () => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  background:
-                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                  boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
+                  background: auraTokens.gradients.primary,
+                  boxShadow: auraTokens.shadows.lg,
                 }}
               >
                 <ClinicIcon sx={{ fontSize: 28, color: "white" }} />
@@ -240,14 +239,13 @@ const ClinicRegistration: React.FC = () => {
                 sx={{
                   mt: 3,
                   py: 1.5,
-                  background:
-                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                  boxShadow: "0 4px 12px rgba(51, 133, 240, 0.3)",
+                  background: auraTokens.gradients.primary,
+                  boxShadow: auraTokens.shadows.md,
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   "&:hover": {
-                    background:
-                      "linear-gradient(135deg, #2970D9 0%, #8F2FE3 100%)",
-                    boxShadow: "0 6px 20px rgba(51, 133, 240, 0.4)",
+                    background: auraTokens.gradients.primary,
+                    filter: "brightness(0.9)",
+                    boxShadow: auraTokens.shadows.lg,
                     transform: "translateY(-2px)",
                   },
                   "&:active": {

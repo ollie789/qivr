@@ -407,3 +407,43 @@ export const setItemToStore = (key: string, payload: string, store = localStorag
   store.setItem(key, payload);
 
 export const removeItemFromStore = (key: string, store = localStorage) => store.removeItem(key);
+
+/**
+ * Resolve a theme color path to an actual hex color value
+ * This is needed because MUI's alpha(), lighten(), darken() functions
+ * require actual color values, not theme path strings like "primary.main"
+ *
+ * @param color - Either a hex color (#3391FF), rgb color, or theme path (primary.main)
+ * @param theme - MUI theme object
+ * @param fallback - Fallback color if resolution fails (default: Aura blue)
+ * @returns Resolved hex color string
+ *
+ * @example
+ * resolveThemeColor('primary.main', theme) // → '#3391FF'
+ * resolveThemeColor('#FF0000', theme) // → '#FF0000'
+ * resolveThemeColor('error.light', theme) // → '#FFA3B4'
+ */
+export const resolveThemeColor = (
+  color: string,
+  theme: { palette?: Record<string, any> },
+  fallback = '#3391FF'
+): string => {
+  // If it's already a hex or rgb color, return as-is
+  if (color.startsWith('#') || color.startsWith('rgb')) {
+    return color;
+  }
+
+  // Try to resolve theme path like "primary.main" or "error.light"
+  const parts = color.split('.');
+  let resolved: any = theme.palette;
+
+  for (const part of parts) {
+    resolved = resolved?.[part];
+    if (resolved === undefined) break;
+  }
+
+  // Return resolved color if it's a valid string, otherwise fallback
+  return typeof resolved === 'string' && resolved.startsWith('#')
+    ? resolved
+    : fallback;
+};

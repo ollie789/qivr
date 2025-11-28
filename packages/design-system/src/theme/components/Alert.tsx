@@ -84,6 +84,18 @@ const Alert: Components<Omit<Theme, 'components'>>['MuiAlert'] = {
       ],
       borderRadius: (theme.shape.borderRadius as number) * 2,
       outline: 0,
+      // Slide-in animation for alerts
+      animation: 'alertSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      '@keyframes alertSlideIn': {
+        from: {
+          opacity: 0,
+          transform: 'translateY(-8px)',
+        },
+        to: {
+          opacity: 1,
+          transform: 'translateY(0)',
+        },
+      },
     }),
     message: () => ({
       fontSize: '1rem',
@@ -91,6 +103,13 @@ const Alert: Components<Omit<Theme, 'components'>>['MuiAlert'] = {
     }),
     icon: ({ theme }) => ({
       marginTop: theme.spacing(0.35),
+      // Subtle bounce animation for icon
+      animation: 'alertIconBounce 0.4s ease-out 0.1s',
+      '@keyframes alertIconBounce': {
+        '0%': { transform: 'scale(0.5)', opacity: 0 },
+        '60%': { transform: 'scale(1.1)' },
+        '100%': { transform: 'scale(1)', opacity: 1 },
+      },
     }),
   },
 };

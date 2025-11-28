@@ -3,7 +3,7 @@
  * Centralized design tokens for consistent styling across the platform
  */
 
-import { auraColors, auraGradients } from './auraColors';
+import { auraColors, auraGradients, chartColors, healthcareColors } from './auraColors';
 
 export const auraTokens = {
   // Border Radius - Only 3 values + round
@@ -33,16 +33,22 @@ export const auraTokens = {
     xl: '0 12px 32px rgba(0,0,0,0.20)',
   },
 
-  // Gradients - Single source of truth
+  // Gradients - Single source of truth (using auraGradients)
   gradients: {
-    primary: `linear-gradient(135deg, ${auraColors.blue.main} 0%, ${auraColors.purple.main} 100%)`,
-    blue: `linear-gradient(135deg, ${auraColors.blue.main} 0%, ${auraColors.blue.dark} 100%)`,
-    purple: `linear-gradient(135deg, ${auraColors.purple.main} 0%, ${auraColors.purple.dark} 100%)`,
-    success: `linear-gradient(135deg, ${auraColors.green.main} 0%, ${auraColors.green.dark} 100%)`,
-    warning: `linear-gradient(135deg, ${auraColors.orange.main} 0%, ${auraColors.orange.dark} 100%)`,
-    error: `linear-gradient(135deg, ${auraColors.red.main} 0%, ${auraColors.red.dark} 100%)`,
-    subtle: 'linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)',
-    glass: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+    primary: auraGradients.primary.css,
+    blue: auraGradients.primary.css,
+    purple: auraGradients.purple.css,
+    success: auraGradients.success.css,
+    warning: auraGradients.warning.css,
+    error: auraGradients.error.css,
+    info: auraGradients.info.css,
+    ocean: auraGradients.ocean.css,
+    sunset: auraGradients.sunset.css,
+    aurora: auraGradients.aurora.css,
+    forest: auraGradients.forest.css,
+    royal: auraGradients.royal.css,
+    subtle: auraGradients.subtlePrimary.css,
+    glass: auraGradients.glass.css,
   },
 
   // Colors - Reference to auraColors
@@ -63,6 +69,15 @@ export const auraTokens = {
     bold: 700,
   },
 
+  // Icon sizes - standardized scale
+  iconSize: {
+    xs: 16,   // small inline icons
+    sm: 20,   // button icons, list items
+    md: 24,   // default icon size
+    lg: 32,   // prominent icons, cards
+    xl: 48,   // hero icons, empty states
+  },
+
   // Z-index scale
   zIndex: {
     dropdown: 1000,
@@ -72,6 +87,43 @@ export const auraTokens = {
     popover: 1050,
     tooltip: 1060,
   },
+
+  // Layout dimensions - standardized widths for consistent layouts
+  layout: {
+    drawerWidth: 280,
+    drawerWidthCollapsed: 64,
+    kanbanColumn: 340,
+    dialogSmall: 400,
+    dialogMedium: 600,
+    dialogLarge: 800,
+    menuPopover: 360,
+    notificationPanel: 400,
+  },
+
+  // Component heights - standardized sizes
+  heights: {
+    chip: {
+      sm: 24,
+      md: 28,
+      lg: 32,
+    },
+    button: {
+      sm: 32,
+      md: 40,
+      lg: 48,
+    },
+    input: {
+      sm: 36,
+      md: 44,
+      lg: 52,
+    },
+  },
+
+  // Chart colors for data visualization
+  chartColors,
+
+  // Healthcare-specific semantic colors
+  healthcare: healthcareColors,
 } as const;
 
 /**

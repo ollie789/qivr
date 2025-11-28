@@ -93,7 +93,7 @@ export default function HealthProgress() {
               variant="determinate" 
               value={healthScore} 
               color={scoreColor}
-              sx={{ mt: 2, height: 8, borderRadius: 4 }}
+              sx={{ mt: 2, height: 8, borderRadius: 2 }}
             />
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
               {100 - healthScore} points to next level

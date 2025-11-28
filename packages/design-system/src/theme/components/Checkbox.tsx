@@ -50,6 +50,22 @@ const Checkbox: Components<Omit<Theme, 'components'>>['MuiCheckbox'] = {
   },
   styleOverrides: {
     root: ({ theme }) => ({
+      // Smooth transition for check animation
+      transition: 'transform 0.15s ease-in-out',
+      [`& .${svgIconClasses.root}`]: {
+        transition: 'transform 0.15s ease-in-out, color 0.15s ease-in-out',
+      },
+      // Subtle scale on check
+      [`&.${checkboxClasses.checked}`]: {
+        [`& .${svgIconClasses.root}`]: {
+          animation: 'checkboxPop 0.2s ease-out',
+        },
+      },
+      '@keyframes checkboxPop': {
+        '0%': { transform: 'scale(0.8)' },
+        '50%': { transform: 'scale(1.1)' },
+        '100%': { transform: 'scale(1)' },
+      },
       [`.${svgIconClasses.fontSizeMedium}`]: {
         fontSize: 20,
       },

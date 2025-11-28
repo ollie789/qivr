@@ -122,15 +122,15 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
       case "critical":
-        return "#EF4444"; // Aura red
+        return "error.main";
       case "high":
-        return "#F68D2A"; // Aura orange
+        return "warning.main";
       case "medium":
-        return "#F68D2A"; // Aura orange
+        return "warning.main";
       case "low":
-        return "#26CD82"; // Aura green
+        return "success.main";
       default:
-        return "#64748B"; // Neutral gray
+        return "text.secondary";
     }
   };
 
@@ -195,7 +195,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
             <Typography variant="h4" sx={{ fontWeight: 700 }}>
               {evaluation.evaluationNumber}
             </Typography>
-            <Typography variant="body2" color="textSecondary">
+            <Typography variant="body2" color="text.secondary">
               {evaluation.date
                 ? format(new Date(evaluation.date), "MMMM dd, yyyy 'at' h:mm a")
                 : "Date not available"}
@@ -231,7 +231,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
           <InfoCard title="Evaluation Overview">
             <Grid container spacing={2}>
               <Grid size={6}>
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" color="text.secondary">
                   Status
                 </Typography>
                 <Chip
@@ -242,7 +242,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 />
               </Grid>
               <Grid size={6}>
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" color="text.secondary">
                   Urgency
                 </Typography>
                 <Box
@@ -267,7 +267,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 </Box>
               </Grid>
               <Grid size={12}>
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" color="text.secondary">
                   Chief Complaint
                 </Typography>
                 <Typography variant="body1" sx={{ mt: 0.5 }}>
@@ -275,7 +275,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 </Typography>
               </Grid>
               <Grid size={12}>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
                   Symptoms
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
@@ -291,7 +291,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
               </Grid>
               {evaluation.provider && (
                 <Grid size={12}>
-                  <Typography variant="body2" color="textSecondary">
+                  <Typography variant="body2" color="text.secondary">
                     Provider
                   </Typography>
                   <Typography variant="body1" sx={{ mt: 0.5 }}>
@@ -311,7 +311,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 <Box sx={{ mb: 2 }}>
                   <Typography
                     variant="body2"
-                    color="textSecondary"
+                    color="text.secondary"
                     gutterBottom
                   >
                     Diagnosis
@@ -326,7 +326,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 <Box sx={{ mb: 2 }}>
                   <Typography
                     variant="body2"
-                    color="textSecondary"
+                    color="text.secondary"
                     gutterBottom
                   >
                     Treatment Plan
@@ -341,7 +341,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 <Box>
                   <Typography
                     variant="body2"
-                    color="textSecondary"
+                    color="text.secondary"
                     gutterBottom
                   >
                     Clinical Notes
@@ -401,7 +401,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {evaluation.vitalSigns.bloodPressure && (
                   <Box>
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography variant="body2" color="text.secondary">
                       Blood Pressure
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -411,7 +411,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 )}
                 {evaluation.vitalSigns.heartRate && (
                   <Box>
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography variant="body2" color="text.secondary">
                       Heart Rate
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -421,7 +421,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 )}
                 {evaluation.vitalSigns.temperature && (
                   <Box>
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography variant="body2" color="text.secondary">
                       Temperature
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -431,7 +431,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
                 )}
                 {evaluation.vitalSigns.weight && (
                   <Box>
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography variant="body2" color="text.secondary">
                       Weight
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -446,7 +446,7 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
           {/* Follow-up */}
           {evaluation.followUpDate && (
             <InfoCard title="Follow-up" sx={{ mt: 3 }}>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
                 Scheduled Date
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>

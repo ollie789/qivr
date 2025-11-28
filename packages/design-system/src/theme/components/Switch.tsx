@@ -9,8 +9,14 @@ const Switch: Components<Omit<Theme, 'components'>>['MuiSwitch'] = {
       [`& .${switchClasses.switchBase}`]: {
         padding: 0,
         margin: 2,
+        // Smooth transition for toggle
+        transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         [`&.${switchClasses.checked}`]: {
           transform: 'translateX(12px)',
+          // Thumb color when checked
+          [`& .${switchClasses.thumb}`]: {
+            backgroundColor: theme.vars.palette.common.white,
+          },
         },
         [`&.${switchClasses.disabled}`]: {
           backgroundColor: 'transparent',
@@ -27,14 +33,18 @@ const Switch: Components<Omit<Theme, 'components'>>['MuiSwitch'] = {
       width: 32,
     },
     thumb: ({ theme }) => ({
-      boxShadow: 'none',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
       backgroundColor: theme.vars.palette.background.elevation1,
+      // Smooth transition for thumb
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
     }),
 
     track: ({ theme }) => ({
       backgroundColor: theme.vars.palette.background.elevation4,
       opacity: '1 !important',
       borderRadius: 12,
+      // Smooth color transition
+      transition: 'background-color 0.2s ease-in-out',
     }),
   },
 };

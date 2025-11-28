@@ -1,38 +1,52 @@
 /**
- * Do not edit directly, this file was auto-generated.
+ * Design System Color Tokens
+ * Synced with auraColors.ts - Update both files when changing colors
  */
 
-export const ColorPrimaryMain = "#3385f0";
-export const ColorPrimaryLight = "#589bf3";
-export const ColorPrimaryDark = "#2b71cc";
-export const ColorSecondaryMain = "#a641fa";
-export const ColorSecondaryLight = "#b663fb";
-export const ColorSecondaryDark = "#8d37d5";
-export const ColorSuccessMain = "#099f69";
-export const ColorSuccessLight = "#35b084";
-export const ColorSuccessDark = "#088759";
-export const ColorErrorMain = "#d02241";
-export const ColorErrorLight = "#d84a63";
-export const ColorErrorDark = "#b11d37";
-export const ColorWarningMain = "#f68d2a";
-export const ColorWarningLight = "#f8a250";
-export const ColorWarningDark = "#d17824";
-export const ColorInfoMain = "#0da6d6";
-export const ColorInfoLight = "#39b6dd";
-export const ColorInfoDark = "#0b8db6";
-export const ColorGrey50 = "#f7fafc";
-export const ColorGrey100 = "#ebf2f5";
-export const ColorGrey200 = "#dbe6eb";
-export const ColorGrey300 = "#c3d3db";
-export const ColorGrey400 = "#9caeb8";
-export const ColorGrey500 = "#77878f";
-export const ColorGrey600 = "#4d595e";
-export const ColorGrey700 = "#262d30";
-export const ColorGrey800 = "#1b2124";
-export const ColorGrey900 = "#111417";
-export const ColorBackgroundDefault = "#f7fafc";
-export const ColorBackgroundPaper = "#ffffff";
-export const ColorDivider = "#00000014";
+// Primary Blue - Trust, professionalism
+export const ColorPrimaryMain = "#3391FF";
+export const ColorPrimaryLight = "#85C1FF";
+export const ColorPrimaryDark = "#1F61CC";
+
+// Secondary Purple - Innovation, premium feel
+export const ColorSecondaryMain = "#9D6BFF";
+export const ColorSecondaryLight = "#C5A8FF";
+export const ColorSecondaryDark = "#6D39CC";
+
+// Success Green - Teal-green, calming
+export const ColorSuccessMain = "#19CC9B";
+export const ColorSuccessLight = "#75E0C3";
+export const ColorSuccessDark = "#0F9977";
+
+// Error Red - Rose red, clear but softer
+export const ColorErrorMain = "#FF6582";
+export const ColorErrorLight = "#FFA3B4";
+export const ColorErrorDark = "#CC435E";
+
+// Warning Amber - Warm, professional
+export const ColorWarningMain = "#FFB400";
+export const ColorWarningLight = "#FFD266";
+export const ColorWarningDark = "#CC9000";
+
+// Info Cyan - Clear, professional
+export const ColorInfoMain = "#00CCD7";
+export const ColorInfoLight = "#66E0E7";
+export const ColorInfoDark = "#00A3AC";
+
+// Grey - Cool greys with subtle blue undertone
+export const ColorGrey50 = "#F8FAFC";
+export const ColorGrey100 = "#F1F5F9";
+export const ColorGrey200 = "#E2E8F0";
+export const ColorGrey300 = "#CBD5E1";
+export const ColorGrey400 = "#94A3B8";
+export const ColorGrey500 = "#64748B";
+export const ColorGrey600 = "#475569";
+export const ColorGrey700 = "#334155";
+export const ColorGrey800 = "#1E293B";
+export const ColorGrey900 = "#0F172A";
+export const ColorBackgroundDefault = "#F8FAFC";
+export const ColorBackgroundPaper = "#FFFFFF";
+export const ColorDivider = "rgba(0, 0, 0, 0.08)";
 export const GlassBlurSm = "4px";
 export const GlassBlurMd = "8px";
 export const GlassBlurLg = "12px";

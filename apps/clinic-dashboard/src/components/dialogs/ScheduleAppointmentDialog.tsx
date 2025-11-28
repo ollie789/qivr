@@ -21,7 +21,7 @@ import { enAU } from 'date-fns/locale';
 import type { ChipProps } from '@mui/material/Chip';
 import { useSnackbar } from 'notistack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { StepperDialog, FormSection, FormRow, TimeSlotPicker, Callout } from '@qivr/design-system';
+import { StepperDialog, FormSection, FormRow, TimeSlotPicker, Callout, auraTokens } from '@qivr/design-system';
 import { appointmentsApi } from '../../services/appointmentsApi';
 
 export interface ScheduleAppointmentDialogProps {
@@ -215,7 +215,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
                   sx={{
                     border: 1,
                     borderColor: appointmentData.providerId === provider.id ? 'primary.main' : 'divider',
-                    borderRadius: 1,
+                    borderRadius: auraTokens.borderRadius.sm,
                   }}
                 >
                   <ListItemAvatar>

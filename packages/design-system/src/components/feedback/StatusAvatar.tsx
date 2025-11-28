@@ -32,3 +32,4 @@ const StatusAvatar = ({ status, ...rest }: StatusAvatarProps) => {
 };
 
 export default StatusAvatar;
+export { StatusAvatar };

@@ -109,7 +109,7 @@ const TenantInfo: React.FC = () => {
           <Typography variant="body2" color="text.secondary">
             Tenant ID
           </Typography>
-          <Typography variant="body1" fontFamily="monospace" fontSize="0.875rem">
+          <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
             {tenantInfo.id}
           </Typography>
         </Box>
@@ -136,16 +136,16 @@ const TenantInfo: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 User Pool ID
               </Typography>
-              <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
                 {tenantInfo.cognitoUserPoolId}
               </Typography>
             </Box>
-            
+
             <Box>
               <Typography variant="body2" color="text.secondary">
                 Client ID
               </Typography>
-              <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
                 {tenantInfo.cognitoUserPoolClientId}
               </Typography>
             </Box>

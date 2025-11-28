@@ -3,6 +3,15 @@ import { format } from 'date-fns';
 // Type for exportable data - any object with string keys
 type ExportableData = Record<string, unknown>;
 
+// Export colors - using Aura design system values for consistency
+// Note: These are hardcoded for export files (not runtime theme-aware)
+const EXPORT_COLORS = {
+  headerBackground: '#3391FF', // auraColors.blue.main
+  headerText: '#FFFFFF',
+  rowBackground: '#F8FAFC',    // auraColors.grey[50]
+  border: '#E2E8F0',           // auraColors.grey[200]
+};
+
 /**
  * Convert array of objects to CSV string
  */
@@ -81,7 +90,7 @@ export function arrayToExcelHTML(data: ExportableData[], columns?: { key: string
   html += '<thead><tr>';
   if (columns) {
     columns.forEach(col => {
-      html += `<th style="background-color: #f0f0f0; font-weight: bold;">${col.label}</th>`;
+      html += `<th style="background-color: ${EXPORT_COLORS.headerBackground}; color: ${EXPORT_COLORS.headerText}; font-weight: bold;">${col.label}</th>`;
     });
   }
   html += '</tr></thead>';
@@ -127,8 +136,8 @@ export function downloadExcel(data: ExportableData[], filename: string, columns?
       <meta charset="utf-8">
       <style>
         table { border-collapse: collapse; }
-        td, th { border: 1px solid #ddd; padding: 8px; }
-        th { background-color: #4CAF50; color: white; }
+        td, th { border: 1px solid ${EXPORT_COLORS.border}; padding: 8px; }
+        th { background-color: ${EXPORT_COLORS.headerBackground}; color: ${EXPORT_COLORS.headerText}; }
       </style>
     </head>
     <body>

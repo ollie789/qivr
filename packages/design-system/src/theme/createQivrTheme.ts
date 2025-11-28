@@ -25,14 +25,14 @@ import Checkbox from './components/Checkbox';
 import Chip from './components/Chip';
 import CssBaseline from './components/CssBaseline';
 import DataGrid from './components/DataGrid';
-import Dialog from './components/Dialog';
+import Dialog, { DialogTitle, DialogContent, DialogActions } from './components/Dialog';
 import Divider from './components/Divider';
 import Drawer from './components/Drawer';
 import Fab from './components/Fab';
 import ImageList, { ImageListItem } from './components/ImageList';
 import Link from './components/Link';
 import List, { ListItemButton, ListItemIcon, ListItemText } from './components/List';
-import { MenuItem } from './components/Menu';
+import { Menu, MenuItem } from './components/Menu';
 import Pagination, { PaginationItem } from './components/Pagination';
 import Paper from './components/Paper';
 import Popover from './components/Popover';
@@ -288,6 +288,9 @@ export const createQivrTheme = (
       MuiBreadcrumbs: Breadcrumbs,
       MuiSelect: Select,
       MuiDialog: Dialog,
+      MuiDialogTitle: DialogTitle,
+      MuiDialogContent: DialogContent,
+      MuiDialogActions: DialogActions,
       MuiAlert: Alert,
       MuiStack: Stack,
       MuiCheckbox: Checkbox,
@@ -301,6 +304,7 @@ export const createQivrTheme = (
       MuiListItemButton: ListItemButton,
       MuiListItemIcon: ListItemIcon,
       MuiListItemText: ListItemText,
+      MuiMenu: Menu,
       MuiMenuItem: MenuItem,
       MuiToolbar: Toolbar,
       MuiTooltip: Tooltip,

@@ -278,12 +278,12 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3} sx={{ mt: 3 }}>
         {isStatsLoading
           ? Array.from({ length: 6 }).map((_, i) => (
-              <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+              <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 4, xl: 2 }}>
                 <StatCardSkeleton />
               </Grid>
             ))
           : stats.map((stat, index) => (
-              <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+              <Grid key={stat.id} size={{ xs: 12, sm: 6, md: 4, lg: 4, xl: 2 }}>
                 <Box
                   sx={{
                     animation: "fadeInUp 0.5s ease-out",

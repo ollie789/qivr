@@ -912,7 +912,7 @@ export const PromBuilder: React.FC = () => {
                       min: lastRange ? lastRange.max + 1 : 0,
                       max: lastRange ? lastRange.max + 10 : 10,
                       label: "New Range",
-                      color: "#3385F0", // Aura blue
+                      color: "#3391FF", // auraColors.blue.main
                     };
                     setTemplate({
                       ...template,
@@ -1528,7 +1528,7 @@ export const PromBuilder: React.FC = () => {
             <Box key={question.id} sx={{ mb: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 {question.question}{" "}
-                {question.required && <span style={{ color: "red" }}>*</span>}
+                {question.required && <Box component="span" sx={{ color: "error.main" }}>*</Box>}
               </Typography>
 
               {question.type === "scale" && (
