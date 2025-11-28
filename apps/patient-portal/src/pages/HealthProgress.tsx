@@ -7,7 +7,13 @@ import {
   Star, 
   Refresh,
   Assignment,
-  CalendarMonth
+  CalendarMonth,
+  FlagCircle,
+  FitnessCenter,
+  BarChart,
+  Whatshot,
+  AutoAwesome,
+  Bolt
 } from '@mui/icons-material';
 import { 
   AuraGlassStatCard, 
@@ -19,14 +25,20 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api-client';
 
-const achievements = [
-  { id: 1, title: 'First Steps', description: 'Completed intake form', icon: '🎯', unlocked: true },
-  { id: 2, title: 'Consistent Care', description: '5 appointments attended', icon: '💪', unlocked: true },
-  { id: 3, title: 'Data Champion', description: '10 PROMs completed', icon: '📊', unlocked: true },
-  { id: 4, title: 'Recovery Warrior', description: '50% improvement', icon: '🏆', unlocked: false },
-  { id: 5, title: 'Perfect Week', description: '7 day streak', icon: '⭐', unlocked: false },
-  { id: 6, title: 'Health Hero', description: '30 day streak', icon: '🔥', unlocked: false },
-];
+// Map achievement icons from API to MUI icons
+const achievementIconMap: Record<string, React.ReactNode> = {
+  '🎯': <FlagCircle />,
+  '💪': <FitnessCenter />,
+  '🏆': <EmojiEvents />,
+  '📊': <BarChart />,
+  '📈': <TrendingUp />,
+  '🔥': <Whatshot />,
+  '⚡': <Bolt />,
+  '✨': <AutoAwesome />,
+  '⭐': <Star />,
+};
+
+const getAchievementIcon = (icon: string) => achievementIconMap[icon] || <Star />;
 
 const calculateHealthScore = (data: any) => {
   if (!data) return 0;
@@ -58,7 +70,10 @@ export default function HealthProgress() {
     nextMilestone: { 
       current: rawData.completedAppointments || 0, 
       target: 15 
-    }
+    },
+    achievements: rawData.achievements || [],
+    level: rawData.level || 1,
+    pointsToNextLevel: rawData.pointsToNextLevel || 50
   } : null;
 
   const healthScore = stats?.healthScore || 0;
@@ -89,7 +104,7 @@ export default function HealthProgress() {
     );
   }
 
-  const unlockedCount = achievements.filter(a => a.unlocked).length;
+  const achievements = stats?.achievements || [];
   const milestoneProgress = ((stats?.nextMilestone?.current || 0) / (stats?.nextMilestone?.target || 15)) * 100;
 
   return (
@@ -123,8 +138,8 @@ export default function HealthProgress() {
             } : undefined}
           />
           <AuraGlassStatCard
-            title="Appointment Streak"
-            value={`${stats?.appointmentStreak || 0} 🔥`}
+            title="Current Streak"
+            value={stats?.appointmentStreak || 0}
             icon={<LocalFireDepartment />}
             color="error.main"
           />
@@ -148,10 +163,10 @@ export default function HealthProgress() {
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
               <Box>
                 <Typography variant="h6" fontWeight={600}>
-                  🏆 Achievements
+                  Achievements
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {unlockedCount} of {achievements.length} unlocked
+                  {achievements.length} unlocked
                 </Typography>
               </Box>
               <Box sx={{ 
@@ -159,62 +174,80 @@ export default function HealthProgress() {
                 py: 0.5, 
                 borderRadius: 2, 
                 bgcolor: alpha(theme.palette.warning.main, 0.1),
-                color: 'warning.main'
+                color: 'warning.main',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
               }}>
+                <EmojiEvents sx={{ fontSize: 18 }} />
                 <Typography variant="body2" fontWeight={600}>
-                  {unlockedCount} / {achievements.length}
+                  Level {stats?.level || 1}
                 </Typography>
               </Box>
             </Stack>
             
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, 
-              gap: 2 
-            }}>
-              {achievements.map((achievement) => (
-                <Box
-                  key={achievement.id}
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    bgcolor: achievement.unlocked 
-                      ? alpha(theme.palette.primary.main, 0.08)
-                      : alpha(theme.palette.action.hover, 0.5),
-                    border: '1px solid',
-                    borderColor: achievement.unlocked 
-                      ? alpha(theme.palette.primary.main, 0.2)
-                      : 'divider',
-                    opacity: achievement.unlocked ? 1 : 0.6,
-                    transition: 'all 0.2s ease-in-out',
-                    '&:hover': achievement.unlocked ? {
-                      transform: 'translateY(-2px)',
-                      boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
-                      borderColor: alpha(theme.palette.primary.main, 0.4),
-                    } : {}
-                  }}
-                >
-                  <Stack direction="row" spacing={2} alignItems="flex-start">
-                    <Typography variant="h4" sx={{ lineHeight: 1 }}>
-                      {achievement.icon}
-                    </Typography>
-                    <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <Typography variant="subtitle2" fontWeight={600}>
-                          {achievement.title}
-                        </Typography>
-                        {achievement.unlocked && (
+            {achievements.length > 0 ? (
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, 
+                gap: 2 
+              }}>
+                {achievements.map((achievement: any, index: number) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 2,
+                      bgcolor: alpha(theme.palette.primary.main, 0.08),
+                      border: '1px solid',
+                      borderColor: alpha(theme.palette.primary.main, 0.2),
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
+                        borderColor: alpha(theme.palette.primary.main, 0.4),
+                      }
+                    }}
+                  >
+                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                      <Box sx={{
+                        p: 1,
+                        borderRadius: 1.5,
+                        bgcolor: alpha(theme.palette.warning.main, 0.15),
+                        color: 'warning.main',
+                        display: 'flex',
+                        '& svg': { fontSize: 24 }
+                      }}>
+                        {getAchievementIcon(achievement.icon)}
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {achievement.name}
+                          </Typography>
                           <Star sx={{ fontSize: 16, color: 'warning.main' }} />
-                        )}
-                      </Stack>
-                      <Typography variant="caption" color="text.secondary">
-                        {achievement.description}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Box>
-              ))}
-            </Box>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {achievement.description}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Box sx={{ 
+                p: 4, 
+                textAlign: 'center',
+                bgcolor: alpha(theme.palette.action.hover, 0.5),
+                borderRadius: 2
+              }}>
+                <EmojiEvents sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+                <Typography variant="body2" color="text.secondary">
+                  Complete appointments and PROMs to unlock achievements
+                </Typography>
+              </Box>
+            )}
           </Box>
         </AuraCard>
 
@@ -227,9 +260,12 @@ export default function HealthProgress() {
           {/* Next Milestone */}
           <AuraCard>
             <Box sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
-                🎯 Next Milestone
-              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <FlagCircle sx={{ color: 'primary.main' }} />
+                <Typography variant="h6" fontWeight={600}>
+                  Next Milestone
+                </Typography>
+              </Stack>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Keep going! You're making great progress.
               </Typography>
@@ -277,9 +313,12 @@ export default function HealthProgress() {
           {/* Streaks */}
           <AuraCard>
             <Box sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
-                🔥 Your Streaks
-              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Whatshot sx={{ color: 'error.main' }} />
+                <Typography variant="h6" fontWeight={600}>
+                  Your Streaks
+                </Typography>
+              </Stack>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Consistency is key to recovery
               </Typography>
@@ -303,10 +342,10 @@ export default function HealthProgress() {
                     </Box>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="h5" fontWeight={700}>
-                        {stats?.appointmentStreak || 0} 🔥
+                        {stats?.appointmentStreak || 0} weeks
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Appointment Streak
+                        Current Streak
                       </Typography>
                     </Box>
                   </Stack>
@@ -326,14 +365,14 @@ export default function HealthProgress() {
                       bgcolor: alpha(theme.palette.primary.main, 0.15),
                       display: 'flex'
                     }}>
-                      <CheckCircle sx={{ color: 'primary.main' }} />
+                      <Assignment sx={{ color: 'primary.main' }} />
                     </Box>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="h5" fontWeight={700}>
-                        {stats?.promStreak || 0} weeks
+                        {stats?.completedProms || 0}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        PROM Completion Streak
+                        PROMs Completed
                       </Typography>
                     </Box>
                   </Stack>
