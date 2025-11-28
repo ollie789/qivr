@@ -21,7 +21,7 @@ function BodyModelViewer({
   regions: PainRegion[];
   cameraView: 'front' | 'back' | 'left' | 'right';
 }) {
-  const gltf = useLoader(GLTFLoader, '/assets/body-model.glb');
+  const gltf = useLoader(GLTFLoader, '/models/body-model.glb');
   const { camera } = useThree();
   
   useEffect(() => {
