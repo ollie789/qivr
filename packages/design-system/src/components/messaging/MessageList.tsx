@@ -4,12 +4,12 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
-  ListItemAvatar,
-  Avatar,
-  Chip,
   Box,
   Typography,
+  alpha,
+  useTheme,
 } from '@mui/material';
+import { Circle, PriorityHigh } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 
 export interface MessageListItem {
@@ -32,15 +32,26 @@ interface MessageListProps {
   emptyMessage?: string;
 }
 
+const getCategoryColor = (category?: string) => {
+  switch (category) {
+    case 'Medical': return 'error.main';
+    case 'Appointment': return 'primary.main';
+    case 'Billing': return 'warning.main';
+    default: return 'text.secondary';
+  }
+};
+
 export const MessageList: React.FC<MessageListProps> = ({
   messages,
   selectedId,
   onSelect,
   emptyMessage = 'No messages',
 }) => {
+  const theme = useTheme();
+
   if (messages.length === 0) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
+      <Box sx={{ p: 4, textAlign: 'center' }}>
         <Typography color="text.secondary">{emptyMessage}</Typography>
       </Box>
     );
@@ -59,34 +70,53 @@ export const MessageList: React.FC<MessageListProps> = ({
             sx={{
               borderBottom: '1px solid',
               borderColor: 'divider',
-              bgcolor: !message.read ? 'action.hover' : 'transparent',
             }}
           >
             <ListItemButton
               selected={isSelected}
               onClick={() => onSelect(message.id)}
               sx={{
+                py: 2,
+                px: 2.5,
+                transition: 'all 0.15s ease-in-out',
+                bgcolor: !message.read 
+                  ? alpha(theme.palette.primary.main, 0.04)
+                  : 'transparent',
+                '&:hover': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.08),
+                },
                 '&.Mui-selected': {
-                  backgroundColor: 'action.selected',
+                  bgcolor: alpha(theme.palette.primary.main, 0.12),
+                  borderLeft: '3px solid',
+                  borderLeftColor: 'primary.main',
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.16),
+                  },
                 },
               }}
             >
-              <ListItemAvatar>
-                <Avatar>{message.senderName.charAt(0).toUpperCase()}</Avatar>
-              </ListItemAvatar>
               <ListItemText
+                disableTypography
                 primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                    <Typography variant="body1" fontWeight={message.read ? 400 : 600}>
-                      {message.senderName}
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {!message.read && (
+                        <Circle sx={{ fontSize: 8, color: 'primary.main' }} />
+                      )}
+                      <Typography 
+                        variant="body2" 
+                        fontWeight={message.read ? 500 : 600}
+                        color="text.primary"
+                      >
+                        {message.senderName}
+                      </Typography>
+                      {message.urgent && (
+                        <PriorityHigh sx={{ fontSize: 16, color: 'error.main' }} />
+                      )}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {timeAgo}
                     </Typography>
-                    {!message.read && message.unreadCount && message.unreadCount > 0 && (
-                      <Chip label={message.unreadCount} size="small" color="primary" />
-                    )}
-                    {message.urgent && <Chip label="Urgent" size="small" color="error" />}
-                    {message.category && message.category !== 'General' && (
-                      <Chip label={message.category} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
-                    )}
                   </Box>
                 }
                 secondary={
@@ -94,20 +124,46 @@ export const MessageList: React.FC<MessageListProps> = ({
                     <Typography
                       variant="body2"
                       fontWeight={message.read ? 400 : 500}
-                      sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      color="text.primary"
+                      sx={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        mb: 0.5
+                      }}
                     >
                       {message.subject}
                     </Typography>
                     <Typography
-                      variant="body2"
+                      variant="caption"
                       color="text.secondary"
-                      sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      sx={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        display: 'block'
+                      }}
                     >
                       {message.preview}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {timeAgo}
-                    </Typography>
+                    {message.category && message.category !== 'General' && (
+                      <Box 
+                        component="span"
+                        sx={{ 
+                          display: 'inline-block',
+                          mt: 1,
+                          px: 1,
+                          py: 0.25,
+                          borderRadius: 1,
+                          bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          color: getCategoryColor(message.category),
+                          fontSize: '0.7rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        {message.category}
+                      </Box>
+                    )}
                   </Box>
                 }
               />

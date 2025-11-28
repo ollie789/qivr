@@ -1,6 +1,8 @@
 import React from 'react';
-import { Box, Typography, Paper, Chip, Button } from '@mui/material';
+import { Box, Typography, alpha, useTheme, Stack } from '@mui/material';
+import { Reply, Schedule } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
+import { AuraButton } from '../buttons/Button';
 
 export interface ThreadMessage {
   id: string;
@@ -19,11 +21,22 @@ interface MessageThreadProps {
   emptyMessage?: string;
 }
 
+const getCategoryColor = (category?: string, theme?: any) => {
+  switch (category) {
+    case 'Medical': return theme?.palette.error.main;
+    case 'Appointment': return theme?.palette.primary.main;
+    case 'Billing': return theme?.palette.warning.main;
+    default: return theme?.palette.text.secondary;
+  }
+};
+
 export const MessageThread: React.FC<MessageThreadProps> = ({
   messages,
   onReply,
   emptyMessage = 'No messages in this conversation',
 }) => {
+  const theme = useTheme();
+
   if (messages.length === 0) {
     return (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -38,6 +51,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
         {messages.map((message) => {
           const isOwn = message.isFromCurrentUser;
           const timeAgo = formatDistanceToNow(new Date(message.sentAt), { addSuffix: true });
+          const categoryColor = getCategoryColor(message.category, theme);
 
           return (
             <Box
@@ -47,56 +61,112 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
                 justifyContent: isOwn ? 'flex-end' : 'flex-start',
               }}
             >
-              <Paper
+              <Box
                 sx={{
-                  maxWidth: '70%',
-                  p: 2,
-                  bgcolor: isOwn ? 'primary.light' : 'grey.100',
-                  color: isOwn ? 'primary.contrastText' : 'text.primary',
+                  maxWidth: '75%',
+                  minWidth: 200,
                 }}
               >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="subtitle2">
-                      {isOwn ? 'You' : message.senderName}
+                {/* Sender info */}
+                <Stack 
+                  direction="row" 
+                  spacing={1} 
+                  alignItems="center" 
+                  sx={{ mb: 0.5, px: 1 }}
+                  justifyContent={isOwn ? 'flex-end' : 'flex-start'}
+                >
+                  <Typography variant="caption" fontWeight={500} color="text.secondary">
+                    {isOwn ? 'You' : message.senderName}
+                  </Typography>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Schedule sx={{ fontSize: 12, color: 'text.disabled' }} />
+                    <Typography variant="caption" color="text.disabled">
+                      {timeAgo}
                     </Typography>
-                    {message.category && message.category !== 'General' && (
-                      <Chip
-                        label={message.category}
-                        size="small"
-                        sx={{ height: 20, fontSize: '0.7rem' }}
-                        color={
-                          message.category === 'Medical' ? 'error' :
-                          message.category === 'Appointment' ? 'primary' :
-                          message.category === 'Billing' ? 'warning' :
-                          'default'
-                        }
-                      />
-                    )}
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    {timeAgo}
+                  </Stack>
+                </Stack>
+
+                {/* Message bubble */}
+                <Box
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 3,
+                    borderTopLeftRadius: isOwn ? 12 : 4,
+                    borderTopRightRadius: isOwn ? 4 : 12,
+                    bgcolor: isOwn 
+                      ? alpha(theme.palette.primary.main, 0.1)
+                      : 'background.paper',
+                    border: '1px solid',
+                    borderColor: isOwn 
+                      ? alpha(theme.palette.primary.main, 0.2)
+                      : 'divider',
+                    boxShadow: isOwn ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  {message.category && message.category !== 'General' && (
+                    <Box 
+                      component="span"
+                      sx={{ 
+                        display: 'inline-block',
+                        mb: 1.5,
+                        px: 1,
+                        py: 0.25,
+                        borderRadius: 1,
+                        bgcolor: alpha(categoryColor, 0.1),
+                        color: categoryColor,
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5
+                      }}
+                    >
+                      {message.category}
+                    </Box>
+                  )}
+                  
+                  {message.subject && (
+                    <Typography 
+                      variant="subtitle2" 
+                      fontWeight={600} 
+                      sx={{ mb: 1 }}
+                    >
+                      {message.subject}
+                    </Typography>
+                  )}
+                  
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: 1.6,
+                      color: 'text.primary'
+                    }}
+                  >
+                    {message.content}
                   </Typography>
                 </Box>
-                {message.subject && (
-                  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                    {message.subject}
-                  </Typography>
-                )}
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                  {message.content}
-                </Typography>
-              </Paper>
+              </Box>
             </Box>
           );
         })}
       </Box>
 
       {onReply && (
-        <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Button variant="contained" onClick={onReply}>
+        <Box 
+          sx={{ 
+            p: 2, 
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper'
+          }}
+        >
+          <AuraButton 
+            variant="contained" 
+            onClick={onReply}
+            startIcon={<Reply />}
+          >
             Reply
-          </Button>
+          </AuraButton>
         </Box>
       )}
     </Box>
