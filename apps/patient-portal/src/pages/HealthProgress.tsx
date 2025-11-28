@@ -1,6 +1,21 @@
-import { Box, Typography, LinearProgress, Stack, Avatar } from '@mui/material';
-import { EmojiEvents, LocalFireDepartment, TrendingUp, CheckCircle, Star, Refresh } from '@mui/icons-material';
-import { glassCard, AuraButton, SectionLoader, Callout } from '@qivr/design-system';
+import { Box, Typography, Stack, alpha, useTheme, LinearProgress } from '@mui/material';
+import { 
+  EmojiEvents, 
+  LocalFireDepartment, 
+  TrendingUp, 
+  CheckCircle, 
+  Star, 
+  Refresh,
+  Assignment,
+  CalendarMonth
+} from '@mui/icons-material';
+import { 
+  AuraGlassStatCard, 
+  AuraCard, 
+  AuraButton, 
+  SectionLoader, 
+  Callout
+} from '@qivr/design-system';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api-client';
 
@@ -22,6 +37,8 @@ const calculateHealthScore = (data: any) => {
 };
 
 export default function HealthProgress() {
+  const theme = useTheme();
+  
   const { data: rawData, isLoading, error, refetch } = useQuery({
     queryKey: ['patient-analytics'],
     queryFn: async () => {
@@ -42,7 +59,6 @@ export default function HealthProgress() {
   } : null;
 
   const healthScore = stats?.healthScore || 0;
-  const scoreColor = healthScore >= 80 ? 'success' : healthScore >= 60 ? 'warning' : 'error';
 
   if (error) {
     return (
@@ -53,9 +69,11 @@ export default function HealthProgress() {
         <Callout variant="error">
           Failed to load your health data. Please try again.
         </Callout>
-        <AuraButton onClick={() => refetch()} startIcon={<Refresh />}>
-          Retry
-        </AuraButton>
+        <Box sx={{ mt: 2 }}>
+          <AuraButton onClick={() => refetch()} startIcon={<Refresh />}>
+            Retry
+          </AuraButton>
+        </Box>
       </Box>
     );
   }
@@ -68,160 +86,287 @@ export default function HealthProgress() {
     );
   }
 
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
+  const milestoneProgress = ((stats?.nextMilestone?.current || 0) / (stats?.nextMilestone?.target || 15)) * 100;
+
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" fontWeight={700} gutterBottom>
-        Health Progress
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Track your recovery journey and unlock achievements
-      </Typography>
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
+          Health Progress
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Track your recovery journey and unlock achievements
+        </Typography>
+      </Box>
 
       <Stack spacing={3}>
-        {/* Top Row - Stats */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
-          {/* Health Score */}
-          <Box sx={{ ...glassCard, p: 3, textAlign: 'center' }}>
-            <EmojiEvents sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
-            <Typography variant="h3" fontWeight={700} color={`${scoreColor}.main`}>
-              {healthScore}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Health Score
-            </Typography>
-            <LinearProgress 
-              variant="determinate" 
-              value={healthScore} 
-              color={scoreColor}
-              sx={{ mt: 2, height: 8, borderRadius: 2 }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              {100 - healthScore} points to next level
-            </Typography>
+        {/* Stats Row */}
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
+          gap: 3 
+        }}>
+          <AuraGlassStatCard
+            title="Health Score"
+            value={healthScore}
+            icon={<EmojiEvents />}
+            color={healthScore >= 80 ? 'success.main' : healthScore >= 60 ? 'warning.main' : 'error.main'}
+            trend={stats?.improvementRate ? {
+              value: stats.improvementRate,
+              isPositive: stats.improvementRate > 0,
+              label: 'overall improvement'
+            } : undefined}
+          />
+          <AuraGlassStatCard
+            title="Appointment Streak"
+            value={`${stats?.appointmentStreak || 0} 🔥`}
+            icon={<LocalFireDepartment />}
+            color="error.main"
+          />
+          <AuraGlassStatCard
+            title="Total Appointments"
+            value={stats?.totalAppointments || 0}
+            icon={<CalendarMonth />}
+            color="primary.main"
+          />
+          <AuraGlassStatCard
+            title="PROMs Completed"
+            value={stats?.completedProms || 0}
+            icon={<Assignment />}
+            color="info.main"
+          />
+        </Box>
+
+        {/* Achievements Section */}
+        <AuraCard>
+          <Box sx={{ p: 3 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+              <Box>
+                <Typography variant="h6" fontWeight={600}>
+                  🏆 Achievements
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {unlockedCount} of {achievements.length} unlocked
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                px: 2, 
+                py: 0.5, 
+                borderRadius: 2, 
+                bgcolor: alpha(theme.palette.warning.main, 0.1),
+                color: 'warning.main'
+              }}>
+                <Typography variant="body2" fontWeight={600}>
+                  {unlockedCount} / {achievements.length}
+                </Typography>
+              </Box>
+            </Stack>
+            
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, 
+              gap: 2 
+            }}>
+              {achievements.map((achievement) => (
+                <Box
+                  key={achievement.id}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 2,
+                    bgcolor: achievement.unlocked 
+                      ? alpha(theme.palette.primary.main, 0.08)
+                      : alpha(theme.palette.action.hover, 0.5),
+                    border: '1px solid',
+                    borderColor: achievement.unlocked 
+                      ? alpha(theme.palette.primary.main, 0.2)
+                      : 'divider',
+                    opacity: achievement.unlocked ? 1 : 0.6,
+                    transition: 'all 0.2s ease-in-out',
+                    '&:hover': achievement.unlocked ? {
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
+                      borderColor: alpha(theme.palette.primary.main, 0.4),
+                    } : {}
+                  }}
+                >
+                  <Stack direction="row" spacing={2} alignItems="flex-start">
+                    <Typography variant="h4" sx={{ lineHeight: 1 }}>
+                      {achievement.icon}
+                    </Typography>
+                    <Box sx={{ flex: 1 }}>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          {achievement.title}
+                        </Typography>
+                        {achievement.unlocked && (
+                          <Star sx={{ fontSize: 16, color: 'warning.main' }} />
+                        )}
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        {achievement.description}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              ))}
+            </Box>
           </Box>
+        </AuraCard>
+
+        {/* Progress Cards Row */}
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, 
+          gap: 3 
+        }}>
+          {/* Next Milestone */}
+          <AuraCard>
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h6" fontWeight={600} gutterBottom>
+                🎯 Next Milestone
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Keep going! You're making great progress.
+              </Typography>
+              
+              <Box sx={{ mb: 2 }}>
+                <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="body2" fontWeight={500}>
+                    {stats?.nextMilestone?.current || 0} / {stats?.nextMilestone?.target || 15} appointments
+                  </Typography>
+                  <Typography variant="body2" color="primary.main" fontWeight={600}>
+                    {Math.round(milestoneProgress)}%
+                  </Typography>
+                </Stack>
+                <LinearProgress
+                  variant="determinate"
+                  value={milestoneProgress}
+                  sx={{ 
+                    height: 10, 
+                    borderRadius: 5,
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    '& .MuiLinearProgress-bar': {
+                      borderRadius: 5,
+                    }
+                  }}
+                />
+              </Box>
+              
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 2, 
+                bgcolor: alpha(theme.palette.info.main, 0.08),
+                border: '1px solid',
+                borderColor: alpha(theme.palette.info.main, 0.2)
+              }}>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <CheckCircle sx={{ color: 'info.main', fontSize: 20 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>{(stats?.nextMilestone?.target || 15) - (stats?.nextMilestone?.current || 0)}</strong> more to unlock "Dedicated Patient" badge
+                  </Typography>
+                </Stack>
+              </Box>
+            </Box>
+          </AuraCard>
 
           {/* Streaks */}
-          <Box sx={{ ...glassCard, p: 3 }}>
-            <Stack spacing={2}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'error.main' }}>
-                  <LocalFireDepartment />
-                </Avatar>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h5" fontWeight={600}>
-                    {stats?.appointmentStreak || 0} 🔥
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Appointment Streak
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  <CheckCircle />
-                </Avatar>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h5" fontWeight={600}>
-                    {stats?.promStreak || 0} weeks
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    PROM Completion Streak
-                  </Typography>
-                </Box>
-              </Box>
-            </Stack>
-          </Box>
-
-          {/* Quick Stats */}
-          <Box sx={{ ...glassCard, p: 3 }}>
-            <Stack spacing={2}>
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  Total Appointments
-                </Typography>
-                <Typography variant="h5" fontWeight={600}>
-                  {stats?.totalAppointments || 0}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  PROMs Completed
-                </Typography>
-                <Typography variant="h5" fontWeight={600}>
-                  {stats?.completedProms || 0}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TrendingUp color="success" />
-                <Typography variant="body2" color="success.main" fontWeight={600}>
-                  {stats?.improvementRate || 0}% improvement
-                </Typography>
-              </Box>
-            </Stack>
-          </Box>
-        </Box>
-
-        {/* Achievements */}
-        <Box sx={{ ...glassCard, p: 3 }}>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            🏆 Achievements
-          </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2, mt: 2 }}>
-            {achievements.map((achievement) => (
-              <Box
-                key={achievement.id}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  bgcolor: achievement.unlocked ? 'primary.light' : 'action.hover',
-                  opacity: achievement.unlocked ? 1 : 0.5,
-                  border: 1,
-                  borderColor: achievement.unlocked ? 'primary.main' : 'divider',
-                  transition: 'all 0.3s',
-                  '&:hover': {
-                    transform: achievement.unlocked ? 'translateY(-4px)' : 'none',
-                    boxShadow: achievement.unlocked ? 3 : 0,
-                  }
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <Typography variant="h4">{achievement.icon}</Typography>
-                  {achievement.unlocked && <Star sx={{ color: 'warning.main', fontSize: 20 }} />}
-                </Box>
-                <Typography variant="subtitle2" fontWeight={600}>
-                  {achievement.title}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {achievement.description}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-
-        {/* Next Milestone */}
-        <Box sx={{ ...glassCard, p: 3 }}>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            🎯 Next Milestone
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">
-                {stats?.nextMilestone?.current || 0} / {stats?.nextMilestone?.target || 15} appointments
+          <AuraCard>
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h6" fontWeight={600} gutterBottom>
+                🔥 Your Streaks
               </Typography>
-              <Typography variant="body2" color="primary.main" fontWeight={600}>
-                {Math.round(((stats?.nextMilestone?.current || 0) / (stats?.nextMilestone?.target || 15)) * 100)}%
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Consistency is key to recovery
               </Typography>
+              
+              <Stack spacing={2}>
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  bgcolor: alpha(theme.palette.error.main, 0.08),
+                  border: '1px solid',
+                  borderColor: alpha(theme.palette.error.main, 0.2)
+                }}>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Box sx={{ 
+                      p: 1.5, 
+                      borderRadius: 2, 
+                      bgcolor: alpha(theme.palette.error.main, 0.15),
+                      display: 'flex'
+                    }}>
+                      <LocalFireDepartment sx={{ color: 'error.main' }} />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h5" fontWeight={700}>
+                        {stats?.appointmentStreak || 0} 🔥
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Appointment Streak
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+                
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  bgcolor: alpha(theme.palette.primary.main, 0.08),
+                  border: '1px solid',
+                  borderColor: alpha(theme.palette.primary.main, 0.2)
+                }}>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Box sx={{ 
+                      p: 1.5, 
+                      borderRadius: 2, 
+                      bgcolor: alpha(theme.palette.primary.main, 0.15),
+                      display: 'flex'
+                    }}>
+                      <CheckCircle sx={{ color: 'primary.main' }} />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h5" fontWeight={700}>
+                        {stats?.promStreak || 0} weeks
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        PROM Completion Streak
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+
+                {(stats?.improvementRate ?? 0) > 0 && (
+                  <Box sx={{ 
+                    p: 2, 
+                    borderRadius: 2, 
+                    bgcolor: alpha(theme.palette.success.main, 0.08),
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.success.main, 0.2)
+                  }}>
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Box sx={{ 
+                        p: 1.5, 
+                        borderRadius: 2, 
+                        bgcolor: alpha(theme.palette.success.main, 0.15),
+                        display: 'flex'
+                      }}>
+                        <TrendingUp sx={{ color: 'success.main' }} />
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h5" fontWeight={700} color="success.main">
+                          +{stats?.improvementRate}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Overall Improvement
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                )}
+              </Stack>
             </Box>
-            <LinearProgress
-              variant="determinate"
-              value={((stats?.nextMilestone?.current || 0) / (stats?.nextMilestone?.target || 15)) * 100}
-              sx={{ height: 10, borderRadius: 5 }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              {(stats?.nextMilestone?.target || 15) - (stats?.nextMilestone?.current || 0)} more to unlock "Dedicated Patient" badge
-            </Typography>
-          </Box>
+          </AuraCard>
         </Box>
       </Stack>
     </Box>
