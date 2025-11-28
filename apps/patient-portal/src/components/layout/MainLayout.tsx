@@ -15,8 +15,9 @@ import {
   ListItemButton,
   Divider,
   Avatar,
+  useTheme,
 } from "@mui/material";
-import { auraColors } from "@qivr/design-system";
+import { auraColors, auraTokens } from "@qivr/design-system";
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
@@ -53,6 +54,7 @@ export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const theme = useTheme();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -75,12 +77,28 @@ export const MainLayout: React.FC = () => {
 
       {/* User Info */}
       <Box sx={{ p: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-          <Avatar sx={{ mr: 2, bgcolor: auraColors.blue.main }}>
+        <Box 
+          sx={{ 
+            display: "flex", 
+            alignItems: "center", 
+            p: 1.5,
+            borderRadius: auraTokens.borderRadius.md,
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}15 0%, ${theme.palette.primary.dark}10 100%)`,
+            border: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Avatar 
+            sx={{ 
+              mr: 2, 
+              width: 36,
+              height: 36,
+              background: `linear-gradient(135deg, ${auraColors.blue.main} 0%, ${auraColors.blue.dark} 100%)`,
+            }}
+          >
             {user?.email?.charAt(0).toUpperCase()}
           </Avatar>
           <Box>
-            <Typography variant="subtitle2" noWrap>
+            <Typography variant="subtitle2" noWrap fontWeight={600}>
               {user?.email}
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -92,21 +110,41 @@ export const MainLayout: React.FC = () => {
       <Divider />
 
       {/* Navigation Menu */}
-      <List>
+      <List sx={{ px: 1 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.path} disablePadding>
+          <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
               selected={location.pathname === item.path}
               onClick={() => {
                 navigate(item.path);
                 setMobileOpen(false);
               }}
+              sx={{
+                borderRadius: auraTokens.borderRadius.md,
+                transition: auraTokens.transitions.default,
+                "&.Mui-selected": {
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                  color: "white",
+                  boxShadow: `0 4px 12px ${theme.palette.primary.main}40`,
+                  "&:hover": {
+                    background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                    transform: "translateX(4px)",
+                  },
+                  "& .MuiListItemIcon-root": {
+                    color: "white",
+                  },
+                },
+                "&:hover:not(.Mui-selected)": {
+                  backgroundColor: theme.palette.action.hover,
+                  transform: "translateX(2px)",
+                },
+              }}
             >
               <ListItemIcon
                 sx={{
                   color:
                     location.pathname === item.path
-                      ? "primary.main"
+                      ? "white"
                       : "inherit",
                 }}
               >
@@ -185,6 +223,7 @@ export const MainLayout: React.FC = () => {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
+              background: `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
             },
           }}
         >
@@ -197,6 +236,9 @@ export const MainLayout: React.FC = () => {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
+              background: `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
+              borderRight: `1px solid ${theme.palette.divider}`,
+              boxShadow: "4px 0 24px rgba(0,0,0,0.04)",
             },
           }}
           open

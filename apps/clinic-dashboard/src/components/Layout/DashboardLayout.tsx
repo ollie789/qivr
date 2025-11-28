@@ -61,15 +61,23 @@ const getNavButtonStyles = (
   borderRadius: auraTokens.borderRadius.md,
   justifyContent: drawerOpen ? "initial" : "center",
   px: drawerOpen ? auraTokens.spacing.md : auraTokens.spacing.sm,
+  my: 0.5,
+  transition: auraTokens.transitions.default,
   "&.Mui-selected": {
-    backgroundColor: theme.palette.primary.main,
+    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
     color: "white",
+    boxShadow: `0 4px 12px ${theme.palette.primary.main}40`,
     "&:hover": {
-      backgroundColor: theme.palette.primary.dark,
+      background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+      transform: "translateX(4px)",
     },
     "& .MuiListItemIcon-root": {
       color: "white",
     },
+  },
+  "&:hover:not(.Mui-selected)": {
+    backgroundColor: theme.palette.action.hover,
+    transform: "translateX(2px)",
   },
 });
 
@@ -220,12 +228,23 @@ const DashboardLayout: React.FC = () => {
               display: "flex",
               alignItems: "center",
               gap: 2,
-              p: 1,
-              borderRadius: 2,
-              backgroundColor: theme.palette.action.hover,
+              p: 1.5,
+              borderRadius: auraTokens.borderRadius.md,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}15 0%, ${theme.palette.primary.dark}10 100%)`,
+              border: `1px solid ${theme.palette.divider}`,
+              transition: auraTokens.transitions.default,
+              "&:hover": {
+                boxShadow: `0 4px 12px ${theme.palette.primary.main}20`,
+              },
             }}
           >
-            <Avatar sx={{ width: 32, height: 32 }}>
+            <Avatar 
+              sx={{ 
+                width: 36, 
+                height: 36,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              }}
+            >
               {user?.name?.charAt(0) || "U"}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -239,7 +258,13 @@ const DashboardLayout: React.FC = () => {
           </Box>
         ) : (
           <Box sx={{ display: "flex", justifyContent: "center" }}>
-            <Avatar sx={{ width: 32, height: 32 }}>
+            <Avatar 
+              sx={{ 
+                width: 36, 
+                height: 36,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              }}
+            >
               {user?.name?.charAt(0) || "U"}
             </Avatar>
           </Box>
@@ -316,6 +341,7 @@ const DashboardLayout: React.FC = () => {
               "& .MuiDrawer-paper": {
                 boxSizing: "border-box",
                 width: drawerWidth,
+                background: `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
               },
             }}
           >
@@ -335,6 +361,9 @@ const DashboardLayout: React.FC = () => {
                   duration: theme.transitions.duration.enteringScreen,
                 }),
                 overflowX: "hidden",
+                background: `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
+                borderRight: `1px solid ${theme.palette.divider}`,
+                boxShadow: "4px 0 24px rgba(0,0,0,0.04)",
               },
             }}
           >
