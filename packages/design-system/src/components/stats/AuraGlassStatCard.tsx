@@ -37,7 +37,7 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
         borderColor: 'divider',
         borderRadius: 3,
         boxShadow: glassTokens.shadow.subtle,
-        p: 2.5,
+        p: 3,
         position: "relative",
         overflow: "hidden",
         transition: "all 0.2s ease-in-out",
@@ -66,20 +66,32 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
         }}
       />
 
-      <Stack spacing={1.5} sx={{ flex: 1, position: 'relative', zIndex: 1 }}>
+      <Stack spacing={2} sx={{ flex: 1, position: 'relative', zIndex: 1 }}>
         {/* Header row - icon and title */}
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            fontWeight={500}
+            sx={{
+              letterSpacing: 0.3,
+              fontSize: "0.875rem",
+              lineHeight: 1.4,
+            }}
+          >
+            {title}
+          </Typography>
           <Box
             sx={{
               p: 1,
-              borderRadius: 2,
+              borderRadius: 1.5,
               bgcolor: alpha(accentColor, 0.1),
               color: accentColor,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
-              "& svg": { fontSize: 20 },
+              "& svg": { fontSize: 22 },
             }}
           >
             {icon}
@@ -87,57 +99,43 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
         </Stack>
 
         {/* Value - prominent display */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <Typography
-            variant="h4"
-            fontWeight={700}
-            sx={{
-              lineHeight: 1.2,
-              fontSize: { xs: '1.75rem', sm: '2rem' },
-            }}
-          >
-            {value}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            fontWeight={500}
-            sx={{
-              mt: 0.5,
-              letterSpacing: 0.2,
-              fontSize: "0.813rem",
-              lineHeight: 1.4,
-            }}
-          >
-            {title}
-          </Typography>
-        </Box>
+        <Typography
+          variant="h3"
+          fontWeight={700}
+          sx={{
+            lineHeight: 1,
+            fontSize: { xs: '2rem', sm: '2.25rem' },
+            color: 'text.primary',
+          }}
+        >
+          {value}
+        </Typography>
 
         {/* Trend indicator */}
         {trend && (
-          <Stack direction="row" spacing={0.75} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 'auto' }}>
             <Box
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 0.25,
-                px: 0.75,
-                py: 0.25,
+                gap: 0.5,
+                px: 1,
+                py: 0.5,
                 borderRadius: 1,
                 bgcolor: trend.isPositive ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
               }}
             >
               {trend.isPositive ? (
-                <TrendingUp sx={{ fontSize: 14, color: "success.main" }} />
+                <TrendingUp sx={{ fontSize: 16, color: "success.main" }} />
               ) : (
-                <TrendingDown sx={{ fontSize: 14, color: "error.main" }} />
+                <TrendingDown sx={{ fontSize: 16, color: "error.main" }} />
               )}
               <Typography
                 variant="caption"
                 sx={{
                   color: trend.isPositive ? "success.main" : "error.main",
                   fontWeight: 600,
-                  fontSize: "0.75rem",
+                  fontSize: "0.813rem",
                 }}
               >
                 {Math.abs(trend.value)}%
@@ -147,7 +145,7 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
               variant="caption"
               color="text.secondary"
               sx={{
-                fontSize: "0.75rem",
+                fontSize: "0.813rem",
               }}
             >
               {trend.label || "vs last period"}
