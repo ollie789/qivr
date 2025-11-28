@@ -28,7 +28,6 @@ public class Evaluation : TenantEntity
     // Navigation properties
     public virtual User? Patient { get; set; }
     public virtual User? Reviewer { get; set; }
-    public virtual MedicalRecord? MedicalRecord { get; set; }
     public virtual ICollection<PainMap> PainMaps { get; set; } = new List<PainMap>();
     public virtual ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 }
