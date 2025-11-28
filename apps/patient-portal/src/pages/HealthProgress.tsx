@@ -30,9 +30,9 @@ const achievements = [
 
 const calculateHealthScore = (data: any) => {
   if (!data) return 0;
-  const appointmentScore = Math.min((data.totalAppointments || 0) * 5, 30);
-  const promScore = Math.min((data.completedProms || 0) * 3, 30);
-  const improvementScore = Math.min((data.improvementRate || 0), 40);
+  const appointmentScore = Math.min((data.completedAppointments || 0) * 5, 30);
+  const promScore = Math.min((data.totalPromCompleted || 0) * 3, 30);
+  const improvementScore = Math.min((data.promImprovement || 0), 40);
   return Math.min(appointmentScore + promScore + improvementScore, 100);
 };
 
@@ -40,9 +40,9 @@ export default function HealthProgress() {
   const theme = useTheme();
   
   const { data: rawData, isLoading, error, refetch } = useQuery({
-    queryKey: ['patient-analytics'],
+    queryKey: ['patient-analytics-dashboard'],
     queryFn: async () => {
-      const response: any = await api.get('/api/patient-analytics/progress');
+      const response: any = await api.get('/api/patient-analytics/dashboard');
       return response.data || response;
     },
     retry: 2,
@@ -50,12 +50,15 @@ export default function HealthProgress() {
 
   const stats = rawData ? {
     healthScore: calculateHealthScore(rawData),
-    appointmentStreak: rawData.appointmentStreak || 0,
-    promStreak: rawData.promStreak || 0,
+    appointmentStreak: rawData.currentStreak || 0,
+    promStreak: rawData.currentStreak || 0,
     totalAppointments: rawData.totalAppointments || 0,
-    completedProms: rawData.completedProms || 0,
-    improvementRate: rawData.improvementRate || 0,
-    nextMilestone: rawData.nextMilestone || { current: 0, target: 15 }
+    completedProms: rawData.totalPromCompleted || 0,
+    improvementRate: rawData.promImprovement || 0,
+    nextMilestone: { 
+      current: rawData.completedAppointments || 0, 
+      target: 15 
+    }
   } : null;
 
   const healthScore = stats?.healthScore || 0;
