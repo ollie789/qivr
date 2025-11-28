@@ -44,24 +44,6 @@ interface PainHeatmap3DProps {
   height?: number;
 }
 
-// Body region positions (y=0 at feet, increases upward)
-const BODY_REGION_CONFIG: Record<string, { position: [number, number, number]; scale: [number, number, number]; type: 'sphere' | 'capsule' }> = {
-  'Head': { position: [0, 4.6, 0], scale: [0.35, 0.4, 0.35], type: 'sphere' },
-  'Neck': { position: [0, 4.1, 0], scale: [0.15, 0.2, 0.15], type: 'capsule' },
-  'Shoulder': { position: [0, 3.7, 0], scale: [0.8, 0.15, 0.25], type: 'capsule' },
-  'Chest': { position: [0, 3.3, 0], scale: [0.45, 0.35, 0.25], type: 'capsule' },
-  'Upper Back': { position: [0, 3.3, -0.1], scale: [0.45, 0.35, 0.2], type: 'capsule' },
-  'Abdomen': { position: [0, 2.7, 0], scale: [0.4, 0.3, 0.2], type: 'capsule' },
-  'Lower Back': { position: [0, 2.4, -0.1], scale: [0.4, 0.3, 0.18], type: 'capsule' },
-  'Hip': { position: [0, 2.1, 0], scale: [0.5, 0.2, 0.25], type: 'capsule' },
-  'Arm': { position: [0.7, 3.2, 0], scale: [0.12, 0.5, 0.12], type: 'capsule' },
-  'Hand': { position: [0.85, 2.4, 0], scale: [0.1, 0.15, 0.05], type: 'sphere' },
-  'Leg': { position: [0.2, 1.3, 0], scale: [0.15, 0.6, 0.15], type: 'capsule' },
-  'Knee': { position: [0.2, 1.0, 0], scale: [0.16, 0.15, 0.14], type: 'sphere' },
-  'Ankle': { position: [0.2, 0.2, 0], scale: [0.1, 0.1, 0.08], type: 'sphere' },
-  'Foot': { position: [0.2, 0.05, 0.08], scale: [0.1, 0.05, 0.18], type: 'capsule' },
-};
-
 // Get intensity color
 const getIntensityColor = (intensity: number): string => {
   if (intensity >= 8) return auraColors.red[600];
