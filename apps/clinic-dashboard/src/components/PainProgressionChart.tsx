@@ -50,7 +50,7 @@ export const PainProgressionChart: React.FC<PainProgressionChartProps> = ({
       {/* Side-by-side pain maps */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 2, textAlign: "center" }}>
+          <Paper sx={{ p: 2, textAlign: "center", borderRadius: 3 }}>
             <Typography variant="h6" gutterBottom>
               Baseline
             </Typography>
@@ -76,7 +76,7 @@ export const PainProgressionChart: React.FC<PainProgressionChartProps> = ({
           </Paper>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 2, textAlign: "center" }}>
+          <Paper sx={{ p: 2, textAlign: "center", borderRadius: 3 }}>
             <Typography variant="h6" gutterBottom>
               Current
             </Typography>

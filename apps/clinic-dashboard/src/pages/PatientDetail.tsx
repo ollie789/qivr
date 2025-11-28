@@ -52,7 +52,7 @@ export default function PatientDetail() {
     return (
       <Box>
         <PageHeader title="Patient Details" />
-        <Paper sx={{ p: 4 }}>
+        <Paper sx={{ p: 4, borderRadius: 3 }}>
           <AuraEmptyState
             title="Patient not found"
             description="The patient you're looking for doesn't exist or has been removed"

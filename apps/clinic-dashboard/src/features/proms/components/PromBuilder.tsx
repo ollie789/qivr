@@ -1035,7 +1035,7 @@ export const PromBuilder: React.FC = () => {
         </Grid>
 
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Paper sx={{ p: 3, position: "sticky", top: 20 }}>
+          <Paper sx={{ p: 3, position: "sticky", top: 20, borderRadius: 3 }}>
             <Typography variant="h6" gutterBottom>
               Template Preview
             </Typography>

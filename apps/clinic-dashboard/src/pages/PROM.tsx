@@ -464,7 +464,7 @@ const PROM: React.FC = () => {
         )}
 
         {/* Main Content Tabs */}
-        <Paper sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <Paper sx={{ flex: 1, display: "flex", flexDirection: "column", borderRadius: 3 }}>
           <Tabs
             value={currentTab}
             onChange={handleTabChange}
@@ -761,7 +761,7 @@ const PROM: React.FC = () => {
             {/* Analytics Tab */}
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Paper sx={{ p: 2 }}>
+                <Paper sx={{ p: 2, borderRadius: 3 }}>
                   <Typography variant="h6" gutterBottom>
                     Response Status Distribution
                   </Typography>
@@ -788,7 +788,7 @@ const PROM: React.FC = () => {
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
-                <Paper sx={{ p: 2 }}>
+                <Paper sx={{ p: 2, borderRadius: 3 }}>
                   <Typography variant="h6" gutterBottom>
                     Completion Trends
                   </Typography>
@@ -820,7 +820,7 @@ const PROM: React.FC = () => {
               </Grid>
 
               <Grid size={12}>
-                <Paper sx={{ p: 2 }}>
+                <Paper sx={{ p: 2, borderRadius: 3 }}>
                   <Typography variant="h6" gutterBottom>
                     Template Performance
                   </Typography>

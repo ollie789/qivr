@@ -270,7 +270,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
             </Typography>
             
             {/* Search and Filters */}
-            <Paper sx={{ p: 2, mb: 3 }}>
+            <Paper sx={{ p: 2, mb: 3, borderRadius: 3 }}>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
@@ -493,7 +493,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               Notification Settings
             </Typography>
             
-            <Paper sx={{ p: 3, mb: 3 }}>
+            <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Delivery Methods
               </Typography>
@@ -543,7 +543,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               </FormGroup>
             </Paper>
 
-            <Paper sx={{ p: 3, mb: 3 }}>
+            <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Reminder Settings
               </Typography>
@@ -581,7 +581,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               )}
             </Paper>
 
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: 3, borderRadius: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Custom Message (Optional)
               </Typography>
@@ -607,7 +607,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
             
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Paper sx={{ p: 3 }}>
+                <Paper sx={{ p: 3, borderRadius: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     <AssignmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Template
@@ -622,7 +622,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               </Grid>
               
               <Grid size={{ xs: 12, md: 6 }}>
-                <Paper sx={{ p: 3 }}>
+                <Paper sx={{ p: 3, borderRadius: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     <PersonIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Recipients
@@ -639,7 +639,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               </Grid>
               
               <Grid size={{ xs: 12, md: 6 }}>
-                <Paper sx={{ p: 3 }}>
+                <Paper sx={{ p: 3, borderRadius: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     <ScheduleIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Schedule
@@ -658,7 +658,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               </Grid>
               
               <Grid size={{ xs: 12, md: 6 }}>
-                <Paper sx={{ p: 3 }}>
+                <Paper sx={{ p: 3, borderRadius: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     <NotificationIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Notifications
@@ -678,7 +678,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               
               {notificationSettings.customMessage && (
                 <Grid size={12}>
-                  <Paper sx={{ p: 3 }}>
+                  <Paper sx={{ p: 3, borderRadius: 3 }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Custom Message
                     </Typography>
