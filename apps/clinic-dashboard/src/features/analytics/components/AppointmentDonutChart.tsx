@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Stack, Paper, alpha, useTheme } from '@mui/material';
+import { Box, Typography, Stack, Paper, useTheme } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { auraColors, glassTokens } from '@qivr/design-system';
 
@@ -22,13 +22,6 @@ const COLORS = {
   cancelled: auraColors.red.main,
   noShow: auraColors.orange.main,
   pending: auraColors.blue.main,
-};
-
-const LABELS = {
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-  noShow: 'No Show',
-  pending: 'Pending',
 };
 
 const AppointmentDonutChart: React.FC<AppointmentDonutChartProps> = ({

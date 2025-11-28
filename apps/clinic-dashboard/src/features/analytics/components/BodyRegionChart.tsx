@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { auraTokens, auraColors, glassTokens } from '@qivr/design-system';
+import { auraColors, glassTokens } from '@qivr/design-system';
 
 interface BodyRegionData {
   region: string;
@@ -42,7 +42,6 @@ const BodyRegionChart: React.FC<BodyRegionChartProps> = ({
   const theme = useTheme();
 
   const sortedData = [...data].sort((a, b) => b.count - a.count).slice(0, 8);
-  const maxCount = Math.max(...sortedData.map((d) => d.count), 1);
   const totalCount = sortedData.reduce((sum, d) => sum + d.count, 0);
 
   if (variant === 'progress') {
@@ -71,7 +70,7 @@ const BodyRegionChart: React.FC<BodyRegionChartProps> = ({
         </Box>
 
         <Stack spacing={2}>
-          {sortedData.map((item, index) => {
+          {sortedData.map((item) => {
             const percentage = Math.round((item.count / totalCount) * 100);
             const intensityColor = getIntensityColor(item.avgIntensity);
 
@@ -176,7 +175,7 @@ const BodyRegionChart: React.FC<BodyRegionChartProps> = ({
               borderRadius: 12,
               boxShadow: glassTokens.shadow.standard,
             }}
-            formatter={(value: number, name: string, props: any) => [
+            formatter={(value: number, _name: string, props: any) => [
               <>
                 <span>{value} cases</span>
                 <br />

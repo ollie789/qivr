@@ -1,4 +1,4 @@
-import { auraTokens } from '../../theme/auraTokens';
+import { auraTokens, glassTokens } from '../../theme/auraTokens';
 import { Box, Paper, Skeleton, Stack } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
@@ -12,14 +12,19 @@ export const StatCardSkeleton = ({ compact = false }: StatCardSkeletonProps) => 
 
   return (
     <Paper
+      elevation={0}
       sx={{
-        p: compact ? 2 : { xs: 2.5, md: 3 },
+        p: 2.5,
+        minHeight: 140,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: auraTokens.borderRadius.lg,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: glassTokens.shadow.subtle,
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -36,24 +41,50 @@ export const StatCardSkeleton = ({ compact = false }: StatCardSkeletonProps) => 
         },
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+      <Stack spacing={1.5} sx={{ flex: 1 }}>
+        {/* Icon */}
         <Skeleton
           variant="rounded"
-          width={compact ? 36 : 44}
-          height={compact ? 36 : 44}
+          width={40}
+          height={40}
           animation="wave"
           sx={{ borderRadius: 2 }}
         />
-        <Box sx={{ flex: 1 }}>
-          <Skeleton variant="text" width="70%" height={16} animation="wave" />
-          <Skeleton variant="text" width="50%" height={compact ? 28 : 36} sx={{ mt: 0.5 }} animation="wave" />
+
+        {/* Value and title */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Skeleton
+            variant="text"
+            width="60%"
+            height={36}
+            animation="wave"
+          />
+          <Skeleton
+            variant="text"
+            width="80%"
+            height={18}
+            sx={{ mt: 0.5 }}
+            animation="wave"
+          />
         </Box>
-      </Box>
-      {!compact && (
-        <Box sx={{ mt: 'auto', pt: 1.5 }}>
-          <Skeleton variant="text" width="40%" height={14} animation="wave" />
+
+        {/* Trend */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Skeleton
+            variant="rounded"
+            width={52}
+            height={22}
+            animation="wave"
+            sx={{ borderRadius: 1 }}
+          />
+          <Skeleton
+            variant="text"
+            width={70}
+            height={16}
+            animation="wave"
+          />
         </Box>
-      )}
+      </Stack>
     </Paper>
   );
 };
@@ -70,12 +101,16 @@ export const ChartCardSkeleton = ({ height = 240, type = 'bar' }: ChartCardSkele
 
   return (
     <Paper
+      elevation={0}
       sx={{
         p: 3,
         height: '100%',
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: auraTokens.borderRadius.lg,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: glassTokens.shadow.subtle,
         '&::before': {
           content: '""',
           position: 'absolute',

@@ -23,16 +23,6 @@ import {
   Star as StarIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
 import { useAuthUser } from "../stores/authStore";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import dashboardApi from "../services/dashboardApi";
@@ -43,6 +33,7 @@ import {
   AppointmentTrendCard,
   PromCompletionCard,
   TopDiagnosesCard,
+  AppointmentDonutChart,
 } from "../features/analytics";
 import type {
   AppointmentTrendDatum,
@@ -53,16 +44,16 @@ import {
   AuraButton,
   AuraEmptyState,
   SkeletonLoader,
-  AuraStatCard,
+  AuraGlassStatCard,
   StatCardSkeleton,
   GreetingCard,
   InfoCard,
-  AuraChartCard,
   auraColors,
   DashboardMenu,
   CardHeaderAction,
   SelectField,
   ConfirmDialog,
+  ChartCardSkeleton,
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -275,7 +266,7 @@ const Dashboard: React.FC = () => {
       </Box>
 
       {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mt: 3 }}>
+      <Grid container spacing={2.5} sx={{ mt: 3 }}>
         {isStatsLoading
           ? Array.from({ length: 6 }).map((_, i) => (
               <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 4, xl: 2 }}>
@@ -301,11 +292,11 @@ const Dashboard: React.FC = () => {
                     },
                   }}
                 >
-                  <AuraStatCard
+                  <AuraGlassStatCard
                     title={stat.title}
                     value={stat.value}
                     icon={stat.icon}
-                    iconColor={stat.avatarColor}
+                    color={stat.avatarColor}
                     trend={stat.trend}
                   />
                 </Box>
@@ -517,37 +508,27 @@ const Dashboard: React.FC = () => {
           />
         </Grid>
 
-        {/* Weekly Activity Heatmap */}
-        <Grid size={12}>
-          <AuraChartCard title="Weekly Activity Overview">
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart
-                data={
-                  appointmentTrends.length > 0
-                    ? appointmentTrends
-                    : [{ name: "No Data", appointments: 0, completed: 0 }]
-                }
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="appointments"
-                  stroke="var(--qivr-palette-primary-main)"
-                  strokeWidth={2}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="completed"
-                  stroke="var(--qivr-palette-success-main)"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </AuraChartCard>
+        {/* Today's Appointment Status */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          {isStatsLoading ? (
+            <ChartCardSkeleton />
+          ) : (
+            <AppointmentDonutChart
+              title="Today's Appointment Status"
+              data={{
+                completed: derivedStats.completedToday,
+                cancelled: dashboardMetrics?.cancelledToday || 0,
+                noShow: dashboardMetrics?.noShowToday || 0,
+                pending: Math.max(
+                  0,
+                  derivedStats.todayAppointments -
+                    derivedStats.completedToday -
+                    (dashboardMetrics?.cancelledToday || 0) -
+                    (dashboardMetrics?.noShowToday || 0)
+                ),
+              }}
+            />
+          )}
         </Grid>
       </Grid>
 
