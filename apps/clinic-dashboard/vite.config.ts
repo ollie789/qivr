@@ -9,6 +9,7 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, '../shared')
     }
   },
+  assetsInclude: ['**/*.glb', '**/*.gltf'],
   server: {
     port: 3010,
     host: true,

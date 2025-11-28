@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useGLTF } from '@react-three/drei';
 import {
   Box,
   Paper,
@@ -15,6 +15,9 @@ import {
 } from '@mui/material';
 import * as THREE from 'three';
 import { auraColors, glassTokens } from '@qivr/design-system';
+
+// Import the body model from public folder
+const bodyModelUrl = '/models/body-model.glb';
 
 interface PainPoint3D {
   x: number;
@@ -115,7 +118,49 @@ const aggregatePainData = (painPoints: PainPoint3D[]): RegionHeatData[] => {
   });
 };
 
-// Individual body region mesh
+// Body Model from GLB
+function BodyModel({ regionData }: { regionData: Map<string, number> }) {
+  const { scene } = useGLTF(bodyModelUrl);
+  const modelRef = useRef<THREE.Group>(null);
+
+  useEffect(() => {
+    if (!modelRef.current) return;
+
+    // Traverse the model and apply heat colors to meshes based on region data
+    modelRef.current.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const meshName = child.name;
+        const intensity = regionData.get(meshName) || 0;
+        
+        if (intensity > 0) {
+          const color = getIntensityColorThree(intensity);
+          const material = child.material as THREE.MeshStandardMaterial;
+          
+          if (material) {
+            material.color = new THREE.Color(color);
+            material.emissive = new THREE.Color(color);
+            material.emissiveIntensity = 0.2 + (intensity / 10) * 0.4;
+            material.transparent = true;
+            material.opacity = 0.5 + (intensity / 10) * 0.4;
+          }
+        } else {
+          // Default appearance for unaffected regions
+          const material = child.material as THREE.MeshStandardMaterial;
+          if (material) {
+            material.color = new THREE.Color(0xe2e8f0);
+            material.transparent = true;
+            material.opacity = 0.25;
+            material.emissiveIntensity = 0;
+          }
+        }
+      }
+    });
+  }, [regionData, scene]);
+
+  return <primitive ref={modelRef} object={scene.clone()} scale={1} position={[0, 0, 0]} />;
+}
+
+// Individual body region mesh (fallback for when GLB not available)
 function BodyRegionMesh({
   region,
   intensity,
@@ -206,22 +251,9 @@ function HeatmapBody({ regionData }: { regionData: RegionHeatData[] }) {
     return map;
   }, [regionData]);
 
-  const regions = Object.keys(BODY_REGION_CONFIG);
-
   return (
     <group>
-      {regions.map((region) => {
-        const intensity = regionMap.get(region) || 0;
-        const isAffected = regionMap.has(region);
-        return (
-          <BodyRegionMesh
-            key={region}
-            region={region}
-            intensity={intensity}
-            isAffected={isAffected}
-          />
-        );
-      })}
+      <BodyModel regionData={regionMap} />
     </group>
   );
 }
