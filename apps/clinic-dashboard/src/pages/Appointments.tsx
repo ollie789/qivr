@@ -1,17 +1,12 @@
-import { auraTokens } from "@qivr/design-system";
+import { auraTokens, PageHeader, AuraButton, FormDialog } from "@qivr/design-system";
 import { useState } from "react";
 import {
   Box,
   Typography,
-  Button,
   Stack,
   Chip,
   IconButton,
   TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Divider,
   Avatar,
   Paper,
@@ -166,29 +161,30 @@ export default function Appointments() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          Appointments
-        </Typography>
-        <Button variant="contained" startIcon={<AddIcon />}>
-          New Appointment
-        </Button>
-      </Stack>
+    <Box>
+      <PageHeader
+        title="Appointments"
+        description="Manage your clinic appointments"
+        actions={
+          <AuraButton variant="contained" startIcon={<AddIcon />}>
+            New Appointment
+          </AuraButton>
+        }
+      />
 
       <Box sx={{ display: "flex", gap: 3 }}>
         {/* Calendar */}
         <Paper sx={{ p: 3, flex: 1, borderRadius: 3 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-            <Button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
+            <AuraButton onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
               Previous
-            </Button>
+            </AuraButton>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               {format(currentDate, "MMMM yyyy")}
             </Typography>
-            <Button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}>
+            <AuraButton onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}>
               Next
-            </Button>
+            </AuraButton>
           </Stack>
 
           {/* Calendar Grid */}
@@ -366,128 +362,130 @@ export default function Appointments() {
       </Box>
 
       {/* Session Notes Dialog */}
-      <Dialog open={notesDialogOpen} onClose={() => setNotesDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Session Notes - {selectedAppointment?.patientName}
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                {selectedAppointment && format(parseISO(selectedAppointment.scheduledStart), "EEEE, MMMM d, yyyy 'at' h:mm a")}
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {selectedAppointment?.appointmentType}
-              </Typography>
-            </Box>
-            
-            <Divider />
-            
-            {/* Treatment Modalities */}
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Treatment Modalities Used
-              </Typography>
-              <FormGroup row>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={modalities.manualTherapy}
-                      onChange={(e) => setModalities({ ...modalities, manualTherapy: e.target.checked })}
-                    />
-                  }
-                  label="Manual Therapy"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={modalities.exerciseTherapy}
-                      onChange={(e) => setModalities({ ...modalities, exerciseTherapy: e.target.checked })}
-                    />
-                  }
-                  label="Exercise Therapy"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={modalities.modalities}
-                      onChange={(e) => setModalities({ ...modalities, modalities: e.target.checked })}
-                    />
-                  }
-                  label="Modalities"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={modalities.education}
-                      onChange={(e) => setModalities({ ...modalities, education: e.target.checked })}
-                    />
-                  }
-                  label="Education"
-                />
-              </FormGroup>
-            </Box>
+      <FormDialog
+        open={notesDialogOpen}
+        onClose={() => setNotesDialogOpen(false)}
+        title={`Session Notes - ${selectedAppointment?.patientName}`}
+        maxWidth="md"
+        actions={
+          <>
+            <AuraButton onClick={() => setNotesDialogOpen(false)}>Cancel</AuraButton>
+            <AuraButton onClick={handleSaveNotes} variant="contained">
+              Save Notes
+            </AuraButton>
+            {selectedAppointment?.status !== "completed" && (
+              <AuraButton
+                onClick={() => handleCompleteAppointment(selectedAppointment?.id)}
+                variant="contained"
+                color="success"
+              >
+                Complete & Save
+              </AuraButton>
+            )}
+          </>
+        }
+      >
+        <Stack spacing={3} sx={{ mt: 1 }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              {selectedAppointment && format(parseISO(selectedAppointment.scheduledStart), "EEEE, MMMM d, yyyy 'at' h:mm a")}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              {selectedAppointment?.appointmentType}
+            </Typography>
+          </Box>
 
-            {/* Pain Level */}
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Pain Level During Session
-              </Typography>
-              <Slider
-                value={painLevel}
-                onChange={(_, value) => setPainLevel(value as number)}
-                min={0}
-                max={10}
-                marks
-                valueLabelDisplay="on"
+          <Divider />
+
+          {/* Treatment Modalities */}
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Treatment Modalities Used
+            </Typography>
+            <FormGroup row>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={modalities.manualTherapy}
+                    onChange={(e) => setModalities({ ...modalities, manualTherapy: e.target.checked })}
+                  />
+                }
+                label="Manual Therapy"
               />
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="caption">No Pain</Typography>
-                <Typography variant="caption">Worst Pain</Typography>
-              </Stack>
-            </Box>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={modalities.exerciseTherapy}
+                    onChange={(e) => setModalities({ ...modalities, exerciseTherapy: e.target.checked })}
+                  />
+                }
+                label="Exercise Therapy"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={modalities.modalities}
+                    onChange={(e) => setModalities({ ...modalities, modalities: e.target.checked })}
+                  />
+                }
+                label="Modalities"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={modalities.education}
+                    onChange={(e) => setModalities({ ...modalities, education: e.target.checked })}
+                  />
+                }
+                label="Education"
+              />
+            </FormGroup>
+          </Box>
 
-            <Divider />
-            
-            {/* Session Notes */}
-            <TextField
-              label="Session Notes"
-              multiline
-              rows={8}
-              value={sessionNotes}
-              onChange={(e) => setSessionNotes(e.target.value)}
-              placeholder="Document patient progress, treatment provided, observations, and next steps..."
-              fullWidth
+          {/* Pain Level */}
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Pain Level During Session
+            </Typography>
+            <Slider
+              value={painLevel}
+              onChange={(_, value) => setPainLevel(value as number)}
+              min={0}
+              max={10}
+              marks
+              valueLabelDisplay="on"
             />
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption">No Pain</Typography>
+              <Typography variant="caption">Worst Pain</Typography>
+            </Stack>
+          </Box>
 
-            {/* PROM Assignment */}
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={assignPROM}
-                  onChange={(e) => setAssignPROM(e.target.checked)}
-                />
-              }
-              label="Assign PROM for next visit"
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNotesDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveNotes} variant="contained">
-            Save Notes
-          </Button>
-          {selectedAppointment?.status !== "completed" && (
-            <Button 
-              onClick={() => handleCompleteAppointment(selectedAppointment?.id)} 
-              variant="contained" 
-              color="success"
-            >
-              Complete & Save
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+          <Divider />
+
+          {/* Session Notes */}
+          <TextField
+            label="Session Notes"
+            multiline
+            rows={8}
+            value={sessionNotes}
+            onChange={(e) => setSessionNotes(e.target.value)}
+            placeholder="Document patient progress, treatment provided, observations, and next steps..."
+            fullWidth
+          />
+
+          {/* PROM Assignment */}
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={assignPROM}
+                onChange={(e) => setAssignPROM(e.target.checked)}
+              />
+            }
+            label="Assign PROM for next visit"
+          />
+        </Stack>
+      </FormDialog>
     </Box>
   );
 }

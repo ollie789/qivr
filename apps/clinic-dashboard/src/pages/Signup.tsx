@@ -1,17 +1,20 @@
-import { PasswordTextField, LoadingButton, auraTokens } from "@qivr/design-system";
 import React, { useState } from "react";
 import {
   Box,
   TextField,
   Typography,
-  Alert,
-  Grid,
-  Container,
   Stack,
-  Divider,
+  Link as MuiLink,
 } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api-client";
+import {
+  AuthLayout,
+  PasswordTextField,
+  LoadingButton,
+  Callout,
+} from "@qivr/design-system";
 
 interface SignupData {
   email: string;
@@ -79,7 +82,8 @@ const Signup: React.FC = () => {
       if (errorMessage.includes("already exists")) {
         errorMessage = "An account with this email already exists.";
       } else if (errorMessage.includes("password")) {
-        errorMessage = "Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters.";
+        errorMessage =
+          "Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters.";
       }
 
       setError(errorMessage);
@@ -88,17 +92,37 @@ const Signup: React.FC = () => {
     }
   };
 
+  const footer = (
+    <Typography variant="body2" color="text.secondary" textAlign="center">
+      <MuiLink
+        component={Link}
+        to="/login"
+        sx={{ color: "primary.main", textDecoration: "none" }}
+      >
+        Back to login
+      </MuiLink>
+    </Typography>
+  );
+
   return (
-    <Container maxWidth="sm">
+    <AuthLayout appName="Qivr" tagline="Clinic Management Portal">
       <Stack
+        direction="column"
         sx={{
-          minHeight: "100vh",
+          height: "100%",
           alignItems: "center",
           justifyContent: "center",
-          py: 4,
+          py: { xs: 4, md: 10 },
+          px: { xs: 3, sm: 5 },
         }}
       >
-        <Grid container sx={{ maxWidth: "28rem", rowGap: 3 }}>
+        <Grid
+          container
+          sx={{
+            maxWidth: "28rem",
+            rowGap: 3,
+          }}
+        >
           {/* Header */}
           <Grid size={12}>
             <Stack
@@ -113,15 +137,23 @@ const Signup: React.FC = () => {
                 <Typography variant="h4" fontWeight={600}>
                   Sign up
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
+                >
                   Create your Qivr account
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Already have an account?{" "}
-                <Link to="/login" style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none" }}>
+                <MuiLink
+                  component={Link}
+                  to="/login"
+                  sx={{ color: "primary.main", textDecoration: "none" }}
+                >
                   Log in
-                </Link>
+                </MuiLink>
               </Typography>
             </Stack>
           </Grid>
@@ -130,9 +162,9 @@ const Signup: React.FC = () => {
           <Grid size={12}>
             <Box component="form" onSubmit={handleSubmit}>
               {error && (
-                <Alert severity="error" sx={{ mb: 3, borderRadius: auraTokens.borderRadius.sm }}>
-                  {error}
-                </Alert>
+                <Box sx={{ mb: 3 }}>
+                  <Callout variant="error">{error}</Callout>
+                </Box>
               )}
 
               <Stack spacing={3}>
@@ -143,6 +175,7 @@ const Signup: React.FC = () => {
                     value={formData.firstName}
                     onChange={handleChange("firstName")}
                     required
+                    autoFocus
                   />
                   <TextField
                     fullWidth
@@ -187,13 +220,7 @@ const Signup: React.FC = () => {
                   size="large"
                   loading={loading}
                   loadingText="Creating account..."
-                  sx={{
-                    py: 1.5,
-                    bgcolor: "primary.main",
-                    "&:hover": {
-                      bgcolor: "primary.dark",
-                    },
-                  }}
+                  sx={{ py: 1.5 }}
                 >
                   Create Account
                 </LoadingButton>
@@ -201,25 +228,11 @@ const Signup: React.FC = () => {
             </Box>
           </Grid>
 
-          {/* Divider */}
-          <Grid size={12}>
-            <Divider sx={{ color: "text.secondary" }}>or</Divider>
-          </Grid>
-
           {/* Footer */}
-          <Grid size={12}>
-            <Typography variant="body2" color="text.secondary" textAlign="center">
-              <Link
-                to="/login"
-                style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none" }}
-              >
-                Back to login
-              </Link>
-            </Typography>
-          </Grid>
+          <Grid size={12}>{footer}</Grid>
         </Grid>
       </Stack>
-    </Container>
+    </AuthLayout>
   );
 };
 

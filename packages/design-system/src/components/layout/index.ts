@@ -4,3 +4,4 @@ export * from './TabPanel';
 export * from './Stack';
 export * from './Container';
 export * from './Section';
+export * from './AuthLayout';

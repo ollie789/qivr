@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Grid,
   TextField,
   Switch,
-  Button,
   List,
   ListItem,
   ListItemIcon,
@@ -15,14 +12,9 @@ import {
   ListItemSecondaryAction,
   Avatar,
   Paper,
-  FormControl,
   FormControlLabel,
-  InputLabel,
-  Select,
-  MenuItem,
   Tabs,
   Tab,
-  Alert,
   Chip,
   IconButton,
   Table,
@@ -57,7 +49,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
-import { CopyButton } from "@qivr/design-system";
+import { CopyButton, Callout, AuraCard } from "@qivr/design-system";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useAuthGuard } from "../hooks/useAuthGuard";
@@ -75,6 +67,8 @@ import {
   FormDialog,
   AuraButton,
   AuraEmptyState,
+  NumberTextField,
+  SelectField,
 } from "@qivr/design-system";
 
 interface ClinicSettings {
@@ -656,29 +650,26 @@ export default function Settings() {
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth disabled={!editMode}>
-                  <InputLabel>Timezone</InputLabel>
-                  <Select
-                    value={settings.clinic.timezone}
-                    label="Timezone"
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        clinic: {
-                          ...settings.clinic,
-                          timezone: e.target.value,
-                        },
-                      })
-                    }
-                  >
-                    <MenuItem value="America/New_York">Eastern Time</MenuItem>
-                    <MenuItem value="America/Chicago">Central Time</MenuItem>
-                    <MenuItem value="America/Denver">Mountain Time</MenuItem>
-                    <MenuItem value="America/Los_Angeles">
-                      Pacific Time
-                    </MenuItem>
-                  </Select>
-                </FormControl>
+                <SelectField
+                  label="Timezone"
+                  value={settings.clinic.timezone}
+                  disabled={!editMode}
+                  onChange={(value) =>
+                    setSettings({
+                      ...settings,
+                      clinic: {
+                        ...settings.clinic,
+                        timezone: value,
+                      },
+                    })
+                  }
+                  options={[
+                    { value: "America/New_York", label: "Eastern Time" },
+                    { value: "America/Chicago", label: "Central Time" },
+                    { value: "America/Denver", label: "Mountain Time" },
+                    { value: "America/Los_Angeles", label: "Pacific Time" },
+                  ]}
+                />
               </Grid>
             </Grid>
           </Box>
@@ -697,36 +688,36 @@ export default function Settings() {
             >
               <Typography variant="h6">Operations Settings</Typography>
               {!editMode ? (
-                <Button
+                <AuraButton
                   startIcon={<EditIcon />}
                   onClick={() => setEditMode(true)}
                 >
                   Edit
-                </Button>
+                </AuraButton>
               ) : (
                 <Box>
-                  <Button
+                  <AuraButton
                     startIcon={<CancelIcon />}
                     onClick={() => setEditMode(false)}
                     sx={{ mr: 1 }}
                   >
                     Cancel
-                  </Button>
-                  <Button
+                  </AuraButton>
+                  <AuraButton
                     variant="contained"
                     startIcon={<SaveIcon />}
                     onClick={handleSaveSettings}
                   >
                     Save Changes
-                  </Button>
+                  </AuraButton>
                 </Box>
               )}
             </Box>
 
             <Grid container spacing={3}>
               <Grid size={12}>
-                <Card>
-                  <CardContent>
+                <AuraCard>
+                  <>
                     <Typography variant="h6" gutterBottom>
                       Operating Hours
                     </Typography>
@@ -824,21 +815,20 @@ export default function Settings() {
                         </Box>
                       ),
                     )}
-                  </CardContent>
-                </Card>
+                  </>
+                </AuraCard>
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
-                <Card>
-                  <CardContent>
+                <AuraCard>
+                  <>
                     <Typography variant="h6" gutterBottom>
                       Appointment Settings
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid size={12}>
-                        <TextField
+                        <NumberTextField
                           label="Default Appointment Duration (minutes)"
-                          type="number"
                           fullWidth
                           value={settings.operations.appointmentDuration}
                           onChange={(e) =>
@@ -855,9 +845,8 @@ export default function Settings() {
                         />
                       </Grid>
                       <Grid size={12}>
-                        <TextField
+                        <NumberTextField
                           label="Buffer Time Between Appointments (minutes)"
-                          type="number"
                           fullWidth
                           value={settings.operations.bufferTime}
                           onChange={(e) =>
@@ -873,9 +862,8 @@ export default function Settings() {
                         />
                       </Grid>
                       <Grid size={12}>
-                        <TextField
+                        <NumberTextField
                           label="Maximum Advance Booking (days)"
-                          type="number"
                           fullWidth
                           value={settings.operations.maxAdvanceBooking}
                           onChange={(e) =>
@@ -892,13 +880,13 @@ export default function Settings() {
                         />
                       </Grid>
                     </Grid>
-                  </CardContent>
-                </Card>
+                  </>
+                </AuraCard>
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
-                <Card>
-                  <CardContent>
+                <AuraCard>
+                  <>
                     <Typography variant="h6" gutterBottom>
                       Booking Policies
                     </Typography>
@@ -949,9 +937,8 @@ export default function Settings() {
                       </ListItem>
                     </List>
                     {settings.operations.sendReminders && (
-                      <TextField
+                      <NumberTextField
                         label="Reminder Time (hours before appointment)"
-                        type="number"
                         fullWidth
                         value={settings.operations.reminderTiming}
                         onChange={(e) =>
@@ -967,8 +954,8 @@ export default function Settings() {
                         sx={{ mt: 2 }}
                       />
                     )}
-                  </CardContent>
-                </Card>
+                  </>
+                </AuraCard>
               </Grid>
             </Grid>
           </Box>
@@ -983,13 +970,13 @@ export default function Settings() {
               mb={3}
             >
               <Typography variant="h6">Provider Management</Typography>
-              <Button
+              <AuraButton
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setAddProviderDialog(true)}
               >
                 Add Provider
-              </Button>
+              </AuraButton>
             </Box>
 
             <TableContainer component={Paper}>
@@ -1077,8 +1064,8 @@ export default function Settings() {
             <Typography variant="h6" gutterBottom>
               Notification Settings
             </Typography>
-            <Card>
-              <CardContent>
+            <AuraCard>
+              <>
                 <List>
                   <ListItem>
                     <ListItemIcon>
@@ -1129,8 +1116,8 @@ export default function Settings() {
                     </ListItemSecondaryAction>
                   </ListItem>
                 </List>
-              </CardContent>
-            </Card>
+              </>
+            </AuraCard>
           </Box>
         </DesignTabPanel>
 
@@ -1139,9 +1126,9 @@ export default function Settings() {
             <Typography variant="h6" gutterBottom>
               Billing & Payment Settings
             </Typography>
-            <Alert severity="info" sx={{ mb: 2 }}>
+            <Callout variant="info">
               Configure billing rates, payment methods, and insurance providers
-            </Alert>
+            </Callout>
           </Box>
         </DesignTabPanel>
 
@@ -1155,8 +1142,8 @@ export default function Settings() {
                 <TenantInfo />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Card>
-                  <CardContent>
+                <AuraCard>
+                  <>
                     <Box
                       display="flex"
                       alignItems="center"
@@ -1218,15 +1205,15 @@ export default function Settings() {
                         }}
                       />
                     </Box>
-                    <Button
+                    <AuraButton
                       startIcon={<RefreshIcon />}
                       sx={{ mt: 2 }}
                       onClick={() => setNewApiKeyDialog(true)}
                     >
                       Generate New Key
-                    </Button>
-                  </CardContent>
-                </Card>
+                    </AuraButton>
+                  </>
+                </AuraCard>
               </Grid>
             </Grid>
           </Box>
@@ -1237,8 +1224,8 @@ export default function Settings() {
             <Typography variant="h6" gutterBottom>
               Security Settings
             </Typography>
-            <Card>
-              <CardContent>
+            <AuraCard>
+              <>
                 <List>
                   <ListItem>
                     <ListItemIcon>
@@ -1282,8 +1269,8 @@ export default function Settings() {
                     />
                   </ListItem>
                 </List>
-              </CardContent>
-            </Card>
+              </>
+            </AuraCard>
           </Box>
         </DesignTabPanel>
       </Paper>
@@ -1368,46 +1355,42 @@ export default function Settings() {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth>
-              <InputLabel>Specialization</InputLabel>
-              <Select
-                label="Specialization"
-                value={providerForm.specialization}
-                onChange={(e) =>
-                  setProviderForm({
-                    ...providerForm,
-                    specialization: e.target.value,
-                  })
-                }
-              >
-                <MenuItem value="General Practice">General Practice</MenuItem>
-                <MenuItem value="Cardiology">Cardiology</MenuItem>
-                <MenuItem value="Pediatrics">Pediatrics</MenuItem>
-                <MenuItem value="Orthopedics">Orthopedics</MenuItem>
-                <MenuItem value="Dermatology">Dermatology</MenuItem>
-              </Select>
-            </FormControl>
+            <SelectField
+              label="Specialization"
+              value={providerForm.specialization}
+              onChange={(value) =>
+                setProviderForm({
+                  ...providerForm,
+                  specialization: value,
+                })
+              }
+              options={[
+                { value: "General Practice", label: "General Practice" },
+                { value: "Cardiology", label: "Cardiology" },
+                { value: "Pediatrics", label: "Pediatrics" },
+                { value: "Orthopedics", label: "Orthopedics" },
+                { value: "Dermatology", label: "Dermatology" },
+              ]}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth>
-              <InputLabel>Department</InputLabel>
-              <Select
-                label="Department"
-                value={providerForm.department}
-                onChange={(e) =>
-                  setProviderForm({
-                    ...providerForm,
-                    department: e.target.value,
-                  })
-                }
-              >
-                <MenuItem value="Primary Care">Primary Care</MenuItem>
-                <MenuItem value="Cardiology">Cardiology</MenuItem>
-                <MenuItem value="Pediatrics">Pediatrics</MenuItem>
-                <MenuItem value="Orthopedics">Orthopedics</MenuItem>
-                <MenuItem value="Administration">Administration</MenuItem>
-              </Select>
-            </FormControl>
+            <SelectField
+              label="Department"
+              value={providerForm.department}
+              onChange={(value) =>
+                setProviderForm({
+                  ...providerForm,
+                  department: value,
+                })
+              }
+              options={[
+                { value: "Primary Care", label: "Primary Care" },
+                { value: "Cardiology", label: "Cardiology" },
+                { value: "Pediatrics", label: "Pediatrics" },
+                { value: "Orthopedics", label: "Orthopedics" },
+                { value: "Administration", label: "Administration" },
+              ]}
+            />
           </Grid>
         </Grid>
       </FormDialog>

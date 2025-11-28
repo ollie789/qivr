@@ -1,9 +1,9 @@
 import React from "react";
-import { Box, Typography, Paper, Grid, Alert } from "@mui/material";
+import { Box, Typography, Paper, Grid } from "@mui/material";
 import { TrendingDown as TrendingDownIcon } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { LineChart } from "@mui/x-charts/LineChart";
-import { auraColors } from "@qivr/design-system";
+import { auraColors, Callout } from "@qivr/design-system";
 import { PainMap3DViewer } from "@qivr/design-system";
 import apiClient from "../lib/api-client";
 
@@ -30,9 +30,9 @@ export const PainProgressionChart: React.FC<PainProgressionChartProps> = ({
 
   if (!progression) {
     return (
-      <Alert severity="info">
+      <Callout variant="info">
         No pain progression data available yet.
-      </Alert>
+      </Callout>
     );
   }
 
@@ -105,9 +105,9 @@ export const PainProgressionChart: React.FC<PainProgressionChartProps> = ({
 
       {/* Improvement alert */}
       {improvement > 0 && (
-        <Alert severity="success" icon={<TrendingDownIcon />} sx={{ mb: 3 }}>
+        <Callout variant="success" icon={<TrendingDownIcon />}>
           {improvement}% improvement from baseline
-        </Alert>
+        </Callout>
       )}
 
       {/* Trend graph */}

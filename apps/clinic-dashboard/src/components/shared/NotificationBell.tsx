@@ -4,7 +4,6 @@ import {
   Menu,
   Box,
   Divider,
-  Button,
   Typography,
 } from '@mui/material';
 import {
@@ -17,7 +16,7 @@ import {
   notificationsApi,
   type NotificationListItem,
 } from '../../services/notificationsApi';
-import { EmptyState, LoadingSpinner, CountBadge } from '@qivr/design-system';
+import { AuraEmptyState, LoadingSpinner, CountBadge, AuraButton } from '@qivr/design-system';
 
 // Adapter to convert API notification to Aura Notification type
 // Placeholder until Aura notifications are available in design-system exports
@@ -142,12 +141,12 @@ const NotificationBell: React.FC = () => {
                 <RefreshIcon fontSize="small" />
               </IconButton>
               {unreadCount > 0 && (
-                <Button
+                <AuraButton
                   size="small"
                   onClick={() => markAllAsReadMutation.mutate()}
                 >
                   Mark all read
-                </Button>
+                </AuraButton>
               )}
             </Box>
           </Box>
@@ -161,7 +160,7 @@ const NotificationBell: React.FC = () => {
           </Box>
         ) : notifications.length === 0 ? (
           <Box sx={{ p: 3 }}>
-            <EmptyState
+            <AuraEmptyState
               icon={<NotificationIcon />}
               title="No notifications"
             />
@@ -181,7 +180,7 @@ const NotificationBell: React.FC = () => {
           <>
             <Divider />
             <Box sx={{ p: 1 }}>
-              <Button
+              <AuraButton
                 fullWidth
                 size="small"
                 onClick={() => {
@@ -190,7 +189,7 @@ const NotificationBell: React.FC = () => {
                 }}
               >
                 View all notifications
-              </Button>
+              </AuraButton>
             </Box>
           </>
         )}

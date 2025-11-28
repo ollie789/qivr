@@ -1,15 +1,13 @@
 import React, { useState } from "react";
-import { LoadingSpinner } from "@qivr/design-system";
+import { LoadingSpinner, Callout, AuraButton } from "@qivr/design-system";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Container,
   Paper,
   Box,
   TextField,
-  Button,
   Typography,
-  Alert,
-  
+
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -136,19 +134,15 @@ export const ConfirmEmail: React.FC = () => {
           </Box>
 
           {error && (
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              onClose={() => setError(null)}
-            >
+            <Callout variant="error">
               {error}
-            </Alert>
+            </Callout>
           )}
 
           {(success || initialMessage) && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Callout variant="success">
               {success || initialMessage}
-            </Alert>
+            </Callout>
           )}
 
           <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -186,7 +180,7 @@ export const ConfirmEmail: React.FC = () => {
               {...register("code")}
             />
 
-            <Button
+            <AuraButton
               type="submit"
               fullWidth
               variant="contained"
@@ -194,9 +188,9 @@ export const ConfirmEmail: React.FC = () => {
               disabled={isLoading}
             >
               {isLoading ? <LoadingSpinner size={24} /> : "Verify Email"}
-            </Button>
+            </AuraButton>
 
-            <Button
+            <AuraButton
               fullWidth
               variant="outlined"
               onClick={handleResendCode}
@@ -204,14 +198,14 @@ export const ConfirmEmail: React.FC = () => {
               sx={{ mb: 2 }}
             >
               {isResending ? <LoadingSpinner size={24} /> : "Resend Code"}
-            </Button>
+            </AuraButton>
 
             <Box sx={{ textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
                 Already verified?{" "}
-                <Button size="small" onClick={() => navigate("/login")}>
+                <AuraButton size="small" onClick={() => navigate("/login")}>
                   Back to Login
-                </Button>
+                </AuraButton>
               </Typography>
             </Box>
           </Box>

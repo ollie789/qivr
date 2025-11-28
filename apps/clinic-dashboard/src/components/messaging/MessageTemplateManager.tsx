@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Button,
   Chip,
   Dialog,
   DialogActions,
@@ -29,7 +28,7 @@ import type {
   MessageTemplateChannel,
   UpsertMessageTemplateInput,
 } from '../../services/messageTemplatesApi';
-import { EmptyState } from '@qivr/design-system';
+import { AuraEmptyState, AuraButton, FormSection } from '@qivr/design-system';
 
 interface MessageTemplateManagerProps {
   open: boolean;
@@ -217,7 +216,7 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
           <Box sx={{ width: { xs: '100%', md: 280 } }}>
             <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-              <Button
+              <AuraButton
                 variant="outlined"
                 startIcon={<AddIcon />}
                 onClick={handleCreateNew}
@@ -225,11 +224,11 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
                 disabled={loading}
               >
                 New Template
-              </Button>
+              </AuraButton>
             </Stack>
             <List dense sx={{ maxHeight: 320, overflowY: 'auto', border: theme => `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
               {templates.length === 0 ? (
-                <EmptyState
+                <AuraEmptyState
                   title="No templates"
                   description="Create one to get started."
                 />
@@ -276,71 +275,81 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
           <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
 
           <Box sx={{ flex: 1 }}>
-            <Stack spacing={2}>
-              <TextField
-                label="Template Name"
-                value={form.name}
-                onChange={(event) => handleFieldChange('name', event.target.value)}
-                required
-                fullWidth
-              />
-              <FormControl fullWidth>
-                <InputLabel id="message-template-channel-label">Channel</InputLabel>
-                <Select
-                  labelId="message-template-channel-label"
-                  label="Channel"
-                  value={form.channel}
-                  onChange={(event) => handleFieldChange('channel', event.target.value as MessageTemplateChannel)}
-                >
-                  <MenuItem value="sms">SMS</MenuItem>
-                  <MenuItem value="email">Email</MenuItem>
-                  <MenuItem value="both">SMS + Email</MenuItem>
-                </Select>
-              </FormControl>
-              {(form.channel === 'email' || form.channel === 'both') && (
+            <FormSection
+              title="Template Details"
+              description="Configure the template name, channel, and content"
+            >
+              <Stack spacing={2}>
                 <TextField
-                  label="Subject"
-                  value={form.subject}
-                  onChange={(event) => handleFieldChange('subject', event.target.value)}
+                  label="Template Name"
+                  value={form.name}
+                  onChange={(event) => handleFieldChange('name', event.target.value)}
                   required
                   fullWidth
                 />
-              )}
-              <TextField
-                label="Description"
-                value={form.description}
-                onChange={(event) => handleFieldChange('description', event.target.value)}
-                fullWidth
-              />
-              <TextField
-                label="Content"
-                value={form.content}
-                onChange={(event) => handleFieldChange('content', event.target.value)}
-                multiline
-                minRows={6}
-                fullWidth
-                helperText="Use {{variable}} syntax for placeholders (for example, {{name}} or {{date}})."
-              />
-              {derivedVariables.length > 0 && (
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {derivedVariables.map(variable => (
-                    <Chip key={variable} label={variable} size="small" />
-                  ))}
-                </Stack>
-              )}
-            </Stack>
+                <FormControl fullWidth>
+                  <InputLabel id="message-template-channel-label">Channel</InputLabel>
+                  <Select
+                    labelId="message-template-channel-label"
+                    label="Channel"
+                    value={form.channel}
+                    onChange={(event) => handleFieldChange('channel', event.target.value as MessageTemplateChannel)}
+                  >
+                    <MenuItem value="sms">SMS</MenuItem>
+                    <MenuItem value="email">Email</MenuItem>
+                    <MenuItem value="both">SMS + Email</MenuItem>
+                  </Select>
+                </FormControl>
+                {(form.channel === 'email' || form.channel === 'both') && (
+                  <TextField
+                    label="Subject"
+                    value={form.subject}
+                    onChange={(event) => handleFieldChange('subject', event.target.value)}
+                    required
+                    fullWidth
+                  />
+                )}
+                <TextField
+                  label="Description"
+                  value={form.description}
+                  onChange={(event) => handleFieldChange('description', event.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  label="Content"
+                  value={form.content}
+                  onChange={(event) => handleFieldChange('content', event.target.value)}
+                  multiline
+                  minRows={6}
+                  fullWidth
+                  helperText="Use {{variable}} syntax for placeholders (for example, {{name}} or {{date}})."
+                />
+                {derivedVariables.length > 0 && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                      Detected Variables
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                      {derivedVariables.map(variable => (
+                        <Chip key={variable} label={variable} size="small" />
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+              </Stack>
+            </FormSection>
           </Box>
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-        <Button
+        <AuraButton onClick={onClose}>Close</AuraButton>
+        <AuraButton
           variant="contained"
           onClick={handleSubmit}
           disabled={!canSubmit || isBusy}
         >
           {isExisting ? 'Update' : 'Save'}
-        </Button>
+        </AuraButton>
       </DialogActions>
     </Dialog>
   );

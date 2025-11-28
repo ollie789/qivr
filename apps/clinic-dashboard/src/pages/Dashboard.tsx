@@ -11,9 +11,6 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
-  FormControl,
-  Select,
-  MenuItem,
   IconButton,
 } from "@mui/material";
 import {
@@ -61,8 +58,10 @@ import {
   GreetingCard,
   InfoCard,
   AuraChartCard,
-  HelpTooltip,
   auraColors,
+  DashboardMenu,
+  CardHeaderAction,
+  SelectField,
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -300,7 +299,17 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Upcoming Appointments */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <InfoCard title="Today's Appointments" action={<HelpTooltip title="Shows appointments scheduled for today. Click on a patient to view details." />}>
+          <InfoCard title="Today's Appointments" action={
+                <CardHeaderAction>
+                  <DashboardMenu
+                    menuItems={[
+                      { label: "Refresh", onClick: () => queryClient.invalidateQueries({ queryKey: ["today-appointments"] }) },
+                      { label: "View All", onClick: () => navigate("/appointments") },
+                      { label: "Export", onClick: () => enqueueSnackbar("Export coming soon", { variant: "info" }) },
+                    ]}
+                  />
+                </CardHeaderAction>
+              }>
             <List>
               {appointmentsLoading ? (
                 <SkeletonLoader type="list" count={3} />
@@ -382,7 +391,17 @@ const Dashboard: React.FC = () => {
 
         {/* Recent Intakes */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <InfoCard title="Recent Intake Submissions">
+          <InfoCard title="Recent Intake Submissions" action={
+                <CardHeaderAction>
+                  <DashboardMenu
+                    menuItems={[
+                      { label: "Refresh", onClick: () => queryClient.invalidateQueries({ queryKey: ["recent-activity"] }) },
+                      { label: "View Queue", onClick: () => navigate("/intake") },
+                      { label: "Export", onClick: () => enqueueSnackbar("Export coming soon", { variant: "info" }) },
+                    ]}
+                  />
+                </CardHeaderAction>
+              }>
             <List>
               {activityLoading ? (
                 <SkeletonLoader type="list" count={3} />
@@ -452,16 +471,19 @@ const Dashboard: React.FC = () => {
           <AppointmentTrendCard
             data={appointmentTrends}
             headerAction={
-              <FormControl size="small">
-                <Select
-                  value={chartPeriod}
-                  onChange={(e) => setChartPeriod(e.target.value)}
-                >
-                  <MenuItem value="7d">Last 7 days</MenuItem>
-                  <MenuItem value="30d">Last 30 days</MenuItem>
-                  <MenuItem value="90d">Last 90 days</MenuItem>
-                </Select>
-              </FormControl>
+              <SelectField
+                label=""
+                value={chartPeriod}
+                onChange={setChartPeriod}
+                size="small"
+                fullWidth={false}
+                sx={{ minWidth: 130 }}
+                options={[
+                  { value: "7d", label: "Last 7 days" },
+                  { value: "30d", label: "Last 30 days" },
+                  { value: "90d", label: "Last 90 days" },
+                ]}
+              />
             }
           />
         </Grid>

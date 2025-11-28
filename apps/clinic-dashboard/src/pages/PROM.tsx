@@ -3,23 +3,11 @@ import {
   Box,
   Paper,
   Typography,
-  Button,
   Grid,
-  Card,
-  CardContent,
-  CardActions,
   IconButton,
   Tabs,
   Tab,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -27,7 +15,6 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  Alert,
   Stack,
   Divider,
   Tooltip,
@@ -84,6 +71,13 @@ import {
   InfoCard,
   StatCardSkeleton,
   AuraEmptyState,
+  TableLabelDisplayedRows,
+  Callout,
+  AuraButton,
+  AuraCard,
+  auraColors,
+  FormDialog,
+  FilterToolbar,
 } from "@qivr/design-system";
 
 interface TabPanelProps {
@@ -230,13 +224,13 @@ const PROM: React.FC = () => {
     }
   };
 
-  // Chart data
+  // Chart data - using design system colors
   const statusChartData = [
-    { name: "Completed", value: statistics.completed, color: "#26CD82" }, // Aura green
-    { name: "Pending", value: statistics.pending, color: "#F68D2A" }, // Aura orange
-    { name: "In Progress", value: statistics.inProgress, color: "#3385F0" }, // Aura blue
-    { name: "Expired", value: statistics.expired, color: "#EF4444" }, // Aura red
-    { name: "Cancelled", value: statistics.cancelled, color: "#64748B" }, // Neutral gray
+    { name: "Completed", value: statistics.completed, color: auraColors.green.main },
+    { name: "Pending", value: statistics.pending, color: auraColors.orange.main },
+    { name: "In Progress", value: statistics.inProgress, color: auraColors.blue.main },
+    { name: "Expired", value: statistics.expired, color: auraColors.red.main },
+    { name: "Cancelled", value: statistics.cancelled, color: auraColors.grey[500] },
   ];
 
   // Type for trends data accumulator
@@ -496,13 +490,13 @@ const PROM: React.FC = () => {
                 }}
               >
                 <Typography variant="h6">PROM Templates</Typography>
-                <Button
+                <AuraButton
                   variant="contained"
                   startIcon={<SendIcon />}
                   onClick={() => setSendDialogOpen(true)}
                 >
                   Send PROM
-                </Button>
+                </AuraButton>
               </Box>
 
               {templatesLoading ? (
@@ -511,8 +505,8 @@ const PROM: React.FC = () => {
                 <Grid container spacing={3}>
                   {templates.map((template) => (
                     <Grid size={{ xs: 12, md: 6, lg: 4 }} key={template.id}>
-                      <Card>
-                        <CardContent>
+                      <AuraCard sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <Box sx={{ flex: 1 }}>
                           <Typography variant="h6" gutterBottom>
                             {template.name}
                           </Typography>
@@ -523,7 +517,6 @@ const PROM: React.FC = () => {
                           >
                             {template.description}
                           </Typography>
-
                           <Typography variant="body2" color="text.secondary">
                             Version {template.version}
                           </Typography>
@@ -539,10 +532,9 @@ const PROM: React.FC = () => {
                               "dd MMM yyyy",
                             )}
                           </Typography>
-                        </CardContent>
-
-                        <CardActions>
-                          <Button
+                        </Box>
+                        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                          <AuraButton
                             size="small"
                             startIcon={<PreviewIcon />}
                             onClick={() => {
@@ -551,8 +543,8 @@ const PROM: React.FC = () => {
                             }}
                           >
                             Preview
-                          </Button>
-                          <Button
+                          </AuraButton>
+                          <AuraButton
                             size="small"
                             startIcon={<SendIcon />}
                             onClick={() => {
@@ -561,15 +553,15 @@ const PROM: React.FC = () => {
                             }}
                           >
                             Send
-                          </Button>
+                          </AuraButton>
                           <IconButton
                             size="small"
                             onClick={() => handleDeleteTemplate(template)}
                           >
                             <DeleteIcon />
                           </IconButton>
-                        </CardActions>
-                      </Card>
+                        </Stack>
+                      </AuraCard>
                     </Grid>
                   ))}
                 </Grid>
@@ -580,56 +572,58 @@ const PROM: React.FC = () => {
           <TabPanel value={currentTab} index={1}>
             {/* Responses Tab */}
             <Box>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={3}
-              >
-                <Box display="flex" gap={2} alignItems="center">
-                  <FormControl size="small" sx={{ minWidth: 150 }}>
-                    <InputLabel>Status</InputLabel>
-                    <Select
-                      value={filterStatus}
-                      label="Status"
-                      onChange={(e) => setFilterStatus(e.target.value)}
+              <FilterToolbar
+                filters={[
+                  {
+                    key: "status",
+                    label: "Status",
+                    value: filterStatus,
+                    options: [
+                      { value: "all", label: "All" },
+                      { value: "pending", label: "Pending" },
+                      { value: "in-progress", label: "In Progress" },
+                      { value: "completed", label: "Completed" },
+                      { value: "expired", label: "Expired" },
+                      { value: "cancelled", label: "Cancelled" },
+                    ],
+                  },
+                ]}
+                onFilterChange={(key, value) => {
+                  if (key === "status") setFilterStatus(value);
+                }}
+                onClearAll={() => {
+                  setFilterStatus("all");
+                  setDateRange({ start: null, end: null });
+                }}
+                actions={
+                  <>
+                    <DatePicker
+                      label="Start Date"
+                      value={dateRange.start}
+                      onChange={(newValue) =>
+                        setDateRange((prev) => ({ ...prev, start: newValue }))
+                      }
+                      slotProps={{ textField: { size: "small" } }}
+                    />
+                    <DatePicker
+                      label="End Date"
+                      value={dateRange.end}
+                      onChange={(newValue) =>
+                        setDateRange((prev) => ({ ...prev, end: newValue }))
+                      }
+                      slotProps={{ textField: { size: "small" } }}
+                    />
+                    <AuraButton
+                      variant="outlined"
+                      startIcon={<RefreshIcon />}
+                      onClick={() => refetchResponses()}
                     >
-                      <MenuItem value="all">All</MenuItem>
-                      <MenuItem value="pending">Pending</MenuItem>
-                      <MenuItem value="in-progress">In Progress</MenuItem>
-                      <MenuItem value="completed">Completed</MenuItem>
-                      <MenuItem value="expired">Expired</MenuItem>
-                      <MenuItem value="cancelled">Cancelled</MenuItem>
-                    </Select>
-                  </FormControl>
-
-                  <DatePicker
-                    label="Start Date"
-                    value={dateRange.start}
-                    onChange={(newValue) =>
-                      setDateRange((prev) => ({ ...prev, start: newValue }))
-                    }
-                    slotProps={{ textField: { size: "small" } }}
-                  />
-
-                  <DatePicker
-                    label="End Date"
-                    value={dateRange.end}
-                    onChange={(newValue) =>
-                      setDateRange((prev) => ({ ...prev, end: newValue }))
-                    }
-                    slotProps={{ textField: { size: "small" } }}
-                  />
-                </Box>
-
-                <Button
-                  variant="outlined"
-                  startIcon={<RefreshIcon />}
-                  onClick={() => refetchResponses()}
-                >
-                  Refresh
-                </Button>
-              </Box>
+                      Refresh
+                    </AuraButton>
+                  </>
+                }
+                showFilterChips={filterStatus !== "all" || !!dateRange.start || !!dateRange.end}
+              />
 
               <TableContainer component={Paper}>
                 <Table>
@@ -741,6 +735,9 @@ const PROM: React.FC = () => {
                     setRowsPerPage(parseInt(e.target.value, 10));
                     setPage(0);
                   }}
+                  labelDisplayedRows={({ from, to, count }) => (
+                    <TableLabelDisplayedRows from={from} to={to} count={count} />
+                  )}
                 />
               </TableContainer>
             </Box>
@@ -763,7 +760,7 @@ const PROM: React.FC = () => {
                         labelLine={false}
                         label={(entry) => `${entry.name}: ${entry.value}`}
                         outerRadius={80}
-                        fill="#3385F0" // Aura blue
+                        fill={auraColors.blue.main}
                         dataKey="value"
                       >
                         {statusChartData.map((entry, index) => (
@@ -793,14 +790,14 @@ const PROM: React.FC = () => {
                         yAxisId="left"
                         type="monotone"
                         dataKey="count"
-                        stroke="#3385F0" // Aura blue
+                        stroke={auraColors.blue.main}
                         name="Responses"
                       />
                       <Line
                         yAxisId="right"
                         type="monotone"
                         dataKey="avgScore"
-                        stroke="#26CD82" // Aura green
+                        stroke={auraColors.green.main}
                         name="Avg Score"
                       />
                     </LineChart>
@@ -813,10 +810,10 @@ const PROM: React.FC = () => {
                   <Typography variant="h6" gutterBottom>
                     Template Performance
                   </Typography>
-                  <Alert severity="info" sx={{ mt: 2 }}>
+                  <Callout variant="info">
                     Detailed analytics for individual templates and questions
                     will be displayed here
-                  </Alert>
+                  </Callout>
                 </Paper>
               </Grid>
             </Grid>
@@ -829,30 +826,27 @@ const PROM: React.FC = () => {
         </Paper>
 
         {/* Send PROM Dialog */}
-        <Dialog
+        <FormDialog
           open={sendDialogOpen}
           onClose={() => {
             setSendDialogOpen(false);
             setSendTemplateId(null);
           }}
+          title="Send PROM Questionnaire"
           maxWidth="md"
-          fullWidth
         >
-          <DialogTitle>Send PROM Questionnaire</DialogTitle>
-          <DialogContent>
-            <PROMSender
-              preSelectedTemplateId={sendTemplateId || undefined}
-              onComplete={() => {
-                setSendDialogOpen(false);
-                setSendTemplateId(null);
-                refetchResponses();
-                enqueueSnackbar("PROM sent successfully", {
-                  variant: "success",
-                });
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+          <PROMSender
+            preSelectedTemplateId={sendTemplateId || undefined}
+            onComplete={() => {
+              setSendDialogOpen(false);
+              setSendTemplateId(null);
+              refetchResponses();
+              enqueueSnackbar("PROM sent successfully", {
+                variant: "success",
+              });
+            }}
+          />
+        </FormDialog>
 
         <PromPreview
           open={previewOpen}
@@ -864,27 +858,41 @@ const PROM: React.FC = () => {
         />
 
         {/* Response Detail Dialog */}
-        <Dialog
+        <FormDialog
           open={responseDetailOpen}
           onClose={handleCloseResponseDetail}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>
-            Response Details
-            {selectedResponse && (
-              <Box sx={{ ml: 2 }}>
+          title={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              Response Details
+              {selectedResponse && (
                 <StatusBadge status={selectedResponse.status} />
-              </Box>
-            )}
-          </DialogTitle>
-          <DialogContent>
-            {responseDetailLoading ? (
-              <SectionLoader minHeight={200} />
-            ) : selectedResponse ? (
-              <Box>
-                <Stack spacing={2}>
-                  <Alert severity="info">
+              )}
+            </Box>
+          }
+          maxWidth="md"
+          onSubmit={
+            !responseDetailLoading && selectedResponse?.status === "pending"
+              ? () => {
+                  // TODO: Implement send reminder
+                }
+              : undefined
+          }
+          submitLabel={
+            !responseDetailLoading && selectedResponse?.status === "pending"
+              ? "Send Reminder"
+              : undefined
+          }
+          formActionsProps={{
+            cancelLabel: "Close",
+          }}
+        >
+          {responseDetailLoading ? (
+            <SectionLoader minHeight={200} />
+          ) : selectedResponse ? (
+            <Box>
+              <Stack spacing={2}>
+                <Callout variant="info" title="Response Details">
+                  <Stack spacing={0.5}>
                     <Typography variant="body2">
                       <strong>Patient:</strong> {selectedResponse.patientName}
                     </Typography>
@@ -925,57 +933,48 @@ const PROM: React.FC = () => {
                           {selectedResponse.maxScore}
                         </Typography>
                       )}
-                  </Alert>
+                  </Stack>
+                </Callout>
 
-                  <Divider />
+                <Divider />
 
-                  <Typography variant="h6">Responses</Typography>
-                  {Object.keys(selectedResponse.responses).length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      No answers recorded.
+                <Typography variant="h6">Responses</Typography>
+                {Object.keys(selectedResponse.responses).length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No answers recorded.
+                  </Typography>
+                ) : (
+                  Object.entries(selectedResponse.responses).map(
+                    ([question, answer]) => (
+                      <Paper key={question} sx={{ p: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          {question}
+                        </Typography>
+                        <Typography variant="body1">
+                          {renderAnswerValue(answer)}
+                        </Typography>
+                      </Paper>
+                    ),
+                  )
+                )}
+
+                {selectedResponse.notes && (
+                  <>
+                    <Divider />
+                    <Typography variant="h6">Notes</Typography>
+                    <Typography variant="body2">
+                      {selectedResponse.notes}
                     </Typography>
-                  ) : (
-                    Object.entries(selectedResponse.responses).map(
-                      ([question, answer]) => (
-                        <Paper key={question} sx={{ p: 2 }}>
-                          <Typography variant="subtitle2" gutterBottom>
-                            {question}
-                          </Typography>
-                          <Typography variant="body1">
-                            {renderAnswerValue(answer)}
-                          </Typography>
-                        </Paper>
-                      ),
-                    )
-                  )}
-
-                  {selectedResponse.notes && (
-                    <>
-                      <Divider />
-                      <Typography variant="h6">Notes</Typography>
-                      <Typography variant="body2">
-                        {selectedResponse.notes}
-                      </Typography>
-                    </>
-                  )}
-                </Stack>
-              </Box>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Select a response to view details.
-              </Typography>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseResponseDetail}>Close</Button>
-            {!responseDetailLoading &&
-              selectedResponse?.status === "pending" && (
-                <Button variant="contained" startIcon={<EmailIcon />}>
-                  Send Reminder
-                </Button>
-              )}
-          </DialogActions>
-        </Dialog>
+                  </>
+                )}
+              </Stack>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Select a response to view details.
+            </Typography>
+          )}
+        </FormDialog>
       </Box>
     </LocalizationProvider>
   );

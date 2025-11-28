@@ -1,35 +1,7 @@
-import { CssBaseline } from '@mui/material';
-import { Experimental_CssVarsProvider as ThemeProvider } from '@mui/material/styles';
-import { deepmerge } from '@mui/utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { theme, glassCard } from '@qivr/design-system';
-
-// Enhanced theme with Aura glassmorphism
-const auraTheme = deepmerge(theme, {
-  components: {
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          ...glassCard,
-          backgroundImage: 'none',
-          border: '1px solid rgba(255, 255, 255, 0.18)',
-          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          ...glassCard,
-          backgroundImage: 'none',
-          border: '1px solid rgba(255, 255, 255, 0.18)',
-          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
-        },
-      },
-    },
-  },
-});
+import { QivrThemeProvider, SnackbarCloseButton, SnackbarIcon } from '@qivr/design-system';
+import { SnackbarProvider } from 'notistack';
 
 // Initialize Amplify
 import './config/amplify.config';
@@ -56,13 +28,29 @@ function App() {
   try {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={auraTheme}>
-          <CssBaseline />
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
+        <QivrThemeProvider brand="patient" defaultMode="system">
+          <SnackbarProvider
+            maxSnack={3}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "right",
+            }}
+            action={(snackbarKey) => (
+              <SnackbarCloseButton snackbarKey={snackbarKey} />
+            )}
+            iconVariant={{
+              success: <SnackbarIcon variant="success" icon="solar:check-circle-bold" />,
+              error: <SnackbarIcon variant="error" icon="solar:danger-bold" />,
+              warning: <SnackbarIcon variant="warning" icon="solar:bell-bing-bold" />,
+              info: <SnackbarIcon variant="info" icon="solar:info-circle-bold" />,
+            }}
+          >
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </SnackbarProvider>
           <ReactQueryDevtools initialIsOpen={false} />
-        </ThemeProvider>
+        </QivrThemeProvider>
       </QueryClientProvider>
     );
   } catch (error) {

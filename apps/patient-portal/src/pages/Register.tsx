@@ -1,26 +1,29 @@
 import React, { useState } from "react";
-import { LoadingSpinner, auraStepper } from "@qivr/design-system";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Box,
-  Container,
   TextField,
-  Button,
   Typography,
-  Paper,
-  Alert,
-  Divider,
-  
   Stepper,
   Step,
   StepLabel,
+  Stack,
+  Link as MuiLink,
 } from "@mui/material";
-import { useAuth } from "../contexts/AuthContext";
+import Grid from "@mui/material/Grid";
 import {
   Email as EmailIcon,
-  PersonAdd as PersonAddIcon,
 } from "@mui/icons-material";
+import { useAuth } from "../contexts/AuthContext";
 import { api, handleApiError } from "../services/api";
+import {
+  AuthLayout,
+  LoadingButton,
+  Callout,
+  AuraButton,
+  PasswordTextField,
+  auraStepper,
+} from "@qivr/design-system";
 
 interface EmailVerificationResponse {
   success: boolean;
@@ -102,20 +105,18 @@ export const Register = () => {
         formData.email,
         formData.phoneNumber,
         formData.firstName,
-        formData.lastName,
+        formData.lastName
       );
 
       const isSignUpComplete =
         (result as { isSignUpComplete?: boolean })?.isSignUpComplete ?? false;
 
       if (isSignUpComplete) {
-        // User is already confirmed (shouldn't happen with email verification)
         navigate("/login");
       } else {
-        // Redirect to confirmation page with email
         setStep(1);
         setInfoMessage(
-          "Registration successful! Please check your email for the verification code.",
+          "Registration successful! Please check your email for the verification code."
         );
         localStorage.setItem("pendingVerificationEmail", formData.email);
         navigate("/confirm-email", {
@@ -131,7 +132,7 @@ export const Register = () => {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to create account. Please try again.",
+          : "Failed to create account. Please try again."
       );
     } finally {
       setLoading(false);
@@ -150,13 +151,13 @@ export const Register = () => {
     try {
       const response = await api.post<EmailVerificationResponse>(
         "/api/EmailVerification/resend",
-        { email: formData.email },
+        { email: formData.email }
       );
 
       if (response.success) {
         setInfoMessage(
           response.message ??
-            "Verification email resent. Please check your inbox.",
+            "Verification email resent. Please check your inbox."
         );
       } else {
         setError(response.error ?? "Failed to resend verification email");
@@ -170,217 +171,236 @@ export const Register = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ mt: 8, mb: 4 }}>
-        <Paper
-          elevation={0}
+    <AuthLayout appName="Qivr" tagline="Patient Health Portal">
+      <Stack
+        direction="column"
+        sx={{
+          height: "100%",
+          alignItems: "center",
+          justifyContent: "center",
+          py: { xs: 4, md: 6 },
+          px: { xs: 3, sm: 5 },
+        }}
+      >
+        <Grid
+          container
           sx={{
-            p: { xs: 3, md: 5 },
-            borderRadius: 3,
-            border: "1px solid",
-            borderColor: "divider",
-            background:
-              "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
+            maxWidth: "28rem",
+            rowGap: 3,
           }}
         >
-          <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-            <Box
+          {/* Header */}
+          <Grid size={12}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
               sx={{
-                width: 56,
-                height: 56,
-                borderRadius: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                boxShadow: "0 8px 24px rgba(51, 133, 240, 0.25)",
+                justifyContent: "space-between",
+                alignItems: { xs: "flex-start", sm: "flex-end" },
+                mb: 2,
               }}
             >
-              <PersonAddIcon sx={{ fontSize: 28, color: "white" }} />
-            </Box>
-          </Box>
-          <Typography
-            variant="h4"
-            align="center"
-            gutterBottom
-            sx={{ fontWeight: 700 }}
-          >
-            Create Your Account
-          </Typography>
-
-          <Stepper activeStep={step} sx={auraStepper}>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-
-          {step === 0 && (
-            <Box component="form" onSubmit={handleSubmit}>
-              {(error || infoMessage) && (
-                <Alert severity={error ? "error" : "success"} sx={{ mb: 2 }}>
-                  {error || infoMessage}
-                </Alert>
-              )}
-
-              <TextField
-                fullWidth
-                required
-                label="First Name"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                margin="normal"
-                autoComplete="given-name"
-              />
-
-              <TextField
-                fullWidth
-                required
-                label="Last Name"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                margin="normal"
-                autoComplete="family-name"
-              />
-
-              <TextField
-                fullWidth
-                required
-                label="Email Address"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                margin="normal"
-                autoComplete="email"
-              />
-
-              <TextField
-                fullWidth
-                label="Phone Number"
-                name="phoneNumber"
-                type="tel"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                margin="normal"
-                autoComplete="tel"
-                placeholder="+61 4XX XXX XXX"
-              />
-
-              <TextField
-                fullWidth
-                required
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                margin="normal"
-                autoComplete="new-password"
-                helperText="Must be at least 8 characters long"
-              />
-
-              <TextField
-                fullWidth
-                required
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                margin="normal"
-                autoComplete="new-password"
-              />
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                size="large"
-                sx={{
-                  mt: 3,
-                  mb: 2,
-                  py: 1.5,
-                  background:
-                    "linear-gradient(135deg, #3385F0 0%, #A641FA 100%)",
-                  boxShadow: "0 4px 12px rgba(51, 133, 240, 0.3)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    background:
-                      "linear-gradient(135deg, #2970D9 0%, #8F2FE3 100%)",
-                    boxShadow: "0 6px 20px rgba(51, 133, 240, 0.4)",
-                    transform: "translateY(-2px)",
-                  },
-                  "&:active": {
-                    transform: "translateY(0)",
-                  },
-                }}
-                disabled={loading}
-              >
-                {loading ? <LoadingSpinner size={24} /> : "Create Account"}
-              </Button>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Typography align="center">
-                Already have an account?{" "}
-                <Link to="/login" style={{ textDecoration: "none" }}>
-                  Sign In
-                </Link>
-              </Typography>
-            </Box>
-          )}
-
-          {step === 1 && (
-            <Box sx={{ textAlign: "center" }}>
-              <EmailIcon sx={{ fontSize: 64, color: "primary.main", mb: 2 }} />
-
-              <Typography variant="h5" gutterBottom>
-                Verify Your Email
-              </Typography>
-
-              <Typography color="text.secondary" sx={{ mb: 3 }}>
-                We've sent a verification email to:
-              </Typography>
-
-              <Typography variant="h6" sx={{ mb: 3 }}>
-                {formData.email}
-              </Typography>
-
-              <Alert severity="info" sx={{ mb: 3, textAlign: "left" }}>
-                Please check your inbox and click the verification link to
-                activate your account. The link will expire in 24 hours.
-              </Alert>
-
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleResendVerification}
-                  disabled={loading}
+              <Box>
+                <Typography variant="h4" fontWeight={600}>
+                  Create Account
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
                 >
-                  {loading ? (
-                    <LoadingSpinner size={24} />
-                  ) : (
-                    "Resend Verification Email"
-                  )}
-                </Button>
-
-                <Button variant="contained" onClick={() => navigate("/login")}>
-                  Go to Login
-                </Button>
+                  Join the Qivr health platform
+                </Typography>
               </Box>
-
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-                Didn't receive the email? Check your spam folder or click
-                resend.
+              <Typography variant="body2" color="text.secondary">
+                Already have an account?{" "}
+                <MuiLink
+                  component={Link}
+                  to="/login"
+                  sx={{ color: "primary.main", textDecoration: "none" }}
+                >
+                  Sign in
+                </MuiLink>
               </Typography>
-            </Box>
+            </Stack>
+          </Grid>
+
+          {/* Stepper */}
+          <Grid size={12}>
+            <Stepper activeStep={step} sx={auraStepper}>
+              {steps.map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+          </Grid>
+
+          {/* Step 0: Registration Form */}
+          {step === 0 && (
+            <Grid size={12}>
+              <Box component="form" onSubmit={handleSubmit}>
+                {(error || infoMessage) && (
+                  <Box sx={{ mb: 3 }}>
+                    <Callout variant={error ? "error" : "success"}>
+                      {error || infoMessage}
+                    </Callout>
+                  </Box>
+                )}
+
+                <Stack spacing={3}>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="First Name"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleChange}
+                      autoComplete="given-name"
+                      autoFocus
+                    />
+                    <TextField
+                      fullWidth
+                      required
+                      label="Last Name"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleChange}
+                      autoComplete="family-name"
+                    />
+                  </Stack>
+
+                  <TextField
+                    fullWidth
+                    required
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    autoComplete="email"
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="Phone Number"
+                    name="phoneNumber"
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    autoComplete="tel"
+                    placeholder="+61 4XX XXX XXX"
+                  />
+
+                  <PasswordTextField
+                    fullWidth
+                    required
+                    label="Password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    autoComplete="new-password"
+                    helperText="Must be at least 8 characters long"
+                  />
+
+                  <PasswordTextField
+                    fullWidth
+                    required
+                    label="Confirm Password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    autoComplete="new-password"
+                  />
+
+                  <LoadingButton
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    loading={loading}
+                    loadingText="Creating account..."
+                    sx={{ py: 1.5 }}
+                  >
+                    Create Account
+                  </LoadingButton>
+                </Stack>
+              </Box>
+            </Grid>
           )}
-        </Paper>
-      </Box>
-    </Container>
+
+          {/* Step 1: Email Verification */}
+          {step === 1 && (
+            <Grid size={12}>
+              <Box sx={{ textAlign: "center" }}>
+                <Box
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: "primary.50",
+                    mx: "auto",
+                    mb: 3,
+                  }}
+                >
+                  <EmailIcon sx={{ fontSize: 40, color: "primary.main" }} />
+                </Box>
+
+                <Typography variant="h5" fontWeight={600} gutterBottom>
+                  Verify Your Email
+                </Typography>
+
+                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                  We've sent a verification email to:
+                </Typography>
+
+                <Typography variant="h6" sx={{ mb: 3, color: "primary.main" }}>
+                  {formData.email}
+                </Typography>
+
+                <Callout variant="info">
+                  Please check your inbox and click the verification link to
+                  activate your account. The link will expire in 24 hours.
+                </Callout>
+
+                <Stack spacing={2} sx={{ mt: 3 }}>
+                  <AuraButton
+                    variant="outlined"
+                    fullWidth
+                    onClick={handleResendVerification}
+                    disabled={loading}
+                  >
+                    {loading ? "Sending..." : "Resend Verification Email"}
+                  </AuraButton>
+
+                  <AuraButton
+                    variant="contained"
+                    fullWidth
+                    onClick={() => navigate("/login")}
+                  >
+                    Go to Login
+                  </AuraButton>
+                </Stack>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 3 }}
+                >
+                  Didn't receive the email? Check your spam folder or click
+                  resend.
+                </Typography>
+              </Box>
+            </Grid>
+          )}
+        </Grid>
+      </Stack>
+    </AuthLayout>
   );
 };
+
+export default Register;

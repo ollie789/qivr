@@ -6,7 +6,6 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Button,
   Grid,
   Avatar,
   Chip,
@@ -36,7 +35,7 @@ import {
   fetchAvailableProviders,
   fetchAvailableSlots,
 } from "../services/appointmentsApi";
-import { SectionLoader, auraStepper } from "@qivr/design-system";
+import { SectionLoader, auraStepper, AuraButton, DialogSection } from "@qivr/design-system";
 
 const steps = ["Select Provider", "Pick Date & Time", "Confirm Details"];
 
@@ -255,7 +254,7 @@ export const BookAppointment: React.FC = () => {
             <Grid container spacing={1}>
               {slots.map((slot) => (
                 <Grid size={4} key={slot.startTime}>
-                  <Button
+                  <AuraButton
                     variant={
                       selectedSlot?.startTime === slot.startTime
                         ? "contained"
@@ -265,7 +264,7 @@ export const BookAppointment: React.FC = () => {
                     onClick={() => handleSlotSelect(slot)}
                   >
                     {format(new Date(slot.startTime), "h:mm a")}
-                  </Button>
+                  </AuraButton>
                 </Grid>
               ))}
             </Grid>
@@ -309,14 +308,14 @@ export const BookAppointment: React.FC = () => {
           </Grid>
         </Grid>
         <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-          <Button onClick={handleBack}>Back</Button>
-          <Button
+          <AuraButton onClick={handleBack}>Back</AuraButton>
+          <AuraButton
             variant="contained"
             onClick={handleBookingConfirm}
             disabled={bookMutation.isPending}
           >
             {bookMutation.isPending ? "Booking..." : "Confirm Booking"}
-          </Button>
+          </AuraButton>
         </Box>
       </Paper>
     </Box>
@@ -358,9 +357,9 @@ export const BookAppointment: React.FC = () => {
 
       {activeStep > 0 && activeStep < steps.length - 1 && (
         <Box sx={{ mt: 3 }}>
-          <Button onClick={handleBack} startIcon={<ArrowBackIcon />}>
+          <AuraButton onClick={handleBack} startIcon={<ArrowBackIcon />}>
             Back
-          </Button>
+          </AuraButton>
         </Box>
       )}
 
@@ -369,20 +368,22 @@ export const BookAppointment: React.FC = () => {
         onClose={() => navigate("/appointments")}
       >
         <DialogContent sx={{ textAlign: "center", py: 4 }}>
-          <CheckCircleIcon
-            sx={{ fontSize: 60, color: "success.main", mb: 2 }}
-          />
-          <Typography variant="h5" gutterBottom>
-            Appointment Booked!
-          </Typography>
-          <Typography color="text.secondary">
-            Your appointment has been successfully scheduled.
-          </Typography>
+          <DialogSection>
+            <CheckCircleIcon
+              sx={{ fontSize: 60, color: "success.main", mb: 2 }}
+            />
+            <Typography variant="h5" gutterBottom>
+              Appointment Booked!
+            </Typography>
+            <Typography color="text.secondary">
+              Your appointment has been successfully scheduled.
+            </Typography>
+          </DialogSection>
         </DialogContent>
         <DialogActions sx={{ justifyContent: "center", pb: 3 }}>
-          <Button variant="contained" onClick={() => navigate("/appointments")}>
+          <AuraButton variant="contained" onClick={() => navigate("/appointments")}>
             View My Appointments
-          </Button>
+          </AuraButton>
         </DialogActions>
       </Dialog>
     </Container>

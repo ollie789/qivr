@@ -1,11 +1,8 @@
-import { auraTokens, Callout } from "@qivr/design-system";
+import { auraTokens, Callout, AuraButton, AuraCard } from "@qivr/design-system";
 import React, { useState, useEffect } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   TextField,
-  Button,
   Typography,
   Grid,
   Container,
@@ -117,19 +114,15 @@ const ClinicRegistration: React.FC = () => {
         minHeight="100vh"
         py={4}
       >
-        <Card
-          elevation={0}
+        <AuraCard
           sx={{
             width: "100%",
             maxWidth: 600,
-            borderRadius: auraTokens.borderRadius.lg,
-            border: "1px solid",
-            borderColor: "divider",
+            p: 4,
             background:
               "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
           }}
         >
-          <CardContent sx={{ p: 4 }}>
             <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
               <Box
                 sx={{
@@ -238,7 +231,7 @@ const ClinicRegistration: React.FC = () => {
                 </Grid>
               </Grid>
 
-              <Button
+              <AuraButton
                 type="submit"
                 fullWidth
                 variant="contained"
@@ -263,10 +256,9 @@ const ClinicRegistration: React.FC = () => {
                 }}
               >
                 {loading ? "Setting up your clinic..." : "Complete Setup"}
-              </Button>
+              </AuraButton>
             </form>
-          </CardContent>
-        </Card>
+        </AuraCard>
       </Box>
     </Container>
   );

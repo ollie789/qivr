@@ -33,13 +33,13 @@ import TreatmentPlan from "./pages/TreatmentPlan";
 // Auth
 import { useAuth } from "./contexts/AuthContext";
 import { PrivateRoute } from "./components/auth";
-import { LoadingScreen } from "@qivr/design-system";
+import { AuroraPageLoader } from "@qivr/design-system";
 
 export const AppContent: React.FC = () => {
   const { loading } = useAuth();
 
   if (loading) {
-    return <LoadingScreen />;
+    return <AuroraPageLoader sx={{ height: '100vh' }} />;
   }
 
   return (

@@ -7,18 +7,14 @@ import {
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import {
-  Experimental_CssVarsProvider as ThemeProvider,
-  useColorScheme,
-} from "@mui/material/styles";
-import { PageLoader, theme, glassCard } from "@qivr/design-system";
+import { useColorScheme } from "@mui/material/styles";
+import { AuroraPageLoader, QivrThemeProvider, SnackbarCloseButton, SnackbarIcon } from "@qivr/design-system";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { SnackbarProvider } from "notistack";
 import CssBaseline from "@mui/material/CssBaseline";
 import { useAuthActions } from "./stores/authStore";
 import { ThemeModeProvider } from "./contexts/ThemeContext";
-import { deepmerge } from "@mui/utils";
 
 // Layout components
 import DashboardLayout from "./components/Layout/DashboardLayout";
@@ -53,31 +49,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Extend theme with Aura glass effects
-const auraTheme = deepmerge(theme, {
-  components: {
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          ...glassCard,
-          backgroundImage: "none",
-          border: "1px solid rgba(255, 255, 255, 0.18)",
-          boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          ...glassCard,
-          backgroundImage: "none",
-          border: "1px solid rgba(255, 255, 255, 0.18)",
-          boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
-        },
-      },
-    },
-  },
-});
+// No need for manual theme setup - QivrThemeProvider handles it
 
 function InnerApp() {
   const { mode, setMode } = useColorScheme();
@@ -99,12 +71,21 @@ function InnerApp() {
             vertical: "bottom",
             horizontal: "right",
           }}
+          action={(snackbarKey) => (
+            <SnackbarCloseButton snackbarKey={snackbarKey} />
+          )}
+          iconVariant={{
+            success: <SnackbarIcon variant="success" icon="solar:check-circle-bold" />,
+            error: <SnackbarIcon variant="error" icon="solar:danger-bold" />,
+            warning: <SnackbarIcon variant="warning" icon="solar:bell-bing-bold" />,
+            info: <SnackbarIcon variant="info" icon="solar:info-circle-bold" />,
+          }}
         >
           <CssBaseline />
           <Router
             future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
           >
-            <Suspense fallback={<PageLoader />}>
+            <Suspense fallback={<AuroraPageLoader />}>
               <Routes>
                 {/* Public routes */}
                 <Route path="/login" element={<Login />} />
@@ -172,9 +153,9 @@ function App() {
   console.log("App component rendering");
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={auraTheme}>
+      <QivrThemeProvider brand="clinic" defaultMode="system">
         <InnerApp />
-      </ThemeProvider>
+      </QivrThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

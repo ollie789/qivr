@@ -3,7 +3,6 @@ import {
   Box,
   Paper,
   Typography,
-  Button,
   TextField,
   MenuItem,
   Chip,
@@ -34,8 +33,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { documentApi, Document } from '../services/documentApi';
-import { 
-  SearchBar, 
+import {
+  SearchBar,
   ConfirmDialog,
   PageHeader,
   AuraButton,
@@ -43,11 +42,11 @@ import {
   FilterChips,
   AuraDocumentCard,
   auraTokens,
+  TableLabelDisplayedRows,
+  FormSection,
+  DialogSection,
+  FormDialog,
 } from '@qivr/design-system';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 
 const DOCUMENT_TYPES = [
   { value: '', label: 'All Types' },
@@ -256,14 +255,14 @@ export default function Documents() {
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 2 }}>
-            <Button
+            <AuraButton
               fullWidth
               variant="outlined"
               startIcon={<FilterList />}
               onClick={() => setShowFilters(!showFilters)}
             >
               Filters
-            </Button>
+            </AuraButton>
           </Grid>
         </Grid>
 
@@ -343,6 +342,9 @@ export default function Documents() {
                 setRowsPerPage(parseInt(e.target.value, 10));
                 setPage(0);
               }}
+              labelDisplayedRows={({ from, to, count }) => (
+                <TableLabelDisplayedRows from={from} to={to} count={count} />
+              )}
             />
           </Box>
         </Box>
@@ -448,6 +450,9 @@ export default function Documents() {
             setRowsPerPage(parseInt(e.target.value, 10));
             setPage(0);
           }}
+          labelDisplayedRows={({ from, to, count }) => (
+            <TableLabelDisplayedRows from={from} to={to} count={count} />
+          )}
         />
       </TableContainer>
       )}
@@ -488,42 +493,54 @@ export default function Documents() {
       />
 
       {/* OCR Text Dialog */}
-      <Dialog
+      <FormDialog
         open={ocrDialogOpen}
         onClose={() => setOcrDialogOpen(false)}
         maxWidth="md"
-        fullWidth
+        title={
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            Extracted Text - {selectedDocument?.fileName}
+            {selectedDocument?.confidenceScore && (
+              <Chip
+                label={`${Math.round(selectedDocument.confidenceScore)}% confidence`}
+                size="small"
+                color="success"
+              />
+            )}
+          </Box>
+        }
+        onSubmit={() => {
+          navigator.clipboard.writeText(selectedDocument?.extractedText || '');
+          enqueueSnackbar('Text copied to clipboard', { variant: 'success' });
+        }}
+        submitLabel="Copy Text"
+        formActionsProps={{ cancelLabel: 'Close' }}
       >
-        <DialogTitle>
-          Extracted Text - {selectedDocument?.fileName}
-          {selectedDocument?.confidenceScore && (
-            <Chip
-              label={`${Math.round(selectedDocument.confidenceScore)}% confidence`}
-              size="small"
-              color="success"
-              sx={{ ml: 2 }}
-            />
-          )}
-        </DialogTitle>
-        <DialogContent>
-          <Paper
-            sx={{
-              p: 2,
-              bgcolor: 'grey.50',
-              maxHeight: 500,
-              overflow: 'auto',
-              fontFamily: 'monospace',
-              whiteSpace: 'pre-wrap',
-              fontSize: '0.875rem'
-            }}
+        <DialogSection>
+          <FormSection
+            title="OCR Results"
+            description="Text extracted from the document using optical character recognition"
           >
-            {selectedDocument?.extractedText || 'No text extracted'}
-          </Paper>
+            <Paper
+              sx={{
+                p: 2,
+                bgcolor: 'grey.50',
+                maxHeight: 500,
+                overflow: 'auto',
+                fontFamily: 'monospace',
+                whiteSpace: 'pre-wrap',
+                fontSize: '0.875rem'
+              }}
+            >
+              {selectedDocument?.extractedText || 'No text extracted'}
+            </Paper>
+          </FormSection>
+
           {selectedDocument?.extractedPatientName && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Extracted Information:
-              </Typography>
+            <FormSection
+              title="Extracted Information"
+              description="Patient details identified from the document"
+            >
               <Typography variant="body2">
                 Patient Name: {selectedDocument.extractedPatientName}
               </Typography>
@@ -532,22 +549,10 @@ export default function Documents() {
                   Date of Birth: {selectedDocument.extractedDob}
                 </Typography>
               )}
-            </Box>
+            </FormSection>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOcrDialogOpen(false)}>Close</Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              navigator.clipboard.writeText(selectedDocument?.extractedText || '');
-              enqueueSnackbar('Text copied to clipboard', { variant: 'success' });
-            }}
-          >
-            Copy Text
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </DialogSection>
+      </FormDialog>
     </Box>
   );
 }

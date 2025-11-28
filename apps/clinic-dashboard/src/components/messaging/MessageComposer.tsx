@@ -1,10 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Avatar,
-  Alert,
   Autocomplete,
   Box,
-  Button,
   Chip,
   Dialog,
   DialogActions,
@@ -17,7 +15,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { LoadingSpinner } from "@qivr/design-system";
+import { LoadingSpinner, FormSection, DialogSection, AuraButton, Callout } from "@qivr/design-system";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -506,299 +504,302 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
         </DialogTitle>
 
         <DialogContent>
-          {/* Recipients */}
-          {allowPatientSelection && recipients.length === 0 ? (
-            <Autocomplete
-              multiple
-              options={patients}
-              getOptionLabel={(option) => option.name}
-              value={selectedRecipients}
-              onChange={(_, newValue) => setSelectedRecipients(newValue)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Select Patients"
-                  placeholder="Search patients..."
-                  margin="normal"
-                  required
-                />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...tagProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={key}
-                      {...tagProps}
-                      avatar={<Avatar>{option.name[0]}</Avatar>}
-                      label={option.name}
-                      size="small"
-                      color="primary"
+          <DialogSection>
+            {/* Recipients Section */}
+            <FormSection
+              title="Recipients"
+              description={allowPatientSelection ? "Select patients to receive this message" : `${recipients.length} recipient(s) selected`}
+            >
+              {allowPatientSelection && recipients.length === 0 ? (
+                <Autocomplete
+                  multiple
+                  options={patients}
+                  getOptionLabel={(option) => option.name}
+                  value={selectedRecipients}
+                  onChange={(_, newValue) => setSelectedRecipients(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Search patients..."
+                      required
                     />
-                  );
-                })
-              }
-            />
-          ) : (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Recipients ({recipients.length})
-              </Typography>
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                {recipients.map((recipient) => (
-                  <Chip
-                    key={recipient.id}
-                    avatar={<Avatar>{recipient.name[0]}</Avatar>}
-                    label={recipient.name}
-                    size="small"
-                    color={
-                      recipient.type === "patient" ? "primary" : "secondary"
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => {
+                      const { key, ...tagProps } = getTagProps({ index });
+                      return (
+                        <Chip
+                          key={key}
+                          {...tagProps}
+                          avatar={<Avatar>{option.name[0]}</Avatar>}
+                          label={option.name}
+                          size="small"
+                          color="primary"
+                        />
+                      );
+                    })
+                  }
+                />
+              ) : (
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  {recipients.map((recipient) => (
+                    <Chip
+                      key={recipient.id}
+                      avatar={<Avatar>{recipient.name[0]}</Avatar>}
+                      label={recipient.name}
+                      size="small"
+                      color={recipient.type === "patient" ? "primary" : "secondary"}
+                    />
+                  ))}
+                </Box>
+              )}
+            </FormSection>
+
+            {/* Category & Context Section */}
+            <FormSection
+              title="Message Details"
+              description="Choose the category and context for this message"
+            >
+              <TextField
+                select
+                label="Category"
+                value={messageCategory}
+                onChange={(e) => setMessageCategory(e.target.value as any)}
+                fullWidth
+                SelectProps={{ native: true }}
+              >
+                <option value="General">General</option>
+                <option value="Appointment">Appointment</option>
+                <option value="Medical">Medical</option>
+                <option value="Billing">Billing</option>
+                <option value="Administrative">Administrative</option>
+              </TextField>
+
+              {relatedAppointmentId && (
+                <Callout variant="info">
+                  This message will be linked to appointment #{relatedAppointmentId.slice(0, 8)}
+                </Callout>
+              )}
+            </FormSection>
+
+            {/* Template Section */}
+            <FormSection
+              title="Template"
+              description="Optionally use a saved template to compose your message"
+            >
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                alignItems={{ xs: "stretch", sm: "center" }}
+              >
+                <Autocomplete
+                  options={filteredTemplates}
+                  loading={templatesLoading}
+                  getOptionLabel={(option) => option.name}
+                  value={selectedTemplate}
+                  onChange={(_, value) => handleTemplateSelect(value)}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Message Template (Optional)"
+                      fullWidth
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {templatesLoading ? <LoadingSpinner size={18} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  sx={{ flex: 1 }}
+                />
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  sx={{ width: { xs: "100%", sm: "auto" } }}
+                >
+                  <Tooltip
+                    title={
+                      canManageTemplates
+                        ? "Manage saved templates"
+                        : "Templates are read-only until the message template API is available."
                     }
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
+                  >
+                    <span>
+                      <AuraButton
+                        variant="outlined"
+                        startIcon={<ManageHistoryIcon />}
+                        onClick={handleManageTemplates}
+                        disabled={!canManageTemplates || templatesLoading}
+                        fullWidth
+                      >
+                        Manage
+                      </AuraButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip
+                    title={
+                      canManageTemplates
+                        ? "Save the current message as a reusable template"
+                        : "Templates are read-only until the message template API is available."
+                    }
+                  >
+                    <span>
+                      <AuraButton
+                        variant="outlined"
+                        startIcon={<SaveIcon />}
+                        onClick={handleSaveTemplateRequested}
+                        disabled={!canManageTemplates || !message.trim()}
+                        fullWidth
+                      >
+                        Save as template
+                      </AuraButton>
+                    </span>
+                  </Tooltip>
+                </Stack>
+              </Stack>
 
-          {/* Message Category */}
-          <TextField
-            select
-            label="Category"
-            value={messageCategory}
-            onChange={(e) => setMessageCategory(e.target.value as any)}
-            fullWidth
-            margin="normal"
-            SelectProps={{ native: true }}
-          >
-            <option value="General">General</option>
-            <option value="Appointment">Appointment</option>
-            <option value="Medical">Medical</option>
-            <option value="Billing">Billing</option>
-            <option value="Administrative">Administrative</option>
-          </TextField>
-
-          {/* Appointment Context Indicator */}
-          {relatedAppointmentId && (
-            <Alert severity="info" sx={{ mt: 1, mb: 2 }}>
-              This message will be linked to appointment #
-              {relatedAppointmentId.slice(0, 8)}
-            </Alert>
-          )}
-
-          {/* Template Selector */}
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            sx={{ mt: 2 }}
-            alignItems={{ xs: "stretch", sm: "center" }}
-          >
-            <Autocomplete
-              options={filteredTemplates}
-              loading={templatesLoading}
-              getOptionLabel={(option) => option.name}
-              value={selectedTemplate}
-              onChange={(_, value) => handleTemplateSelect(value)}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Message Template (Optional)"
-                  margin="normal"
-                  fullWidth
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {templatesLoading ? (
-                          <LoadingSpinner size={18} />
-                        ) : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
+              {/* Template Variables */}
+              {selectedTemplate && Object.keys(templateVariables).length > 0 && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    bgcolor: "background.default",
+                    borderRadius: 1,
                   }}
+                >
+                  <Typography variant="subtitle2" gutterBottom>
+                    Template Variables
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                    {(selectedTemplate.variables?.length
+                      ? selectedTemplate.variables
+                      : Object.keys(templateVariables)
+                    ).map((variable) => (
+                      <TextField
+                        key={variable}
+                        label={variable}
+                        value={templateVariables[variable] || ""}
+                        onChange={(e) => handleVariableChange(variable, e.target.value)}
+                        size="small"
+                        sx={{ flex: 1, minWidth: 150 }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </FormSection>
+
+            {/* Message Content Section */}
+            <FormSection
+              title="Message Content"
+              description={messageType === "sms" ? "Compose your SMS message" : "Compose your email message"}
+            >
+              {messageType === "email" && (
+                <TextField
+                  label="Subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  fullWidth
+                  required
+                  sx={{ mb: 2 }}
                 />
               )}
-              sx={{ flex: 1 }}
-            />
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              sx={{ width: { xs: "100%", sm: "auto" } }}
-            >
-              <Tooltip
-                title={
-                  canManageTemplates
-                    ? "Manage saved templates"
-                    : "Templates are read-only until the message template API is available."
-                }
-              >
-                <span>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ManageHistoryIcon />}
-                    onClick={handleManageTemplates}
-                    disabled={!canManageTemplates || templatesLoading}
-                    fullWidth
-                  >
-                    Manage
-                  </Button>
-                </span>
-              </Tooltip>
-              <Tooltip
-                title={
-                  canManageTemplates
-                    ? "Save the current message as a reusable template"
-                    : "Templates are read-only until the message template API is available."
-                }
-              >
-                <span>
-                  <Button
-                    variant="outlined"
-                    startIcon={<SaveIcon />}
-                    onClick={handleSaveTemplateRequested}
-                    disabled={!canManageTemplates || !message.trim()}
-                    fullWidth
-                  >
-                    Save as template
-                  </Button>
-                </span>
-              </Tooltip>
-            </Stack>
-          </Stack>
 
-          {/* Template Variables */}
-          {selectedTemplate && Object.keys(templateVariables).length > 0 && (
-            <Box
-              sx={{
-                mb: 2,
-                p: 2,
-                bgcolor: "background.default",
-                borderRadius: 1,
-              }}
+              <TextField
+                label="Message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                multiline
+                rows={messageType === "email" ? 8 : 4}
+                fullWidth
+                required
+                helperText={
+                  messageType === "sms"
+                    ? `${message.length}/160 characters (${Math.ceil(message.length / 160)} SMS)`
+                    : null
+                }
+              />
+            </FormSection>
+
+            {/* Scheduling Section */}
+            <FormSection
+              title="Scheduling"
+              description="Send now or schedule for later"
             >
-              <Typography variant="subtitle2" gutterBottom>
-                Template Variables
-              </Typography>
-              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                {(selectedTemplate.variables?.length
-                  ? selectedTemplate.variables
-                  : Object.keys(templateVariables)
-                ).map((variable) => (
-                  <TextField
-                    key={variable}
-                    label={variable}
-                    value={templateVariables[variable] || ""}
-                    onChange={(e) =>
-                      handleVariableChange(variable, e.target.value)
-                    }
-                    size="small"
-                    sx={{ flex: 1, minWidth: 150 }}
-                  />
-                ))}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <AuraButton
+                  startIcon={<ScheduleIcon />}
+                  variant={scheduleFor ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => setShowSchedulePicker(!showSchedulePicker)}
+                >
+                  {scheduleFor
+                    ? `Scheduled for ${scheduleFor.toLocaleString()}`
+                    : "Schedule for later"}
+                </AuraButton>
+                {scheduleFor && (
+                  <AuraButton size="small" onClick={() => setScheduleFor(null)}>
+                    Clear
+                  </AuraButton>
+                )}
               </Box>
-            </Box>
-          )}
 
-          {/* Subject (Email only) */}
-          {messageType === "email" && (
-            <TextField
-              label="Subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              fullWidth
-              margin="normal"
-              required
-            />
-          )}
+              {showSchedulePicker && (
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <Box sx={{ mt: 2 }}>
+                    <DateTimePicker
+                      label="Schedule send time"
+                      value={scheduleFor}
+                      onChange={(newValue) => {
+                        setScheduleFor(newValue);
+                        setShowSchedulePicker(false);
+                      }}
+                      minDateTime={new Date()}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: "small",
+                        },
+                      }}
+                    />
+                  </Box>
+                </LocalizationProvider>
+              )}
+            </FormSection>
 
-          {/* Message */}
-          <TextField
-            label="Message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            multiline
-            rows={messageType === "email" ? 8 : 4}
-            fullWidth
-            margin="normal"
-            required
-            helperText={
-              messageType === "sms"
-                ? `${message.length}/160 characters (${Math.ceil(message.length / 160)} SMS)`
-                : null
-            }
-          />
-
-          {/* Schedule Option */}
-          <Box sx={{ mt: 2 }}>
-            <Button
-              startIcon={<ScheduleIcon />}
-              variant={scheduleFor ? "contained" : "outlined"}
-              size="small"
-              onClick={() => setShowSchedulePicker(!showSchedulePicker)}
-            >
-              {scheduleFor 
-                ? `Scheduled for ${scheduleFor.toLocaleString()}`
-                : "Schedule for later"}
-            </Button>
-            {scheduleFor && (
-              <Button
-                size="small"
-                onClick={() => setScheduleFor(null)}
-                sx={{ ml: 1 }}
-              >
-                Clear
-              </Button>
+            {/* Status Messages */}
+            {error && (
+              <Callout variant="error">
+                {error}
+              </Callout>
             )}
-          </Box>
 
-          {showSchedulePicker && (
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Box sx={{ mt: 2 }}>
-                <DateTimePicker
-                  label="Schedule send time"
-                  value={scheduleFor}
-                  onChange={(newValue) => {
-                    setScheduleFor(newValue);
-                    setShowSchedulePicker(false);
-                  }}
-                  minDateTime={new Date()}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: "small"
-                    }
-                  }}
-                />
-              </Box>
-            </LocalizationProvider>
-          )}
-
-          {/* Error/Success Messages */}
-          {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          {success && (
-            <Alert severity="success" sx={{ mt: 2 }}>
-              Message sent successfully!
-            </Alert>
-          )}
+            {success && (
+              <Callout variant="success">
+                Message sent successfully!
+              </Callout>
+            )}
+          </DialogSection>
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={onClose} startIcon={<CloseIcon />}>
+          <AuraButton onClick={onClose} startIcon={<CloseIcon />}>
             Cancel
-          </Button>
-          <Button
+          </AuraButton>
+          <AuraButton
             onClick={handleSend}
             variant="contained"
             disabled={!canSend() || sending}
             startIcon={sending ? <LoadingSpinner size={20} /> : <SendIcon />}
           >
             {sending ? "Sending..." : "Send"}
-          </Button>
+          </AuraButton>
         </DialogActions>
       </Dialog>
 

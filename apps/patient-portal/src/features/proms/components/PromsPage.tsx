@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   Grid,
-  Button,
   List,
   ListItem,
   ListItemIcon,
@@ -27,6 +26,7 @@ import {
   AuraStatCard,
   StatCardSkeleton,
   AuraEmptyState,
+  AuraButton,
 } from "@qivr/design-system";
 
 const formatDate = (date?: string) => {
@@ -168,7 +168,7 @@ const PromsPage: React.FC = () => {
                             color={getStatusColor(instance)}
                             size="small"
                           />
-                          <Button
+                          <AuraButton
                             variant="contained"
                             startIcon={<StartIcon />}
                             onClick={() =>
@@ -176,7 +176,7 @@ const PromsPage: React.FC = () => {
                             }
                           >
                             Start
-                          </Button>
+                          </AuraButton>
                         </Box>
                       </ListItemSecondaryAction>
                     </ListItem>

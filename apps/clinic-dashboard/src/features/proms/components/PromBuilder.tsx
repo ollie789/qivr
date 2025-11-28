@@ -21,7 +21,6 @@ import {
   Paper,
   Typography,
   Grid,
-  Button,
   IconButton,
   TextField,
   Select,
@@ -39,7 +38,6 @@ import {
   Switch,
   FormControlLabel,
   Slider,
-  Alert,
   Tabs,
   Tab,
   Accordion,
@@ -62,7 +60,7 @@ import {
   ContentCopy,
   ExpandMore,
 } from "@mui/icons-material";
-import { glassCard } from "@qivr/design-system";
+import { glassCard, Callout, AuraButton } from "@qivr/design-system";
 import { promApi, PromTemplateQuestion } from "../../../services/promApi";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -663,21 +661,21 @@ export const PromBuilder: React.FC = () => {
             </Typography>
           </Grid>
           <Grid>
-            <Button
+            <AuraButton
               variant="outlined"
               startIcon={<Preview />}
               sx={{ mr: 1 }}
               onClick={() => setPreviewDialog(true)}
             >
               Preview
-            </Button>
-            <Button
+            </AuraButton>
+            <AuraButton
               variant="contained"
               startIcon={<Publish />}
               onClick={handleSaveTemplate}
             >
               Publish Template
-            </Button>
+            </AuraButton>
           </Grid>
         </Grid>
       </Paper>
@@ -772,7 +770,7 @@ export const PromBuilder: React.FC = () => {
             {activeTab === 1 && (
               <Box>
                 <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
-                  <Button
+                  <AuraButton
                     variant="contained"
                     startIcon={<Add />}
                     onClick={() => {
@@ -786,21 +784,21 @@ export const PromBuilder: React.FC = () => {
                     }}
                   >
                     Add Question
-                  </Button>
-                  <Button
+                  </AuraButton>
+                  <AuraButton
                     variant="outlined"
                     startIcon={<Functions />}
                     onClick={() => setLibraryDialog(true)}
                   >
                     Question Library
-                  </Button>
+                  </AuraButton>
                 </Box>
 
                 {template.questions.length === 0 ? (
-                  <Alert severity="info">
-                    No questions added yet. Click {'"Add Question"'} or select
+                  <Callout variant="info">
+                    No questions added yet. Click "Add Question" or select
                     from the library.
-                  </Alert>
+                  </Callout>
                 ) : (
                   <DndContext
                     sensors={sensors}
@@ -902,7 +900,7 @@ export const PromBuilder: React.FC = () => {
                       </Grid>
                   </Paper>
                 ))}
-                <Button
+                <AuraButton
                   variant="outlined"
                   startIcon={<Add />}
                   onClick={() => {
@@ -926,7 +924,7 @@ export const PromBuilder: React.FC = () => {
                   }}
                 >
                   Add Range
-                </Button>
+                </AuraButton>
 
                 <Divider sx={{ my: 3 }} />
 
@@ -1008,9 +1006,9 @@ export const PromBuilder: React.FC = () => {
                       onDelete={() => {}}
                     />
                   ))}
-                  <Button size="small" startIcon={<Add />}>
+                  <AuraButton size="small" startIcon={<Add />}>
                     Add Interval
-                  </Button>
+                  </AuraButton>
                 </Box>
 
                 <Typography variant="h6" gutterBottom>
@@ -1027,9 +1025,9 @@ export const PromBuilder: React.FC = () => {
                       onDelete={() => {}}
                     />
                   ))}
-                  <Button size="small" startIcon={<Add />}>
+                  <AuraButton size="small" startIcon={<Add />}>
                     Add Reminder
-                  </Button>
+                  </AuraButton>
                 </Box>
               </Box>
             )}
@@ -1071,14 +1069,14 @@ export const PromBuilder: React.FC = () => {
               Quick Actions
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Button
+              <AuraButton
                 variant="outlined"
                 startIcon={<ContentCopy />}
                 size="small"
               >
                 Duplicate Template
-              </Button>
-              <Button
+              </AuraButton>
+              <AuraButton
                 variant="outlined"
                 startIcon={<Functions />}
                 size="small"
@@ -1089,15 +1087,15 @@ export const PromBuilder: React.FC = () => {
                 }}
               >
                 Test Scoring
-              </Button>
-              <Button
+              </AuraButton>
+              <AuraButton
                 variant="outlined"
                 startIcon={<Preview />}
                 size="small"
                 onClick={() => setPreviewDialog(true)}
               >
                 Patient View
-              </Button>
+              </AuraButton>
             </Box>
           </Paper>
         </Grid>
@@ -1194,7 +1192,7 @@ export const PromBuilder: React.FC = () => {
                       size="small"
                     />
                   ))}
-                  <Button
+                  <AuraButton
                     size="small"
                     startIcon={<Add />}
                     onClick={() =>
@@ -1205,7 +1203,7 @@ export const PromBuilder: React.FC = () => {
                     }
                   >
                     Add Option
-                  </Button>
+                  </AuraButton>
                 </Box>
               )}
 
@@ -1275,8 +1273,8 @@ export const PromBuilder: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setQuestionDialog(false)}>Cancel</Button>
-          <Button
+          <AuraButton onClick={() => setQuestionDialog(false)}>Cancel</AuraButton>
+          <AuraButton
             variant="contained"
             onClick={() => {
               if (editingQuestion) {
@@ -1295,7 +1293,7 @@ export const PromBuilder: React.FC = () => {
             }}
           >
             Save Question
-          </Button>
+          </AuraButton>
         </DialogActions>
       </Dialog>
 
@@ -1330,7 +1328,7 @@ export const PromBuilder: React.FC = () => {
                         primary={q.question}
                         secondary={`Type: ${q.type}`}
                       />
-                      <Button size="small">Add</Button>
+                      <AuraButton size="small">Add</AuraButton>
                     </ListItem>
                   ))}
                 </List>
@@ -1339,7 +1337,7 @@ export const PromBuilder: React.FC = () => {
           ))}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setLibraryDialog(false)}>Close</Button>
+          <AuraButton onClick={() => setLibraryDialog(false)}>Close</AuraButton>
         </DialogActions>
       </Dialog>
 
@@ -1355,9 +1353,9 @@ export const PromBuilder: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
-            <Alert severity="info" sx={{ mb: 2 }}>
+            <Callout variant="info">
               This is how the questionnaire will appear to patients
-            </Alert>
+            </Callout>
 
             {template.description && (
               <Typography variant="body1" paragraph>
@@ -1509,7 +1507,7 @@ export const PromBuilder: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPreviewDialog(false)}>Close</Button>
+          <AuraButton onClick={() => setPreviewDialog(false)}>Close</AuraButton>
         </DialogActions>
       </Dialog>
 
@@ -1622,10 +1620,7 @@ export const PromBuilder: React.FC = () => {
           ))}
 
           {testScore !== null && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="h6">
-                Calculated Score: {testScore}
-              </Typography>
+            <Callout variant="info" title={`Calculated Score: ${testScore}`}>
               {template.scoring.ranges?.map((range) => {
                 if (testScore >= range.min && testScore <= range.max) {
                   return (
@@ -1639,14 +1634,14 @@ export const PromBuilder: React.FC = () => {
                 }
                 return null;
               })}
-            </Alert>
+            </Callout>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTestScoringDialog(false)}>Close</Button>
-          <Button variant="contained" onClick={calculateScore}>
+          <AuraButton onClick={() => setTestScoringDialog(false)}>Close</AuraButton>
+          <AuraButton variant="contained" onClick={calculateScore}>
             Calculate Score
-          </Button>
+          </AuraButton>
         </DialogActions>
       </Dialog>
     </Box>

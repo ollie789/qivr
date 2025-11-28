@@ -4,15 +4,11 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Button,
   Typography,
   Grid,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Checkbox,
+  FormControl,
   FormControlLabel,
   FormGroup,
   RadioGroup,
@@ -25,16 +21,11 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Paper,
-  Alert,
   Divider,
   Switch,
   InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from '@mui/material';
-import { InfoCard, auraStepper } from '@qivr/design-system';
+import { InfoCard, auraStepper, Callout, AuraButton, FormDialog, SelectField } from '@qivr/design-system';
 import {
   Send as SendIcon,
   Schedule as ScheduleIcon,
@@ -297,36 +288,34 @@ const PROMSender: React.FC<PROMSenderProps> = ({
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 3 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Filter</InputLabel>
-                    <Select
-                      value={patientFilter}
-                      label="Filter"
-                      onChange={(e) => setPatientFilter(e.target.value)}
-                    >
-                      <MenuItem value="all">All Patients</MenuItem>
-                      <MenuItem value="active">Active Only</MenuItem>
-                      <MenuItem value="recent">Recent Visits</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <SelectField
+                    label="Filter"
+                    value={patientFilter}
+                    onChange={setPatientFilter}
+                    options={[
+                      { value: "all", label: "All Patients" },
+                      { value: "active", label: "Active Only" },
+                      { value: "recent", label: "Recent Visits" },
+                    ]}
+                  />
                 </Grid>
                 <Grid size={{ xs: 12, md: 3 }}>
-                  <Button
+                  <AuraButton
                     fullWidth
                     variant="outlined"
                     sx={{ height: '56px' }}
                     onClick={() => setSelectedPatients(patients.map(p => p.id))}
                   >
                     Select All ({patients.length})
-                  </Button>
+                  </AuraButton>
                 </Grid>
               </Grid>
             </Paper>
 
             {/* Selected Count */}
-            <Alert severity="info" sx={{ mb: 2 }}>
+            <Callout variant="info">
               {selectedPatients.length} patient(s) selected
-            </Alert>
+            </Callout>
 
             {/* Patient List */}
             <List>
@@ -430,20 +419,18 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               <Box sx={{ mt: 3 }}>
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 12, md: 6 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Frequency</InputLabel>
-                      <Select
-                        value={recurringConfig.frequency}
-                        label="Frequency"
-                        onChange={(e) => setRecurringConfig({ ...recurringConfig, frequency: e.target.value })}
-                      >
-                        <MenuItem value="daily">Daily</MenuItem>
-                        <MenuItem value="weekly">Weekly</MenuItem>
-                        <MenuItem value="biweekly">Bi-weekly</MenuItem>
-                        <MenuItem value="monthly">Monthly</MenuItem>
-                        <MenuItem value="quarterly">Quarterly</MenuItem>
-                      </Select>
-                    </FormControl>
+                    <SelectField
+                      label="Frequency"
+                      value={recurringConfig.frequency}
+                      onChange={(value) => setRecurringConfig({ ...recurringConfig, frequency: value })}
+                      options={[
+                        { value: "daily", label: "Daily" },
+                        { value: "weekly", label: "Weekly" },
+                        { value: "biweekly", label: "Bi-weekly" },
+                        { value: "monthly", label: "Monthly" },
+                        { value: "quarterly", label: "Quarterly" },
+                      ]}
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
@@ -703,9 +690,9 @@ const PROMSender: React.FC<PROMSenderProps> = ({
               )}
             </Grid>
 
-            <Alert severity="info" sx={{ mt: 3 }}>
+            <Callout variant="info">
               Please review all details before sending. Once sent, PROMs cannot be recalled.
-            </Alert>
+            </Callout>
           </Box>
         );
 
@@ -746,81 +733,83 @@ const PROMSender: React.FC<PROMSenderProps> = ({
       </Box>
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 4 }}>
-        <Button
+        <AuraButton
           disabled={activeStep === 0}
           onClick={handleBack}
           startIcon={<ArrowBackIcon />}
         >
           Back
-        </Button>
-        
+        </AuraButton>
+
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2 }}>
           {activeStep === steps.length - 1 && (
-            <Button
+            <AuraButton
               variant="outlined"
               startIcon={<PreviewIcon />}
               onClick={() => setPreviewOpen(true)}
             >
               Preview
-            </Button>
+            </AuraButton>
           )}
-          
+
           {activeStep === steps.length - 1 ? (
-            <Button
+            <AuraButton
               variant="contained"
               onClick={handleSend}
               disabled={!isStepValid()}
               startIcon={<SendIcon />}
             >
               Send PROM
-            </Button>
+            </AuraButton>
           ) : (
-            <Button
+            <AuraButton
               variant="contained"
               onClick={handleNext}
               disabled={!isStepValid()}
               endIcon={<ArrowForwardIcon />}
             >
               Next
-            </Button>
+            </AuraButton>
           )}
         </Box>
       </Box>
 
       {/* Preview Dialog */}
-      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>PROM Preview</DialogTitle>
-        <DialogContent>
-          <Typography variant="h6" gutterBottom>
-            {activeTemplateName || 'PROM Template'}
+      <FormDialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title="PROM Preview"
+        maxWidth="md"
+        formActionsProps={{
+          cancelLabel: "Close",
+        }}
+      >
+        <Typography variant="h6" gutterBottom>
+          {activeTemplateName || 'PROM Template'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          {activeTemplateDescription || 'Select a template to view details.'}
+        </Typography>
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="subtitle2" gutterBottom>
+          Sample Questions:
+        </Typography>
+        <List>
+          {activeTemplateQuestions.slice(0, 3).map((question, index) => (
+            <ListItem key={index}>
+              <ListItemText
+                primary={`${index + 1}. ${question.text}`}
+                secondary={`Type: ${question.type}`}
+              />
+            </ListItem>
+          ))}
+        </List>
+        {activeTemplateQuestions.length > 3 && (
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+            ... and {activeTemplateQuestions.length - 3} more questions
           </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            {activeTemplateDescription || 'Select a template to view details.'}
-          </Typography>
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="subtitle2" gutterBottom>
-            Sample Questions:
-          </Typography>
-          <List>
-            {activeTemplateQuestions.slice(0, 3).map((question, index) => (
-              <ListItem key={index}>
-                <ListItemText
-                  primary={`${index + 1}. ${question.text}`}
-                  secondary={`Type: ${question.type}`}
-                />
-              </ListItem>
-            ))}
-          </List>
-          {activeTemplateQuestions.length > 3 && (
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-              ... and {activeTemplateQuestions.length - 3} more questions
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPreviewOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+        )}
+      </FormDialog>
     </Box>
   );
 };

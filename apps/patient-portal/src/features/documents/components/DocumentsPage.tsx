@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   Grid,
-  Button,
   IconButton,
   LinearProgress,
   List,
@@ -59,6 +58,7 @@ import {
   AuraEmptyState,
   FilterChips,
   FormDialog,
+  AuraButton,
 } from "@qivr/design-system";
 import { useSnackbar } from "notistack";
 
@@ -127,14 +127,14 @@ const UploadDialog: React.FC<UploadDialogProps> = ({
       }}
     >
       <Stack spacing={2}>
-        <Button
+        <AuraButton
           component="label"
           variant="outlined"
           startIcon={<UploadIcon />}
         >
           {file ? file.name : "Select File"}
           <input type="file" hidden onChange={handleFileChange} />
-        </Button>
+        </AuraButton>
 
         <FormControl fullWidth>
           <InputLabel id="document-category-label">Category</InputLabel>
@@ -343,13 +343,13 @@ const DocumentsPage: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-          <Button
+          <AuraButton
             variant="contained"
             startIcon={<UploadIcon />}
             onClick={() => setUploadDialogOpen(true)}
           >
             Upload
-          </Button>
+          </AuraButton>
         </Stack>
       </Stack>
 
@@ -444,9 +444,9 @@ const DocumentsPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary">
               {selectedDocs.length} selected
             </Typography>
-            <Button size="small" onClick={() => setSelectedDocs([])}>
+            <AuraButton size="small" onClick={() => setSelectedDocs([])}>
               Clear
-            </Button>
+            </AuraButton>
           </Box>
         ) : undefined}
       >
@@ -519,7 +519,7 @@ const DocumentsPage: React.FC = () => {
                       spacing={1}
                       alignItems="center"
                     >
-                      <Button
+                      <AuraButton
                         size="small"
                         variant="outlined"
                         onClick={() =>
@@ -536,8 +536,8 @@ const DocumentsPage: React.FC = () => {
                         }
                       >
                         Share
-                      </Button>
-                      <Button
+                      </AuraButton>
+                      <AuraButton
                         size="small"
                         variant="outlined"
                         color={document.requiresReview ? "success" : "primary"}
@@ -556,7 +556,7 @@ const DocumentsPage: React.FC = () => {
                         {document.requiresReview
                           ? "Mark reviewed"
                           : "Request review"}
-                      </Button>
+                      </AuraButton>
                       <IconButton
                         edge="end"
                         onClick={() =>
@@ -644,7 +644,7 @@ const DocumentsPage: React.FC = () => {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button
+          <AuraButton
             onClick={() =>
               setShareDialog({
                 open: false,
@@ -655,8 +655,8 @@ const DocumentsPage: React.FC = () => {
             }
           >
             Cancel
-          </Button>
-          <Button
+          </AuraButton>
+          <AuraButton
             variant="contained"
             onClick={() => {
               if (!shareDialog.userId) {
@@ -674,7 +674,7 @@ const DocumentsPage: React.FC = () => {
             disabled={!shareDialog.userId || shareMutation.isPending}
           >
             Share
-          </Button>
+          </AuraButton>
         </DialogActions>
       </Dialog>
     </Box>

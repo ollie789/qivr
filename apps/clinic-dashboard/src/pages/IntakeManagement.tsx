@@ -4,7 +4,6 @@ import {
   Typography,
   Grid,
   Chip,
-  Button,
   IconButton,
   Table,
   TableBody,
@@ -19,13 +18,9 @@ import {
   Tabs,
   Badge,
   LinearProgress,
-  Alert,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Stack,
   Menu,
+  MenuItem,
   ToggleButtonGroup,
   ToggleButton,
 } from "@mui/material";
@@ -68,12 +63,13 @@ import { handleApiError } from "../lib/api-client";
 import {
   PageHeader,
   TabPanel as DesignTabPanel,
-  SearchBar,
   StatusBadge,
   AuraStatCard,
   StatCardSkeleton,
   AuraEmptyState,
-  FilterChips,
+  Callout,
+  AuraButton,
+  FilterToolbar,
 } from "@qivr/design-system";
 
 const IntakeManagement: React.FC = () => {
@@ -406,13 +402,13 @@ const IntakeManagement: React.FC = () => {
                 Table
               </ToggleButton>
             </ToggleButtonGroup>
-            <Button
+            <AuraButton
               variant="outlined"
               startIcon={<RefreshIcon />}
               onClick={() => refetch()}
             >
               Refresh
-            </Button>
+            </AuraButton>
           </Stack>
         }
       />
@@ -480,74 +476,72 @@ const IntakeManagement: React.FC = () => {
       </Grid>
 
       {/* Filters and Actions */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 3 }}>
-            <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search by name, email, or condition..."
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                label="Status"
-              >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="reviewing">Reviewing</MenuItem>
-                <MenuItem value="approved">Approved</MenuItem>
-                <MenuItem value="scheduled">Scheduled</MenuItem>
-                <MenuItem value="rejected">Rejected</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Urgency</InputLabel>
-              <Select
-                value={filterUrgency}
-                onChange={(e) => setFilterUrgency(e.target.value)}
-                label="Urgency"
-              >
-                <MenuItem value="all">All Urgency</MenuItem>
-                <MenuItem value="critical">Critical</MenuItem>
-                <MenuItem value="high">High</MenuItem>
-                <MenuItem value="medium">Medium</MenuItem>
-                <MenuItem value="low">Low</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid
-            size={{ xs: 12, md: 5 }}
-            sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}
-          >
-            <Button
+      <FilterToolbar
+        search={{
+          value: searchQuery,
+          onChange: setSearchQuery,
+          placeholder: "Search by name, email, or condition...",
+        }}
+        filters={[
+          {
+            key: "status",
+            label: "Status",
+            value: filterStatus,
+            options: [
+              { value: "all", label: "All Status" },
+              { value: "pending", label: "Pending" },
+              { value: "reviewing", label: "Reviewing" },
+              { value: "approved", label: "Approved" },
+              { value: "scheduled", label: "Scheduled" },
+              { value: "rejected", label: "Rejected" },
+            ],
+          },
+          {
+            key: "urgency",
+            label: "Urgency",
+            value: filterUrgency,
+            options: [
+              { value: "all", label: "All Urgency" },
+              { value: "critical", label: "Critical" },
+              { value: "high", label: "High" },
+              { value: "medium", label: "Medium" },
+              { value: "low", label: "Low" },
+            ],
+          },
+        ]}
+        onFilterChange={(key, value) => {
+          if (key === "status") setFilterStatus(value);
+          if (key === "urgency") setFilterUrgency(value);
+        }}
+        onClearAll={() => {
+          setSearchQuery("");
+          setFilterStatus("all");
+          setFilterUrgency("all");
+        }}
+        actions={
+          <>
+            <AuraButton
               startIcon={<PersonAddIcon />}
               onClick={() => setInviteDialogOpen(true)}
               variant="contained"
               color="primary"
             >
               Invite Patient
-            </Button>
-            <Button
+            </AuraButton>
+            <AuraButton
               startIcon={<RefreshIcon />}
               onClick={() => refetch()}
               variant="outlined"
             >
               Refresh
-            </Button>
-            <Button
+            </AuraButton>
+            <AuraButton
               startIcon={<DownloadIcon />}
               onClick={(e) => setExportMenuAnchor(e.currentTarget)}
               variant="outlined"
             >
               Export
-            </Button>
+            </AuraButton>
             <Menu
               anchorEl={exportMenuAnchor}
               open={Boolean(exportMenuAnchor)}
@@ -556,38 +550,9 @@ const IntakeManagement: React.FC = () => {
               <MenuItem onClick={handleExportCSV}>Export as CSV</MenuItem>
               <MenuItem onClick={handleExportExcel}>Export as Excel</MenuItem>
             </Menu>
-          </Grid>
-        </Grid>
-
-        {/* Active Filters */}
-        {(searchQuery || filterStatus !== "all" || filterUrgency !== "all") && (
-          <Box sx={{ mt: 2 }}>
-            <FilterChips
-              filters={[
-                ...(searchQuery
-                  ? [{ key: "search", label: `Search: ${searchQuery}` }]
-                  : []),
-                ...(filterStatus !== "all"
-                  ? [{ key: "status", label: `Status: ${filterStatus}` }]
-                  : []),
-                ...(filterUrgency !== "all"
-                  ? [{ key: "urgency", label: `Urgency: ${filterUrgency}` }]
-                  : []),
-              ]}
-              onRemove={(key) => {
-                if (key === "search") setSearchQuery("");
-                if (key === "status") setFilterStatus("all");
-                if (key === "urgency") setFilterUrgency("all");
-              }}
-              onClearAll={() => {
-                setSearchQuery("");
-                setFilterStatus("all");
-                setFilterUrgency("all");
-              }}
-            />
-          </Box>
-        )}
-      </Paper>
+          </>
+        }
+      />
 
       {/* Kanban or Table View */}
       {viewMode === "kanban" ? (
@@ -657,7 +622,7 @@ const IntakeManagement: React.FC = () => {
             {isLoading ? (
               <LinearProgress />
             ) : pendingIntakes.length === 0 ? (
-              <Alert severity="info">No pending intakes to review</Alert>
+              <Callout variant="info">No pending intakes to review</Callout>
             ) : (
               <TableContainer>
                 <Table>
@@ -695,7 +660,7 @@ const IntakeManagement: React.FC = () => {
             {isLoading ? (
               <LinearProgress />
             ) : reviewingIntakes.length === 0 ? (
-              <Alert severity="info">No intakes currently under review</Alert>
+              <Callout variant="info">No intakes currently under review</Callout>
             ) : (
               <TableContainer>
                 <Table>
@@ -733,7 +698,7 @@ const IntakeManagement: React.FC = () => {
             {isLoading ? (
               <LinearProgress />
             ) : processedIntakes.length === 0 ? (
-              <Alert severity="info">No processed intakes</Alert>
+              <Callout variant="info">No processed intakes</Callout>
             ) : (
               <TableContainer>
                 <Table>

@@ -1,6 +1,6 @@
-import { Box, Typography, LinearProgress, Stack, Avatar, Alert } from '@mui/material';
+import { Box, Typography, LinearProgress, Stack, Avatar } from '@mui/material';
 import { EmojiEvents, LocalFireDepartment, TrendingUp, CheckCircle, Star, Refresh } from '@mui/icons-material';
-import { glassCard, AuraButton, SectionLoader } from '@qivr/design-system';
+import { glassCard, AuraButton, SectionLoader, Callout } from '@qivr/design-system';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api-client';
 
@@ -50,9 +50,9 @@ export default function HealthProgress() {
         <Typography variant="h4" fontWeight={700} gutterBottom>
           Health Progress
         </Typography>
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Callout variant="error">
           Failed to load your health data. Please try again.
-        </Alert>
+        </Callout>
         <AuraButton onClick={() => refetch()} startIcon={<Refresh />}>
           Retry
         </AuraButton>

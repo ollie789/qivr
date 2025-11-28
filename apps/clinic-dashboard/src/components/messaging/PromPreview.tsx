@@ -4,7 +4,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   Box,
   Typography,
   Radio,
@@ -19,7 +18,6 @@ import {
   Step,
   StepLabel,
   LinearProgress,
-  Alert,
   Chip,
   IconButton,
 } from '@mui/material';
@@ -38,7 +36,7 @@ import type {
 } from '../../services/promApi';
 import { promApi } from '../../services/promApi';
 import { useSnackbar } from 'notistack';
-import { LoadingSpinner, InfoCard, auraStepper } from '@qivr/design-system';
+import { LoadingSpinner, InfoCard, auraStepper, Callout, AuraButton } from '@qivr/design-system';
 
 interface PromPreviewProps {
   open: boolean;
@@ -391,46 +389,44 @@ export const PromPreview: React.FC<PromPreviewProps> = ({
                 </InfoCard>
 
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 3 }}>
-                  <Button
+                  <AuraButton
                     startIcon={<BackIcon />}
                     onClick={handleBack}
                     disabled={currentStep === 0}
                   >
                     Previous
-                  </Button>
-                  <Button
+                  </AuraButton>
+                  <AuraButton
                     endIcon={<NextIcon />}
                     onClick={handleNext}
                     variant="contained"
                     disabled={currentStep === preview.questions.length - 1}
                   >
                     Next
-                  </Button>
+                  </AuraButton>
                 </Box>
               </>
             )}
 
             {/* Preview Notice */}
-            <Alert severity="info" sx={{ mt: 3 }}>
-              <Typography variant="body2">
-                This is a preview mode. Responses are not saved or submitted.
-              </Typography>
-            </Alert>
+            <Callout variant="info">
+              This is a preview mode. Responses are not saved or submitted.
+            </Callout>
           </Box>
         ) : null}
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Close Preview</Button>
+        <AuraButton onClick={onClose}>Close Preview</AuraButton>
         {preview && getCompletionPercentage() === 100 && (
-          <Button 
-            variant="contained" 
+          <AuraButton
+            variant="contained"
             color="success"
             startIcon={<CheckCircleIcon />}
             disabled
           >
             Preview Complete
-          </Button>
+          </AuraButton>
         )}
       </DialogActions>
     </Dialog>

@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Button,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -13,7 +12,7 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
-import { LoadingSpinner } from "@qivr/design-system";
+import { LoadingSpinner, AuraButton } from "@qivr/design-system";
 import { EvaluationViewer } from "../../features/intake/components/EvaluationViewer";
 import { intakeApi } from "../../services/intakeApi";
 
@@ -126,7 +125,7 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
         >
           Intake Evaluation
           <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
+            <AuraButton
               variant="contained"
               color="primary"
               size="small"
@@ -137,9 +136,9 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
               }}
             >
               Create Record & Plan
-            </Button>
+            </AuraButton>
             {onDelete && (
-              <Button
+              <AuraButton
                 variant="outlined"
                 color="error"
                 size="small"
@@ -159,7 +158,7 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                 }}
               >
                 Delete
-              </Button>
+              </AuraButton>
             )}
             <IconButton onClick={onClose} size="small">
               <CloseIcon />

@@ -3,8 +3,10 @@ import { Box, Typography, Card, CardContent } from '@mui/material';
 import { auraTokens } from '../../theme/auraTokens';
 
 export interface StatCardProps {
-  /** Label text displayed above value */
-  label: string;
+  /** Label text displayed above value (alias: title) */
+  label?: string;
+  /** Title text displayed above value (alias: label) */
+  title?: string;
   /** The primary value to display */
   value: string | number;
   /** Optional icon element */
@@ -21,16 +23,19 @@ export interface StatCardProps {
  */
 export const StatCard: React.FC<StatCardProps> = ({
   label,
+  title,
   value,
   icon,
   iconColor,
   compact = false,
 }) => {
+  const displayLabel = label || title || '';
+
   if (compact) {
     return (
       <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: auraTokens.borderRadius.sm }}>
         <Typography variant="caption" color="text.secondary">
-          {label}
+          {displayLabel}
         </Typography>
         <Typography variant="h6">{value}</Typography>
       </Box>
@@ -48,7 +53,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           )}
           <Box>
             <Typography variant="caption" color="text.secondary">
-              {label}
+              {displayLabel}
             </Typography>
             <Typography variant="h6">{value}</Typography>
           </Box>

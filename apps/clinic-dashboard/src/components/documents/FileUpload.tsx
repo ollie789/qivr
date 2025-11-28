@@ -10,7 +10,6 @@ import {
   ListItemIcon,
   ListItemText,
   IconButton,
-  Alert,
   Chip,
 } from '@mui/material';
 import {
@@ -21,7 +20,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { documentsApi, type Document } from '../../services/documentsApi';
-import { EmptyState } from '@qivr/design-system';
+import { AuraEmptyState, Callout } from '@qivr/design-system';
 
 interface FileUploadProps {
   patientId?: string;
@@ -200,7 +199,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         }}
       >
         <input {...getInputProps()} />
-        <EmptyState
+        <AuraEmptyState
           icon={<UploadIcon />}
           title={isDragActive ? 'Drop files here...' : 'Drag & drop files here'}
           description={`Supported formats: Images, PDF, Word documents. Max file size: ${formatFileSize(maxSize)} | Max files: ${maxFiles}`}
@@ -245,9 +244,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   file.status === 'uploading' ? (
                     <LinearProgress variant="determinate" value={file.progress || 0} sx={{ mt: 1 }} />
                   ) : file.error ? (
-                    <Alert severity="error" sx={{ mt: 1, py: 0 }}>
+                    <Callout variant="error">
                       {file.error}
-                    </Alert>
+                    </Callout>
                   ) : null
                 }
               />

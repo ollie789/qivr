@@ -5,6 +5,7 @@ export * from './FormActions';
 export * from './FormRow';
 export * from './SelectField';
 export * from './SearchBar';
+export * from './FilterToolbar';
 export * from './DocumentUploader';
 
 // Aura form components
@@ -17,3 +18,7 @@ export * from './PhoneInput';
 export * from './CurrencyInput';
 export * from './TextArea';
 export * from './RatingInput';
+
+// Auth forms
+export * from './LoginForm';
+export * from './SignupForm';

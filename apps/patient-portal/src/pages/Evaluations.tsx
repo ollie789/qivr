@@ -6,7 +6,6 @@ import {
   Grid,
   Chip,
   IconButton,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -43,6 +42,7 @@ import {
   AuraErrorState,
   StatCardSkeleton,
   FilterChips,
+  AuraButton,
 } from "@qivr/design-system";
 
 interface Evaluation {
@@ -201,14 +201,14 @@ export const Evaluations = () => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           My Evaluations
         </Typography>
-        <Button
+        <AuraButton
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => navigate("/evaluations/new")}
           aria-label="Create new intake evaluation"
         >
           New Intake
-        </Button>
+        </AuraButton>
       </Box>
 
       {/* Statistics Cards */}

@@ -9,7 +9,6 @@ import {
   Select,
   MenuItem,
   Chip,
-  Alert,
   Checkbox,
   FormControlLabel,
   Switch,
@@ -30,7 +29,7 @@ import { patientApi, type Patient as PatientSummary } from '../../services/patie
 import { NotificationMethod } from '../../services/promApi';
 import type { PromTemplateSummary } from '../../services/promApi';
 import { handleApiError } from '../../lib/api-client';
-import { DialogSection, FormSection, FormRow, FormDialog } from '@qivr/design-system';
+import { DialogSection, FormSection, FormRow, FormDialog, Callout } from '@qivr/design-system';
 
 interface SendPromDialogProps {
   open: boolean;
@@ -400,10 +399,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
           </FormSection>
 
           {selectedPatients.length > 0 && selectedTemplate && (
-            <Alert severity="info">
-              <Typography variant="subtitle2" gutterBottom>
-                Summary
-              </Typography>
+            <Callout variant="info" title="Summary">
               <Typography variant="body2">
                 • Sending to {selectedPatients.length} patient(s)
               </Typography>
@@ -421,7 +417,7 @@ export const SendPromDialog: React.FC<SendPromDialogProps> = ({
                   • Notifications: {[sendEmail && 'Email', sendSms && 'SMS'].filter(Boolean).join(', ')}
                 </Typography>
               )}
-            </Alert>
+            </Callout>
           )}
         </DialogSection>
     </FormDialog>

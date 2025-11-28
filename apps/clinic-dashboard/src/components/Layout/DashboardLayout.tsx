@@ -16,7 +16,6 @@ import {
   Avatar,
   Menu,
   MenuItem,
-  Badge,
   Tooltip,
   useTheme,
   useMediaQuery,
@@ -39,8 +38,7 @@ import {
 } from "@mui/icons-material";
 import { useAuthActions, useAuthUser } from "../../stores/authStore";
 import { NotificationBell, TenantSelector } from "../shared";
-import { useThemeMode } from "../../contexts/ThemeContext";
-import { ThemeToggle } from "@qivr/design-system";
+import { ThemeToggle, CountBadge } from "@qivr/design-system";
 import type { SxProps, Theme } from "@mui/material/styles";
 
 const drawerWidth = 280;
@@ -87,8 +85,6 @@ const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const { darkMode, toggleDarkMode } = useThemeMode();
-
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(!isMobile);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -203,9 +199,9 @@ const DashboardLayout: React.FC = () => {
                   }}
                 >
                   {item.badge ? (
-                    <Badge badgeContent={item.badge} color="error">
+                    <CountBadge count={item.badge}>
                       {item.icon}
-                    </Badge>
+                    </CountBadge>
                   ) : (
                     item.icon
                   )}
@@ -288,10 +284,7 @@ const DashboardLayout: React.FC = () => {
 
           <NotificationBell />
 
-          <ThemeToggle
-            mode={darkMode ? "dark" : "light"}
-            onToggle={toggleDarkMode}
-          />
+          <ThemeToggle />
 
           <IconButton
             edge="end"

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TopDiagnosisDatum } from '../types';
-import { AuraChartCard, EmptyState } from '@qivr/design-system';
+import { AuraChartCard, AuraEmptyState } from '@qivr/design-system';
 import { BarChart as BarChartIcon } from '@mui/icons-material';
 
 export interface TopDiagnosesCardProps {
@@ -22,7 +22,7 @@ const TopDiagnosesCard: React.FC<TopDiagnosesCardProps> = ({
   return (
     <AuraChartCard title={title}>
       {isEmpty ? (
-        <EmptyState
+        <AuraEmptyState
           icon={<BarChartIcon />}
           title="No Data"
           description={emptyMessage}

@@ -4,13 +4,12 @@ import {
   Paper,
   Typography,
   TextField,
-  Button,
   MenuItem,
   FormControlLabel,
   Checkbox,
   Grid,
   Autocomplete,
-  
+
 } from "@mui/material";
 import { CloudUpload, CheckCircle } from "@mui/icons-material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { OCRResultsViewer } from "../components/documents";
 import { documentApi, Document } from "../services/documentApi";
 import { patientApi } from "../services/patientApi";
-import { PageHeader, DocumentUploader, auraTokens, LoadingSpinner } from "@qivr/design-system";
+import { PageHeader, DocumentUploader, auraTokens, LoadingSpinner, AuraButton } from "@qivr/design-system";
 
 const DOCUMENT_TYPES = [
   { value: "referral", label: "Referral" },
@@ -178,16 +177,16 @@ export default function DocumentUpload() {
                 <OCRResultsViewer document={uploadedDocument} />
 
                 <Box sx={{ mt: 3, display: "flex", gap: 2 }}>
-                  <Button
+                  <AuraButton
                     variant="contained"
                     size="large"
                     onClick={() => navigate("/documents")}
                   >
                     View All Documents
-                  </Button>
-                  <Button variant="outlined" size="large" onClick={handleReset}>
+                  </AuraButton>
+                  <AuraButton variant="outlined" size="large" onClick={handleReset}>
                     Upload Another
-                  </Button>
+                  </AuraButton>
                 </Box>
               </Box>
             ) : (
@@ -348,7 +347,7 @@ export default function DocumentUpload() {
                     </Grid>
 
                     <Box sx={{ mt: 4, display: "flex", gap: 2 }}>
-                      <Button
+                      <AuraButton
                         variant="contained"
                         size="large"
                         startIcon={
@@ -365,8 +364,8 @@ export default function DocumentUpload() {
                         {uploadMutation.isPending
                           ? "Uploading..."
                           : "Upload Document"}
-                      </Button>
-                      <Button
+                      </AuraButton>
+                      <AuraButton
                         variant="outlined"
                         size="large"
                         onClick={handleReset}
@@ -374,7 +373,7 @@ export default function DocumentUpload() {
                         sx={{ px: 4, py: 1.5 }}
                       >
                         Reset
-                      </Button>
+                      </AuraButton>
                     </Box>
                   </Box>
                 )}

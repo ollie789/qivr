@@ -1,9 +1,7 @@
 import React, { useMemo } from "react";
 import {
-  Alert,
   Avatar,
   Box,
-  Button,
   Chip,
   Container,
   Grid,
@@ -33,7 +31,7 @@ import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useDashboardData } from "../hooks";
-import { AuraStatCard, InfoCard, StatCardSkeleton, AuraEmptyState, TreatmentPlanCard } from "@qivr/design-system";
+import { AuraStatCard, InfoCard, StatCardSkeleton, AuraEmptyState, TreatmentPlanCard, AuraButton, Callout } from "@qivr/design-system";
 
 const formatAppointmentTime = (isoDate: string) => {
   const date = parseISO(isoDate);
@@ -90,9 +88,9 @@ export const DashboardPage: React.FC = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Callout variant="error">
           Unable to load all dashboard data. Please try again later.
-        </Alert>
+        </Callout>
       )}
 
       {isLoading && <LinearProgress sx={{ mb: 3 }} />}
@@ -164,13 +162,13 @@ export const DashboardPage: React.FC = () => {
           <InfoCard
             title="Upcoming Appointments"
             action={
-              <Button
+              <AuraButton
                 size="small"
                 startIcon={<AddIcon />}
                 onClick={() => navigate("/appointments/book")}
               >
                 Book New
-              </Button>
+              </AuraButton>
             }
           >
             {displayedAppointments.length === 0 ? (
@@ -246,13 +244,13 @@ export const DashboardPage: React.FC = () => {
           <InfoCard
             title="Assessments & PROMs"
             action={
-              <Button
+              <AuraButton
                 size="small"
                 startIcon={<ScheduleIcon />}
                 onClick={() => navigate("/proms")}
               >
                 View All
-              </Button>
+              </AuraButton>
             }
           >
             {displayedProms.length === 0 ? (

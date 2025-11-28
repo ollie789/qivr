@@ -11,8 +11,6 @@ import {
   Select,
   MenuItem,
 
-  Alert,
-
   ToggleButton,
   ToggleButtonGroup,
   List,
@@ -25,7 +23,7 @@ import {
   LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import { postWithAuth } from '@qivr/http';
-import { StepperDialog, FormSection, FormRow, TimeSlotPicker, ProviderCard } from '@qivr/design-system';
+import { StepperDialog, FormSection, FormRow, TimeSlotPicker, ProviderCard, Callout } from '@qivr/design-system';
 
 interface ScheduledAppointment {
   id: string;
@@ -218,16 +216,15 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       case 3:
         return (
           <FormSection title="Confirm Appointment" description="Review appointment details">
-            {error && <Alert severity="error">{error}</Alert>}
-            <Alert severity="info">
-              <Typography variant="subtitle2" gutterBottom>Appointment Summary</Typography>
+            {error && <Callout variant="error">{error}</Callout>}
+            <Callout variant="info" title="Appointment Summary">
               <Typography variant="body2">Patient: {patientName || 'Not specified'}</Typography>
               <Typography variant="body2">Provider: {selectedProvider?.name}</Typography>
               <Typography variant="body2">Date: {selectedDate?.toLocaleDateString()}</Typography>
               <Typography variant="body2">Time: {selectedTime}</Typography>
               <Typography variant="body2">Type: {appointmentTypes.find(t => t.value === appointmentType)?.label}</Typography>
               <Typography variant="body2">Location: {includeVideo ? 'Video Call' : 'In Clinic'}</Typography>
-            </Alert>
+            </Callout>
           </FormSection>
         );
 

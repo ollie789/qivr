@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, Button, TextField, Typography, Chip, Stack } from '@mui/material';
+import { Box, TextField, Typography, Chip, Stack } from '@mui/material';
 import { Add, Description } from '@mui/icons-material';
-import { glassCard, FormDialog } from '@qivr/design-system';
+import { glassCard, FormDialog, AuraButton } from '@qivr/design-system';
 import { treatmentPlansApi } from '../lib/api';
 import { useSnackbar } from 'notistack';
 
@@ -65,9 +65,9 @@ export default function TreatmentPlans() {
           <Typography variant="h4" fontWeight={700} gutterBottom>Treatment Plans</Typography>
           <Typography variant="body2" color="text.secondary">Manage patient treatment plans</Typography>
         </Box>
-        <Button variant="contained" startIcon={<Add />} onClick={() => setShowCreateDialog(true)}>
+        <AuraButton variant="contained" startIcon={<Add />} onClick={() => setShowCreateDialog(true)}>
           Create Plan
-        </Button>
+        </AuraButton>
       </Box>
 
       {plans.length === 0 ? (

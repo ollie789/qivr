@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Button,
   TextField,
   Typography,
   Stepper,
@@ -23,7 +22,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
-import { PainMap3D, auraStepper } from "@qivr/design-system";
+import { PainMap3D, auraStepper, AuraButton } from "@qivr/design-system";
 import { fetchProfile } from "../services/profileApi";
 
 const steps = [
@@ -708,21 +707,21 @@ export const IntakeForm: React.FC = () => {
         )}
 
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
-          <Button disabled={activeStep === 0} onClick={handleBack}>
+          <AuraButton disabled={activeStep === 0} onClick={handleBack}>
             Back
-          </Button>
+          </AuraButton>
           {activeStep === steps.length - 1 ? (
-            <Button
+            <AuraButton
               variant="contained"
               onClick={handleSubmit}
               disabled={!formData.chiefComplaint}
             >
               Submit Assessment
-            </Button>
+            </AuraButton>
           ) : (
-            <Button variant="contained" onClick={handleNext}>
+            <AuraButton variant="contained" onClick={handleNext}>
               Next
-            </Button>
+            </AuraButton>
           )}
         </Box>
       </Paper>

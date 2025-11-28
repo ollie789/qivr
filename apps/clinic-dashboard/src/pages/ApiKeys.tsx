@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, IconButton, Chip, Stack } from '@mui/material';
+import { Box, TextField, Typography, IconButton, Chip, Stack } from '@mui/material';
 import { Add, Delete, PowerSettingsNew, Key } from '@mui/icons-material';
-import { glassCard, auraTokens, CopyButton } from '@qivr/design-system';
+import { glassCard, auraTokens, CopyButton, PageHeader, AuraButton, AuraEmptyState, Code, FormSection, DialogSection, NumberTextField, FormDialog } from '@qivr/design-system';
 import { apiKeysApi } from '../lib/api';
 import { useSnackbar } from 'notistack';
 
@@ -57,22 +57,25 @@ export default function ApiKeys() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>API Keys</Typography>
-          <Typography variant="body2" color="text.secondary">Manage API keys for integrations</Typography>
-        </Box>
-        <Button variant="contained" startIcon={<Add />} onClick={() => setShowCreateDialog(true)}>
-          Create Key
-        </Button>
-      </Box>
+    <Box>
+      <PageHeader
+        title="API Keys"
+        description="Manage API keys for integrations"
+        actions={
+          <AuraButton variant="contained" startIcon={<Add />} onClick={() => setShowCreateDialog(true)}>
+            Create Key
+          </AuraButton>
+        }
+      />
 
       {keys.length === 0 ? (
-        <Box sx={{ ...glassCard, p: 8, textAlign: 'center' }}>
-          <Key sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
-          <Typography color="text.secondary">No API keys yet</Typography>
-        </Box>
+        <AuraEmptyState
+          icon={<Key />}
+          title="No API keys yet"
+          description="Create an API key to integrate with external services"
+          actionText="Create Key"
+          onAction={() => setShowCreateDialog(true)}
+        />
       ) : (
         <Stack spacing={2}>
           {keys.map((key: any) => (
@@ -81,7 +84,7 @@ export default function ApiKeys() {
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Typography variant="h6" fontWeight={600}>{key.name}</Typography>
-                    <Chip label={key.keyPrefix + '...'} size="small" variant="outlined" />
+                    <Code sx={{ fontSize: 12 }}>{key.keyPrefix}...</Code>
                     <Chip label={key.isActive ? 'Active' : 'Inactive'} size="small" color={key.isActive ? 'success' : 'default'} />
                   </Box>
                   {key.description && (
@@ -117,40 +120,67 @@ export default function ApiKeys() {
         </Stack>
       )}
 
-      <Dialog open={showCreateDialog} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Create API Key</DialogTitle>
-        <DialogContent>
+      <FormDialog
+        open={showCreateDialog}
+        onClose={handleClose}
+        title="Create API Key"
+        maxWidth="sm"
+        onSubmit={newKey ? undefined : handleCreate}
+        submitLabel={newKey ? undefined : "Create"}
+        submitDisabled={!formData.name || createMutation.isPending}
+        loading={createMutation.isPending}
+        formActionsProps={{
+          cancelLabel: newKey ? "Done" : "Cancel",
+        }}
+      >
+        <DialogSection>
           {newKey ? (
-            <Box sx={{ bgcolor: 'warning.light', p: 2, borderRadius: auraTokens.borderRadius.sm, mt: 1 }}>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                ⚠️ Save this key now - you won't see it again!
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <TextField value={newKey} fullWidth size="small" InputProps={{ readOnly: true }} />
-                <CopyButton text={newKey} tooltip="Copy API key" />
+            <FormSection
+              title="API Key Created"
+              description="Save this key now - you won't be able to see it again"
+            >
+              <Box sx={{ bgcolor: 'warning.light', p: 2, borderRadius: auraTokens.borderRadius.sm }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <TextField value={newKey} fullWidth size="small" InputProps={{ readOnly: true }} />
+                  <CopyButton text={newKey} tooltip="Copy API key" />
+                </Box>
               </Box>
-            </Box>
+            </FormSection>
           ) : (
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required fullWidth />
-              <TextField label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} fullWidth multiline rows={2} />
-              <TextField label="Expires in days (optional)" value={formData.expiresInDays} onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })} type="number" fullWidth />
-            </Stack>
+            <FormSection
+              title="Key Details"
+              description="Configure your new API key"
+            >
+              <Stack spacing={2}>
+                <TextField
+                  label="Name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  fullWidth
+                  placeholder="e.g., Production Integration"
+                />
+                <TextField
+                  label="Description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  fullWidth
+                  multiline
+                  rows={2}
+                  placeholder="What will this key be used for?"
+                />
+                <NumberTextField
+                  label="Expires in days (optional)"
+                  value={formData.expiresInDays}
+                  onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })}
+                  fullWidth
+                  placeholder="Leave empty for no expiration"
+                />
+              </Stack>
+            </FormSection>
           )}
-        </DialogContent>
-        <DialogActions>
-          {newKey ? (
-            <Button onClick={handleClose}>Done</Button>
-          ) : (
-            <>
-              <Button onClick={handleClose}>Cancel</Button>
-              <Button onClick={handleCreate} variant="contained" disabled={!formData.name || createMutation.isPending}>
-                Create
-              </Button>
-            </>
-          )}
-        </DialogActions>
-      </Dialog>
+        </DialogSection>
+      </FormDialog>
     </Box>
   );
 }

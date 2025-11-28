@@ -5,10 +5,9 @@ import {
   Typography,
   Chip,
   Grid,
-  Alert,
 } from "@mui/material";
 import { CheckCircle, Warning, Error as ErrorIcon } from "@mui/icons-material";
-import { LoadingSpinner } from "@qivr/design-system";
+import { LoadingSpinner, Callout } from "@qivr/design-system";
 import { Document } from "../../services/documentApi";
 
 interface OCRResultsViewerProps {
@@ -89,9 +88,9 @@ export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
           )}
         </Box>
 
-        <Alert severity={getSeverity()} sx={{ mb: 2 }}>
+        <Callout variant={getSeverity()}>
           {getStatusMessage()}
-        </Alert>
+        </Callout>
 
         {document.status === "ready" && (
           <Grid container spacing={2}>
@@ -129,10 +128,10 @@ export default function OCRResultsViewer({ document }: OCRResultsViewerProps) {
               document.extractedPatientName.toLowerCase() !==
                 document.patientName.toLowerCase() && (
                 <Grid size={12}>
-                  <Alert severity="warning">
-                    ⚠️ Extracted name doesn&apos;t match selected patient.
+                  <Callout variant="warning">
+                    Extracted name doesn&apos;t match selected patient.
                     Please verify.
-                  </Alert>
+                  </Callout>
                 </Grid>
               )}
 

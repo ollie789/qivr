@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -7,8 +8,8 @@ import {
 } from '@mui/material';
 import { FormActions, type FormActionsProps } from '../forms/FormActions';
 
-export interface FormDialogProps extends Omit<DialogProps, 'onSubmit'> {
-  title: string;
+export interface FormDialogProps extends Omit<DialogProps, 'onSubmit' | 'title'> {
+  title: ReactNode;
   onClose: () => void;
   onSubmit?: () => void;
   submitLabel?: string;
@@ -16,6 +17,8 @@ export interface FormDialogProps extends Omit<DialogProps, 'onSubmit'> {
   loading?: boolean;
   children: React.ReactNode;
   formActionsProps?: Omit<FormActionsProps, 'onCancel' | 'onSubmit'>;
+  /** Custom actions to render instead of FormActions */
+  actions?: ReactNode;
 }
 
 export const FormDialog = ({
@@ -28,6 +31,7 @@ export const FormDialog = ({
   loading,
   children,
   formActionsProps,
+  actions,
   maxWidth = 'sm',
   ...dialogProps
 }: FormDialogProps) => (
@@ -35,14 +39,16 @@ export const FormDialog = ({
     <DialogTitle>{title}</DialogTitle>
     <DialogContent>{children}</DialogContent>
     <DialogActions>
-      <FormActions
-        onCancel={onClose}
-        onSubmit={onSubmit}
-        submitLabel={submitLabel}
-        submitDisabled={submitDisabled}
-        submitLoading={loading}
-        {...formActionsProps}
-      />
+      {actions ?? (
+        <FormActions
+          onCancel={onClose}
+          onSubmit={onSubmit}
+          submitLabel={submitLabel}
+          submitDisabled={submitDisabled}
+          submitLoading={loading}
+          {...formActionsProps}
+        />
+      )}
     </DialogActions>
   </Dialog>
 );

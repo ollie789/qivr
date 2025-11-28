@@ -5,7 +5,6 @@ import {
   Typography,
   Grid,
   Chip,
-  Button,
   IconButton,
   Paper,
 } from "@mui/material";
@@ -21,7 +20,7 @@ import {
 import { format } from "date-fns";
 import type { ChipProps } from "@mui/material/Chip";
 import apiClient from "../lib/api-client";
-import { PageLoader, InfoCard, Breadcrumbs } from "@qivr/design-system";
+import { PageLoader, InfoCard, Breadcrumbs, AuraButton } from "@qivr/design-system";
 
 interface Evaluation {
   id: string;
@@ -156,13 +155,13 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
     return (
       <Box>
         <Typography variant="h5">Evaluation not found</Typography>
-        <Button
+        <AuraButton
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/evaluations")}
           sx={{ mt: 2 }}
         >
           Back to Evaluations
-        </Button>
+        </AuraButton>
       </Box>
     );
   }
@@ -204,25 +203,25 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
           </Box>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
+          <AuraButton
             startIcon={<DownloadIcon />}
             variant="outlined"
             size="small"
             onClick={handleDownload}
           >
             Download
-          </Button>
-          <Button
+          </AuraButton>
+          <AuraButton
             startIcon={<PrintIcon />}
             variant="outlined"
             size="small"
             onClick={handlePrint}
           >
             Print
-          </Button>
-          <Button startIcon={<ShareIcon />} variant="outlined" size="small">
+          </AuraButton>
+          <AuraButton startIcon={<ShareIcon />} variant="outlined" size="small">
             Share
-          </Button>
+          </AuraButton>
         </Box>
       </Box>
 

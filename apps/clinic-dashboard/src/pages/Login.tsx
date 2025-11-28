@@ -1,26 +1,19 @@
-import { PasswordTextField, LoadingButton, auraTokens } from "@qivr/design-system";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import {
-  Box,
-  Typography,
-  Container,
-  TextField,
-  Alert,
-  Divider,
-  Stack,
-  Grid,
-} from "@mui/material";
+import { Typography, Link as MuiLink } from "@mui/material";
 import { useAuth, useAuthActions } from "../stores/authStore";
+import {
+  AuthLayout,
+  LoginForm,
+  type LoginFormValues,
+} from "@qivr/design-system";
 
 export default function Login() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { login } = useAuthActions();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -28,18 +21,17 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const handleLogin = async (data: LoginFormValues) => {
+    setError(null);
 
-    if (!email || !password) {
+    if (!data.email || !data.password) {
       setError("Please enter both email and password");
       return;
     }
 
-    setIsLoggingIn(true);
+    setIsLoading(true);
     try {
-      await login(email, password);
+      await login(data.email, data.password);
       navigate("/dashboard");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "";
@@ -63,130 +55,37 @@ export default function Login() {
         setError(message || "Login failed. Please try again.");
       }
     } finally {
-      setIsLoggingIn(false);
+      setIsLoading(false);
     }
   };
 
-  return (
-    <Container maxWidth="sm">
-      <Stack
-        sx={{
-          minHeight: "100vh",
-          alignItems: "center",
-          justifyContent: "center",
-          py: 4,
-        }}
+  const footer = (
+    <Typography variant="body2" color="text.secondary" textAlign="center">
+      <MuiLink
+        component={Link}
+        to="/signup"
+        sx={{ color: "primary.main", textDecoration: "none" }}
       >
-        <Grid container sx={{ maxWidth: "28rem", rowGap: 3 }}>
-          {/* Header */}
-          <Grid size={12}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              sx={{
-                justifyContent: "space-between",
-                alignItems: { xs: "flex-start", sm: "flex-end" },
-              }}
-            >
-              <Box>
-                <Typography variant="h4" fontWeight={600}>
-                  Log in
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Qivr Clinic Portal
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Don't have an account?{" "}
-                <Link to="/signup" style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none" }}>
-                  Sign up
-                </Link>
-              </Typography>
-            </Stack>
-          </Grid>
+        Create a new account
+      </MuiLink>
+    </Typography>
+  );
 
-          {/* Form */}
-          <Grid size={12}>
-            <Box component="form" onSubmit={handleSubmit}>
-              {error && (
-                <Alert severity="error" sx={{ mb: 3, borderRadius: auraTokens.borderRadius.sm }}>
-                  {error}
-                </Alert>
-              )}
-
-              <Stack spacing={3}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  autoFocus
-                />
-
-                <PasswordTextField
-                  fullWidth
-                  label="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-
-                <Stack
-                  direction="row"
-                  justifyContent="flex-end"
-                  alignItems="center"
-                >
-                  <Link
-                    to="/forgot-password"
-                    style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none", fontSize: "0.875rem" }}
-                  >
-                    Forgot Password?
-                  </Link>
-                </Stack>
-
-                <LoadingButton
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  loading={isLoggingIn}
-                  loadingText="Logging in..."
-                  sx={{
-                    py: 1.5,
-                    bgcolor: "primary.main",
-                    "&:hover": {
-                      bgcolor: "primary.dark",
-                    },
-                  }}
-                >
-                  Log in
-                </LoadingButton>
-              </Stack>
-            </Box>
-          </Grid>
-
-          {/* Divider */}
-          <Grid size={12}>
-            <Divider sx={{ color: "text.secondary" }}>or</Divider>
-          </Grid>
-
-          {/* Footer */}
-          <Grid size={12}>
-            <Typography variant="body2" color="text.secondary" textAlign="center">
-              <Link
-                to="/signup"
-                style={{ color: "var(--mui-palette-primary-main)", textDecoration: "none" }}
-              >
-                Create a new account
-              </Link>
-            </Typography>
-          </Grid>
-        </Grid>
-      </Stack>
-    </Container>
+  return (
+    <AuthLayout
+      appName="Qivr"
+      tagline="Clinic Management Portal"
+    >
+      <LoginForm
+        onSubmit={handleLogin}
+        error={error}
+        isLoading={isLoading}
+        title="Log in"
+        subtitle="Qivr Clinic Portal"
+        onSignUpClick={() => navigate("/signup")}
+        onForgotPasswordClick={() => navigate("/forgot-password")}
+        footer={footer}
+      />
+    </AuthLayout>
   );
 }

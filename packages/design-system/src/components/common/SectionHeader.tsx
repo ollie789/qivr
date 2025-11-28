@@ -7,7 +7,7 @@ interface SectionHeaderProps extends StackOwnProps {
   actionComponent?: ReactElement;
 }
 
-export const SectionHeader = ({ title, subTitle, actionComponent, ...rest }: SectionHeaderProps) => {
+const SectionHeader = ({ title, subTitle, actionComponent, ...rest }: SectionHeaderProps) => {
   return (
     <Stack
       spacing={2}
@@ -36,3 +36,5 @@ export const SectionHeader = ({ title, subTitle, actionComponent, ...rest }: Sec
     </Stack>
   );
 };
+
+export default SectionHeader;

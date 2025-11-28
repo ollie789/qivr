@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, useAuthActions } from '../../stores/authStore';
-import { PageLoader } from '@qivr/design-system';
+import { AuroraPageLoader } from '@qivr/design-system';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -19,7 +19,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
 
   // Show loading while checking authentication
   if (isLoading) {
-    return <PageLoader />;
+    return <AuroraPageLoader sx={{ height: '100vh' }} />;
   }
 
   // Redirect to login if not authenticated

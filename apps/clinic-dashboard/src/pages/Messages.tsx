@@ -3,7 +3,6 @@ import {
   Box,
   Paper,
   Typography,
-  Button,
   Tabs,
   Tab,
   List,
@@ -11,9 +10,7 @@ import {
   ListItemButton,
   ListItemText,
   ListItemAvatar,
-  Avatar,
   Chip,
-  Alert,
   Divider,
   IconButton,
 } from "@mui/material";
@@ -39,6 +36,8 @@ import {
   AuraButton,
   AuraEmptyState,
   auraTokens,
+  StatusAvatar,
+  Callout,
 } from "@qivr/design-system";
 
 const Messages: React.FC = () => {
@@ -232,9 +231,9 @@ const Messages: React.FC = () => {
           {conversationsLoading ? (
             <SectionLoader minHeight={200} />
           ) : conversationsError ? (
-            <Alert severity="error" sx={{ m: 2 }}>
+            <Callout variant="error">
               Failed to load conversations
-            </Alert>
+            </Callout>
           ) : conversations.length === 0 ? (
             <Box sx={{ p: 3 }}>
               <AuraEmptyState
@@ -275,9 +274,12 @@ const Messages: React.FC = () => {
                     }}
                   >
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: avatarColor }}>
+                      <StatusAvatar
+                        status={conversation.unreadCount > 0 ? "online" : "offline"}
+                        sx={{ bgcolor: avatarColor }}
+                      >
                         {conversation.participantName.charAt(0).toUpperCase()}
-                      </Avatar>
+                      </StatusAvatar>
                     </ListItemAvatar>
                     <ListItemText
                       primary={
@@ -356,7 +358,7 @@ const Messages: React.FC = () => {
           ) : conversationLoading ? (
             <SectionLoader minHeight={200} />
           ) : conversationError ? (
-            <Alert severity="error">Unable to load conversation</Alert>
+            <Callout variant="error">Unable to load conversation</Callout>
           ) : visibleMessages.length === 0 ? (
             <Box
               sx={{
@@ -472,13 +474,13 @@ const Messages: React.FC = () => {
                 })}
                 {hasNextPage && (
                   <ListItem sx={{ justifyContent: "center" }}>
-                    <Button
+                    <AuraButton
                       variant="text"
                       onClick={() => fetchNextPage()}
                       disabled={isFetchingNextPage}
                     >
                       {isFetchingNextPage ? "Loading…" : "Load older messages"}
-                    </Button>
+                    </AuraButton>
                   </ListItem>
                 )}
               </List>

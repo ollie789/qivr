@@ -3,12 +3,7 @@ import {
   Box,
   Typography,
   Grid,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   LinearProgress,
-  Alert,
   Tabs,
   Tab,
   Paper,
@@ -34,6 +29,8 @@ import {
   LoadingSpinner,
   SectionLoader,
   auraColors,
+  Callout,
+  SelectField,
 } from "@qivr/design-system";
 import analyticsApi from "../services/analyticsApi";
 import { TopDiagnosesCard } from "../features/analytics";
@@ -167,12 +164,14 @@ const Analytics: React.FC = () => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Callout variant="error">
           Failed to load analytics data. Please try again.
-        </Alert>
-        <AuraButton onClick={refetch} startIcon={<RefreshIcon />}>
-          Retry
-        </AuraButton>
+        </Callout>
+        <Box sx={{ mt: 2 }}>
+          <AuraButton onClick={refetch} startIcon={<RefreshIcon />}>
+            Retry
+          </AuraButton>
+        </Box>
       </Box>
     );
   }
@@ -198,18 +197,18 @@ const Analytics: React.FC = () => {
         description="Track your clinic's performance and patient outcomes"
         actions={
           <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Range</InputLabel>
-              <Select
-                label="Range"
-                value={dateRange}
-                onChange={(event) => setDateRange(event.target.value)}
-              >
-                <MenuItem value="7">7 days</MenuItem>
-                <MenuItem value="30">30 days</MenuItem>
-                <MenuItem value="90">90 days</MenuItem>
-              </Select>
-            </FormControl>
+            <SelectField
+              label="Range"
+              value={dateRange}
+              onChange={(value) => setDateRange(value)}
+              options={[
+                { value: "7", label: "7 days" },
+                { value: "30", label: "30 days" },
+                { value: "90", label: "90 days" },
+              ]}
+              size="small"
+              sx={{ minWidth: 120 }}
+            />
             <AuraButton
               variant="outlined"
               startIcon={
@@ -345,29 +344,29 @@ const Analytics: React.FC = () => {
           <Grid size={12}>
             <Paper sx={{ p: 2, mb: 2 }}>
               <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Avatar</InputLabel>
-                  <Select
-                    label="Avatar"
-                    value={painAvatarType}
-                    onChange={(e) => setPainAvatarType(e.target.value)}
-                  >
-                    <MenuItem value="male">Male</MenuItem>
-                    <MenuItem value="female">Female</MenuItem>
-                    <MenuItem value="child">Child</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>View</InputLabel>
-                  <Select
-                    label="View"
-                    value={painViewOrientation}
-                    onChange={(e) => setPainViewOrientation(e.target.value)}
-                  >
-                    <MenuItem value="front">Front</MenuItem>
-                    <MenuItem value="back">Back</MenuItem>
-                  </Select>
-                </FormControl>
+                <SelectField
+                  label="Avatar"
+                  value={painAvatarType}
+                  onChange={(value) => setPainAvatarType(value)}
+                  options={[
+                    { value: "male", label: "Male" },
+                    { value: "female", label: "Female" },
+                    { value: "child", label: "Child" },
+                  ]}
+                  size="small"
+                  sx={{ minWidth: 120 }}
+                />
+                <SelectField
+                  label="View"
+                  value={painViewOrientation}
+                  onChange={(value) => setPainViewOrientation(value)}
+                  options={[
+                    { value: "front", label: "Front" },
+                    { value: "back", label: "Back" },
+                  ]}
+                  size="small"
+                  sx={{ minWidth: 120 }}
+                />
               </Box>
             </Paper>
           </Grid>
@@ -395,9 +394,9 @@ const Analytics: React.FC = () => {
                   </Typography>
                 </Box>
               ) : (
-                <Alert severity="info">
+                <Callout variant="info">
                   No pain map data available for the selected filters
-                </Alert>
+                </Callout>
               )}
             </InfoCard>
           </Grid>

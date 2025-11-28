@@ -10,7 +10,6 @@ import {
   ListItemButton,
   ListItemText,
   ListItemAvatar,
-  Alert,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -22,7 +21,7 @@ import { enAU } from 'date-fns/locale';
 import type { ChipProps } from '@mui/material/Chip';
 import { useSnackbar } from 'notistack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { StepperDialog, FormSection, FormRow, TimeSlotPicker } from '@qivr/design-system';
+import { StepperDialog, FormSection, FormRow, TimeSlotPicker, Callout } from '@qivr/design-system';
 import { appointmentsApi } from '../../services/appointmentsApi';
 
 export interface ScheduleAppointmentDialogProps {
@@ -162,7 +161,7 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
       return (
         <FormSection title="Patient Information" description="Enter patient details">
           {intakeId && (
-            <Alert severity="info">Creating appointment from intake submission</Alert>
+            <Callout variant="info">Creating appointment from intake submission</Callout>
           )}
           <FormRow>
             <TextField
@@ -290,15 +289,14 @@ export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps>
     // Confirm Step
     return (
       <FormSection title="Confirm Details" description="Review appointment details">
-        <Alert severity="info">
-          <Typography variant="subtitle2" gutterBottom>Appointment Summary</Typography>
+        <Callout variant="info" title="Appointment Summary">
           <Typography variant="body2">Patient: {appointmentData.patientName}</Typography>
           <Typography variant="body2">Provider: {providers.find(p => p.id === appointmentData.providerId)?.name}</Typography>
           <Typography variant="body2">Type: {appointmentTypes.find(t => t.id === appointmentData.appointmentType)?.label}</Typography>
           <Typography variant="body2">Date: {appointmentData.date?.toLocaleDateString()}</Typography>
           <Typography variant="body2">Time: {appointmentData.timeSlot}</Typography>
           <Typography variant="body2">Duration: {appointmentData.duration} minutes</Typography>
-        </Alert>
+        </Callout>
       </FormSection>
     );
   };

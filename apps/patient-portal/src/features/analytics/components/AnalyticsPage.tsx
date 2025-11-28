@@ -5,7 +5,6 @@ import {
   Grid,
   Chip,
   Stack,
-  Button,
   List,
   ListItem,
   ListItemText,
@@ -22,7 +21,7 @@ import {
 } from "@mui/icons-material";
 import { useAnalyticsDashboardData } from "../hooks/useAnalyticsDashboardData";
 import type { HealthGoal, HealthMetric } from "../../../types";
-import { InfoCard, SimpleLineChart, SimpleBarChart } from "@qivr/design-system";
+import { InfoCard, SimpleLineChart, SimpleBarChart, AuraButton } from "@qivr/design-system";
 
 const formatMetricValue = (metric: HealthMetric) => {
   const value = metric.value.toLocaleString();
@@ -168,9 +167,9 @@ const AnalyticsPage: React.FC = () => {
                 </List>
               )}
               {healthGoals.length > 3 && (
-                <Button sx={{ mt: 2 }} size="small">
+                <AuraButton sx={{ mt: 2 }} size="small">
                   View all goals
-                </Button>
+                </AuraButton>
               )}
             </InfoCard>
           </Grid>

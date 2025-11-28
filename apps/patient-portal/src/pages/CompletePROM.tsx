@@ -2,9 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
-  Button,
-  
-  Alert,
   Stepper,
   Step,
   StepLabel,
@@ -33,7 +30,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { PainMap3D, PainMap3DViewer, RebookingDialog, LoadingSpinner, auraStepper } from "@qivr/design-system";
+import { PainMap3D, PainMap3DViewer, RebookingDialog, LoadingSpinner, auraStepper, AuraButton, Callout } from "@qivr/design-system";
 import {
   fetchPromInstance as fetchPromInstanceById,
   fetchPromTemplate,
@@ -427,23 +424,19 @@ export const CompletePROM = () => {
   if (error && !success) {
     return (
       <Box p={3}>
-        <Alert
-          severity="error"
-          action={
-            <Button color="inherit" size="small" onClick={fetchPromInstance}>
-              Retry
-            </Button>
-          }
-        >
+        <Callout variant="error">
           {error}
-        </Alert>
-        <Button
+          <AuraButton color="inherit" size="small" onClick={fetchPromInstance} sx={{ ml: 2 }}>
+            Retry
+          </AuraButton>
+        </Callout>
+        <AuraButton
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/proms")}
           sx={{ mt: 2 }}
         >
           Back to PROMs
-        </Button>
+        </AuraButton>
       </Box>
     );
   }
@@ -451,10 +444,10 @@ export const CompletePROM = () => {
   if (success) {
     return (
       <Box p={3}>
-        <Alert severity="success" icon={<CheckIcon />} sx={{ mb: 3 }}>
+        <Callout variant="success" icon={<CheckIcon />}>
           Assessment submitted successfully! Redirecting...
-        </Alert>
-        <LinearProgress />
+        </Callout>
+        <LinearProgress sx={{ mt: 2 }} />
       </Box>
     );
   }
@@ -471,13 +464,13 @@ export const CompletePROM = () => {
     <Box>
       {/* Header */}
       <Box mb={3}>
-        <Button
+        <AuraButton
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/proms")}
           sx={{ mb: 2 }}
         >
           Back to PROMs
-        </Button>
+        </AuraButton>
 
         <Typography variant="h4" gutterBottom>
           {template.name}
@@ -570,13 +563,12 @@ export const CompletePROM = () => {
                   />
                 </Box>
                 {currentPainMap.length > 0 && baselinePainMap && (
-                  <Alert 
-                    severity="success" 
+                  <Callout
+                    variant="success"
                     icon={<TrendingDownIcon />}
-                    sx={{ mt: 2 }}
                   >
                     {calculateImprovement(baselinePainMap, currentPainMap)}% improvement
-                  </Alert>
+                  </Callout>
                 )}
               </Box>
             </Grid>
@@ -590,16 +582,16 @@ export const CompletePROM = () => {
 
         {/* Navigation buttons */}
         <Box display="flex" justifyContent="space-between" mt={4}>
-          <Button
+          <AuraButton
             disabled={activeStep === 0}
             onClick={handleBack}
             startIcon={<ArrowBackIcon />}
           >
             Previous
-          </Button>
+          </AuraButton>
 
           {isLastStep ? (
-            <Button
+            <AuraButton
               variant="contained"
               onClick={handleSubmit}
               disabled={submitting}
@@ -608,15 +600,15 @@ export const CompletePROM = () => {
               }
             >
               {submitting ? "Submitting..." : "Submit Assessment"}
-            </Button>
+            </AuraButton>
           ) : (
-            <Button
+            <AuraButton
               variant="contained"
               onClick={handleNext}
               endIcon={<ArrowForwardIcon />}
             >
               Next
-            </Button>
+            </AuraButton>
           )}
         </Box>
       </Paper>

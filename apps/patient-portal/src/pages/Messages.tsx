@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Box, Typography, Button, Tabs, Tab, Paper } from "@mui/material";
+import { Box, Typography, Tabs, Tab, Paper } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -7,6 +7,7 @@ import {
   MessageThread,
   PatientMessageComposer,
   AuraEmptyState,
+  AuraButton,
   type MessageListItem,
   type ThreadMessage,
 } from "@qivr/design-system";
@@ -134,13 +135,13 @@ export default function MessagesPage() {
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
             Messages
           </Typography>
-          <Button
+          <AuraButton
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setComposerOpen(true)}
           >
             New Message
-          </Button>
+          </AuraButton>
         </Box>
 
         <Tabs

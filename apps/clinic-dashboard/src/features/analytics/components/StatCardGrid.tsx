@@ -1,8 +1,8 @@
 import React from "react";
-import { Grid, Skeleton, Paper } from "@mui/material";
+import { Grid } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { StatCardItem } from "../types";
-import { StatCard } from "@qivr/design-system";
+import { AuraStatCard, StatCardSkeleton } from "@qivr/design-system";
 
 export interface StatCardGridProps {
   items: StatCardItem[];
@@ -32,15 +32,13 @@ const StatCardGrid: React.FC<StatCardGridProps> = ({
       {loading
         ? Array.from({ length: placeholders }).map((_, index) => (
             <Grid key={`stat-skeleton-${index}`} size={itemSizes}>
-              <Paper elevation={2} sx={{ p: 2 }}>
-                <Skeleton variant="rectangular" height={80} />
-              </Paper>
+              <StatCardSkeleton />
             </Grid>
           ))
         : items.map((item) => (
             <Grid key={item.id} size={itemSizes}>
-              <StatCard
-                label={item.title}
+              <AuraStatCard
+                title={item.title}
                 value={item.value}
                 icon={item.icon}
                 iconColor={item.avatarColor}

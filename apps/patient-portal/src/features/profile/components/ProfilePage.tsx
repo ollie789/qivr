@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import {
-  Alert,
   Avatar,
   Box,
-  Button,
   Chip,
   Container,
   FormControl,
@@ -43,7 +41,7 @@ import {
 } from "@mui/icons-material";
 import { handleApiError } from "../../../lib/api-client";
 import { useProfileData } from "../hooks";
-import { PageLoader, FormDialog } from "@qivr/design-system";
+import { PageLoader, FormDialog, FormSection, FormRow, AuraButton, Callout } from "@qivr/design-system";
 import MedicalRecordsPage from "../../medical-records/components/MedicalRecordsPage";
 import type {
   EmergencyContact,
@@ -252,15 +250,15 @@ export const ProfilePage: React.FC = () => {
       </Box>
 
       {feedback && (
-        <Alert severity={feedback.type} sx={{ mb: 3 }}>
+        <Callout variant={feedback.type}>
           {feedback.message}
-        </Alert>
+        </Callout>
       )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Callout variant="error">
           {error}
-        </Alert>
+        </Callout>
       )}
 
       <Paper sx={{ p: { xs: 3, md: 5 }, mb: 3 }}>
@@ -326,31 +324,31 @@ export const ProfilePage: React.FC = () => {
           </Grid>
           <Grid>
             {!isEditing ? (
-              <Button
+              <AuraButton
                 variant="outlined"
                 startIcon={<EditIcon />}
                 onClick={handleEdit}
                 disabled={!profile}
               >
                 Edit Profile
-              </Button>
+              </AuraButton>
             ) : (
               <Box sx={{ display: "flex", gap: 1 }}>
-                <Button
+                <AuraButton
                   variant="contained"
                   startIcon={<SaveIcon />}
                   onClick={handleSave}
                   disabled={updateProfileStatus.isPending}
                 >
                   Save
-                </Button>
-                <Button
+                </AuraButton>
+                <AuraButton
                   variant="outlined"
                   startIcon={<CancelIcon />}
                   onClick={handleCancel}
                 >
                   Cancel
-                </Button>
+                </AuraButton>
               </Box>
             )}
           </Grid>
@@ -368,332 +366,361 @@ export const ProfilePage: React.FC = () => {
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>
-          <Grid container spacing={3} sx={{ p: 3 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="First Name"
-                value={displayProfile?.firstName || ""}
-                onChange={(event) =>
-                  handleFieldChange("firstName", event.target.value)
-                }
-                disabled={!isEditing}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PersonIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Last Name"
-                value={displayProfile?.lastName || ""}
-                onChange={(event) =>
-                  handleFieldChange("lastName", event.target.value)
-                }
-                disabled={!isEditing}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Email"
-                value={displayProfile?.email || ""}
-                disabled
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EmailIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Phone"
-                value={displayProfile?.phone || ""}
-                onChange={(event) =>
-                  handleFieldChange("phone", event.target.value)
-                }
-                disabled={!isEditing}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PhoneIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Date of Birth"
-                type="date"
-                value={displayProfile?.dateOfBirth || ""}
-                onChange={(event) =>
-                  handleFieldChange("dateOfBirth", event.target.value)
-                }
-                disabled={!isEditing}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth disabled={!isEditing}>
-                <InputLabel>Gender</InputLabel>
-                <Select
-                  value={displayProfile?.gender || ""}
-                  onChange={(event) =>
-                    handleFieldChange("gender", event.target.value)
-                  }
-                  label="Gender"
-                >
-                  <MenuItem value="male">Male</MenuItem>
-                  <MenuItem value="female">Female</MenuItem>
-                  <MenuItem value="other">Other</MenuItem>
-                  <MenuItem value="prefer-not-to-say">
-                    Prefer not to say
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                fullWidth
-                label="Address"
-                value={displayProfile?.address || ""}
-                onChange={(event) =>
-                  handleFieldChange("address", event.target.value)
-                }
-                disabled={!isEditing}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LocationIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                fullWidth
-                label="City"
-                value={displayProfile?.city || ""}
-                onChange={(event) =>
-                  handleFieldChange("city", event.target.value)
-                }
-                disabled={!isEditing}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                fullWidth
-                label="State"
-                value={displayProfile?.state || ""}
-                onChange={(event) =>
-                  handleFieldChange("state", event.target.value)
-                }
-                disabled={!isEditing}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                fullWidth
-                label="Postcode"
-                value={displayProfile?.postcode || ""}
-                onChange={(event) =>
-                  handleFieldChange("postcode", event.target.value)
-                }
-                disabled={!isEditing}
-              />
-            </Grid>
-          </Grid>
+          <Box sx={{ p: 3 }}>
+            <FormSection title="Basic Information" description="Your name and contact details">
+              <FormRow>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    value={displayProfile?.firstName || ""}
+                    onChange={(event) =>
+                      handleFieldChange("firstName", event.target.value)
+                    }
+                    disabled={!isEditing}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PersonIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    value={displayProfile?.lastName || ""}
+                    onChange={(event) =>
+                      handleFieldChange("lastName", event.target.value)
+                    }
+                    disabled={!isEditing}
+                  />
+                </Grid>
+              </FormRow>
+              <FormRow>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    value={displayProfile?.email || ""}
+                    disabled
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EmailIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Phone"
+                    value={displayProfile?.phone || ""}
+                    onChange={(event) =>
+                      handleFieldChange("phone", event.target.value)
+                    }
+                    disabled={!isEditing}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PhoneIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+              </FormRow>
+              <FormRow>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Date of Birth"
+                    type="date"
+                    value={displayProfile?.dateOfBirth || ""}
+                    onChange={(event) =>
+                      handleFieldChange("dateOfBirth", event.target.value)
+                    }
+                    disabled={!isEditing}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormControl fullWidth disabled={!isEditing}>
+                    <InputLabel>Gender</InputLabel>
+                    <Select
+                      value={displayProfile?.gender || ""}
+                      onChange={(event) =>
+                        handleFieldChange("gender", event.target.value)
+                      }
+                      label="Gender"
+                    >
+                      <MenuItem value="male">Male</MenuItem>
+                      <MenuItem value="female">Female</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                      <MenuItem value="prefer-not-to-say">
+                        Prefer not to say
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </FormRow>
+            </FormSection>
+
+            <FormSection title="Address" description="Your residential address" divider>
+              <FormRow>
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Street Address"
+                    value={displayProfile?.address || ""}
+                    onChange={(event) =>
+                      handleFieldChange("address", event.target.value)
+                    }
+                    disabled={!isEditing}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LocationIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+              </FormRow>
+              <FormRow>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="City"
+                    value={displayProfile?.city || ""}
+                    onChange={(event) =>
+                      handleFieldChange("city", event.target.value)
+                    }
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="State"
+                    value={displayProfile?.state || ""}
+                    onChange={(event) =>
+                      handleFieldChange("state", event.target.value)
+                    }
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="Postcode"
+                    value={displayProfile?.postcode || ""}
+                    onChange={(event) =>
+                      handleFieldChange("postcode", event.target.value)
+                    }
+                    disabled={!isEditing}
+                  />
+                </Grid>
+              </FormRow>
+            </FormSection>
+          </Box>
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <Grid container spacing={3} sx={{ p: 3 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth disabled={!isEditing}>
-                <InputLabel>Blood Type</InputLabel>
-                <Select
-                  value={displayProfile?.medicalInfo?.bloodType || ""}
-                  onChange={(event) => {
-                    if (!editedProfile) {
-                      return;
+          <Box sx={{ p: 3 }}>
+            <FormSection title="Medical Information" description="Your health and medical details">
+              <FormRow>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormControl fullWidth disabled={!isEditing}>
+                    <InputLabel>Blood Type</InputLabel>
+                    <Select
+                      value={displayProfile?.medicalInfo?.bloodType || ""}
+                      onChange={(event) => {
+                        if (!editedProfile) {
+                          return;
+                        }
+                        const medicalInfo = createDefaultMedicalInfo(
+                          editedProfile.medicalInfo,
+                        );
+                        handleFieldChange("medicalInfo", {
+                          ...medicalInfo,
+                          bloodType: event.target.value,
+                        });
+                      }}
+                      label="Blood Type"
+                    >
+                      <MenuItem value="A+">A+</MenuItem>
+                      <MenuItem value="A-">A-</MenuItem>
+                      <MenuItem value="B+">B+</MenuItem>
+                      <MenuItem value="B-">B-</MenuItem>
+                      <MenuItem value="AB+">AB+</MenuItem>
+                      <MenuItem value="AB-">AB-</MenuItem>
+                      <MenuItem value="O+">O+</MenuItem>
+                      <MenuItem value="O-">O-</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </FormRow>
+              <FormRow>
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    label="Allergies"
+                    value={displayProfile?.medicalInfo?.allergies?.join(", ") || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) {
+                        return;
+                      }
+                      const medicalInfo = createDefaultMedicalInfo(
+                        editedProfile.medicalInfo,
+                      );
+                      handleFieldChange("medicalInfo", {
+                        ...medicalInfo,
+                        allergies: parseCommaSeparated(event.target.value),
+                      });
+                    }}
+                    disabled={!isEditing}
+                    helperText="Separate multiple allergies with commas"
+                  />
+                </Grid>
+              </FormRow>
+              <FormRow>
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    label="Current Medications"
+                    value={
+                      displayProfile?.medicalInfo?.medications?.join(", ") || ""
                     }
-                    const medicalInfo = createDefaultMedicalInfo(
-                      editedProfile.medicalInfo,
-                    );
-                    handleFieldChange("medicalInfo", {
-                      ...medicalInfo,
-                      bloodType: event.target.value,
-                    });
-                  }}
-                  label="Blood Type"
-                >
-                  <MenuItem value="A+">A+</MenuItem>
-                  <MenuItem value="A-">A-</MenuItem>
-                  <MenuItem value="B+">B+</MenuItem>
-                  <MenuItem value="B-">B-</MenuItem>
-                  <MenuItem value="AB+">AB+</MenuItem>
-                  <MenuItem value="AB-">AB-</MenuItem>
-                  <MenuItem value="O+">O+</MenuItem>
-                  <MenuItem value="O-">O-</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Allergies"
-                value={displayProfile?.medicalInfo?.allergies?.join(", ") || ""}
-                onChange={(event) => {
-                  if (!editedProfile) {
-                    return;
-                  }
-                  const medicalInfo = createDefaultMedicalInfo(
-                    editedProfile.medicalInfo,
-                  );
-                  handleFieldChange("medicalInfo", {
-                    ...medicalInfo,
-                    allergies: parseCommaSeparated(event.target.value),
-                  });
-                }}
-                disabled={!isEditing}
-                helperText="Separate multiple allergies with commas"
-              />
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Current Medications"
-                value={
-                  displayProfile?.medicalInfo?.medications?.join(", ") || ""
-                }
-                onChange={(event) => {
-                  if (!editedProfile) {
-                    return;
-                  }
-                  const medicalInfo = createDefaultMedicalInfo(
-                    editedProfile.medicalInfo,
-                  );
-                  handleFieldChange("medicalInfo", {
-                    ...medicalInfo,
-                    medications: parseCommaSeparated(event.target.value),
-                  });
-                }}
-                disabled={!isEditing}
-                helperText="Separate multiple medications with commas"
-              />
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Medical Conditions"
-                value={
-                  displayProfile?.medicalInfo?.conditions?.join(", ") || ""
-                }
-                onChange={(event) => {
-                  if (!editedProfile) {
-                    return;
-                  }
-                  const medicalInfo = createDefaultMedicalInfo(
-                    editedProfile.medicalInfo,
-                  );
-                  handleFieldChange("medicalInfo", {
-                    ...medicalInfo,
-                    conditions: parseCommaSeparated(event.target.value),
-                  });
-                }}
-                disabled={!isEditing}
-                helperText="Separate multiple conditions with commas"
-              />
-            </Grid>
-          </Grid>
+                    onChange={(event) => {
+                      if (!editedProfile) {
+                        return;
+                      }
+                      const medicalInfo = createDefaultMedicalInfo(
+                        editedProfile.medicalInfo,
+                      );
+                      handleFieldChange("medicalInfo", {
+                        ...medicalInfo,
+                        medications: parseCommaSeparated(event.target.value),
+                      });
+                    }}
+                    disabled={!isEditing}
+                    helperText="Separate multiple medications with commas"
+                  />
+                </Grid>
+              </FormRow>
+              <FormRow>
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    label="Medical Conditions"
+                    value={
+                      displayProfile?.medicalInfo?.conditions?.join(", ") || ""
+                    }
+                    onChange={(event) => {
+                      if (!editedProfile) {
+                        return;
+                      }
+                      const medicalInfo = createDefaultMedicalInfo(
+                        editedProfile.medicalInfo,
+                      );
+                      handleFieldChange("medicalInfo", {
+                        ...medicalInfo,
+                        conditions: parseCommaSeparated(event.target.value),
+                      });
+                    }}
+                    disabled={!isEditing}
+                    helperText="Separate multiple conditions with commas"
+                  />
+                </Grid>
+              </FormRow>
+            </FormSection>
+          </Box>
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
-          <Grid container spacing={3} sx={{ p: 3 }}>
-            <Grid size={12}>
-              <Alert severity="info">
-                Emergency contact information will be used in case of medical
-                emergencies
-              </Alert>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Contact Name"
-                value={displayProfile?.emergencyContact?.name || ""}
-                onChange={(event) => {
-                  if (!editedProfile) {
-                    return;
-                  }
-                  const contact = createDefaultEmergencyContact(
-                    editedProfile.emergencyContact,
-                  );
-                  handleFieldChange("emergencyContact", {
-                    ...contact,
-                    name: event.target.value,
-                  });
-                }}
-                disabled={!isEditing}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Relationship"
-                value={displayProfile?.emergencyContact?.relationship || ""}
-                onChange={(event) => {
-                  if (!editedProfile) {
-                    return;
-                  }
-                  const contact = createDefaultEmergencyContact(
-                    editedProfile.emergencyContact,
-                  );
-                  handleFieldChange("emergencyContact", {
-                    ...contact,
-                    relationship: event.target.value,
-                  });
-                }}
-                disabled={!isEditing}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Contact Phone"
-                value={displayProfile?.emergencyContact?.phone || ""}
-                onChange={(event) => {
-                  if (!editedProfile) {
-                    return;
-                  }
-                  const contact = createDefaultEmergencyContact(
-                    editedProfile.emergencyContact,
-                  );
-                  handleFieldChange("emergencyContact", {
-                    ...contact,
-                    phone: event.target.value,
-                  });
-                }}
-                disabled={!isEditing}
-              />
-            </Grid>
-          </Grid>
+          <Box sx={{ p: 3 }}>
+            <Callout variant="info">
+              Emergency contact information will be used in case of medical
+              emergencies
+            </Callout>
+            <FormSection title="Emergency Contact" description="Someone we can contact in case of emergency">
+              <FormRow>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Contact Name"
+                    value={displayProfile?.emergencyContact?.name || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) {
+                        return;
+                      }
+                      const contact = createDefaultEmergencyContact(
+                        editedProfile.emergencyContact,
+                      );
+                      handleFieldChange("emergencyContact", {
+                        ...contact,
+                        name: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Relationship"
+                    value={displayProfile?.emergencyContact?.relationship || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) {
+                        return;
+                      }
+                      const contact = createDefaultEmergencyContact(
+                        editedProfile.emergencyContact,
+                      );
+                      handleFieldChange("emergencyContact", {
+                        ...contact,
+                        relationship: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+              </FormRow>
+              <FormRow>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Contact Phone"
+                    value={displayProfile?.emergencyContact?.phone || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) {
+                        return;
+                      }
+                      const contact = createDefaultEmergencyContact(
+                        editedProfile.emergencyContact,
+                      );
+                      handleFieldChange("emergencyContact", {
+                        ...contact,
+                        phone: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+              </FormRow>
+            </FormSection>
+          </Box>
         </TabPanel>
 
         <TabPanel value={tabValue} index={3}>
@@ -832,12 +859,12 @@ export const ProfilePage: React.FC = () => {
                   primary="Password"
                   secondary="Change your account password"
                 />
-                <Button
+                <AuraButton
                   variant="outlined"
                   onClick={() => setPasswordDialogOpen(true)}
                 >
                   Change Password
-                </Button>
+                </AuraButton>
               </ListItem>
               <ListItem>
                 <ListItemIcon>

@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
-  Button,
   Paper,
   Typography,
   Grid,
@@ -16,6 +15,7 @@ import {
   StatCardSkeleton,
   AuraEmptyState,
   InfoCard,
+  AuraButton,
 } from "@qivr/design-system";
 import { format, parseISO } from "date-fns";
 
@@ -58,13 +58,13 @@ export default function PatientDetail() {
             description="The patient you're looking for doesn't exist or has been removed"
           />
           <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-            <Button
+            <AuraButton
               variant="contained"
               startIcon={<BackIcon />}
               onClick={() => navigate("/medical-records")}
             >
               Back to Medical Records
-            </Button>
+            </AuraButton>
           </Box>
         </Paper>
       </Box>
@@ -77,15 +77,15 @@ export default function PatientDetail() {
         title="Patient Details"
         actions={
           <>
-            <Button
+            <AuraButton
               startIcon={<BackIcon />}
               onClick={() => navigate("/medical-records")}
             >
               Back
-            </Button>
-            <Button variant="contained" startIcon={<EditIcon />}>
+            </AuraButton>
+            <AuraButton variant="contained" startIcon={<EditIcon />}>
               Edit
-            </Button>
+            </AuraButton>
           </>
         }
       />

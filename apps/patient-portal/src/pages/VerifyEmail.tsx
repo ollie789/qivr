@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { LoadingSpinner } from "@qivr/design-system";
+import { LoadingSpinner, Callout, AuraButton } from "@qivr/design-system";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
   Typography,
   Paper,
-  
-  Button,
-  Alert,
+
 } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
@@ -128,7 +126,7 @@ const VerifyEmail: React.FC = () => {
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
                 {message}
               </Typography>
-              <Button
+              <AuraButton
                 variant="contained"
                 color="primary"
                 size="large"
@@ -136,7 +134,7 @@ const VerifyEmail: React.FC = () => {
                 fullWidth
               >
                 Go to Login
-              </Button>
+              </AuraButton>
             </>
           )}
 
@@ -148,27 +146,27 @@ const VerifyEmail: React.FC = () => {
               <Typography variant="h4" gutterBottom>
                 Verification Failed
               </Typography>
-              <Alert severity="error" sx={{ mb: 3, textAlign: "left" }}>
+              <Callout variant="error">
                 {message}
-              </Alert>
+              </Callout>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Button
+                <AuraButton
                   variant="contained"
                   color="primary"
                   onClick={handleNavigateToLogin}
                   fullWidth
                 >
                   Go to Login
-                </Button>
+                </AuraButton>
                 {token && (
-                  <Button
+                  <AuraButton
                     variant="outlined"
                     color="primary"
                     onClick={handleResendEmail}
                     fullWidth
                   >
                     Resend Verification Email
-                  </Button>
+                  </AuraButton>
                 )}
               </Box>
             </>

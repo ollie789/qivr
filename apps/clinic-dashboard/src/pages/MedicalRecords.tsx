@@ -4,13 +4,8 @@ import {
   Box,
   Paper,
   Typography,
-  Button,
   Grid,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Chip,
   Avatar,
   List,
@@ -87,7 +82,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { ChipProps } from "@mui/material/Chip";
-import type { SelectChangeEvent } from "@mui/material/Select";
 import {
   PageHeader,
   TabPanel,
@@ -100,6 +94,8 @@ import {
   AuraEmptyState,
   StatCardSkeleton,
   TreatmentPlanDialog,
+  TableLabelDisplayedRows,
+  SelectField,
 } from "@qivr/design-system";
 import { MessageComposer } from "../components/messaging";
 import { intakeApi } from "../services/intakeApi";
@@ -955,7 +951,7 @@ const MedicalRecords: React.FC = () => {
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            <Button
+                            <AuraButton
                               size="small"
                               onClick={() => {
                                 setSelectedPatientId(patient.id);
@@ -963,7 +959,7 @@ const MedicalRecords: React.FC = () => {
                               }}
                             >
                               View Records
-                            </Button>
+                            </AuraButton>
                           </TableCell>
                         </TableRow>
                       ))
@@ -972,11 +968,11 @@ const MedicalRecords: React.FC = () => {
               </Table>
             </TableContainer>
             <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Showing {page * rowsPerPage + 1}-
-                {Math.min((page + 1) * rowsPerPage, patients.length)} of{" "}
-                {patients.length}
-              </Typography>
+              <TableLabelDisplayedRows
+                from={page * rowsPerPage + 1}
+                to={Math.min((page + 1) * rowsPerPage, patients.length)}
+                count={patients.length}
+              />
             </Box>
           </Paper>
         )}
@@ -987,13 +983,13 @@ const MedicalRecords: React.FC = () => {
             <Typography variant="h6" color="text.secondary">
               Select a patient from the list to view their medical records
             </Typography>
-            <Button
+            <AuraButton
               variant="contained"
               sx={{ mt: 2 }}
               onClick={() => setViewMode("list")}
             >
               Go to Patient List
-            </Button>
+            </AuraButton>
           </Paper>
         )}
 
@@ -1046,14 +1042,14 @@ const MedicalRecords: React.FC = () => {
                   </Box>
                 </Box>
                 <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
+                  <AuraButton
                     variant="outlined"
                     startIcon={<MessageIcon />}
                     onClick={() => setMessageDialogOpen(true)}
                   >
                     Send Message
-                  </Button>
-                  <Button
+                  </AuraButton>
+                  <AuraButton
                     variant={editMode ? "contained" : "outlined"}
                     startIcon={editMode ? <SaveIcon /> : <EditIcon />}
                     onClick={() =>
@@ -1061,7 +1057,7 @@ const MedicalRecords: React.FC = () => {
                     }
                   >
                     {editMode ? "Save Changes" : "Edit Info"}
-                  </Button>
+                  </AuraButton>
                 </Box>
               </Box>
 
@@ -1084,11 +1080,11 @@ const MedicalRecords: React.FC = () => {
               ) : (
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 6, md: 3 }}>
-                    <StatCard label="Blood Type" value="O+" compact />
+                    <StatCard title="Blood Type" value="O+" compact />
                   </Grid>
                   <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard
-                      label="Allergies"
+                      title="Allergies"
                       value={
                         medicalHistory.filter(
                           (h: MedicalHistory) => h.category === "allergy",
@@ -1099,7 +1095,7 @@ const MedicalRecords: React.FC = () => {
                   </Grid>
                   <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard
-                      label="Medications"
+                      title="Medications"
                       value={
                         medicalHistory.filter(
                           (h: MedicalHistory) =>
@@ -1112,7 +1108,7 @@ const MedicalRecords: React.FC = () => {
                   </Grid>
                   <Grid size={{ xs: 6, md: 3 }}>
                     <StatCard
-                      label="Last Visit"
+                      title="Last Visit"
                       value={lastVisitDisplay}
                       compact
                     />
@@ -1180,24 +1176,23 @@ const MedicalRecords: React.FC = () => {
                           disabled={!editMode}
                           slotProps={{ textField: { fullWidth: true } }}
                         />
-                        <FormControl fullWidth>
-                          <InputLabel>Gender</InputLabel>
-                          <Select
-                            value={editedPatient?.gender || ""}
-                            label="Gender"
-                            onChange={(e) =>
-                              setEditedPatient({
-                                ...editedPatient,
-                                gender: e.target.value,
-                              })
-                            }
-                            disabled={!editMode}
-                          >
-                            <MenuItem value="Male">Male</MenuItem>
-                            <MenuItem value="Female">Female</MenuItem>
-                            <MenuItem value="Other">Other</MenuItem>
-                          </Select>
-                        </FormControl>
+                        <SelectField
+                          label="Gender"
+                          value={editedPatient?.gender || ""}
+                          onChange={(value) =>
+                            setEditedPatient({
+                              ...editedPatient,
+                              gender: value,
+                            })
+                          }
+                          disabled={!editMode}
+                          options={[
+                            { value: "Male", label: "Male" },
+                            { value: "Female", label: "Female" },
+                            { value: "Other", label: "Other" },
+                          ]}
+                          fullWidth
+                        />
                       </Stack>
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
@@ -1389,32 +1384,32 @@ const MedicalRecords: React.FC = () => {
                     <Grid container spacing={2} sx={{ mb: 3 }}>
                       <Grid size={{ xs: 12, md: 4 }}>
                         <StatCard
-                          label="Overall Pain Level"
+                          title="Overall Pain Level"
                           value={`${vitalSigns[0].overallPainLevel || 0}/10`}
                           icon={<WarningIcon />}
                           iconColor={
                             vitalSigns[0].overallPainLevel > 6
-                              ? "error"
+                              ? "error.main"
                               : vitalSigns[0].overallPainLevel > 3
-                                ? "warning"
-                                : "success"
+                                ? "warning.main"
+                                : "success.main"
                           }
                         />
                       </Grid>
                       <Grid size={{ xs: 12, md: 4 }}>
                         <StatCard
-                          label="Functional Impact"
+                          title="Functional Impact"
                           value={vitalSigns[0].functionalImpact || "None"}
                           icon={<MedicalIcon />}
-                          iconColor="primary"
+                          iconColor="primary.main"
                         />
                       </Grid>
                       <Grid size={{ xs: 12, md: 4 }}>
                         <StatCard
-                          label="Pain Points"
+                          title="Pain Points"
                           value={`${vitalSigns[0].painPoints?.length || 0} areas`}
                           icon={<PersonIcon />}
-                          iconColor="info"
+                          iconColor="info.main"
                         />
                       </Grid>
                     </Grid>
@@ -1497,9 +1492,9 @@ const MedicalRecords: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               {assessment.evaluationId ? (
-                                <Button size="small" variant="outlined">
+                                <AuraButton size="small" variant="outlined">
                                   View Eval
-                                </Button>
+                                </AuraButton>
                               ) : (
                                 "-"
                               )}
@@ -1534,13 +1529,13 @@ const MedicalRecords: React.FC = () => {
                     }}
                   >
                     <Typography variant="h6">Medical History</Typography>
-                    <Button
+                    <AuraButton
                       variant="contained"
                       startIcon={<AddIcon />}
                       onClick={() => setHistoryDialogOpen(true)}
                     >
                       Add Entry
-                    </Button>
+                    </AuraButton>
                   </Box>
 
                   {[
@@ -1651,23 +1646,19 @@ const MedicalRecords: React.FC = () => {
                     }}
                   >
                     <Typography variant="h6">Medical Timeline</Typography>
-                    <FormControl size="small">
-                      <Select
-                        value={timelineFilter}
-                        onChange={(
-                          event: SelectChangeEvent<TimelineFilter>,
-                        ) => {
-                          const value = event.target.value as TimelineFilter;
-                          setTimelineFilter(value);
-                        }}
-                      >
-                        <MenuItem value="all">All Events</MenuItem>
-                        <MenuItem value="vital">Pain Assessments</MenuItem>
-                        <MenuItem value="condition">Conditions</MenuItem>
-                        <MenuItem value="medication">Medications</MenuItem>
-                        <MenuItem value="surgery">Surgeries</MenuItem>
-                      </Select>
-                    </FormControl>
+                    <SelectField
+                      label="Filter"
+                      value={timelineFilter}
+                      onChange={(value) => setTimelineFilter(value as TimelineFilter)}
+                      options={[
+                        { value: "all", label: "All Events" },
+                        { value: "vital", label: "Pain Assessments" },
+                        { value: "condition", label: "Conditions" },
+                        { value: "medication", label: "Medications" },
+                        { value: "surgery", label: "Surgeries" },
+                      ]}
+                      size="small"
+                    />
                   </Box>
 
                   <Timeline position="alternate">
@@ -1737,7 +1728,7 @@ const MedicalRecords: React.FC = () => {
                       <DocumentIcon sx={{ verticalAlign: "middle", mr: 1 }} />
                       Medical Documents
                     </Typography>
-                    <Button
+                    <AuraButton
                       variant="contained"
                       startIcon={<Add />}
                       onClick={() => {
@@ -1769,7 +1760,7 @@ const MedicalRecords: React.FC = () => {
                       }}
                     >
                       Upload Document
-                    </Button>
+                    </AuraButton>
                   </Box>
 
                   {documents.length > 0 ? (
@@ -1862,7 +1853,7 @@ const MedicalRecords: React.FC = () => {
                                   gap: 1,
                                 }}
                               >
-                                <Button
+                                <AuraButton
                                   variant="outlined"
                                   size="small"
                                   onClick={async () => {
@@ -1881,9 +1872,9 @@ const MedicalRecords: React.FC = () => {
                                   }}
                                 >
                                   Download
-                                </Button>
+                                </AuraButton>
                                 {doc.extractedText && (
-                                  <Button
+                                  <AuraButton
                                     variant="outlined"
                                     size="small"
                                     onClick={() => {
@@ -1897,7 +1888,7 @@ const MedicalRecords: React.FC = () => {
                                     }}
                                   >
                                     Copy Text
-                                  </Button>
+                                  </AuraButton>
                                 )}
                               </Box>
                             </Box>
@@ -1953,30 +1944,23 @@ const MedicalRecords: React.FC = () => {
               />
             </Grid>
             <Grid size={12}>
-              <FormControl fullWidth>
-                <InputLabel>Functional Impact</InputLabel>
-                <Select
-                  value={newVital.functionalImpact || "none"}
-                  label="Functional Impact"
-                  onChange={(e) =>
-                    setNewVital({
-                      ...newVital,
-                      functionalImpact: e.target.value as any,
-                    })
-                  }
-                >
-                  <MenuItem value="none">
-                    None - No impact on daily activities
-                  </MenuItem>
-                  <MenuItem value="mild">Mild - Minor limitations</MenuItem>
-                  <MenuItem value="moderate">
-                    Moderate - Significant limitations
-                  </MenuItem>
-                  <MenuItem value="severe">
-                    Severe - Unable to perform activities
-                  </MenuItem>
-                </Select>
-              </FormControl>
+              <SelectField
+                label="Functional Impact"
+                value={newVital.functionalImpact || "none"}
+                onChange={(value) =>
+                  setNewVital({
+                    ...newVital,
+                    functionalImpact: value as any,
+                  })
+                }
+                options={[
+                  { value: "none", label: "None - No impact on daily activities" },
+                  { value: "mild", label: "Mild - Minor limitations" },
+                  { value: "moderate", label: "Moderate - Significant limitations" },
+                  { value: "severe", label: "Severe - Unable to perform activities" },
+                ]}
+                fullWidth
+              />
             </Grid>
             <Grid size={12}>
               <TextField
@@ -2017,27 +2001,22 @@ const MedicalRecords: React.FC = () => {
         >
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={12}>
-              <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={newHistory.category}
-                  label="Category"
-                  onChange={(
-                    event: SelectChangeEvent<MedicalHistory["category"]>,
-                  ) => {
-                    const value = event.target
-                      .value as MedicalHistory["category"];
-                    setNewHistory({ ...newHistory, category: value });
-                  }}
-                >
-                  <MenuItem value="injury">Previous Injury</MenuItem>
-                  <MenuItem value="symptom">Current Symptom</MenuItem>
-                  <MenuItem value="treatment">Treatment History</MenuItem>
-                  <MenuItem value="activity">Exercise/Activity</MenuItem>
-                  <MenuItem value="occupation">Occupation/Ergonomics</MenuItem>
-                  <MenuItem value="goal">Goal/Objective</MenuItem>
-                </Select>
-              </FormControl>
+              <SelectField
+                label="Category"
+                value={newHistory.category || "injury"}
+                onChange={(value) =>
+                  setNewHistory({ ...newHistory, category: value as MedicalHistory["category"] })
+                }
+                options={[
+                  { value: "injury", label: "Previous Injury" },
+                  { value: "symptom", label: "Current Symptom" },
+                  { value: "treatment", label: "Treatment History" },
+                  { value: "activity", label: "Exercise/Activity" },
+                  { value: "occupation", label: "Occupation/Ergonomics" },
+                  { value: "goal", label: "Goal/Objective" },
+                ]}
+                fullWidth
+              />
             </Grid>
             <Grid size={12}>
               <TextField
@@ -2064,48 +2043,35 @@ const MedicalRecords: React.FC = () => {
               />
             </Grid>
             <Grid size={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={newHistory.status}
-                  label="Status"
-                  onChange={(
-                    event: SelectChangeEvent<MedicalHistory["status"]>,
-                  ) => {
-                    const value = event.target
-                      .value as MedicalHistory["status"];
-                    setNewHistory({ ...newHistory, status: value });
-                  }}
-                >
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="resolved">Resolved</MenuItem>
-                  <MenuItem value="ongoing">Ongoing</MenuItem>
-                </Select>
-              </FormControl>
+              <SelectField
+                label="Status"
+                value={newHistory.status || "active"}
+                onChange={(value) =>
+                  setNewHistory({ ...newHistory, status: value as MedicalHistory["status"] })
+                }
+                options={[
+                  { value: "active", label: "Active" },
+                  { value: "resolved", label: "Resolved" },
+                  { value: "ongoing", label: "Ongoing" },
+                ]}
+                fullWidth
+              />
             </Grid>
             <Grid size={6}>
-              <FormControl fullWidth>
-                <InputLabel>Severity</InputLabel>
-                <Select
-                  value={newHistory.severity}
-                  label="Severity"
-                  onChange={(
-                    event: SelectChangeEvent<
-                      NonNullable<MedicalHistory["severity"]>
-                    >,
-                  ) => {
-                    const value = event.target.value as NonNullable<
-                      MedicalHistory["severity"]
-                    >;
-                    setNewHistory({ ...newHistory, severity: value });
-                  }}
-                >
-                  <MenuItem value="mild">Mild</MenuItem>
-                  <MenuItem value="moderate">Moderate</MenuItem>
-                  <MenuItem value="severe">Severe</MenuItem>
-                  <MenuItem value="critical">Critical</MenuItem>
-                </Select>
-              </FormControl>
+              <SelectField
+                label="Severity"
+                value={newHistory.severity || "mild"}
+                onChange={(value) =>
+                  setNewHistory({ ...newHistory, severity: value as MedicalHistory["severity"] })
+                }
+                options={[
+                  { value: "mild", label: "Mild" },
+                  { value: "moderate", label: "Moderate" },
+                  { value: "severe", label: "Severe" },
+                  { value: "critical", label: "Critical" },
+                ]}
+                fullWidth
+              />
             </Grid>
             <Grid size={12}>
               <DatePicker

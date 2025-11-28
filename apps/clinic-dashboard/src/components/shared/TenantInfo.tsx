@@ -5,9 +5,8 @@ import {
   Typography,
   Chip,
   Box,
-  Alert,
 } from '@mui/material';
-import { LoadingSpinner } from '@qivr/design-system';
+import { LoadingSpinner, Callout } from '@qivr/design-system';
 import { api } from '../../lib/api-client';
 import { Cloud, Security, AccountTree } from '@mui/icons-material';
 
@@ -62,17 +61,17 @@ const TenantInfo: React.FC = () => {
 
   if (error) {
     return (
-      <Alert severity="error">
+      <Callout variant="error">
         {error}
-      </Alert>
+      </Callout>
     );
   }
 
   if (!tenantInfo) {
     return (
-      <Alert severity="info">
+      <Callout variant="info">
         No tenant information available
-      </Alert>
+      </Callout>
     );
   }
 

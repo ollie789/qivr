@@ -7,10 +7,8 @@ import {
   Grid,
   Chip,
   Divider,
-  Button,
   TextField,
   Avatar,
-  Alert,
   Stack,
   List,
   ListItem,
@@ -27,7 +25,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
-import { PainMap3DViewer, type PainMap3DData, InfoCard } from "@qivr/design-system";
+import { PainMap3DViewer, type PainMap3DData, InfoCard, Callout, AuraButton } from "@qivr/design-system";
 import MessageComposer from "../../../components/messaging/MessageComposer";
 
 interface PainPoint {
@@ -151,20 +149,20 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
           </Stack>
         </Box>
         <Stack direction="row" spacing={1}>
-          <Button
+          <AuraButton
             variant="outlined"
             startIcon={<MessageIcon />}
             onClick={() => setMessageOpen(true)}
           >
             Message
-          </Button>
-          <Button
+          </AuraButton>
+          <AuraButton
             variant="contained"
             startIcon={<ScheduleIcon />}
             onClick={onSchedule}
           >
             Schedule
-          </Button>
+          </AuraButton>
         </Stack>
       </Stack>
 
@@ -175,9 +173,9 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
         <Grid size={{ xs: 12, md: 6 }}>
           {/* Chief Complaint */}
           <InfoCard title="Chief Complaint" sx={{ mb: 2 }}>
-            <Alert severity="info" icon={<WarningIcon />}>
+            <Callout variant="info" icon={<WarningIcon />}>
               {evaluation.chiefComplaint}
-            </Alert>
+            </Callout>
             {evaluation.symptoms.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" gutterBottom>
@@ -310,13 +308,13 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 No AI analysis available yet. Click below to generate an AI-powered triage summary.
               </Typography>
-              <Button
+              <AuraButton
                 variant="contained"
                 onClick={() => aiAnalysisMutation.mutate()}
                 disabled={aiAnalysisMutation.isPending}
               >
                 {aiAnalysisMutation.isPending ? "Analyzing..." : "Generate AI Analysis"}
-              </Button>
+              </AuraButton>
             </InfoCard>
           )}
           {evaluation.aiSummary && (
@@ -382,13 +380,13 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
                     </Typography>
                     <Stack spacing={1}>
                       {evaluation.aiSummary.riskFlags.map((flag, idx) => (
-                        <Alert
+                        <Callout
                           key={idx}
-                          severity="warning"
+                          variant="warning"
                           icon={<WarningIcon />}
                         >
                           {flag}
-                        </Alert>
+                        </Callout>
                       ))}
                     </Stack>
                   </Box>

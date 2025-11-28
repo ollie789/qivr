@@ -3,14 +3,12 @@ import {
   Box,
   Paper,
   Typography,
-  Button,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
   Chip,
   LinearProgress,
-  Alert,
 } from "@mui/material";
 import {
   CheckCircle,
@@ -21,7 +19,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { documentApi, RequiredDocument } from "../services/documentApi";
-import { FormDialog } from "@qivr/design-system";
+import { FormDialog, Callout, AuraButton } from "@qivr/design-system";
 
 export default function DocumentChecklist() {
   const { enqueueSnackbar } = useSnackbar();
@@ -144,10 +142,10 @@ export default function DocumentChecklist() {
       </Paper>
 
       {progress < 100 && (
-        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }} icon={<Info />}>
+        <Callout variant="info" icon={<Info />}>
           <strong>Important:</strong> Please upload all required documents at
           least 24 hours before your appointment.
-        </Alert>
+        </Callout>
       )}
 
       <Paper sx={{ borderRadius: 2, boxShadow: 2 }}>
@@ -213,7 +211,7 @@ export default function DocumentChecklist() {
                   }
                 />
                 {!doc.uploaded && (
-                  <Button
+                  <AuraButton
                     variant="contained"
                     size="large"
                     startIcon={<CloudUpload />}
@@ -221,7 +219,7 @@ export default function DocumentChecklist() {
                     sx={{ px: 3, fontWeight: 600 }}
                   >
                     Upload
-                  </Button>
+                  </AuraButton>
                 )}
                 {doc.uploaded && (
                   <Chip
@@ -284,7 +282,7 @@ export default function DocumentChecklist() {
           id="file-upload-input"
         />
         <label htmlFor="file-upload-input">
-          <Button
+          <AuraButton
             variant="outlined"
             component="span"
             fullWidth
@@ -292,14 +290,14 @@ export default function DocumentChecklist() {
             sx={{ mb: 2 }}
           >
             Choose File
-          </Button>
+          </AuraButton>
         </label>
 
         {selectedFile && (
-          <Alert severity="success">
+          <Callout variant="success">
             Selected: {selectedFile.name} (
             {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-          </Alert>
+          </Callout>
         )}
 
         <Typography
