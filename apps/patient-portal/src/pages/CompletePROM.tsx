@@ -496,7 +496,7 @@ export const CompletePROM = () => {
       </Box>
 
       {/* Progress */}
-      <Paper sx={{ p: { xs: 3, md: 5 }, mb: 3 }}>
+      <Paper sx={{ p: { xs: 3, md: 5 }, mb: 3, borderRadius: 3 }}>
         <Box
           display="flex"
           justifyContent="space-between"
@@ -527,7 +527,7 @@ export const CompletePROM = () => {
 
       {/* Pain Map Comparison - Show on first step */}
       {activeStep === 0 && baselinePainMap && (
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
           <Typography variant="h6" gutterBottom>
             Pain Assessment
           </Typography>
@@ -577,7 +577,7 @@ export const CompletePROM = () => {
       )}
 
       {/* Questions */}
-      <Paper sx={{ p: { xs: 3, md: 5 } }}>
+      <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
         {stepQuestions.map(renderQuestion)}
 
         {/* Navigation buttons */}
