@@ -443,7 +443,7 @@ export default function Settings() {
   // };
 
   return (
-    <Box>
+    <Box className="page-enter">
       <PageHeader title="Clinic Settings" />
 
       <Paper sx={{ width: "100%" }}>

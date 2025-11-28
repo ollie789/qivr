@@ -1,8 +1,7 @@
-import { auraTokens } from "../../theme/auraTokens";
+import { auraTokens, glassTokens } from "../../theme/auraTokens";
 import React from "react";
-import { Box, Typography, Stack } from "@mui/material";
+import { Box, Typography, Stack, alpha, useTheme } from "@mui/material";
 import { TrendingUp, TrendingDown } from "@mui/icons-material";
-import { glassCard } from '../../styles/glassmorphism';
 
 interface AuraGlassStatCardProps {
   title: string;
@@ -11,6 +10,7 @@ interface AuraGlassStatCardProps {
   trend?: {
     value: number;
     isPositive: boolean;
+    label?: string;
   };
   color?: string;
 }
@@ -20,77 +20,97 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
   value,
   icon,
   trend,
-  color = "#3b82f6",
+  color,
 }) => {
+  const theme = useTheme();
+  const accentColor = color || theme.palette.primary.main;
+
   return (
     <Box
       sx={{
-        ...glassCard,
-        p: auraTokens.spacing.lg,
+        // Glass effect - clean, consistent
+        bgcolor: 'background.paper',
+        backdropFilter: `blur(${glassTokens.blur.standard})`,
+        WebkitBackdropFilter: `blur(${glassTokens.blur.standard})`,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 3,
+        boxShadow: glassTokens.shadow.subtle,
+        p: 3,
         position: "relative",
         overflow: "hidden",
+        transition: "all 0.2s ease-in-out",
         "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: "0 12px 32px rgba(0,0,0,0.15)",
+          transform: "translateY(-2px)",
+          boxShadow: glassTokens.shadow.standard,
+          borderColor: alpha(accentColor, 0.3),
         },
-        transition: "all 0.3s ease",
       }}
     >
-      {/* Background gradient */}
+      {/* Subtle accent gradient in corner */}
       <Box
         sx={{
           position: "absolute",
-          top: 0,
-          right: 0,
-          width: "120px",
-          height: "120px",
-          background: `radial-gradient(circle, ${color}20 0%, transparent 70%)`,
+          top: -40,
+          right: -40,
+          width: 120,
+          height: 120,
+          background: `radial-gradient(circle, ${alpha(accentColor, 0.08)} 0%, transparent 70%)`,
           pointerEvents: "none",
         }}
       />
 
-      <Stack spacing={2}>
+      <Stack spacing={1.5}>
+        {/* Header row */}
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            fontWeight={500}
+            sx={{ letterSpacing: 0.2 }}
+          >
             {title}
           </Typography>
           <Box
             sx={{
               p: 1,
-              borderRadius: auraTokens.borderRadius.md,
-              bgcolor: `${color}15`,
-              color: color,
+              borderRadius: 2,
+              bgcolor: alpha(accentColor, 0.1),
+              color: accentColor,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              "& svg": { fontSize: 20 },
             }}
           >
             {icon}
           </Box>
         </Stack>
 
-        <Typography variant="h3" fontWeight={700}>
+        {/* Value */}
+        <Typography variant="h4" fontWeight={700} sx={{ lineHeight: 1.2 }}>
           {value}
         </Typography>
 
+        {/* Trend indicator */}
         {trend && (
           <Stack direction="row" spacing={0.5} alignItems="center">
             {trend.isPositive ? (
-              <TrendingUp sx={{ fontSize: 16, color: "#10b981" }} />
+              <TrendingUp sx={{ fontSize: 16, color: "success.main" }} />
             ) : (
-              <TrendingDown sx={{ fontSize: 16, color: "#ef4444" }} />
+              <TrendingDown sx={{ fontSize: 16, color: "error.main" }} />
             )}
             <Typography
               variant="caption"
               sx={{
-                color: trend.isPositive ? "#10b981" : "#ef4444",
+                color: trend.isPositive ? "success.main" : "error.main",
                 fontWeight: 600,
               }}
             >
               {Math.abs(trend.value)}%
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              vs last period
+              {trend.label || "vs last period"}
             </Typography>
           </Stack>
         )}

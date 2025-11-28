@@ -42,8 +42,8 @@ export const FilledInput: Components<Omit<Theme, 'components'>>['MuiFilledInput'
       props: { size: 'large' },
       style: {
         [`& .${filledInputClasses.input}`]: {
-          paddingTop: 23,
-          paddingBottom: 7,
+          paddingTop: 14,
+          paddingBottom: 14,
           fontSize: '16px',
           paddingRight: '20px !important',
         },
@@ -85,8 +85,8 @@ export const FilledInput: Components<Omit<Theme, 'components'>>['MuiFilledInput'
       },
     ],
     input: () => ({
-      paddingTop: 19,
-      paddingBottom: 5,
+      paddingTop: 12,
+      paddingBottom: 12,
       height: '1.5rem',
       fontSize: '14px',
       [`&:not(.${inputBaseClasses.adornedStart} > .${inputBaseClasses.input})`]: {
@@ -100,8 +100,8 @@ export const FilledInput: Components<Omit<Theme, 'components'>>['MuiFilledInput'
     sizeSmall: {
       borderRadius: 4,
       [`&.${inputBaseClasses.sizeSmall} > .${inputBaseClasses.input}`]: {
-        paddingTop: 15,
-        paddingBottom: 3,
+        paddingTop: 8,
+        paddingBottom: 8,
         [`&:not(.${inputBaseClasses.adornedStart} > .${inputBaseClasses.input})`]: {
           paddingLeft: 12,
           paddingRight: 12,

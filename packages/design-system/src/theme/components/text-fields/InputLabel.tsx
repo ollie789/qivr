@@ -25,18 +25,18 @@ const InputLabel: Components<Omit<Theme, 'components'>>['MuiInputLabel'] = {
         {
           props: { size: 'medium' },
           style: {
-            transform: 'translate(16px,14px) scale(1)',
+            transform: 'translate(16px, 12px) scale(1)',
           },
         },
         {
           props: { size: 'small' },
           style: {
-            transform: 'translate(12px, 11px) scale(1)',
+            transform: 'translate(12px, 8px) scale(1)',
           },
         },
         {
           props: { size: 'large' },
-          style: { fontSize: '16px', transform: 'translate(20px, 17px) scale(1)' },
+          style: { fontSize: '16px', transform: 'translate(20px, 14px) scale(1)' },
         },
         {
           props: { variant: 'standard' },
@@ -85,12 +85,12 @@ const InputLabel: Components<Omit<Theme, 'components'>>['MuiInputLabel'] = {
             //@ts-ignore
             ownerState.formControl.adornedStart,
           style: {
-            transform: 'translate(44px, 14px) scale(1)',
+            transform: 'translate(44px, 12px) scale(1)',
             [`&.${inputLabelClasses.sizeSmall}`]: {
-              transform: 'translate(36px, 12px) scale(1)',
+              transform: 'translate(36px, 8px) scale(1)',
             },
             [`&.MuiInputLabel-sizeLarge`]: {
-              transform: 'translate(52px, 18px) scale(1)',
+              transform: 'translate(52px, 14px) scale(1)',
             },
           },
         },
@@ -106,19 +106,19 @@ const InputLabel: Components<Omit<Theme, 'components'>>['MuiInputLabel'] = {
     outlined: () => {
       return {
         lineHeight: 1.3,
-        transform: 'translate(16px, 14px) scale(1)',
+        transform: 'translate(16px, 12px) scale(1)',
         [`&.${inputLabelClasses.shrink}`]: {
           fontWeight: 500,
           transform: 'translate(16px, -7px) scale(.85)',
         },
         [`&.${inputLabelClasses.sizeSmall}`]: {
-          transform: 'translate(12px, 12px) scale(1)',
+          transform: 'translate(12px, 8px) scale(1)',
           [`&.${inputLabelClasses.shrink}`]: {
             transform: 'translate(12px, -7px) scale(.85)',
           },
         },
         '&.MuiInputLabel-sizeLarge': {
-          transform: 'translate(20px, 18px) scale(1)',
+          transform: 'translate(20px, 14px) scale(1)',
           [`&.${inputLabelClasses.shrink}`]: {
             transform: 'translate(20px, -7px) scale(.75)',
           },

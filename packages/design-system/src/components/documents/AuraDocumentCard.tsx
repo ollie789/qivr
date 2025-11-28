@@ -1,9 +1,8 @@
-import { auraTokens } from '../../theme/auraTokens';
+import { glassTokens } from '../../theme/auraTokens';
 import React from "react";
-import { Box, Typography, Stack, IconButton, Chip } from "@mui/material";
+import { Box, Typography, Stack, IconButton, Chip, Paper, alpha, useTheme } from "@mui/material";
 import { Download, Visibility, MoreVert, InsertDriveFile, Image, PictureAsPdf } from "@mui/icons-material";
 import { format } from "date-fns";
-import { glassCard } from '../../styles/glassmorphism';
 
 interface AuraDocumentCardProps {
   id: string;
@@ -27,29 +26,33 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
   onView,
   onDownload,
 }) => {
-  const getFileIcon = () => {
-    if (type.includes("pdf")) return <PictureAsPdf sx={{ fontSize: 32, color: "#ef4444" }} />;
-    if (type.includes("image")) return <Image sx={{ fontSize: 32, color: "#3b82f6" }} />;
-    return <InsertDriveFile sx={{ fontSize: 32, color: "#6b7280" }} />;
+  const theme = useTheme();
+
+  const getFileConfig = () => {
+    if (type.includes("pdf")) return { icon: PictureAsPdf, color: theme.palette.error.main };
+    if (type.includes("image")) return { icon: Image, color: theme.palette.primary.main };
+    return { icon: InsertDriveFile, color: theme.palette.grey[500] };
   };
 
-  const getFileColor = () => {
-    if (type.includes("pdf")) return "#ef4444";
-    if (type.includes("image")) return "#3b82f6";
-    return "#6b7280";
-  };
+  const { icon: FileIcon, color: fileColor } = getFileConfig();
 
   return (
-    <Box
+    <Paper
+      elevation={0}
       sx={{
-        ...glassCard,
         p: 2.5,
         cursor: "pointer",
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 3,
+        boxShadow: glassTokens.shadow.subtle,
+        transition: "all 0.2s ease-in-out",
         "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: "0 12px 32px rgba(0,0,0,0.15)",
+          transform: "translateY(-2px)",
+          boxShadow: glassTokens.shadow.standard,
+          borderColor: alpha(fileColor, 0.3),
         },
-        transition: "all 0.3s ease",
       }}
       onClick={onView}
     >
@@ -57,17 +60,17 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
         <Stack direction="row" spacing={2} alignItems="flex-start">
           <Box
             sx={{
-              width: 56,
-              height: 56,
-              borderRadius: auraTokens.borderRadius.md,
-              bgcolor: `${getFileColor()}15`,
+              width: 48,
+              height: 48,
+              borderRadius: 2,
+              bgcolor: alpha(fileColor, 0.1),
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
             }}
           >
-            {getFileIcon()}
+            <FileIcon sx={{ fontSize: 24, color: fileColor }} />
           </Box>
 
           <Box flex={1} minWidth={0}>
@@ -81,10 +84,8 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
 
           <IconButton
             size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            sx={{ opacity: 0.6 }}
+            onClick={(e) => e.stopPropagation()}
+            sx={{ color: 'text.secondary' }}
           >
             <MoreVert fontSize="small" />
           </IconButton>
@@ -99,8 +100,8 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
                 sx={{
                   height: 22,
                   fontSize: "0.7rem",
-                  bgcolor: `${getFileColor()}15`,
-                  color: getFileColor(),
+                  bgcolor: alpha(fileColor, 0.1),
+                  color: fileColor,
                 }}
               />
             )}
@@ -119,7 +120,7 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
               e.stopPropagation();
               onView();
             }}
-            sx={{ bgcolor: "action.hover" }}
+            sx={{ bgcolor: "action.hover", borderRadius: 2 }}
           >
             <Visibility sx={{ fontSize: 18 }} />
           </IconButton>
@@ -129,12 +130,12 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
               e.stopPropagation();
               onDownload();
             }}
-            sx={{ bgcolor: "action.hover" }}
+            sx={{ bgcolor: "action.hover", borderRadius: 2 }}
           >
             <Download sx={{ fontSize: 18 }} />
           </IconButton>
         </Stack>
       </Stack>
-    </Box>
+    </Paper>
   );
 };

@@ -49,8 +49,8 @@ const StyledTextField = styled(
   [`& .${inputBaseClasses.root}`]: {
     [`&.${autocompleteClasses.inputRoot}`]: {
       paddingLeft: 16,
-      paddingTop: 8,
-      paddingBottom: 8,
+      paddingTop: 12,
+      paddingBottom: 12,
       rowGap: 4,
 
       [`& .${autocompleteClasses.tag}`]: {
@@ -58,15 +58,15 @@ const StyledTextField = styled(
       },
       [`&.${inputBaseClasses.sizeSmall}`]: {
         paddingLeft: 12,
-        paddingTop: 6,
-        paddingBottom: 6,
+        paddingTop: 8,
+        paddingBottom: 8,
       },
       '&.MuiFilledInput-root': {
-        paddingTop: 8,
+        paddingTop: 12,
         [`&.MuiInputBase-sizeLarge`]: {
           paddingLeft: 20,
-          paddingTop: 6,
-          paddingBottom: 6,
+          paddingTop: 14,
+          paddingBottom: 14,
         },
       },
     },
@@ -74,12 +74,12 @@ const StyledTextField = styled(
       paddingLeft: '0px !important',
     },
     [`& .${inputBaseClasses.input}`]: {
-      padding: '8px 16px',
-      height: '1.25rem',
-      lineHeight: 1.45,
+      padding: '12px 16px',
+      height: '1.5rem',
+      lineHeight: 1.5,
       fontSize: 14,
       '&.MuiSelect-select': {
-        padding: '8px 16px',
+        padding: '12px 16px',
         paddingRight: '40px !important',
       },
       '&.MuiAutocomplete-input': {
@@ -110,17 +110,16 @@ const StyledTextField = styled(
       }),
     },
     [`&.${inputBaseClasses.sizeSmall} > .${inputBaseClasses.input}`]: {
-      padding: '6px 12px',
-      height: '1.125rem',
+      padding: '8px 12px',
+      height: '1.5rem',
       fontSize: 14,
       [`&.${selectClasses.select}`]: {
-        paddingTop: 5,
-        paddingBottom: 5,
+        padding: '8px 12px',
         paddingRight: '32px !important',
       },
       '&.MuiAutocomplete-input': {
-        height: '1.125rem',
-        padding: '6px 8px',
+        height: '1.5rem',
+        padding: '8px',
       },
     },
     [`&.${inputBaseClasses.sizeSmall}`]: {
@@ -135,17 +134,16 @@ const StyledTextField = styled(
     },
     '&.MuiInputBase-sizeLarge': {
       [`& .${inputBaseClasses.input}`]: {
-        paddingLeft: 16,
-        padding: '6px 12px',
-        height: '1.875rem',
+        padding: '14px 20px',
+        height: '1.5rem',
         fontSize: 16,
         '&.MuiSelect-select': {
-          lineHeight: 1.875,
+          lineHeight: 1.5,
           paddingRight: '48px !important',
         },
         '&.MuiAutocomplete-input': {
-          height: '1.875rem',
-          padding: '6px 12px',
+          height: '1.5rem',
+          padding: '14px 12px',
           paddingLeft: '0px !important',
         },
       },

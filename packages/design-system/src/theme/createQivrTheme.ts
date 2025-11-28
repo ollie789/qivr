@@ -7,7 +7,9 @@ import { createTheme as muiCreateTheme } from '@mui/material/styles';
 import type {} from '@mui/material/themeCssVarsAugmentation';
 import type {} from '@mui/x-data-grid/themeAugmentation';
 import { createPalette } from './palette';
-import { lightShadows, darkShadows } from './shadows';
+import { lightShadows } from './shadows';
+import mixins from './mixins';
+import sxConfig from './sxConfig';
 
 // Component overrides
 import Accordion, { AccordionDetails, AccordionSummary } from './components/Accordion';
@@ -192,6 +194,12 @@ const shape = {
 const spacing = 8;
 
 /**
+ * Unstable SX config for custom CSS utilities
+ * Enables custom sx props like lineClamp, glassEffect, etc.
+ */
+const unstable_sxConfig = sxConfig;
+
+/**
  * Brand types
  * Different apps can have slightly different color emphasis
  */
@@ -244,6 +252,12 @@ export const createQivrTheme = (
 
     // Spacing
     spacing,
+
+    // Layout mixins for topbar/sidebar/footer heights
+    mixins,
+
+    // Custom SX utilities (lineClamp, glassEffect, etc.)
+    unstable_sxConfig,
 
     // Component overrides - Aurora UI styled components
     components: {

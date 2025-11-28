@@ -62,6 +62,7 @@ import {
   DashboardMenu,
   CardHeaderAction,
   SelectField,
+  ConfirmDialog,
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -71,6 +72,23 @@ const Dashboard: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
   const [chartPeriod, setChartPeriod] = React.useState("7d");
+  const [deleteConfirm, setDeleteConfirm] = React.useState<{
+    open: boolean;
+    appointmentId: string | null;
+  }>({ open: false, appointmentId: null });
+
+  const handleDeleteAppointment = async () => {
+    if (!deleteConfirm.appointmentId) return;
+    try {
+      await appointmentsApi.deleteAppointment(deleteConfirm.appointmentId);
+      queryClient.invalidateQueries({ queryKey: ["today-appointments"] });
+      enqueueSnackbar("Appointment deleted", { variant: "success" });
+    } catch (err) {
+      enqueueSnackbar("Failed to delete appointment", { variant: "error" });
+    } finally {
+      setDeleteConfirm({ open: false, appointmentId: null });
+    }
+  };
 
   // Fetch new comprehensive dashboard metrics
   const { data: dashboardMetrics, isLoading: metricsLoading } = useQuery({
@@ -322,17 +340,7 @@ const Dashboard: React.FC = () => {
                       <IconButton
                         edge="end"
                         size="small"
-                        onClick={async () => {
-                          if (confirm("Delete this appointment?")) {
-                            try {
-                              await appointmentsApi.deleteAppointment(apt.id);
-                              queryClient.invalidateQueries({ queryKey: ["today-appointments"] });
-                              enqueueSnackbar("Appointment deleted", { variant: "success" });
-                            } catch (err) {
-                              enqueueSnackbar("Failed to delete appointment", { variant: "error" });
-                            }
-                          }
-                        }}
+                        onClick={() => setDeleteConfirm({ open: true, appointmentId: apt.id })}
                         sx={{ color: "error.main" }}
                       >
                         <DeleteIcon fontSize="small" />
@@ -542,6 +550,16 @@ const Dashboard: React.FC = () => {
           </AuraChartCard>
         </Grid>
       </Grid>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        title="Delete Appointment"
+        message="Are you sure you want to delete this appointment? This action cannot be undone."
+        severity="error"
+        confirmText="Delete"
+        onConfirm={handleDeleteAppointment}
+        onClose={() => setDeleteConfirm({ open: false, appointmentId: null })}
+      />
     </Box>
   );
 };

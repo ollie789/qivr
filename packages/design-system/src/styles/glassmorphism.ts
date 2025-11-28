@@ -1,38 +1,106 @@
-import { SxProps } from '@mui/material';
-import * as tokens from '../tokens';
+import { SxProps, Theme } from '@mui/material';
+import { glassTokens, glassEffect } from '../theme/auraTokens';
 
+/**
+ * Glass Styles - Using unified glass token system
+ *
+ * @example
+ * // Basic usage
+ * <Box sx={glassStyles.standard} />
+ *
+ * // With intensity
+ * <Paper sx={glassCard('subtle')} />
+ */
 export const glassStyles = {
-  light: {
-    backgroundColor: tokens.GlassBackgroundLight,
-    backdropFilter: `blur(${tokens.GlassBlurMd})`,
-    border: `1px solid ${tokens.GlassBorder}`,
+  /** Subtle glass - 50% opacity, 4px blur - for overlays */
+  subtle: {
+    backgroundColor: glassTokens.background.medium,
+    backdropFilter: `blur(${glassTokens.blur.subtle})`,
+    WebkitBackdropFilter: `blur(${glassTokens.blur.subtle})`,
+    border: `1px solid ${glassTokens.border.subtle}`,
   } as SxProps,
-  
-  medium: {
-    backgroundColor: tokens.GlassBackgroundMedium,
-    backdropFilter: `blur(${tokens.GlassBlurMd})`,
-    border: `1px solid ${tokens.GlassBorder}`,
+
+  /** Standard glass - 70% opacity, 8px blur - default for cards */
+  standard: {
+    backgroundColor: glassTokens.background.light,
+    backdropFilter: `blur(${glassTokens.blur.standard})`,
+    WebkitBackdropFilter: `blur(${glassTokens.blur.standard})`,
+    border: `1px solid ${glassTokens.border.light}`,
   } as SxProps,
-  
-  dark: {
-    backgroundColor: tokens.GlassBackgroundDark,
-    backdropFilter: `blur(${tokens.GlassBlurLg})`,
-    border: `1px solid ${tokens.GlassBorder}`,
+
+  /** Strong glass - 70% opacity, 12px blur - for prominent elements */
+  strong: {
+    backgroundColor: glassTokens.background.light,
+    backdropFilter: `blur(${glassTokens.blur.strong})`,
+    WebkitBackdropFilter: `blur(${glassTokens.blur.strong})`,
+    border: `1px solid ${glassTokens.border.light}`,
   } as SxProps,
+
+  // Legacy aliases for backward compatibility
+  light: {} as SxProps,
+  medium: {} as SxProps,
+  dark: {} as SxProps,
 };
 
-export const glassCard = (intensity: 'light' | 'medium' | 'dark' = 'light'): SxProps => ({
-  ...glassStyles[intensity],
-  borderRadius: 2,
-  boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
-  border: '1px solid rgba(255, 255, 255, 0.18)',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.18)',
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-  },
-});
+// Set legacy aliases
+glassStyles.light = glassStyles.standard;
+glassStyles.medium = glassStyles.subtle;
+glassStyles.dark = glassStyles.strong;
+
+export type GlassIntensity = 'subtle' | 'standard' | 'strong' | 'light' | 'medium' | 'dark';
+
+/**
+ * Glass Card - Complete glass card styling with hover effects
+ *
+ * @param intensity - Glass intensity level
+ * @returns SxProps for glass card styling
+ *
+ * @example
+ * <Paper sx={glassCard('standard')} />
+ */
+export const glassCard = (intensity: GlassIntensity = 'standard'): SxProps<Theme> => {
+  // Map legacy names to new names
+  const normalizedIntensity =
+    intensity === 'light' ? 'standard' :
+    intensity === 'medium' ? 'subtle' :
+    intensity === 'dark' ? 'strong' :
+    intensity;
+
+  const baseStyle = glassStyles[normalizedIntensity] || glassStyles.standard;
+
+  return {
+    ...baseStyle,
+    borderRadius: 2,
+    boxShadow: glassTokens.shadow.standard,
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: glassTokens.shadow.elevated,
+      borderColor: glassTokens.border.medium,
+    },
+  };
+};
+
+/**
+ * Glass Panel - Glass styling without hover effects
+ * Useful for static panels, sidebars, headers
+ */
+export const glassPanel = (intensity: GlassIntensity = 'standard'): SxProps<Theme> => {
+  const normalizedIntensity =
+    intensity === 'light' ? 'standard' :
+    intensity === 'medium' ? 'subtle' :
+    intensity === 'dark' ? 'strong' :
+    intensity;
+
+  return {
+    ...glassStyles[normalizedIntensity],
+    borderRadius: 2,
+    boxShadow: glassTokens.shadow.subtle,
+  };
+};
+
+// Re-export tokens for direct access
+export { glassTokens, glassEffect };
 
 
 // Aura Stepper styles for consistent wizard appearance

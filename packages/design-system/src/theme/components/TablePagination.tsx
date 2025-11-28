@@ -1,13 +1,13 @@
 import { Theme } from '@mui/material';
 import { Components } from '@mui/material/styles';
-import DataGridPaginationAction from '../../components/pagination/DataGridPaginationAction';
+import StandardTablePaginationAction from '../../components/pagination/StandardTablePaginationAction';
 import TableLabelDisplayedRows from '../../components/pagination/TableLabelDisplayedRows';
 
 const TablePagination: Components<Omit<Theme, 'components'>>['MuiTablePagination'] = {
   defaultProps: {
     rowsPerPageOptions: [],
     labelDisplayedRows: TableLabelDisplayedRows,
-    ActionsComponent: DataGridPaginationAction,
+    ActionsComponent: StandardTablePaginationAction,
   },
   styleOverrides: {
     root: ({ theme }) => ({

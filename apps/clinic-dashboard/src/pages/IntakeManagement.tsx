@@ -11,6 +11,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Paper,
   Avatar,
   Tooltip,
@@ -91,6 +92,12 @@ const IntakeManagement: React.FC = () => {
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(
     null,
   );
+
+  // Pagination state for each tab
+  const [pendingPage, setPendingPage] = useState(0);
+  const [reviewingPage, setReviewingPage] = useState(0);
+  const [processedPage, setProcessedPage] = useState(0);
+  const rowsPerPage = 10;
 
   // Fetch intake submissions
   const { data, isLoading, error, refetch } = useQuery({
@@ -320,42 +327,43 @@ const IntakeManagement: React.FC = () => {
       </TableCell>
       <TableCell>
         <Stack direction="row" spacing={1}>
-          <Tooltip title="View Details">
-            <IconButton size="small" onClick={() => handleViewDetails(intake)}>
+          <Tooltip title="View Details" arrow>
+            <IconButton size="small" onClick={() => handleViewDetails(intake)} aria-label="View intake details">
               <ViewIcon fontSize="small" />
             </IconButton>
           </Tooltip>
 
           {intake.status === "pending" && (
-            <>
-              <Tooltip title="Start Review">
-                <IconButton
-                  size="small"
-                  color="info"
-                  onClick={() => handleStartReview(intake.id)}
-                >
-                  <AssignIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </>
+            <Tooltip title="Start Review" arrow>
+              <IconButton
+                size="small"
+                color="info"
+                onClick={() => handleStartReview(intake.id)}
+                aria-label="Start review"
+              >
+                <AssignIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
 
           {intake.status === "reviewing" && (
             <>
-              <Tooltip title="Approve & Schedule">
+              <Tooltip title="Approve & Schedule" arrow>
                 <IconButton
                   size="small"
                   color="success"
                   onClick={() => handleSchedule(intake)}
+                  aria-label="Approve and schedule appointment"
                 >
                   <ScheduleIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Reject">
+              <Tooltip title="Reject" arrow>
                 <IconButton
                   size="small"
                   color="error"
                   onClick={() => handleReject(intake.id)}
+                  aria-label="Reject intake"
                 >
                   <RejectIcon fontSize="small" />
                 </IconButton>
@@ -365,11 +373,12 @@ const IntakeManagement: React.FC = () => {
 
           {intake.status === "approved" &&
             !intake.status.includes("scheduled") && (
-              <Tooltip title="Schedule Appointment">
+              <Tooltip title="Schedule Appointment" arrow>
                 <IconButton
                   size="small"
                   color="primary"
                   onClick={() => handleSchedule(intake)}
+                  aria-label="Schedule appointment"
                 >
                   <ScheduleIcon fontSize="small" />
                 </IconButton>
@@ -381,7 +390,7 @@ const IntakeManagement: React.FC = () => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className="page-enter" sx={{ p: 3 }}>
       <PageHeader
         title="Intake Management"
         description="Process and manage patient intake submissions"
@@ -648,10 +657,22 @@ const IntakeManagement: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      pendingIntakes.map(renderIntakeRow)
+                      pendingIntakes
+                        .slice(pendingPage * rowsPerPage, pendingPage * rowsPerPage + rowsPerPage)
+                        .map(renderIntakeRow)
                     )}
                   </TableBody>
                 </Table>
+                {pendingIntakes.length > rowsPerPage && (
+                  <TablePagination
+                    component="div"
+                    count={pendingIntakes.length}
+                    page={pendingPage}
+                    onPageChange={(_, newPage) => setPendingPage(newPage)}
+                    rowsPerPage={rowsPerPage}
+                    rowsPerPageOptions={[rowsPerPage]}
+                  />
+                )}
               </TableContainer>
             )}
           </DesignTabPanel>
@@ -686,10 +707,22 @@ const IntakeManagement: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      reviewingIntakes.map(renderIntakeRow)
+                      reviewingIntakes
+                        .slice(reviewingPage * rowsPerPage, reviewingPage * rowsPerPage + rowsPerPage)
+                        .map(renderIntakeRow)
                     )}
                   </TableBody>
                 </Table>
+                {reviewingIntakes.length > rowsPerPage && (
+                  <TablePagination
+                    component="div"
+                    count={reviewingIntakes.length}
+                    page={reviewingPage}
+                    onPageChange={(_, newPage) => setReviewingPage(newPage)}
+                    rowsPerPage={rowsPerPage}
+                    rowsPerPageOptions={[rowsPerPage]}
+                  />
+                )}
               </TableContainer>
             )}
           </DesignTabPanel>
@@ -724,10 +757,22 @@ const IntakeManagement: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      processedIntakes.map(renderIntakeRow)
+                      processedIntakes
+                        .slice(processedPage * rowsPerPage, processedPage * rowsPerPage + rowsPerPage)
+                        .map(renderIntakeRow)
                     )}
                   </TableBody>
                 </Table>
+                {processedIntakes.length > rowsPerPage && (
+                  <TablePagination
+                    component="div"
+                    count={processedIntakes.length}
+                    page={processedPage}
+                    onPageChange={(_, newPage) => setProcessedPage(newPage)}
+                    rowsPerPage={rowsPerPage}
+                    rowsPerPageOptions={[rowsPerPage]}
+                  />
+                )}
               </TableContainer>
             )}
           </DesignTabPanel>

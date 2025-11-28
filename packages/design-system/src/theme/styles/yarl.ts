@@ -1,10 +1,11 @@
 import { Theme } from '@mui/material';
 import { cssVarRgba } from '../utils';
+import { glassTokens } from '../auraTokens';
 
 const yarl = (theme: Theme) => ({
   '& .yarl__container': {
     '--yarl__container_background_color': cssVarRgba(theme.vars.palette.grey['950Channel'], 0.9),
-    backdropFilter: 'blur(4px)',
+    backdropFilter: `blur(${glassTokens.blur.subtle})`,
     '.yarl__navigation_next, .yarl__navigation_prev': {
       padding: theme.spacing(1),
       backgroundColor: cssVarRgba(theme.vars.palette.common.whiteChannel, 0.15),
@@ -83,7 +84,7 @@ const yarl = (theme: Theme) => ({
       theme.vars.palette.grey['950Channel'],
       0.9,
     ),
-    backdropFilter: 'blur(4px)',
+    backdropFilter: `blur(${glassTokens.blur.subtle})`,
 
     '.yarl__thumbnails_track': {
       '--yarl__thumbnails_thumbnail_gap': theme.spacing(1),

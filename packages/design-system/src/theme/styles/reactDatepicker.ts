@@ -1,6 +1,7 @@
 import 'react-datepicker/dist/react-datepicker.css';
 import { type Theme, inputBaseClasses } from '@mui/material';
 import { cssVarRgba } from '../utils';
+import { glassTokens } from '../auraTokens';
 
 const reactDatepicker = (theme: Theme) => {
   const { vars, shadows, spacing, shape, typography, direction, zIndex } = theme;
@@ -43,7 +44,7 @@ const reactDatepicker = (theme: Theme) => {
 
     '& .react-datepicker__portal': {
       backgroundColor: cssVarRgba(vars.palette.common.blackChannel, 0.2),
-      backdropFilter: 'blur(4px)',
+      backdropFilter: `blur(${glassTokens.blur.subtle})`,
     },
 
     '& .react-datepicker-popper, & .react-datepicker__portal': {

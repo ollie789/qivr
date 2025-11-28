@@ -182,7 +182,7 @@ const Messages: React.FC = () => {
   };
 
   return (
-    <Box>
+    <Box className="page-enter">
       <PageHeader
         title="Messages"
         actions={

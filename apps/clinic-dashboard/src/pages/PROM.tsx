@@ -78,6 +78,7 @@ import {
   auraColors,
   FormDialog,
   FilterToolbar,
+  ConfirmDialog,
 } from "@qivr/design-system";
 
 interface TabPanelProps {
@@ -123,6 +124,10 @@ const PROM: React.FC = () => {
     null,
   );
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    template: PromTemplateSummary | null;
+  }>({ open: false, template: null });
 
   // Fetch templates
   const {
@@ -274,14 +279,15 @@ const PROM: React.FC = () => {
     setCurrentTab(newValue);
   };
 
-  const handleDeleteTemplate = (template: PromTemplateSummary) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete the template "${template.name}"?`,
-      )
-    ) {
-      deleteTemplateMutation.mutate(template.id);
+  const handleDeleteTemplateClick = (template: PromTemplateSummary) => {
+    setDeleteConfirm({ open: true, template });
+  };
+
+  const handleDeleteTemplateConfirm = () => {
+    if (deleteConfirm.template) {
+      deleteTemplateMutation.mutate(deleteConfirm.template.id);
     }
+    setDeleteConfirm({ open: false, template: null });
   };
 
   const handleViewResponse = async (response: PromResponse) => {
@@ -343,7 +349,7 @@ const PROM: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Box className="page-enter" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
         <PageHeader
           title="Patient Reported Outcome Measures (PROM)"
           description="Manage questionnaires and track patient-reported outcomes"
@@ -554,12 +560,15 @@ const PROM: React.FC = () => {
                           >
                             Send
                           </AuraButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteTemplate(template)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
+                          <Tooltip title="Delete Template" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteTemplateClick(template)}
+                              aria-label="Delete template"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
                         </Stack>
                       </AuraCard>
                     </Grid>
@@ -705,18 +714,23 @@ const PROM: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                void handleViewResponse(response);
-                              }}
-                            >
-                              <PreviewIcon />
-                            </IconButton>
-                            {response.status === "pending" && (
-                              <IconButton size="small">
-                                <EmailIcon />
+                            <Tooltip title="View Response" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  void handleViewResponse(response);
+                                }}
+                                aria-label="View response details"
+                              >
+                                <PreviewIcon />
                               </IconButton>
+                            </Tooltip>
+                            {response.status === "pending" && (
+                              <Tooltip title="Send Reminder" arrow>
+                                <IconButton size="small" aria-label="Send reminder email">
+                                  <EmailIcon />
+                                </IconButton>
+                              </Tooltip>
                             )}
                           </TableCell>
                         </TableRow>
@@ -975,6 +989,16 @@ const PROM: React.FC = () => {
             </Typography>
           )}
         </FormDialog>
+
+        <ConfirmDialog
+          open={deleteConfirm.open}
+          title="Delete Template"
+          message={`Are you sure you want to delete the template "${deleteConfirm.template?.name}"?`}
+          severity="error"
+          confirmText="Delete"
+          onConfirm={handleDeleteTemplateConfirm}
+          onClose={() => setDeleteConfirm({ open: false, template: null })}
+        />
       </Box>
     </LocalizationProvider>
   );

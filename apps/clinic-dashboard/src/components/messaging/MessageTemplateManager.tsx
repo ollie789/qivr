@@ -28,7 +28,7 @@ import type {
   MessageTemplateChannel,
   UpsertMessageTemplateInput,
 } from '../../services/messageTemplatesApi';
-import { AuraEmptyState, AuraButton, FormSection } from '@qivr/design-system';
+import { AuraEmptyState, AuraButton, FormSection, ConfirmDialog } from '@qivr/design-system';
 
 interface MessageTemplateManagerProps {
   open: boolean;
@@ -82,6 +82,10 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
 }) => {
   const [selectedId, setSelectedId] = useState<string | 'new' | null>(null);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    template: MessageTemplate | null;
+  }>({ open: false, template: null });
 
   useEffect(() => {
     if (!open) {
@@ -178,14 +182,16 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
     }
   };
 
-  const handleDelete = async (template: MessageTemplate) => {
+  const handleDeleteClick = (template: MessageTemplate) => {
     if (removing) {
       return;
     }
+    setDeleteConfirm({ open: true, template });
+  };
 
-    if (!window.confirm(`Delete the template "${template.name}"?`)) {
-      return;
-    }
+  const handleDeleteConfirm = async () => {
+    const template = deleteConfirm.template;
+    if (!template) return;
 
     try {
       await onDelete(template.id);
@@ -195,6 +201,8 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
       }
     } catch {
       // Parent shows toast
+    } finally {
+      setDeleteConfirm({ open: false, template: null });
     }
   };
 
@@ -259,7 +267,7 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
                         size="small"
                         onClick={(event) => {
                           event.stopPropagation();
-                          handleDelete(template);
+                          handleDeleteClick(template);
                         }}
                         disabled={removing || loading}
                       >
@@ -351,6 +359,16 @@ const MessageTemplateManager: React.FC<MessageTemplateManagerProps> = ({
           {isExisting ? 'Update' : 'Save'}
         </AuraButton>
       </DialogActions>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        title="Delete Template"
+        message={`Are you sure you want to delete the template "${deleteConfirm.template?.name}"?`}
+        severity="error"
+        confirmText="Delete"
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setDeleteConfirm({ open: false, template: null })}
+      />
     </Dialog>
   );
 };

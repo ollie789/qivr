@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -12,7 +13,7 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
-import { LoadingSpinner, AuraButton } from "@qivr/design-system";
+import { LoadingSpinner, AuraButton, ConfirmDialog } from "@qivr/design-system";
 import { EvaluationViewer } from "../../features/intake/components/EvaluationViewer";
 import { intakeApi } from "../../services/intakeApi";
 
@@ -57,6 +58,22 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+
+  const handleDeleteConfirm = async () => {
+    if (!intake) return;
+    try {
+      await intakeApi.deleteIntake(intake.id);
+      queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
+      enqueueSnackbar("Intake deleted", { variant: "success" });
+      setDeleteConfirmOpen(false);
+      onClose();
+      onDelete?.();
+    } catch (err) {
+      enqueueSnackbar("Failed to delete intake", { variant: "error" });
+      setDeleteConfirmOpen(false);
+    }
+  };
 
   const { data: fullEvaluation, isLoading } = useQuery({
     queryKey: ["intakeDetails", intake?.id],
@@ -143,26 +160,16 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                 color="error"
                 size="small"
                 startIcon={<DeleteIcon />}
-                onClick={async () => {
-                  if (confirm("Delete this intake? This cannot be undone.")) {
-                    try {
-                      await intakeApi.deleteIntake(intake!.id);
-                      queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
-                      enqueueSnackbar("Intake deleted", { variant: "success" });
-                      onClose();
-                      onDelete();
-                    } catch (err) {
-                      enqueueSnackbar("Failed to delete intake", { variant: "error" });
-                    }
-                  }
-                }}
+                onClick={() => setDeleteConfirmOpen(true)}
               >
                 Delete
               </AuraButton>
             )}
-            <IconButton onClick={onClose} size="small">
-              <CloseIcon />
-            </IconButton>
+            <Tooltip title="Close" arrow>
+              <IconButton onClick={onClose} size="small" aria-label="Close dialog">
+                <CloseIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
         </Box>
       </DialogTitle>
@@ -193,6 +200,16 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
           />
         ) : null}
       </DialogContent>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title="Delete Intake"
+        message="Are you sure you want to delete this intake? This action cannot be undone."
+        severity="error"
+        confirmText="Delete"
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setDeleteConfirmOpen(false)}
+      />
     </Dialog>
   );
 };

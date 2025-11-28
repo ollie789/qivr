@@ -1,5 +1,5 @@
-import { auraTokens, PageHeader, AuraButton, FormDialog } from "@qivr/design-system";
-import { useState } from "react";
+import { auraTokens, PageHeader, AuraButton, FormDialog, ConfirmDialog } from "@qivr/design-system";
+import { useState, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -14,6 +14,7 @@ import {
   FormControlLabel,
   Checkbox,
   Slider,
+  Tooltip,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -46,8 +47,23 @@ export default function Appointments() {
   });
   const [painLevel, setPainLevel] = useState(5);
   const [assignPROM, setAssignPROM] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    severity: 'warning' | 'error';
+    onConfirm: () => void;
+  }>({ open: false, title: '', message: '', severity: 'warning', onConfirm: () => {} });
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
+
+  const openConfirmDialog = useCallback((config: Omit<typeof confirmDialog, 'open'>) => {
+    setConfirmDialog({ ...config, open: true });
+  }, []);
+
+  const closeConfirmDialog = useCallback(() => {
+    setConfirmDialog(prev => ({ ...prev, open: false }));
+  }, []);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -126,28 +142,40 @@ export default function Appointments() {
     }
   };
 
-  const handleCancelAppointment = async (id: string) => {
-    if (!confirm("Cancel this appointment?")) return;
-    
-    try {
-      await appointmentsApi.cancelAppointment(id);
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      enqueueSnackbar("Appointment cancelled", { variant: "success" });
-    } catch (err) {
-      enqueueSnackbar("Failed to cancel appointment", { variant: "error" });
-    }
+  const handleCancelAppointment = (id: string) => {
+    openConfirmDialog({
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this appointment? The patient will be notified.',
+      severity: 'warning',
+      onConfirm: async () => {
+        try {
+          await appointmentsApi.cancelAppointment(id);
+          queryClient.invalidateQueries({ queryKey: ["appointments"] });
+          enqueueSnackbar("Appointment cancelled", { variant: "success" });
+        } catch (err) {
+          enqueueSnackbar("Failed to cancel appointment", { variant: "error" });
+        }
+        closeConfirmDialog();
+      },
+    });
   };
 
-  const handleDeleteAppointment = async (id: string) => {
-    if (!confirm("Delete this appointment? This cannot be undone.")) return;
-    
-    try {
-      await appointmentsApi.deleteAppointment(id);
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      enqueueSnackbar("Appointment deleted", { variant: "success" });
-    } catch (err) {
-      enqueueSnackbar("Failed to delete appointment", { variant: "error" });
-    }
+  const handleDeleteAppointment = (id: string) => {
+    openConfirmDialog({
+      title: 'Delete Appointment',
+      message: 'Are you sure you want to delete this appointment? This action cannot be undone.',
+      severity: 'error',
+      onConfirm: async () => {
+        try {
+          await appointmentsApi.deleteAppointment(id);
+          queryClient.invalidateQueries({ queryKey: ["appointments"] });
+          enqueueSnackbar("Appointment deleted", { variant: "success" });
+        } catch (err) {
+          enqueueSnackbar("Failed to delete appointment", { variant: "error" });
+        }
+        closeConfirmDialog();
+      },
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -161,7 +189,7 @@ export default function Appointments() {
   };
 
   return (
-    <Box>
+    <Box className="page-enter">
       <PageHeader
         title="Appointments"
         description="Manage your clinic appointments"
@@ -302,56 +330,72 @@ export default function Appointments() {
                     )}
 
                     <Stack direction="row" spacing={0.5}>
-                      <IconButton
-                        size="small"
-                        onClick={() => navigate(`/medical-records?patientId=${apt.patientId}`)}
-                        sx={{ bgcolor: "info.main", color: "white", "&:hover": { bgcolor: "info.dark" } }}
-                        title="View Medical Record"
-                      >
-                        <PersonIcon fontSize="small" />
-                      </IconButton>
+                      <Tooltip title="View Medical Record" arrow>
+                        <IconButton
+                          size="small"
+                          onClick={() => navigate(`/medical-records?patientId=${apt.patientId}`)}
+                          sx={{ bgcolor: "info.main", color: "white", "&:hover": { bgcolor: "info.dark" } }}
+                          aria-label="View medical record"
+                        >
+                          <PersonIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       {apt.treatmentPlanId && (
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/treatment-plans/${apt.treatmentPlanId}`)}
-                          sx={{ bgcolor: "secondary.main", color: "white", "&:hover": { bgcolor: "secondary.dark" } }}
-                          title="View Treatment Plan"
-                        >
-                          <TreatmentIcon fontSize="small" />
-                        </IconButton>
+                        <Tooltip title="View Treatment Plan" arrow>
+                          <IconButton
+                            size="small"
+                            onClick={() => navigate(`/treatment-plans/${apt.treatmentPlanId}`)}
+                            sx={{ bgcolor: "secondary.main", color: "white", "&:hover": { bgcolor: "secondary.dark" } }}
+                            aria-label="View treatment plan"
+                          >
+                            <TreatmentIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       )}
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenNotes(apt)}
-                        sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" } }}
-                      >
-                        <NotesIcon fontSize="small" />
-                      </IconButton>
-                      {apt.status !== "completed" && (
+                      <Tooltip title="Session Notes" arrow>
                         <IconButton
                           size="small"
-                          onClick={() => handleCompleteAppointment(apt.id)}
-                          sx={{ bgcolor: "success.main", color: "white", "&:hover": { bgcolor: "success.dark" } }}
+                          onClick={() => handleOpenNotes(apt)}
+                          sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" } }}
+                          aria-label="Add session notes"
                         >
-                          <CompleteIcon fontSize="small" />
+                          <NotesIcon fontSize="small" />
                         </IconButton>
+                      </Tooltip>
+                      {apt.status !== "completed" && (
+                        <Tooltip title="Mark Complete" arrow>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleCompleteAppointment(apt.id)}
+                            sx={{ bgcolor: "success.main", color: "white", "&:hover": { bgcolor: "success.dark" } }}
+                            aria-label="Mark appointment as complete"
+                          >
+                            <CompleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       )}
                       {apt.status !== "cancelled" && apt.status !== "completed" && (
+                        <Tooltip title="Cancel Appointment" arrow>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleCancelAppointment(apt.id)}
+                            sx={{ bgcolor: "warning.main", color: "white", "&:hover": { bgcolor: "warning.dark" } }}
+                            aria-label="Cancel appointment"
+                          >
+                            <CancelIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Delete Appointment" arrow>
                         <IconButton
                           size="small"
-                          onClick={() => handleCancelAppointment(apt.id)}
-                          sx={{ bgcolor: "warning.main", color: "white", "&:hover": { bgcolor: "warning.dark" } }}
+                          onClick={() => handleDeleteAppointment(apt.id)}
+                          sx={{ bgcolor: "error.main", color: "white", "&:hover": { bgcolor: "error.dark" } }}
+                          aria-label="Delete appointment"
                         >
-                          <CancelIcon fontSize="small" />
+                          <DeleteIcon fontSize="small" />
                         </IconButton>
-                      )}
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteAppointment(apt.id)}
-                        sx={{ bgcolor: "error.main", color: "white", "&:hover": { bgcolor: "error.dark" } }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                      </Tooltip>
                     </Stack>
                   </Stack>
                 </Box>
@@ -486,6 +530,17 @@ export default function Appointments() {
           />
         </Stack>
       </FormDialog>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        severity={confirmDialog.severity}
+        confirmLabel={confirmDialog.severity === 'error' ? 'Delete' : 'Confirm'}
+      />
     </Box>
   );
 }

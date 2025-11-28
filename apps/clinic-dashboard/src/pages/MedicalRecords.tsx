@@ -823,7 +823,7 @@ const MedicalRecords: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box>
+      <Box className="page-enter">
         <PageHeader
           title="Medical Records"
           description="Comprehensive patient health information management"
@@ -1433,7 +1433,7 @@ const MedicalRecords: React.FC = () => {
                             <Line
                               type="monotone"
                               dataKey="value"
-                              stroke="#EF4444" // Aura red
+                              stroke="var(--qivr-palette-error-main)"
                               strokeWidth={2}
                             />
                           </LineChart>
