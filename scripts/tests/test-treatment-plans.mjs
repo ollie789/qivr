@@ -208,9 +208,17 @@ async function testCreateTreatmentPlan() {
     })
   });
   
+  console.log(`     Status: ${response.status}`);
+  
   if (response.status === 403) {
     console.log('  ⏭️  Skipped - StaffOnly policy (user may be patient)');
     return;
+  }
+  
+  if (response.status === 500) {
+    const data = await safeJson(response);
+    console.log(`  ❌ Server error: ${JSON.stringify(data).substring(0, 500)}`);
+    throw new Error(`Server error: ${data.message || data.detail || 'Unknown'}`);
   }
   
   assert(response.ok, `Create treatment plan (${response.status})`);
@@ -226,10 +234,24 @@ async function testAiGeneratePlan() {
     return;
   }
   
+  // First, try to find an evaluation for this patient
+  const evalResponse = await makeClinicRequest(`/evaluations?patientId=${testData.existingPatientId}`);
+  const evaluations = await safeJson(evalResponse);
+  const evalList = Array.isArray(evaluations) ? evaluations : [];
+  
+  let evaluationId = null;
+  if (evalList.length > 0) {
+    evaluationId = evalList[0].id;
+    console.log(`     Found evaluation: ${evaluationId}`);
+  } else {
+    console.log('     No evaluation found for patient - AI will use minimal data');
+  }
+  
   const response = await makeClinicRequest('/treatment-plans/generate', {
     method: 'POST',
     body: JSON.stringify({
       patientId: testData.existingPatientId,
+      evaluationId: evaluationId,
       preferredDurationWeeks: 8,
       sessionsPerWeek: 2,
       focusAreas: ['Lower back', 'Core stability'],
@@ -237,25 +259,26 @@ async function testAiGeneratePlan() {
     })
   });
   
+  console.log(`     Status: ${response.status}`);
+  const data = await safeJson(response);
+  console.log(`     Response: ${JSON.stringify(data).substring(0, 500)}`);
+  
   if (response.status === 403) {
     console.log('  ⏭️  Skipped - StaffOnly policy');
     return;
   }
   
   if (response.status === 400) {
-    const data = await safeJson(response);
     console.log(`  ⚠️  AI generation failed: ${data.error || data.message || 'Unknown error'}`);
     return;
   }
   
   if (response.status === 500) {
-    const data = await safeJson(response);
-    console.log(`  ⚠️  Server error (likely Bedrock): ${data.error || data.message || response.statusText}`);
-    return;
+    console.log(`  ❌ Server error 500: ${data.error || data.message || data.detail || data.title}`);
+    throw new Error(`Server error: ${data.error || data.message || data.detail || 'Unknown'}`);
   }
   
   assert(response.ok, `AI generate plan (${response.status})`);
-  const data = await safeJson(response);
   assert(data.plan, 'Response has plan');
   testData.aiGeneratedPlanId = data.plan.id;
   console.log(`     AI generated plan: ${data.plan.id}`);

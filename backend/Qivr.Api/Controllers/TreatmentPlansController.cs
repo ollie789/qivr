@@ -164,29 +164,39 @@ public class TreatmentPlansController : BaseApiController
     [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> Create([FromBody] CreateTreatmentPlanRequest request)
     {
-        var tenantId = RequireTenantId();
-        var userId = CurrentUserId;
-
-        var plan = new TreatmentPlan
+        try
         {
-            TenantId = tenantId,
-            PatientId = request.PatientId,
-            ProviderId = userId,
-            Title = request.Title ?? "Treatment Plan",
-            Diagnosis = request.Diagnosis,
-            Goals = request.Goals ?? string.Join(", ", request.GoalsList ?? new List<string>()),
-            StartDate = request.StartDate != default ? request.StartDate : DateTime.UtcNow,
-            DurationWeeks = request.DurationWeeks > 0 ? request.DurationWeeks : ParseDurationWeeks(request.Duration),
-            Status = TreatmentPlanStatus.Active,
-            Sessions = request.Sessions ?? new(),
-            Exercises = request.Exercises ?? new(),
-            Notes = BuildNotes(request)
-        };
+            var tenantId = RequireTenantId();
+            var userId = CurrentUserId;
 
-        _context.TreatmentPlans.Add(plan);
-        await _context.SaveChangesAsync();
+            var plan = new TreatmentPlan
+            {
+                TenantId = tenantId,
+                PatientId = request.PatientId,
+                ProviderId = userId,
+                Title = request.Title ?? "Treatment Plan",
+                Diagnosis = request.Diagnosis,
+                Goals = request.Goals ?? string.Join(", ", request.GoalsList ?? new List<string>()),
+                StartDate = request.StartDate != default ? request.StartDate : DateTime.UtcNow,
+                DurationWeeks = request.DurationWeeks > 0 ? request.DurationWeeks : ParseDurationWeeks(request.Duration),
+                Status = TreatmentPlanStatus.Active,
+                Sessions = request.Sessions ?? new(),
+                Exercises = request.Exercises ?? new(),
+                Phases = new(),
+                Milestones = new(),
+                Notes = BuildNotes(request)
+            };
 
-        return CreatedAtAction(nameof(Get), new { id = plan.Id }, plan);
+            _context.TreatmentPlans.Add(plan);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(Get), new { id = plan.Id }, plan);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating treatment plan");
+            return StatusCode(500, new { error = "Failed to create treatment plan", detail = ex.Message });
+        }
     }
 
     private int ParseDurationWeeks(string? duration)
