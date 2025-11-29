@@ -8,7 +8,7 @@ namespace Qivr.Api.Controllers.Admin;
 
 [ApiController]
 [Route("api/admin/billing")]
-[Authorize(Roles = "SuperAdmin,Admin")]
+[Authorize]
 public class AdminBillingController : ControllerBase
 {
     private readonly QivrDbContext _context;

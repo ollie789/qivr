@@ -24,7 +24,12 @@ public static class AuthenticationExtensions
         var cognitoSettings = configuration.GetSection("Cognito").Get<CognitoSettings>() 
             ?? throw new InvalidOperationException("Cognito settings not configured");
         
-        // Configure JWT authentication
+        // Admin pool ID for the admin portal
+        var adminPoolId = configuration["Cognito:AdminPoolId"] ?? "ap-southeast-2_BEFWL83lO";
+        var mainIssuer = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{cognitoSettings.UserPoolId}";
+        var adminIssuer = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{adminPoolId}";
+        
+        // Configure JWT authentication with multiple valid issuers
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -32,15 +37,26 @@ public static class AuthenticationExtensions
         })
         .AddJwtBearer(options =>
         {
-            options.Authority = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{cognitoSettings.UserPoolId}";
+            // Don't set Authority - we'll validate multiple issuers manually
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 ValidateIssuer = true,
                 ValidateAudience = false, // Cognito access tokens don't have an 'aud' claim
                 ValidateLifetime = true,
-                ValidIssuer = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{cognitoSettings.UserPoolId}",
-                ClockSkew = TimeSpan.Zero
+                ValidIssuers = new[] { mainIssuer, adminIssuer }, // Accept both pools
+                ClockSkew = TimeSpan.Zero,
+                IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
+                {
+                    // Dynamically fetch signing keys from the correct Cognito pool
+                    var issuer = securityToken?.Issuer ?? mainIssuer;
+                    var jwksUrl = $"{issuer}/.well-known/jwks.json";
+                    
+                    using var httpClient = new System.Net.Http.HttpClient();
+                    var jwks = httpClient.GetStringAsync(jwksUrl).GetAwaiter().GetResult();
+                    var keys = new Microsoft.IdentityModel.Tokens.JsonWebKeySet(jwks);
+                    return keys.GetSigningKeys();
+                }
             };
             
             options.Events = new JwtBearerEvents
@@ -214,16 +230,19 @@ public static class AuthenticationExtensions
                 policy.RequireRole("Patient"));
                 
             options.AddPolicy("StaffOnly", policy =>
-                policy.RequireRole("Clinician", "Admin", "Owner"));
+                policy.RequireRole("Clinician", "Admin", "Owner", "SuperAdmin"));
                 
             options.AddPolicy("ClinicianOnly", policy =>
-                policy.RequireRole("Clinician", "Admin", "Owner"));
+                policy.RequireRole("Clinician", "Admin", "Owner", "SuperAdmin"));
                 
             options.AddPolicy("AdminOnly", policy =>
-                policy.RequireRole("Admin", "Owner"));
+                policy.RequireRole("Admin", "Owner", "SuperAdmin"));
                 
             options.AddPolicy("OwnerOnly", policy =>
-                policy.RequireRole("Owner"));
+                policy.RequireRole("Owner", "SuperAdmin"));
+            
+            options.AddPolicy("SuperAdminOnly", policy =>
+                policy.RequireRole("SuperAdmin"));
                 
             options.AddPolicy("RequireTenant", policy =>
                 policy.RequireClaim("tenant_id"));

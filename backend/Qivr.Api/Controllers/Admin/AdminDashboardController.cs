@@ -8,7 +8,7 @@ namespace Qivr.Api.Controllers.Admin;
 
 [ApiController]
 [Route("api/admin/dashboard")]
-[Authorize(Roles = "SuperAdmin,Admin")]
+[Authorize]
 public class AdminDashboardController : ControllerBase
 {
     private readonly QivrDbContext _context;

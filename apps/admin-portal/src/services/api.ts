@@ -1,19 +1,11 @@
 import { Tenant, TenantUsage, FeatureFlags } from "../types/tenant";
+import { getIdToken } from "./cognitoAuth";
 
 const API_BASE =
   import.meta.env.VITE_ADMIN_API_URL || "http://localhost:5000/api/admin";
 
-function getToken(): string | null {
-  try {
-    const stored = localStorage.getItem("admin-auth");
-    return stored ? JSON.parse(stored).state?.token : null;
-  } catch {
-    return null;
-  }
-}
-
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const token = getToken();
+  const token = await getIdToken();
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -26,7 +18,6 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     if (res.status === 401) {
-      localStorage.removeItem("admin-auth");
       window.location.href = "/login";
     }
     const error = await res.json().catch(() => ({ message: "Request failed" }));

@@ -8,7 +8,7 @@ namespace Qivr.Api.Controllers.Admin;
 
 [ApiController]
 [Route("api/admin/tenants")]
-[Authorize(Roles = "SuperAdmin,Admin")]
+[Authorize] // Any authenticated user from admin pool can access
 public class AdminTenantsController : ControllerBase
 {
     private readonly QivrDbContext _context;

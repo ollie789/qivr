@@ -1,29 +1,107 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Card, TextField, Button, Typography, Alert } from "@mui/material";
+import {
+  Box,
+  Card,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
 import { useAuthStore } from "../stores/authStore";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const {
+    login,
+    verifyMfa,
+    setupMfa,
+    completeMfaSetup,
+    mfaRequired,
+    mfaSetupRequired,
+    totpSecret,
+    checkSession,
+  } = useAuthStore();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    checkSession().then((valid) => {
+      if (valid) navigate("/dashboard");
+      setCheckingSession(false);
+    });
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    try {
-      await login(email, password);
+
+    const result = await login(email, password);
+    setLoading(false);
+
+    if (result.success) {
       navigate("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Login failed");
-    } finally {
-      setLoading(false);
+    } else if (result.mfaSetupRequired) {
+      await setupMfa();
+    } else if (!result.mfaRequired && result.error) {
+      setError(result.error);
     }
   };
+
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const result = await verifyMfa(mfaCode);
+    setLoading(false);
+
+    if (result.success) {
+      navigate("/dashboard");
+    } else {
+      setError(result.error || "Invalid code");
+    }
+  };
+
+  const handleMfaSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const result = await completeMfaSetup(mfaCode);
+    setLoading(false);
+
+    if (result.success) {
+      setError("");
+      alert("MFA setup complete! Please sign in again.");
+      window.location.reload();
+    } else {
+      setError(result.error || "Invalid code");
+    }
+  };
+
+  if (checkingSession) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: "#0f172a",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -58,7 +136,13 @@ export default function Login() {
           <Typography variant="h5" fontWeight={700}>
             QIVR Admin Portal
           </Typography>
-          <Typography color="text.secondary">Internal access only</Typography>
+          <Typography color="text.secondary">
+            {mfaSetupRequired
+              ? "Set up MFA"
+              : mfaRequired
+                ? "Enter MFA Code"
+                : "Secure access"}
+          </Typography>
         </Box>
 
         {error && (
@@ -67,41 +151,98 @@ export default function Login() {
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            sx={{ mb: 3 }}
-          />
-          <Button
-            fullWidth
-            variant="contained"
-            size="large"
-            type="submit"
-            disabled={loading}
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </Button>
-        </form>
-
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ display: "block", mt: 3, textAlign: "center" }}
-        >
-          Dev: admin@qivr.io / admin123
-        </Typography>
+        {mfaSetupRequired && totpSecret ? (
+          <form onSubmit={handleMfaSetup}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Scan this code with your authenticator app (Google Authenticator,
+              Authy, etc.)
+            </Alert>
+            <Box
+              sx={{
+                bgcolor: "grey.900",
+                p: 2,
+                borderRadius: 1,
+                mb: 2,
+                textAlign: "center",
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: "monospace", wordBreak: "break-all" }}
+              >
+                {totpSecret}
+              </Typography>
+            </Box>
+            <TextField
+              fullWidth
+              label="Enter code from app"
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value)}
+              sx={{ mb: 3 }}
+              autoFocus
+              inputProps={{ maxLength: 6 }}
+            />
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              type="submit"
+              disabled={loading || mfaCode.length !== 6}
+            >
+              {loading ? "Verifying..." : "Complete Setup"}
+            </Button>
+          </form>
+        ) : mfaRequired ? (
+          <form onSubmit={handleMfaVerify}>
+            <TextField
+              fullWidth
+              label="MFA Code"
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value)}
+              sx={{ mb: 3 }}
+              autoFocus
+              inputProps={{ maxLength: 6 }}
+              helperText="Enter the 6-digit code from your authenticator app"
+            />
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              type="submit"
+              disabled={loading || mfaCode.length !== 6}
+            >
+              {loading ? "Verifying..." : "Verify"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleLogin}>
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              sx={{ mb: 3 }}
+            />
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        )}
       </Card>
     </Box>
   );
