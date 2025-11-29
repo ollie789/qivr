@@ -296,11 +296,30 @@ Return JSON with format:
 
             if (evaluation != null)
             {
+                // Extract questionnaire data
+                var q = evaluation.QuestionnaireResponses ?? new Dictionary<string, object>();
+                
                 request.Evaluation = new EvaluationDataForAi
                 {
                     ChiefComplaint = evaluation.ChiefComplaint,
                     Symptoms = evaluation.Symptoms,
-                    AiSummary = evaluation.AiSummary
+                    AiSummary = evaluation.AiSummary,
+                    Duration = q.TryGetValue("duration", out var dur) ? dur?.ToString() : null,
+                    Onset = q.TryGetValue("onset", out var onset) ? onset?.ToString() : null,
+                    Pattern = q.TryGetValue("pattern", out var pat) ? pat?.ToString() : null,
+                    AggravatingFactors = ExtractStringList(q, "aggravatingFactors"),
+                    RelievingFactors = ExtractStringList(q, "relievingFactors"),
+                    TreatmentGoals = q.TryGetValue("treatmentGoals", out var goals) ? goals?.ToString() : null
+                };
+
+                // Extract medical history from questionnaire
+                request.MedicalHistory ??= new MedicalHistoryForAi
+                {
+                    Conditions = q.TryGetValue("medicalConditions", out var cond) ? cond?.ToString() : null,
+                    Medications = q.TryGetValue("currentMedications", out var meds) ? meds?.ToString() : null,
+                    Allergies = q.TryGetValue("allergies", out var allerg) ? allerg?.ToString() : null,
+                    PreviousTreatments = q.TryGetValue("previousTreatments", out var prev) ? prev?.ToString() : null,
+                    Surgeries = q.TryGetValue("surgeries", out var surg) ? surg?.ToString() : null
                 };
 
                 request.PainMaps = evaluation.PainMaps.Select(pm => new PainRegionForAi
@@ -311,6 +330,11 @@ Return JSON with format:
                     PainType = pm.PainType,
                     PainQuality = pm.PainQuality
                 }).ToList();
+                
+                _logger.LogInformation("Enriched from evaluation: complaint={Complaint}, painMaps={PainCount}, hasMedHistory={HasMed}",
+                    evaluation.ChiefComplaint?.Substring(0, Math.Min(50, evaluation.ChiefComplaint?.Length ?? 0)),
+                    request.PainMaps.Count,
+                    request.MedicalHistory != null);
             }
         }
 
@@ -330,7 +354,28 @@ Return JSON with format:
                 Severity = r.Severity,
                 CompletedAt = r.CompletedAt
             }).ToList();
+            
+            _logger.LogInformation("Found {PromCount} PROM responses for patient", request.PromHistory.Count);
         }
+    }
+    
+    private List<string> ExtractStringList(Dictionary<string, object> dict, string key)
+    {
+        if (!dict.TryGetValue(key, out var value) || value == null)
+            return new List<string>();
+            
+        if (value is List<string> list)
+            return list;
+            
+        if (value is System.Text.Json.JsonElement jsonElement && jsonElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            return jsonElement.EnumerateArray()
+                .Select(e => e.GetString() ?? "")
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+        }
+        
+        return new List<string>();
     }
 
     private async Task<DeidentifiedPatientData> DeIdentifyPatientData(TreatmentPlanGenerationRequest request)
@@ -345,7 +390,17 @@ Return JSON with format:
 
         if (request.Evaluation?.Symptoms?.Any() == true)
         {
-            data.Symptoms = request.Evaluation.Symptoms; // Symptoms typically don't contain PHI
+            data.Symptoms = request.Evaluation.Symptoms;
+        }
+        
+        // Copy evaluation data
+        if (request.Evaluation != null)
+        {
+            data.Duration = request.Evaluation.Duration;
+            data.Onset = request.Evaluation.Onset;
+            data.AggravatingFactors = request.Evaluation.AggravatingFactors;
+            data.RelievingFactors = request.Evaluation.RelievingFactors;
+            data.TreatmentGoals = request.Evaluation.TreatmentGoals;
         }
 
         if (request.MedicalHistory != null)
@@ -353,6 +408,7 @@ Return JSON with format:
             data.MedicalConditions = request.MedicalHistory.Conditions;
             data.Medications = request.MedicalHistory.Medications;
             data.Allergies = request.MedicalHistory.Allergies;
+            data.PreviousTreatments = request.MedicalHistory.PreviousTreatments;
             data.Age = request.MedicalHistory.Age;
         }
 
@@ -365,7 +421,7 @@ Return JSON with format:
     {
         var painSummary = data.PainRegions.Any()
             ? string.Join("\n", data.PainRegions.Select(p =>
-                $"  - {p.BodyRegion}: {p.PainType} pain, intensity {p.Intensity}/10, quality: {string.Join(", ", p.PainQuality)}"))
+                $"  - {p.BodyRegion}: {p.PainType ?? "unspecified"} pain, intensity {p.Intensity}/10, quality: {string.Join(", ", p.PainQuality)}"))
             : "  No specific pain regions documented";
 
         var promSummary = request.PromHistory?.Any() == true
@@ -379,15 +435,21 @@ Generate a comprehensive physiotherapy treatment plan for this patient.
 PATIENT DATA:
 - Chief Complaint: {data.ChiefComplaint ?? "Not specified"}
 - Symptoms: {(data.Symptoms.Any() ? string.Join(", ", data.Symptoms) : "Not specified")}
-- Age: {data.Age?.ToString() ?? "Not specified"}
+- Duration: {data.Duration ?? "Not specified"}
+- Onset: {data.Onset ?? "Not specified"}
+- Treatment Goals: {data.TreatmentGoals ?? "Not specified"}
 
 PAIN ASSESSMENT:
 {painSummary}
 
+AGGRAVATING FACTORS: {(data.AggravatingFactors.Any() ? string.Join(", ", data.AggravatingFactors) : "Not specified")}
+RELIEVING FACTORS: {(data.RelievingFactors.Any() ? string.Join(", ", data.RelievingFactors) : "Not specified")}
+
 MEDICAL HISTORY:
-- Conditions: {(data.MedicalConditions.Any() ? string.Join(", ", data.MedicalConditions) : "None documented")}
-- Medications: {(data.Medications.Any() ? string.Join(", ", data.Medications) : "None documented")}
-- Allergies: {(data.Allergies.Any() ? string.Join(", ", data.Allergies) : "None documented")}
+- Conditions: {data.MedicalConditions ?? "None documented"}
+- Medications: {data.Medications ?? "None documented"}
+- Allergies: {data.Allergies ?? "None documented"}
+- Previous Treatments: {data.PreviousTreatments ?? "None documented"}
 
 PROM HISTORY:
 {promSummary}
@@ -696,9 +758,15 @@ internal class DeidentifiedPatientData
     public string? ChiefComplaint { get; set; }
     public List<string> Symptoms { get; set; } = new();
     public List<PainRegionForAi> PainRegions { get; set; } = new();
-    public List<string> MedicalConditions { get; set; } = new();
-    public List<string> Medications { get; set; } = new();
-    public List<string> Allergies { get; set; } = new();
+    public string? MedicalConditions { get; set; }
+    public string? Medications { get; set; }
+    public string? Allergies { get; set; }
+    public string? PreviousTreatments { get; set; }
+    public string? Duration { get; set; }
+    public string? Onset { get; set; }
+    public List<string> AggravatingFactors { get; set; } = new();
+    public List<string> RelievingFactors { get; set; } = new();
+    public string? TreatmentGoals { get; set; }
     public int? Age { get; set; }
 }
 

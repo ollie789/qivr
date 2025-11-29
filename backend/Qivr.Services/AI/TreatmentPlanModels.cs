@@ -29,8 +29,13 @@ public class EvaluationDataForAi
     public string? ChiefComplaint { get; set; }
     public List<string> Symptoms { get; set; } = new();
     public string? Duration { get; set; }
+    public string? Onset { get; set; }
+    public string? Pattern { get; set; }
     public int? PainSeverity { get; set; }
     public string? AiSummary { get; set; }
+    public List<string> AggravatingFactors { get; set; } = new();
+    public List<string> RelievingFactors { get; set; } = new();
+    public string? TreatmentGoals { get; set; }
 }
 
 public class PainRegionForAi
@@ -52,12 +57,16 @@ public class PromResponseSummary
 
 public class MedicalHistorySummary
 {
-    public List<string> Conditions { get; set; } = new();
-    public List<string> Medications { get; set; } = new();
-    public List<string> Allergies { get; set; } = new();
-    public List<string> PreviousSurgeries { get; set; } = new();
+    public string? Conditions { get; set; }
+    public string? Medications { get; set; }
+    public string? Allergies { get; set; }
+    public string? PreviousTreatments { get; set; }
+    public string? Surgeries { get; set; }
     public int? Age { get; set; }
 }
+
+// Alias for compatibility
+public class MedicalHistoryForAi : MedicalHistorySummary { }
 
 #endregion
 
