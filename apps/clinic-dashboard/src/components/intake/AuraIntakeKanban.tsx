@@ -9,7 +9,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -28,11 +29,36 @@ interface AuraIntakeKanbanProps {
 }
 
 const COLUMNS = [
-  { id: "pending", title: "New", statuses: ["pending"], color: auraColors.blue.main },
-  { id: "reviewing", title: "Triaged", statuses: ["reviewing", "triaged"], color: auraColors.purple.main },
-  { id: "scheduling", title: "Scheduling", statuses: ["scheduling"], color: auraColors.orange.main },
-  { id: "scheduled", title: "Scheduled", statuses: ["scheduled", "approved"], color: auraColors.green.main },
-  { id: "archived", title: "Archived", statuses: ["archived", "rejected"], color: auraColors.grey[500] },
+  {
+    id: "pending",
+    title: "New",
+    statuses: ["pending"],
+    color: auraColors.blue.main,
+  },
+  {
+    id: "reviewing",
+    title: "Triaged",
+    statuses: ["reviewing", "triaged"],
+    color: auraColors.purple.main,
+  },
+  {
+    id: "scheduling",
+    title: "Scheduling",
+    statuses: ["scheduling"],
+    color: auraColors.orange.main,
+  },
+  {
+    id: "scheduled",
+    title: "Scheduled",
+    statuses: ["scheduled", "approved"],
+    color: auraColors.green.main,
+  },
+  {
+    id: "archived",
+    title: "Archived",
+    statuses: ["archived", "rejected"],
+    color: auraColors.grey[500],
+  },
 ];
 
 const STATUS_MAP: Record<string, string> = {
@@ -103,8 +129,16 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
     >
       <Stack spacing={2}>
         {/* Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" fontWeight={auraTokens.fontWeights.semibold} sx={{ fontSize: "1rem" }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Typography
+            variant="h6"
+            fontWeight={auraTokens.fontWeights.semibold}
+            sx={{ fontSize: "1rem" }}
+          >
             {intake.patientName}
           </Typography>
           {intake.severity && (
@@ -124,7 +158,11 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
         </Stack>
 
         {/* Condition */}
-        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ fontWeight: 500 }}
+        >
           {intake.conditionType}
         </Typography>
 
@@ -169,7 +207,11 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
               borderLeft: `3px solid ${auraColors.purple.main}`,
             }}
           >
-            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ lineHeight: 1.5 }}
+            >
               {intake.aiSummary.substring(0, 100)}
               {intake.aiSummary.length > 100 && "..."}
             </Typography>
@@ -204,9 +246,17 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
           direction="row"
           justifyContent="space-between"
           alignItems="center"
-          sx={{ pt: auraTokens.spacing.sm, borderTop: "1px solid", borderColor: "divider" }}
+          sx={{
+            pt: auraTokens.spacing.sm,
+            borderTop: "1px solid",
+            borderColor: "divider",
+          }}
         >
-          <Typography variant="caption" color="text.secondary" fontWeight={auraTokens.fontWeights.medium}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            fontWeight={auraTokens.fontWeights.medium}
+          >
             {format(new Date(intake.submittedAt), "MMM d, h:mm a")}
           </Typography>
           <Stack direction="row" spacing={0.5}>
@@ -248,8 +298,15 @@ const KanbanColumn: React.FC<{
   onViewDetails: (intake: IntakeSubmission) => void;
   onSchedule: (intake: IntakeSubmission) => void;
 }> = ({ column, intakes, onViewDetails, onSchedule }) => {
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
+
   return (
-    <Box sx={{ minWidth: auraTokens.layout.kanbanColumn, maxWidth: auraTokens.layout.kanbanColumn }}>
+    <Box
+      sx={{
+        minWidth: auraTokens.layout.kanbanColumn,
+        maxWidth: auraTokens.layout.kanbanColumn,
+      }}
+    >
       <Box
         sx={{
           p: 2.5,
@@ -265,7 +322,11 @@ const KanbanColumn: React.FC<{
           justifyContent="space-between"
           alignItems="center"
         >
-          <Typography variant="h6" fontWeight={auraTokens.fontWeights.bold} sx={{ fontSize: "1.1rem" }}>
+          <Typography
+            variant="h6"
+            fontWeight={auraTokens.fontWeights.bold}
+            sx={{ fontSize: "1.1rem" }}
+          >
             {column.title}
           </Typography>
           <Chip
@@ -284,11 +345,22 @@ const KanbanColumn: React.FC<{
         </Stack>
       </Box>
 
-      <SortableContext
-        items={intakes.map((i) => i.id)}
-        strategy={verticalListSortingStrategy}
+      <Box
+        ref={setNodeRef}
+        sx={{
+          minHeight: 400,
+          p: 1,
+          borderRadius: auraTokens.borderRadius.lg,
+          bgcolor: isOver ? "action.hover" : "transparent",
+          border: isOver ? "2px dashed" : "2px dashed transparent",
+          borderColor: isOver ? "primary.main" : "transparent",
+          transition: "all 0.2s ease",
+        }}
       >
-        <Box sx={{ minHeight: 400 }}>
+        <SortableContext
+          items={intakes.map((i) => i.id)}
+          strategy={verticalListSortingStrategy}
+        >
           {intakes.map((intake) => (
             <IntakeCard
               key={intake.id}
@@ -297,8 +369,8 @@ const KanbanColumn: React.FC<{
               onSchedule={() => onSchedule(intake)}
             />
           ))}
-        </Box>
-      </SortableContext>
+        </SortableContext>
+      </Box>
     </Box>
   );
 };
@@ -336,15 +408,21 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
     const activeIntake = intakes.find((i) => i.id === active.id);
     if (!activeIntake) return;
 
-    const overColumn = COLUMNS.find((col) =>
-      getColumnIntakes(col.statuses).some((i) => i.id === over.id),
-    );
+    // Check if dropped on a column directly
+    let targetColumn = COLUMNS.find((col) => col.id === over.id);
+
+    // If not dropped on column, check if dropped on a card in a column
+    if (!targetColumn) {
+      targetColumn = COLUMNS.find((col) =>
+        getColumnIntakes(col.statuses).some((i) => i.id === over.id),
+      );
+    }
 
     if (
-      overColumn &&
-      !overColumn.statuses.includes(activeIntake.status.toLowerCase())
+      targetColumn &&
+      !targetColumn.statuses.includes(activeIntake.status.toLowerCase())
     ) {
-      const newStatus = STATUS_MAP[overColumn.id];
+      const newStatus = STATUS_MAP[targetColumn.id];
       if (newStatus) {
         onStatusChange(activeIntake.id, newStatus);
       }
@@ -356,7 +434,7 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
