@@ -17,6 +17,7 @@ import { EvaluationDetail } from "./pages/EvaluationDetail";
 import { IntakeForm } from "./pages/IntakeForm";
 import Appointments from "./pages/Appointments";
 import { BookAppointment } from "./pages/BookAppointment";
+import { RescheduleAppointment } from "./pages/RescheduleAppointment";
 import PROMEnhanced from "./pages/PROMEnhanced";
 import { CompletePROM } from "./pages/CompletePROM";
 import Profile from "./pages/Profile";
@@ -39,7 +40,7 @@ export const AppContent: React.FC = () => {
   const { loading } = useAuth();
 
   if (loading) {
-    return <AuroraPageLoader sx={{ height: '100vh' }} />;
+    return <AuroraPageLoader sx={{ height: "100vh" }} />;
   }
 
   return (
@@ -79,6 +80,10 @@ export const AppContent: React.FC = () => {
           {/* Appointments */}
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/appointments/book" element={<BookAppointment />} />
+          <Route
+            path="/appointments/reschedule/:id"
+            element={<RescheduleAppointment />}
+          />
 
           {/* PROMs */}
           <Route path="/proms" element={<PROMEnhanced />} />

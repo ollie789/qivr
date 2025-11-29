@@ -8,7 +8,12 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useColorScheme } from "@mui/material/styles";
-import { AuroraPageLoader, QivrThemeProvider, SnackbarCloseButton, SnackbarIcon } from "@qivr/design-system";
+import {
+  AuroraPageLoader,
+  QivrThemeProvider,
+  SnackbarCloseButton,
+  SnackbarIcon,
+} from "@qivr/design-system";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { SnackbarProvider } from "notistack";
@@ -75,9 +80,13 @@ function InnerApp() {
             <SnackbarCloseButton snackbarKey={snackbarKey} />
           )}
           iconVariant={{
-            success: <SnackbarIcon variant="success" icon="solar:check-circle-bold" />,
+            success: (
+              <SnackbarIcon variant="success" icon="solar:check-circle-bold" />
+            ),
             error: <SnackbarIcon variant="error" icon="solar:danger-bold" />,
-            warning: <SnackbarIcon variant="warning" icon="solar:bell-bing-bold" />,
+            warning: (
+              <SnackbarIcon variant="warning" icon="solar:bell-bing-bold" />
+            ),
             info: <SnackbarIcon variant="info" icon="solar:info-circle-bold" />,
           }}
         >
@@ -150,7 +159,6 @@ function App() {
     checkAuth();
   }, [checkAuth]);
 
-  console.log("App component rendering");
   return (
     <QueryClientProvider client={queryClient}>
       <QivrThemeProvider brand="clinic" defaultMode="system">

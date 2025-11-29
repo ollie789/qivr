@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Qivr.Core.Entities;
@@ -13,9 +14,11 @@ using Qivr.Infrastructure.Data;
 namespace Qivr.Infrastructure.Migrations
 {
     [DbContext(typeof(QivrDbContext))]
-    partial class QivrDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251129030034_AddTreatmentPlanIdToAppointments")]
+    partial class AddTreatmentPlanIdToAppointments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { api, handleApiError } from '../services/api';
+import { api, handleApiError } from "../services/api";
 
 type Maybe<T> = T | null | undefined;
 
@@ -18,32 +18,25 @@ type CursorResponse<T> = {
   Count?: number;
 };
 
-const unwrapItems = <T>(payload: CursorResponse<T> | T[] | { data: CursorResponse<T> | T[] }): T[] => {
-  console.log('[unwrapItems] Input payload:', payload);
-  console.log('[unwrapItems] Is array?', Array.isArray(payload));
-  console.log('[unwrapItems] Has data?', payload && typeof payload === 'object' && 'data' in payload);
-  
-  const raw = (payload && typeof payload === 'object' && 'data' in payload
-    ? (payload as { data: CursorResponse<T> | T[] }).data
-    : payload) ?? [];
-
-  console.log('[unwrapItems] Raw after extraction:', raw);
-  console.log('[unwrapItems] Raw is array?', Array.isArray(raw));
+const unwrapItems = <T>(
+  payload: CursorResponse<T> | T[] | { data: CursorResponse<T> | T[] },
+): T[] => {
+  const raw =
+    (payload && typeof payload === "object" && "data" in payload
+      ? (payload as { data: CursorResponse<T> | T[] }).data
+      : payload) ?? [];
 
   if (Array.isArray(raw)) {
-    console.log('[unwrapItems] Returning array directly:', raw);
     return raw;
   }
 
   // Type guard to ensure raw is CursorResponse<T>
-  if (raw && typeof raw === 'object') {
+  if (raw && typeof raw === "object") {
     const cursorResponse = raw as CursorResponse<T>;
     const items = cursorResponse.items ?? cursorResponse.Items ?? [];
-    console.log('[unwrapItems] Extracted items from cursor:', items);
     return Array.isArray(items) ? items : [];
   }
-  
-  console.log('[unwrapItems] Returning empty array');
+
   return [];
 };
 
@@ -58,8 +51,12 @@ const toIsoString = (value: Maybe<string | Date>): string => {
   if (!trimmed) {
     return new Date().toISOString();
   }
-  const isoCandidate = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
-  const finalValue = isoCandidate.endsWith('Z') ? isoCandidate : `${isoCandidate}Z`;
+  const isoCandidate = trimmed.includes("T")
+    ? trimmed
+    : trimmed.replace(" ", "T");
+  const finalValue = isoCandidate.endsWith("Z")
+    ? isoCandidate
+    : `${isoCandidate}Z`;
   const parsed = new Date(finalValue);
   if (Number.isNaN(parsed.getTime())) {
     return new Date().toISOString();
@@ -78,55 +75,81 @@ const minutesBetween = (startIso: string, endIso: string): number => {
 
 const normalizeStatus = (value: Maybe<string | number>): string => {
   if (value === null || value === undefined) {
-    return 'unknown';
+    return "unknown";
   }
-  
+
   // Handle numeric enum values
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     switch (value) {
-      case 0: return 'scheduled';
-      case 1: return 'confirmed';
-      case 2: return 'in-progress';
-      case 3: return 'completed';
-      case 4: return 'cancelled';
-      case 5: return 'no-show';
-      default: return 'unknown';
+      case 0:
+        return "scheduled";
+      case 1:
+        return "confirmed";
+      case 2:
+        return "in-progress";
+      case 3:
+        return "completed";
+      case 4:
+        return "cancelled";
+      case 5:
+        return "no-show";
+      default:
+        return "unknown";
     }
   }
-  
+
   return value.toLowerCase();
 };
 
 const mapAppointment = (raw: any): AppointmentDto => {
   const scheduledStart = toIsoString(raw.scheduledStart ?? raw.ScheduledStart);
-  const scheduledEnd = toIsoString(raw.scheduledEnd ?? raw.ScheduledEnd ?? scheduledStart);
-  const providerName = raw.providerName ?? raw.ProviderName ?? 'Assigned clinician';
-  const providerSpecialty = raw.providerSpecialty ?? raw.ProviderSpecialty ?? raw.locationDetails?.specialty ?? undefined;
-  const appointmentType = raw.appointmentType ?? raw.AppointmentType ?? 'consultation';
+  const scheduledEnd = toIsoString(
+    raw.scheduledEnd ?? raw.ScheduledEnd ?? scheduledStart,
+  );
+  const providerName =
+    raw.providerName ?? raw.ProviderName ?? "Assigned clinician";
+  const providerSpecialty =
+    raw.providerSpecialty ??
+    raw.ProviderSpecialty ??
+    raw.locationDetails?.specialty ??
+    undefined;
+  const appointmentType =
+    raw.appointmentType ?? raw.AppointmentType ?? "consultation";
   const locationDetails = raw.locationDetails ?? raw.LocationDetails ?? {};
-  const location = raw.location ?? raw.Location ?? (locationDetails.address ?? locationDetails.Address); 
-  const videoLink = raw.videoLink ?? raw.VideoLink ?? locationDetails.meetingUrl ?? locationDetails.videoLink;
+  const location =
+    raw.location ??
+    raw.Location ??
+    locationDetails.address ??
+    locationDetails.Address;
+  const videoLink =
+    raw.videoLink ??
+    raw.VideoLink ??
+    locationDetails.meetingUrl ??
+    locationDetails.videoLink;
 
   const locationTypeValue = raw.locationType ?? raw.LocationType;
-  const isVirtualLocation = typeof locationTypeValue === 'number' 
-    ? locationTypeValue === 1 // Assuming 0=InPerson, 1=Virtual
-    : String(locationTypeValue).toLowerCase() === 'virtual';
+  const isVirtualLocation =
+    typeof locationTypeValue === "number"
+      ? locationTypeValue === 1 // Assuming 0=InPerson, 1=Virtual
+      : String(locationTypeValue).toLowerCase() === "virtual";
 
   return {
-    id: String(raw.id ?? raw.Id ?? ''),
-    providerId: String(raw.providerId ?? raw.ProviderId ?? ''),
+    id: String(raw.id ?? raw.Id ?? ""),
+    providerId: String(raw.providerId ?? raw.ProviderId ?? ""),
     providerName,
-    providerSpecialty: providerSpecialty ?? 'General',
+    providerSpecialty: providerSpecialty ?? "General",
     appointmentType,
     scheduledStart,
     scheduledEnd,
     duration: minutesBetween(scheduledStart, scheduledEnd),
     status: normalizeStatus(raw.status ?? raw.Status),
-    location: location ?? '',
+    location: location ?? "",
     isVirtual: Boolean(isVirtualLocation || videoLink),
-    notes: raw.notes ?? raw.Notes ?? '',
+    notes: raw.notes ?? raw.Notes ?? "",
     createdAt: toIsoString(raw.createdAt ?? raw.CreatedAt),
-    updatedAt: toIsoString(raw.updatedAt ?? raw.UpdatedAt ?? raw.createdAt ?? raw.CreatedAt),
+    updatedAt: toIsoString(
+      raw.updatedAt ?? raw.UpdatedAt ?? raw.createdAt ?? raw.CreatedAt,
+    ),
   } satisfies AppointmentDto;
 };
 
@@ -205,7 +228,9 @@ export interface AppointmentDto {
   updatedAt: string;
 }
 
-export async function fetchAppointments(filters: AppointmentFilters): Promise<AppointmentDto[]> {
+export async function fetchAppointments(
+  filters: AppointmentFilters,
+): Promise<AppointmentDto[]> {
   const params: Record<string, string | number | boolean> = {
     limit: 50,
   };
@@ -223,25 +248,22 @@ export async function fetchAppointments(filters: AppointmentFilters): Promise<Ap
   }
 
   if (filters.status) {
-    params.status = filters.status.charAt(0).toUpperCase() + filters.status.slice(1);
+    params.status =
+      filters.status.charAt(0).toUpperCase() + filters.status.slice(1);
   }
 
   const payload = await api.get<CursorResponse<any> | any[]>(
-    '/api/appointments',
+    "/api/appointments",
     params,
   );
 
-  console.log('[appointmentsApi] Raw payload:', payload);
-  console.log('[appointmentsApi] Params:', params);
-  
   const items = unwrapItems(payload);
-  console.log('[appointmentsApi] Unwrapped items:', items);
-  
   const mapped = items.map(mapAppointment);
-  console.log('[appointmentsApi] Mapped appointments:', mapped);
 
   return mapped.sort((a, b) => {
-    const delta = new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime();
+    const delta =
+      new Date(a.scheduledStart).getTime() -
+      new Date(b.scheduledStart).getTime();
     if (filters.past && !filters.upcoming) {
       return -delta;
     }
@@ -249,7 +271,10 @@ export async function fetchAppointments(filters: AppointmentFilters): Promise<Ap
   });
 }
 
-export async function cancelAppointment(id: string, reason: string): Promise<void> {
+export async function cancelAppointment(
+  id: string,
+  reason: string,
+): Promise<void> {
   await api.post(`/api/appointments/${id}/cancel`, { reason });
 }
 
@@ -257,35 +282,43 @@ export interface RescheduleResponse {
   id: string;
 }
 
-export async function rescheduleAppointment(id: string): Promise<RescheduleResponse> {
+export async function rescheduleAppointment(
+  id: string,
+): Promise<RescheduleResponse> {
   await api.post(`/api/appointments/${id}/reschedule`, {});
   return { id } satisfies RescheduleResponse;
 }
 
-export async function fetchAvailableProviders(date: string, specialization?: string): Promise<AvailableProvider[]> {
+export async function fetchAvailableProviders(
+  date: string,
+  specialization?: string,
+): Promise<AvailableProvider[]> {
   const params = new URLSearchParams({ date });
-  if (specialization) params.append('specialization', specialization);
+  if (specialization) params.append("specialization", specialization);
 
-  const providers = await api.get<AvailableProviderApi[] | { data: AvailableProviderApi[] }>(
+  const providers = await api.get<
+    AvailableProviderApi[] | { data: AvailableProviderApi[] }
+  >(
     `/api/appointments/providers/available`,
     Object.fromEntries(params.entries()),
   );
 
-  const list = Array.isArray(providers)
-    ? providers
-    : (providers?.data ?? []);
+  const list = Array.isArray(providers) ? providers : (providers?.data ?? []);
 
   return list.map((provider) => {
-    const name = provider.fullName
-      || provider.FullName
-      || provider.name
-      || provider.Name
-      || provider.user?.fullName
-      || [provider.user?.firstName, provider.user?.lastName].filter(Boolean).join(' ')
-      || 'Available provider';
+    const name =
+      provider.fullName ||
+      provider.FullName ||
+      provider.name ||
+      provider.Name ||
+      provider.user?.fullName ||
+      [provider.user?.firstName, provider.user?.lastName]
+        .filter(Boolean)
+        .join(" ") ||
+      "Available provider";
 
     return {
-      id: provider.id ?? provider.Id ?? '',
+      id: provider.id ?? provider.Id ?? "",
       name,
       specialty: provider.specialty ?? provider.Specialty ?? undefined,
       title: provider.title ?? provider.Title ?? undefined,
@@ -307,19 +340,18 @@ export async function fetchAvailableSlots(
     durationMinutes: String(durationMinutes),
   });
 
-  const slots = await api.get<AvailableSlotApi[] | { data: AvailableSlotApi[] }>(
-    '/api/appointments/availability',
-    Object.fromEntries(params.entries()),
-  );
+  const slots = await api.get<
+    AvailableSlotApi[] | { data: AvailableSlotApi[] }
+  >("/api/appointments/availability", Object.fromEntries(params.entries()));
 
-  const list = Array.isArray(slots) ? slots : slots?.data ?? [];
+  const list = Array.isArray(slots) ? slots : (slots?.data ?? []);
 
   return list
     .filter((slot) => slot.available)
     .map((slot) => ({
       providerId: slot.providerId ?? slot.ProviderId ?? providerId,
-      startTime: slot.startTime ?? slot.StartTime ?? '',
-      endTime: slot.endTime ?? slot.EndTime ?? '',
+      startTime: slot.startTime ?? slot.StartTime ?? "",
+      endTime: slot.endTime ?? slot.EndTime ?? "",
       available: slot.available ?? slot.Available ?? true,
     }));
 }
@@ -331,16 +363,18 @@ export interface BookAppointmentPayload {
   appointmentType?: string;
 }
 
-export async function bookAppointment(payload: BookAppointmentPayload): Promise<AppointmentDto> {
+export async function bookAppointment(
+  payload: BookAppointmentPayload,
+): Promise<AppointmentDto> {
   try {
-    const response = await api.post<any>('/api/appointments/book', {
+    const response = await api.post<any>("/api/appointments/book", {
       providerId: payload.providerId,
       startTime: payload.startTime,
       durationMinutes: payload.durationMinutes ?? 30,
-      appointmentType: payload.appointmentType ?? 'consultation',
+      appointmentType: payload.appointmentType ?? "consultation",
     });
     return mapAppointment(response);
   } catch (error) {
-    throw new Error(handleApiError(error, 'Unable to book appointment'));
+    throw new Error(handleApiError(error, "Unable to book appointment"));
   }
 }

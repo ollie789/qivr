@@ -1,16 +1,20 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { QivrThemeProvider, SnackbarCloseButton, SnackbarIcon } from '@qivr/design-system';
-import { SnackbarProvider } from 'notistack';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import {
+  QivrThemeProvider,
+  SnackbarCloseButton,
+  SnackbarIcon,
+} from "@qivr/design-system";
+import { SnackbarProvider } from "notistack";
 
 // Initialize Amplify
-import './config/amplify.config';
+import "./config/amplify.config";
 
 // Auth
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from "./contexts/AuthContext";
 
 // App Content
-import { AppContent } from './AppContent';
+import { AppContent } from "./AppContent";
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -23,8 +27,6 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  console.log('App component rendering...');
-
   try {
     return (
       <QueryClientProvider client={queryClient}>
@@ -39,10 +41,19 @@ function App() {
               <SnackbarCloseButton snackbarKey={snackbarKey} />
             )}
             iconVariant={{
-              success: <SnackbarIcon variant="success" icon="solar:check-circle-bold" />,
+              success: (
+                <SnackbarIcon
+                  variant="success"
+                  icon="solar:check-circle-bold"
+                />
+              ),
               error: <SnackbarIcon variant="error" icon="solar:danger-bold" />,
-              warning: <SnackbarIcon variant="warning" icon="solar:bell-bing-bold" />,
-              info: <SnackbarIcon variant="info" icon="solar:info-circle-bold" />,
+              warning: (
+                <SnackbarIcon variant="warning" icon="solar:bell-bing-bold" />
+              ),
+              info: (
+                <SnackbarIcon variant="info" icon="solar:info-circle-bold" />
+              ),
             }}
           >
             <AuthProvider>
@@ -54,7 +65,7 @@ function App() {
       </QueryClientProvider>
     );
   } catch (error) {
-    console.error('App render error:', error);
+    console.error("App render error:", error);
     return <div>Error loading app: {String(error)}</div>;
   }
 }

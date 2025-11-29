@@ -296,6 +296,7 @@ public class AppointmentsController : BaseApiController
             PatientId = User.IsInRole("Patient") ? userId : request.PatientId,
             ProviderId = request.ProviderId,
             EvaluationId = request.EvaluationId,
+            TreatmentPlanId = request.TreatmentPlanId,
             AppointmentType = request.AppointmentType,
             Status = AppointmentStatus.Requested,
             ScheduledStart = request.ScheduledStart,
@@ -828,6 +829,7 @@ public class AppointmentsController : BaseApiController
             ProviderEmail = appointment.Provider?.Email,
             ProviderPhone = appointment.Provider?.Phone,
             EvaluationId = appointment.EvaluationId,
+            TreatmentPlanId = appointment.TreatmentPlanId,
             AppointmentType = appointment.AppointmentType,
             Status = appointment.Status,
             ScheduledStart = appointment.ScheduledStart,
@@ -1080,6 +1082,7 @@ public class AppointmentDto
     public string? ProviderEmail { get; set; }
     public string? ProviderPhone { get; set; }
     public Guid? EvaluationId { get; set; }
+    public Guid? TreatmentPlanId { get; set; }
     public string AppointmentType { get; set; } = string.Empty;
     public AppointmentStatus Status { get; set; }
     public DateTime ScheduledStart { get; set; }
@@ -1109,6 +1112,7 @@ public class CreateAppointmentRequest
     public Guid PatientId { get; set; }
     public Guid ProviderId { get; set; }
     public Guid? EvaluationId { get; set; }
+    public Guid? TreatmentPlanId { get; set; }
     public DateTime ScheduledStart { get; set; }
     public DateTime ScheduledEnd { get; set; }
     public string AppointmentType { get; set; } = "consultation";

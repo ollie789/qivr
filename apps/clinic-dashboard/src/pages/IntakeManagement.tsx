@@ -39,11 +39,6 @@ import {
   Assessment as AssessmentIcon,
   ViewKanban as KanbanIcon,
   ViewList as ListIcon,
-  
-  
-  
-  
-  
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthGuard } from "../hooks/useAuthGuard";
@@ -328,7 +323,11 @@ const IntakeManagement: React.FC = () => {
       <TableCell>
         <Stack direction="row" spacing={1}>
           <Tooltip title="View Details" arrow>
-            <IconButton size="small" onClick={() => handleViewDetails(intake)} aria-label="View intake details">
+            <IconButton
+              size="small"
+              onClick={() => handleViewDetails(intake)}
+              aria-label="View intake details"
+            >
               <ViewIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -658,7 +657,10 @@ const IntakeManagement: React.FC = () => {
                       </TableRow>
                     ) : (
                       pendingIntakes
-                        .slice(pendingPage * rowsPerPage, pendingPage * rowsPerPage + rowsPerPage)
+                        .slice(
+                          pendingPage * rowsPerPage,
+                          pendingPage * rowsPerPage + rowsPerPage,
+                        )
                         .map(renderIntakeRow)
                     )}
                   </TableBody>
@@ -681,7 +683,9 @@ const IntakeManagement: React.FC = () => {
             {isLoading ? (
               <LinearProgress />
             ) : reviewingIntakes.length === 0 ? (
-              <Callout variant="info">No intakes currently under review</Callout>
+              <Callout variant="info">
+                No intakes currently under review
+              </Callout>
             ) : (
               <TableContainer>
                 <Table>
@@ -708,7 +712,10 @@ const IntakeManagement: React.FC = () => {
                       </TableRow>
                     ) : (
                       reviewingIntakes
-                        .slice(reviewingPage * rowsPerPage, reviewingPage * rowsPerPage + rowsPerPage)
+                        .slice(
+                          reviewingPage * rowsPerPage,
+                          reviewingPage * rowsPerPage + rowsPerPage,
+                        )
                         .map(renderIntakeRow)
                     )}
                   </TableBody>
@@ -758,7 +765,10 @@ const IntakeManagement: React.FC = () => {
                       </TableRow>
                     ) : (
                       processedIntakes
-                        .slice(processedPage * rowsPerPage, processedPage * rowsPerPage + rowsPerPage)
+                        .slice(
+                          processedPage * rowsPerPage,
+                          processedPage * rowsPerPage + rowsPerPage,
+                        )
                         .map(renderIntakeRow)
                     )}
                   </TableBody>
@@ -791,6 +801,10 @@ const IntakeManagement: React.FC = () => {
             onClose={() => {
               setDetailsOpen(false);
               setSelectedIntake(null);
+            }}
+            onSchedule={() => {
+              setDetailsOpen(false);
+              setScheduleOpen(true);
             }}
             onDelete={() => {
               refetch();

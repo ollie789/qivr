@@ -9,6 +9,7 @@ public class Appointment : TenantEntity
     public Guid ProviderProfileId { get; set; }
     public Guid? ClinicId { get; set; }  // Added ClinicId
     public Guid? EvaluationId { get; set; }
+    public Guid? TreatmentPlanId { get; set; }
     public string? ExternalCalendarId { get; set; }
     public string AppointmentType { get; set; } = string.Empty;
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Requested;
@@ -38,6 +39,7 @@ public class Appointment : TenantEntity
     public virtual User? Provider { get; set; }
     public virtual Provider? ProviderProfile { get; set; }
     public virtual Evaluation? Evaluation { get; set; }
+    public virtual TreatmentPlan? TreatmentPlan { get; set; }
     public virtual User? CancelledByUser { get; set; }
     
     public TimeSpan Duration => ScheduledEnd - ScheduledStart;

@@ -21,12 +21,13 @@ import {
   VideoCall as VideoCallIcon,
   LocationOn as LocationIcon,
   Cancel as CancelIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
 import { parseISO, format, isFuture } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useAppointmentsData } from "../hooks/useAppointmentsData";
 import type { AppointmentDto } from "../types";
-import { FormDialog, AuraEmptyState } from "@qivr/design-system";
+import { FormDialog, AuraEmptyState, AuraButton } from "@qivr/design-system";
 
 const statusChipColor = (
   status: string,
@@ -65,10 +66,6 @@ const AppointmentsPage: React.FC = () => {
 
   const { appointments, isLoading, cancel, reschedule } =
     useAppointmentsData(filters);
-
-  console.log("[AppointmentsPage] appointments:", appointments);
-  console.log("[AppointmentsPage] isLoading:", isLoading);
-  console.log("[AppointmentsPage] filters:", filters);
 
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -133,6 +130,8 @@ const AppointmentsPage: React.FC = () => {
           gap: 2,
           mb: 3,
           flexDirection: { xs: "column", md: "row" },
+          alignItems: { md: "center" },
+          justifyContent: "space-between",
         }}
       >
         <TextField
@@ -141,7 +140,15 @@ const AppointmentsPage: React.FC = () => {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search by provider or type"
+          sx={{ minWidth: 250 }}
         />
+        <AuraButton
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => navigate("/appointments/book")}
+        >
+          Book Appointment
+        </AuraButton>
       </Box>
 
       {isLoading ? (
@@ -171,7 +178,7 @@ const AppointmentsPage: React.FC = () => {
           }
           onAction={
             !searchTerm && tabValue === 0
-              ? () => navigate("/book-appointment")
+              ? () => navigate("/appointments/book")
               : undefined
           }
         />
