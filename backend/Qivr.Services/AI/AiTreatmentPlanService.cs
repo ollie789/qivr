@@ -37,14 +37,19 @@ public class AiTreatmentPlanService : IAiTreatmentPlanService
     {
         try
         {
+            _logger.LogInformation("Starting treatment plan generation for patient {PatientId}", request.PatientId);
+            
             // Fetch additional data if not provided
             await EnrichRequestData(request);
+            _logger.LogInformation("Enriched request data. Has evaluation: {HasEval}", request.Evaluation != null);
 
             // De-identify sensitive data before sending to AI
             var deidentifiedData = await DeIdentifyPatientData(request);
+            _logger.LogInformation("De-identified patient data");
 
             // Build the prompt
             var prompt = BuildGenerationPrompt(request, deidentifiedData);
+            _logger.LogInformation("Built prompt, length: {Length}", prompt.Length);
 
             var systemPrompt = @"You are an expert physiotherapist with extensive experience in creating evidence-based rehabilitation treatment plans.
 
@@ -66,11 +71,13 @@ Guidelines:
 
 Always provide evidence-based recommendations and avoid exercises that could worsen the patient's condition.";
 
+            _logger.LogInformation("Calling Bedrock for treatment plan generation");
             var response = await _bedrockService.InvokeClaudeWithStructuredOutputAsync(
                 prompt,
                 systemPrompt,
                 new BedrockModelOptions { Temperature = 0.2f, MaxTokens = 4000 }
             );
+            _logger.LogInformation("Bedrock response received, parsing...");
 
             var generatedPlan = ParseGeneratedPlan(response.ParsedContent);
 
