@@ -36,7 +36,11 @@ public class Evaluation : TenantEntity
 public enum EvaluationStatus
 {
     Pending,
+    Reviewing,
     Reviewed,
+    Approved,
+    Rejected,
+    Scheduled,
     Triaged,
     Archived
 }
