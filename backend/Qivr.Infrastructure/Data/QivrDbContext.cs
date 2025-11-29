@@ -967,7 +967,7 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.Sessions).HasColumnType("jsonb");
             entity.Property(e => e.Exercises).HasColumnType("jsonb");
-            entity.HasQueryFilter(e => !e.IsDeleted && e.TenantId == GetTenantId());
+            entity.HasQueryFilter(e => e.DeletedAt == null && e.TenantId == GetTenantId());
         });
     }
 
