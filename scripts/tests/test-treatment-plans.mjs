@@ -312,6 +312,39 @@ async function testSuggestExercises() {
   console.log(`     Got ${data.length} exercise suggestions`);
 }
 
+async function testAiTriage() {
+  const response = await makeClinicRequest('/ai-triage/analyze', {
+    method: 'POST',
+    body: JSON.stringify({
+      symptoms: 'Lower back pain radiating to left leg, numbness in foot',
+      duration: '2 weeks',
+      severity: 7,
+      medicalHistory: 'Previous back injury 2 years ago',
+      currentMedications: ['Ibuprofen'],
+      allergies: ['None'],
+      age: 45
+    })
+  });
+  
+  console.log(`     Status: ${response.status}`);
+  const data = await safeJson(response);
+  console.log(`     Response: ${JSON.stringify(data).substring(0, 400)}`);
+  
+  if (response.status === 500) {
+    console.log(`  ❌ Server error: ${data.error || data.message || data.detail}`);
+    throw new Error(`Server error: ${data.message || 'Unknown'}`);
+  }
+  
+  if (response.status === 400) {
+    console.log(`  ⚠️  Triage failed: ${data.error || data.message || data.title}`);
+    return;
+  }
+  
+  assert(response.ok, `AI triage (${response.status})`);
+  console.log(`     Urgency: ${data.urgency?.level || data.urgencyLevel}`);
+  console.log(`     Risk flags: ${data.riskFlags?.length || 0}`);
+}
+
 // ============ PATIENT SIDE TESTS ============
 
 async function testPatientAuth() {
@@ -482,6 +515,7 @@ async function main() {
   await runTest('Create Treatment Plan (Manual)', testCreateTreatmentPlan);
   await runTest('AI Generate Treatment Plan', testAiGeneratePlan);
   await runTest('AI Suggest Exercises', testSuggestExercises);
+  await runTest('AI Intake Triage', testAiTriage);
   
   console.log('\n' + '═'.repeat(60));
   console.log('PATIENT SIDE TESTS');
