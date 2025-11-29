@@ -45,8 +45,6 @@ const menuItems = [
     path: "/health-progress",
     icon: <TrendingUpIcon />,
   },
-  { title: "Documents", path: "/documents", icon: <FolderIcon /> },
-  { title: "Referrals", path: "/referrals", icon: <SendIcon /> },
   { title: "Appointments", path: "/appointments", icon: <EventIcon /> },
   { title: "Messages", path: "/messages", icon: <MessageIcon /> },
   { title: "Assessments", path: "/proms", icon: <AssignmentIcon /> },
@@ -55,6 +53,8 @@ const menuItems = [
     path: "/treatment-plan",
     icon: <MedicalServicesIcon />,
   },
+  { title: "Documents", path: "/documents", icon: <FolderIcon /> },
+  { title: "Referrals", path: "/referrals", icon: <SendIcon /> },
   { title: "Evaluations", path: "/evaluations", icon: <AssessmentIcon /> },
   { title: "Profile", path: "/profile", icon: <PersonIcon /> },
 ];

@@ -1,159 +1,141 @@
-# Qivr Clinic Dashboard
+# Qivr Healthcare Platform
 
-Multi-tenant SaaS platform for clinic management with per-tenant Cognito authentication.
+Multi-tenant SaaS platform for clinic management with patient engagement features.
 
-## 🎨 UX Improvements (97% Complete - 100% of Active Pages!) 🎉
-
-**Patient Portal**: 100% complete (19/19 pages)
-**Clinic Dashboard**: 100% complete (15/15 pages)
-**Overall Platform**: 97% complete (34/35 pages - 1 test page deleted)
-
-See [UX-IMPROVEMENTS.md](docs/UX-IMPROVEMENTS.md) for detailed documentation.
-
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
 npm install
 
-# Start development
+# Start development (all apps)
 npm run dev
+
+# Or start individually
+npm run clinic:dev      # Clinic dashboard on :3010
+npm run patient:dev     # Patient portal on :3005
+npm run backend:dev     # .NET API on :5050
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 qivr/
-├── apps/                   # Frontend applications
-│   ├── clinic-dashboard/   # Staff portal (React + Vite)
-│   └── patient-portal/     # Patient portal (React + Vite)
-├── backend/                # .NET Core API
-│   ├── Qivr.Api/          # API controllers
-│   ├── Qivr.Services/     # Business logic
-│   ├── Qivr.Core/         # Domain models
-│   └── Qivr.Infrastructure/ # Data access
-├── packages/               # Shared packages
-│   ├── design-system/     # UI component library
-│   └── http/              # HTTP client utilities
-├── docs/                   # Documentation
-├── scripts/                # Utility scripts
-│   └── tests/             # Test suites
-├── database/               # SQL migrations
-├── aws/                    # AWS configurations
-└── infrastructure/         # Docker, Terraform
+├── apps/                     # Frontend applications
+│   ├── clinic-dashboard/     # Staff portal (React + Vite)
+│   ├── patient-portal/       # Patient portal (React + Vite)
+│   ├── intake-widget/        # Embeddable intake form
+│   └── admin-portal/         # Platform admin
+│
+├── backend/                  # .NET 8 API
+│   ├── Qivr.Api/            # API controllers & endpoints
+│   ├── Qivr.Services/       # Business logic layer
+│   ├── Qivr.Core/           # Domain models & interfaces
+│   └── Qivr.Infrastructure/ # Data access & external services
+│
+├── packages/                 # Shared packages
+│   ├── design-system/       # Aura UI component library
+│   └── http/                # HTTP client utilities
+│
+├── database/                 # PostgreSQL migrations & seeds
+├── analytics/                # AWS analytics (Athena, Glue)
+├── aws/                      # AWS configurations
+├── infrastructure/           # Docker, Terraform
+├── scripts/                  # Utility & deployment scripts
+├── stories/                  # Storybook stories
+└── docs/                     # Documentation
 ```
 
-**See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed system architecture.**
+## Development
 
-## 🧪 Testing
+### Frontend Apps
+
+| App | Port | Command |
+|-----|------|---------|
+| Clinic Dashboard | 3010 | `npm run clinic:dev` |
+| Patient Portal | 3005 | `npm run patient:dev` |
+| Intake Widget | 3002 | `npm run widget:dev` |
+
+### Backend
 
 ```bash
-# Run E2E tests (19 comprehensive tests)
-node scripts/tests/test-live-system.mjs
-
-# Test specific features
-node scripts/tests/test-api-endpoints.mjs user@clinic.com Password123!
-node scripts/tests/test-frontend-pages.mjs user@clinic.com Password123!
+cd backend
+dotnet run --project Qivr.Api    # API on port 5050
 ```
 
-## 🔐 Authentication
+### Database
 
-- **Auth Proxy** with httpOnly cookies
-- **Per-tenant Cognito pools** (created on registration)
-- **Tenant isolation** via X-Tenant-Id header
-- **HTTPS only** in production
+```bash
+npm run db:migrate    # Run migrations
+npm run db:seed       # Seed test data
+```
 
-## 🌐 Deployment
+## Testing
+
+```bash
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
+
+# Run tests
+npm run test
+
+# Storybook
+npm run storybook
+```
+
+## Key Features
+
+- **Multi-tenant architecture** with per-tenant Cognito pools
+- **Patient portal** with appointments, messaging, health progress
+- **Clinic dashboard** with intake management, analytics, treatment plans
+- **Document management** with OCR extraction
+- **PROM questionnaires** with scoring and tracking
+- **Real-time messaging** between patients and providers
+- **Analytics dashboard** with clinic metrics
+
+## Tech Stack
+
+**Frontend:**
+- React 18 + TypeScript
+- Vite build tool
+- Material UI + custom Aura design system
+- React Query for data fetching
+- Zustand for state management
+
+**Backend:**
+- .NET 8 Web API
+- Entity Framework Core
+- PostgreSQL database
+- Serilog logging
+
+**Infrastructure:**
+- AWS ECS Fargate (API)
+- AWS S3 + CloudFront (frontend)
+- AWS RDS PostgreSQL
+- AWS Cognito (auth)
+
+## Deployment
 
 **Production:** https://clinic.qivr.pro
 
-**Stack:**
-
-- Frontend: React + Vite → S3 + CloudFront
-- Backend: .NET 8 → ECS Fargate
-- Database: PostgreSQL RDS
-- Auth: AWS Cognito (per-tenant pools)
-
-## 📚 Documentation
-
-**Getting Started:**
-
-- [Setup Guide](docs/guides/setup.md)
-- [Development Guide](docs/guides/development.md)
-- [Quick Reference](docs/guides/QUICK-REFERENCE.md)
-
-**Current Status:**
-
-- [UX Progress](docs/UX-PROGRESS.md) - 97% complete!
-- [UX Improvements Guide](docs/UX-IMPROVEMENTS.md)
-- [API Routes](docs/API-ROUTES.md)
-- [Database Schema](docs/DATABASE-SCHEMA.md)
-
-**Operations:**
-
-- [Deployment Guide](docs/deployment/DEPLOYMENT.md)
-- [Testing Guide](docs/guides/testing.md)
-- [Architecture](docs/guides/architecture.md)
-
-See [docs/README.md](docs/README.md) for complete documentation index.
-
-## 🛠️ Development
-
 ```bash
-# Backend
-cd backend
-dotnet run
-
-# Frontend
-cd apps/clinic-dashboard
-npm run dev
+npm run deploy              # Full deployment
+npm run deploy:backend      # Backend only
+npm run deploy:frontend     # Frontend only
 ```
 
-## 🚀 Deployment Status
+## Documentation
 
-- **Latest**: Project cleanup & optimization complete (1.5GB saved)
-- **UX**: 97% complete - All active pages improved
-- **Production**: https://clinic.qivr.pro
-- **Recent Updates**: Bundle optimization, documentation reorganization
+- [Architecture](docs/ARCHITECTURE.md) - System design overview
+- [API Routes](docs/API-ROUTES.md) - Backend endpoints
+- [Database Schema](docs/DATABASE-SCHEMA.md) - Data model
+- [Implementation Guide](docs/IMPLEMENTATION-GUIDE.md) - Feature development
 
-## 📊 Features
+See [docs/README.md](docs/README.md) for full documentation index.
 
-✅ Multi-tenant architecture
-✅ Medical records (consolidated patient management)
-✅ Appointment scheduling
-✅ Document management with OCR
-✅ Messaging system with unread counts
-✅ Analytics dashboard
-✅ PROM questionnaires with scoring
-✅ Intake forms with AI triage
-✅ Settings management
-
-## 🔧 Tech Stack
-
-**Frontend:**
-
-- React 18
-- TypeScript
-- Vite
-- Zustand (state)
-- React Query
-- TailwindCSS
-
-**Backend:**
-
-- .NET 8
-- Entity Framework Core
-- PostgreSQL
-- Serilog
-
-**Infrastructure:**
-
-- AWS ECS Fargate
-- AWS RDS PostgreSQL
-- AWS Cognito
-- AWS S3 + CloudFront
-- AWS ALB
-
-## 📝 License
+## License
 
 Proprietary

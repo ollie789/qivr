@@ -1,69 +1,53 @@
 # Qivr Documentation
 
-## 📁 Documentation Structure
+## Core Reference
 
-### **Root Level (Current & Active)**
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture overview |
+| [API-ROUTES.md](API-ROUTES.md) | Backend API endpoints |
+| [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) | Database structure |
+| [INTAKE-QUESTIONNAIRE-STRUCTURE.md](INTAKE-QUESTIONNAIRE-STRUCTURE.md) | Intake form data model |
 
-- `API-ROUTES.md` - API endpoint documentation
-- `DATABASE-SCHEMA.md` - Database structure
-- `UX-IMPROVEMENTS.md` - UX component guide
-- `UX-PROGRESS.md` - UX completion tracker
-- `UX-TRANSFORMATION-SUMMARY.md` - UX transformation overview
+## Guides
 
-### **📚 Guides** (`/guides`)
+| Guide | Description |
+|-------|-------------|
+| [setup.md](guides/setup.md) | Initial project setup |
+| [development.md](guides/development.md) | Development workflow |
+| [authentication.md](guides/authentication.md) | Auth implementation |
+| [testing.md](guides/testing.md) | Testing approach |
+| [operations.md](guides/operations.md) | Ops procedures |
+| [security.md](guides/security.md) | Security guidelines |
+| [OPENTELEMETRY-SETUP.md](guides/OPENTELEMETRY-SETUP.md) | Observability setup |
+| [QUICK-REFERENCE.md](guides/QUICK-REFERENCE.md) | Quick command reference |
 
-Core development and operational guides:
+## Specialized
 
-- `architecture.md` - System architecture
-- `authentication.md` - Auth implementation
-- `development.md` - Development setup
-- `operations.md` - Operational procedures
-- `security.md` - Security guidelines
-- `setup.md` - Initial setup
-- `testing.md` - Testing guide
-- `QUICK-REFERENCE.md` - Quick reference
+| Document | Description |
+|----------|-------------|
+| [deployment/DEPLOYMENT.md](deployment/DEPLOYMENT.md) | Production deployment |
+| [features/3D-PAIN-MAP.md](features/3D-PAIN-MAP.md) | 3D pain visualization |
+| [SAAS-ANALYTICS-ARCHITECTURE.md](SAAS-ANALYTICS-ARCHITECTURE.md) | Analytics roadmap |
 
-### **🚀 Deployment** (`/deployment`)
+## Archive
 
-Deployment and infrastructure docs:
+The [archive/](archive/) folder contains historical documentation:
+- Completed implementation guides
+- Session summaries
+- Migration docs
+- Feature completion reports
 
-- `DEPLOYMENT.md` - Deployment guide
-- `DOCUMENT-UPLOAD-DEPLOYMENT.md` - Document upload deployment
-- `DOCUMENT-UPLOAD-INTEGRATION-STATUS.md` - Integration status
-- `CACHE-INVALIDATION-FIX.md` - Cache fix documentation
+## Quick Start
 
-### **✨ Features** (`/features`)
+1. **Setup**: [guides/setup.md](guides/setup.md)
+2. **Development**: [guides/development.md](guides/development.md)
+3. **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
 
-Feature-specific documentation:
+## Production URLs
 
-- `3D-PAIN-MAP*.md` - 3D pain map implementation
-- `PAIN-DRAWING-ROADMAP.md` - Pain drawing feature roadmap
-
-### **📦 Archive** (`/archive`)
-
-Completed milestones and historical docs:
-
-- Completed feature implementations
-- Migration guides
-- Historical session summaries
-
----
-
-## 🔍 Quick Links
-
-**Getting Started:**
-
-1. [Setup Guide](guides/setup.md)
-2. [Development Guide](guides/development.md)
-3. [Quick Reference](guides/QUICK-REFERENCE.md)
-
-**Current Work:**
-
-- [UX Progress](UX-PROGRESS.md) - 97% complete!
-- [API Routes](API-ROUTES.md)
-- [Database Schema](DATABASE-SCHEMA.md)
-
-**Deployment:**
-
-- [Deployment Guide](deployment/DEPLOYMENT.md)
-- Production: https://clinic.qivr.pro
+| Service | URL |
+|---------|-----|
+| Clinic Dashboard | https://clinic.qivr.pro |
+| Patient Portal | https://patient.qivr.pro |
+| API | https://api.qivr.pro |

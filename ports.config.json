@@ -5,37 +5,48 @@
       "port": 5050,
       "url": "http://localhost:5050",
       "api_url": "http://localhost:5050/api",
-      "description": "Main backend API (.NET Core)"
-    },
-    "patient_portal": {
-      "port": 3005,
-      "url": "http://localhost:3005",
-      "description": "Patient Portal (React/Vite)"
+      "description": "Main backend API (.NET 8)"
     },
     "clinic_dashboard": {
       "port": 3010,
       "url": "http://localhost:3010",
       "description": "Clinic Dashboard (React/Vite)"
     },
+    "patient_portal": {
+      "port": 3005,
+      "url": "http://localhost:3005",
+      "description": "Patient Portal (React/Vite)"
+    },
+    "intake_widget": {
+      "port": 3002,
+      "url": "http://localhost:3002",
+      "description": "Intake Widget (React/Vite)"
+    },
+    "admin_portal": {
+      "port": 3001,
+      "url": "http://localhost:3001",
+      "description": "Admin Portal (React/Vite)"
+    },
+    "storybook": {
+      "port": 6006,
+      "url": "http://localhost:6006",
+      "description": "Storybook Component Library"
+    },
     "postgres": {
       "port": 5432,
       "description": "PostgreSQL Database"
-    },
-    "redis": {
-      "port": 6379,
-      "description": "Redis Cache (if used)"
     }
   },
   "environments": {
     "development": {
       "api_base": "http://localhost:5050/api",
-      "patient_portal": "http://localhost:3005",
-      "clinic_dashboard": "http://localhost:3010"
+      "clinic_dashboard": "http://localhost:3010",
+      "patient_portal": "http://localhost:3005"
     },
     "production": {
-      "api_base": "https://api.qivr.com",
-      "patient_portal": "https://portal.qivr.com",
-      "clinic_dashboard": "https://clinic.qivr.com"
+      "api_base": "https://api.qivr.pro",
+      "clinic_dashboard": "https://clinic.qivr.pro",
+      "patient_portal": "https://patient.qivr.pro"
     }
   }
 }

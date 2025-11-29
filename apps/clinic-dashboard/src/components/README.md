@@ -7,20 +7,18 @@ Organized component structure for the clinic dashboard application.
 ```
 components/
 ├── documents/          # Document handling components
-│   ├── DocumentUploader.tsx    # Simple file selector
-│   ├── FileUpload.tsx          # Full upload with API integration
 │   └── OCRResultsViewer.tsx    # Display OCR extraction results
 │
 ├── messaging/          # Communication components
 │   ├── MessageComposer.tsx     # Compose messages to patients
 │   ├── MessageTemplateManager.tsx
 │   ├── PROMSender.tsx          # Send PROM questionnaires
-│   ├── PromPreview.tsx
-│   └── SendPromDialog.tsx
+│   └── PromPreview.tsx
 │
 ├── dialogs/            # Modal dialogs
 │   ├── ScheduleAppointmentDialog.tsx
 │   ├── IntakeDetailsDialog.tsx
+│   ├── TreatmentPlanBuilder.tsx
 │   └── PatientInviteDialog.tsx
 │
 ├── shared/             # Shared/reusable components
@@ -47,13 +45,13 @@ Import from organized folders:
 
 ```tsx
 // Documents
-import { DocumentUploader, FileUpload, OCRResultsViewer } from '../components/documents';
+import { OCRResultsViewer } from '../components/documents';
 
 // Messaging
-import { MessageComposer, PROMSender } from '../components/messaging';
+import { MessageComposer, PROMSender, PromPreview } from '../components/messaging';
 
 // Dialogs
-import { ScheduleAppointmentDialog, PatientInviteDialog } from '../components/dialogs';
+import { ScheduleAppointmentDialog, PatientInviteDialog, TreatmentPlanBuilder } from '../components/dialogs';
 
 // Shared
 import { TenantSelector, NotificationBell } from '../components/shared';
@@ -73,6 +71,5 @@ import { TenantSelector, NotificationBell } from '../components/shared';
 
 ## Notes
 
-- **DocumentUploader** vs **FileUpload**: DocumentUploader is simpler (just file selection), FileUpload includes API integration and progress tracking
 - **TenantSelector**: Uses clinic-specific auth store, not suitable for design system yet
 - **NotificationBell**: Could be made generic but currently uses clinic-specific notification types

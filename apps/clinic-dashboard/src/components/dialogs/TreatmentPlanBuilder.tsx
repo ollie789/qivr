@@ -20,6 +20,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   Grid,
+  LinearProgress,
 } from "@mui/material";
 import {
   AutoAwesome as AIIcon,
@@ -28,6 +29,7 @@ import {
   FitnessCenter,
   Add,
   Delete,
+  CheckCircle,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -42,6 +44,16 @@ import { treatmentPlansApi, exerciseLibraryApi } from "../../lib/api";
 import { patientApi } from "../../services/patientApi";
 import { intakeApi } from "../../services/intakeApi";
 
+export interface BulkPatient {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  appointmentId?: string;
+  appointmentType?: string;
+  reasonForVisit?: string;
+}
+
 export interface TreatmentPlanBuilderProps {
   open: boolean;
   onClose: () => void;
@@ -53,6 +65,8 @@ export interface TreatmentPlanBuilderProps {
   };
   evaluationId?: string;
   onSuccess?: (planId: string) => void;
+  /** For bulk creation - array of patients to create plans for */
+  bulkPatients?: BulkPatient[];
 }
 
 interface Exercise {
@@ -87,11 +101,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   patient: initialPatient,
   evaluationId,
   onSuccess,
+  bulkPatients = [],
 }) => {
   const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
   const [activeStep, setActiveStep] = useState(0);
   const [creationMode, setCreationMode] = useState<CreationMode>(null);
+
+  // Bulk mode state
+  const isBulkMode = bulkPatients.length > 0;
+  const [bulkProgress, setBulkProgress] = useState<{
+    current: number;
+    total: number;
+    completed: string[];
+    failed: string[];
+  }>({ current: 0, total: 0, completed: [], failed: [] });
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   // Form state
   const [selectedPatient, setSelectedPatient] = useState<{
@@ -141,6 +166,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
   // Steps based on mode
   const steps = useMemo(() => {
+    if (isBulkMode) {
+      return ["Review Patients", "AI Generation Settings", "Processing", "Complete"];
+    }
     if (!initialPatient) {
       return creationMode === "ai"
         ? ["Patient", "AI Generation", "Review & Customize", "Confirm"]
@@ -149,7 +177,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     return creationMode === "ai"
       ? ["AI Generation", "Review & Customize", "Confirm"]
       : ["Basic Info", "Phases & Exercises", "Confirm"];
-  }, [initialPatient, creationMode]);
+  }, [initialPatient, creationMode, isBulkMode]);
 
   // Mutations
   const generateMutation = useMutation({
@@ -217,6 +245,77 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     },
   });
 
+  // Bulk processing function
+  const processBulkPlans = async () => {
+    if (!isBulkMode) return;
+
+    setIsBulkProcessing(true);
+    setBulkProgress({
+      current: 0,
+      total: bulkPatients.length,
+      completed: [],
+      failed: [],
+    });
+
+    const completed: string[] = [];
+    const failed: string[] = [];
+
+    for (let i = 0; i < bulkPatients.length; i++) {
+      const currentPatient = bulkPatients[i];
+      if (!currentPatient) continue;
+
+      const patientName = `${currentPatient.firstName} ${currentPatient.lastName}`;
+      setBulkProgress((prev) => ({ ...prev, current: i + 1 }));
+
+      try {
+        // Generate AI plan for this patient
+        const generatedPlan = await treatmentPlansApi.generate({
+          patientId: currentPatient.id,
+          preferredDurationWeeks: basicInfo.durationWeeks,
+          sessionsPerWeek: basicInfo.sessionsPerWeek,
+          focusAreas: basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
+          contraindications: basicInfo.contraindications.length > 0 ? basicInfo.contraindications : undefined,
+        });
+
+        // Create the plan
+        await treatmentPlansApi.create({
+          patientId: currentPatient.id,
+          title: generatedPlan.title || `Treatment Plan for ${patientName}`,
+          diagnosis: generatedPlan.diagnosis || currentPatient.reasonForVisit || "",
+          startDate: new Date().toISOString(),
+          durationWeeks: generatedPlan.totalDurationWeeks || basicInfo.durationWeeks,
+          phases: generatedPlan.phases || [],
+          aiGeneratedSummary: generatedPlan.summary,
+          aiRationale: generatedPlan.rationale,
+          aiConfidence: generatedPlan.confidence,
+        });
+
+        completed.push(patientName);
+        setBulkProgress((prev) => ({ ...prev, completed: [...prev.completed, patientName] }));
+      } catch (error) {
+        failed.push(patientName);
+        setBulkProgress((prev) => ({ ...prev, failed: [...prev.failed, patientName] }));
+      }
+    }
+
+    setIsBulkProcessing(false);
+    queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
+
+    if (completed.length > 0) {
+      enqueueSnackbar(`Created ${completed.length} treatment plan${completed.length !== 1 ? "s" : ""} successfully!`, {
+        variant: "success",
+      });
+    }
+    if (failed.length > 0) {
+      enqueueSnackbar(`Failed to create ${failed.length} plan${failed.length !== 1 ? "s" : ""}`, {
+        variant: "error",
+      });
+    }
+
+    // Move to complete step
+    setActiveStep(steps.length - 1);
+  };
+
   const handleClose = () => {
     setActiveStep(0);
     setCreationMode(null);
@@ -233,6 +332,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     setPhases([]);
     setGeneratedPlan(null);
     setIsGenerating(false);
+    setBulkProgress({ current: 0, total: 0, completed: [], failed: [] });
+    setIsBulkProcessing(false);
     onClose();
   };
 
@@ -332,8 +433,23 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
   // Validation
   const isStepValid = useMemo(() => {
-    const currentStepIndex = initialPatient ? activeStep : activeStep;
-    const currentStepName = steps[currentStepIndex];
+    const currentStepName = steps[activeStep];
+
+    // Bulk mode validation
+    if (isBulkMode) {
+      switch (currentStepName) {
+        case "Review Patients":
+          return bulkPatients.length > 0;
+        case "AI Generation Settings":
+          return basicInfo.durationWeeks > 0 && basicInfo.sessionsPerWeek > 0;
+        case "Processing":
+          return !isBulkProcessing;
+        case "Complete":
+          return true;
+        default:
+          return true;
+      }
+    }
 
     switch (currentStepName) {
       case "Patient":
@@ -350,10 +466,18 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       default:
         return true;
     }
-  }, [activeStep, selectedPatient, basicInfo, phases, isGenerating, steps, initialPatient]);
+  }, [activeStep, selectedPatient, basicInfo, phases, isGenerating, steps, isBulkMode, bulkPatients, isBulkProcessing]);
 
   const handleNext = () => {
     const currentStepName = steps[activeStep];
+
+    // Bulk mode - start processing on step 2
+    if (isBulkMode && currentStepName === "AI Generation Settings") {
+      setActiveStep((prev) => prev + 1);
+      processBulkPlans();
+      return;
+    }
+
     if (currentStepName === "AI Generation" && creationMode === "ai") {
       handleGeneratePlan();
       return;
@@ -362,11 +486,14 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   };
 
   const handleBack = () => {
+    // Bulk mode - can't go back during processing
+    if (isBulkMode && isBulkProcessing) return;
+
     if (activeStep === 0 && initialPatient) {
       setCreationMode(null);
       return;
     }
-    if (activeStep === 1 && !initialPatient) {
+    if (activeStep === 1 && !initialPatient && !isBulkMode) {
       setCreationMode(null);
       setActiveStep(0);
       return;
@@ -378,8 +505,218 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   const renderStepContent = () => {
     const currentStepName = steps[activeStep];
 
+    // Bulk mode rendering
+    if (isBulkMode) {
+      switch (currentStepName) {
+        case "Review Patients":
+          return (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Creating Treatment Plans for {bulkPatients.length} Patient{bulkPatients.length !== 1 ? "s" : ""}
+              </Typography>
+              <Callout variant="info">
+                <Typography variant="body2">
+                  AI will generate personalized treatment plans for each patient based on their
+                  medical history, evaluations, and the settings you configure in the next step.
+                </Typography>
+              </Callout>
+              <List dense>
+                {bulkPatients.map((patient, index) => (
+                  <ListItem key={patient.id} sx={{ bgcolor: "action.hover", borderRadius: 1, mb: 0.5 }}>
+                    <ListItemIcon>
+                      <Avatar sx={{ width: 32, height: 32 }}>
+                        {patient.firstName.charAt(0)}
+                      </Avatar>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`${patient.firstName} ${patient.lastName}`}
+                      secondary={
+                        patient.reasonForVisit
+                          ? `${patient.appointmentType || "Appointment"}: ${patient.reasonForVisit}`
+                          : patient.appointmentType || "Patient"
+                      }
+                    />
+                    <Chip label={`#${index + 1}`} size="small" variant="outlined" />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          );
+
+        case "AI Generation Settings":
+          return (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <FormSection title="AI Generation Settings">
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Configure default settings for all plans. AI will adapt each plan to the individual patient.
+                </Typography>
+
+                <FormRow>
+                  <TextField
+                    label="Duration (weeks)"
+                    type="number"
+                    value={basicInfo.durationWeeks}
+                    onChange={(e) =>
+                      setBasicInfo({
+                        ...basicInfo,
+                        durationWeeks: parseInt(e.target.value) || 8,
+                      })
+                    }
+                    inputProps={{ min: 1, max: 52 }}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Sessions per week"
+                    type="number"
+                    value={basicInfo.sessionsPerWeek}
+                    onChange={(e) =>
+                      setBasicInfo({
+                        ...basicInfo,
+                        sessionsPerWeek: parseInt(e.target.value) || 2,
+                      })
+                    }
+                    inputProps={{ min: 1, max: 7 }}
+                    fullWidth
+                  />
+                </FormRow>
+
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  options={exerciseFilters?.bodyRegions || []}
+                  value={basicInfo.focusAreas}
+                  onChange={(_, value) =>
+                    setBasicInfo({ ...basicInfo, focusAreas: value })
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Focus Areas (optional)"
+                      placeholder="e.g., Lower Back, Shoulder"
+                      helperText="Leave empty to let AI determine based on each patient&apos;s needs"
+                    />
+                  )}
+                  sx={{ mt: 2 }}
+                />
+
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  options={[
+                    "Recent surgery",
+                    "Osteoporosis",
+                    "Heart condition",
+                    "Pregnancy",
+                    "Severe pain",
+                  ]}
+                  value={basicInfo.contraindications}
+                  onChange={(_, value) =>
+                    setBasicInfo({ ...basicInfo, contraindications: value })
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Common Contraindications (optional)"
+                      placeholder="Conditions to avoid for all patients"
+                    />
+                  )}
+                  sx={{ mt: 2 }}
+                />
+              </FormSection>
+            </Box>
+          );
+
+        case "Processing":
+          return (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <CircularProgress size={64} />
+                <Typography variant="h6" sx={{ mt: 2 }}>
+                  Creating Treatment Plans...
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Processing {bulkProgress.current} of {bulkProgress.total}
+                </Typography>
+              </Box>
+
+              <LinearProgress
+                variant="determinate"
+                value={(bulkProgress.current / bulkProgress.total) * 100}
+                sx={{ height: 8, borderRadius: 4 }}
+              />
+
+              {bulkProgress.completed.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" color="success.main" gutterBottom>
+                    Completed ({bulkProgress.completed.length}):
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {bulkProgress.completed.map((name) => (
+                      <Chip key={name} label={name} size="small" color="success" variant="outlined" />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {bulkProgress.failed.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" color="error.main" gutterBottom>
+                    Failed ({bulkProgress.failed.length}):
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {bulkProgress.failed.map((name) => (
+                      <Chip key={name} label={name} size="small" color="error" variant="outlined" />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          );
+
+        case "Complete":
+          return (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Avatar sx={{ width: 64, height: 64, bgcolor: "success.main", mx: "auto", mb: 2 }}>
+                  <CheckCircle sx={{ fontSize: 40 }} />
+                </Avatar>
+                <Typography variant="h5" fontWeight={600}>
+                  Bulk Creation Complete!
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                  {bulkProgress.completed.length} plan{bulkProgress.completed.length !== 1 ? "s" : ""} created successfully
+                  {bulkProgress.failed.length > 0 && `, ${bulkProgress.failed.length} failed`}
+                </Typography>
+              </Box>
+
+              {bulkProgress.completed.length > 0 && (
+                <Callout variant="success">
+                  <Typography variant="body2">
+                    <strong>Created plans for:</strong> {bulkProgress.completed.join(", ")}
+                  </Typography>
+                </Callout>
+              )}
+
+              {bulkProgress.failed.length > 0 && (
+                <Callout variant="error">
+                  <Typography variant="body2">
+                    <strong>Failed for:</strong> {bulkProgress.failed.join(", ")}
+                  </Typography>
+                  <Typography variant="caption">
+                    You can try creating plans for these patients individually.
+                  </Typography>
+                </Callout>
+              )}
+            </Box>
+          );
+
+        default:
+          return null;
+      }
+    }
+
     // Mode selection (shown before steps)
-    if (creationMode === null) {
+    if (creationMode === null && !isBulkMode) {
       return (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
           <Typography variant="h6" gutterBottom>
@@ -415,7 +752,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 <Typography variant="h6">AI-Assisted</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
-                Let AI analyze the patient's evaluation, medical history, and
+                Let AI analyze the patient&apos;s evaluation, medical history, and
                 PROM scores to generate a personalized treatment plan with
                 recommended exercises and phases.
               </Typography>
@@ -459,7 +796,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             <Callout variant="info">
               <Typography variant="body2">
                 <strong>Evaluation detected:</strong> This plan will be linked to
-                the patient's recent evaluation, allowing AI to use symptoms,
+                the patient&apos;s recent evaluation, allowing AI to use symptoms,
                 pain maps, and questionnaire responses for better recommendations.
               </Typography>
             </Callout>
@@ -493,7 +830,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             <FormSection title="AI Generation Settings">
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Configure options for AI-generated treatment plan. The AI will
-                analyze the patient's data and create a personalized plan.
+                analyze the patient&apos;s data and create a personalized plan.
               </Typography>
 
               <FormRow>
@@ -775,21 +1112,34 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     }
   };
 
+  // Determine if we're on the final step for bulk mode
+  const isBulkComplete = isBulkMode && steps[activeStep] === "Complete";
+  const isBulkProcessingStep = isBulkMode && steps[activeStep] === "Processing";
+
+  // For bulk mode processing/complete steps, use special handling
+  const showAsComplete = isBulkComplete;
+
   return (
     <StepperDialog
       open={open}
       onClose={handleClose}
-      title="Create Treatment Plan"
-      steps={creationMode === null ? ["Select Mode"] : steps}
-      activeStep={creationMode === null ? 0 : activeStep}
-      onNext={creationMode === null ? () => {} : handleNext}
-      onBack={creationMode === null ? () => {} : handleBack}
-      onComplete={handleCreatePlan}
-      isStepValid={creationMode === null ? false : isStepValid}
-      loading={createMutation.isPending || isGenerating}
+      title={isBulkMode ? `Create ${bulkPatients.length} Treatment Plans` : "Create Treatment Plan"}
+      steps={isBulkMode ? steps : (creationMode === null ? ["Select Mode"] : steps)}
+      activeStep={isBulkMode ? (showAsComplete ? steps.length - 1 : activeStep) : (creationMode === null ? 0 : activeStep)}
+      onNext={isBulkMode ? handleNext : (creationMode === null ? () => {} : handleNext)}
+      onBack={isBulkMode ? handleBack : (creationMode === null ? () => {} : handleBack)}
+      onComplete={isBulkMode ? handleClose : handleCreatePlan}
+      isStepValid={isBulkMode ? (showAsComplete || isStepValid) : (creationMode === null ? false : isStepValid)}
+      loading={createMutation.isPending || isGenerating || isBulkProcessingStep}
       maxWidth="md"
-      completeLabel="Create Plan"
-      nextLabel={steps[activeStep] === "AI Generation" ? "Generate" : "Next"}
+      completeLabel={isBulkComplete ? "Done" : "Create Plan"}
+      nextLabel={
+        isBulkMode && steps[activeStep] === "AI Generation Settings"
+          ? "Generate Plans"
+          : steps[activeStep] === "AI Generation"
+            ? "Generate"
+            : "Next"
+      }
     >
       {renderStepContent()}
     </StepperDialog>

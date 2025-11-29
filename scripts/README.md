@@ -1,59 +1,92 @@
 # Scripts
 
-Essential utility scripts for Qivr platform.
+Utility scripts for development, deployment, and database management.
 
-## 🧪 Testing
+## Directory Structure
 
-### Main Test Suite
-```bash
-# Run comprehensive E2E tests
-node scripts/tests/test-live-system.mjs
-
-# Or use npm script
-npm run test
+```
+scripts/
+├── Deployment
+│   ├── deploy.sh              # Full deployment (frontend + backend)
+│   ├── deploy-backend.sh      # Backend API deployment only
+│   ├── build-local.sh         # Local build script
+│   └── deployment/            # Deployment configurations
+│
+├── Database
+│   ├── manage-dev-db.sh       # Local database management
+│   ├── dev-migrate.sh         # Run database migrations
+│   ├── apply-migrations.sh    # Apply migrations to remote DB
+│   ├── seed-dev-data.sh       # Seed development data
+│   └── database/              # Database-specific scripts
+│
+├── User Management
+│   ├── create-user.sh         # Create user in Cognito
+│   └── create-clinic-user.js  # Create clinic user
+│
+├── Testing
+│   ├── run-tests.sh           # Run test suite
+│   └── tests/                 # Test scripts
+│
+├── Infrastructure
+│   ├── aws/                   # AWS-specific scripts
+│   └── docker/                # Docker configurations
+│
+└── README.md
 ```
 
-## 🚀 Deployment
+## Usage
 
-### Backend Deployment
-```bash
-# Deploy backend API to ECS
-./scripts/deploy-backend.sh
-```
+### Deployment
 
-### Full Deployment
 ```bash
-# Deploy all components
+# Full deployment
 ./scripts/deploy.sh
+
+# Backend only
+./scripts/deploy-backend.sh
+
+# Local build
+./scripts/build-local.sh
 ```
 
-## 🗄️ Database
+### Database
 
-### Development Database
 ```bash
-# Manage local development database
+# Start/manage local database
 ./scripts/manage-dev-db.sh
 
 # Run migrations
 ./scripts/dev-migrate.sh
 
+# Apply migrations to remote
+./scripts/apply-migrations.sh
+
 # Seed development data
 ./scripts/seed-dev-data.sh
 ```
 
-## 📦 Deployment Scripts
+### Testing
 
-- `deploy.sh` - Full deployment (frontend + backend)
-- `deploy-backend.sh` - Backend API deployment only
-- `deployment/` - Deployment utilities and configurations
+```bash
+# Run tests
+./scripts/run-tests.sh
 
-## 🗃️ Database Scripts
+# Or use npm
+npm run test
+```
 
-- `manage-dev-db.sh` - Local database management
-- `dev-migrate.sh` - Run database migrations
-- `seed-dev-data.sh` - Seed development data
-- `database/` - Database-specific scripts
+### User Management
 
-## 🧹 Cleanup
+```bash
+# Create a user
+./scripts/create-user.sh
 
-All old test scripts, audit scripts, and debug utilities have been removed. Only production-ready scripts remain.
+# Create clinic user
+node scripts/create-clinic-user.js
+```
+
+## Notes
+
+- All scripts should be run from the project root
+- Database scripts require PostgreSQL client tools
+- Deployment scripts require AWS CLI configured
