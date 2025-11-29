@@ -235,6 +235,7 @@ builder.Services.AddScoped<IS3Service, S3Service>();
 builder.Services.AddScoped<ITextractService, TextractService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IOcrQueueService, OcrQueueService>();
+builder.Services.AddScoped<IReferralService, ReferralService>();
 
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR(options =>
