@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogActions,
   IconButton,
   Tooltip,
   Typography,
@@ -24,6 +26,9 @@ import {
   Menu,
   MenuItem,
   Badge,
+  ToggleButtonGroup,
+  ToggleButton,
+  Paper,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -44,11 +49,32 @@ import {
   LocalHospital as HospitalIcon,
   AccessTime as AccessTimeIcon,
   ArrowForward as ArrowForwardIcon,
+  Psychology as PsychologyIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  Verified as VerifiedIcon,
+  Keyboard as KeyboardIcon,
+  Description as DescriptionIcon,
+  Sms as SmsIcon,
+  ContentCopy as CopyIcon,
+  RotateLeft as RotateLeftIcon,
+  RotateRight as RotateRightIcon,
+  FlipToFront as FlipToFrontIcon,
+  FlipToBack as FlipToBackIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
 import {
   LoadingSpinner,
   AuraButton,
@@ -57,6 +83,10 @@ import {
   Callout,
   TabPanel,
   InfoCard,
+  PainMap3DViewer,
+  auraTokens,
+  auraColors,
+  type PainRegion,
 } from "@qivr/design-system";
 import { intakeApi } from "../../services/intakeApi";
 import { ScheduleAppointmentDialog } from "./ScheduleAppointmentDialog";
@@ -117,6 +147,82 @@ const STATUS_OPTIONS = [
   { value: "completed", label: "Completed" },
 ];
 
+// Quick templates for common triage notes
+const TRIAGE_TEMPLATES = [
+  {
+    label: "Referred to PT",
+    text: "Patient referred to physical therapy for evaluation and treatment.",
+  },
+  {
+    label: "Schedule follow-up (2 weeks)",
+    text: "Schedule follow-up appointment in 2 weeks to reassess symptoms.",
+  },
+  {
+    label: "Schedule follow-up (1 month)",
+    text: "Schedule follow-up appointment in 1 month to monitor progress.",
+  },
+  {
+    label: "Urgent - Same day",
+    text: "URGENT: Patient requires same-day appointment. Priority scheduling needed.",
+  },
+  {
+    label: "Imaging ordered",
+    text: "Diagnostic imaging ordered. Await results before scheduling treatment.",
+  },
+  {
+    label: "Lab work required",
+    text: "Lab work required before initial consultation. Send lab order to patient.",
+  },
+  {
+    label: "Insurance verification",
+    text: "Pending insurance verification. Contact patient once approved.",
+  },
+  {
+    label: "Medical records requested",
+    text: "Previous medical records requested from referring provider.",
+  },
+];
+
+// SMS quick reply templates
+const SMS_TEMPLATES = [
+  {
+    label: "Appointment Confirmed",
+    template:
+      "Hi {patientName}, your appointment is confirmed for {date} at {time}. Reply CONFIRM to acknowledge or call us to reschedule.",
+  },
+  {
+    label: "Reminder (24hr)",
+    template:
+      "Reminder: {patientName}, you have an appointment tomorrow at {time}. Please arrive 15 minutes early. Reply CONFIRM or call to reschedule.",
+  },
+  {
+    label: "Documents Needed",
+    template:
+      "Hi {patientName}, please bring your insurance card and photo ID to your upcoming appointment. Questions? Call us at {clinicPhone}.",
+  },
+  {
+    label: "Follow-up Scheduling",
+    template:
+      "Hi {patientName}, it's time to schedule your follow-up appointment. Please call us or reply with your preferred times.",
+  },
+  {
+    label: "Intake Form",
+    template:
+      "Hi {patientName}, please complete your intake form before your appointment: {intakeLink}. This helps us prepare for your visit.",
+  },
+];
+
+// Keyboard shortcuts
+const KEYBOARD_SHORTCUTS = [
+  { key: "N", description: "Add new note", action: "note" },
+  { key: "S", description: "Schedule appointment", action: "schedule" },
+  { key: "M", description: "Send message", action: "message" },
+  { key: "R", description: "Draft referral letter", action: "referral" },
+  { key: "T", description: "Send SMS", action: "sms" },
+  { key: "1-5", description: "Switch tabs", action: "tabs" },
+  { key: "Esc", description: "Close dialog", action: "close" },
+];
+
 export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
   open,
   onClose,
@@ -134,8 +240,23 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
   const [messageOpen, setMessageOpen] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [isEditingUrgency, setIsEditingUrgency] = useState(false);
-  const [selectedUrgency, setSelectedUrgency] = useState(intake?.urgency || "medium");
-  const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedUrgency, setSelectedUrgency] = useState(
+    intake?.urgency || "medium",
+  );
+  const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(
+    null,
+  );
+
+  // New feature states
+  const [bodyMapView, setBodyMapView] = useState<
+    "front" | "back" | "left" | "right"
+  >("front");
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [referralDialogOpen, setReferralDialogOpen] = useState(false);
+  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [selectedSmsTemplate, setSelectedSmsTemplate] = useState("");
+  const [templateMenuAnchor, setTemplateMenuAnchor] =
+    useState<null | HTMLElement>(null);
 
   // Reset tab when dialog opens
   useEffect(() => {
@@ -143,8 +264,90 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
       setTabValue(0);
       setNewNote("");
       setSelectedUrgency(intake?.urgency || "medium");
+      setBodyMapView("front");
     }
   }, [open, intake?.urgency]);
+
+  // Keyboard shortcuts handler
+  const handleKeyboardShortcut = useCallback(
+    (event: KeyboardEvent): void => {
+      // Don't trigger if typing in an input
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      // Only handle if dialog is open
+      if (!open) return;
+
+      switch (event.key.toLowerCase()) {
+        case "n":
+          setTabValue(1); // Switch to Notes tab
+          setTimeout(() => {
+            const noteInput = document.querySelector(
+              'textarea[placeholder*="Add notes"]',
+            ) as HTMLTextAreaElement;
+            noteInput?.focus();
+          }, 100);
+          break;
+        case "s":
+          setScheduleDialogOpen(true);
+          break;
+        case "m":
+          setMessageOpen(true);
+          break;
+        case "r":
+          setReferralDialogOpen(true);
+          break;
+        case "t":
+          setSmsDialogOpen(true);
+          break;
+        case "1":
+          setTabValue(0);
+          break;
+        case "2":
+          setTabValue(1);
+          break;
+        case "3":
+          setTabValue(2);
+          break;
+        case "escape":
+          onClose();
+          break;
+        case "?":
+          setShowKeyboardShortcuts(true);
+          break;
+      }
+    },
+    [open, onClose],
+  );
+
+  // Register keyboard shortcuts
+  useEffect(() => {
+    if (open) {
+      window.addEventListener("keydown", handleKeyboardShortcut);
+      return () =>
+        window.removeEventListener("keydown", handleKeyboardShortcut);
+    }
+    return undefined;
+  }, [open, handleKeyboardShortcut]);
+
+  // Apply SMS template with patient data
+  const applySmsTemplate = useCallback(
+    (template: string) => {
+      if (!intake) return template;
+
+      return template
+        .replace("{patientName}", intake.patientName.split(" ")[0] || "")
+        .replace("{date}", "[DATE]")
+        .replace("{time}", "[TIME]")
+        .replace("{clinicPhone}", "[CLINIC PHONE]")
+        .replace("{intakeLink}", "[INTAKE LINK]");
+    },
+    [intake],
+  );
 
   // Fetch full intake details
   const { data: fullDetails, isLoading } = useQuery({
@@ -152,6 +355,77 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
     queryFn: () => intakeApi.getIntakeDetails(intake!.id),
     enabled: open && !!intake?.id,
   });
+
+  // Generate referral letter from intake data
+  const generateReferralLetter = useCallback(() => {
+    if (!intake || !fullDetails) return "";
+
+    const evaluation = fullDetails.evaluation;
+    const patient = fullDetails.patient;
+    const painMap = fullDetails.painMap;
+
+    const painDetails =
+      painMap?.bodyParts
+        ?.map((p) => `${p.region} (${p.intensity}/10 - ${p.type})`)
+        .join(", ") || "Not specified";
+
+    return `REFERRAL LETTER
+
+Date: ${format(new Date(), "MMMM d, yyyy")}
+
+Patient Information:
+Name: ${intake.patientName}
+DOB: ${patient?.dateOfBirth ? format(new Date(patient.dateOfBirth), "MM/dd/yyyy") : "Not on file"}
+Phone: ${intake.phone || "Not on file"}
+Email: ${intake.email || "Not on file"}
+
+Chief Complaint:
+${intake.chiefComplaint}
+
+Clinical Summary:
+${evaluation?.description || intake.chiefComplaint}
+
+Pain Assessment:
+- Pain Level: ${evaluation?.painLevel || intake.painLevel || "N/A"}/10
+- Duration: ${evaluation?.duration || "Not specified"}
+- Location(s): ${painDetails}
+- Pattern: ${evaluation?.pattern || "Not specified"}
+
+Symptoms:
+${evaluation?.symptoms?.join(", ") || "None reported"}
+
+Aggravating Factors:
+${evaluation?.triggers?.join(", ") || "None reported"}
+
+Relieving Factors:
+${evaluation?.relievingFactors?.join(", ") || "None reported"}
+
+Medical History:
+- Medications: ${evaluation?.currentMedications || "None reported"}
+- Allergies: ${evaluation?.allergies || "None reported"}
+- Medical Conditions: ${evaluation?.medicalConditions || "None reported"}
+- Previous Surgeries: ${evaluation?.surgeries || "None reported"}
+
+Treatment Goals:
+${evaluation?.treatmentGoals || "Not specified"}
+
+${
+  fullDetails.aiSummary
+    ? `AI Analysis Summary:
+${fullDetails.aiSummary.content}
+
+Risk Factors: ${fullDetails.aiSummary.riskFactors.join(", ") || "None identified"}
+`
+    : ""
+}
+Referral Reason:
+[Please specify reason for referral]
+
+Requesting Provider: ________________________
+Signature: ________________________
+Date: ________________________
+`;
+  }, [intake, fullDetails]);
 
   // Fetch activity/notes for this intake
   const { data: activityLog = [] } = useQuery({
@@ -164,7 +438,8 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
           id: "1",
           content: fullDetails.notes,
           createdBy: "System",
-          createdAt: fullDetails.evaluation?.submittedAt || new Date().toISOString(),
+          createdAt:
+            fullDetails.evaluation?.submittedAt || new Date().toISOString(),
           type: "note",
         });
       }
@@ -173,14 +448,50 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
     enabled: open && !!intake?.id && !!fullDetails,
   });
 
+  // Fetch pain history for the patient (mock data for now - would be real API)
+  const { data: painHistory = [] } = useQuery({
+    queryKey: ["painHistory", intake?.id],
+    queryFn: async () => {
+      // In production, this would fetch from /api/patients/{id}/pain-history
+      // For now, generate mock data if we have a current pain level
+      const currentPain = fullDetails?.evaluation?.painLevel;
+      if (!currentPain) return [];
+
+      // Generate sample history showing progression
+      const history = [
+        {
+          date: "Week 1",
+          painLevel: Math.min(10, currentPain + 2),
+          note: "Initial assessment",
+        },
+        {
+          date: "Week 2",
+          painLevel: Math.min(10, currentPain + 1),
+          note: "Started treatment",
+        },
+        { date: "Week 3", painLevel: currentPain, note: "Current" },
+      ];
+      return history;
+    },
+    enabled: open && !!intake?.id && !!fullDetails?.evaluation?.painLevel,
+  });
+
   // Update status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ status, notes }: { status: string; notes?: string }) => {
+    mutationFn: async ({
+      status,
+      notes,
+    }: {
+      status: string;
+      notes?: string;
+    }) => {
       await intakeApi.updateIntakeStatus(intake!.id, status, notes);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
-      queryClient.invalidateQueries({ queryKey: ["intakeDetails", intake?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["intakeDetails", intake?.id],
+      });
       enqueueSnackbar("Status updated", { variant: "success" });
     },
     onError: () => {
@@ -194,7 +505,9 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
       await api.post(`/api/evaluations/${intake!.id}/notes`, { content });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["intakeActivity", intake?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["intakeActivity", intake?.id],
+      });
       setNewNote("");
       enqueueSnackbar("Note added", { variant: "success" });
     },
@@ -270,7 +583,11 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
             bgcolor: "background.paper",
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="flex-start"
+          >
             {/* Patient Info */}
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -290,13 +607,19 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography variant="h5">{intake.patientName}</Typography>
                   {patientAge && (
-                    <Chip label={`${patientAge} yrs`} size="small" variant="outlined" />
+                    <Chip
+                      label={`${patientAge} yrs`}
+                      size="small"
+                      variant="outlined"
+                    />
                   )}
                 </Stack>
                 <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
                   {intake.email && (
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <EmailIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+                      <EmailIcon
+                        sx={{ fontSize: 16, color: "text.secondary" }}
+                      />
                       <Typography variant="body2" color="text.secondary">
                         {intake.email}
                       </Typography>
@@ -304,7 +627,9 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                   )}
                   {intake.phone && (
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <PhoneIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+                      <PhoneIcon
+                        sx={{ fontSize: 16, color: "text.secondary" }}
+                      />
                       <Typography variant="body2" color="text.secondary">
                         {intake.phone}
                       </Typography>
@@ -338,7 +663,9 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
               <Tooltip title={format(new Date(intake.submittedAt), "PPpp")}>
                 <Chip
                   icon={<AccessTimeIcon />}
-                  label={formatDistanceToNow(new Date(intake.submittedAt), { addSuffix: true })}
+                  label={formatDistanceToNow(new Date(intake.submittedAt), {
+                    addSuffix: true,
+                  })}
                   variant="outlined"
                   size="small"
                 />
@@ -384,6 +711,31 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                   </ListItemIcon>
                   Create Medical Record
                 </MenuItem>
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    setReferralDialogOpen(true);
+                    setMoreMenuAnchor(null);
+                  }}
+                >
+                  <ListItemIcon>
+                    <DescriptionIcon fontSize="small" />
+                  </ListItemIcon>
+                  Draft Referral Letter (R)
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setSmsDialogOpen(true);
+                    setMoreMenuAnchor(null);
+                  }}
+                  disabled={!intake.phone}
+                >
+                  <ListItemIcon>
+                    <SmsIcon fontSize="small" />
+                  </ListItemIcon>
+                  Send SMS (T)
+                </MenuItem>
+                <Divider />
                 <MenuItem
                   onClick={() => {
                     setDeleteConfirmOpen(true);
@@ -398,6 +750,16 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                 </MenuItem>
               </Menu>
 
+              {/* Keyboard Shortcuts Hint */}
+              <Tooltip title="Keyboard shortcuts (?)">
+                <IconButton
+                  onClick={() => setShowKeyboardShortcuts(true)}
+                  size="small"
+                >
+                  <KeyboardIcon />
+                </IconButton>
+              </Tooltip>
+
               <IconButton onClick={onClose} size="small">
                 <CloseIcon />
               </IconButton>
@@ -411,7 +773,11 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
           onChange={(_, v) => setTabValue(v)}
           sx={{ px: 3, borderBottom: 1, borderColor: "divider" }}
         >
-          <Tab icon={<HospitalIcon />} label="Clinical Info" iconPosition="start" />
+          <Tab
+            icon={<HospitalIcon />}
+            label="Clinical Info"
+            iconPosition="start"
+          />
           <Tab
             icon={
               <Badge badgeContent={activityLog.length} color="primary">
@@ -421,13 +787,22 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
             label="Notes & Activity"
             iconPosition="start"
           />
-          <Tab icon={<HistoryIcon />} label="Communication" iconPosition="start" />
+          <Tab
+            icon={<HistoryIcon />}
+            label="Communication"
+            iconPosition="start"
+          />
         </Tabs>
 
         {/* Content */}
         <DialogContent sx={{ flex: 1, overflow: "auto", p: 0 }}>
           {isLoading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              height="100%"
+            >
               <LoadingSpinner />
             </Box>
           ) : (
@@ -447,11 +822,17 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                           <Typography variant="h6" sx={{ mt: 0.5 }}>
                             {intake.chiefComplaint}
                           </Typography>
-                          {evaluation?.description && evaluation.description !== intake.chiefComplaint && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                              {evaluation.description}
-                            </Typography>
-                          )}
+                          {evaluation?.description &&
+                            evaluation.description !==
+                              intake.chiefComplaint && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ mt: 1 }}
+                              >
+                                {evaluation.description}
+                              </Typography>
+                            )}
                         </Box>
                       </AuraCard>
 
@@ -460,7 +841,10 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                         <Grid size={{ xs: 6, sm: 3 }}>
                           <AuraCard>
                             <Box sx={{ p: 2, textAlign: "center" }}>
-                              <Typography variant="overline" color="text.secondary">
+                              <Typography
+                                variant="overline"
+                                color="text.secondary"
+                              >
                                 Pain Level
                               </Typography>
                               <Typography
@@ -473,7 +857,10 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                                       : "success.main"
                                 }
                               >
-                                {evaluation?.painLevel || intake.painLevel || "N/A"}/10
+                                {evaluation?.painLevel ||
+                                  intake.painLevel ||
+                                  "N/A"}
+                                /10
                               </Typography>
                             </Box>
                           </AuraCard>
@@ -481,7 +868,10 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                         <Grid size={{ xs: 6, sm: 3 }}>
                           <AuraCard>
                             <Box sx={{ p: 2, textAlign: "center" }}>
-                              <Typography variant="overline" color="text.secondary">
+                              <Typography
+                                variant="overline"
+                                color="text.secondary"
+                              >
                                 Duration
                               </Typography>
                               <Typography variant="h6">
@@ -493,7 +883,10 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                         <Grid size={{ xs: 6, sm: 3 }}>
                           <AuraCard>
                             <Box sx={{ p: 2, textAlign: "center" }}>
-                              <Typography variant="overline" color="text.secondary">
+                              <Typography
+                                variant="overline"
+                                color="text.secondary"
+                              >
                                 Onset
                               </Typography>
                               <Typography variant="h6">
@@ -505,7 +898,10 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                         <Grid size={{ xs: 6, sm: 3 }}>
                           <AuraCard>
                             <Box sx={{ p: 2, textAlign: "center" }}>
-                              <Typography variant="overline" color="text.secondary">
+                              <Typography
+                                variant="overline"
+                                color="text.secondary"
+                              >
                                 Pattern
                               </Typography>
                               <Typography variant="h6">
@@ -517,79 +913,459 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                       </Grid>
 
                       {/* Symptoms */}
-                      {evaluation?.symptoms && evaluation.symptoms.length > 0 && (
-                        <InfoCard title="Symptoms" sx={{ mb: 3 }}>
-                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                            {evaluation.symptoms.map((symptom, idx) => (
-                              <Chip key={idx} label={symptom} size="small" />
-                            ))}
-                          </Stack>
-                        </InfoCard>
-                      )}
+                      {evaluation?.symptoms &&
+                        evaluation.symptoms.length > 0 && (
+                          <InfoCard title="Symptoms" sx={{ mb: 3 }}>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              flexWrap="wrap"
+                              useFlexGap
+                            >
+                              {evaluation.symptoms.map((symptom, idx) => (
+                                <Chip key={idx} label={symptom} size="small" />
+                              ))}
+                            </Stack>
+                          </InfoCard>
+                        )}
 
-                      {/* Pain Map */}
-                      {fullDetails?.painMap?.bodyParts && fullDetails.painMap.bodyParts.length > 0 && (
-                        <InfoCard title="Pain Assessment" sx={{ mb: 3 }}>
-                          <List dense>
-                            {fullDetails.painMap.bodyParts.map((point, idx) => (
-                              <ListItem key={idx} sx={{ px: 0 }}>
-                                <ListItemText
-                                  primary={point.region}
-                                  secondary={`${point.type} pain`}
-                                />
-                                <Chip
-                                  label={`${point.intensity}/10`}
-                                  size="small"
-                                  color={
-                                    point.intensity >= 7
-                                      ? "error"
-                                      : point.intensity >= 4
-                                        ? "warning"
-                                        : "success"
+                      {/* 3D Pain Body Map */}
+                      {fullDetails?.painMap?.bodyParts &&
+                        fullDetails.painMap.bodyParts.length > 0 && (
+                          <AuraCard
+                            sx={{
+                              mb: auraTokens.spacing.lg,
+                              boxShadow: auraTokens.shadows.sm,
+                            }}
+                          >
+                            <Box sx={{ p: auraTokens.spacing.md }}>
+                              <Stack
+                                direction="row"
+                                spacing={auraTokens.spacing.sm}
+                                alignItems="center"
+                                justifyContent="space-between"
+                                sx={{ mb: auraTokens.spacing.md }}
+                              >
+                                <Stack
+                                  direction="row"
+                                  spacing={auraTokens.spacing.sm}
+                                  alignItems="center"
+                                >
+                                  <Avatar
+                                    sx={{
+                                      bgcolor: auraColors.blue.main,
+                                      width: auraTokens.iconSize.xl,
+                                      height: auraTokens.iconSize.xl,
+                                    }}
+                                  >
+                                    <HospitalIcon
+                                      sx={{ fontSize: auraTokens.iconSize.sm }}
+                                    />
+                                  </Avatar>
+                                  <Typography
+                                    variant="subtitle1"
+                                    fontWeight={auraTokens.fontWeights.semibold}
+                                  >
+                                    Pain Assessment - 3D Body Map
+                                  </Typography>
+                                </Stack>
+                                {/* View Toggle */}
+                                <ToggleButtonGroup
+                                  value={bodyMapView}
+                                  exclusive
+                                  onChange={(_, newView) =>
+                                    newView && setBodyMapView(newView)
                                   }
+                                  size="small"
+                                >
+                                  <ToggleButton value="front">
+                                    <Tooltip title="Front View">
+                                      <FlipToFrontIcon
+                                        sx={{
+                                          fontSize: auraTokens.iconSize.sm,
+                                        }}
+                                      />
+                                    </Tooltip>
+                                  </ToggleButton>
+                                  <ToggleButton value="back">
+                                    <Tooltip title="Back View">
+                                      <FlipToBackIcon
+                                        sx={{
+                                          fontSize: auraTokens.iconSize.sm,
+                                        }}
+                                      />
+                                    </Tooltip>
+                                  </ToggleButton>
+                                  <ToggleButton value="left">
+                                    <Tooltip title="Left Side">
+                                      <RotateLeftIcon
+                                        sx={{
+                                          fontSize: auraTokens.iconSize.sm,
+                                        }}
+                                      />
+                                    </Tooltip>
+                                  </ToggleButton>
+                                  <ToggleButton value="right">
+                                    <Tooltip title="Right Side">
+                                      <RotateRightIcon
+                                        sx={{
+                                          fontSize: auraTokens.iconSize.sm,
+                                        }}
+                                      />
+                                    </Tooltip>
+                                  </ToggleButton>
+                                </ToggleButtonGroup>
+                              </Stack>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: auraTokens.spacing.md,
+                                  flexDirection: { xs: "column", md: "row" },
+                                }}
+                              >
+                                <Box sx={{ flex: "0 0 auto" }}>
+                                  <PainMap3DViewer
+                                    regions={fullDetails.painMap.bodyParts.map(
+                                      (point): PainRegion => ({
+                                        meshName: point.region
+                                          .toLowerCase()
+                                          .replace(/\s+/g, "_"),
+                                        anatomicalName: point.region,
+                                        quality: point.type || "dull",
+                                        intensity: point.intensity,
+                                      }),
+                                    )}
+                                    cameraView={bodyMapView}
+                                    width={280}
+                                    height={350}
+                                  />
+                                </Box>
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography
+                                    variant="subtitle2"
+                                    color="text.secondary"
+                                    fontWeight={auraTokens.fontWeights.medium}
+                                    gutterBottom
+                                  >
+                                    Pain Regions Summary
+                                  </Typography>
+                                  <List dense>
+                                    {fullDetails.painMap.bodyParts.map(
+                                      (point, idx) => (
+                                        <ListItem
+                                          key={idx}
+                                          sx={{
+                                            px: auraTokens.spacing.sm,
+                                            py: auraTokens.spacing.xs,
+                                            borderRadius:
+                                              auraTokens.borderRadius.sm,
+                                            mb: auraTokens.spacing.xs,
+                                            bgcolor:
+                                              point.intensity >= 7
+                                                ? `${auraColors.red.main}10`
+                                                : point.intensity >= 4
+                                                  ? `${auraColors.orange.main}10`
+                                                  : `${auraColors.green.main}10`,
+                                            transition:
+                                              auraTokens.transitions.fast,
+                                          }}
+                                        >
+                                          <ListItemText
+                                            primary={point.region}
+                                            secondary={`${point.type} pain`}
+                                            primaryTypographyProps={{
+                                              fontWeight:
+                                                auraTokens.fontWeights.medium,
+                                            }}
+                                          />
+                                          <Chip
+                                            label={`${point.intensity}/10`}
+                                            size="small"
+                                            sx={{
+                                              fontWeight:
+                                                auraTokens.fontWeights.semibold,
+                                              bgcolor:
+                                                point.intensity >= 7
+                                                  ? auraColors.red.main
+                                                  : point.intensity >= 4
+                                                    ? auraColors.orange.main
+                                                    : auraColors.green.main,
+                                              color: "white",
+                                            }}
+                                          />
+                                        </ListItem>
+                                      ),
+                                    )}
+                                  </List>
+                                </Box>
+                              </Box>
+                            </Box>
+                          </AuraCard>
+                        )}
+
+                      {/* Pain Progression Over Time */}
+                      {painHistory.length > 0 && (
+                        <AuraCard
+                          sx={{
+                            mb: auraTokens.spacing.lg,
+                            boxShadow: auraTokens.shadows.sm,
+                          }}
+                        >
+                          <Box sx={{ p: auraTokens.spacing.md }}>
+                            <Stack
+                              direction="row"
+                              spacing={auraTokens.spacing.sm}
+                              alignItems="center"
+                              sx={{ mb: auraTokens.spacing.md }}
+                            >
+                              <Avatar
+                                sx={{
+                                  bgcolor: auraColors.purple.main,
+                                  width: auraTokens.iconSize.xl,
+                                  height: auraTokens.iconSize.xl,
+                                }}
+                              >
+                                <HistoryIcon
+                                  sx={{ fontSize: auraTokens.iconSize.sm }}
                                 />
-                              </ListItem>
-                            ))}
-                          </List>
-                        </InfoCard>
+                              </Avatar>
+                              <Box>
+                                <Typography
+                                  variant="subtitle1"
+                                  fontWeight={auraTokens.fontWeights.semibold}
+                                >
+                                  Pain Progression
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Tracking changes over time
+                                </Typography>
+                              </Box>
+                            </Stack>
+                            <Box sx={{ height: 200 }}>
+                              <ResponsiveContainer width="100%" height="100%">
+                                <LineChart
+                                  data={painHistory}
+                                  margin={{
+                                    top: 10,
+                                    right: 30,
+                                    left: 0,
+                                    bottom: 0,
+                                  }}
+                                >
+                                  <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke={auraColors.grey[200]}
+                                  />
+                                  <XAxis
+                                    dataKey="date"
+                                    tick={{ fontSize: 12 }}
+                                    stroke={auraColors.grey[400]}
+                                  />
+                                  <YAxis
+                                    domain={[0, 10]}
+                                    tick={{ fontSize: 12 }}
+                                    stroke={auraColors.grey[400]}
+                                    label={{
+                                      value: "Pain",
+                                      angle: -90,
+                                      position: "insideLeft",
+                                      fontSize: 12,
+                                    }}
+                                  />
+                                  <RechartsTooltip
+                                    content={({ active, payload }) => {
+                                      if (
+                                        active &&
+                                        payload &&
+                                        payload.length &&
+                                        payload[0]
+                                      ) {
+                                        const data = payload[0].payload as {
+                                          date: string;
+                                          painLevel: number;
+                                          note?: string;
+                                        };
+                                        return (
+                                          <Paper sx={{ p: 1.5 }}>
+                                            <Typography variant="subtitle2">
+                                              {data.date}
+                                            </Typography>
+                                            <Typography
+                                              variant="body2"
+                                              color="text.secondary"
+                                            >
+                                              Pain Level:{" "}
+                                              <strong>
+                                                {data.painLevel}/10
+                                              </strong>
+                                            </Typography>
+                                            {data.note && (
+                                              <Typography
+                                                variant="caption"
+                                                color="text.secondary"
+                                              >
+                                                {data.note}
+                                              </Typography>
+                                            )}
+                                          </Paper>
+                                        );
+                                      }
+                                      return null;
+                                    }}
+                                  />
+                                  <ReferenceLine
+                                    y={4}
+                                    stroke={auraColors.green.main}
+                                    strokeDasharray="3 3"
+                                    label={{
+                                      value: "Mild",
+                                      position: "right",
+                                      fontSize: 10,
+                                    }}
+                                  />
+                                  <ReferenceLine
+                                    y={7}
+                                    stroke={auraColors.orange.main}
+                                    strokeDasharray="3 3"
+                                    label={{
+                                      value: "Moderate",
+                                      position: "right",
+                                      fontSize: 10,
+                                    }}
+                                  />
+                                  <Line
+                                    type="monotone"
+                                    dataKey="painLevel"
+                                    stroke={auraColors.blue.main}
+                                    strokeWidth={3}
+                                    dot={{
+                                      fill: auraColors.blue.main,
+                                      strokeWidth: 2,
+                                      r: 5,
+                                    }}
+                                    activeDot={{
+                                      r: 8,
+                                      fill: auraColors.blue.dark,
+                                    }}
+                                  />
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </Box>
+                            <Stack
+                              direction="row"
+                              spacing={2}
+                              justifyContent="center"
+                              sx={{ mt: 1 }}
+                            >
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                              >
+                                <Box
+                                  sx={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: "50%",
+                                    bgcolor: auraColors.green.main,
+                                  }}
+                                />
+                                <Typography variant="caption">
+                                  Mild (0-4)
+                                </Typography>
+                              </Stack>
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                              >
+                                <Box
+                                  sx={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: "50%",
+                                    bgcolor: auraColors.orange.main,
+                                  }}
+                                />
+                                <Typography variant="caption">
+                                  Moderate (5-7)
+                                </Typography>
+                              </Stack>
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                              >
+                                <Box
+                                  sx={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: "50%",
+                                    bgcolor: auraColors.red.main,
+                                  }}
+                                />
+                                <Typography variant="caption">
+                                  Severe (8-10)
+                                </Typography>
+                              </Stack>
+                            </Stack>
+                          </Box>
+                        </AuraCard>
                       )}
 
                       {/* Triggers & Relieving Factors */}
                       <Grid container spacing={2}>
-                        {evaluation?.triggers && evaluation.triggers.length > 0 && (
-                          <Grid size={{ xs: 12, sm: 6 }}>
-                            <InfoCard title="Aggravating Factors">
-                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                {evaluation.triggers.map((trigger, idx) => (
-                                  <Chip
-                                    key={idx}
-                                    label={trigger}
-                                    size="small"
-                                    color="warning"
-                                    variant="outlined"
-                                  />
-                                ))}
-                              </Stack>
-                            </InfoCard>
-                          </Grid>
-                        )}
-                        {evaluation?.relievingFactors && evaluation.relievingFactors.length > 0 && (
-                          <Grid size={{ xs: 12, sm: 6 }}>
-                            <InfoCard title="Relieving Factors">
-                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                {evaluation.relievingFactors.map((factor, idx) => (
-                                  <Chip
-                                    key={idx}
-                                    label={factor}
-                                    size="small"
-                                    color="success"
-                                    variant="outlined"
-                                  />
-                                ))}
-                              </Stack>
-                            </InfoCard>
-                          </Grid>
-                        )}
+                        {evaluation?.triggers &&
+                          evaluation.triggers.length > 0 && (
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                              <InfoCard title="Aggravating Factors">
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  flexWrap="wrap"
+                                  useFlexGap
+                                >
+                                  {evaluation.triggers.map((trigger, idx) => (
+                                    <Chip
+                                      key={idx}
+                                      label={trigger}
+                                      size="small"
+                                      color="warning"
+                                      variant="outlined"
+                                    />
+                                  ))}
+                                </Stack>
+                              </InfoCard>
+                            </Grid>
+                          )}
+                        {evaluation?.relievingFactors &&
+                          evaluation.relievingFactors.length > 0 && (
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                              <InfoCard title="Relieving Factors">
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  flexWrap="wrap"
+                                  useFlexGap
+                                >
+                                  {evaluation.relievingFactors.map(
+                                    (factor, idx) => (
+                                      <Chip
+                                        key={idx}
+                                        label={factor}
+                                        size="small"
+                                        color="success"
+                                        variant="outlined"
+                                      />
+                                    ),
+                                  )}
+                                </Stack>
+                              </InfoCard>
+                            </Grid>
+                          )}
                       </Grid>
                     </Grid>
 
@@ -597,53 +1373,267 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                     <Grid size={{ xs: 12, lg: 5 }}>
                       {/* AI Analysis */}
                       {fullDetails?.aiSummary ? (
-                        <InfoCard title="AI Triage Analysis" sx={{ mb: 3 }}>
-                          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 2 }}>
-                            {fullDetails.aiSummary.content}
-                          </Typography>
-
-                          {fullDetails.aiSummary.riskFactors.length > 0 && (
-                            <Box sx={{ mb: 2 }}>
-                              <Typography variant="subtitle2" color="error" gutterBottom>
-                                Risk Flags
-                              </Typography>
-                              <Stack spacing={1}>
-                                {fullDetails.aiSummary.riskFactors.map((flag, idx) => (
-                                  <Callout key={idx} variant="warning" icon={<WarningIcon />}>
-                                    {flag}
-                                  </Callout>
-                                ))}
+                        <AuraCard
+                          sx={{
+                            mb: auraTokens.spacing.lg,
+                            background: auraTokens.gradients.subtle,
+                            border: "1px solid",
+                            borderColor: auraColors.blue.light,
+                            boxShadow: auraTokens.shadows.sm,
+                          }}
+                        >
+                          <Box sx={{ p: auraTokens.spacing.md }}>
+                            {/* Header with AI icon and status */}
+                            <Stack
+                              direction="row"
+                              justifyContent="space-between"
+                              alignItems="center"
+                              sx={{ mb: auraTokens.spacing.md }}
+                            >
+                              <Stack
+                                direction="row"
+                                spacing={auraTokens.spacing.sm}
+                                alignItems="center"
+                              >
+                                <Avatar
+                                  sx={{
+                                    bgcolor: auraColors.blue.main,
+                                    width: auraTokens.iconSize.xl,
+                                    height: auraTokens.iconSize.xl,
+                                  }}
+                                >
+                                  <PsychologyIcon
+                                    sx={{ fontSize: auraTokens.iconSize.sm }}
+                                  />
+                                </Avatar>
+                                <Box>
+                                  <Typography
+                                    variant="subtitle1"
+                                    fontWeight={auraTokens.fontWeights.semibold}
+                                  >
+                                    AI Triage Analysis
+                                  </Typography>
+                                  <Stack
+                                    direction="row"
+                                    spacing={auraTokens.spacing.xs}
+                                    alignItems="center"
+                                  >
+                                    <AutoAwesomeIcon
+                                      sx={{
+                                        fontSize: auraTokens.iconSize.xxs,
+                                        color: auraColors.blue.main,
+                                      }}
+                                    />
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      Powered by Qivr AI
+                                    </Typography>
+                                  </Stack>
+                                </Box>
                               </Stack>
-                            </Box>
-                          )}
+                              {fullDetails.aiSummary.approved && (
+                                <Chip
+                                  icon={<VerifiedIcon />}
+                                  label="Verified"
+                                  size="small"
+                                  color="success"
+                                  variant="outlined"
+                                />
+                              )}
+                            </Stack>
 
-                          {fullDetails.aiSummary.recommendations.length > 0 && (
-                            <Box>
-                              <Typography variant="subtitle2" color="success.main" gutterBottom>
-                                Recommendations
+                            {/* AI Summary Content */}
+                            <Box
+                              sx={{
+                                p: auraTokens.spacing.md,
+                                bgcolor: "background.paper",
+                                borderRadius: auraTokens.borderRadius.md,
+                                mb: auraTokens.spacing.md,
+                                border: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{ whiteSpace: "pre-wrap" }}
+                              >
+                                {fullDetails.aiSummary.content}
                               </Typography>
-                              <List dense>
-                                {fullDetails.aiSummary.recommendations.map((rec, idx) => (
-                                  <ListItem key={idx} sx={{ px: 0 }}>
-                                    <CheckCircleIcon color="success" sx={{ mr: 1, fontSize: 20 }} />
-                                    <ListItemText primary={rec} />
-                                  </ListItem>
-                                ))}
-                              </List>
                             </Box>
-                          )}
-                        </InfoCard>
+
+                            {/* Risk Flags */}
+                            {fullDetails.aiSummary.riskFactors.length > 0 && (
+                              <Box sx={{ mb: auraTokens.spacing.md }}>
+                                <Stack
+                                  direction="row"
+                                  spacing={auraTokens.spacing.sm}
+                                  alignItems="center"
+                                  sx={{ mb: auraTokens.spacing.sm }}
+                                >
+                                  <WarningIcon
+                                    sx={{
+                                      fontSize: auraTokens.iconSize.sm,
+                                      color: auraColors.red.main,
+                                    }}
+                                  />
+                                  <Typography
+                                    variant="subtitle2"
+                                    sx={{ color: auraColors.red.main }}
+                                  >
+                                    Risk Flags (
+                                    {fullDetails.aiSummary.riskFactors.length})
+                                  </Typography>
+                                </Stack>
+                                <Stack spacing={auraTokens.spacing.sm}>
+                                  {fullDetails.aiSummary.riskFactors.map(
+                                    (flag, idx) => (
+                                      <Callout
+                                        key={idx}
+                                        variant="error"
+                                        icon={<WarningIcon />}
+                                      >
+                                        {flag}
+                                      </Callout>
+                                    ),
+                                  )}
+                                </Stack>
+                              </Box>
+                            )}
+
+                            {/* Recommendations */}
+                            {fullDetails.aiSummary.recommendations.length >
+                              0 && (
+                              <Box>
+                                <Stack
+                                  direction="row"
+                                  spacing={auraTokens.spacing.sm}
+                                  alignItems="center"
+                                  sx={{ mb: auraTokens.spacing.sm }}
+                                >
+                                  <CheckCircleIcon
+                                    sx={{
+                                      fontSize: auraTokens.iconSize.sm,
+                                      color: auraColors.green.main,
+                                    }}
+                                  />
+                                  <Typography
+                                    variant="subtitle2"
+                                    sx={{ color: auraColors.green.main }}
+                                  >
+                                    Recommendations
+                                  </Typography>
+                                </Stack>
+                                <List dense disablePadding>
+                                  {fullDetails.aiSummary.recommendations.map(
+                                    (rec, idx) => (
+                                      <ListItem
+                                        key={idx}
+                                        sx={{
+                                          px: 0,
+                                          py: auraTokens.spacing.xs,
+                                        }}
+                                      >
+                                        <CheckCircleIcon
+                                          sx={{
+                                            mr: auraTokens.spacing.sm,
+                                            fontSize: auraTokens.iconSize.xs,
+                                            color: auraColors.green.main,
+                                          }}
+                                        />
+                                        <ListItemText
+                                          primary={rec}
+                                          primaryTypographyProps={{
+                                            variant: "body2",
+                                          }}
+                                        />
+                                      </ListItem>
+                                    ),
+                                  )}
+                                </List>
+                              </Box>
+                            )}
+
+                            {/* Approval timestamp */}
+                            {fullDetails.aiSummary.approvedAt && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                  mt: auraTokens.spacing.md,
+                                  display: "block",
+                                }}
+                              >
+                                Analysis generated{" "}
+                                {formatDistanceToNow(
+                                  new Date(fullDetails.aiSummary.approvedAt),
+                                  { addSuffix: true },
+                                )}
+                              </Typography>
+                            )}
+                          </Box>
+                        </AuraCard>
                       ) : (
-                        <Alert severity="info" sx={{ mb: 3 }}>
-                          AI analysis not yet generated. Navigate to create medical record to trigger analysis.
-                        </Alert>
+                        <AuraCard sx={{ mb: auraTokens.spacing.lg }}>
+                          <Box
+                            sx={{
+                              p: auraTokens.spacing.lg,
+                              textAlign: "center",
+                            }}
+                          >
+                            <Avatar
+                              sx={{
+                                bgcolor: auraColors.grey[200],
+                                width: auraTokens.iconSize.xxl,
+                                height: auraTokens.iconSize.xxl,
+                                mx: "auto",
+                                mb: auraTokens.spacing.md,
+                              }}
+                            >
+                              <PsychologyIcon
+                                sx={{ color: auraColors.grey[500] }}
+                              />
+                            </Avatar>
+                            <Typography
+                              variant="subtitle1"
+                              fontWeight={auraTokens.fontWeights.semibold}
+                              gutterBottom
+                            >
+                              AI Analysis Pending
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mb: auraTokens.spacing.md }}
+                            >
+                              AI triage analysis will be generated when you
+                              create a medical record for this patient.
+                            </Typography>
+                            <AuraButton
+                              variant="outlined"
+                              size="small"
+                              startIcon={<PersonAddIcon />}
+                              onClick={() =>
+                                navigate(
+                                  `/medical-records/new?intakeId=${intake.id}`,
+                                )
+                              }
+                            >
+                              Create Medical Record
+                            </AuraButton>
+                          </Box>
+                        </AuraCard>
                       )}
 
                       {/* Medical History */}
                       <InfoCard title="Medical History" sx={{ mb: 3 }}>
                         {evaluation?.currentMedications && (
                           <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary">
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                            >
                               Current Medications
                             </Typography>
                             <Typography variant="body2">
@@ -663,7 +1653,10 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                         )}
                         {evaluation?.medicalConditions && (
                           <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary">
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                            >
                               Medical Conditions
                             </Typography>
                             <Typography variant="body2">
@@ -673,7 +1666,10 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                         )}
                         {evaluation?.surgeries && (
                           <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary">
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                            >
                               Previous Surgeries
                             </Typography>
                             <Typography variant="body2">
@@ -683,13 +1679,17 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                         )}
                         {evaluation?.previousTreatments && (
                           <Box>
-                            <Typography variant="subtitle2" color="text.secondary">
+                            <Typography
+                              variant="subtitle2"
+                              color="text.secondary"
+                            >
                               Previous Treatments
                             </Typography>
                             <Typography variant="body2">
                               {Array.isArray(evaluation.previousTreatments)
                                 ? evaluation.previousTreatments.join(", ")
-                                : evaluation.previousTreatments || "None reported"}
+                                : evaluation.previousTreatments ||
+                                  "None reported"}
                             </Typography>
                           </Box>
                         )}
@@ -698,7 +1698,9 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                       {/* Treatment Goals */}
                       {evaluation?.treatmentGoals && (
                         <InfoCard title="Treatment Goals">
-                          <Typography variant="body2">{evaluation.treatmentGoals}</Typography>
+                          <Typography variant="body2">
+                            {evaluation.treatmentGoals}
+                          </Typography>
                         </InfoCard>
                       )}
                     </Grid>
@@ -709,12 +1711,53 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
               {/* Notes & Activity Tab */}
               <TabPanel value={tabValue} index={1}>
                 <Box sx={{ p: 3 }}>
-                  {/* Add Note */}
+                  {/* Add Note with Quick Templates */}
                   <AuraCard sx={{ mb: 3 }}>
                     <Box sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Add Triage Note
-                      </Typography>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{ mb: 1 }}
+                      >
+                        <Typography variant="subtitle2">
+                          Add Triage Note
+                        </Typography>
+                        <AuraButton
+                          variant="text"
+                          size="small"
+                          onClick={(e) =>
+                            setTemplateMenuAnchor(e.currentTarget)
+                          }
+                          sx={{ textTransform: "none" }}
+                        >
+                          Quick Templates
+                        </AuraButton>
+                        <Menu
+                          anchorEl={templateMenuAnchor}
+                          open={Boolean(templateMenuAnchor)}
+                          onClose={() => setTemplateMenuAnchor(null)}
+                        >
+                          {TRIAGE_TEMPLATES.map((template) => (
+                            <MenuItem
+                              key={template.label}
+                              onClick={() => {
+                                setNewNote((prev) =>
+                                  prev
+                                    ? `${prev}\n${template.text}`
+                                    : template.text,
+                                );
+                                setTemplateMenuAnchor(null);
+                              }}
+                            >
+                              <ListItemText
+                                primary={template.label}
+                                secondary={template.text.slice(0, 50) + "..."}
+                              />
+                            </MenuItem>
+                          ))}
+                        </Menu>
+                      </Stack>
                       <Stack direction="row" spacing={2}>
                         <TextField
                           fullWidth
@@ -727,11 +1770,42 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                         <AuraButton
                           variant="contained"
                           onClick={handleAddNote}
-                          disabled={!newNote.trim() || addNoteMutation.isPending}
+                          disabled={
+                            !newNote.trim() || addNoteMutation.isPending
+                          }
                           sx={{ alignSelf: "flex-end" }}
                         >
-                          {addNoteMutation.isPending ? <CircularProgress size={20} /> : <SendIcon />}
+                          {addNoteMutation.isPending ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <SendIcon />
+                          )}
                         </AuraButton>
+                      </Stack>
+                      {/* Quick template chips */}
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        flexWrap="wrap"
+                        useFlexGap
+                        sx={{ mt: 1.5 }}
+                      >
+                        {TRIAGE_TEMPLATES.slice(0, 4).map((template) => (
+                          <Chip
+                            key={template.label}
+                            label={template.label}
+                            size="small"
+                            variant="outlined"
+                            onClick={() =>
+                              setNewNote((prev) =>
+                                prev
+                                  ? `${prev}\n${template.text}`
+                                  : template.text,
+                              )
+                            }
+                            sx={{ cursor: "pointer" }}
+                          />
+                        ))}
                       </Stack>
                     </Box>
                   </AuraCard>
@@ -742,14 +1816,31 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                       <Typography variant="subtitle2" gutterBottom>
                         Update Status
                       </Typography>
-                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        flexWrap="wrap"
+                        useFlexGap
+                      >
                         {STATUS_OPTIONS.map((option) => (
                           <Chip
                             key={option.value}
                             label={option.label}
-                            variant={intake.status === option.value ? "filled" : "outlined"}
-                            color={intake.status === option.value ? "primary" : "default"}
-                            onClick={() => updateStatusMutation.mutate({ status: option.value })}
+                            variant={
+                              intake.status === option.value
+                                ? "filled"
+                                : "outlined"
+                            }
+                            color={
+                              intake.status === option.value
+                                ? "primary"
+                                : "default"
+                            }
+                            onClick={() =>
+                              updateStatusMutation.mutate({
+                                status: option.value,
+                              })
+                            }
                             disabled={updateStatusMutation.isPending}
                             sx={{ cursor: "pointer" }}
                           />
@@ -767,12 +1858,20 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                   ) : (
                     <List>
                       {activityLog.map((activity) => (
-                        <ListItem key={activity.id} alignItems="flex-start" sx={{ px: 0 }}>
+                        <ListItem
+                          key={activity.id}
+                          alignItems="flex-start"
+                          sx={{ px: 0 }}
+                        >
                           <ListItemAvatar>
                             <Avatar sx={{ bgcolor: "primary.light" }}>
                               {activity.type === "note" && <NotesIcon />}
-                              {activity.type === "status_change" && <ArrowForwardIcon />}
-                              {activity.type === "appointment" && <CalendarIcon />}
+                              {activity.type === "status_change" && (
+                                <ArrowForwardIcon />
+                              )}
+                              {activity.type === "appointment" && (
+                                <CalendarIcon />
+                              )}
                               {activity.type === "message" && <MessageIcon />}
                             </Avatar>
                           </ListItemAvatar>
@@ -781,7 +1880,10 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                             secondary={
                               <>
                                 {activity.createdBy} &bull;{" "}
-                                {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                                {formatDistanceToNow(
+                                  new Date(activity.createdAt),
+                                  { addSuffix: true },
+                                )}
                               </>
                             }
                           />
@@ -814,7 +1916,8 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                   </Stack>
 
                   <Alert severity="info">
-                    Communication history will appear here once messages are sent.
+                    Communication history will appear here once messages are
+                    sent.
                   </Alert>
                 </Box>
               </TabPanel>
@@ -838,12 +1941,14 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
       <ScheduleAppointmentDialog
         open={scheduleDialogOpen}
         onClose={() => setScheduleDialogOpen(false)}
+        onScheduled={handleScheduleComplete}
         patient={
           fullDetails
             ? {
                 id: intake.id,
                 firstName: intake.patientName.split(" ")[0] || "",
-                lastName: intake.patientName.split(" ").slice(1).join(" ") || "",
+                lastName:
+                  intake.patientName.split(" ").slice(1).join(" ") || "",
                 email: intake.email || "",
                 phone: intake.phone || "",
               }
@@ -877,7 +1982,11 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
       />
 
       {/* Urgency Edit Dialog */}
-      <Dialog open={isEditingUrgency} onClose={() => setIsEditingUrgency(false)} maxWidth="xs">
+      <Dialog
+        open={isEditingUrgency}
+        onClose={() => setIsEditingUrgency(false)}
+        maxWidth="xs"
+      >
         <Box sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
             Update Urgency
@@ -888,7 +1997,9 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
                 key={option.value}
                 label={option.label}
                 color={option.color as any}
-                variant={selectedUrgency === option.value ? "filled" : "outlined"}
+                variant={
+                  selectedUrgency === option.value ? "filled" : "outlined"
+                }
                 onClick={() => {
                   setSelectedUrgency(option.value);
                   updateStatusMutation.mutate({
@@ -902,6 +2013,206 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
             ))}
           </Stack>
         </Box>
+      </Dialog>
+
+      {/* Keyboard Shortcuts Dialog */}
+      <Dialog
+        open={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <KeyboardIcon />
+            <Typography variant="h6">Keyboard Shortcuts</Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <List dense>
+            {KEYBOARD_SHORTCUTS.map((shortcut) => (
+              <ListItem key={shortcut.key} sx={{ px: 0 }}>
+                <Chip
+                  label={shortcut.key}
+                  size="small"
+                  sx={{
+                    minWidth: 40,
+                    mr: 2,
+                    fontFamily: "monospace",
+                    fontWeight: auraTokens.fontWeights.semibold,
+                  }}
+                />
+                <ListItemText primary={shortcut.description} />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <AuraButton onClick={() => setShowKeyboardShortcuts(false)}>
+            Close
+          </AuraButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* Referral Letter Dialog */}
+      <Dialog
+        open={referralDialogOpen}
+        onClose={() => setReferralDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <DescriptionIcon />
+            <Typography variant="h6">Referral Letter</Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            This referral letter has been auto-generated from the intake data.
+            Review and edit as needed before sending.
+          </Alert>
+          <TextField
+            fullWidth
+            multiline
+            rows={20}
+            value={generateReferralLetter()}
+            sx={{
+              "& .MuiInputBase-input": {
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <AuraButton
+            variant="outlined"
+            startIcon={<CopyIcon />}
+            onClick={() => {
+              navigator.clipboard.writeText(generateReferralLetter());
+              enqueueSnackbar("Referral letter copied to clipboard", {
+                variant: "success",
+              });
+            }}
+          >
+            Copy to Clipboard
+          </AuraButton>
+          <AuraButton
+            variant="outlined"
+            onClick={() => setReferralDialogOpen(false)}
+          >
+            Cancel
+          </AuraButton>
+          <AuraButton
+            variant="contained"
+            onClick={() => {
+              // In a real app, this would open a print dialog or send to fax
+              window.print();
+            }}
+          >
+            Print
+          </AuraButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* SMS Quick Reply Dialog */}
+      <Dialog
+        open={smsDialogOpen}
+        onClose={() => setSmsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <SmsIcon />
+            <Typography variant="h6">
+              Send SMS to {intake?.patientName}
+            </Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          {!intake?.phone ? (
+            <Alert severity="warning">
+              No phone number on file for this patient.
+            </Alert>
+          ) : (
+            <>
+              <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
+                Quick Templates
+              </Typography>
+              <Stack spacing={1} sx={{ mb: 2 }}>
+                {SMS_TEMPLATES.map((template) => (
+                  <Paper
+                    key={template.label}
+                    sx={{
+                      p: 1.5,
+                      cursor: "pointer",
+                      border:
+                        selectedSmsTemplate === template.template
+                          ? "2px solid"
+                          : "1px solid",
+                      borderColor:
+                        selectedSmsTemplate === template.template
+                          ? "primary.main"
+                          : "divider",
+                      transition: auraTokens.transitions.fast,
+                      "&:hover": {
+                        borderColor: "primary.light",
+                        bgcolor: "action.hover",
+                      },
+                    }}
+                    onClick={() =>
+                      setSelectedSmsTemplate(
+                        applySmsTemplate(template.template),
+                      )
+                    }
+                  >
+                    <Typography variant="subtitle2" color="primary">
+                      {template.label}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {applySmsTemplate(template.template)}
+                    </Typography>
+                  </Paper>
+                ))}
+              </Stack>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="Message"
+                value={selectedSmsTemplate}
+                onChange={(e) => setSelectedSmsTemplate(e.target.value)}
+                placeholder="Type your message or select a template above..."
+                helperText={`Sending to: ${intake.phone}`}
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <AuraButton
+            variant="outlined"
+            onClick={() => setSmsDialogOpen(false)}
+          >
+            Cancel
+          </AuraButton>
+          <AuraButton
+            variant="contained"
+            startIcon={<SendIcon />}
+            disabled={!selectedSmsTemplate.trim() || !intake?.phone}
+            onClick={() => {
+              // In a real app, this would send via SMS API
+              enqueueSnackbar(`SMS sent to ${intake?.phone}`, {
+                variant: "success",
+              });
+              setSmsDialogOpen(false);
+              setSelectedSmsTemplate("");
+            }}
+          >
+            Send SMS
+          </AuraButton>
+        </DialogActions>
       </Dialog>
     </>
   );

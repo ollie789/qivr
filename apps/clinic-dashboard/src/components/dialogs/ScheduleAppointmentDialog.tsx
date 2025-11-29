@@ -35,6 +35,7 @@ import api from "../../lib/api-client";
 export interface ScheduleAppointmentDialogProps {
   open: boolean;
   onClose: () => void;
+  onScheduled?: () => void;
   patient?: {
     id: string;
     firstName: string;
@@ -101,6 +102,7 @@ export const ScheduleAppointmentDialog: React.FC<
 > = ({
   open,
   onClose,
+  onScheduled,
   patient,
   patientId,
   intakeId,
@@ -122,7 +124,7 @@ export const ScheduleAppointmentDialog: React.FC<
     providerName: "",
     appointmentType:
       defaultAppointmentType || (intakeId ? "initial" : "followup"),
-    date: initialDate || null as Date | null,
+    date: initialDate || (null as Date | null),
     timeSlot: null as string | null,
     selectedSlot: null as AvailableSlot | null,
     duration: 60,
@@ -150,7 +152,15 @@ export const ScheduleAppointmentDialog: React.FC<
         notes: prefilledData?.chiefComplaint || "",
       });
     }
-  }, [open, patient, patientId, prefilledData, defaultAppointmentType, intakeId, initialDate]);
+  }, [
+    open,
+    patient,
+    patientId,
+    prefilledData,
+    defaultAppointmentType,
+    intakeId,
+    initialDate,
+  ]);
 
   // Fetch providers from the API
   const { data: providers = [], isLoading: providersLoading } = useQuery({
@@ -180,7 +190,7 @@ export const ScheduleAppointmentDialog: React.FC<
         {
           date: dateStr,
           durationMinutes: appointmentData.duration,
-        }
+        },
       );
       return response as { start: string; end: string; isAvailable: boolean }[];
     },
@@ -225,6 +235,7 @@ export const ScheduleAppointmentDialog: React.FC<
         enqueueSnackbar("Intake status updated", { variant: "info" });
       }
       onClose();
+      onScheduled?.();
     },
     onError: (error: any) => {
       const message =
@@ -275,7 +286,7 @@ export const ScheduleAppointmentDialog: React.FC<
 
       const scheduledEnd = new Date(scheduledStart);
       scheduledEnd.setMinutes(
-        scheduledEnd.getMinutes() + appointmentData.duration
+        scheduledEnd.getMinutes() + appointmentData.duration,
       );
 
       createAppointmentMutation.mutate({
@@ -568,14 +579,16 @@ export const ScheduleAppointmentDialog: React.FC<
             Type:{" "}
             {
               appointmentTypes.find(
-                (t) => t.id === appointmentData.appointmentType
+                (t) => t.id === appointmentData.appointmentType,
               )?.label
             }
           </Typography>
           <Typography variant="body2">
             Date: {appointmentData.date?.toLocaleDateString()}
           </Typography>
-          <Typography variant="body2">Time: {appointmentData.timeSlot}</Typography>
+          <Typography variant="body2">
+            Time: {appointmentData.timeSlot}
+          </Typography>
           <Typography variant="body2">
             Duration: {appointmentData.duration} minutes
           </Typography>
