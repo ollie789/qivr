@@ -35,6 +35,7 @@ import {
   LocalHospital as MedicalIcon,
   MedicalServices as TreatmentIcon,
   Send as ReferralsIcon,
+  ViewKanban as KanbanIcon,
 } from "@mui/icons-material";
 import { useAuthActions, useAuthUser } from "../../stores/authStore";
 import { NotificationBell, TenantSelector } from "../shared";
@@ -128,6 +129,7 @@ const DashboardLayout: React.FC = () => {
       icon: <TreatmentIcon />,
       path: "/treatment-plans",
     },
+    { text: "Task Board", icon: <KanbanIcon />, path: "/kanban" },
     { text: "Referrals", icon: <ReferralsIcon />, path: "/referrals" },
     {
       text: "Inbox",

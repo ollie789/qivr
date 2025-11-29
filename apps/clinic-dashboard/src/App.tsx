@@ -42,6 +42,7 @@ const MedicalRecords = lazy(() => import("./pages/MedicalRecords"));
 const Referrals = lazy(() => import("./pages/Referrals"));
 const ApiKeys = lazy(() => import("./pages/ApiKeys"));
 const TreatmentPlans = lazy(() => import("./pages/TreatmentPlans"));
+const Kanban = lazy(() => import("./pages/Kanban"));
 
 // Create query client
 const queryClient = new QueryClient({
@@ -139,6 +140,7 @@ function InnerApp() {
                   <Route path="settings" element={<Settings />} />
                   <Route path="api-keys" element={<ApiKeys />} />
                   <Route path="treatment-plans" element={<TreatmentPlans />} />
+                  <Route path="kanban" element={<Kanban />} />
                   <Route
                     path="clinic-registration"
                     element={<ClinicRegistration />}
