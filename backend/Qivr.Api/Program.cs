@@ -122,6 +122,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString;
         // Include fields in serialization if needed
         options.JsonSerializerOptions.IncludeFields = true;
+        // Allow string enum values (e.g., "Specialist" instead of 0)
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
