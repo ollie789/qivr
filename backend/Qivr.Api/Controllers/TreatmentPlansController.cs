@@ -40,7 +40,29 @@ public class TreatmentPlansController : BaseApiController
         if (patientId.HasValue)
             query = query.Where(t => t.PatientId == patientId.Value);
 
-        var plans = await query.OrderByDescending(t => t.CreatedAt).ToListAsync();
+        var plans = await query.OrderByDescending(t => t.CreatedAt)
+            .Select(t => new TreatmentPlanListDto
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Diagnosis = t.Diagnosis,
+                Goals = t.Goals,
+                StartDate = t.StartDate,
+                EndDate = t.EndDate,
+                DurationWeeks = t.DurationWeeks,
+                Status = t.Status,
+                ProgressPercentage = t.ProgressPercentage,
+                CompletedSessions = t.CompletedSessions,
+                TotalSessions = t.TotalSessions,
+                CurrentWeek = t.CurrentWeek,
+                PatientId = t.PatientId,
+                PatientName = t.Patient != null ? t.Patient.FullName : "Unknown",
+                ProviderId = t.ProviderId,
+                ProviderName = t.Provider != null ? t.Provider.FullName : "Unknown",
+                CreatedAt = t.CreatedAt,
+                ReviewDate = t.ReviewDate
+            })
+            .ToListAsync();
         return Ok(plans);
     }
 
@@ -77,7 +99,38 @@ public class TreatmentPlansController : BaseApiController
         if (plan == null)
             return NotFound();
 
-        return Ok(plan);
+        return Ok(new TreatmentPlanDetailDto
+        {
+            Id = plan.Id,
+            Title = plan.Title,
+            Diagnosis = plan.Diagnosis,
+            Goals = plan.Goals,
+            StartDate = plan.StartDate,
+            EndDate = plan.EndDate,
+            DurationWeeks = plan.DurationWeeks,
+            Status = plan.Status,
+            ProgressPercentage = plan.ProgressPercentage,
+            CompletedSessions = plan.CompletedSessions,
+            TotalSessions = plan.TotalSessions,
+            CurrentWeek = plan.CurrentWeek,
+            ExerciseStreak = plan.ExerciseStreak,
+            PointsEarned = plan.PointsEarned,
+            PatientId = plan.PatientId,
+            PatientName = plan.Patient?.FullName ?? "Unknown",
+            ProviderId = plan.ProviderId,
+            ProviderName = plan.Provider?.FullName ?? "Unknown",
+            CreatedAt = plan.CreatedAt,
+            ReviewDate = plan.ReviewDate,
+            Notes = plan.Notes,
+            Sessions = plan.Sessions,
+            Exercises = plan.Exercises,
+            Phases = plan.Phases,
+            Milestones = plan.Milestones,
+            PromConfig = plan.PromConfig,
+            AiGeneratedSummary = plan.AiGeneratedSummary,
+            AiConfidence = plan.AiConfidence,
+            AiRationale = plan.AiRationale
+        });
     }
 
     [HttpPost]
@@ -1066,4 +1119,41 @@ public class CreateExerciseTemplateRequest
     public List<string>? Contraindications { get; set; }
     public List<string>? Equipment { get; set; }
     public List<string>? Tags { get; set; }
+}
+
+public class TreatmentPlanListDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = "";
+    public string? Diagnosis { get; set; }
+    public string? Goals { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public int DurationWeeks { get; set; }
+    public TreatmentPlanStatus Status { get; set; }
+    public decimal ProgressPercentage { get; set; }
+    public int CompletedSessions { get; set; }
+    public int TotalSessions { get; set; }
+    public int CurrentWeek { get; set; }
+    public Guid PatientId { get; set; }
+    public string PatientName { get; set; } = "";
+    public Guid ProviderId { get; set; }
+    public string ProviderName { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+    public DateTime? ReviewDate { get; set; }
+}
+
+public class TreatmentPlanDetailDto : TreatmentPlanListDto
+{
+    public int ExerciseStreak { get; set; }
+    public int PointsEarned { get; set; }
+    public string? Notes { get; set; }
+    public List<TreatmentSession> Sessions { get; set; } = new();
+    public List<Exercise> Exercises { get; set; } = new();
+    public List<TreatmentPhase> Phases { get; set; } = new();
+    public List<TreatmentMilestone> Milestones { get; set; } = new();
+    public TreatmentPlanPromConfig? PromConfig { get; set; }
+    public string? AiGeneratedSummary { get; set; }
+    public double? AiConfidence { get; set; }
+    public string? AiRationale { get; set; }
 }

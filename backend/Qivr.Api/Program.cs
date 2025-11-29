@@ -233,6 +233,7 @@ builder.Services.AddScoped<IAiTriageService, AiTriageService>();
 // Document Management Services
 builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
 builder.Services.AddAWSService<Amazon.Textract.IAmazonTextract>();
+builder.Services.AddAWSService<Amazon.Athena.IAmazonAthena>(); // For Admin Analytics
 builder.Services.AddScoped<IS3Service, S3Service>();
 builder.Services.AddScoped<ITextractService, TextractService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();

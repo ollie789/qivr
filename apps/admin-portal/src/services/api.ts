@@ -1,4 +1,4 @@
-import { Tenant, TenantUsage, FeatureFlags } from "../types/tenant";
+import { FeatureFlags } from "../types/tenant";
 import { getIdToken } from "./cognitoAuth";
 
 const API_BASE =
@@ -28,77 +28,42 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export interface DashboardStats {
-  totalTenants: number;
-  activeTenants: number;
-  newTenantsThisMonth: number;
-  totalPatients: number;
-  patientGrowthPercent: number;
-  appointmentsThisMonth: number;
-  mrr: number;
+  totalTenants: string;
+  activeTenants: string;
+  totalPatients: string;
+  totalStaff: string;
+  mrr: string;
   mrrFormatted: string;
-}
-
-export interface BillingOverview {
-  mrr: number;
-  mrrFormatted: string;
-  arr: number;
-  activeSubscriptions: number;
-  trialTenants: number;
-  suspendedTenants: number;
-  byPlan: Record<string, number>;
-}
-
-export interface Invoice {
-  id: string;
-  tenantId: string;
-  tenantName: string;
-  amount: number;
-  status: "paid" | "pending" | "failed";
-  date: string;
 }
 
 export const adminApi = {
-  // Dashboard
-  getDashboardStats: () => request<DashboardStats>("/dashboard/stats"),
-  getRecentActivity: () => request<any[]>("/dashboard/activity"),
-  getRevenueData: (months = 6) =>
-    request<any[]>(`/dashboard/revenue?months=${months}`),
-
-  // Tenants
-  getTenants: (search?: string, status?: string) => {
+  // Analytics (from Data Lake via Athena)
+  getDashboardStats: () => request<DashboardStats>("/analytics/dashboard"),
+  getTenants: () => request<any[]>("/analytics/tenants"),
+  getUsageStats: (days = 30) => request<any[]>(`/analytics/usage?days=${days}`),
+  getPromOutcomes: (region?: string, promType?: string) => {
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (status) params.set("status", status);
-    return request<Tenant[]>(`/tenants?${params}`);
+    if (region) params.set("region", region);
+    if (promType) params.set("promType", promType);
+    return request<any[]>(`/analytics/prom-outcomes?${params}`);
   },
-  getTenant: (id: string) => request<Tenant>(`/tenants/${id}`),
-  updateTenant: (id: string, data: Partial<Tenant>) =>
-    request(`/tenants/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  getRevenueTrend: (months = 6) =>
+    request<any[]>(`/analytics/revenue-trend?months=${months}`),
+
+  // Tenant Management Actions (write to production DB)
   suspendTenant: (id: string) =>
     request(`/tenants/${id}/suspend`, { method: "POST" }),
   activateTenant: (id: string) =>
     request(`/tenants/${id}/activate`, { method: "POST" }),
-  deleteTenant: (id: string) => request(`/tenants/${id}`, { method: "DELETE" }),
-
-  // Feature Flags
+  updatePlan: (id: string, plan: string) =>
+    request(`/tenants/${id}/plan`, {
+      method: "PUT",
+      body: JSON.stringify({ plan }),
+    }),
   updateFeatureFlags: (id: string, flags: Partial<FeatureFlags>) =>
     request(`/tenants/${id}/features`, {
       method: "PUT",
       body: JSON.stringify(flags),
     }),
-
-  // Usage
-  getTenantUsage: (id: string, period?: string) =>
-    request<TenantUsage>(
-      `/tenants/${id}/usage${period ? `?period=${period}` : ""}`,
-    ),
-  getAllUsage: (period?: string) =>
-    request<any[]>(`/usage${period ? `?period=${period}` : ""}`),
-  getUsageTotals: () => request<any>("/usage/totals"),
-
-  // Billing
-  getBillingOverview: () => request<BillingOverview>("/billing/overview"),
-  getInvoices: () => request<Invoice[]>("/billing/invoices"),
-  syncStripeCustomer: (tenantId: string) =>
-    request(`/billing/sync/${tenantId}`, { method: "POST" }),
+  deleteTenant: (id: string) => request(`/tenants/${id}`, { method: "DELETE" }),
 };
