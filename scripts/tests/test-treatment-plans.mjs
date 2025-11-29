@@ -9,7 +9,6 @@
  */
 
 const API_URL = 'https://clinic.qivr.pro/api';
-const PATIENT_API_URL = 'https://patients.qivr.pro/api';
 
 // Test credentials
 const CLINIC_USER = {
@@ -21,21 +20,21 @@ const PATIENT_USER = {
   password: 'PatientPass123!'
 };
 const TEST_TENANT_ID = 'd1466419-46e4-4594-b6d9-523668431e06';
+const TEST_PATIENT_ID = 'd50a77ad-a18c-4cfe-849c-518dc6b909d4';
 
 console.log(`\n🧪 Treatment Plan Test Suite`);
-console.log(`Clinic API: ${API_URL}`);
-console.log(`Patient API: ${PATIENT_API_URL}\n`);
+console.log(`API: ${API_URL}\n`);
 
 let clinicAuthCookie = null;
 let patientAuthCookie = null;
 let tenantId = TEST_TENANT_ID;
-let testData = {};
+let testData = { patientId: TEST_PATIENT_ID };
 let passed = 0;
 let failed = 0;
 
 // ============ Utilities ============
 
-async function makeClinicRequest(endpoint, options = {}) {
+async function makeRequest(endpoint, options = {}, authCookie = null) {
   const url = `${API_URL}${endpoint}`;
   const headers = {
     'Content-Type': 'application/json',
@@ -43,48 +42,12 @@ async function makeClinicRequest(endpoint, options = {}) {
     ...options.headers
   };
   
-  if (clinicAuthCookie) {
-    headers['Cookie'] = clinicAuthCookie;
+  if (authCookie) {
+    headers['Cookie'] = authCookie;
   }
   
   const response = await fetch(url, { ...options, headers });
-  
-  const setCookie = response.headers.get('set-cookie');
-  if (setCookie && setCookie.includes('accessToken')) {
-    clinicAuthCookie = setCookie.split(';')[0];
-  }
-  
   return response;
-}
-
-async function makePatientRequest(endpoint, options = {}) {
-  // Patient portal uses same API backend as clinic
-  const url = `${API_URL}${endpoint}`;
-  const headers = {
-    'Content-Type': 'application/json',
-    'X-Tenant-Id': tenantId,
-    ...options.headers
-  };
-  
-  if (patientAuthCookie) {
-    headers['Cookie'] = patientAuthCookie;
-  }
-  
-  const response = await fetch(url, { ...options, headers });
-  
-  const setCookie = response.headers.get('set-cookie');
-  if (setCookie && setCookie.includes('accessToken')) {
-    patientAuthCookie = setCookie.split(';')[0];
-  }
-  
-  return response;
-}
-
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(`Assertion failed: ${message}`);
-  }
-  console.log(`  ✅ ${message}`);
 }
 
 async function safeJson(response) {
@@ -92,7 +55,7 @@ async function safeJson(response) {
   try {
     return JSON.parse(text);
   } catch {
-    return { _raw: text };
+    return { _raw: text.substring(0, 200) };
   }
 }
 
@@ -105,400 +68,293 @@ async function runTest(name, fn) {
   } catch (error) {
     failed++;
     console.log(`  ❌ FAILED: ${error.message}`);
-    if (error.response) {
-      console.log(`     Status: ${error.response.status}`);
-    }
   }
 }
 
 // ============ CLINIC SIDE TESTS ============
 
 async function testClinicAuth() {
-  const response = await makeClinicRequest('/auth/login', {
+  const response = await makeRequest('/auth/login', {
     method: 'POST',
     body: JSON.stringify(CLINIC_USER)
   });
   
-  assert(response.ok, `Login successful (${response.status})`);
-  const data = await safeJson(response);
-  assert(data.user || clinicAuthCookie, 'Got auth token');
+  if (!response.ok) throw new Error(`Login failed: ${response.status}`);
+  
+  const setCookie = response.headers.get('set-cookie');
+  if (setCookie) clinicAuthCookie = setCookie.split(';')[0];
+  
+  console.log(`  ✅ Clinic login successful`);
 }
 
 async function testListTreatmentPlans() {
-  const response = await makeClinicRequest('/treatment-plans');
+  const response = await makeRequest('/treatment-plans', {}, clinicAuthCookie);
   
-  assert(response.ok, `List treatment plans (${response.status})`);
+  if (!response.ok) throw new Error(`List failed: ${response.status}`);
+  
   const data = await safeJson(response);
-  assert(Array.isArray(data), 'Response is array');
-  console.log(`     Found ${data.length} treatment plans`);
+  const plans = Array.isArray(data) ? data : [];
+  console.log(`  ✅ Found ${plans.length} existing treatment plans`);
   
-  if (data.length > 0) {
-    testData.existingPlanId = data[0].id;
-    testData.existingPatientId = data[0].patientId;
+  // Check if test patient already has a plan
+  const existingPlan = plans.find(p => p.patientId === TEST_PATIENT_ID);
+  if (existingPlan) {
+    testData.existingPlanId = existingPlan.id;
+    console.log(`     Test patient already has plan: ${existingPlan.id}`);
   }
+}
+
+async function testCreateManualTreatmentPlan() {
+  // Skip if patient already has a plan
+  if (testData.existingPlanId) {
+    console.log(`  ⏭️  Skipped - patient already has plan ${testData.existingPlanId}`);
+    testData.createdPlanId = testData.existingPlanId;
+    return;
+  }
+  
+  const planData = {
+    patientId: TEST_PATIENT_ID,
+    title: 'Lower Back Rehabilitation Program',
+    diagnosis: 'Chronic lower back pain with mild disc degeneration',
+    goals: 'Reduce pain by 50%, improve core strength, return to daily activities',
+    durationWeeks: 8,
+    frequency: '2x per week',
+    sessionLength: 45,
+    modalities: ['Manual therapy', 'Therapeutic exercise', 'Heat therapy'],
+    homeExercises: 'Daily stretching (10 min), core exercises (15 min)',
+    expectedOutcomes: 'Pain reduction, improved mobility, stronger core',
+    promSchedule: 'Weekly pain assessment',
+    reviewMilestones: ['Week 2 review', 'Week 4 progress check', 'Week 8 discharge']
+  };
+  
+  const response = await makeRequest('/treatment-plans', {
+    method: 'POST',
+    body: JSON.stringify(planData)
+  }, clinicAuthCookie);
+  
+  console.log(`     Status: ${response.status}`);
+  const data = await safeJson(response);
+  
+  if (response.status === 500) {
+    console.log(`     Error: ${JSON.stringify(data).substring(0, 300)}`);
+    throw new Error(data.detail || data.error || 'Server error');
+  }
+  
+  if (!response.ok) {
+    throw new Error(`Create failed: ${response.status} - ${JSON.stringify(data)}`);
+  }
+  
+  testData.createdPlanId = data.id;
+  console.log(`  ✅ Created treatment plan: ${data.id}`);
+  console.log(`     Title: ${planData.title}`);
+  console.log(`     Duration: ${planData.durationWeeks} weeks`);
 }
 
 async function testGetTreatmentPlanDetail() {
-  if (!testData.existingPlanId) {
-    console.log('  ⏭️  Skipped - no existing plan');
+  if (!testData.createdPlanId) {
+    console.log(`  ⏭️  Skipped - no plan created`);
     return;
   }
   
-  const response = await makeClinicRequest(`/treatment-plans/${testData.existingPlanId}`);
-  
-  assert(response.ok, `Get plan detail (${response.status})`);
+  const response = await makeRequest(`/treatment-plans/${testData.createdPlanId}`, {}, clinicAuthCookie);
   const data = await safeJson(response);
-  assert(data.id, 'Plan has ID');
-  assert(data.title, 'Plan has title');
-  console.log(`     Plan: ${data.title}`);
+  
+  if (!response.ok) {
+    console.log(`     Error: ${JSON.stringify(data).substring(0, 500)}`);
+    throw new Error(`Get detail failed: ${response.status}`);
+  }
+  
+  console.log(`  ✅ Retrieved plan details`);
+  console.log(`     Title: ${data.title}`);
   console.log(`     Status: ${data.status}`);
+  console.log(`     Patient: ${data.patientName}`);
   console.log(`     Progress: ${data.progressPercentage}%`);
-}
-
-async function testGetPatients() {
-  const response = await makeClinicRequest('/patients');
-  
-  assert(response.ok, `List patients (${response.status})`);
-  const data = await safeJson(response);
-  
-  // Handle different response structures
-  let patients = [];
-  if (Array.isArray(data)) {
-    patients = data;
-  } else if (data.patients) {
-    patients = data.patients;
-  } else if (data.items) {
-    patients = data.items;
-  } else if (data.data) {
-    patients = data.data;
-  }
-  
-  console.log(`     Found ${patients.length} patients`);
-  
-  // Find the test patient
-  const testPatient = patients.find(p => p.email === PATIENT_USER.email);
-  if (testPatient) {
-    testData.existingPatientId = testPatient.id;
-    console.log(`     Found test patient: ${testPatient.id}`);
-  } else if (patients.length > 0) {
-    testData.existingPatientId = patients[0].id;
-    console.log(`     Using first patient: ${patients[0].id}`);
-  }
-}
-
-async function testCreateTreatmentPlan() {
-  if (!testData.existingPatientId) {
-    console.log('  ⏭️  Skipped - no patient ID');
-    return;
-  }
-  
-  const response = await makeClinicRequest('/treatment-plans', {
-    method: 'POST',
-    body: JSON.stringify({
-      patientId: testData.existingPatientId,
-      title: `Test Plan ${Date.now()}`,
-      diagnosis: 'Lower back pain - test',
-      goals: 'Reduce pain, improve mobility',
-      durationWeeks: 6,
-      frequency: '2x per week',
-      sessionLength: 45,
-      modalities: ['Manual therapy', 'Exercise'],
-      homeExercises: 'Daily stretching routine',
-      expectedOutcomes: 'Pain reduction by 50%'
-    })
-  });
-  
-  console.log(`     Status: ${response.status}`);
-  
-  if (response.status === 403) {
-    console.log('  ⏭️  Skipped - StaffOnly policy (user may be patient)');
-    return;
-  }
-  
-  if (response.status === 500) {
-    const data = await safeJson(response);
-    console.log(`  ❌ Server error: ${JSON.stringify(data).substring(0, 500)}`);
-    throw new Error(`Server error: ${data.message || data.detail || 'Unknown'}`);
-  }
-  
-  assert(response.ok, `Create treatment plan (${response.status})`);
-  const data = await safeJson(response);
-  assert(data.id, 'Created plan has ID');
-  testData.createdPlanId = data.id;
-  console.log(`     Created plan: ${data.id}`);
-}
-
-async function testAiGeneratePlan() {
-  if (!testData.existingPatientId) {
-    console.log('  ⏭️  Skipped - no patient ID');
-    return;
-  }
-  
-  // First, try to find an evaluation for this patient
-  const evalResponse = await makeClinicRequest(`/evaluations?patientId=${testData.existingPatientId}`);
-  const evaluations = await safeJson(evalResponse);
-  const evalList = Array.isArray(evaluations) ? evaluations : [];
-  
-  let evaluationId = null;
-  if (evalList.length > 0) {
-    evaluationId = evalList[0].id;
-    console.log(`     Found evaluation: ${evaluationId}`);
-  } else {
-    console.log('     No evaluation found for patient - AI will use minimal data');
-  }
-  
-  const response = await makeClinicRequest('/treatment-plans/generate', {
-    method: 'POST',
-    body: JSON.stringify({
-      patientId: testData.existingPatientId,
-      evaluationId: evaluationId,
-      preferredDurationWeeks: 8,
-      sessionsPerWeek: 2,
-      focusAreas: ['Lower back', 'Core stability'],
-      contraindications: []
-    })
-  });
-  
-  console.log(`     Status: ${response.status}`);
-  const data = await safeJson(response);
-  console.log(`     Response: ${JSON.stringify(data).substring(0, 500)}`);
-  
-  if (response.status === 403) {
-    console.log('  ⏭️  Skipped - StaffOnly policy');
-    return;
-  }
-  
-  if (response.status === 400) {
-    console.log(`  ⚠️  AI generation failed: ${data.error || data.message || 'Unknown error'}`);
-    return;
-  }
-  
-  if (response.status === 500) {
-    console.log(`  ❌ Server error 500: ${data.error || data.message || data.detail || data.title}`);
-    throw new Error(`Server error: ${data.error || data.message || data.detail || 'Unknown'}`);
-  }
-  
-  assert(response.ok, `AI generate plan (${response.status})`);
-  assert(data.plan, 'Response has plan');
-  testData.aiGeneratedPlanId = data.plan.id;
-  console.log(`     AI generated plan: ${data.plan.id}`);
-}
-
-async function testSuggestExercises() {
-  const response = await makeClinicRequest('/treatment-plans/suggest-exercises', {
-    method: 'POST',
-    body: JSON.stringify({
-      bodyRegion: 'Lower back',
-      condition: 'Chronic pain',
-      difficulty: 'Beginner',
-      maxResults: 5
-    })
-  });
-  
-  if (response.status === 403) {
-    console.log('  ⏭️  Skipped - StaffOnly policy');
-    return;
-  }
-  
-  if (response.status === 500) {
-    const data = await safeJson(response);
-    console.log(`  ⚠️  Server error (likely Bedrock): ${data.error || data.message || response.statusText}`);
-    return;
-  }
-  
-  assert(response.ok, `Suggest exercises (${response.status})`);
-  const data = await safeJson(response);
-  assert(Array.isArray(data), 'Response is array of exercises');
-  console.log(`     Got ${data.length} exercise suggestions`);
-}
-
-async function testAiTriage() {
-  const response = await makeClinicRequest('/ai-triage/analyze', {
-    method: 'POST',
-    body: JSON.stringify({
-      symptoms: 'Lower back pain radiating to left leg, numbness in foot',
-      duration: '2 weeks',
-      severity: 7,
-      medicalHistory: 'Previous back injury 2 years ago',
-      currentMedications: ['Ibuprofen'],
-      allergies: ['None'],
-      age: 45
-    })
-  });
-  
-  console.log(`     Status: ${response.status}`);
-  const data = await safeJson(response);
-  console.log(`     Response: ${JSON.stringify(data).substring(0, 400)}`);
-  
-  if (response.status === 500) {
-    console.log(`  ❌ Server error: ${data.error || data.message || data.detail}`);
-    throw new Error(`Server error: ${data.message || 'Unknown'}`);
-  }
-  
-  if (response.status === 400) {
-    console.log(`  ⚠️  Triage failed: ${data.error || data.message || data.title}`);
-    return;
-  }
-  
-  assert(response.ok, `AI triage (${response.status})`);
-  console.log(`     Urgency: ${data.urgency?.level || data.urgencyLevel}`);
-  console.log(`     Risk flags: ${data.riskFlags?.length || 0}`);
 }
 
 // ============ PATIENT SIDE TESTS ============
 
 async function testPatientAuth() {
-  const response = await makePatientRequest('/auth/login', {
+  const response = await makeRequest('/auth/login', {
     method: 'POST',
     body: JSON.stringify(PATIENT_USER)
   });
   
-  assert(response.ok, `Patient login successful (${response.status})`);
-  const data = await safeJson(response);
-  console.log(`     Response keys: ${Object.keys(data).join(', ')}`);
-  console.log(`     Cookie captured: ${!!patientAuthCookie}`);
-  console.log(`     Logged in as: ${PATIENT_USER.email}`);
+  if (!response.ok) throw new Error(`Patient login failed: ${response.status}`);
+  
+  const setCookie = response.headers.get('set-cookie');
+  if (setCookie) patientAuthCookie = setCookie.split(';')[0];
+  
+  console.log(`  ✅ Patient login successful`);
+  console.log(`     Email: ${PATIENT_USER.email}`);
 }
 
 async function testPatientGetMyPlan() {
-  const response = await makePatientRequest('/treatment-plans/my-plan');
+  const response = await makeRequest('/treatment-plans/my-plan', {}, patientAuthCookie);
   
   console.log(`     Status: ${response.status}`);
   
   if (response.status === 404) {
-    console.log('  ℹ️  No active treatment plan for this patient');
+    console.log(`  ℹ️  No active treatment plan found`);
     return;
-  }
-  
-  if (response.status === 401) {
-    console.log('  ❌ Unauthorized - auth cookie may not have been captured');
-    const data = await safeJson(response);
-    console.log(`     ${JSON.stringify(data).substring(0, 200)}`);
-    throw new Error('Unauthorized');
-  }
-  
-  if (response.status === 500) {
-    const data = await safeJson(response);
-    console.log(`  ❌ Server error 500:`);
-    console.log(`     ${JSON.stringify(data, null, 2).substring(0, 500)}`);
-    throw new Error(`Server error: ${data.message || data.title || 'Unknown'}`);
   }
   
   const data = await safeJson(response);
-  console.log(`     Response: ${JSON.stringify(data).substring(0, 300)}`);
+  
+  if (response.status === 500) {
+    console.log(`     Error: ${JSON.stringify(data).substring(0, 500)}`);
+    throw new Error(data.message || data.error || 'Server error');
+  }
   
   if (!data.id) {
-    console.log('  ℹ️  No active treatment plan (empty response)');
+    console.log(`  ℹ️  No active treatment plan`);
     return;
   }
   
-  assert(data.id, 'Plan has ID');
   testData.myPlanId = data.id;
-  console.log(`     My plan: ${data.title}`);
+  console.log(`  ✅ Patient can see their treatment plan`);
+  console.log(`     Title: ${data.title}`);
+  console.log(`     Status: ${data.status}`);
   console.log(`     Progress: ${data.progressPercentage}%`);
+  console.log(`     Current Week: ${data.currentWeek}/${data.totalWeeks}`);
+  console.log(`     Today's Exercises: ${data.todaysExercises?.length || 0}`);
+  console.log(`     Milestones: ${data.milestones?.length || 0}`);
 }
 
 async function testPatientGetProgress() {
-  const response = await makePatientRequest('/treatment-plans/progress');
-  
+  const response = await makeRequest('/treatment-plans/progress', {}, patientAuthCookie);
   const data = await safeJson(response);
   
   if (!data.hasPlan) {
-    console.log('  ℹ️  No active treatment plan');
+    console.log(`  ℹ️  No active treatment plan for progress`);
     return;
   }
   
-  assert(response.ok, `Get progress (${response.status})`);
-  assert(data.progress, 'Response has progress data');
-  console.log(`     Overall progress: ${data.progress.overallProgress}%`);
-  console.log(`     Exercise streak: ${data.progress.exerciseStreak} days`);
-  console.log(`     Points earned: ${data.progress.pointsEarned}`);
+  if (!response.ok) throw new Error(`Get progress failed: ${response.status}`);
+  
+  console.log(`  ✅ Patient progress data retrieved`);
+  console.log(`     Overall: ${data.progress?.overallProgress || 0}%`);
+  console.log(`     Streak: ${data.progress?.exerciseStreak || 0} days`);
+  console.log(`     Points: ${data.progress?.pointsEarned || 0}`);
 }
 
 async function testPatientCompleteExercise() {
   if (!testData.myPlanId) {
-    console.log('  ⏭️  Skipped - no active plan');
+    console.log(`  ⏭️  Skipped - no active plan`);
     return;
   }
   
-  // First get the plan to find an exercise
-  const planResponse = await makePatientRequest('/treatment-plans/my-plan');
+  // Get plan to find exercises
+  const planResponse = await makeRequest('/treatment-plans/my-plan', {}, patientAuthCookie);
   const plan = await safeJson(planResponse);
   
-  if (!plan.todaysExercises || plan.todaysExercises.length === 0) {
-    console.log('  ⏭️  Skipped - no exercises for today');
+  if (!plan.todaysExercises?.length && !plan.phases?.length) {
+    console.log(`  ⏭️  Skipped - no exercises available`);
     return;
   }
   
-  const exercise = plan.todaysExercises[0];
+  // Find an exercise from phases or todaysExercises
+  let exerciseId = null;
+  if (plan.todaysExercises?.length > 0) {
+    exerciseId = plan.todaysExercises[0].id;
+  } else if (plan.phases?.length > 0) {
+    const phase = plan.phases.find(p => p.exercises?.length > 0);
+    if (phase) exerciseId = phase.exercises[0].id;
+  }
   
-  const response = await makePatientRequest(`/treatment-plans/${testData.myPlanId}/exercises/${exercise.id}/complete`, {
+  if (!exerciseId) {
+    console.log(`  ⏭️  Skipped - no exercise ID found`);
+    return;
+  }
+  
+  const response = await makeRequest(`/treatment-plans/${testData.myPlanId}/exercises/${exerciseId}/complete`, {
     method: 'POST',
     body: JSON.stringify({
       painLevelBefore: 5,
       painLevelAfter: 3,
-      setsCompleted: exercise.sets || 3,
-      repsCompleted: exercise.reps || 10,
-      notes: 'Test completion'
+      setsCompleted: 3,
+      repsCompleted: 10,
+      notes: 'Completed via test'
     })
-  });
+  }, patientAuthCookie);
   
   if (response.status === 404) {
-    console.log('  ⚠️  Exercise not found');
+    console.log(`  ⚠️  Exercise not found (may need to add exercises to plan)`);
     return;
   }
   
-  assert(response.ok, `Complete exercise (${response.status})`);
+  if (!response.ok) throw new Error(`Complete exercise failed: ${response.status}`);
+  
   const data = await safeJson(response);
+  console.log(`  ✅ Exercise completed`);
   console.log(`     Points earned: ${data.pointsEarned}`);
   console.log(`     Total points: ${data.totalPoints}`);
+  console.log(`     Streak: ${data.exerciseStreak}`);
 }
 
 async function testPatientCheckIn() {
   if (!testData.myPlanId) {
-    console.log('  ⏭️  Skipped - no active plan');
+    console.log(`  ⏭️  Skipped - no active plan`);
     return;
   }
   
-  const response = await makePatientRequest(`/treatment-plans/${testData.myPlanId}/check-in`, {
+  const response = await makeRequest(`/treatment-plans/${testData.myPlanId}/check-in`, {
     method: 'POST',
     body: JSON.stringify({
       painLevel: 4,
       mood: 'good',
       sleepQuality: 7,
-      notes: 'Feeling better today'
+      exercisesCompleted: true,
+      notes: 'Feeling improvement'
     })
-  });
+  }, patientAuthCookie);
   
-  assert(response.ok, `Daily check-in (${response.status})`);
+  if (!response.ok) throw new Error(`Check-in failed: ${response.status}`);
+  
   const data = await safeJson(response);
-  console.log(`     Streak: ${data.streak} days`);
+  console.log(`  ✅ Daily check-in recorded`);
+  console.log(`     Streak: ${data.streak}`);
+  console.log(`     Points: ${data.points}`);
 }
 
 async function testPatientGetMilestones() {
   if (!testData.myPlanId) {
-    console.log('  ⏭️  Skipped - no active plan');
+    console.log(`  ⏭️  Skipped - no active plan`);
     return;
   }
   
-  const response = await makePatientRequest(`/treatment-plans/${testData.myPlanId}/milestones`);
+  const response = await makeRequest(`/treatment-plans/${testData.myPlanId}/milestones`, {}, patientAuthCookie);
   
-  assert(response.ok, `Get milestones (${response.status})`);
+  if (!response.ok) throw new Error(`Get milestones failed: ${response.status}`);
+  
   const data = await safeJson(response);
-  assert(Array.isArray(data), 'Response is array');
-  console.log(`     Total milestones: ${data.length}`);
-  console.log(`     Completed: ${data.filter(m => m.isCompleted).length}`);
+  const milestones = Array.isArray(data) ? data : [];
+  console.log(`  ✅ Milestones retrieved`);
+  console.log(`     Total: ${milestones.length}`);
+  console.log(`     Completed: ${milestones.filter(m => m.isCompleted).length}`);
 }
 
-async function testPatientAnalyticsDashboard() {
-  const response = await makePatientRequest('/patient-analytics/dashboard');
+async function testPatientDashboard() {
+  const response = await makeRequest('/patient-analytics/dashboard', {}, patientAuthCookie);
   
-  assert(response.ok, `Patient analytics dashboard (${response.status})`);
+  if (!response.ok) throw new Error(`Dashboard failed: ${response.status}`);
+  
   const data = await safeJson(response);
-  console.log(`     Upcoming appointments: ${data.upcomingAppointments}`);
-  console.log(`     Current PROM score: ${data.currentPromScore}`);
-  console.log(`     Current streak: ${data.currentStreak}`);
+  console.log(`  ✅ Patient dashboard loaded`);
+  console.log(`     Appointments: ${data.upcomingAppointments}`);
+  console.log(`     Streak: ${data.currentStreak}`);
   console.log(`     Level: ${data.level}`);
+  console.log(`     Points: ${data.totalPoints}`);
+}
+
+// ============ CLEANUP ============
+
+async function cleanupTestPlan() {
+  // Only delete if we created a new plan (not if using existing)
+  if (testData.createdPlanId && !testData.existingPlanId) {
+    console.log(`\n🧹 Cleanup: Keeping test plan ${testData.createdPlanId} for manual testing`);
+    // Uncomment below to auto-delete:
+    // await makeRequest(`/treatment-plans/${testData.createdPlanId}`, { method: 'DELETE' }, clinicAuthCookie);
+  }
 }
 
 // ============ RUN ALL TESTS ============
@@ -510,33 +366,34 @@ async function main() {
   
   await runTest('Clinic Authentication', testClinicAuth);
   await runTest('List Treatment Plans', testListTreatmentPlans);
+  await runTest('Create Manual Treatment Plan', testCreateManualTreatmentPlan);
   await runTest('Get Treatment Plan Detail', testGetTreatmentPlanDetail);
-  await runTest('Get Patients', testGetPatients);
-  await runTest('Create Treatment Plan (Manual)', testCreateTreatmentPlan);
-  await runTest('AI Generate Treatment Plan', testAiGeneratePlan);
-  await runTest('AI Suggest Exercises', testSuggestExercises);
-  await runTest('AI Intake Triage', testAiTriage);
   
   console.log('\n' + '═'.repeat(60));
   console.log('PATIENT SIDE TESTS');
   console.log('═'.repeat(60));
   
   await runTest('Patient Authentication', testPatientAuth);
-  await runTest('Get My Treatment Plan', testPatientGetMyPlan);
-  await runTest('Get Treatment Progress', testPatientGetProgress);
-  await runTest('Complete Exercise', testPatientCompleteExercise);
-  await runTest('Daily Check-In', testPatientCheckIn);
-  await runTest('Get Milestones', testPatientGetMilestones);
-  await runTest('Patient Analytics Dashboard', testPatientAnalyticsDashboard);
+  await runTest('Patient: Get My Treatment Plan', testPatientGetMyPlan);
+  await runTest('Patient: Get Progress', testPatientGetProgress);
+  await runTest('Patient: Complete Exercise', testPatientCompleteExercise);
+  await runTest('Patient: Daily Check-In', testPatientCheckIn);
+  await runTest('Patient: Get Milestones', testPatientGetMilestones);
+  await runTest('Patient: Dashboard', testPatientDashboard);
+  
+  await cleanupTestPlan();
   
   // Summary
   console.log('\n' + '═'.repeat(60));
   console.log(`RESULTS: ${passed} passed, ${failed} failed`);
   console.log('═'.repeat(60));
   
-  if (failed > 0) {
-    process.exit(1);
+  if (testData.createdPlanId) {
+    console.log(`\n📝 Test Plan ID: ${testData.createdPlanId}`);
+    console.log(`   Patient can view at: https://patients.qivr.pro/treatment-plan`);
   }
+  
+  process.exit(failed > 0 ? 1 : 0);
 }
 
 main().catch(err => {

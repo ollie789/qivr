@@ -972,14 +972,43 @@ public class QivrDbContext : DbContext
             entity.HasIndex(e => e.SourceEvaluationId);
             entity.Property(e => e.Status).HasConversion<string>();
 
-            // Legacy JSONB columns
-            entity.Property(e => e.Sessions).HasColumnType("jsonb");
-            entity.Property(e => e.Exercises).HasColumnType("jsonb");
+            // Legacy JSONB columns with explicit converters
+            entity.Property(e => e.Sessions)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<List<TreatmentSession>>(v, (JsonSerializerOptions?)null) ?? new List<TreatmentSession>());
+            
+            entity.Property(e => e.Exercises)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<List<Exercise>>(v, (JsonSerializerOptions?)null) ?? new List<Exercise>());
 
             // New JSONB columns for phase-based treatment
-            entity.Property(e => e.Phases).HasColumnType("jsonb");
-            entity.Property(e => e.Milestones).HasColumnType("jsonb");
-            entity.Property(e => e.PromConfig).HasColumnType("jsonb");
+            entity.Property(e => e.Phases)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<List<TreatmentPhase>>(v, (JsonSerializerOptions?)null) ?? new List<TreatmentPhase>());
+            
+            entity.Property(e => e.Milestones)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<List<TreatmentMilestone>>(v, (JsonSerializerOptions?)null) ?? new List<TreatmentMilestone>());
+            
+            entity.Property(e => e.PromConfig)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<TreatmentPlanPromConfig>(v, (JsonSerializerOptions?)null));
+            
+            entity.Property(e => e.CheckIns)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<List<DailyCheckIn>>(v, (JsonSerializerOptions?)null) ?? new List<DailyCheckIn>());
 
             entity.HasQueryFilter(e => e.DeletedAt == null && e.TenantId == GetTenantId());
         });
