@@ -1,56 +1,32 @@
-import {
-  Box,
-  Card,
-  Typography,
-  Grid,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Skeleton,
-} from "@mui/material";
-import { TrendingUp, CreditCard, Receipt, Warning } from "@mui/icons-material";
+import { Box, Card, Typography, Grid } from "@mui/material";
+import { TrendingUp, CreditCard, Receipt } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { adminApi } from "../services/api";
 
 export default function Billing() {
-  const { data: overview, isLoading } = useQuery({
-    queryKey: ["billing-overview"],
-    queryFn: adminApi.getBillingOverview,
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: adminApi.getDashboardStats,
   });
 
-  const { data: invoices } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: adminApi.getInvoices,
-  });
-
-  const stats = [
+  const cards = [
     {
       label: "MRR",
-      value: overview?.mrrFormatted ?? "$0",
+      value: stats?.mrrFormatted ?? "$0",
       icon: <TrendingUp />,
       color: "#22c55e",
     },
     {
-      label: "Active Subscriptions",
-      value: overview?.activeSubscriptions ?? 0,
+      label: "Total Tenants",
+      value: stats?.totalTenants ?? "0",
       icon: <CreditCard />,
       color: "#6366f1",
     },
     {
-      label: "Trial Tenants",
-      value: overview?.trialTenants ?? 0,
+      label: "Active Tenants",
+      value: stats?.activeTenants ?? "0",
       icon: <Receipt />,
       color: "#f59e0b",
-    },
-    {
-      label: "Suspended",
-      value: overview?.suspendedTenants ?? 0,
-      icon: <Warning />,
-      color: "#ef4444",
     },
   ];
 
@@ -60,12 +36,12 @@ export default function Billing() {
         Billing
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 4 }}>
-        Revenue and payment management
+        Revenue overview from Data Lake
       </Typography>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {stats.map((stat) => (
-          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.label}>
+        {cards.map((stat) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={stat.label}>
             <Card sx={{ p: 3, display: "flex", alignItems: "center", gap: 2 }}>
               <Box
                 sx={{
@@ -81,59 +57,23 @@ export default function Billing() {
                 <Typography color="text.secondary" variant="body2">
                   {stat.label}
                 </Typography>
-                {isLoading ? (
-                  <Skeleton width={60} />
-                ) : (
-                  <Typography variant="h5" fontWeight={700}>
-                    {stat.value}
-                  </Typography>
-                )}
+                <Typography variant="h5" fontWeight={700}>
+                  {stat.value}
+                </Typography>
               </Box>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      <Card>
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
-          <Typography variant="h6" fontWeight={600}>
-            Recent Invoices
-          </Typography>
-        </Box>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Tenant</TableCell>
-                <TableCell>Amount</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Date</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {invoices?.map((inv: any) => (
-                <TableRow key={inv.id}>
-                  <TableCell>{inv.tenantName}</TableCell>
-                  <TableCell>${inv.amount}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={inv.status}
-                      size="small"
-                      color={
-                        inv.status === "paid"
-                          ? "success"
-                          : inv.status === "pending"
-                            ? "warning"
-                            : "error"
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>{inv.date}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      <Card sx={{ p: 3 }}>
+        <Typography variant="h6" fontWeight={600} gutterBottom>
+          Stripe Integration
+        </Typography>
+        <Typography color="text.secondary">
+          Stripe billing integration coming soon. Currently showing calculated
+          MRR based on tenant plans.
+        </Typography>
       </Card>
     </Box>
   );

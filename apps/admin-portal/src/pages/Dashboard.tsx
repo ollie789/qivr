@@ -9,37 +9,28 @@ export default function Dashboard() {
     queryFn: adminApi.getDashboardStats,
   });
 
-  const { data: activity } = useQuery({
-    queryKey: ["dashboard-activity"],
-    queryFn: adminApi.getRecentActivity,
-  });
-
   const statCards = [
     {
       label: "Total Tenants",
-      value: stats?.totalTenants ?? 0,
-      change: `+${stats?.newTenantsThisMonth ?? 0} this month`,
+      value: stats?.totalTenants ?? "0",
       icon: <Business />,
       color: "#6366f1",
     },
     {
-      label: "Active Patients",
-      value: stats?.totalPatients?.toLocaleString() ?? "0",
-      change: `${stats?.patientGrowthPercent ?? 0}%`,
+      label: "Active Tenants",
+      value: stats?.activeTenants ?? "0",
       icon: <People />,
       color: "#22c55e",
     },
     {
       label: "MRR",
       value: stats?.mrrFormatted ?? "$0",
-      change: "",
       icon: <AttachMoney />,
       color: "#ec4899",
     },
     {
-      label: "Appointments (30d)",
-      value: stats?.appointmentsThisMonth?.toLocaleString() ?? "0",
-      change: "",
+      label: "Total Patients",
+      value: stats?.totalPatients ?? "0",
       icon: <TrendingUp />,
       color: "#f59e0b",
     },
@@ -51,7 +42,7 @@ export default function Dashboard() {
         Dashboard
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 4 }}>
-        Platform overview and key metrics
+        Platform overview from Data Lake
       </Typography>
 
       <Grid container spacing={3}>
@@ -75,11 +66,6 @@ export default function Dashboard() {
                     <Typography variant="h4" fontWeight={700} sx={{ my: 1 }}>
                       {stat.value}
                     </Typography>
-                    {stat.change && (
-                      <Typography variant="body2" color="success.main">
-                        {stat.change}
-                      </Typography>
-                    )}
                   </Box>
                   <Box
                     sx={{
@@ -101,7 +87,7 @@ export default function Dashboard() {
 
       <Grid container spacing={3} sx={{ mt: 1 }}>
         <Grid size={{ xs: 12, md: 8 }}>
-          <Card sx={{ p: 3, height: 400 }}>
+          <Card sx={{ p: 3, height: 300 }}>
             <Typography variant="h6" fontWeight={600} gutterBottom>
               Revenue Trend
             </Typography>
@@ -114,31 +100,25 @@ export default function Dashboard() {
                 color: "text.secondary",
               }}
             >
-              Chart placeholder - integrate Recharts
+              Coming soon - Athena analytics
             </Box>
           </Card>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card sx={{ p: 3, height: 400 }}>
+          <Card sx={{ p: 3, height: 300 }}>
             <Typography variant="h6" fontWeight={600} gutterBottom>
-              Recent Activity
+              Data Source
             </Typography>
             <Box sx={{ color: "text.secondary", mt: 2 }}>
-              {activity?.slice(0, 5).map((item: any, i: number) => (
-                <Typography
-                  key={i}
-                  variant="body2"
-                  sx={{ py: 1, borderBottom: 1, borderColor: "divider" }}
-                >
-                  {item.type === "tenant_created" ? "🏥" : "📅"} {item.message}
-                </Typography>
-              )) || (
-                <>
-                  <Skeleton />
-                  <Skeleton />
-                  <Skeleton />
-                </>
-              )}
+              <Typography variant="body2" sx={{ py: 1 }}>
+                📊 Data Lake (S3 + Athena)
+              </Typography>
+              <Typography variant="body2" sx={{ py: 1 }}>
+                🔄 Updated nightly at midnight AEST
+              </Typography>
+              <Typography variant="body2" sx={{ py: 1 }}>
+                🔒 No direct production DB access
+              </Typography>
             </Box>
           </Card>
         </Grid>
