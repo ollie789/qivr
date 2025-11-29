@@ -37,6 +37,7 @@ const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ClinicRegistration = lazy(() => import("./pages/ClinicRegistration"));
 const Inbox = lazy(() => import("./pages/Inbox"));
+const ActionCenter = lazy(() => import("./pages/ActionCenter"));
 const DocumentUpload = lazy(() => import("./pages/DocumentUpload"));
 const MedicalRecords = lazy(() => import("./pages/MedicalRecords"));
 const Referrals = lazy(() => import("./pages/Referrals"));
@@ -119,7 +120,8 @@ function InnerApp() {
                     element={<Navigate to="/medical-records" replace />}
                   />
                   <Route path="patients/:id" element={<PatientDetail />} />
-                  <Route path="inbox" element={<Inbox />} />
+                  <Route path="inbox" element={<ActionCenter />} />
+                  <Route path="inbox-old" element={<Inbox />} />
                   <Route
                     path="messages"
                     element={<Navigate to="/inbox" replace />}

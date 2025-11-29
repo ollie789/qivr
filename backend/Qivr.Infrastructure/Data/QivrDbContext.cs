@@ -57,6 +57,8 @@ public class QivrDbContext : DbContext
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
+    public DbSet<InboxItem> InboxItems => Set<InboxItem>();
+    public DbSet<OcrJob> OcrJobs => Set<OcrJob>();
     public DbSet<PromResponse> PromResponses => Set<PromResponse>();
     public DbSet<PromInstance> PromInstances => Set<PromInstance>();
     public DbSet<PromTemplate> PromTemplates => Set<PromTemplate>();
@@ -521,12 +523,84 @@ public class QivrDbContext : DbContext
             entity.ToTable("conversation_participants");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.ConversationId, e.UserId }).IsUnique();
-            
+
             entity.HasOne(e => e.Conversation)
                 .WithMany(c => c.Participants)
                 .HasForeignKey(e => e.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
-                
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // InboxItem configuration
+        modelBuilder.Entity<InboxItem>(entity =>
+        {
+            entity.ToTable("inbox_items");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.Status });
+            entity.HasIndex(e => new { e.UserId, e.ReceivedAt });
+
+            entity.Property(e => e.ItemType).HasConversion<string>();
+            entity.Property(e => e.Priority).HasConversion<string>();
+            entity.Property(e => e.Status).HasConversion<string>();
+
+            entity.Property(e => e.Labels)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>());
+
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>())
+                .Metadata.SetValueComparer(jsonComparer);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Message)
+                .WithMany()
+                .HasForeignKey(e => e.MessageId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Document)
+                .WithMany()
+                .HasForeignKey(e => e.DocumentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.FromUser)
+                .WithMany()
+                .HasForeignKey(e => e.FromUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // OcrJob configuration
+        modelBuilder.Entity<OcrJob>(entity =>
+        {
+            entity.ToTable("ocr_jobs");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.Status, e.NextAttemptAt });
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+            entity.HasIndex(e => e.DocumentId);
+
+            entity.Property(e => e.Status).HasConversion<string>();
+
+            entity.HasOne(e => e.Document)
+                .WithMany()
+                .HasForeignKey(e => e.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 

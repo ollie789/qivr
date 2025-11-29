@@ -54,6 +54,15 @@ public static class ServiceCollectionExtensions
         // Register Treatment Plan scheduling service
         services.AddScoped<ITreatmentPlanSchedulingService, TreatmentPlanSchedulingService>();
 
+        // Inbox service for unified messaging/documents view
+        services.AddScoped<IInboxService, InboxService>();
+
+        // Conversation service for threaded messaging
+        services.AddScoped<IConversationService, ConversationService>();
+
+        // Resilient OCR processing service
+        services.AddScoped<IResilientOcrService, ResilientOcrService>();
+
         // Add HttpClient for external APIs
         services.AddHttpClient("MessageMedia", client =>
         {

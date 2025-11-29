@@ -232,6 +232,7 @@ builder.Services.AddScoped<IMessagingService, MessagingService>();
 builder.Services.AddScoped<IPromSchedulingService, PromSchedulingService>();
 builder.Services.AddScoped<ISmartNotificationService, SmartNotificationService>();
 builder.Services.AddHostedService<PromSchedulingBackgroundService>();
+builder.Services.AddHostedService<Qivr.Api.Workers.OcrProcessingWorker>();
 
 // AI Services
 builder.Services.AddAWSService<Amazon.BedrockRuntime.IAmazonBedrockRuntime>();

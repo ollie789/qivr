@@ -94,7 +94,9 @@ export default function TreatmentPlan() {
       await queryClient.cancelQueries({ queryKey: ["my-treatment-plan"] });
 
       // Snapshot previous value
-      const previousPlan = queryClient.getQueryData<MyTreatmentPlan>(["my-treatment-plan"]);
+      const previousPlan = queryClient.getQueryData<MyTreatmentPlan>([
+        "my-treatment-plan",
+      ]);
 
       // Optimistically update the task as completed
       if (previousPlan) {
@@ -102,8 +104,12 @@ export default function TreatmentPlan() {
           ...previousPlan,
           todaysTasks: previousPlan.todaysTasks.map((task) =>
             task.exerciseId === exerciseId
-              ? { ...task, isCompleted: true, completedAt: new Date().toISOString() }
-              : task
+              ? {
+                  ...task,
+                  isCompleted: true,
+                  completedAt: new Date().toISOString(),
+                }
+              : task,
           ),
         });
       }
@@ -131,7 +137,9 @@ export default function TreatmentPlan() {
     onMutate: async (data) => {
       await queryClient.cancelQueries({ queryKey: ["my-treatment-plan"] });
 
-      const previousPlan = queryClient.getQueryData<MyTreatmentPlan>(["my-treatment-plan"]);
+      const previousPlan = queryClient.getQueryData<MyTreatmentPlan>([
+        "my-treatment-plan",
+      ]);
 
       if (previousPlan) {
         queryClient.setQueryData<MyTreatmentPlan>(["my-treatment-plan"], {
@@ -207,20 +215,24 @@ export default function TreatmentPlan() {
         <AuraEmptyState
           title="No Active Treatment Plan"
           description="Your healthcare provider will create a personalized treatment plan for you during your next visit. Once activated, you'll be able to track exercises, milestones, and your progress here."
-          icon={<FitnessCenter sx={{ fontSize: 64, color: "text.secondary" }} />}
+          icon={
+            <FitnessCenter sx={{ fontSize: 64, color: "text.secondary" }} />
+          }
         />
       </Box>
     );
   }
 
-  const completedTodayCount = plan.todaysTasks.filter((t) => t.isCompleted).length;
-  const totalTodayTasks = plan.todaysTasks.length;
+  const completedTodayCount = (plan.todaysTasks || []).filter(
+    (t) => t.isCompleted,
+  ).length;
+  const totalTodayTasks = (plan.todaysTasks || []).length;
   const todayProgress =
     totalTodayTasks > 0 ? (completedTodayCount / totalTodayTasks) * 100 : 0;
 
   const handleExerciseComplete = (
     exerciseId: string,
-    data: { setsCompleted: number; repsCompleted: number }
+    data: { setsCompleted: number; repsCompleted: number },
   ) => {
     completeExerciseMutation.mutate({ exerciseId, data });
   };
@@ -235,7 +247,7 @@ export default function TreatmentPlan() {
   };
 
   // Map today's tasks to Exercise format
-  const exercises: Exercise[] = plan.todaysTasks.map((task) => ({
+  const exercises: Exercise[] = (plan.todaysTasks || []).map((task) => ({
     id: task.exerciseId,
     name: task.name,
     sets: task.sets,
@@ -248,8 +260,12 @@ export default function TreatmentPlan() {
     difficulty: task.difficulty,
   }));
 
-  const unlockedMilestones = plan.milestones.filter((m) => m.isAchieved);
-  const upcomingMilestones = plan.milestones.filter((m) => !m.isAchieved);
+  const unlockedMilestones = (plan.milestones || []).filter(
+    (m) => m.isAchieved,
+  );
+  const upcomingMilestones = (plan.milestones || []).filter(
+    (m) => !m.isAchieved,
+  );
 
   return (
     <Box sx={{ p: 3 }}>
@@ -379,7 +395,7 @@ export default function TreatmentPlan() {
           <Tab
             icon={<EmojiEvents />}
             iconPosition="start"
-            label={`Milestones (${unlockedMilestones.length}/${plan.milestones.length})`}
+            label={`Milestones (${unlockedMilestones.length}/${(plan.milestones || []).length})`}
           />
         </Tabs>
       </Box>
@@ -399,7 +415,7 @@ export default function TreatmentPlan() {
               {exercises.length > 0 ? (
                 exercises.map((exercise) => {
                   const task = plan.todaysTasks.find(
-                    (t) => t.exerciseId === exercise.id
+                    (t) => t.exerciseId === exercise.id,
                   );
                   return (
                     <ExerciseCard
@@ -521,7 +537,10 @@ export default function TreatmentPlan() {
                           sx={{ display: "block", mt: 1 }}
                         >
                           Achieved on{" "}
-                          {format(parseISO(milestone.achievedDate), "MMM d, yyyy")}
+                          {format(
+                            parseISO(milestone.achievedDate),
+                            "MMM d, yyyy",
+                          )}
                         </Typography>
                       )}
                     </Box>
@@ -555,7 +574,11 @@ export default function TreatmentPlan() {
                 {upcomingMilestones.map((milestone) => (
                   <AuraCard
                     key={milestone.id}
-                    sx={{ opacity: 0.8, border: "1px dashed", borderColor: "divider" }}
+                    sx={{
+                      opacity: 0.8,
+                      border: "1px dashed",
+                      borderColor: "divider",
+                    }}
                   >
                     <Box sx={{ p: 2.5 }}>
                       <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -591,7 +614,11 @@ export default function TreatmentPlan() {
                           color="text.secondary"
                           sx={{ display: "block", mt: 1 }}
                         >
-                          Target: {format(parseISO(milestone.targetDate), "MMM d, yyyy")}
+                          Target:{" "}
+                          {format(
+                            parseISO(milestone.targetDate),
+                            "MMM d, yyyy",
+                          )}
                         </Typography>
                       )}
                     </Box>
@@ -601,11 +628,13 @@ export default function TreatmentPlan() {
             </Box>
           )}
 
-          {plan.milestones.length === 0 && (
+          {(plan.milestones || []).length === 0 && (
             <AuraEmptyState
               title="No Milestones Yet"
               description="Milestones will appear here as your treatment plan progresses."
-              icon={<EmojiEvents sx={{ fontSize: 48, color: "text.secondary" }} />}
+              icon={
+                <EmojiEvents sx={{ fontSize: 48, color: "text.secondary" }} />
+              }
             />
           )}
         </Stack>

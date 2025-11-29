@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Qivr.Infrastructure.Data;
@@ -12,9 +13,11 @@ using Qivr.Infrastructure.Data;
 namespace Qivr.Infrastructure.Migrations
 {
     [DbContext(typeof(QivrDbContext))]
-    partial class QivrDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251129114240_AddInboxItem")]
+    partial class AddInboxItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1932,100 +1935,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.ToTable("notification_preferences", (string)null);
                 });
 
-            modelBuilder.Entity("Qivr.Core.Entities.OcrJob", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("attempt_count");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
-
-                    b.Property<decimal?>("ConfidenceScore")
-                        .HasColumnType("numeric")
-                        .HasColumnName("confidence_score");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("DocumentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("document_id");
-
-                    b.Property<string>("LastError")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("last_error");
-
-                    b.Property<int>("MaxAttempts")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_attempts");
-
-                    b.Property<DateTime?>("NextAttemptAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("next_attempt_at");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("integer")
-                        .HasColumnName("priority");
-
-                    b.Property<long?>("ProcessingTimeMs")
-                        .HasColumnType("bigint")
-                        .HasColumnName("processing_time_ms");
-
-                    b.Property<DateTime>("QueuedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("queued_at");
-
-                    b.Property<string>("S3Bucket")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("s3_bucket");
-
-                    b.Property<string>("S3Key")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("s3_key");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("started_at");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("status");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_ocr_jobs");
-
-                    b.HasIndex("DocumentId")
-                        .HasDatabaseName("ix_ocr_jobs_document_id");
-
-                    b.HasIndex("Status", "NextAttemptAt");
-
-                    b.HasIndex("TenantId", "Status");
-
-                    b.ToTable("ocr_jobs", (string)null);
-                });
-
             modelBuilder.Entity("Qivr.Core.Entities.PainAssessment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3786,18 +3695,6 @@ namespace Qivr.Infrastructure.Migrations
                         .HasConstraintName("fk_notification_preferences__users_user_id");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.OcrJob", b =>
-                {
-                    b.HasOne("Qivr.Core.Entities.Document", "Document")
-                        .WithMany()
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_ocr_jobs_documents_document_id");
-
-                    b.Navigation("Document");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PainMap", b =>

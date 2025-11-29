@@ -12,8 +12,8 @@ public interface IDocumentService
     Task<List<Document>> GetDocumentsAsync(Guid tenantId, DocumentFilterDto? filter = null, CancellationToken cancellationToken = default);
     Task<string> GetDownloadUrlAsync(Guid id, Guid tenantId, CancellationToken cancellationToken = default);
     Task DeleteDocumentAsync(Guid id, Guid tenantId, Guid userId, CancellationToken cancellationToken = default);
-    Task<Document> ClassifyDocumentAsync(Guid id, string documentType, Guid userId, CancellationToken cancellationToken = default);
-    Task<Document> AssignDocumentAsync(Guid id, Guid assignedTo, Guid userId, CancellationToken cancellationToken = default);
+    Task<Document?> ClassifyDocumentAsync(Guid id, Guid tenantId, string documentType, Guid userId, CancellationToken cancellationToken = default);
+    Task<Document?> AssignDocumentAsync(Guid id, Guid tenantId, Guid assignedTo, Guid userId, CancellationToken cancellationToken = default);
     Task LogAuditAsync(Guid documentId, Guid userId, string action, string? ipAddress = null, CancellationToken cancellationToken = default);
 }
 
@@ -22,17 +22,20 @@ public class DocumentService : IDocumentService
     private readonly QivrDbContext _context;
     private readonly IS3Service _s3Service;
     private readonly ITextractService _textractService;
+    private readonly IResilientOcrService _resilientOcrService;
     private readonly ILogger<DocumentService> _logger;
 
     public DocumentService(
         QivrDbContext context,
         IS3Service s3Service,
         ITextractService textractService,
+        IResilientOcrService resilientOcrService,
         ILogger<DocumentService> logger)
     {
         _context = context;
         _s3Service = s3Service;
         _textractService = textractService;
+        _resilientOcrService = resilientOcrService;
         _logger = logger;
     }
 
@@ -67,45 +70,18 @@ public class DocumentService : IDocumentService
         // Log audit
         await LogAuditAsync(document.Id, dto.UploadedBy, "uploaded", dto.IpAddress, cancellationToken);
 
-        // Start OCR processing (async, don't wait)
-        _ = Task.Run(async () => await ProcessOcrAsync(document.Id, document.S3Bucket, s3Key), cancellationToken);
+        // Queue for resilient OCR processing (with retry support)
+        var priority = dto.IsUrgent ? 10 : 0; // Higher priority for urgent documents
+        await _resilientOcrService.QueueForOcrAsync(
+            document.Id,
+            dto.TenantId,
+            document.S3Bucket,
+            s3Key,
+            priority,
+            cancellationToken);
 
         _logger.LogInformation("Document uploaded: {DocumentId} for patient {PatientId}", document.Id, dto.PatientId);
         return document;
-    }
-
-    private async Task ProcessOcrAsync(Guid documentId, string s3Bucket, string s3Key)
-    {
-        try
-        {
-            var ocrResult = await _textractService.ExtractTextFromDocumentAsync(s3Bucket, s3Key);
-            
-            var document = await _context.Documents.FindAsync(documentId);
-            if (document != null)
-            {
-                document.ExtractedText = ocrResult.ExtractedText;
-                document.ExtractedPatientName = ocrResult.PatientName;
-                document.ExtractedDob = ocrResult.DateOfBirth;
-                document.ExtractedIdentifiers = ocrResult.Identifiers.ToDictionary(k => k.Key, v => (object)v.Value);
-                document.ConfidenceScore = ocrResult.ConfidenceScore;
-                document.OcrCompletedAt = DateTime.UtcNow;
-                document.Status = "ready";
-                
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("OCR completed for document {DocumentId}", documentId);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "OCR processing failed for document {DocumentId}", documentId);
-            
-            var document = await _context.Documents.FindAsync(documentId);
-            if (document != null)
-            {
-                document.Status = "failed";
-                await _context.SaveChangesAsync();
-            }
-        }
     }
 
     public async Task<Document?> GetDocumentAsync(Guid id, Guid tenantId, CancellationToken cancellationToken = default)
@@ -175,31 +151,35 @@ public class DocumentService : IDocumentService
         _logger.LogInformation("Document soft deleted: {DocumentId}", id);
     }
 
-    public async Task<Document> ClassifyDocumentAsync(Guid id, string documentType, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<Document?> ClassifyDocumentAsync(Guid id, Guid tenantId, string documentType, Guid userId, CancellationToken cancellationToken = default)
     {
-        var document = await _context.Documents.FindAsync(id);
+        var document = await _context.Documents
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DeletedAt == null, cancellationToken);
+
         if (document == null)
-            throw new Exception("Document not found");
+            return null;
 
         document.DocumentType = documentType;
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         await LogAuditAsync(id, userId, "classified", null, cancellationToken);
-        
+
         return document;
     }
 
-    public async Task<Document> AssignDocumentAsync(Guid id, Guid assignedTo, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<Document?> AssignDocumentAsync(Guid id, Guid tenantId, Guid assignedTo, Guid userId, CancellationToken cancellationToken = default)
     {
-        var document = await _context.Documents.FindAsync(id);
+        var document = await _context.Documents
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DeletedAt == null, cancellationToken);
+
         if (document == null)
-            throw new Exception("Document not found");
+            return null;
 
         document.AssignedTo = assignedTo;
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         await LogAuditAsync(id, userId, "assigned", null, cancellationToken);
-        
+
         return document;
     }
 

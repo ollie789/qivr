@@ -156,7 +156,10 @@ public class DocumentsController : BaseApiController
     [ProducesResponseType(typeof(DocumentResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> ClassifyDocument(Guid id, [FromBody] ClassifyRequest request, CancellationToken cancellationToken)
     {
-        var document = await _documentService.ClassifyDocumentAsync(id, request.DocumentType, CurrentUserId, cancellationToken);
+        var tenantId = RequireTenantId();
+        var document = await _documentService.ClassifyDocumentAsync(id, tenantId, request.DocumentType, CurrentUserId, cancellationToken);
+        if (document == null)
+            return NotFound();
         return Ok(new DocumentResponse(document));
     }
 
@@ -167,7 +170,10 @@ public class DocumentsController : BaseApiController
     [ProducesResponseType(typeof(DocumentResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> AssignDocument(Guid id, [FromBody] AssignRequest request, CancellationToken cancellationToken)
     {
-        var document = await _documentService.AssignDocumentAsync(id, request.AssignedTo, CurrentUserId, cancellationToken);
+        var tenantId = RequireTenantId();
+        var document = await _documentService.AssignDocumentAsync(id, tenantId, request.AssignedTo, CurrentUserId, cancellationToken);
+        if (document == null)
+            return NotFound();
         return Ok(new DocumentResponse(document));
     }
 }
