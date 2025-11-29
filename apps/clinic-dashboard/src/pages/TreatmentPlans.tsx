@@ -22,7 +22,7 @@ import {
   AuraEmptyState,
 } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
-import { patientsApi } from "../services/patientsApi";
+import { patientApi } from "../services/patientApi";
 import { useSnackbar } from "notistack";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
 
@@ -61,7 +61,7 @@ export default function TreatmentPlans() {
 
   const { data: patientsData } = useQuery({
     queryKey: ["patients-list"],
-    queryFn: () => patientsApi.list({ pageSize: 100 }),
+    queryFn: () => patientApi.getPatients({ limit: 100 }),
   });
   const patients: Patient[] = patientsData?.data || [];
 
@@ -91,7 +91,7 @@ export default function TreatmentPlans() {
   };
 
   const getStatusColor = (
-    status: string
+    status: string,
   ): "default" | "success" | "info" | "warning" | "error" => {
     const colors: Record<
       string,
@@ -113,7 +113,7 @@ export default function TreatmentPlans() {
       title: formData.title,
       diagnosis: formData.diagnosis || undefined,
       goals: formData.goals || undefined,
-      startDate: new Date(formData.startDate).toISOString(),
+      startDate: new Date(formData.startDate || new Date()).toISOString(),
       durationWeeks: parseInt(formData.durationWeeks),
       notes: formData.notes || undefined,
     });
@@ -303,7 +303,7 @@ export default function TreatmentPlans() {
           />
 
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 label="Start Date"
                 type="date"
@@ -316,7 +316,7 @@ export default function TreatmentPlans() {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 label="Duration (weeks)"
                 type="number"
