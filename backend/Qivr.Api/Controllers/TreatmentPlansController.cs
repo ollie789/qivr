@@ -67,12 +67,14 @@ public class TreatmentPlansController : BaseApiController
     }
 
     [HttpGet("current")]
-    [AllowAnonymous]
     [Authorize]
     public async Task<IActionResult> GetCurrent()
     {
-        var tenantId = RequireTenantId();
+        var tenantId = CurrentTenantId;
         var userId = CurrentUserId;
+
+        if (tenantId == null || tenantId == Guid.Empty)
+            return BadRequest(new { message = "Tenant context required" });
 
         var plan = await _context.TreatmentPlans
             .Include(t => t.Provider)
@@ -84,7 +86,27 @@ public class TreatmentPlansController : BaseApiController
         if (plan == null)
             return NotFound(new { message = "No active treatment plan found" });
 
-        return Ok(plan);
+        return Ok(new TreatmentPlanListDto
+        {
+            Id = plan.Id,
+            Title = plan.Title,
+            Diagnosis = plan.Diagnosis,
+            Goals = plan.Goals,
+            StartDate = plan.StartDate,
+            EndDate = plan.EndDate,
+            DurationWeeks = plan.DurationWeeks,
+            Status = plan.Status,
+            ProgressPercentage = plan.ProgressPercentage,
+            CompletedSessions = plan.CompletedSessions,
+            TotalSessions = plan.TotalSessions,
+            CurrentWeek = plan.CurrentWeek,
+            PatientId = plan.PatientId,
+            PatientName = "Current User",
+            ProviderId = plan.ProviderId,
+            ProviderName = plan.Provider?.FullName ?? "Unknown",
+            CreatedAt = plan.CreatedAt,
+            ReviewDate = plan.ReviewDate
+        });
     }
 
     [HttpGet("{id}")]
@@ -403,11 +425,12 @@ public class TreatmentPlansController : BaseApiController
     /// Complete an exercise within a treatment plan
     /// </summary>
     [HttpPost("{id}/exercises/{exerciseId}/complete")]
-    [AllowAnonymous]
     [Authorize]
     public async Task<IActionResult> CompleteExercise(Guid id, string exerciseId, [FromBody] ExerciseCompletionRequest request)
     {
-        var tenantId = RequireTenantId();
+        var tenantId = CurrentTenantId;
+        if (tenantId == null || tenantId == Guid.Empty)
+            return BadRequest(new { message = "Tenant context required" });
         var userId = CurrentUserId;
 
         var plan = await _context.TreatmentPlans
@@ -465,12 +488,14 @@ public class TreatmentPlansController : BaseApiController
     /// Get patient's active treatment plan with today's tasks
     /// </summary>
     [HttpGet("my-plan")]
-    [AllowAnonymous]
     [Authorize]
     public async Task<IActionResult> GetMyActivePlan()
     {
-        var tenantId = RequireTenantId();
+        var tenantId = CurrentTenantId;
         var userId = CurrentUserId;
+
+        if (tenantId == null || tenantId == Guid.Empty)
+            return BadRequest(new { message = "Tenant context required" });
 
         var plan = await _context.TreatmentPlans
             .Include(t => t.Provider)
@@ -552,11 +577,12 @@ public class TreatmentPlansController : BaseApiController
     /// Get milestones for a treatment plan
     /// </summary>
     [HttpGet("{id}/milestones")]
-    [AllowAnonymous]
     [Authorize]
     public async Task<IActionResult> GetMilestones(Guid id)
     {
-        var tenantId = RequireTenantId();
+        var tenantId = CurrentTenantId;
+        if (tenantId == null || tenantId == Guid.Empty)
+            return BadRequest(new { message = "Tenant context required" });
 
         var plan = await _context.TreatmentPlans
             .Where(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null)
@@ -572,11 +598,12 @@ public class TreatmentPlansController : BaseApiController
     /// Submit a daily check-in for a treatment plan (patient endpoint)
     /// </summary>
     [HttpPost("{id}/check-in")]
-    [AllowAnonymous]
     [Authorize]
     public async Task<IActionResult> SubmitCheckIn(Guid id, [FromBody] DailyCheckInRequest request)
     {
-        var tenantId = RequireTenantId();
+        var tenantId = CurrentTenantId;
+        if (tenantId == null || tenantId == Guid.Empty)
+            return BadRequest(new { message = "Tenant context required" });
         var userId = CurrentUserId;
 
         var plan = await _context.TreatmentPlans
@@ -597,18 +624,24 @@ public class TreatmentPlansController : BaseApiController
     /// Get treatment progress data for the Health Progress page
     /// </summary>
     [HttpGet("progress")]
-    [AllowAnonymous]
     [Authorize]
     public async Task<IActionResult> GetTreatmentProgress()
     {
-        var userId = CurrentUserId;
+        try
+        {
+            var userId = CurrentUserId;
 
-        var progress = await _schedulingService.GetTreatmentProgressAsync(userId);
+            var progress = await _schedulingService.GetTreatmentProgressAsync(userId);
 
-        if (progress == null)
-            return Ok(new { hasPlan = false, message = "No active treatment plan found" });
+            if (progress == null)
+                return Ok(new { hasPlan = false, message = "No active treatment plan found" });
 
-        return Ok(new { hasPlan = true, progress });
+            return Ok(new { hasPlan = true, progress });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { hasPlan = false, message = "Error loading progress", error = ex.Message });
+        }
     }
 
     /// <summary>

@@ -36,17 +36,38 @@ public class EvaluationsController : BaseApiController
         [FromBody] CreateEvaluationRequest request,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Creating evaluation for patient {PatientId}", request.PatientId);
-        
+        // Use the authenticated user's ID if no patient ID provided, or if it doesn't exist
+        var patientId = request.PatientId;
+
+        _logger.LogInformation("Creating evaluation for patient {PatientId}", patientId);
+
         // Get tenant from patient record (patients don't send X-Tenant-Id header)
-        var patient = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.PatientId, cancellationToken);
+        var patient = await _context.Users.FirstOrDefaultAsync(u => u.Id == patientId, cancellationToken);
+
+        // If patient not found by provided ID, try to use the current authenticated user
         if (patient == null)
         {
-            return BadRequest("Patient not found");
+            var currentUserId = CurrentUserId;
+            if (currentUserId != Guid.Empty)
+            {
+                patient = await _context.Users.FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken);
+                if (patient != null)
+                {
+                    patientId = currentUserId;
+                    _logger.LogInformation("Using authenticated user {UserId} instead of provided patient ID", currentUserId);
+                }
+            }
+        }
+
+        if (patient == null)
+        {
+            _logger.LogWarning("Patient not found for evaluation. Provided ID: {PatientId}, Current User: {CurrentUser}",
+                request.PatientId, CurrentUserId);
+            return BadRequest(new { message = "Patient not found. Please ensure you are logged in with a valid account." });
         }
         
         var dto = new CreateEvaluationDto(
-            request.PatientId,
+            patientId,
             request.ChiefComplaint,
             request.Symptoms,
             request.QuestionnaireResponses,

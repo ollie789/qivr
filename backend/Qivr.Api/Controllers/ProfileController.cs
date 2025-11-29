@@ -24,24 +24,30 @@ public class ProfileController : BaseApiController
     [ProducesResponseType(typeof(UserProfileDto), 200)]
     public async Task<IActionResult> GetProfile()
     {
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
-        if (string.IsNullOrEmpty(userId))
+        // First try to get the database user_id (set by AutoCreateUserMiddleware)
+        // Fall back to sub claim if user_id not available
+        var userIdClaim = User.FindFirst("user_id")?.Value
+            ?? User.FindFirst("sub")?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim))
         {
             return Unauthorized();
         }
-        
+
         // Get tenant ID
         var tenantId = RequireTenantId();
-        if (!Guid.TryParse(userId, out var userGuid))
+        if (!Guid.TryParse(userIdClaim, out var userGuid))
         {
-            return BadRequest("Invalid user ID");
+            _logger.LogWarning("Could not parse user ID as GUID: {UserId}", userIdClaim);
+            return BadRequest("Invalid user ID format");
         }
-        
+
         // Fetch actual user profile from database
         var profile = await _profileService.GetUserProfileAsync(tenantId, userGuid);
         if (profile == null)
         {
+            _logger.LogWarning("User profile not found for ID {UserId} in tenant {TenantId}", userGuid, tenantId);
             var fallbackProfile = new UserProfileDto
             {
                 Id = userGuid.ToString(),
