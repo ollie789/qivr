@@ -130,9 +130,9 @@ const DashboardLayout: React.FC = () => {
     },
     { text: "Referrals", icon: <ReferralsIcon />, path: "/referrals" },
     {
-      text: "Messages",
+      text: "Inbox",
       icon: <MessageIcon />,
-      path: "/messages",
+      path: "/inbox",
       badge: unreadCount,
     },
     { text: "PROM", icon: <AssignmentIcon />, path: "/prom" },
