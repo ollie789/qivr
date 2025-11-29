@@ -301,14 +301,17 @@ async function testPatientCheckIn() {
     method: 'POST',
     body: JSON.stringify({
       painLevel: 4,
-      mood: 'good',
-      sleepQuality: 7,
-      exercisesCompleted: true,
+      mood: 7,  // 1-10 scale
+      exercisesCompleted: 0,
       notes: 'Feeling improvement'
     })
   }, patientAuthCookie);
   
-  if (!response.ok) throw new Error(`Check-in failed: ${response.status}`);
+  if (!response.ok) {
+    const data = await safeJson(response);
+    console.log(`     Error: ${JSON.stringify(data).substring(0, 300)}`);
+    throw new Error(`Check-in failed: ${response.status}`);
+  }
   
   const data = await safeJson(response);
   console.log(`  ✅ Daily check-in recorded`);
