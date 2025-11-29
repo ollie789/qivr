@@ -2,13 +2,27 @@ import { Theme, inputBaseClasses, selectClasses } from '@mui/material';
 import { Components } from '@mui/material/styles';
 import IconifyIcon from '../../components/base/IconifyIcon';
 
+// Consistent sizing tokens for Select (aligned with input tokens)
+const selectTokens = {
+  padding: {
+    sm: { y: 8, x: 12 },
+    md: { y: 10, x: 14 },
+    lg: { y: 12, x: 16 },
+  },
+  iconSize: {
+    sm: 16,
+    md: 18,
+    lg: 20,
+  },
+};
+
 const Select: Components<Omit<Theme, 'components'>>['MuiSelect'] = {
   defaultProps: {
     IconComponent: (props) => (
       <IconifyIcon
         icon="material-symbols:keyboard-arrow-down-rounded"
         {...props}
-        sx={(theme) => ({ color: `${theme.vars.palette.text.secondary} !important`, fontSize: 24 })}
+        sx={(theme) => ({ color: `${theme.vars.palette.text.secondary} !important`, fontSize: selectTokens.iconSize.lg })}
       />
     ),
   },
@@ -18,31 +32,31 @@ const Select: Components<Omit<Theme, 'components'>>['MuiSelect'] = {
         borderBottom: `1px solid ${theme.vars.palette.grey[300]}`,
       },
       [`& .${selectClasses.icon}`]: {
-        fontSize: 20,
-        right: 16,
+        fontSize: selectTokens.iconSize.md,
+        right: selectTokens.padding.md.x,
       },
       [`&.${inputBaseClasses.sizeSmall}`]: {
         [`& .${selectClasses.outlined}`]: {
-          paddingTop: 9.5,
-          paddingBottom: 9.5,
+          paddingTop: selectTokens.padding.sm.y,
+          paddingBottom: selectTokens.padding.sm.y,
         },
         [`& .${selectClasses.icon}`]: {
-          fontSize: 16,
-          right: 12,
+          fontSize: selectTokens.iconSize.sm,
+          right: selectTokens.padding.sm.x,
         },
       },
       '&.MuiInputBase-sizeLarge': {
         [`& .${selectClasses.outlined}`]: {
-          paddingTop: 15.5,
-          paddingBottom: 15.5,
+          paddingTop: selectTokens.padding.lg.y,
+          paddingBottom: selectTokens.padding.lg.y,
           height: 'auto',
         },
         [`& .${selectClasses.filled}`]: {
-          paddingTop: 24,
+          paddingTop: selectTokens.padding.lg.y + 8,
         },
         [`& .${selectClasses.icon}`]: {
-          fontSize: 24,
-          right: 20,
+          fontSize: selectTokens.iconSize.lg,
+          right: selectTokens.padding.lg.x,
         },
       },
     }),
@@ -53,22 +67,22 @@ const Select: Components<Omit<Theme, 'components'>>['MuiSelect'] = {
       },
     },
     standard: {
-      paddingTop: 8,
-      paddingBottom: 8,
+      paddingTop: selectTokens.padding.md.y,
+      paddingBottom: selectTokens.padding.md.y,
     },
     filled: {
-      paddingTop: 20,
+      paddingTop: selectTokens.padding.md.y + 8,
       [`&.${inputBaseClasses.sizeSmall} > .${inputBaseClasses.input}`]: {
-        paddingTop: 17,
+        paddingTop: selectTokens.padding.sm.y + 6,
         paddingBottom: 2,
       },
     },
     outlined: {
-      paddingTop: 12.5,
-      paddingBottom: 12.5,
+      paddingTop: selectTokens.padding.md.y,
+      paddingBottom: selectTokens.padding.md.y,
       [`&.${inputBaseClasses.sizeSmall} > .${inputBaseClasses.input}`]: {
-        paddingTop: 12,
-        paddingBottom: 8,
+        paddingTop: selectTokens.padding.sm.y,
+        paddingBottom: selectTokens.padding.sm.y,
       },
     },
   },

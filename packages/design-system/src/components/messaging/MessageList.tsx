@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { Circle, PriorityHigh } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
+import { auraTokens } from '../../theme/auraTokens';
 
 export interface MessageListItem {
   id: string;
@@ -102,7 +103,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {!message.read && (
                         <Circle sx={{ fontSize: 8, color: 'primary.main' }} />
-                      )}
+                      )}{/* Keep at 8px - intentionally tiny indicator dot */}
                       <Typography 
                         variant="body2" 
                         fontWeight={message.read ? 500 : 600}
@@ -111,7 +112,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                         {message.senderName}
                       </Typography>
                       {message.urgent && (
-                        <PriorityHigh sx={{ fontSize: 16, color: 'error.main' }} />
+                        <PriorityHigh sx={{ fontSize: auraTokens.iconSize.xs, color: 'error.main' }} />
                       )}
                     </Box>
                     <Typography variant="caption" color="text.secondary">

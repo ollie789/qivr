@@ -154,7 +154,7 @@ const TimelineCard: React.FC<{ event: TimelineEvent; isLast: boolean }> = ({ eve
             label={event.type.replace('_', ' ')}
             size="small"
             variant="outlined"
-            sx={{ mt: 1.5, fontSize: '0.7rem', textTransform: 'capitalize' }}
+            sx={{ mt: 1.5, fontSize: '0.75rem', textTransform: 'capitalize' }}
           />
         </Box>
       </Box>
@@ -337,8 +337,8 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ timeline }) => {
                   label={event.status}
                   size="small"
                   sx={{
-                    height: 20,
-                    fontSize: '0.65rem',
+                    height: 22,
+                    fontSize: '0.75rem',
                     bgcolor: alpha(getStatusColor(event.status), 0.1),
                     color: getStatusColor(event.status),
                     textTransform: 'capitalize',

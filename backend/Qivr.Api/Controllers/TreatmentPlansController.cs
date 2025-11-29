@@ -23,7 +23,7 @@ public class TreatmentPlansController : BaseApiController
     {
         var tenantId = RequireTenantId();
         var query = _context.TreatmentPlans
-            .Where(t => t.TenantId == tenantId && !t.IsDeleted)
+            .Where(t => t.TenantId == tenantId && t.DeletedAt == null)
             .Include(t => t.Patient)
             .Include(t => t.Provider)
             .AsQueryable();
@@ -45,7 +45,7 @@ public class TreatmentPlansController : BaseApiController
 
         var plan = await _context.TreatmentPlans
             .Include(t => t.Provider)
-            .Where(t => t.TenantId == tenantId && t.PatientId == userId && !t.IsDeleted)
+            .Where(t => t.TenantId == tenantId && t.PatientId == userId && t.DeletedAt == null)
             .Where(t => t.Status == TreatmentPlanStatus.Active)
             .OrderByDescending(t => t.StartDate)
             .FirstOrDefaultAsync();
@@ -63,7 +63,7 @@ public class TreatmentPlansController : BaseApiController
         var plan = await _context.TreatmentPlans
             .Include(t => t.Patient)
             .Include(t => t.Provider)
-            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && !t.IsDeleted);
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null);
 
         if (plan == null)
             return NotFound();
@@ -149,7 +149,7 @@ public class TreatmentPlansController : BaseApiController
     {
         var tenantId = RequireTenantId();
         var plan = await _context.TreatmentPlans
-            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && !t.IsDeleted);
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null);
 
         if (plan == null)
             return NotFound();

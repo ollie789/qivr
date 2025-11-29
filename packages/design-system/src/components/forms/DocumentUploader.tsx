@@ -164,7 +164,7 @@ export function DocumentUploader({
             htmlFor="file-upload"
             style={{ cursor: disabled ? "not-allowed" : "pointer" }}
           >
-            <CloudUpload sx={{ fontSize: 48, color: "primary.main", mb: 2 }} />
+            <CloudUpload sx={{ fontSize: auraTokens.iconSize.xxl, color: "primary.main", mb: 2 }} />
             <Typography variant="h6" gutterBottom>
               Drag and drop file here
             </Typography>

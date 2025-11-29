@@ -1,6 +1,7 @@
 import { Box, Button, Stack, Typography, SxProps } from '@mui/material';
 import { ErrorOutline as ErrorIcon } from '@mui/icons-material';
 import { ReactNode } from 'react';
+import { auraTokens } from '../../theme/auraTokens';
 
 export interface AuraErrorStateProps {
   icon?: ReactNode;
@@ -34,7 +35,7 @@ export const AuraErrorState = ({
     >
       <Box
         sx={{
-          fontSize: 64,
+          '& svg': { fontSize: auraTokens.iconSize.xxl * 1.5 },
           color: 'error.main',
           opacity: 0.8,
           mb: 3,

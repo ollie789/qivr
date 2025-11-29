@@ -156,8 +156,8 @@ const CategoryCard: React.FC<{
                         label={item.severity}
                         size="small"
                         sx={{
-                          height: 18,
-                          fontSize: '0.65rem',
+                          height: 20,
+                          fontSize: '0.75rem',
                           bgcolor: alpha(getSeverityColor(item.severity), 0.1),
                           color: getSeverityColor(item.severity),
                         }}
@@ -335,8 +335,8 @@ export const MedicalHistoryTab: React.FC<MedicalHistoryTabProps> = ({
                           label={item.status}
                           size="small"
                           sx={{
-                            height: 20,
-                            fontSize: '0.7rem',
+                            height: 22,
+                            fontSize: '0.75rem',
                             bgcolor: alpha(getStatusColor(item.status), 0.1),
                             color: getStatusColor(item.status),
                           }}
@@ -346,8 +346,8 @@ export const MedicalHistoryTab: React.FC<MedicalHistoryTabProps> = ({
                             label={item.severity}
                             size="small"
                             sx={{
-                              height: 20,
-                              fontSize: '0.7rem',
+                              height: 22,
+                              fontSize: '0.75rem',
                               bgcolor: alpha(getSeverityColor(item.severity), 0.1),
                               color: getSeverityColor(item.severity),
                             }}
@@ -379,7 +379,7 @@ export const MedicalHistoryTab: React.FC<MedicalHistoryTabProps> = ({
                           label={categoryConfig?.label || item.category}
                           size="small"
                           variant="outlined"
-                          sx={{ mt: 0.5, fontSize: '0.7rem' }}
+                          sx={{ mt: 0.5, fontSize: '0.75rem' }}
                         />
                       </Box>
                       {(onEditEntry || onDeleteEntry) && (

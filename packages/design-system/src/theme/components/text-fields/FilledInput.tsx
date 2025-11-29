@@ -9,6 +9,25 @@ import {
 import { Components } from '@mui/material/styles';
 import { PaletteColorKey } from '../../palette';
 
+// Consistent input sizing tokens (shared with OutlinedInput)
+const inputTokens = {
+  padding: {
+    sm: { y: 8, x: 12 },
+    md: { y: 10, x: 14 },
+    lg: { y: 12, x: 16 },
+  },
+  fontSize: {
+    sm: 13,
+    md: 14,
+    lg: 15,
+  },
+  borderRadius: {
+    sm: 6,
+    md: 8,
+    lg: 10,
+  },
+};
+
 const filledInputColors: PaletteColorKey[] = [
   'primary',
   'secondary',
@@ -41,14 +60,15 @@ export const FilledInput: Components<Omit<Theme, 'components'>>['MuiFilledInput'
     {
       props: { size: 'large' },
       style: {
+        borderRadius: inputTokens.borderRadius.lg,
         [`& .${filledInputClasses.input}`]: {
-          paddingTop: 14,
-          paddingBottom: 14,
-          fontSize: '16px',
-          paddingRight: '20px !important',
+          paddingTop: inputTokens.padding.lg.y,
+          paddingBottom: inputTokens.padding.lg.y,
+          fontSize: inputTokens.fontSize.lg,
+          paddingRight: `${inputTokens.padding.lg.x}px !important`,
         },
         [`&:not(.${inputBaseClasses.adornedStart}) > .${inputBaseClasses.input}`]: {
-          paddingLeft: '20px !important',
+          paddingLeft: `${inputTokens.padding.lg.x}px !important`,
           [`&.${autocompleteClasses.input}`]: {
             paddingLeft: '0px !important',
           },
@@ -59,7 +79,7 @@ export const FilledInput: Components<Omit<Theme, 'components'>>['MuiFilledInput'
   styleOverrides: {
     root: ({ theme }) => [
       {
-        borderRadius: 8,
+        borderRadius: inputTokens.borderRadius.md,
         backgroundColor: theme.vars.palette.background.elevation2,
         '&:hover': {
           backgroundColor: theme.vars.palette.background.elevation3,
@@ -85,26 +105,27 @@ export const FilledInput: Components<Omit<Theme, 'components'>>['MuiFilledInput'
       },
     ],
     input: () => ({
-      paddingTop: 12,
-      paddingBottom: 12,
-      height: '1.5rem',
-      fontSize: '14px',
+      paddingTop: inputTokens.padding.md.y,
+      paddingBottom: inputTokens.padding.md.y,
+      fontSize: inputTokens.fontSize.md,
+      lineHeight: 1.5,
       [`&:not(.${inputBaseClasses.adornedStart} > .${inputBaseClasses.input})`]: {
-        paddingLeft: 16,
-        paddingRight: 16,
+        paddingLeft: inputTokens.padding.md.x,
+        paddingRight: inputTokens.padding.md.x,
       },
       '&:-webkit-autofill': {
         borderRadius: 'inherit',
       },
     }),
     sizeSmall: {
-      borderRadius: 4,
+      borderRadius: inputTokens.borderRadius.sm,
       [`&.${inputBaseClasses.sizeSmall} > .${inputBaseClasses.input}`]: {
-        paddingTop: 8,
-        paddingBottom: 8,
+        paddingTop: inputTokens.padding.sm.y,
+        paddingBottom: inputTokens.padding.sm.y,
+        fontSize: inputTokens.fontSize.sm,
         [`&:not(.${inputBaseClasses.adornedStart} > .${inputBaseClasses.input})`]: {
-          paddingLeft: 12,
-          paddingRight: 12,
+          paddingLeft: inputTokens.padding.sm.x,
+          paddingRight: inputTokens.padding.sm.x,
         },
       },
     },
@@ -114,12 +135,12 @@ export const FilledInput: Components<Omit<Theme, 'components'>>['MuiFilledInput'
       },
     },
     adornedStart: {
-      paddingLeft: 16,
+      paddingLeft: inputTokens.padding.md.x,
       [`&.${inputBaseClasses.sizeSmall}`]: {
-        paddingLeft: 12,
+        paddingLeft: inputTokens.padding.sm.x,
       },
       [`&.MuiInputBase-sizeLarge`]: {
-        paddingLeft: 20,
+        paddingLeft: inputTokens.padding.lg.x,
       },
     },
   },

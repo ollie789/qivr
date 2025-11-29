@@ -1,4 +1,4 @@
-import { glassTokens } from '../../theme/auraTokens';
+import { glassTokens, auraTokens } from '../../theme/auraTokens';
 import React from "react";
 import { Box, Typography, Stack, IconButton, Chip, Paper, alpha, useTheme } from "@mui/material";
 import { Download, Visibility, MoreVert, InsertDriveFile, Image, PictureAsPdf } from "@mui/icons-material";
@@ -70,7 +70,7 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
               flexShrink: 0,
             }}
           >
-            <FileIcon sx={{ fontSize: 24, color: fileColor }} />
+            <FileIcon sx={{ fontSize: auraTokens.iconSize.lg, color: fileColor }} />
           </Box>
 
           <Box flex={1} minWidth={0}>
@@ -98,8 +98,8 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
                 label={category}
                 size="small"
                 sx={{
-                  height: 22,
-                  fontSize: "0.7rem",
+                  height: 24,
+                  fontSize: "0.75rem",
                   bgcolor: alpha(fileColor, 0.1),
                   color: fileColor,
                 }}
@@ -122,7 +122,7 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
             }}
             sx={{ bgcolor: "action.hover", borderRadius: 2 }}
           >
-            <Visibility sx={{ fontSize: 18 }} />
+            <Visibility sx={{ fontSize: auraTokens.iconSize.sm }} />
           </IconButton>
           <IconButton
             size="small"
@@ -132,7 +132,7 @@ export const AuraDocumentCard: React.FC<AuraDocumentCardProps> = ({
             }}
             sx={{ bgcolor: "action.hover", borderRadius: 2 }}
           >
-            <Download sx={{ fontSize: 18 }} />
+            <Download sx={{ fontSize: auraTokens.iconSize.sm }} />
           </IconButton>
         </Stack>
       </Stack>

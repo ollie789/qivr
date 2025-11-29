@@ -3,6 +3,7 @@ import { Box, Typography, alpha, useTheme, Stack } from '@mui/material';
 import { Reply, Schedule } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { AuraButton } from '../buttons/Button';
+import { auraTokens } from '../../theme/auraTokens';
 
 export interface ThreadMessage {
   id: string;
@@ -79,7 +80,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
                     {isOwn ? 'You' : message.senderName}
                   </Typography>
                   <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Schedule sx={{ fontSize: 12, color: 'text.disabled' }} />
+                    <Schedule sx={{ fontSize: auraTokens.iconSize.xxs, color: 'text.disabled' }} />
                     <Typography variant="caption" color="text.disabled">
                       {timeAgo}
                     </Typography>
@@ -104,9 +105,9 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
                   }}
                 >
                   {message.category && message.category !== 'General' && (
-                    <Box 
+                    <Box
                       component="span"
-                      sx={{ 
+                      sx={{
                         display: 'inline-block',
                         mb: 1.5,
                         px: 1,
@@ -114,7 +115,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
                         borderRadius: 1,
                         bgcolor: alpha(categoryColor, 0.1),
                         color: categoryColor,
-                        fontSize: '0.7rem',
+                        fontSize: '0.75rem',
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         letterSpacing: 0.5

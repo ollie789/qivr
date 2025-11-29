@@ -242,10 +242,10 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
                   <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
                     {displayName}
                   </Typography>
-                  <Chip 
-                    label={quality?.label} 
-                    size="small" 
-                    sx={{ bgcolor: quality?.color, color: 'white', fontSize: '0.7rem' }}
+                  <Chip
+                    label={quality?.label}
+                    size="small"
+                    sx={{ bgcolor: quality?.color, color: 'white', fontSize: '0.75rem' }}
                   />
                   <Chip 
                     label={`${region.intensity}/10`} 

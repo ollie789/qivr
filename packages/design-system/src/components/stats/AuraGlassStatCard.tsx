@@ -1,4 +1,4 @@
-import { glassTokens } from "../../theme/auraTokens";
+import { glassTokens, auraTokens } from "../../theme/auraTokens";
 import { resolveThemeColor } from "../../theme/utils";
 import React from "react";
 import { Box, Typography, Stack, alpha, useTheme } from "@mui/material";
@@ -41,8 +41,8 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
         position: "relative",
         overflow: "hidden",
         transition: "all 0.2s ease-in-out",
-        // Fixed minimum height for consistent card sizing
-        minHeight: 140,
+        // Responsive minimum height for consistent card sizing
+        minHeight: { xs: 120, sm: 130 },
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -75,7 +75,7 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
             fontWeight={500}
             sx={{
               letterSpacing: 0.3,
-              fontSize: "0.875rem",
+              fontSize: { xs: "0.8125rem", sm: "0.875rem" },
               lineHeight: 1.4,
             }}
           >
@@ -91,7 +91,7 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
-              "& svg": { fontSize: 22 },
+              "& svg": { fontSize: auraTokens.iconSize.md },
             }}
           >
             {icon}
@@ -100,11 +100,11 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
 
         {/* Value - prominent display */}
         <Typography
-          variant="h3"
+          variant="h4"
           fontWeight={700}
           sx={{
             lineHeight: 1,
-            fontSize: { xs: '2rem', sm: '2.25rem' },
+            fontSize: { xs: '1.25rem', sm: '1.5rem' },
             color: 'text.primary',
           }}
         >
@@ -126,9 +126,9 @@ export const AuraGlassStatCard: React.FC<AuraGlassStatCardProps> = ({
               }}
             >
               {trend.isPositive ? (
-                <TrendingUp sx={{ fontSize: 16, color: "success.main" }} />
+                <TrendingUp sx={{ fontSize: auraTokens.iconSize.xs, color: "success.main" }} />
               ) : (
-                <TrendingDown sx={{ fontSize: 16, color: "error.main" }} />
+                <TrendingDown sx={{ fontSize: auraTokens.iconSize.xs, color: "error.main" }} />
               )}
               <Typography
                 variant="caption"

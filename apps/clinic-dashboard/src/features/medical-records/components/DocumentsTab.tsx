@@ -150,8 +150,8 @@ const DocumentCard: React.FC<{
           label={doc.documentType}
           size="small"
           sx={{
-            height: 22,
-            fontSize: '0.7rem',
+            height: 24,
+            fontSize: '0.75rem',
             bgcolor: alpha(auraColors.blue.main, 0.1),
             color: auraColors.blue.main,
           }}
@@ -160,8 +160,8 @@ const DocumentCard: React.FC<{
           label={doc.status}
           size="small"
           sx={{
-            height: 22,
-            fontSize: '0.7rem',
+            height: 24,
+            fontSize: '0.75rem',
             bgcolor: alpha(getStatusColor(doc.status), 0.1),
             color: getStatusColor(doc.status),
           }}
@@ -171,7 +171,7 @@ const DocumentCard: React.FC<{
             label={`${doc.confidenceScore}% confidence`}
             size="small"
             variant="outlined"
-            sx={{ height: 22, fontSize: '0.7rem' }}
+            sx={{ height: 24, fontSize: '0.75rem' }}
           />
         )}
       </Box>

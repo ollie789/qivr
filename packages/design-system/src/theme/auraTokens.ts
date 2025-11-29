@@ -71,11 +71,13 @@ export const auraTokens = {
 
   // Icon sizes - standardized scale
   iconSize: {
-    xs: 16,   // small inline icons
-    sm: 20,   // button icons, list items
-    md: 24,   // default icon size
-    lg: 32,   // prominent icons, cards
-    xl: 48,   // hero icons, empty states
+    xxs: 12,  // tiny indicators
+    xs: 16,   // small inline icons, input small
+    sm: 18,   // compact icons
+    md: 20,   // default icon size, input medium
+    lg: 24,   // prominent icons, input large
+    xl: 32,   // card icons
+    xxl: 48,  // hero icons, empty states
   },
 
   // Z-index scale
@@ -90,14 +92,27 @@ export const auraTokens = {
 
   // Layout dimensions - standardized widths for consistent layouts
   layout: {
-    drawerWidth: 280,
+    drawerWidth: 260,
     drawerWidthCollapsed: 64,
-    kanbanColumn: 340,
-    dialogSmall: 400,
-    dialogMedium: 600,
-    dialogLarge: 800,
-    menuPopover: 360,
-    notificationPanel: 400,
+    kanbanColumn: 300,
+    dialogSmall: 360,
+    dialogMedium: 520,
+    dialogLarge: 720,
+    menuPopover: 320,
+    notificationPanel: 360,
+  },
+
+  // Responsive layout helpers - use with sx prop
+  // e.g., sx={{ maxWidth: auraTokens.responsive.dialog }}
+  responsive: {
+    // Dialog max-widths that respect screen size
+    dialog: { xs: '95vw', sm: 520, md: 720 },
+    // Drawer widths
+    drawer: { xs: '85vw', sm: 260 },
+    // Card widths for grids
+    card: { xs: '100%', sm: 320, md: 360 },
+    // Panel widths (notifications, menus)
+    panel: { xs: '90vw', sm: 320 },
   },
 
   // Component heights - standardized sizes
@@ -116,6 +131,34 @@ export const auraTokens = {
       sm: 36,
       md: 44,
       lg: 52,
+    },
+  },
+
+  // Input field tokens - consistent sizing across all input types
+  input: {
+    // Padding (vertical, horizontal)
+    padding: {
+      sm: { y: 8, x: 12 },
+      md: { y: 10, x: 14 },
+      lg: { y: 12, x: 16 },
+    },
+    // Font sizes
+    fontSize: {
+      sm: '0.8125rem',   // 13px
+      md: '0.875rem',    // 14px
+      lg: '0.9375rem',   // 15px
+    },
+    // Border radius
+    borderRadius: {
+      sm: 6,
+      md: 8,
+      lg: 10,
+    },
+    // Icon sizes in inputs
+    iconSize: {
+      sm: 16,
+      md: 18,
+      lg: 20,
     },
   },
 

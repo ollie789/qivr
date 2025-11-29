@@ -1,10 +1,29 @@
 import { Theme, inputBaseClasses, outlinedInputClasses } from '@mui/material';
 import { Components } from '@mui/material/styles';
 
+// Consistent input sizing tokens
+const inputTokens = {
+  padding: {
+    sm: { y: 8, x: 12 },
+    md: { y: 10, x: 14 },
+    lg: { y: 12, x: 16 },
+  },
+  fontSize: {
+    sm: 13,
+    md: 14,
+    lg: 15,
+  },
+  borderRadius: {
+    sm: 6,
+    md: 8,
+    lg: 10,
+  },
+};
+
 const OutlinedInput: Components<Omit<Theme, 'components'>>['MuiOutlinedInput'] = {
   styleOverrides: {
     root: ({ theme }) => ({
-      borderRadius: 8,
+      borderRadius: inputTokens.borderRadius.md,
       // Smooth transition for focus states
       transition: 'box-shadow 0.2s ease-in-out',
       [`& .${outlinedInputClasses.notchedOutline}`]: {
@@ -38,47 +57,47 @@ const OutlinedInput: Components<Omit<Theme, 'components'>>['MuiOutlinedInput'] =
         {
           props: { size: 'large' },
           style: {
+            borderRadius: inputTokens.borderRadius.lg,
             [`& .${outlinedInputClasses.input}`]: {
-              padding: '14px 20px',
-              height: '1.5rem',
-              fontSize: '16px',
+              padding: `${inputTokens.padding.lg.y}px ${inputTokens.padding.lg.x}px`,
+              fontSize: inputTokens.fontSize.lg,
             },
             [`& .${outlinedInputClasses.notchedOutline}`]: {
-              padding: '0 14px',
+              padding: '0 12px',
             },
           },
         },
         {
           props: { size: 'small' },
           style: {
-            borderRadius: 4,
+            borderRadius: inputTokens.borderRadius.sm,
           },
         },
       ],
       [`&.${inputBaseClasses.multiline}`]: {
-        paddingLeft: 16,
-        paddingRight: 16,
+        paddingLeft: inputTokens.padding.md.x,
+        paddingRight: inputTokens.padding.md.x,
       },
     }),
     adornedStart: {
-      paddingLeft: 16,
+      paddingLeft: inputTokens.padding.md.x,
       [`&.${inputBaseClasses.sizeSmall}`]: {
-        paddingLeft: 12,
+        paddingLeft: inputTokens.padding.sm.x,
       },
       [`&.MuiInputBase-sizeLarge`]: {
-        paddingLeft: 20,
+        paddingLeft: inputTokens.padding.lg.x,
       },
       [`& .${outlinedInputClasses.input}`]: {
         paddingLeft: 0,
       },
     },
     input: () => ({
-      padding: '12px 16px',
-      height: '1.5rem',
-      fontSize: 14,
+      padding: `${inputTokens.padding.md.y}px ${inputTokens.padding.md.x}px`,
+      fontSize: inputTokens.fontSize.md,
+      lineHeight: 1.5,
     }),
     sizeSmall: {
-      borderRadius: 4,
+      borderRadius: inputTokens.borderRadius.sm,
       [`& .${outlinedInputClasses.notchedOutline}`]: {
         padding: '0 6px',
       },
@@ -90,8 +109,8 @@ const OutlinedInput: Components<Omit<Theme, 'components'>>['MuiOutlinedInput'] =
       paddingRight: 0,
     },
     inputSizeSmall: {
-      padding: '8px 12px',
-      height: '1.5rem',
+      padding: `${inputTokens.padding.sm.y}px ${inputTokens.padding.sm.x}px`,
+      fontSize: inputTokens.fontSize.sm,
     },
     notchedOutline: ({ theme }) => ({
       borderStyle: 'solid',
@@ -99,10 +118,10 @@ const OutlinedInput: Components<Omit<Theme, 'components'>>['MuiOutlinedInput'] =
       borderWidth: '1px !important',
     }),
     multiline: {
-      paddingTop: 12,
-      paddingBottom: 12,
-      paddingLeft: 16,
-      paddingRight: 16,
+      paddingTop: inputTokens.padding.md.y,
+      paddingBottom: inputTokens.padding.md.y,
+      paddingLeft: inputTokens.padding.md.x,
+      paddingRight: inputTokens.padding.md.x,
       [`& .${outlinedInputClasses.input}`]: {
         padding: 0,
       },

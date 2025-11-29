@@ -115,7 +115,7 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                 bgcolor: getSeverityColor(intake.severity),
                 color: "white",
                 fontWeight: auraTokens.fontWeights.bold,
-                fontSize: "0.65rem",
+                fontSize: "0.75rem",
                 height: auraTokens.heights.chip.sm,
                 borderRadius: auraTokens.borderRadius.sm,
               }}
@@ -137,7 +137,7 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                 label={symptom}
                 size="small"
                 sx={{
-                  fontSize: "0.7rem",
+                  fontSize: "0.75rem",
                   height: auraTokens.heights.chip.sm,
                   bgcolor: "action.hover",
                   fontWeight: auraTokens.fontWeights.medium,
@@ -149,7 +149,7 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                 label={`+${intake.symptoms.length - 3}`}
                 size="small"
                 sx={{
-                  fontSize: "0.7rem",
+                  fontSize: "0.75rem",
                   height: auraTokens.heights.chip.sm,
                   bgcolor: "action.selected",
                   fontWeight: auraTokens.fontWeights.semibold,
@@ -188,7 +188,7 @@ const IntakeCard: React.FC<IntakeCardProps & { isDragging?: boolean }> = ({
                 sx={{
                   bgcolor: auraColors.red[50],
                   color: auraColors.red.main,
-                  fontSize: "0.7rem",
+                  fontSize: "0.75rem",
                   height: auraTokens.heights.chip.sm,
                   fontWeight: auraTokens.fontWeights.semibold,
                   borderRadius: auraTokens.borderRadius.sm,

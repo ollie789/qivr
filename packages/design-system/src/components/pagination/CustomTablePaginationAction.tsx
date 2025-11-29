@@ -11,6 +11,7 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import IconifyIcon from '../base/IconifyIcon';
+import { auraTokens } from '../../theme/auraTokens';
 
 export interface CustomTablePaginationActionProps extends TablePaginationOwnProps {
   onNextClick?: () => void;
@@ -77,7 +78,7 @@ const CustomTablePaginationAction = ({
               <IconifyIcon
                 flipOnRTL
                 icon="material-symbols:chevron-left-rounded"
-                sx={{ fontSize: '18px !important' }}
+                sx={{ fontSize: `${auraTokens.iconSize.sm}px !important` }}
               />
             }
             disabled={page === 0}
@@ -104,7 +105,7 @@ const CustomTablePaginationAction = ({
               <IconifyIcon
                 flipOnRTL
                 icon="material-symbols:chevron-right-rounded"
-                sx={{ fontSize: '18px !important' }}
+                sx={{ fontSize: `${auraTokens.iconSize.sm}px !important` }}
               />
             }
             sx={{

@@ -73,7 +73,7 @@ export const FileDropBox = ({
         component="label"
       >
         <input type="file" hidden accept={accept} multiple={multiple} onChange={handleChange} />
-        <CloudUpload sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+        <CloudUpload sx={{ fontSize: auraTokens.iconSize.xl, color: 'text.secondary', mb: 1 }} />
         <Typography variant="body2" color="text.secondary">
           Drop files here or click to upload
         </Typography>
