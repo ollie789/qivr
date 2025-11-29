@@ -10,24 +10,28 @@ namespace Qivr.Api.Controllers;
 
 [ApiController]
 [Route("api/treatment-plans")]
-[Authorize(Policy = "StaffOnly")]
+[Authorize]  // Base auth - specific endpoints add StaffOnly
 public class TreatmentPlansController : BaseApiController
 {
     private readonly QivrDbContext _context;
     private readonly IAiTreatmentPlanService _aiService;
     private readonly ITreatmentPlanSchedulingService _schedulingService;
+    private readonly ILogger<TreatmentPlansController> _logger;
 
     public TreatmentPlansController(
         QivrDbContext context,
         IAiTreatmentPlanService aiService,
-        ITreatmentPlanSchedulingService schedulingService)
+        ITreatmentPlanSchedulingService schedulingService,
+        ILogger<TreatmentPlansController> logger)
     {
         _context = context;
         _aiService = aiService;
         _schedulingService = schedulingService;
+        _logger = logger;
     }
 
     [HttpGet]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> List([FromQuery] Guid? patientId)
     {
         var tenantId = RequireTenantId();
@@ -110,6 +114,7 @@ public class TreatmentPlansController : BaseApiController
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> Get(Guid id)
     {
         var tenantId = RequireTenantId();
@@ -156,6 +161,7 @@ public class TreatmentPlansController : BaseApiController
     }
 
     [HttpPost]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> Create([FromBody] CreateTreatmentPlanRequest request)
     {
         var tenantId = RequireTenantId();
@@ -229,6 +235,7 @@ public class TreatmentPlansController : BaseApiController
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTreatmentPlanRequest request)
     {
         var tenantId = RequireTenantId();
@@ -254,6 +261,7 @@ public class TreatmentPlansController : BaseApiController
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tenantId = RequireTenantId();
@@ -274,6 +282,7 @@ public class TreatmentPlansController : BaseApiController
     /// Generate a treatment plan using AI based on patient data
     /// </summary>
     [HttpPost("generate")]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> GenerateWithAi([FromBody] GenerateTreatmentPlanRequest request)
     {
         var tenantId = RequireTenantId();
@@ -323,6 +332,7 @@ public class TreatmentPlansController : BaseApiController
     /// Approve a draft treatment plan and activate it
     /// </summary>
     [HttpPost("{id}/approve")]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> Approve(Guid id)
     {
         var tenantId = RequireTenantId();
@@ -359,6 +369,7 @@ public class TreatmentPlansController : BaseApiController
     /// Get AI suggestions for exercise additions
     /// </summary>
     [HttpPost("suggest-exercises")]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> SuggestExercises([FromBody] ExerciseSuggestionRequest request)
     {
         var exercises = await _aiService.SuggestExercisesAsync(request);
@@ -488,52 +499,56 @@ public class TreatmentPlansController : BaseApiController
     /// Get patient's active treatment plan with today's tasks
     /// </summary>
     [HttpGet("my-plan")]
-    [Authorize]
     public async Task<IActionResult> GetMyActivePlan()
     {
-        var tenantId = CurrentTenantId;
-        var userId = CurrentUserId;
+        try
+        {
+            var tenantId = CurrentTenantId;
+            var userId = CurrentUserId;
 
-        if (tenantId == null || tenantId == Guid.Empty)
-            return BadRequest(new { message = "Tenant context required" });
+            if (tenantId == null || tenantId == Guid.Empty)
+                return BadRequest(new { message = "Tenant context required" });
 
-        var plan = await _context.TreatmentPlans
-            .Include(t => t.Provider)
-            .Where(t => t.TenantId == tenantId && t.PatientId == userId && t.DeletedAt == null)
-            .Where(t => t.Status == TreatmentPlanStatus.Active)
-            .OrderByDescending(t => t.StartDate)
-            .FirstOrDefaultAsync();
+            if (userId == Guid.Empty)
+                return BadRequest(new { message = "User context required" });
 
-        if (plan == null)
-            return NotFound(new { message = "No active treatment plan found" });
+            var plan = await _context.TreatmentPlans
+                .Include(t => t.Provider)
+                .Where(t => t.TenantId == tenantId && t.PatientId == userId && t.DeletedAt == null)
+                .Where(t => t.Status == TreatmentPlanStatus.Active)
+                .OrderByDescending(t => t.StartDate)
+                .FirstOrDefaultAsync();
 
-        // Calculate current week
-        var daysSinceStart = (DateTime.UtcNow - plan.StartDate).Days;
-        plan.CurrentWeek = Math.Max(1, (daysSinceStart / 7) + 1);
+            if (plan == null)
+                return NotFound(new { message = "No active treatment plan found" });
 
-        // Get current phase
-        var currentPhase = plan.Phases.FirstOrDefault(p => p.Status == PhaseStatus.InProgress)
-            ?? plan.Phases.FirstOrDefault(p => p.Status == PhaseStatus.NotStarted);
+            // Calculate current week
+            var daysSinceStart = (DateTime.UtcNow - plan.StartDate).Days;
+            plan.CurrentWeek = Math.Max(1, (daysSinceStart / 7) + 1);
 
-        // Get today's exercises
-        var todaysExercises = currentPhase?.Exercises
-            .Where(e => e.Frequency == "Daily" ||
-                       (e.Frequency?.Contains("week") == true && ShouldDoExerciseToday(e)))
-            .ToList() ?? new List<Exercise>();
+            // Get current phase - handle null Phases
+            var currentPhase = plan.Phases?.FirstOrDefault(p => p.Status == PhaseStatus.InProgress)
+                ?? plan.Phases?.FirstOrDefault(p => p.Status == PhaseStatus.NotStarted);
 
-        // Get next appointment
-        var nextAppointment = await _context.Appointments
-            .Where(a => a.PatientId == userId && a.TreatmentPlanId == plan.Id)
-            .Where(a => a.ScheduledStart > DateTime.UtcNow)
-            .OrderBy(a => a.ScheduledStart)
-            .FirstOrDefaultAsync();
+            // Get today's exercises - handle null safely
+            var todaysExercises = currentPhase?.Exercises?
+                .Where(e => e.Frequency == "Daily" ||
+                           (e.Frequency?.Contains("week") == true && ShouldDoExerciseToday(e)))
+                .ToList() ?? new List<Exercise>();
 
-        // Get pending PROM
-        var pendingProm = await _context.PromInstances
-            .Include(p => p.Template)
-            .Where(p => p.PatientId == userId && p.Status == PromStatus.Pending)
-            .OrderBy(p => p.DueDate)
-            .FirstOrDefaultAsync();
+            // Get next appointment
+            var nextAppointment = await _context.Appointments
+                .Where(a => a.PatientId == userId && a.TreatmentPlanId == plan.Id)
+                .Where(a => a.ScheduledStart > DateTime.UtcNow)
+                .OrderBy(a => a.ScheduledStart)
+                .FirstOrDefaultAsync();
+
+            // Get pending PROM
+            var pendingProm = await _context.PromInstances
+                .Include(p => p.Template)
+                .Where(p => p.PatientId == userId && p.Status == PromStatus.Pending)
+                .OrderBy(p => p.DueDate)
+                .FirstOrDefaultAsync();
 
         return Ok(new PatientTreatmentPlanView
         {
@@ -566,11 +581,17 @@ public class TreatmentPlansController : BaseApiController
                 TemplateName = pendingProm.Template?.Name ?? "Assessment",
                 DueDate = pendingProm.DueDate
             } : null,
-            Milestones = plan.Milestones,
+            Milestones = plan.Milestones ?? new List<TreatmentMilestone>(),
             CurrentStreak = plan.ExerciseStreak,
             PointsEarned = plan.PointsEarned,
-            Phases = plan.Phases
+            Phases = plan.Phases ?? new List<TreatmentPhase>()
         });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting treatment plan for user");
+            return StatusCode(500, new { message = "Error loading treatment plan", error = ex.Message });
+        }
     }
 
     /// <summary>
