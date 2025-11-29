@@ -130,6 +130,7 @@ public class EvaluationService : IEvaluationService
             evaluation.QuestionnaireResponses,
             evaluation.AiSummary,
             evaluation.AiRiskFlags,
+            evaluation.AiRecommendations,
             evaluation.AiProcessedAt,
             evaluation.ClinicianNotes,
             evaluation.Status.ToString(),

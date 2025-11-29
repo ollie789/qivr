@@ -17,6 +17,7 @@ public class Evaluation : TenantEntity
     public Dictionary<string, object> QuestionnaireResponses { get; set; } = new();
     public string? AiSummary { get; set; }
     public List<string> AiRiskFlags { get; set; } = new();
+    public List<string> AiRecommendations { get; set; } = new();
     public DateTime? AiProcessedAt { get; set; }
     public string? ClinicianNotes { get; set; }
     public Guid? ReviewedBy { get; set; }

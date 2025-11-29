@@ -166,6 +166,7 @@ public record EvaluationDetailDto(
     Dictionary<string, object> QuestionnaireResponses,
     string? AiSummary,
     List<string> AiRiskFlags,
+    List<string> AiRecommendations,
     DateTime? AiProcessedAt,
     string? ClinicianNotes,
     string Status,

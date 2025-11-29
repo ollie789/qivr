@@ -22,7 +22,12 @@ import { useAuth } from "../contexts/AuthContext";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
-import { PainMap3D, auraStepper, AuraButton, auraTokens } from "@qivr/design-system";
+import {
+  PainMap3D,
+  auraStepper,
+  AuraButton,
+  auraTokens,
+} from "@qivr/design-system";
 import { fetchProfile } from "../services/profileApi";
 
 const steps = [
@@ -47,12 +52,12 @@ export const IntakeForm: React.FC = () => {
     // Pain Location (Step 1)
     painMapData: { regions: [], cameraView: "front" } as any,
     chiefComplaint: "",
-    
+
     // Pain Characteristics (Step 2)
     painIntensity: 5,
     painQualities: [] as string[],
     painStart: "",
-    
+
     // Pain Timing & Pattern (Step 3)
     onset: "",
     durationValue: "",
@@ -60,7 +65,7 @@ export const IntakeForm: React.FC = () => {
     pattern: "",
     frequency: "",
     timeOfDay: [] as string[],
-    
+
     // Aggravating & Relieving Factors (Step 4)
     aggravators: {
       sitting: false,
@@ -86,7 +91,7 @@ export const IntakeForm: React.FC = () => {
       position: false,
       other: "",
     },
-    
+
     // Medical History (Step 5)
     previousTreatments: "",
     currentMedications: "",
@@ -167,12 +172,17 @@ export const IntakeForm: React.FC = () => {
       if (formData.aggravators.bending) aggravatingFactors.push("Bending");
       if (formData.aggravators.lifting) aggravatingFactors.push("Lifting");
       if (formData.aggravators.twisting) aggravatingFactors.push("Twisting");
-      if (formData.aggravators.coughing) aggravatingFactors.push("Coughing/Sneezing");
-      if (formData.aggravators.morningWorse) aggravatingFactors.push("Mornings");
-      if (formData.aggravators.eveningWorse) aggravatingFactors.push("Evenings");
-      if (formData.aggravators.weather) aggravatingFactors.push("Weather changes");
+      if (formData.aggravators.coughing)
+        aggravatingFactors.push("Coughing/Sneezing");
+      if (formData.aggravators.morningWorse)
+        aggravatingFactors.push("Mornings");
+      if (formData.aggravators.eveningWorse)
+        aggravatingFactors.push("Evenings");
+      if (formData.aggravators.weather)
+        aggravatingFactors.push("Weather changes");
       if (formData.aggravators.stress) aggravatingFactors.push("Stress");
-      if (formData.aggravators.other) aggravatingFactors.push(formData.aggravators.other);
+      if (formData.aggravators.other)
+        aggravatingFactors.push(formData.aggravators.other);
 
       // Build relieving factors list
       const relievingFactors = [];
@@ -182,8 +192,10 @@ export const IntakeForm: React.FC = () => {
       if (formData.relievers.medication) relievingFactors.push("Medication");
       if (formData.relievers.stretching) relievingFactors.push("Stretching");
       if (formData.relievers.massage) relievingFactors.push("Massage");
-      if (formData.relievers.position) relievingFactors.push("Position changes");
-      if (formData.relievers.other) relievingFactors.push(formData.relievers.other);
+      if (formData.relievers.position)
+        relievingFactors.push("Position changes");
+      if (formData.relievers.other)
+        relievingFactors.push(formData.relievers.other);
 
       await apiClient.post("/api/evaluations", {
         patientId: userId,
@@ -210,26 +222,24 @@ export const IntakeForm: React.FC = () => {
           treatmentGoals: formData.treatmentGoals,
           notes: formData.additionalNotes,
         },
-        painMaps: formData.painMapData?.regions
-          ? [
-              {
-                bodyRegion:
-                  formData.painMapData.regions[0]?.anatomicalName ||
-                  "Multiple regions",
-                coordinates: { x: 0, y: 0, z: 0 },
-                intensity: Math.max(
-                  ...formData.painMapData.regions.map((r: any) => r.intensity),
-                ),
-                type: formData.painMapData.regions[0]?.quality || "pain",
-                qualities: formData.painMapData.regions.map((r: any) => r.quality),
-                avatarType: "male",
-                bodySubdivision: "simple",
-                viewOrientation: formData.painMapData.cameraView,
-                depthIndicator: "superficial",
-                submissionSource: "portal",
-                drawingDataJson: JSON.stringify(formData.painMapData),
-              },
-            ]
+        painMaps: formData.painMapData?.regions?.length
+          ? formData.painMapData.regions.map((region: any, index: number) => ({
+              bodyRegion:
+                region.anatomicalName ||
+                region.meshName ||
+                `Region ${index + 1}`,
+              coordinates: { x: 0, y: 0, z: 0 },
+              intensity: region.intensity || 5,
+              type: region.quality || "aching",
+              qualities: [region.quality].filter(Boolean),
+              avatarType: "male",
+              bodySubdivision: "simple",
+              viewOrientation: formData.painMapData.cameraView || "front",
+              depthIndicator: "superficial",
+              submissionSource: "portal",
+              drawingDataJson:
+                index === 0 ? JSON.stringify(formData.painMapData) : null,
+            }))
           : [],
       });
 
@@ -246,14 +256,27 @@ export const IntakeForm: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+        }}
+      >
         <Typography>Loading...</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: auraTokens.responsive.contentMedium, mx: "auto", p: auraTokens.responsivePadding.page }}>
+    <Box
+      sx={{
+        maxWidth: auraTokens.responsive.contentMedium,
+        mx: "auto",
+        p: auraTokens.responsivePadding.page,
+      }}
+    >
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
         Comprehensive Pain Assessment
       </Typography>
@@ -273,10 +296,11 @@ export const IntakeForm: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Where is your pain and what does it feel like?
             </Typography>
-            
+
             {/* 3D Pain Map */}
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Click on the 3D body model to mark all areas where you experience pain
+              Click on the 3D body model to mark all areas where you experience
+              pain
             </Typography>
             <PainMap3D
               value={formData.painMapData?.regions || []}
@@ -330,10 +354,27 @@ export const IntakeForm: React.FC = () => {
             </Box>
 
             {/* Pain Qualities */}
-            <FormControl component="fieldset" sx={{ mb: 3 }} error={!!errors.painQualities}>
-              <FormLabel>What does your pain feel like? (Select all that apply)</FormLabel>
+            <FormControl
+              component="fieldset"
+              sx={{ mb: 3 }}
+              error={!!errors.painQualities}
+            >
+              <FormLabel>
+                What does your pain feel like? (Select all that apply)
+              </FormLabel>
               <FormGroup row>
-                {["Aching", "Sharp", "Burning", "Stabbing", "Throbbing", "Shooting", "Tingling", "Numbness", "Dull", "Cramping"].map((quality) => (
+                {[
+                  "Aching",
+                  "Sharp",
+                  "Burning",
+                  "Stabbing",
+                  "Throbbing",
+                  "Shooting",
+                  "Tingling",
+                  "Numbness",
+                  "Dull",
+                  "Cramping",
+                ].map((quality) => (
                   <FormControlLabel
                     key={quality}
                     control={
@@ -342,8 +383,13 @@ export const IntakeForm: React.FC = () => {
                         onChange={(e) => {
                           const newQualities = e.target.checked
                             ? [...formData.painQualities, quality]
-                            : formData.painQualities.filter((q) => q !== quality);
-                          setFormData({ ...formData, painQualities: newQualities });
+                            : formData.painQualities.filter(
+                                (q) => q !== quality,
+                              );
+                          setFormData({
+                            ...formData,
+                            painQualities: newQualities,
+                          });
                           setErrors({ ...errors, painQualities: "" });
                         }}
                       />
@@ -394,7 +440,9 @@ export const IntakeForm: React.FC = () => {
                 <MenuItem value="sudden">Sudden onset</MenuItem>
                 <MenuItem value="gradual">Gradual onset</MenuItem>
                 <MenuItem value="after_injury">After an injury</MenuItem>
-                <MenuItem value="after_activity">After specific activity</MenuItem>
+                <MenuItem value="after_activity">
+                  After specific activity
+                </MenuItem>
                 <MenuItem value="unknown">Don't remember</MenuItem>
               </Select>
               {errors.onset && (
@@ -445,7 +493,9 @@ export const IntakeForm: React.FC = () => {
               >
                 <MenuItem value="constant">Constant</MenuItem>
                 <MenuItem value="intermittent">Comes and goes</MenuItem>
-                <MenuItem value="baseline_with_flares">Baseline with flare-ups</MenuItem>
+                <MenuItem value="baseline_with_flares">
+                  Baseline with flare-ups
+                </MenuItem>
               </Select>
             </FormControl>
 
@@ -460,16 +510,26 @@ export const IntakeForm: React.FC = () => {
               >
                 <MenuItem value="always">All the time</MenuItem>
                 <MenuItem value="daily">Daily</MenuItem>
-                <MenuItem value="several_times_week">Several times a week</MenuItem>
+                <MenuItem value="several_times_week">
+                  Several times a week
+                </MenuItem>
                 <MenuItem value="weekly">Weekly</MenuItem>
                 <MenuItem value="occasionally">Occasionally</MenuItem>
               </Select>
             </FormControl>
 
             <FormControl component="fieldset">
-              <FormLabel>When is the pain worse? (Select all that apply)</FormLabel>
+              <FormLabel>
+                When is the pain worse? (Select all that apply)
+              </FormLabel>
               <FormGroup>
-                {["Morning", "Afternoon", "Evening", "Night", "No specific time"].map((time) => (
+                {[
+                  "Morning",
+                  "Afternoon",
+                  "Evening",
+                  "Night",
+                  "No specific time",
+                ].map((time) => (
                   <FormControlLabel
                     key={time}
                     control={
@@ -507,7 +567,11 @@ export const IntakeForm: React.FC = () => {
                   key={key}
                   control={
                     <Checkbox
-                      checked={formData.aggravators[key as keyof typeof formData.aggravators] as boolean}
+                      checked={
+                        formData.aggravators[
+                          key as keyof typeof formData.aggravators
+                        ] as boolean
+                      }
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -519,7 +583,9 @@ export const IntakeForm: React.FC = () => {
                       }
                     />
                   }
-                  label={key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
+                  label={key
+                    .replace(/([A-Z])/g, " $1")
+                    .replace(/^./, (str) => str.toUpperCase())}
                 />
               ))}
             </FormGroup>
@@ -530,7 +596,10 @@ export const IntakeForm: React.FC = () => {
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  aggravators: { ...formData.aggravators, other: e.target.value },
+                  aggravators: {
+                    ...formData.aggravators,
+                    other: e.target.value,
+                  },
                 })
               }
               sx={{ mt: 2 }}
@@ -545,7 +614,11 @@ export const IntakeForm: React.FC = () => {
                   key={key}
                   control={
                     <Checkbox
-                      checked={formData.relievers[key as keyof typeof formData.relievers] as boolean}
+                      checked={
+                        formData.relievers[
+                          key as keyof typeof formData.relievers
+                        ] as boolean
+                      }
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -557,7 +630,9 @@ export const IntakeForm: React.FC = () => {
                       }
                     />
                   }
-                  label={key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
+                  label={key
+                    .replace(/([A-Z])/g, " $1")
+                    .replace(/^./, (str) => str.toUpperCase())}
                 />
               ))}
             </FormGroup>
@@ -683,16 +758,19 @@ export const IntakeForm: React.FC = () => {
                 <strong>Chief Complaint:</strong> {formData.chiefComplaint}
               </Typography>
               <Typography>
-                <strong>Pain Areas:</strong> {formData.painMapData?.regions?.length || 0} regions marked
+                <strong>Pain Areas:</strong>{" "}
+                {formData.painMapData?.regions?.length || 0} regions marked
               </Typography>
               <Typography>
                 <strong>Pain Intensity:</strong> {formData.painIntensity}/10
               </Typography>
               <Typography>
-                <strong>Pain Qualities:</strong> {formData.painQualities.join(", ") || "None selected"}
+                <strong>Pain Qualities:</strong>{" "}
+                {formData.painQualities.join(", ") || "None selected"}
               </Typography>
               <Typography>
-                <strong>Duration:</strong> {formData.durationValue} {formData.durationUnit}
+                <strong>Duration:</strong> {formData.durationValue}{" "}
+                {formData.durationUnit}
               </Typography>
               <Typography>
                 <strong>Pattern:</strong> {formData.pattern || "Not specified"}

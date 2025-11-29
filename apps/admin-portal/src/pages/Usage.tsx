@@ -10,47 +10,26 @@ import {
   TableHead,
   TableRow,
   LinearProgress,
+  Skeleton,
 } from "@mui/material";
-
-const usageData = [
-  {
-    tenant: "Sydney Physio Clinic",
-    apiCalls: 45200,
-    storage: 12.4,
-    patients: 847,
-    aiCalls: 234,
-  },
-  {
-    tenant: "Melbourne Sports Medicine",
-    apiCalls: 128400,
-    storage: 45.2,
-    patients: 2341,
-    aiCalls: 892,
-  },
-  {
-    tenant: "Brisbane Wellness Centre",
-    apiCalls: 8900,
-    storage: 2.1,
-    patients: 156,
-    aiCalls: 0,
-  },
-  {
-    tenant: "Perth Chiropractic",
-    apiCalls: 32100,
-    storage: 8.7,
-    patients: 503,
-    aiCalls: 145,
-  },
-];
-
-const totals = {
-  apiCalls: usageData.reduce((sum, t) => sum + t.apiCalls, 0),
-  storage: usageData.reduce((sum, t) => sum + t.storage, 0),
-  patients: usageData.reduce((sum, t) => sum + t.patients, 0),
-  aiCalls: usageData.reduce((sum, t) => sum + t.aiCalls, 0),
-};
+import { useQuery } from "@tanstack/react-query";
+import { adminApi } from "../services/api";
 
 export default function Usage() {
+  const { data: totals, isLoading: loadingTotals } = useQuery({
+    queryKey: ["usage-totals"],
+    queryFn: adminApi.getUsageTotals,
+  });
+
+  const { data: usage, isLoading } = useQuery({
+    queryKey: ["usage"],
+    queryFn: () => adminApi.getAllUsage(),
+  });
+
+  const maxPatients = Math.max(
+    ...(usage?.map((u: any) => u.activePatients) || [1]),
+  );
+
   return (
     <Box>
       <Typography variant="h4" fontWeight={700} gutterBottom>
@@ -61,46 +40,30 @@ export default function Usage() {
       </Typography>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography color="text.secondary" variant="body2">
-              Total API Calls (30d)
-            </Typography>
-            <Typography variant="h4" fontWeight={700}>
-              {(totals.apiCalls / 1000).toFixed(0)}K
-            </Typography>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography color="text.secondary" variant="body2">
-              Total Storage
-            </Typography>
-            <Typography variant="h4" fontWeight={700}>
-              {totals.storage.toFixed(1)} GB
-            </Typography>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography color="text.secondary" variant="body2">
-              Active Patients
-            </Typography>
-            <Typography variant="h4" fontWeight={700}>
-              {totals.patients.toLocaleString()}
-            </Typography>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography color="text.secondary" variant="body2">
-              AI Calls (30d)
-            </Typography>
-            <Typography variant="h4" fontWeight={700}>
-              {totals.aiCalls.toLocaleString()}
-            </Typography>
-          </Card>
-        </Grid>
+        {[
+          { label: "Total Patients", value: totals?.totalPatients },
+          { label: "Total Practitioners", value: totals?.totalPractitioners },
+          {
+            label: "Appointments (Month)",
+            value: totals?.appointmentsThisMonth,
+          },
+          { label: "Messages (Month)", value: totals?.messagesThisMonth },
+        ].map((stat) => (
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.label}>
+            <Card sx={{ p: 3 }}>
+              <Typography color="text.secondary" variant="body2">
+                {stat.label}
+              </Typography>
+              {loadingTotals ? (
+                <Skeleton width={80} height={40} />
+              ) : (
+                <Typography variant="h4" fontWeight={700}>
+                  {stat.value?.toLocaleString() || 0}
+                </Typography>
+              )}
+            </Card>
+          </Grid>
+        ))}
       </Grid>
 
       <Card>
@@ -114,33 +77,49 @@ export default function Usage() {
             <TableHead>
               <TableRow>
                 <TableCell>Tenant</TableCell>
-                <TableCell>API Calls</TableCell>
-                <TableCell>Storage</TableCell>
+                <TableCell>Plan</TableCell>
                 <TableCell>Patients</TableCell>
-                <TableCell>AI Calls</TableCell>
+                <TableCell>Practitioners</TableCell>
+                <TableCell>Appointments</TableCell>
+                <TableCell>Messages</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {usageData.map((row) => (
-                <TableRow key={row.tenant}>
-                  <TableCell>{row.tenant}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <LinearProgress
-                        variant="determinate"
-                        value={(row.apiCalls / 150000) * 100}
-                        sx={{ flex: 1, height: 6, borderRadius: 3 }}
-                      />
-                      <Typography variant="body2" sx={{ minWidth: 60 }}>
-                        {(row.apiCalls / 1000).toFixed(1)}K
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{row.storage.toFixed(1)} GB</TableCell>
-                  <TableCell>{row.patients.toLocaleString()}</TableCell>
-                  <TableCell>{row.aiCalls.toLocaleString()}</TableCell>
-                </TableRow>
-              ))}
+              {isLoading
+                ? [...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(6)].map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                : usage?.map((row: any) => (
+                    <TableRow key={row.tenantId}>
+                      <TableCell>{row.tenantName}</TableCell>
+                      <TableCell sx={{ textTransform: "capitalize" }}>
+                        {row.plan}
+                      </TableCell>
+                      <TableCell>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <LinearProgress
+                            variant="determinate"
+                            value={(row.activePatients / maxPatients) * 100}
+                            sx={{ flex: 1, height: 6, borderRadius: 3 }}
+                          />
+                          <Typography variant="body2" sx={{ minWidth: 40 }}>
+                            {row.activePatients}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{row.practitioners}</TableCell>
+                      <TableCell>{row.appointments}</TableCell>
+                      <TableCell>{row.messages}</TableCell>
+                    </TableRow>
+                  ))}
             </TableBody>
           </Table>
         </TableContainer>

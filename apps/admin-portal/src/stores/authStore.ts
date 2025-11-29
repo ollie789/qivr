@@ -5,7 +5,7 @@ interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: "super_admin" | "admin" | "support";
+  role: "SuperAdmin" | "Admin" | "Support";
 }
 
 interface AuthState {
@@ -16,6 +16,9 @@ interface AuthState {
   logout: () => void;
 }
 
+const API_BASE =
+  import.meta.env.VITE_ADMIN_API_URL || "http://localhost:5000/api/admin";
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -24,17 +27,25 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       login: async (email: string, password: string) => {
-        // TODO: Replace with actual admin API auth
-        // For now, simple hardcoded check for development
-        if (email === "admin@qivr.io" && password === "admin123") {
-          set({
-            user: { id: "1", email, name: "Admin User", role: "super_admin" },
-            token: "dev-token",
-            isAuthenticated: true,
-          });
-        } else {
-          throw new Error("Invalid credentials");
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (!res.ok) {
+          const error = await res
+            .json()
+            .catch(() => ({ message: "Login failed" }));
+          throw new Error(error.message || "Invalid credentials");
         }
+
+        const data = await res.json();
+        set({
+          user: data.user,
+          token: data.token,
+          isAuthenticated: true,
+        });
       },
 
       logout: () => {

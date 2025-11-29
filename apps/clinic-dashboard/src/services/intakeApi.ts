@@ -170,15 +170,15 @@ export const intakeApi = {
     try {
       const response = await apiClient.get(`/api/evaluations/${id}`);
       const e = response;
-      
+
       // Extract comprehensive questionnaire data
       const q = e.questionnaireResponses || {};
       const medicalHistory = e.medicalHistory || {};
-      
+
       // Build comprehensive description
       const description = q.description || e.chiefComplaint;
       const duration = q.duration || medicalHistory.duration || "Not specified";
-      
+
       return {
         id: e.id,
         patient: {
@@ -191,12 +191,14 @@ export const intakeApi = {
           submittedAt: e.createdAt,
           conditionType: e.chiefComplaint,
           severity: e.urgency || "medium",
-          painLevel: q.painIntensity || (e.painMaps && e.painMaps[0]?.intensity) || 0,
+          painLevel:
+            q.painIntensity || (e.painMaps && e.painMaps[0]?.intensity) || 0,
           symptoms: e.symptoms || q.painQualities || [],
           description,
           duration,
           triggers: q.aggravatingFactors || medicalHistory.triggers || [],
-          previousTreatments: q.previousTreatments || medicalHistory.previousTreatments || "",
+          previousTreatments:
+            q.previousTreatments || medicalHistory.previousTreatments || "",
           painStart: q.painStart || "",
           onset: q.onset || "",
           pattern: q.pattern || "",
@@ -222,7 +224,7 @@ export const intakeApi = {
           ? {
               content: e.aiSummary,
               riskFactors: e.aiRiskFlags || [],
-              recommendations: [],
+              recommendations: e.aiRecommendations || [],
               approved: !!e.aiProcessedAt,
               approvedAt: e.aiProcessedAt,
             }
@@ -255,9 +257,12 @@ export const intakeApi = {
     await apiClient.delete(`/api/evaluations/${id}`);
   },
 
-  async linkToMedicalRecord(intakeId: string, patientId: string): Promise<void> {
+  async linkToMedicalRecord(
+    intakeId: string,
+    patientId: string,
+  ): Promise<void> {
     await apiClient.post(`/api/evaluations/${intakeId}/link-medical-record`, {
-      patientId: patientId
+      patientId: patientId,
     });
   },
 };

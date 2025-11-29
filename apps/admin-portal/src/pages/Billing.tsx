@@ -10,54 +10,50 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Skeleton,
 } from "@mui/material";
 import { TrendingUp, CreditCard, Receipt, Warning } from "@mui/icons-material";
-
-const stats = [
-  { label: "MRR", value: "$4,850", icon: <TrendingUp />, color: "#22c55e" },
-  {
-    label: "Active Subscriptions",
-    value: "21",
-    icon: <CreditCard />,
-    color: "#6366f1",
-  },
-  {
-    label: "Pending Invoices",
-    value: "3",
-    icon: <Receipt />,
-    color: "#f59e0b",
-  },
-  { label: "Failed Payments", value: "1", icon: <Warning />, color: "#ef4444" },
-];
-
-const recentInvoices = [
-  {
-    tenant: "Sydney Physio Clinic",
-    amount: "$299",
-    status: "paid",
-    date: "2024-11-15",
-  },
-  {
-    tenant: "Melbourne Sports Medicine",
-    amount: "$599",
-    status: "paid",
-    date: "2024-11-15",
-  },
-  {
-    tenant: "Brisbane Wellness Centre",
-    amount: "$99",
-    status: "pending",
-    date: "2024-11-20",
-  },
-  {
-    tenant: "Perth Chiropractic",
-    amount: "$299",
-    status: "failed",
-    date: "2024-11-10",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { adminApi } from "../services/api";
 
 export default function Billing() {
+  const { data: overview, isLoading } = useQuery({
+    queryKey: ["billing-overview"],
+    queryFn: adminApi.getBillingOverview,
+  });
+
+  const { data: invoices } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: adminApi.getInvoices,
+  });
+
+  const stats = [
+    {
+      label: "MRR",
+      value: overview?.mrrFormatted ?? "$0",
+      icon: <TrendingUp />,
+      color: "#22c55e",
+    },
+    {
+      label: "Active Subscriptions",
+      value: overview?.activeSubscriptions ?? 0,
+      icon: <CreditCard />,
+      color: "#6366f1",
+    },
+    {
+      label: "Trial Tenants",
+      value: overview?.trialTenants ?? 0,
+      icon: <Receipt />,
+      color: "#f59e0b",
+    },
+    {
+      label: "Suspended",
+      value: overview?.suspendedTenants ?? 0,
+      icon: <Warning />,
+      color: "#ef4444",
+    },
+  ];
+
   return (
     <Box>
       <Typography variant="h4" fontWeight={700} gutterBottom>
@@ -85,9 +81,13 @@ export default function Billing() {
                 <Typography color="text.secondary" variant="body2">
                   {stat.label}
                 </Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  {stat.value}
-                </Typography>
+                {isLoading ? (
+                  <Skeleton width={60} />
+                ) : (
+                  <Typography variant="h5" fontWeight={700}>
+                    {stat.value}
+                  </Typography>
+                )}
               </Box>
             </Card>
           </Grid>
@@ -111,10 +111,10 @@ export default function Billing() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {recentInvoices.map((inv, i) => (
-                <TableRow key={i}>
-                  <TableCell>{inv.tenant}</TableCell>
-                  <TableCell>{inv.amount}</TableCell>
+              {invoices?.map((inv: any) => (
+                <TableRow key={inv.id}>
+                  <TableCell>{inv.tenantName}</TableCell>
+                  <TableCell>${inv.amount}</TableCell>
                   <TableCell>
                     <Chip
                       label={inv.status}
