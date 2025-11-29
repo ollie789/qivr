@@ -19,16 +19,17 @@ import {
   Typography,
   Stack,
   Chip,
-  IconButton,
   TextField,
   Divider,
   Avatar,
   Paper,
-  FormGroup,
   FormControlLabel,
   Checkbox,
   Slider,
-  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -37,7 +38,6 @@ import {
   CheckCircle as CompleteIcon,
   Cancel as CancelIcon,
   Person as PersonIcon,
-  MedicalServices as TreatmentIcon,
 } from "@mui/icons-material";
 import {
   format,
@@ -60,6 +60,7 @@ export default function Appointments() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLElement; apt: Appointment } | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [sessionNotes, setSessionNotes] = useState("");
   const [modalities, setModalities] = useState({
@@ -257,113 +258,64 @@ export default function Appointments() {
         title="Appointments"
         description="Manage your clinic appointments"
         actions={
-          <AuraButton
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setScheduleDialogOpen(true)}
-          >
+          <AuraButton variant="contained" startIcon={<AddIcon />} onClick={() => setScheduleDialogOpen(true)}>
             New Appointment
           </AuraButton>
         }
       />
 
-      <Box sx={{ display: "flex", gap: 3 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 400px" }, gap: auraTokens.spacing.lg }}>
         {/* Calendar */}
-        <Paper sx={{ p: 3, flex: 1, borderRadius: 3 }}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ mb: 3 }}
-          >
-            <AuraButton
-              onClick={() =>
-                setCurrentDate(
-                  new Date(currentDate.setMonth(currentDate.getMonth() - 1)),
-                )
-              }
-            >
-              Previous
+        <Paper sx={{ p: auraTokens.spacing.lg, borderRadius: auraTokens.borderRadius.lg }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: auraTokens.spacing.lg }}>
+            <AuraButton variant="text" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}>
+              ← Prev
             </AuraButton>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Typography variant="h6" fontWeight={auraTokens.fontWeights.semibold}>
               {format(currentDate, "MMMM yyyy")}
             </Typography>
-            <AuraButton
-              onClick={() =>
-                setCurrentDate(
-                  new Date(currentDate.setMonth(currentDate.getMonth() + 1)),
-                )
-              }
-            >
-              Next
+            <AuraButton variant="text" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}>
+              Next →
             </AuraButton>
-          </Stack>
+          </Box>
 
-          {/* Calendar Grid */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, 1fr)",
-              gap: 1,
-            }}
-          >
+          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: auraTokens.spacing.xs }}>
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <Box
-                key={day}
-                sx={{ textAlign: "center", fontWeight: 600, py: 1 }}
-              >
-                <Typography variant="caption">{day}</Typography>
-              </Box>
+              <Typography key={day} variant="caption" color="text.secondary" textAlign="center" py={1} fontWeight={auraTokens.fontWeights.semibold}>
+                {day}
+              </Typography>
             ))}
-
             {daysInMonth.map((day) => {
-              const hasAppointments = appointmentsForDate(day).length > 0;
+              const dayAppointments = appointmentsForDate(day);
               const isSelected = isSameDay(day, selectedDate);
               const isCurrentDay = isToday(day);
-
               return (
                 <Box
                   key={day.toString()}
                   onClick={() => setSelectedDate(day)}
                   sx={{
-                    p: 2,
-                    textAlign: "center",
+                    py: 1.5,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
                     cursor: "pointer",
-                    borderRadius: auraTokens.borderRadius.md,
-                    border: "1px solid",
-                    borderColor: isSelected ? "primary.main" : "divider",
-                    bgcolor: isCurrentDay
-                      ? "primary.light"
-                      : isSelected
-                        ? "primary.50"
-                        : "transparent",
+                    borderRadius: auraTokens.borderRadius.sm,
+                    bgcolor: isSelected ? "primary.main" : isCurrentDay ? "primary.50" : "transparent",
+                    color: isSelected ? "white" : "text.primary",
                     opacity: isSameMonth(day, currentDate) ? 1 : 0.3,
-                    "&:hover": {
-                      bgcolor: "action.hover",
-                      borderColor: "primary.main",
-                    },
-                    position: "relative",
+                    transition: auraTokens.transitions.fast,
+                    "&:hover": { bgcolor: isSelected ? "primary.dark" : "action.hover" },
                   }}
                 >
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: isCurrentDay ? 700 : 400 }}
-                  >
+                  <Typography variant="body2" fontWeight={isCurrentDay || isSelected ? auraTokens.fontWeights.semibold : auraTokens.fontWeights.regular}>
                     {format(day, "d")}
                   </Typography>
-                  {hasAppointments && (
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        bottom: 4,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        bgcolor: "primary.main",
-                      }}
-                    />
+                  {dayAppointments.length > 0 && (
+                    <Box sx={{ display: "flex", gap: auraTokens.spacing.xs, mt: auraTokens.spacing.xs }}>
+                      {dayAppointments.slice(0, 3).map((_, i) => (
+                        <Box key={i} sx={{ width: 5, height: 5, borderRadius: auraTokens.borderRadius.round, bgcolor: isSelected ? "rgba(255,255,255,0.8)" : "primary.main" }} />
+                      ))}
+                    </Box>
                   )}
                 </Box>
               );
@@ -371,193 +323,56 @@ export default function Appointments() {
           </Box>
         </Paper>
 
-        {/* Appointments List */}
-        <Paper
-          sx={{
-            p: 3,
-            width: auraTokens.responsive.detailSidebar,
-            borderRadius: 3,
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-            {format(selectedDate, "EEEE, MMMM d")}
+        {/* Day Detail Sidebar */}
+        <Paper sx={{ p: auraTokens.spacing.lg, borderRadius: auraTokens.borderRadius.lg }}>
+          <Typography variant="h6" fontWeight={auraTokens.fontWeights.semibold}>
+            {format(selectedDate, "EEEE")}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={auraTokens.spacing.lg}>
+            {format(selectedDate, "MMMM d, yyyy")}
           </Typography>
 
           {isLoading ? (
-            <Typography variant="body2" color="text.secondary">
-              Loading...
-            </Typography>
+            <Typography color="text.secondary">Loading...</Typography>
           ) : appointmentsForDate(selectedDate).length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No appointments scheduled
-            </Typography>
+            <Box sx={{ textAlign: "center", py: auraTokens.spacing.xxl }}>
+              <Typography color="text.secondary" mb={auraTokens.spacing.md}>No appointments scheduled</Typography>
+              <AuraButton variant="outlined" size="small" onClick={() => setScheduleDialogOpen(true)}>
+                + Add Appointment
+              </AuraButton>
+            </Box>
           ) : (
-            <Stack spacing={2}>
+            <Stack spacing={auraTokens.spacing.sm}>
               {appointmentsForDate(selectedDate).map((apt) => (
                 <Box
                   key={apt.id}
+                  onClick={(e) => setMenuAnchor({ el: e.currentTarget as HTMLElement, apt })}
                   sx={{
-                    p: 2,
+                    p: auraTokens.spacing.md,
+                    borderRadius: auraTokens.borderRadius.md,
                     border: "1px solid",
                     borderColor: "divider",
-                    borderRadius: auraTokens.borderRadius.md,
-                    "&:hover": {
-                      borderColor: "primary.main",
-                      bgcolor: "action.hover",
-                    },
+                    cursor: "pointer",
+                    transition: auraTokens.transitions.fast,
+                    "&:hover": { borderColor: "primary.main", bgcolor: "action.hover" },
                   }}
                 >
-                  <Stack spacing={1.5}>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            bgcolor: "primary.main",
-                          }}
-                        >
-                          {apt.patientName?.charAt(0)}
-                        </Avatar>
-                        <Box>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{ fontWeight: 600 }}
-                          >
-                            {format(parseISO(apt.scheduledStart), "h:mm a")}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {apt.patientName}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                      <Chip
-                        label={apt.status}
-                        size="small"
-                        color={getStatusColor(apt.status)}
-                      />
-                    </Stack>
-
-                    <Typography variant="body2">
-                      {apt.appointmentType}
-                    </Typography>
-
-                    {apt.notes && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ fontStyle: "italic" }}
-                      >
-                        Notes: {apt.notes.substring(0, 50)}...
+                  <Box sx={{ display: "flex", gap: auraTokens.spacing.md, alignItems: "center" }}>
+                    <Avatar sx={{ width: auraTokens.iconSize.xxl, height: auraTokens.iconSize.xxl, bgcolor: "primary.main" }}>
+                      {apt.patientName?.charAt(0)}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: auraTokens.spacing.xs }}>
+                        <Typography variant="subtitle2" fontWeight={auraTokens.fontWeights.semibold} noWrap>
+                          {apt.patientName}
+                        </Typography>
+                        <Chip label={apt.status} size="small" color={getStatusColor(apt.status)} />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {format(parseISO(apt.scheduledStart), "h:mm a")} · {apt.appointmentType}
                       </Typography>
-                    )}
-
-                    <Stack direction="row" spacing={0.5}>
-                      <Tooltip title="View Medical Record" arrow>
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            navigate(
-                              `/medical-records?patientId=${apt.patientId}`,
-                            )
-                          }
-                          sx={{
-                            bgcolor: "info.main",
-                            color: "white",
-                            "&:hover": { bgcolor: "info.dark" },
-                          }}
-                          aria-label="View medical record"
-                        >
-                          <PersonIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      {apt.treatmentPlanId && (
-                        <Tooltip title="View Treatment Plan" arrow>
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              navigate(
-                                `/treatment-plans/${apt.treatmentPlanId}`,
-                              )
-                            }
-                            sx={{
-                              bgcolor: "secondary.main",
-                              color: "white",
-                              "&:hover": { bgcolor: "secondary.dark" },
-                            }}
-                            aria-label="View treatment plan"
-                          >
-                            <TreatmentIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Session Notes" arrow>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenNotes(apt)}
-                          sx={{
-                            bgcolor: "primary.main",
-                            color: "white",
-                            "&:hover": { bgcolor: "primary.dark" },
-                          }}
-                          aria-label="Add session notes"
-                        >
-                          <NotesIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      {apt.status !== "completed" && (
-                        <Tooltip title="Mark Complete" arrow>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleCompleteAppointment(apt.id)}
-                            sx={{
-                              bgcolor: "success.main",
-                              color: "white",
-                              "&:hover": { bgcolor: "success.dark" },
-                            }}
-                            aria-label="Mark appointment as complete"
-                          >
-                            <CompleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {apt.status !== "cancelled" &&
-                        apt.status !== "completed" && (
-                          <Tooltip title="Cancel Appointment" arrow>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleCancelAppointment(apt.id)}
-                              sx={{
-                                bgcolor: "warning.main",
-                                color: "white",
-                                "&:hover": { bgcolor: "warning.dark" },
-                              }}
-                              aria-label="Cancel appointment"
-                            >
-                              <CancelIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      <Tooltip title="Delete Appointment" arrow>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteAppointment(apt.id)}
-                          sx={{
-                            bgcolor: "error.main",
-                            color: "white",
-                            "&:hover": { bgcolor: "error.dark" },
-                          }}
-                          aria-label="Delete appointment"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </Stack>
+                    </Box>
+                  </Box>
                 </Box>
               ))}
             </Stack>
@@ -565,172 +380,168 @@ export default function Appointments() {
         </Paper>
       </Box>
 
+      {/* Action Menu */}
+      <Menu
+        anchorEl={menuAnchor?.el}
+        open={Boolean(menuAnchor)}
+        onClose={() => setMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => { navigate(`/medical-records?patientId=${menuAnchor?.apt.patientId}`); setMenuAnchor(null); }}>
+          <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>View Medical Record</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { if (menuAnchor?.apt) handleOpenNotes(menuAnchor.apt); setMenuAnchor(null); }}>
+          <ListItemIcon><NotesIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Session Notes</ListItemText>
+        </MenuItem>
+        <Divider />
+        {menuAnchor?.apt.status !== "completed" && (
+          <MenuItem onClick={() => { if (menuAnchor?.apt) handleCompleteAppointment(menuAnchor.apt.id); setMenuAnchor(null); }}>
+            <ListItemIcon><CompleteIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>Mark Complete</ListItemText>
+          </MenuItem>
+        )}
+        {menuAnchor?.apt.status !== "cancelled" && menuAnchor?.apt.status !== "completed" && (
+          <MenuItem onClick={() => { if (menuAnchor?.apt) handleCancelAppointment(menuAnchor.apt.id); setMenuAnchor(null); }}>
+            <ListItemIcon><CancelIcon fontSize="small" color="warning" /></ListItemIcon>
+            <ListItemText>Cancel Appointment</ListItemText>
+          </MenuItem>
+        )}
+        <MenuItem onClick={() => { if (menuAnchor?.apt) handleDeleteAppointment(menuAnchor.apt.id); setMenuAnchor(null); }}>
+          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText sx={{ color: "error.main" }}>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
+
       {/* Session Notes Dialog */}
       <FormDialog
         open={notesDialogOpen}
         onClose={() => setNotesDialogOpen(false)}
-        title={`Session Notes - ${selectedAppointment?.patientName}`}
-        maxWidth="md"
+        title="Session Notes"
+        maxWidth="sm"
         actions={
-          <>
-            <AuraButton onClick={() => setNotesDialogOpen(false)}>
-              Cancel
-            </AuraButton>
-            <AuraButton onClick={handleSaveNotes} variant="contained">
-              Save Notes
-            </AuraButton>
-            {selectedAppointment?.status !== "completed" &&
-              selectedAppointment?.id && (
-                <AuraButton
-                  onClick={() =>
-                    handleCompleteAppointment(selectedAppointment.id)
-                  }
-                  variant="contained"
-                  color="success"
-                >
-                  Complete & Save
-                </AuraButton>
-              )}
-          </>
+          <Box sx={{ display: "flex", gap: auraTokens.spacing.sm, width: "100%", justifyContent: "flex-end" }}>
+            <AuraButton onClick={() => setNotesDialogOpen(false)}>Cancel</AuraButton>
+            <AuraButton onClick={handleSaveNotes} variant="contained">Save Notes</AuraButton>
+            {selectedAppointment?.status !== "completed" && selectedAppointment?.id && (
+              <AuraButton onClick={() => handleCompleteAppointment(selectedAppointment.id)} variant="contained" color="success">
+                Complete Session
+              </AuraButton>
+            )}
+          </Box>
         }
       >
-        <Stack spacing={3} sx={{ mt: 1 }}>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              {selectedAppointment &&
-                format(
-                  parseISO(selectedAppointment.scheduledStart),
-                  "EEEE, MMMM d, yyyy 'at' h:mm a",
-                )}
+        <Stack spacing={auraTokens.spacing.lg}>
+          {/* Patient Info Header */}
+          <Box sx={{ 
+            p: auraTokens.spacing.md, 
+            bgcolor: "primary.50", 
+            borderRadius: auraTokens.borderRadius.md,
+            borderLeft: "4px solid",
+            borderLeftColor: "primary.main"
+          }}>
+            <Typography variant="subtitle1" fontWeight={auraTokens.fontWeights.semibold}>
+              {selectedAppointment?.patientName}
             </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              {selectedAppointment?.appointmentType}
+            <Typography variant="body2" color="text.secondary">
+              {selectedAppointment && format(parseISO(selectedAppointment.scheduledStart), "EEEE, MMMM d 'at' h:mm a")}
             </Typography>
+            <Chip 
+              label={selectedAppointment?.appointmentType} 
+              size="small" 
+              sx={{ mt: 1 }}
+            />
           </Box>
 
-          <Divider />
+          {/* Pain Assessment */}
+          <Box>
+            <Typography variant="subtitle2" fontWeight={auraTokens.fontWeights.semibold} gutterBottom>
+              Pain Level Assessment
+            </Typography>
+            <Box sx={{ px: 1 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">No Pain</Typography>
+                <Typography variant="body2" fontWeight={auraTokens.fontWeights.semibold} color="primary.main">
+                  {painLevel}/10
+                </Typography>
+                <Typography variant="caption" color="text.secondary">Severe</Typography>
+              </Box>
+              <Slider 
+                value={painLevel} 
+                onChange={(_, v) => setPainLevel(v as number)} 
+                min={0} 
+                max={10} 
+                marks 
+                valueLabelDisplay="auto"
+                sx={{
+                  '& .MuiSlider-track': {
+                    background: painLevel <= 3 ? 'success.main' : painLevel <= 6 ? 'warning.main' : 'error.main',
+                  },
+                }}
+              />
+            </Box>
+          </Box>
 
           {/* Treatment Modalities */}
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
-              Treatment Modalities Used
+            <Typography variant="subtitle2" fontWeight={auraTokens.fontWeights.semibold} gutterBottom>
+              Treatment Provided
             </Typography>
-            <FormGroup row>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={modalities.manualTherapy}
-                    onChange={(e) =>
-                      setModalities({
-                        ...modalities,
-                        manualTherapy: e.target.checked,
-                      })
-                    }
-                  />
-                }
-                label="Manual Therapy"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={modalities.exerciseTherapy}
-                    onChange={(e) =>
-                      setModalities({
-                        ...modalities,
-                        exerciseTherapy: e.target.checked,
-                      })
-                    }
-                  />
-                }
-                label="Exercise Therapy"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={modalities.modalities}
-                    onChange={(e) =>
-                      setModalities({
-                        ...modalities,
-                        modalities: e.target.checked,
-                      })
-                    }
-                  />
-                }
-                label="Modalities"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={modalities.education}
-                    onChange={(e) =>
-                      setModalities({
-                        ...modalities,
-                        education: e.target.checked,
-                      })
-                    }
-                  />
-                }
-                label="Education"
-              />
-            </FormGroup>
-          </Box>
-
-          {/* Pain Level */}
-          <Box>
-            <Typography variant="subtitle2" gutterBottom>
-              Pain Level During Session
-            </Typography>
-            <Slider
-              value={painLevel}
-              onChange={(_, value) => setPainLevel(value as number)}
-              min={0}
-              max={10}
-              marks
-              valueLabelDisplay="on"
-            />
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="caption">No Pain</Typography>
-              <Typography variant="caption">Worst Pain</Typography>
-            </Stack>
-          </Box>
-
-          <Divider />
-
-          {/* Session Notes */}
-          <TextField
-            label="Session Notes"
-            multiline
-            rows={8}
-            value={sessionNotes}
-            onChange={(e) => setSessionNotes(e.target.value)}
-            placeholder="Document patient progress, treatment provided, observations, and next steps..."
-            fullWidth
-          />
-
-          {/* PROM Assignment */}
-          <Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={assignPROM}
-                  onChange={(e) => setAssignPROM(e.target.checked)}
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: auraTokens.spacing.sm }}>
+              {[
+                { key: "manualTherapy", label: "Manual Therapy" },
+                { key: "exerciseTherapy", label: "Exercise Therapy" },
+                { key: "modalities", label: "Modalities (Heat/Ice/TENS)" },
+                { key: "education", label: "Patient Education" },
+              ].map(({ key, label }) => (
+                <Chip
+                  key={key}
+                  label={label}
+                  variant={modalities[key as keyof typeof modalities] ? "filled" : "outlined"}
+                  color={modalities[key as keyof typeof modalities] ? "primary" : "default"}
+                  onClick={() => setModalities({ ...modalities, [key]: !modalities[key as keyof typeof modalities] })}
+                  sx={{ cursor: "pointer" }}
                 />
-              }
-              label="Assign PROM for next visit"
+              ))}
+            </Box>
+          </Box>
+
+          {/* Clinical Notes */}
+          <Box>
+            <Typography variant="subtitle2" fontWeight={auraTokens.fontWeights.semibold} gutterBottom>
+              Clinical Notes
+            </Typography>
+            <TextField
+              multiline
+              rows={6}
+              value={sessionNotes}
+              onChange={(e) => setSessionNotes(e.target.value)}
+              placeholder="Document:&#10;• Subjective: Patient's reported symptoms&#10;• Objective: Clinical findings&#10;• Assessment: Progress evaluation&#10;• Plan: Next steps and home exercises"
+              fullWidth
+              sx={{ '& .MuiInputBase-input': { fontSize: '0.875rem' } }}
+            />
+          </Box>
+
+          {/* Follow-up Actions */}
+          <Box sx={{ 
+            p: auraTokens.spacing.md, 
+            bgcolor: "action.hover", 
+            borderRadius: auraTokens.borderRadius.md 
+          }}>
+            <Typography variant="subtitle2" fontWeight={auraTokens.fontWeights.semibold} gutterBottom>
+              Follow-up Actions
+            </Typography>
+            <FormControlLabel
+              control={<Checkbox checked={assignPROM} onChange={(e) => setAssignPROM(e.target.checked)} size="small" />}
+              label={<Typography variant="body2">Send outcome questionnaire (PROM)</Typography>}
             />
             {assignPROM && (
-              <Box sx={{ mt: 1 }}>
+              <Box sx={{ mt: 1, pl: 4 }}>
                 <SelectField
-                  label="PROM Template"
+                  label="Select Questionnaire"
                   value={selectedPromTemplate}
                   onChange={setSelectedPromTemplate}
-                  options={[
-                    { value: "", label: "Select a template..." },
-                    ...promTemplates.map((t) => ({
-                      value: t.key,
-                      label: t.name,
-                    })),
-                  ]}
+                  options={[{ value: "", label: "Choose template..." }, ...promTemplates.map((t) => ({ value: t.key, label: t.name }))]}
                 />
               </Box>
             )}

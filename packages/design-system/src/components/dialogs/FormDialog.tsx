@@ -36,9 +36,9 @@ export const FormDialog = ({
   ...dialogProps
 }: FormDialogProps) => (
   <Dialog open={open} onClose={onClose} maxWidth={maxWidth} fullWidth {...dialogProps}>
-    <DialogTitle>{title}</DialogTitle>
-    <DialogContent>{children}</DialogContent>
-    <DialogActions>
+    <DialogTitle sx={{ pb: 1 }}>{title}</DialogTitle>
+    <DialogContent sx={{ pt: 2 }}>{children}</DialogContent>
+    <DialogActions sx={{ px: 3, pb: 2 }}>
       {actions ?? (
         <FormActions
           onCancel={onClose}

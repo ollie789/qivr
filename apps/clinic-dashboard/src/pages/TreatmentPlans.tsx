@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, TextField, Typography, Chip, Stack, Paper } from "@mui/material";
+import {
+  Box,
+  TextField,
+  Typography,
+  Chip,
+  Stack,
+  Paper,
+  Autocomplete,
+  Grid,
+} from "@mui/material";
 import {
   Add,
   Description,
@@ -13,20 +22,28 @@ import {
   AuraEmptyState,
 } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
+import { patientsApi } from "../services/patientsApi";
 import { useSnackbar } from "notistack";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
+
+interface Patient {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+}
 
 export default function TreatmentPlans() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [formData, setFormData] = useState({
-    patientId: "",
     title: "",
     diagnosis: "",
     goals: "",
-    startDate: "",
-    durationWeeks: "",
+    startDate: new Date().toISOString().split("T")[0],
+    durationWeeks: "6",
     notes: "",
   });
   const queryClient = useQueryClient();
@@ -37,31 +54,44 @@ export default function TreatmentPlans() {
     setScheduleDialogOpen(true);
   };
 
-  const { data: plans = [] } = useQuery({
+  const { data: plans = [], isLoading } = useQuery({
     queryKey: ["treatment-plans"],
     queryFn: () => treatmentPlansApi.list(),
   });
+
+  const { data: patientsData } = useQuery({
+    queryKey: ["patients-list"],
+    queryFn: () => patientsApi.list({ pageSize: 100 }),
+  });
+  const patients: Patient[] = patientsData?.data || [];
 
   const createMutation = useMutation({
     mutationFn: treatmentPlansApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
       setShowCreateDialog(false);
-      setFormData({
-        patientId: "",
-        title: "",
-        diagnosis: "",
-        goals: "",
-        startDate: "",
-        durationWeeks: "",
-        notes: "",
-      });
+      resetForm();
       enqueueSnackbar("Treatment plan created", { variant: "success" });
+    },
+    onError: () => {
+      enqueueSnackbar("Failed to create treatment plan", { variant: "error" });
     },
   });
 
+  const resetForm = () => {
+    setSelectedPatient(null);
+    setFormData({
+      title: "",
+      diagnosis: "",
+      goals: "",
+      startDate: new Date().toISOString().split("T")[0],
+      durationWeeks: "6",
+      notes: "",
+    });
+  };
+
   const getStatusColor = (
-    status: string,
+    status: string
   ): "default" | "success" | "info" | "warning" | "error" => {
     const colors: Record<
       string,
@@ -77,8 +107,9 @@ export default function TreatmentPlans() {
   };
 
   const handleCreate = () => {
+    if (!selectedPatient) return;
     createMutation.mutate({
-      patientId: formData.patientId,
+      patientId: selectedPatient.id,
       title: formData.title,
       diagnosis: formData.diagnosis || undefined,
       goals: formData.goals || undefined,
@@ -104,7 +135,9 @@ export default function TreatmentPlans() {
         }
       />
 
-      {plans.length === 0 ? (
+      {isLoading ? (
+        <Typography color="text.secondary">Loading...</Typography>
+      ) : plans.length === 0 ? (
         <AuraEmptyState
           icon={<Description />}
           title="No treatment plans yet"
@@ -203,7 +236,10 @@ export default function TreatmentPlans() {
 
       <FormDialog
         open={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
+        onClose={() => {
+          setShowCreateDialog(false);
+          resetForm();
+        }}
         onSubmit={handleCreate}
         title="Create Treatment Plan"
         maxWidth="sm"
@@ -211,22 +247,26 @@ export default function TreatmentPlans() {
           submitLabel: "Create",
           submitLoading: createMutation.isPending,
           submitDisabled:
-            !formData.patientId ||
+            !selectedPatient ||
             !formData.title ||
             !formData.startDate ||
             !formData.durationWeeks,
         }}
       >
-        <Stack spacing={2}>
-          <TextField
-            label="Patient ID"
-            value={formData.patientId}
-            onChange={(e) =>
-              setFormData({ ...formData, patientId: e.target.value })
+        <Stack spacing={3} sx={{ pt: 1 }}>
+          <Autocomplete
+            options={patients}
+            value={selectedPatient}
+            onChange={(_, value) => setSelectedPatient(value)}
+            getOptionLabel={(option) =>
+              `${option.firstName} ${option.lastName}`
             }
-            required
-            fullWidth
+            renderInput={(params) => (
+              <TextField {...params} label="Patient" required fullWidth />
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
           />
+
           <TextField
             label="Title"
             value={formData.title}
@@ -235,7 +275,9 @@ export default function TreatmentPlans() {
             }
             required
             fullWidth
+            placeholder="e.g., Post-Surgery Rehabilitation"
           />
+
           <TextField
             label="Diagnosis"
             value={formData.diagnosis}
@@ -245,7 +287,9 @@ export default function TreatmentPlans() {
             fullWidth
             multiline
             rows={2}
+            placeholder="Primary diagnosis or condition"
           />
+
           <TextField
             label="Goals"
             value={formData.goals}
@@ -255,28 +299,38 @@ export default function TreatmentPlans() {
             fullWidth
             multiline
             rows={2}
+            placeholder="Treatment goals and objectives"
           />
-          <TextField
-            label="Start Date"
-            type="date"
-            value={formData.startDate}
-            onChange={(e) =>
-              setFormData({ ...formData, startDate: e.target.value })
-            }
-            required
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            label="Duration (weeks)"
-            type="number"
-            value={formData.durationWeeks}
-            onChange={(e) =>
-              setFormData({ ...formData, durationWeeks: e.target.value })
-            }
-            required
-            fullWidth
-          />
+
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <TextField
+                label="Start Date"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, startDate: e.target.value })
+                }
+                required
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Duration (weeks)"
+                type="number"
+                value={formData.durationWeeks}
+                onChange={(e) =>
+                  setFormData({ ...formData, durationWeeks: e.target.value })
+                }
+                required
+                fullWidth
+                inputProps={{ min: 1, max: 52 }}
+              />
+            </Grid>
+          </Grid>
+
           <TextField
             label="Notes"
             value={formData.notes}
@@ -286,11 +340,11 @@ export default function TreatmentPlans() {
             fullWidth
             multiline
             rows={3}
+            placeholder="Additional notes or instructions"
           />
         </Stack>
       </FormDialog>
 
-      {/* Schedule Appointment Dialog */}
       <ScheduleAppointmentDialog
         open={scheduleDialogOpen}
         onClose={() => {
