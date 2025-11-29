@@ -183,14 +183,7 @@ public class EvaluationService : IEvaluationService
             throw new KeyNotFoundException($"Evaluation {id} not found");
         }
 
-        // Map frontend status names to backend enum values
-        var normalizedStatus = status?.ToLower() switch
-        {
-            "scheduling" => "Scheduled",
-            _ => status
-        };
-
-        if (!Enum.TryParse<EvaluationStatus>(normalizedStatus, ignoreCase: true, out var evaluationStatus))
+        if (!Enum.TryParse<EvaluationStatus>(status, ignoreCase: true, out var evaluationStatus))
         {
             throw new ArgumentException($"Invalid status: {status}");
         }

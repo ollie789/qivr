@@ -40,6 +40,7 @@ public enum EvaluationStatus
     Reviewed,
     Approved,
     Rejected,
+    Scheduling,
     Scheduled,
     Triaged,
     Archived
