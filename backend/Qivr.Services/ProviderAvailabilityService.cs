@@ -10,10 +10,22 @@ public interface IProviderAvailabilityService
 {
     Task<List<Qivr.Core.Interfaces.TimeSlot>> GetAvailableSlots(Guid providerId, DateTime date, int durationMinutes = 30);
     Task<bool> IsSlotAvailable(Guid providerId, DateTime startTime, DateTime endTime);
-    Task<List<ProviderSchedule>> GetProviderSchedule(Guid providerId, DateTime startDate, DateTime endDate);
+    Task<List<ProviderDailySchedule>> GetProviderSchedule(Guid providerId, DateTime startDate, DateTime endDate);
     Task<bool> BookAppointment(Guid patientId, Guid providerId, DateTime startTime, int durationMinutes, string appointmentType);
-    Task<List<Provider>> GetAvailableProviders(DateTime date, string? specialization = null);
+    Task<List<ProviderAvailability>> GetAvailableProviders(DateTime date, string? specialization = null);
     Task<WorkingHours> GetProviderWorkingHours(Guid providerId, DayOfWeek dayOfWeek);
+    Task<WorkingHours> GetProviderWorkingHoursForDate(Guid providerId, DateTime date);
+    Task<bool> IsProviderAvailableOnDate(Guid providerId, DateTime date);
+
+    // Schedule management
+    Task<List<ProviderSchedule>> GetProviderWeeklySchedule(Guid providerId);
+    Task SetProviderWeeklySchedule(Guid providerId, List<ProviderSchedule> schedules);
+    Task<List<ProviderTimeOff>> GetProviderTimeOffs(Guid providerId, DateTime? startDate = null, DateTime? endDate = null);
+    Task<ProviderTimeOff> AddProviderTimeOff(ProviderTimeOff timeOff);
+    Task<bool> DeleteProviderTimeOff(Guid timeOffId);
+    Task<ProviderScheduleOverride?> GetScheduleOverride(Guid providerId, DateTime date);
+    Task SetScheduleOverride(ProviderScheduleOverride scheduleOverride);
+    Task InitializeProviderDefaultSchedule(Guid providerId);
 }
 
 public class ProviderAvailabilityService : IProviderAvailabilityService
@@ -21,16 +33,16 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     private readonly QivrDbContext _context;
     private readonly ILogger<ProviderAvailabilityService> _logger;
 
-    // Default working hours (can be overridden per provider)
+    // Default working hours - used when provider has no schedule configured
     private readonly Dictionary<DayOfWeek, WorkingHours> _defaultWorkingHours = new()
     {
-        { DayOfWeek.Monday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0) } },
-        { DayOfWeek.Tuesday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0) } },
-        { DayOfWeek.Wednesday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0) } },
-        { DayOfWeek.Thursday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0) } },
-        { DayOfWeek.Friday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0) } },
-        { DayOfWeek.Saturday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(13, 0, 0) } },
-        { DayOfWeek.Sunday, new WorkingHours { Start = TimeSpan.Zero, End = TimeSpan.Zero } } // Closed
+        { DayOfWeek.Monday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0), IsWorkingDay = true } },
+        { DayOfWeek.Tuesday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0), IsWorkingDay = true } },
+        { DayOfWeek.Wednesday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0), IsWorkingDay = true } },
+        { DayOfWeek.Thursday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0), IsWorkingDay = true } },
+        { DayOfWeek.Friday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(17, 0, 0), IsWorkingDay = true } },
+        { DayOfWeek.Saturday, new WorkingHours { Start = new TimeSpan(9, 0, 0), End = new TimeSpan(13, 0, 0), IsWorkingDay = true } },
+        { DayOfWeek.Sunday, new WorkingHours { Start = TimeSpan.Zero, End = TimeSpan.Zero, IsWorkingDay = false } }
     };
 
     public ProviderAvailabilityService(QivrDbContext context, ILogger<ProviderAvailabilityService> logger)
@@ -42,13 +54,25 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     public async Task<List<Qivr.Core.Interfaces.TimeSlot>> GetAvailableSlots(Guid providerId, DateTime date, int durationMinutes = 30)
     {
         var availableSlots = new List<Qivr.Core.Interfaces.TimeSlot>();
-        
-        // Get provider's working hours for the day
-        var workingHours = await GetProviderWorkingHours(providerId, date.DayOfWeek);
-        if (workingHours.Start == TimeSpan.Zero && workingHours.End == TimeSpan.Zero)
+
+        // Check if provider is available on this date
+        if (!await IsProviderAvailableOnDate(providerId, date))
         {
-            return availableSlots; // Provider doesn't work on this day
+            return availableSlots;
         }
+
+        // Get provider's working hours for the day (considering overrides)
+        var workingHours = await GetProviderWorkingHoursForDate(providerId, date);
+        if (!workingHours.IsWorkingDay || (workingHours.Start == TimeSpan.Zero && workingHours.End == TimeSpan.Zero))
+        {
+            return availableSlots;
+        }
+
+        // Get the schedule to determine buffer time
+        var schedule = await _context.ProviderSchedules
+            .FirstOrDefaultAsync(s => s.ProviderId == providerId && s.DayOfWeek == date.DayOfWeek);
+        var bufferMinutes = schedule?.BufferMinutes ?? 0;
+        var slotDuration = schedule?.DefaultSlotDurationMinutes ?? durationMinutes;
 
         // Get existing appointments for the provider on this date
         var existingAppointments = await _context.Appointments
@@ -62,15 +86,34 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         var currentSlotStart = date.Date.Add(workingHours.Start);
         var endOfDay = date.Date.Add(workingHours.End);
 
-        while (currentSlotStart.AddMinutes(durationMinutes) <= endOfDay)
+        while (currentSlotStart.AddMinutes(slotDuration) <= endOfDay)
         {
-            var currentSlotEnd = currentSlotStart.AddMinutes(durationMinutes);
-            
-            // Check if slot conflicts with existing appointments
-            bool isAvailable = !existingAppointments.Any(a => 
-                (currentSlotStart >= a.ScheduledStart && currentSlotStart < a.ScheduledEnd) ||
-                (currentSlotEnd > a.ScheduledStart && currentSlotEnd <= a.ScheduledEnd) ||
-                (currentSlotStart <= a.ScheduledStart && currentSlotEnd >= a.ScheduledEnd));
+            var currentSlotEnd = currentSlotStart.AddMinutes(slotDuration);
+
+            // Skip break time if configured
+            if (workingHours.BreakStart.HasValue && workingHours.BreakEnd.HasValue)
+            {
+                var breakStart = date.Date.Add(workingHours.BreakStart.Value);
+                var breakEnd = date.Date.Add(workingHours.BreakEnd.Value);
+
+                if (currentSlotStart < breakEnd && currentSlotEnd > breakStart)
+                {
+                    // Slot overlaps with break, skip to after break
+                    currentSlotStart = breakEnd;
+                    continue;
+                }
+            }
+
+            // Check if slot conflicts with existing appointments (including buffer)
+            bool isAvailable = !existingAppointments.Any(a =>
+            {
+                var apptStartWithBuffer = a.ScheduledStart.AddMinutes(-bufferMinutes);
+                var apptEndWithBuffer = a.ScheduledEnd.AddMinutes(bufferMinutes);
+
+                return (currentSlotStart >= apptStartWithBuffer && currentSlotStart < apptEndWithBuffer) ||
+                       (currentSlotEnd > apptStartWithBuffer && currentSlotEnd <= apptEndWithBuffer) ||
+                       (currentSlotStart <= apptStartWithBuffer && currentSlotEnd >= apptEndWithBuffer);
+            });
 
             // Only add future slots
             if (isAvailable && currentSlotStart > DateTime.UtcNow)
@@ -83,7 +126,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
                 });
             }
 
-            currentSlotStart = currentSlotStart.AddMinutes(durationMinutes);
+            currentSlotStart = currentSlotStart.AddMinutes(slotDuration + bufferMinutes);
         }
 
         return availableSlots;
@@ -91,9 +134,15 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<bool> IsSlotAvailable(Guid providerId, DateTime startTime, DateTime endTime)
     {
+        // Check if provider is available on this date
+        if (!await IsProviderAvailableOnDate(providerId, startTime.Date))
+        {
+            return false;
+        }
+
         // Check if provider works during this time
-        var workingHours = await GetProviderWorkingHours(providerId, startTime.DayOfWeek);
-        if (workingHours.Start == TimeSpan.Zero && workingHours.End == TimeSpan.Zero)
+        var workingHours = await GetProviderWorkingHoursForDate(providerId, startTime.Date);
+        if (!workingHours.IsWorkingDay)
         {
             return false;
         }
@@ -104,6 +153,15 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         if (startTimeOfDay < workingHours.Start || endTimeOfDay > workingHours.End)
         {
             return false;
+        }
+
+        // Check break time
+        if (workingHours.BreakStart.HasValue && workingHours.BreakEnd.HasValue)
+        {
+            if (startTimeOfDay < workingHours.BreakEnd.Value && endTimeOfDay > workingHours.BreakStart.Value)
+            {
+                return false; // Overlaps with break
+            }
         }
 
         // Check for conflicts with existing appointments
@@ -117,15 +175,58 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         return !hasConflict;
     }
 
-    public async Task<List<ProviderSchedule>> GetProviderSchedule(Guid providerId, DateTime startDate, DateTime endDate)
+    public async Task<bool> IsProviderAvailableOnDate(Guid providerId, DateTime date)
     {
-        var schedules = new List<ProviderSchedule>();
+        // Check for time off (including all-day blocks)
+        var hasTimeOff = await _context.ProviderTimeOffs
+            .AnyAsync(t => t.ProviderId == providerId
+                && t.IsApproved
+                && t.StartDateTime.Date <= date.Date
+                && t.EndDateTime.Date >= date.Date);
+
+        if (hasTimeOff)
+        {
+            return false;
+        }
+
+        // Check for schedule override that marks the day as non-working
+        var scheduleOverride = await GetScheduleOverride(providerId, date);
+        if (scheduleOverride != null && !scheduleOverride.IsWorkingDay)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public async Task<WorkingHours> GetProviderWorkingHoursForDate(Guid providerId, DateTime date)
+    {
+        // First check for a schedule override
+        var scheduleOverride = await GetScheduleOverride(providerId, date);
+        if (scheduleOverride != null)
+        {
+            return new WorkingHours
+            {
+                Start = scheduleOverride.GetStartTimeSpan() ?? TimeSpan.Zero,
+                End = scheduleOverride.GetEndTimeSpan() ?? TimeSpan.Zero,
+                IsWorkingDay = scheduleOverride.IsWorkingDay
+            };
+        }
+
+        // Otherwise get the regular schedule
+        return await GetProviderWorkingHours(providerId, date.DayOfWeek);
+    }
+
+    public async Task<List<ProviderDailySchedule>> GetProviderSchedule(Guid providerId, DateTime startDate, DateTime endDate)
+    {
+        var schedules = new List<ProviderDailySchedule>();
         var currentDate = startDate.Date;
 
         while (currentDate <= endDate.Date)
         {
-            var workingHours = await GetProviderWorkingHours(providerId, currentDate.DayOfWeek);
-            
+            var workingHours = await GetProviderWorkingHoursForDate(providerId, currentDate);
+            var isAvailable = await IsProviderAvailableOnDate(providerId, currentDate);
+
             var appointments = await _context.Appointments
                 .Include(a => a.Patient)
                 .Where(a => a.ProviderId == providerId
@@ -134,15 +235,25 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
                 .OrderBy(a => a.ScheduledStart)
                 .ToListAsync();
 
-            var availableSlots = await GetAvailableSlots(providerId, currentDate, 30);
+            var availableSlots = isAvailable ? await GetAvailableSlots(providerId, currentDate, 30) : new List<Qivr.Core.Interfaces.TimeSlot>();
 
-            schedules.Add(new ProviderSchedule
+            // Get time off info for this day
+            var timeOff = await _context.ProviderTimeOffs
+                .Where(t => t.ProviderId == providerId
+                    && t.StartDateTime.Date <= currentDate.Date
+                    && t.EndDateTime.Date >= currentDate.Date)
+                .FirstOrDefaultAsync();
+
+            schedules.Add(new ProviderDailySchedule
             {
                 ProviderId = providerId,
                 Date = currentDate,
                 WorkingHours = workingHours,
                 Appointments = appointments,
-                AvailableSlots = availableSlots
+                AvailableSlots = availableSlots,
+                IsAvailable = isAvailable,
+                TimeOffReason = timeOff?.Reason,
+                TimeOffType = timeOff?.Type
             });
 
             currentDate = currentDate.AddDays(1);
@@ -158,7 +269,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         // Verify slot is available
         if (!await IsSlotAvailable(providerId, startTime, endTime))
         {
-            _logger.LogWarning("Attempted to book unavailable slot for provider {ProviderId} at {StartTime}", 
+            _logger.LogWarning("Attempted to book unavailable slot for provider {ProviderId} at {StartTime}",
                 providerId, startTime);
             return false;
         }
@@ -172,7 +283,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
         if (patientHasConflict)
         {
-            _logger.LogWarning("Patient {PatientId} has conflicting appointment at {StartTime}", 
+            _logger.LogWarning("Patient {PatientId} has conflicting appointment at {StartTime}",
                 patientId, startTime);
             return false;
         }
@@ -182,7 +293,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             // Get tenant ID from provider
             var provider = await _context.Users
                 .FirstOrDefaultAsync(u => u.Id == providerId);
-                
+
             if (provider == null)
             {
                 _logger.LogError("Provider {ProviderId} not found", providerId);
@@ -197,6 +308,25 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             {
                 _logger.LogError("Provider profile for provider {ProviderId} not found", providerId);
                 return false;
+            }
+
+            // Check max appointments per day
+            var schedule = await _context.ProviderSchedules
+                .FirstOrDefaultAsync(s => s.ProviderId == providerProfile.Id && s.DayOfWeek == startTime.DayOfWeek);
+
+            if (schedule?.MaxAppointmentsPerDay > 0)
+            {
+                var existingAppointmentCount = await _context.Appointments
+                    .CountAsync(a => a.ProviderId == providerId
+                        && a.ScheduledStart.Date == startTime.Date
+                        && a.Status != AppointmentStatus.Cancelled);
+
+                if (existingAppointmentCount >= schedule.MaxAppointmentsPerDay)
+                {
+                    _logger.LogWarning("Provider {ProviderId} has reached max appointments ({Max}) for {Date}",
+                        providerId, schedule.MaxAppointmentsPerDay, startTime.Date);
+                    return false;
+                }
             }
 
             // Create the appointment
@@ -219,52 +349,58 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             _context.Appointments.Add(appointment);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully booked appointment {AppointmentId} for patient {PatientId} with provider {ProviderId}", 
+            _logger.LogInformation("Successfully booked appointment {AppointmentId} for patient {PatientId} with provider {ProviderId}",
                 appointment.Id, patientId, providerId);
 
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error booking appointment for patient {PatientId} with provider {ProviderId}", 
+            _logger.LogError(ex, "Error booking appointment for patient {PatientId} with provider {ProviderId}",
                 patientId, providerId);
             return false;
         }
     }
 
-    public async Task<List<Provider>> GetAvailableProviders(DateTime date, string? specialization = null)
+    public async Task<List<ProviderAvailability>> GetAvailableProviders(DateTime date, string? specialization = null)
     {
-        var availableProviders = new List<Provider>();
-        
+        var availableProviders = new List<ProviderAvailability>();
+
         // Get all providers (staff users can be providers) - RLS will filter by tenant
         var query = _context.Users
             .Where(u => u.UserType == UserType.Staff || u.UserType == UserType.Admin);
 
         if (!string.IsNullOrEmpty(specialization))
         {
-            // For now, we'll use role-based filtering as a proxy for specialization
-            // In a real implementation, you'd have a separate Provider entity or metadata
             query = query.Where(u => u.Roles.Contains(specialization));
         }
 
-        var providers = await query.ToListAsync();
+        var users = await query.ToListAsync();
 
-        _logger.LogInformation("Found {Count} providers for date {Date}", providers.Count, date);
+        _logger.LogInformation("Found {Count} provider users for date {Date}", users.Count, date);
 
-        // Check each provider's availability
-        foreach (var provider in providers)
+        foreach (var user in users)
         {
-            var slots = await GetAvailableSlots(provider.Id, date);
-            _logger.LogInformation("Provider {ProviderId} ({Name}) has {SlotCount} available slots", 
-                provider.Id, $"{provider.FirstName} {provider.LastName}", slots.Count);
-            
-            // Include provider even if no slots (they can still be selected, slots will be empty)
-            availableProviders.Add(new Provider
+            // Get provider profile to get the actual provider ID
+            var providerProfile = await _context.Providers
+                .FirstOrDefaultAsync(p => p.UserId == user.Id);
+
+            if (providerProfile == null) continue;
+
+            var isAvailable = await IsProviderAvailableOnDate(providerProfile.Id, date);
+            var slots = isAvailable ? await GetAvailableSlots(user.Id, date) : new List<Qivr.Core.Interfaces.TimeSlot>();
+
+            _logger.LogInformation("Provider {ProviderId} ({Name}) has {SlotCount} available slots",
+                providerProfile.Id, $"{user.FirstName} {user.LastName}", slots.Count);
+
+            availableProviders.Add(new ProviderAvailability
             {
-                Id = provider.Id,
-                Name = $"{provider.FirstName} {provider.LastName}",
-                Specialization = provider.Roles.FirstOrDefault() ?? "General",
-                AvailableSlotCount = slots.Count
+                Id = providerProfile.Id,
+                UserId = user.Id,
+                Name = $"{user.FirstName} {user.LastName}",
+                Specialization = providerProfile.Specialty ?? user.Roles.FirstOrDefault() ?? "General",
+                AvailableSlotCount = slots.Count,
+                IsAvailable = isAvailable
             });
         }
 
@@ -274,34 +410,195 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<WorkingHours> GetProviderWorkingHours(Guid providerId, DayOfWeek dayOfWeek)
     {
-        // In a real implementation, this would fetch from a provider schedule table
-        // For now, return default working hours
-        return await Task.FromResult(_defaultWorkingHours[dayOfWeek]);
+        // Try to get schedule from database
+        var schedule = await _context.ProviderSchedules
+            .FirstOrDefaultAsync(s => s.ProviderId == providerId && s.DayOfWeek == dayOfWeek);
+
+        if (schedule != null)
+        {
+            return new WorkingHours
+            {
+                Start = schedule.GetStartTimeSpan() ?? TimeSpan.Zero,
+                End = schedule.GetEndTimeSpan() ?? TimeSpan.Zero,
+                BreakStart = schedule.GetBreakStartTimeSpan(),
+                BreakEnd = schedule.GetBreakEndTimeSpan(),
+                IsWorkingDay = schedule.IsWorkingDay
+            };
+        }
+
+        // Return default working hours if no schedule configured
+        return _defaultWorkingHours[dayOfWeek];
+    }
+
+    // Schedule management methods
+
+    public async Task<List<ProviderSchedule>> GetProviderWeeklySchedule(Guid providerId)
+    {
+        var schedules = await _context.ProviderSchedules
+            .Where(s => s.ProviderId == providerId)
+            .OrderBy(s => s.DayOfWeek)
+            .ToListAsync();
+
+        return schedules;
+    }
+
+    public async Task SetProviderWeeklySchedule(Guid providerId, List<ProviderSchedule> schedules)
+    {
+        // Delete existing schedules
+        var existingSchedules = await _context.ProviderSchedules
+            .Where(s => s.ProviderId == providerId)
+            .ToListAsync();
+
+        _context.ProviderSchedules.RemoveRange(existingSchedules);
+
+        // Add new schedules
+        foreach (var schedule in schedules)
+        {
+            schedule.ProviderId = providerId;
+            _context.ProviderSchedules.Add(schedule);
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task InitializeProviderDefaultSchedule(Guid providerId)
+    {
+        // Check if provider already has a schedule
+        var existingSchedule = await _context.ProviderSchedules
+            .AnyAsync(s => s.ProviderId == providerId);
+
+        if (existingSchedule)
+        {
+            return; // Already has schedule
+        }
+
+        // Get provider to get tenant ID
+        var provider = await _context.Providers
+            .FirstOrDefaultAsync(p => p.Id == providerId);
+
+        if (provider == null)
+        {
+            _logger.LogWarning("Cannot initialize schedule: Provider {ProviderId} not found", providerId);
+            return;
+        }
+
+        // Create default schedule for each day
+        foreach (var (dayOfWeek, hours) in _defaultWorkingHours)
+        {
+            var schedule = new ProviderSchedule
+            {
+                Id = Guid.NewGuid(),
+                TenantId = provider.TenantId,
+                ProviderId = providerId,
+                DayOfWeek = dayOfWeek,
+                IsWorkingDay = hours.IsWorkingDay,
+                StartTime = hours.IsWorkingDay ? $"{hours.Start.Hours:D2}:{hours.Start.Minutes:D2}" : null,
+                EndTime = hours.IsWorkingDay ? $"{hours.End.Hours:D2}:{hours.End.Minutes:D2}" : null,
+                DefaultSlotDurationMinutes = 30,
+                BufferMinutes = 0,
+                AllowsTelehealth = true,
+                AllowsInPerson = true,
+                MaxAppointmentsPerDay = 0 // Unlimited
+            };
+
+            _context.ProviderSchedules.Add(schedule);
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Initialized default schedule for provider {ProviderId}", providerId);
+    }
+
+    public async Task<List<ProviderTimeOff>> GetProviderTimeOffs(Guid providerId, DateTime? startDate = null, DateTime? endDate = null)
+    {
+        var query = _context.ProviderTimeOffs
+            .Where(t => t.ProviderId == providerId);
+
+        if (startDate.HasValue)
+        {
+            query = query.Where(t => t.EndDateTime >= startDate.Value);
+        }
+
+        if (endDate.HasValue)
+        {
+            query = query.Where(t => t.StartDateTime <= endDate.Value);
+        }
+
+        return await query.OrderBy(t => t.StartDateTime).ToListAsync();
+    }
+
+    public async Task<ProviderTimeOff> AddProviderTimeOff(ProviderTimeOff timeOff)
+    {
+        _context.ProviderTimeOffs.Add(timeOff);
+        await _context.SaveChangesAsync();
+        return timeOff;
+    }
+
+    public async Task<bool> DeleteProviderTimeOff(Guid timeOffId)
+    {
+        var timeOff = await _context.ProviderTimeOffs
+            .FirstOrDefaultAsync(t => t.Id == timeOffId);
+
+        if (timeOff == null)
+        {
+            return false;
+        }
+
+        _context.ProviderTimeOffs.Remove(timeOff);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<ProviderScheduleOverride?> GetScheduleOverride(Guid providerId, DateTime date)
+    {
+        return await _context.ProviderScheduleOverrides
+            .FirstOrDefaultAsync(o => o.ProviderId == providerId && o.Date.Date == date.Date);
+    }
+
+    public async Task SetScheduleOverride(ProviderScheduleOverride scheduleOverride)
+    {
+        // Remove existing override for this date if any
+        var existingOverride = await _context.ProviderScheduleOverrides
+            .FirstOrDefaultAsync(o => o.ProviderId == scheduleOverride.ProviderId && o.Date.Date == scheduleOverride.Date.Date);
+
+        if (existingOverride != null)
+        {
+            _context.ProviderScheduleOverrides.Remove(existingOverride);
+        }
+
+        _context.ProviderScheduleOverrides.Add(scheduleOverride);
+        await _context.SaveChangesAsync();
     }
 }
 
-// Supporting classes
-// Using TimeSlot from Qivr.Core.Interfaces instead of defining our own
+// Supporting DTOs
 
 public class WorkingHours
 {
     public TimeSpan Start { get; set; }
     public TimeSpan End { get; set; }
+    public TimeSpan? BreakStart { get; set; }
+    public TimeSpan? BreakEnd { get; set; }
+    public bool IsWorkingDay { get; set; } = true;
 }
 
-public class ProviderSchedule
+public class ProviderDailySchedule
 {
     public Guid ProviderId { get; set; }
     public DateTime Date { get; set; }
     public WorkingHours WorkingHours { get; set; } = new();
     public List<Appointment> Appointments { get; set; } = new();
     public List<Qivr.Core.Interfaces.TimeSlot> AvailableSlots { get; set; } = new();
+    public bool IsAvailable { get; set; } = true;
+    public string? TimeOffReason { get; set; }
+    public TimeOffType? TimeOffType { get; set; }
 }
 
-public class Provider
+public class ProviderAvailability
 {
     public Guid Id { get; set; }
+    public Guid UserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Specialization { get; set; } = string.Empty;
     public int AvailableSlotCount { get; set; }
+    public bool IsAvailable { get; set; } = true;
 }

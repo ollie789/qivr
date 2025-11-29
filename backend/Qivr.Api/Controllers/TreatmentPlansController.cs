@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using Qivr.Services;
+using Qivr.Services.AI;
 
 namespace Qivr.Api.Controllers;
 
@@ -12,10 +14,17 @@ namespace Qivr.Api.Controllers;
 public class TreatmentPlansController : BaseApiController
 {
     private readonly QivrDbContext _context;
+    private readonly IAiTreatmentPlanService _aiService;
+    private readonly ITreatmentPlanSchedulingService _schedulingService;
 
-    public TreatmentPlansController(QivrDbContext context)
+    public TreatmentPlansController(
+        QivrDbContext context,
+        IAiTreatmentPlanService aiService,
+        ITreatmentPlanSchedulingService schedulingService)
     {
         _context = context;
+        _aiService = aiService;
+        _schedulingService = schedulingService;
     }
 
     [HttpGet]
@@ -183,6 +192,731 @@ public class TreatmentPlansController : BaseApiController
         await _context.SaveChangesAsync();
         return NoContent();
     }
+
+    #region AI Generation Endpoints
+
+    /// <summary>
+    /// Generate a treatment plan using AI based on patient data
+    /// </summary>
+    [HttpPost("generate")]
+    public async Task<IActionResult> GenerateWithAi([FromBody] GenerateTreatmentPlanRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        try
+        {
+            var generationRequest = new TreatmentPlanGenerationRequest
+            {
+                PatientId = request.PatientId,
+                EvaluationId = request.EvaluationId,
+                ProviderId = userId,
+                TenantId = tenantId,
+                PreferredDurationWeeks = request.PreferredDurationWeeks,
+                SessionsPerWeek = request.SessionsPerWeek,
+                FocusAreas = request.FocusAreas,
+                Contraindications = request.Contraindications
+            };
+
+            // Generate the plan using AI
+            var generatedPlan = await _aiService.GeneratePlanAsync(generationRequest);
+
+            // Convert to TreatmentPlan entity (stays in Draft status)
+            var plan = _aiService.ConvertToTreatmentPlan(generatedPlan, generationRequest);
+
+            _context.TreatmentPlans.Add(plan);
+            await _context.SaveChangesAsync();
+
+            // Load relations for response
+            await _context.Entry(plan).Reference(p => p.Patient).LoadAsync();
+            await _context.Entry(plan).Reference(p => p.Provider).LoadAsync();
+
+            return Ok(new
+            {
+                plan,
+                generatedData = generatedPlan,
+                message = "Treatment plan generated successfully. Review and approve to activate."
+            });
+        }
+        catch (TreatmentPlanGenerationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Approve a draft treatment plan and activate it
+    /// </summary>
+    [HttpPost("{id}/approve")]
+    public async Task<IActionResult> Approve(Guid id)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        var plan = await _context.TreatmentPlans
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null);
+
+        if (plan == null)
+            return NotFound();
+
+        if (plan.Status != TreatmentPlanStatus.Draft)
+            return BadRequest(new { error = "Only draft plans can be approved" });
+
+        plan.Status = TreatmentPlanStatus.Active;
+        plan.ApprovedAt = DateTime.UtcNow;
+        plan.ApprovedBy = userId;
+
+        // Set the first phase to InProgress
+        if (plan.Phases.Any())
+        {
+            plan.Phases[0].Status = PhaseStatus.InProgress;
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Trigger auto-scheduling of appointments and PROMs
+        await _schedulingService.OnPlanApprovedAsync(plan.Id);
+
+        return Ok(new { message = "Treatment plan approved and activated", plan });
+    }
+
+    /// <summary>
+    /// Get AI suggestions for exercise additions
+    /// </summary>
+    [HttpPost("suggest-exercises")]
+    public async Task<IActionResult> SuggestExercises([FromBody] ExerciseSuggestionRequest request)
+    {
+        var exercises = await _aiService.SuggestExercisesAsync(request);
+        return Ok(exercises);
+    }
+
+    #endregion
+
+    #region Progress Tracking Endpoints
+
+    /// <summary>
+    /// Complete a session within a treatment plan
+    /// </summary>
+    [HttpPost("{id}/sessions/{sessionNumber}/complete")]
+    public async Task<IActionResult> CompleteSession(Guid id, int sessionNumber, [FromBody] SessionCompletionRequest request)
+    {
+        var tenantId = RequireTenantId();
+
+        var plan = await _context.TreatmentPlans
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null);
+
+        if (plan == null)
+            return NotFound();
+
+        // Find the session
+        var session = plan.Sessions.FirstOrDefault(s => s.SessionNumber == sessionNumber);
+        if (session == null)
+        {
+            // Create session if it doesn't exist
+            session = new TreatmentSession
+            {
+                Id = Guid.NewGuid().ToString(),
+                SessionNumber = sessionNumber,
+                ScheduledDate = DateTime.UtcNow
+            };
+            plan.Sessions.Add(session);
+        }
+
+        session.Completed = true;
+        session.CompletedDate = DateTime.UtcNow;
+        session.PainLevelAfter = request.PainLevelAfter;
+        session.PatientNotes = request.Notes;
+        session.AppointmentId = request.AppointmentId;
+
+        // Update plan progress
+        plan.CompletedSessions++;
+        UpdatePlanProgress(plan);
+
+        // Check milestones
+        CheckAndUpdateMilestones(plan);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Session completed",
+            completedSessions = plan.CompletedSessions,
+            progressPercentage = plan.ProgressPercentage,
+            milestonesCompleted = plan.Milestones.Count(m => m.IsCompleted)
+        });
+    }
+
+    /// <summary>
+    /// Complete an exercise within a treatment plan
+    /// </summary>
+    [HttpPost("{id}/exercises/{exerciseId}/complete")]
+    [AllowAnonymous]
+    [Authorize]
+    public async Task<IActionResult> CompleteExercise(Guid id, string exerciseId, [FromBody] ExerciseCompletionRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        var plan = await _context.TreatmentPlans
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.PatientId == userId && t.DeletedAt == null);
+
+        if (plan == null)
+            return NotFound();
+
+        // Find exercise in phases or legacy exercises
+        Exercise? exercise = null;
+        foreach (var phase in plan.Phases)
+        {
+            exercise = phase.Exercises.FirstOrDefault(e => e.Id == exerciseId);
+            if (exercise != null) break;
+        }
+        exercise ??= plan.Exercises.FirstOrDefault(e => e.Id == exerciseId);
+
+        if (exercise == null)
+            return NotFound(new { error = "Exercise not found" });
+
+        // Add completion record
+        var completion = new ExerciseCompletion
+        {
+            Id = Guid.NewGuid().ToString(),
+            CompletedAt = DateTime.UtcNow,
+            PainLevelBefore = request.PainLevelBefore,
+            PainLevelAfter = request.PainLevelAfter,
+            Notes = request.Notes,
+            SetsCompleted = request.SetsCompleted,
+            RepsCompleted = request.RepsCompleted
+        };
+        exercise.Completions.Add(completion);
+
+        // Update streak
+        UpdateExerciseStreak(plan);
+
+        // Award points
+        plan.PointsEarned += 10;
+
+        // Check milestones
+        CheckAndUpdateMilestones(plan);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Exercise completed",
+            pointsEarned = 10,
+            totalPoints = plan.PointsEarned,
+            exerciseStreak = plan.ExerciseStreak
+        });
+    }
+
+    /// <summary>
+    /// Get patient's active treatment plan with today's tasks
+    /// </summary>
+    [HttpGet("my-plan")]
+    [AllowAnonymous]
+    [Authorize]
+    public async Task<IActionResult> GetMyActivePlan()
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        var plan = await _context.TreatmentPlans
+            .Include(t => t.Provider)
+            .Where(t => t.TenantId == tenantId && t.PatientId == userId && t.DeletedAt == null)
+            .Where(t => t.Status == TreatmentPlanStatus.Active)
+            .OrderByDescending(t => t.StartDate)
+            .FirstOrDefaultAsync();
+
+        if (plan == null)
+            return NotFound(new { message = "No active treatment plan found" });
+
+        // Calculate current week
+        var daysSinceStart = (DateTime.UtcNow - plan.StartDate).Days;
+        plan.CurrentWeek = Math.Max(1, (daysSinceStart / 7) + 1);
+
+        // Get current phase
+        var currentPhase = plan.Phases.FirstOrDefault(p => p.Status == PhaseStatus.InProgress)
+            ?? plan.Phases.FirstOrDefault(p => p.Status == PhaseStatus.NotStarted);
+
+        // Get today's exercises
+        var todaysExercises = currentPhase?.Exercises
+            .Where(e => e.Frequency == "Daily" ||
+                       (e.Frequency?.Contains("week") == true && ShouldDoExerciseToday(e)))
+            .ToList() ?? new List<Exercise>();
+
+        // Get next appointment
+        var nextAppointment = await _context.Appointments
+            .Where(a => a.PatientId == userId && a.TreatmentPlanId == plan.Id)
+            .Where(a => a.ScheduledStart > DateTime.UtcNow)
+            .OrderBy(a => a.ScheduledStart)
+            .FirstOrDefaultAsync();
+
+        // Get pending PROM
+        var pendingProm = await _context.PromInstances
+            .Include(p => p.Template)
+            .Where(p => p.PatientId == userId && p.Status == PromStatus.Pending)
+            .OrderBy(p => p.DueDate)
+            .FirstOrDefaultAsync();
+
+        return Ok(new PatientTreatmentPlanView
+        {
+            Id = plan.Id,
+            Title = plan.Title,
+            Diagnosis = plan.Diagnosis,
+            Status = plan.Status,
+            ProgressPercentage = plan.ProgressPercentage,
+            CompletedSessions = plan.CompletedSessions,
+            TotalSessions = plan.TotalSessions,
+            CurrentWeek = plan.CurrentWeek,
+            TotalWeeks = plan.DurationWeeks,
+            CurrentPhase = currentPhase != null ? new TreatmentPhaseView
+            {
+                PhaseNumber = currentPhase.PhaseNumber,
+                Name = currentPhase.Name,
+                Goals = currentPhase.Goals,
+                ProgressPercentage = currentPhase.PhaseProgressPercentage
+            } : null,
+            TodaysExercises = todaysExercises,
+            NextAppointment = nextAppointment != null ? new AppointmentSummary
+            {
+                Id = nextAppointment.Id,
+                ScheduledStart = nextAppointment.ScheduledStart,
+                AppointmentType = nextAppointment.AppointmentType
+            } : null,
+            PendingProm = pendingProm != null ? new PromInstanceSummary
+            {
+                Id = pendingProm.Id,
+                TemplateName = pendingProm.Template?.Name ?? "Assessment",
+                DueDate = pendingProm.DueDate
+            } : null,
+            Milestones = plan.Milestones,
+            CurrentStreak = plan.ExerciseStreak,
+            PointsEarned = plan.PointsEarned,
+            Phases = plan.Phases
+        });
+    }
+
+    /// <summary>
+    /// Get milestones for a treatment plan
+    /// </summary>
+    [HttpGet("{id}/milestones")]
+    [AllowAnonymous]
+    [Authorize]
+    public async Task<IActionResult> GetMilestones(Guid id)
+    {
+        var tenantId = RequireTenantId();
+
+        var plan = await _context.TreatmentPlans
+            .Where(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null)
+            .FirstOrDefaultAsync();
+
+        if (plan == null)
+            return NotFound();
+
+        return Ok(plan.Milestones);
+    }
+
+    /// <summary>
+    /// Submit a daily check-in for a treatment plan (patient endpoint)
+    /// </summary>
+    [HttpPost("{id}/check-in")]
+    [AllowAnonymous]
+    [Authorize]
+    public async Task<IActionResult> SubmitCheckIn(Guid id, [FromBody] DailyCheckInRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        var plan = await _context.TreatmentPlans
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.PatientId == userId && t.DeletedAt == null);
+
+        if (plan == null)
+            return NotFound();
+
+        var result = await _schedulingService.RecordCheckInAsync(id, request);
+
+        if (!result)
+            return BadRequest(new { error = "Failed to record check-in" });
+
+        return Ok(new { message = "Check-in recorded successfully", streak = plan.ExerciseStreak, points = plan.PointsEarned });
+    }
+
+    /// <summary>
+    /// Get treatment progress data for the Health Progress page
+    /// </summary>
+    [HttpGet("progress")]
+    [AllowAnonymous]
+    [Authorize]
+    public async Task<IActionResult> GetTreatmentProgress()
+    {
+        var userId = CurrentUserId;
+
+        var progress = await _schedulingService.GetTreatmentProgressAsync(userId);
+
+        if (progress == null)
+            return Ok(new { hasPlan = false, message = "No active treatment plan found" });
+
+        return Ok(new { hasPlan = true, progress });
+    }
+
+    /// <summary>
+    /// Manually schedule appointments for a treatment plan
+    /// </summary>
+    [HttpPost("{id}/schedule-appointments")]
+    public async Task<IActionResult> ScheduleAppointments(Guid id)
+    {
+        var tenantId = RequireTenantId();
+
+        var plan = await _context.TreatmentPlans
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null);
+
+        if (plan == null)
+            return NotFound();
+
+        var appointments = await _schedulingService.ScheduleAppointmentsAsync(id);
+
+        return Ok(new { message = $"Scheduled {appointments.Count} appointments", appointments });
+    }
+
+    /// <summary>
+    /// Manually schedule PROMs for a treatment plan
+    /// </summary>
+    [HttpPost("{id}/schedule-proms")]
+    public async Task<IActionResult> ScheduleProms(Guid id)
+    {
+        var tenantId = RequireTenantId();
+
+        var plan = await _context.TreatmentPlans
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null);
+
+        if (plan == null)
+            return NotFound();
+
+        var proms = await _schedulingService.SchedulePromsAsync(id);
+
+        return Ok(new { message = $"Scheduled {proms.Count} PROMs", proms });
+    }
+
+    /// <summary>
+    /// Advance the treatment plan to the next phase
+    /// </summary>
+    [HttpPost("{id}/advance-phase")]
+    public async Task<IActionResult> AdvancePhase(Guid id)
+    {
+        var tenantId = RequireTenantId();
+
+        var plan = await _context.TreatmentPlans
+            .FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenantId && t.DeletedAt == null);
+
+        if (plan == null)
+            return NotFound();
+
+        var result = await _schedulingService.AdvanceToNextPhaseAsync(id);
+
+        if (!result)
+            return BadRequest(new { error = "Failed to advance phase" });
+
+        // Reload to get updated state
+        await _context.Entry(plan).ReloadAsync();
+
+        return Ok(new { message = "Advanced to next phase", currentPhase = plan.Phases.FirstOrDefault(p => p.Status == PhaseStatus.InProgress) });
+    }
+
+    #endregion
+
+    #region Exercise Library
+
+    /// <summary>
+    /// Get all exercise templates (system + tenant-specific)
+    /// </summary>
+    [HttpGet("exercises")]
+    public async Task<IActionResult> GetExerciseLibrary(
+        [FromQuery] string? category,
+        [FromQuery] string? bodyRegion,
+        [FromQuery] string? difficulty,
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        var tenantId = RequireTenantId();
+
+        var query = _context.ExerciseTemplates
+            .Where(e => e.IsActive && (e.IsSystemExercise || e.TenantId == tenantId))
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(category))
+            query = query.Where(e => e.Category == category);
+
+        if (!string.IsNullOrEmpty(bodyRegion))
+            query = query.Where(e => e.BodyRegion == bodyRegion);
+
+        if (!string.IsNullOrEmpty(difficulty) && Enum.TryParse<DifficultyLevel>(difficulty, true, out var diffLevel))
+            query = query.Where(e => e.Difficulty == diffLevel);
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(e =>
+                e.Name.ToLower().Contains(searchLower) ||
+                (e.Description != null && e.Description.ToLower().Contains(searchLower)));
+        }
+
+        var totalCount = await query.CountAsync();
+        var exercises = await query
+            .OrderBy(e => e.SortOrder)
+            .ThenBy(e => e.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(e => new ExerciseTemplateDto
+            {
+                Id = e.Id,
+                Name = e.Name,
+                Description = e.Description,
+                Instructions = e.Instructions,
+                DefaultSets = e.DefaultSets,
+                DefaultReps = e.DefaultReps,
+                DefaultHoldSeconds = e.DefaultHoldSeconds,
+                DefaultFrequency = e.DefaultFrequency,
+                VideoUrl = e.VideoUrl,
+                ThumbnailUrl = e.ThumbnailUrl,
+                ImageUrl = e.ImageUrl,
+                Category = e.Category,
+                BodyRegion = e.BodyRegion,
+                Difficulty = e.Difficulty.ToString(),
+                TargetConditions = e.TargetConditions,
+                Contraindications = e.Contraindications,
+                Equipment = e.Equipment,
+                Tags = e.Tags,
+                IsSystemExercise = e.IsSystemExercise
+            })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            data = exercises,
+            pagination = new
+            {
+                page,
+                pageSize,
+                totalCount,
+                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            }
+        });
+    }
+
+    /// <summary>
+    /// Get exercise template by ID
+    /// </summary>
+    [HttpGet("exercises/{id}")]
+    public async Task<IActionResult> GetExerciseTemplate(Guid id)
+    {
+        var tenantId = RequireTenantId();
+
+        var exercise = await _context.ExerciseTemplates
+            .Where(e => e.Id == id && e.IsActive && (e.IsSystemExercise || e.TenantId == tenantId))
+            .Select(e => new ExerciseTemplateDto
+            {
+                Id = e.Id,
+                Name = e.Name,
+                Description = e.Description,
+                Instructions = e.Instructions,
+                DefaultSets = e.DefaultSets,
+                DefaultReps = e.DefaultReps,
+                DefaultHoldSeconds = e.DefaultHoldSeconds,
+                DefaultFrequency = e.DefaultFrequency,
+                VideoUrl = e.VideoUrl,
+                ThumbnailUrl = e.ThumbnailUrl,
+                ImageUrl = e.ImageUrl,
+                Category = e.Category,
+                BodyRegion = e.BodyRegion,
+                Difficulty = e.Difficulty.ToString(),
+                TargetConditions = e.TargetConditions,
+                Contraindications = e.Contraindications,
+                Equipment = e.Equipment,
+                Tags = e.Tags,
+                IsSystemExercise = e.IsSystemExercise
+            })
+            .FirstOrDefaultAsync();
+
+        if (exercise == null)
+            return NotFound();
+
+        return Ok(exercise);
+    }
+
+    /// <summary>
+    /// Get available categories and body regions for filtering
+    /// </summary>
+    [HttpGet("exercises/filters")]
+    public async Task<IActionResult> GetExerciseFilters()
+    {
+        var tenantId = RequireTenantId();
+
+        var categories = await _context.ExerciseTemplates
+            .Where(e => e.IsActive && (e.IsSystemExercise || e.TenantId == tenantId))
+            .Select(e => e.Category)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+
+        var bodyRegions = await _context.ExerciseTemplates
+            .Where(e => e.IsActive && (e.IsSystemExercise || e.TenantId == tenantId))
+            .Select(e => e.BodyRegion)
+            .Distinct()
+            .OrderBy(r => r)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            categories,
+            bodyRegions,
+            difficulties = Enum.GetNames<DifficultyLevel>()
+        });
+    }
+
+    /// <summary>
+    /// Create a custom exercise template (tenant-specific)
+    /// </summary>
+    [HttpPost("exercises")]
+    public async Task<IActionResult> CreateExerciseTemplate([FromBody] CreateExerciseTemplateRequest request)
+    {
+        var tenantId = RequireTenantId();
+
+        var exercise = new ExerciseTemplate
+        {
+            TenantId = tenantId,
+            Name = request.Name,
+            Description = request.Description,
+            Instructions = request.Instructions,
+            DefaultSets = request.DefaultSets ?? 3,
+            DefaultReps = request.DefaultReps ?? 10,
+            DefaultHoldSeconds = request.DefaultHoldSeconds,
+            DefaultFrequency = request.DefaultFrequency ?? "Daily",
+            VideoUrl = request.VideoUrl,
+            ThumbnailUrl = request.ThumbnailUrl,
+            ImageUrl = request.ImageUrl,
+            Category = request.Category,
+            BodyRegion = request.BodyRegion,
+            Difficulty = Enum.TryParse<DifficultyLevel>(request.Difficulty, true, out var diff)
+                ? diff : DifficultyLevel.Beginner,
+            TargetConditions = request.TargetConditions ?? new List<string>(),
+            Contraindications = request.Contraindications ?? new List<string>(),
+            Equipment = request.Equipment ?? new List<string>(),
+            Tags = request.Tags ?? new List<string>(),
+            IsSystemExercise = false,
+            IsActive = true
+        };
+
+        _context.ExerciseTemplates.Add(exercise);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetExerciseTemplate), new { id = exercise.Id }, new { id = exercise.Id });
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private void UpdatePlanProgress(TreatmentPlan plan)
+    {
+        if (plan.TotalSessions > 0)
+        {
+            plan.ProgressPercentage = (decimal)plan.CompletedSessions / plan.TotalSessions * 100;
+        }
+
+        // Update current week
+        var daysSinceStart = (DateTime.UtcNow - plan.StartDate).Days;
+        plan.CurrentWeek = Math.Max(1, (daysSinceStart / 7) + 1);
+
+        // Check if phase should transition
+        UpdatePhaseStatus(plan);
+    }
+
+    private void UpdatePhaseStatus(TreatmentPlan plan)
+    {
+        var currentPhase = plan.Phases.FirstOrDefault(p => p.Status == PhaseStatus.InProgress);
+        if (currentPhase == null) return;
+
+        // Check if current phase is complete based on time
+        if (currentPhase.EndDate.HasValue && DateTime.UtcNow > currentPhase.EndDate.Value)
+        {
+            currentPhase.Status = PhaseStatus.Completed;
+
+            // Start next phase
+            var nextPhase = plan.Phases.FirstOrDefault(p => p.PhaseNumber == currentPhase.PhaseNumber + 1);
+            if (nextPhase != null)
+            {
+                nextPhase.Status = PhaseStatus.InProgress;
+            }
+        }
+    }
+
+    private void UpdateExerciseStreak(TreatmentPlan plan)
+    {
+        // Check if there was exercise completion yesterday
+        var yesterday = DateTime.UtcNow.Date.AddDays(-1);
+        var hadCompletionYesterday = plan.Phases
+            .SelectMany(p => p.Exercises)
+            .Concat(plan.Exercises)
+            .SelectMany(e => e.Completions)
+            .Any(c => c.CompletedAt.Date == yesterday);
+
+        if (hadCompletionYesterday)
+        {
+            plan.ExerciseStreak++;
+        }
+        else
+        {
+            // Check if today is the first completion
+            var todayCompletions = plan.Phases
+                .SelectMany(p => p.Exercises)
+                .Concat(plan.Exercises)
+                .SelectMany(e => e.Completions)
+                .Count(c => c.CompletedAt.Date == DateTime.UtcNow.Date);
+
+            plan.ExerciseStreak = todayCompletions > 0 ? 1 : 0;
+        }
+    }
+
+    private void CheckAndUpdateMilestones(TreatmentPlan plan)
+    {
+        foreach (var milestone in plan.Milestones.Where(m => !m.IsCompleted))
+        {
+            var currentValue = milestone.Type switch
+            {
+                MilestoneType.SessionCount => plan.CompletedSessions,
+                MilestoneType.WeekComplete => plan.CurrentWeek,
+                MilestoneType.ExerciseStreak => plan.ExerciseStreak,
+                MilestoneType.PhaseComplete => plan.Phases.Count(p => p.Status == PhaseStatus.Completed),
+                _ => milestone.CurrentValue
+            };
+
+            milestone.CurrentValue = currentValue;
+
+            if (currentValue >= milestone.TargetValue)
+            {
+                milestone.IsCompleted = true;
+                milestone.CompletedAt = DateTime.UtcNow;
+                plan.PointsEarned += milestone.PointsAwarded;
+            }
+        }
+    }
+
+    private bool ShouldDoExerciseToday(Exercise exercise)
+    {
+        // Simple logic for weekly exercises
+        var freq = exercise.Frequency?.ToLower() ?? "";
+        if (freq.Contains("3x") || freq.Contains("3 times"))
+        {
+            return DateTime.UtcNow.DayOfWeek is DayOfWeek.Monday or DayOfWeek.Wednesday or DayOfWeek.Friday;
+        }
+        if (freq.Contains("2x") || freq.Contains("2 times"))
+        {
+            return DateTime.UtcNow.DayOfWeek is DayOfWeek.Tuesday or DayOfWeek.Thursday;
+        }
+        return true; // Default to daily
+    }
+
+    #endregion
 }
 
 public class CreateTreatmentPlanRequest
@@ -219,4 +953,117 @@ public class UpdateTreatmentPlanRequest
     public string? Notes { get; set; }
     public DateTime? EndDate { get; set; }
     public DateTime? ReviewDate { get; set; }
+}
+
+public class GenerateTreatmentPlanRequest
+{
+    public Guid PatientId { get; set; }
+    public Guid? EvaluationId { get; set; }
+    public int? PreferredDurationWeeks { get; set; }
+    public int? SessionsPerWeek { get; set; }
+    public List<string>? FocusAreas { get; set; }
+    public List<string>? Contraindications { get; set; }
+}
+
+public class SessionCompletionRequest
+{
+    public int? PainLevelAfter { get; set; }
+    public string? Notes { get; set; }
+    public Guid? AppointmentId { get; set; }
+}
+
+public class ExerciseCompletionRequest
+{
+    public int? PainLevelBefore { get; set; }
+    public int? PainLevelAfter { get; set; }
+    public string? Notes { get; set; }
+    public int? SetsCompleted { get; set; }
+    public int? RepsCompleted { get; set; }
+}
+
+public class PatientTreatmentPlanView
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = "";
+    public string? Diagnosis { get; set; }
+    public TreatmentPlanStatus Status { get; set; }
+    public decimal ProgressPercentage { get; set; }
+    public int CompletedSessions { get; set; }
+    public int TotalSessions { get; set; }
+    public int CurrentWeek { get; set; }
+    public int TotalWeeks { get; set; }
+    public TreatmentPhaseView? CurrentPhase { get; set; }
+    public List<Exercise> TodaysExercises { get; set; } = new();
+    public AppointmentSummary? NextAppointment { get; set; }
+    public PromInstanceSummary? PendingProm { get; set; }
+    public List<TreatmentMilestone> Milestones { get; set; } = new();
+    public int CurrentStreak { get; set; }
+    public int PointsEarned { get; set; }
+    public List<TreatmentPhase> Phases { get; set; } = new();
+}
+
+public class TreatmentPhaseView
+{
+    public int PhaseNumber { get; set; }
+    public string Name { get; set; } = "";
+    public List<string> Goals { get; set; } = new();
+    public decimal ProgressPercentage { get; set; }
+}
+
+public class AppointmentSummary
+{
+    public Guid Id { get; set; }
+    public DateTime ScheduledStart { get; set; }
+    public string? AppointmentType { get; set; }
+}
+
+public class PromInstanceSummary
+{
+    public Guid Id { get; set; }
+    public string TemplateName { get; set; } = "";
+    public DateTime DueDate { get; set; }
+}
+
+public class ExerciseTemplateDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public string? Instructions { get; set; }
+    public int DefaultSets { get; set; }
+    public int DefaultReps { get; set; }
+    public int? DefaultHoldSeconds { get; set; }
+    public string? DefaultFrequency { get; set; }
+    public string? VideoUrl { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? ImageUrl { get; set; }
+    public string Category { get; set; } = "";
+    public string BodyRegion { get; set; } = "";
+    public string Difficulty { get; set; } = "";
+    public List<string> TargetConditions { get; set; } = new();
+    public List<string> Contraindications { get; set; } = new();
+    public List<string> Equipment { get; set; } = new();
+    public List<string> Tags { get; set; } = new();
+    public bool IsSystemExercise { get; set; }
+}
+
+public class CreateExerciseTemplateRequest
+{
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public string? Instructions { get; set; }
+    public int? DefaultSets { get; set; }
+    public int? DefaultReps { get; set; }
+    public int? DefaultHoldSeconds { get; set; }
+    public string? DefaultFrequency { get; set; }
+    public string? VideoUrl { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? ImageUrl { get; set; }
+    public string Category { get; set; } = "";
+    public string BodyRegion { get; set; } = "";
+    public string? Difficulty { get; set; }
+    public List<string>? TargetConditions { get; set; }
+    public List<string>? Contraindications { get; set; }
+    public List<string>? Equipment { get; set; }
+    public List<string>? Tags { get; set; }
 }

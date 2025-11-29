@@ -277,17 +277,47 @@ public class AppointmentsController : BaseApiController
         if (!providerProfileId.HasValue)
             return BadRequest(new { message = "Provider profile not found" });
 
-        // Check for double booking
-        var conflictingAppointment = await _context.Appointments
-            .Where(a => a.TenantId == tenantId 
-                && a.ProviderId == request.ProviderId
-                && a.Status != AppointmentStatus.Cancelled
-                && a.ScheduledStart < request.ScheduledEnd
-                && a.ScheduledEnd > request.ScheduledStart)
-            .AnyAsync();
+        // Check provider availability using the availability service
+        // This checks: working hours, time off, schedule overrides, and existing appointments
+        var isSlotAvailable = await _availabilityService.IsSlotAvailable(
+            providerProfileId.Value,
+            request.ScheduledStart,
+            request.ScheduledEnd);
 
-        if (conflictingAppointment)
-            return BadRequest(new { message = "Time slot is not available" });
+        if (!isSlotAvailable)
+        {
+            // Provide more context about why the slot isn't available
+            var isProviderAvailable = await _availabilityService.IsProviderAvailableOnDate(
+                providerProfileId.Value,
+                request.ScheduledStart.Date);
+
+            if (!isProviderAvailable)
+            {
+                return BadRequest(new { message = "Provider is not available on this date (time off or non-working day)" });
+            }
+
+            var workingHours = await _availabilityService.GetProviderWorkingHoursForDate(
+                providerProfileId.Value,
+                request.ScheduledStart.Date);
+
+            if (!workingHours.IsWorkingDay)
+            {
+                return BadRequest(new { message = "Provider does not work on this day" });
+            }
+
+            var requestStartTime = request.ScheduledStart.TimeOfDay;
+            var requestEndTime = request.ScheduledEnd.TimeOfDay;
+
+            if (requestStartTime < workingHours.Start || requestEndTime > workingHours.End)
+            {
+                return BadRequest(new {
+                    message = $"Requested time is outside provider's working hours ({workingHours.Start:hh\\:mm} - {workingHours.End:hh\\:mm})"
+                });
+            }
+
+            // If we got here, must be a conflict with existing appointment
+            return BadRequest(new { message = "Time slot is not available - conflicts with existing appointment" });
+        }
 
         var appointment = new Appointment
         {
@@ -1005,64 +1035,78 @@ public class AppointmentsController : BaseApiController
         return NoContent();
     }
 
+    /// <summary>
+    /// Get available appointment slots for all providers using actual provider schedules.
+    /// Respects provider working hours, time off, and existing appointments.
+    /// </summary>
     [HttpGet("available-slots")]
     [Authorize]
-    public async Task<IActionResult> GetAvailableSlots([FromQuery] int days = 14)
+    public async Task<IActionResult> GetAvailableSlots(
+        [FromQuery] int days = 14,
+        [FromQuery] Guid? providerId = null,
+        [FromQuery] int durationMinutes = 30)
     {
         var tenantId = RequireTenantId();
-        var startDate = DateTime.UtcNow;
+        var startDate = DateTime.UtcNow.Date;
         var endDate = startDate.AddDays(days);
 
-        var providers = await _context.Users
-            .Where(u => u.TenantId == tenantId && u.UserRoles.Any(r => r.Role.Name == "Clinician") && u.DeletedAt == null)
-            .Select(u => new { u.Id, Name = u.FirstName + " " + u.LastName })
-            .ToListAsync();
+        // Get providers - either specific one or all clinicians
+        var providerQuery = _context.Providers
+            .Include(p => p.User)
+            .Where(p => p.TenantId == tenantId && p.IsActive);
 
-        var existingAppointments = await _context.Appointments
-            .Where(a => a.TenantId == tenantId 
-                && a.ScheduledStart >= startDate 
-                && a.ScheduledStart <= endDate
-                && a.Status != AppointmentStatus.Cancelled)
-            .Select(a => new { a.ProviderId, a.ScheduledStart, a.ScheduledEnd })
+        if (providerId.HasValue)
+        {
+            // If providerId is a user ID, find the provider profile
+            var providerProfile = await _context.Providers
+                .FirstOrDefaultAsync(p => p.UserId == providerId.Value || p.Id == providerId.Value);
+
+            if (providerProfile != null)
+            {
+                providerQuery = providerQuery.Where(p => p.Id == providerProfile.Id);
+            }
+        }
+
+        var providers = await providerQuery
+            .Select(p => new {
+                p.Id,
+                UserId = p.UserId,
+                Name = p.User != null ? p.User.FirstName + " " + p.User.LastName : "Unknown"
+            })
             .ToListAsync();
 
         var slots = new List<object>();
 
         foreach (var provider in providers)
         {
-            var currentDate = startDate.Date;
+            var currentDate = startDate;
             while (currentDate <= endDate)
             {
-                if (currentDate.DayOfWeek != DayOfWeek.Saturday && currentDate.DayOfWeek != DayOfWeek.Sunday)
+                // Use availability service to get slots - this respects working hours, time off, and conflicts
+                var availableSlots = await _availabilityService.GetAvailableSlots(
+                    provider.Id,
+                    currentDate,
+                    durationMinutes);
+
+                foreach (var slot in availableSlots.Where(s => s.IsAvailable))
                 {
-                    for (int hour = 9; hour < 17; hour++)
+                    slots.Add(new
                     {
-                        var slotStart = currentDate.AddHours(hour);
-                        var slotEnd = slotStart.AddMinutes(30);
-
-                        var isBooked = existingAppointments.Any(a => 
-                            a.ProviderId == provider.Id 
-                            && a.ScheduledStart < slotEnd 
-                            && a.ScheduledEnd > slotStart);
-
-                        if (!isBooked && slotStart > DateTime.UtcNow)
-                        {
-                            slots.Add(new
-                            {
-                                id = Guid.NewGuid().ToString(),
-                                start = slotStart.ToString("o"),
-                                end = slotEnd.ToString("o"),
-                                providerId = provider.Id,
-                                providerName = provider.Name
-                            });
-                        }
-                    }
+                        id = Guid.NewGuid().ToString(),
+                        start = slot.Start.ToString("o"),
+                        end = slot.End.ToString("o"),
+                        providerId = provider.UserId, // Return user ID for compatibility
+                        providerProfileId = provider.Id,
+                        providerName = provider.Name
+                    });
                 }
+
                 currentDate = currentDate.AddDays(1);
             }
         }
 
-        return Ok(slots.OrderBy(s => ((dynamic)s).start).Take(20));
+        // Return slots ordered by time, limit to reasonable number
+        return Ok(slots.OrderBy(s => ((dynamic)s).start).Take(100));
     }
 
     // GetTenantId and GetUserId methods removed - using BaseApiController properties instead

@@ -39,7 +39,8 @@ import {
 } from "@qivr/design-system";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
-import api from "../lib/api-client";
+import { useNavigate } from "react-router-dom";
+import api, { treatmentPlansApi, type TreatmentProgressResponse } from "../lib/api-client";
 import {
   LineChart,
   Line,
@@ -85,6 +86,7 @@ const getPainLevelLabel = (level: number) => {
 
 export default function HealthProgress() {
   const theme = useTheme();
+  const navigate = useNavigate();
 
   // Fetch dashboard summary data
   const {
@@ -113,6 +115,13 @@ export default function HealthProgress() {
       return response.data || response;
     },
     retry: 2,
+  });
+
+  // Fetch treatment plan progress
+  const { data: treatmentProgress } = useQuery<TreatmentProgressResponse>({
+    queryKey: ["treatment-plan-progress"],
+    queryFn: () => treatmentPlansApi.getProgress(),
+    retry: 1,
   });
 
   const stats = rawData
@@ -359,6 +368,241 @@ export default function HealthProgress() {
             </Box>
           </AuraCard>
         </Box>
+
+        {/* Treatment Plan Progress */}
+        {treatmentProgress?.hasPlan && treatmentProgress.progress && (
+          <AuraCard>
+            <Box sx={{ p: 3 }}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 2 }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <FitnessCenter sx={{ color: "primary.main" }} />
+                  <Typography variant="h6" fontWeight={600}>
+                    Treatment Plan Progress
+                  </Typography>
+                </Stack>
+                <AuraButton
+                  variant="outlined"
+                  size="small"
+                  onClick={() => navigate("/treatment-plan")}
+                >
+                  View Plan
+                </AuraButton>
+              </Stack>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {treatmentProgress.progress.diagnosis} - Week{" "}
+                {treatmentProgress.progress.currentWeek} of{" "}
+                {treatmentProgress.progress.totalWeeks}
+              </Typography>
+
+              {/* Progress Bar */}
+              <Box sx={{ mb: 3 }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  sx={{ mb: 1 }}
+                >
+                  <Typography variant="body2" fontWeight={500}>
+                    Overall Progress
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="primary.main"
+                    fontWeight={600}
+                  >
+                    {Math.round(treatmentProgress.progress.overallProgress)}%
+                  </Typography>
+                </Stack>
+                <LinearProgress
+                  variant="determinate"
+                  value={treatmentProgress.progress.overallProgress}
+                  sx={{
+                    height: 12,
+                    borderRadius: 6,
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    "& .MuiLinearProgress-bar": {
+                      borderRadius: 6,
+                      background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.success.main})`,
+                    },
+                  }}
+                />
+              </Box>
+
+              {/* Treatment Stats Grid */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+                  gap: 2,
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.info.main, 0.08),
+                    textAlign: "center",
+                  }}
+                >
+                  <Typography variant="h5" fontWeight={700} color="info.main">
+                    {treatmentProgress.progress.completedSessions}/
+                    {treatmentProgress.progress.totalSessions}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Sessions
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.error.main, 0.08),
+                    textAlign: "center",
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="center"
+                    spacing={0.5}
+                  >
+                    <LocalFireDepartment
+                      sx={{ fontSize: 20, color: "error.main" }}
+                    />
+                    <Typography variant="h5" fontWeight={700} color="error.main">
+                      {treatmentProgress.progress.currentStreak}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary">
+                    Day Streak
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.warning.main, 0.08),
+                    textAlign: "center",
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="center"
+                    spacing={0.5}
+                  >
+                    <Star sx={{ fontSize: 20, color: "warning.main" }} />
+                    <Typography
+                      variant="h5"
+                      fontWeight={700}
+                      color="warning.main"
+                    >
+                      {treatmentProgress.progress.totalPoints}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary">
+                    Points
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.success.main, 0.08),
+                    textAlign: "center",
+                  }}
+                >
+                  <Typography variant="h5" fontWeight={700} color="success.main">
+                    {treatmentProgress.progress.currentPhase}/
+                    {treatmentProgress.progress.totalPhases}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Phase
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Today's Exercises Summary */}
+              {treatmentProgress.progress.todaysExercises > 0 && (
+                <Box
+                  sx={{
+                    mt: 3,
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                    border: "1px solid",
+                    borderColor: alpha(theme.palette.primary.main, 0.15),
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <FitnessCenter
+                        sx={{ color: "primary.main", fontSize: 20 }}
+                      />
+                      <Typography variant="body2">
+                        Today's Exercises:{" "}
+                        <strong>
+                          {treatmentProgress.progress.todaysCompletedExercises}/
+                          {treatmentProgress.progress.todaysExercises}
+                        </strong>{" "}
+                        completed
+                      </Typography>
+                    </Stack>
+                    {treatmentProgress.progress.todaysCompletedExercises ===
+                    treatmentProgress.progress.todaysExercises ? (
+                      <Chip
+                        size="small"
+                        icon={<CheckCircle sx={{ fontSize: 16 }} />}
+                        label="All done!"
+                        color="success"
+                      />
+                    ) : (
+                      <AuraButton
+                        variant="contained"
+                        size="small"
+                        onClick={() => navigate("/treatment-plan")}
+                      >
+                        Continue
+                      </AuraButton>
+                    )}
+                  </Stack>
+                </Box>
+              )}
+
+              {/* Milestones Preview */}
+              {treatmentProgress.progress.unlockedMilestones?.length > 0 && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                    Recent Milestones
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {treatmentProgress.progress.unlockedMilestones
+                      .slice(0, 3)
+                      .map((milestone: any) => (
+                        <Chip
+                          key={milestone.id}
+                          icon={<EmojiEvents sx={{ fontSize: 16 }} />}
+                          label={milestone.title}
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                        />
+                      ))}
+                  </Stack>
+                </Box>
+              )}
+            </Box>
+          </AuraCard>
+        )}
 
         {/* Progress Charts */}
         <Box

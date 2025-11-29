@@ -79,7 +79,11 @@ public class QivrDbContext : DbContext
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<TreatmentPlan> TreatmentPlans => Set<TreatmentPlan>();
+    public DbSet<ExerciseTemplate> ExerciseTemplates => Set<ExerciseTemplate>();
     public DbSet<Referral> Referrals => Set<Referral>();
+    public DbSet<ProviderSchedule> ProviderSchedules => Set<ProviderSchedule>();
+    public DbSet<ProviderTimeOff> ProviderTimeOffs => Set<ProviderTimeOff>();
+    public DbSet<ProviderScheduleOverride> ProviderScheduleOverrides => Set<ProviderScheduleOverride>();
 
     private static Dictionary<string, object> DeserializeJsonSafely(string v)
     {
@@ -785,6 +789,7 @@ public class QivrDbContext : DbContext
         });
 
         ConfigureMedicalRecords(modelBuilder);
+        ConfigureProviderScheduling(modelBuilder);
     }
 
     public override int SaveChanges()
@@ -964,10 +969,100 @@ public class QivrDbContext : DbContext
             entity.ToTable("treatment_plans");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.PatientId });
+            entity.HasIndex(e => e.SourceEvaluationId);
             entity.Property(e => e.Status).HasConversion<string>();
+
+            // Legacy JSONB columns
             entity.Property(e => e.Sessions).HasColumnType("jsonb");
             entity.Property(e => e.Exercises).HasColumnType("jsonb");
+
+            // New JSONB columns for phase-based treatment
+            entity.Property(e => e.Phases).HasColumnType("jsonb");
+            entity.Property(e => e.Milestones).HasColumnType("jsonb");
+            entity.Property(e => e.PromConfig).HasColumnType("jsonb");
+
             entity.HasQueryFilter(e => e.DeletedAt == null && e.TenantId == GetTenantId());
+        });
+
+        // ExerciseTemplate configuration
+        modelBuilder.Entity<ExerciseTemplate>(entity =>
+        {
+            entity.ToTable("exercise_templates");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.Category, e.BodyRegion });
+            entity.HasIndex(e => new { e.TenantId, e.Name });
+            entity.HasIndex(e => e.IsSystemExercise);
+
+            entity.Property(e => e.Difficulty).HasConversion<string>();
+            entity.Property(e => e.TargetConditions).HasColumnType("jsonb");
+            entity.Property(e => e.Contraindications).HasColumnType("jsonb");
+            entity.Property(e => e.Equipment).HasColumnType("jsonb");
+            entity.Property(e => e.Tags).HasColumnType("jsonb");
+
+            // Filter to show system exercises OR tenant-specific exercises
+            entity.HasQueryFilter(e => e.IsActive && (e.IsSystemExercise || e.TenantId == GetTenantId()));
+        });
+    }
+
+    private void ConfigureProviderScheduling(ModelBuilder modelBuilder)
+    {
+        // ProviderSchedule - weekly recurring schedule
+        modelBuilder.Entity<ProviderSchedule>(entity =>
+        {
+            entity.ToTable("provider_schedules");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.ProviderId, e.DayOfWeek }).IsUnique();
+
+            entity.Property(e => e.DayOfWeek).HasConversion<int>();
+            entity.Property(e => e.StartTime).HasMaxLength(5);
+            entity.Property(e => e.EndTime).HasMaxLength(5);
+            entity.Property(e => e.BreakStartTime).HasMaxLength(5);
+            entity.Property(e => e.BreakEndTime).HasMaxLength(5);
+
+            entity.HasOne(e => e.Provider)
+                .WithMany()
+                .HasForeignKey(e => e.ProviderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // ProviderTimeOff - vacation, sick leave, blocked time
+        modelBuilder.Entity<ProviderTimeOff>(entity =>
+        {
+            entity.ToTable("provider_time_offs");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.ProviderId, e.StartDateTime, e.EndDateTime });
+
+            entity.Property(e => e.Type).HasConversion<string>();
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.RecurrencePattern).HasConversion<string>();
+
+            entity.HasOne(e => e.Provider)
+                .WithMany()
+                .HasForeignKey(e => e.ProviderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // ProviderScheduleOverride - specific date overrides
+        modelBuilder.Entity<ProviderScheduleOverride>(entity =>
+        {
+            entity.ToTable("provider_schedule_overrides");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.ProviderId, e.Date }).IsUnique();
+
+            entity.Property(e => e.StartTime).HasMaxLength(5);
+            entity.Property(e => e.EndTime).HasMaxLength(5);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+
+            entity.HasOne(e => e.Provider)
+                .WithMany()
+                .HasForeignKey(e => e.ProviderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
     }
 
@@ -977,7 +1072,7 @@ public class QivrDbContext : DbContext
         {
             return input ?? string.Empty;
         }
-        
+
         var result = new System.Text.StringBuilder();
         for (int i = 0; i < input.Length; i++)
         {

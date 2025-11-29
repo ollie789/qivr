@@ -101,4 +101,186 @@ export const handleApiError = (error: unknown, defaultMessage: string): string =
   return defaultMessage;
 };
 
-export default new ApiClient();
+const apiClient = new ApiClient();
+
+// ============================================
+// Treatment Plans API
+// ============================================
+
+export interface ExerciseCompletion {
+  setsCompleted: number;
+  repsCompleted: number;
+  painLevelBefore?: number;
+  painLevelAfter?: number;
+  notes?: string;
+}
+
+export interface DailyCheckInData {
+  painLevel: number;
+  mood: number;
+  notes?: string;
+  exercisesCompleted: number;
+}
+
+export interface TreatmentPhase {
+  phaseNumber: number;
+  name: string;
+  description?: string;
+  durationWeeks: number;
+  goals: string[];
+  status: "NotStarted" | "InProgress" | "Completed";
+  startDate?: string;
+  endDate?: string;
+  exercises: Exercise[];
+  sessionsPerWeek: number;
+  phaseProgressPercentage?: number;
+}
+
+export interface Exercise {
+  id: string;
+  name: string;
+  description?: string;
+  instructions?: string;
+  sets: number;
+  reps: number;
+  holdSeconds?: number;
+  frequency?: string;
+  category?: string;
+  bodyRegion?: string;
+  difficulty?: string;
+  videoUrl?: string;
+  imageUrl?: string;
+  completions?: ExerciseCompletionRecord[];
+}
+
+export interface ExerciseCompletionRecord {
+  completedAt: string;
+  setsCompleted: number;
+  repsCompleted: number;
+}
+
+export interface TodayTask {
+  exerciseId: string;
+  name: string;
+  sets: number;
+  reps: number;
+  holdSeconds?: number;
+  instructions?: string;
+  description?: string;
+  category?: string;
+  bodyRegion?: string;
+  difficulty?: string;
+  isCompleted: boolean;
+  completedAt?: string;
+}
+
+export interface Milestone {
+  id: string;
+  type: string;
+  title: string;
+  description?: string;
+  targetDate?: string;
+  achievedDate?: string;
+  isAchieved: boolean;
+  pointsAwarded: number;
+  icon?: string;
+}
+
+export interface CheckInStatus {
+  hasCheckedInToday: boolean;
+  lastCheckIn?: {
+    painLevel: number;
+    mood: number;
+    notes?: string;
+    date: string;
+  };
+}
+
+export interface MyTreatmentPlan {
+  id: string;
+  patientName: string;
+  title: string;
+  diagnosis: string;
+  status: string;
+  startDate: string;
+  estimatedEndDate?: string;
+  currentPhase: number;
+  totalPhases: number;
+  overallProgress: number;
+  currentWeek: number;
+  totalWeeks: number;
+  currentStreak: number;
+  totalPoints: number;
+  phases: TreatmentPhase[];
+  todaysTasks: TodayTask[];
+  milestones: Milestone[];
+  checkInStatus: CheckInStatus;
+}
+
+export interface TreatmentProgressResponse {
+  hasPlan: boolean;
+  message?: string;
+  progress?: {
+    treatmentPlanId: string;
+    planTitle: string;
+    diagnosis: string;
+    status: string;
+    startDate: string;
+    estimatedEndDate?: string;
+    overallProgress: number;
+    currentWeek: number;
+    totalWeeks: number;
+    currentPhase: number;
+    totalPhases: number;
+    completedSessions: number;
+    totalSessions: number;
+    totalExercises: number;
+    completedExercises: number;
+    todaysExercises: number;
+    todaysCompletedExercises: number;
+    currentStreak: number;
+    totalPoints: number;
+    unlockedMilestones: Milestone[];
+    upcomingMilestones: Milestone[];
+  };
+}
+
+export const treatmentPlansApi = {
+  /**
+   * Get the patient's active treatment plan with today's tasks
+   */
+  getMyPlan: () =>
+    apiClient.get<MyTreatmentPlan>("/api/treatment-plans/my-plan"),
+
+  /**
+   * Get treatment progress data for the Health Progress page
+   */
+  getProgress: () =>
+    apiClient.get<TreatmentProgressResponse>("/api/treatment-plans/progress"),
+
+  /**
+   * Complete an exercise
+   */
+  completeExercise: (planId: string, exerciseId: string, data: ExerciseCompletion) =>
+    apiClient.post<{ message: string; pointsEarned: number; totalPoints: number; exerciseStreak: number }>(
+      `/api/treatment-plans/${planId}/exercises/${exerciseId}/complete`,
+      data
+    ),
+
+  /**
+   * Submit a daily check-in
+   */
+  submitCheckIn: (planId: string, data: DailyCheckInData) =>
+    apiClient.post<{ message: string; streak: number; points: number }>(
+      `/api/treatment-plans/${planId}/check-in`,
+      data
+    ),
+
+  /**
+   * Get milestones for a treatment plan
+   */
+  getMilestones: (planId: string) =>
+    apiClient.get<Milestone[]>(`/api/treatment-plans/${planId}/milestones`),
+};
+
+export default apiClient;

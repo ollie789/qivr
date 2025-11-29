@@ -59,6 +59,7 @@ import {
 } from "../services/notificationsApi";
 import api from "../lib/api-client";
 import { TenantInfo } from "../components/shared";
+import { ProviderScheduleDialog } from "../components/providers";
 import {
   PageHeader,
   TabPanel as DesignTabPanel,
@@ -179,6 +180,8 @@ export default function Settings() {
   const [newApiKeyDialog, setNewApiKeyDialog] = useState(false);
   const [notificationPreferences, setNotificationPreferences] =
     useState<NotificationPreferences | null>(null);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<ProviderMember | null>(null);
 
   const [settings, setSettings] = useState<ClinicSettings>({
     clinic: {
@@ -1044,6 +1047,16 @@ export default function Settings() {
                           />
                         </TableCell>
                         <TableCell>
+                          <IconButton
+                            size="small"
+                            title="Manage Schedule"
+                            onClick={() => {
+                              setSelectedProvider(provider);
+                              setScheduleDialogOpen(true);
+                            }}
+                          >
+                            <ScheduleIcon />
+                          </IconButton>
                           <IconButton size="small">
                             <EditIcon />
                           </IconButton>
@@ -1406,6 +1419,19 @@ export default function Settings() {
         severity="warning"
         confirmText="Generate New Key"
       />
+
+      {/* Provider Schedule Dialog */}
+      {selectedProvider && (
+        <ProviderScheduleDialog
+          open={scheduleDialogOpen}
+          onClose={() => {
+            setScheduleDialogOpen(false);
+            setSelectedProvider(null);
+          }}
+          providerId={selectedProvider.id}
+          providerName={selectedProvider.name}
+        />
+      )}
     </Box>
   );
 }

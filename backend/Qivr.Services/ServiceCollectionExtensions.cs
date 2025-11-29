@@ -44,11 +44,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AI.IBedrockService, AI.BedrockService>();
         services.AddScoped<AI.IDeIdentificationService, AI.DeIdentificationService>();
         services.AddScoped<AI.IAiTriageService, AI.AiTriageService>();
+        services.AddScoped<AI.IAiTreatmentPlanService, AI.AiTreatmentPlanService>();
         
         // Register PROM service
         services.AddScoped<IPromService, PromService>();
         services.AddScoped<IPromInstanceService, PromInstanceService>();
         services.AddHttpClient<INotificationService, NotificationService>();
+
+        // Register Treatment Plan scheduling service
+        services.AddScoped<ITreatmentPlanSchedulingService, TreatmentPlanSchedulingService>();
 
         // Add HttpClient for external APIs
         services.AddHttpClient("MessageMedia", client =>
