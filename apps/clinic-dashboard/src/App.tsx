@@ -40,6 +40,7 @@ const Messages = lazy(() => import("./pages/Messages"));
 const Documents = lazy(() => import("./pages/Documents"));
 const DocumentUpload = lazy(() => import("./pages/DocumentUpload"));
 const MedicalRecords = lazy(() => import("./pages/MedicalRecords"));
+const Referrals = lazy(() => import("./pages/Referrals"));
 const ApiKeys = lazy(() => import("./pages/ApiKeys"));
 const TreatmentPlans = lazy(() => import("./pages/TreatmentPlans"));
 
@@ -119,6 +120,7 @@ function InnerApp() {
                   />
                   <Route path="patients/:id" element={<PatientDetail />} />
                   <Route path="messages" element={<Messages />} />
+                  <Route path="referrals" element={<Referrals />} />
                   <Route path="documents" element={<Documents />} />
                   <Route path="documents/upload" element={<DocumentUpload />} />
                   <Route path="medical-records" element={<MedicalRecords />} />

@@ -1,17 +1,21 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { useAuthGuard } from '../../../hooks/useAuthGuard';
-import { medicalRecordsApi } from '../../../services/medicalRecordsApi';
-import { patientApi, type PatientListResponse } from '../../../services/patientApi';
-import { documentApi } from '../../../services/documentApi';
-import apiClient from '../../../lib/api-client';
-import type { MedicalHistory } from '../types';
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useAuthGuard } from "../../../hooks/useAuthGuard";
+import { medicalRecordsApi } from "../../../services/medicalRecordsApi";
+import {
+  patientApi,
+  type PatientListResponse,
+} from "../../../services/patientApi";
+import { documentApi } from "../../../services/documentApi";
+import { referralApi } from "../../../services/referralApi";
+import apiClient from "../../../lib/api-client";
+import type { MedicalHistory } from "../types";
 
 export function usePatientList() {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery<PatientListResponse>({
-    queryKey: ['medicalRecords', 'patients'],
+    queryKey: ["medicalRecords", "patients"],
     queryFn: () => patientApi.getPatients({ limit: 200 }),
     staleTime: 5 * 60 * 1000,
     enabled: canMakeApiCalls,
@@ -22,7 +26,7 @@ export function useMedicalSummary(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['medicalSummary', patientId],
+    queryKey: ["medicalSummary", patientId],
     queryFn: async () => {
       if (!patientId) return null;
       return medicalRecordsApi.getSummary(patientId);
@@ -35,7 +39,7 @@ export function useVitalSigns(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['vitalSigns', patientId],
+    queryKey: ["vitalSigns", patientId],
     queryFn: async () => {
       if (!patientId) return [];
       return medicalRecordsApi.getVitals(patientId);
@@ -48,7 +52,7 @@ export function useLabResults(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['labResults', patientId],
+    queryKey: ["labResults", patientId],
     queryFn: async () => {
       if (!patientId) return [];
       return medicalRecordsApi.getLabResults(patientId);
@@ -61,7 +65,7 @@ export function useDocuments(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['documents', patientId],
+    queryKey: ["documents", patientId],
     queryFn: () => documentApi.list({ patientId: patientId! }),
     enabled: canMakeApiCalls && !!patientId,
   });
@@ -71,7 +75,7 @@ export function useMedications(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['medications', patientId],
+    queryKey: ["medications", patientId],
     queryFn: async () => {
       if (!patientId) return [];
       return medicalRecordsApi.getMedications(patientId);
@@ -84,7 +88,7 @@ export function useAllergies(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['allergies', patientId],
+    queryKey: ["allergies", patientId],
     queryFn: async () => {
       if (!patientId) return [];
       return medicalRecordsApi.getAllergies(patientId);
@@ -97,7 +101,7 @@ export function useImmunizations(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['immunizations', patientId],
+    queryKey: ["immunizations", patientId],
     queryFn: async () => {
       if (!patientId) return [];
       return medicalRecordsApi.getImmunizations(patientId);
@@ -110,7 +114,7 @@ export function useProcedures(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['procedures', patientId],
+    queryKey: ["procedures", patientId],
     queryFn: async () => {
       if (!patientId) return [];
       return medicalRecordsApi.getProcedures(patientId);
@@ -123,7 +127,7 @@ export function usePhysioHistory(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 
   return useQuery({
-    queryKey: ['physioHistory', patientId],
+    queryKey: ["physioHistory", patientId],
     queryFn: async () => {
       if (!patientId) return [];
       return medicalRecordsApi.getPhysioHistory(patientId);
@@ -134,10 +138,12 @@ export function usePhysioHistory(patientId: string | null) {
 
 export function usePainProgression(patientId: string | null) {
   return useQuery({
-    queryKey: ['painProgression', patientId],
+    queryKey: ["painProgression", patientId],
     queryFn: async () => {
       if (!patientId) return [];
-      return await apiClient.get(`/api/pain-map-analytics/progression/${patientId}`);
+      return await apiClient.get(
+        `/api/pain-map-analytics/progression/${patientId}`,
+      );
     },
     enabled: Boolean(patientId),
   });
@@ -145,13 +151,28 @@ export function usePainProgression(patientId: string | null) {
 
 export function usePatientTimeline(patientId: string | null) {
   return useQuery({
-    queryKey: ['patient-timeline', patientId],
+    queryKey: ["patient-timeline", patientId],
     queryFn: async () => {
       if (!patientId) return [];
-      const response = await apiClient.get(`/api/patients/${patientId}/timeline`);
+      const response = await apiClient.get(
+        `/api/patients/${patientId}/timeline`,
+      );
       return response.data;
     },
     enabled: !!patientId,
+  });
+}
+
+export function usePatientReferrals(patientId: string | null) {
+  const { canMakeApiCalls } = useAuthGuard();
+
+  return useQuery({
+    queryKey: ["referrals", "patient", patientId],
+    queryFn: async () => {
+      if (!patientId) return [];
+      return referralApi.getByPatient(patientId);
+    },
+    enabled: canMakeApiCalls && !!patientId,
   });
 }
 
@@ -162,7 +183,7 @@ export function useAggregatedMedicalHistory(
   allergies: any[],
   immunizations: any[],
   procedures: any[],
-  physioHistory: any[]
+  physioHistory: any[],
 ): MedicalHistory[] {
   return useMemo(() => {
     if (!patientId) return [];
@@ -185,16 +206,20 @@ export function useAggregatedMedicalHistory(
 
     medicalSummary?.conditions?.forEach((condition: any) => {
       const match = condition.condition?.match(/^\[([A-Z]+)\]\s*(.+)$/);
-      const category = (match ? match[1]?.toLowerCase() : 'condition') as MedicalHistory['category'];
-      const title = match ? match[2] || condition.condition : condition.condition;
+      const category = (
+        match ? match[1]?.toLowerCase() : "condition"
+      ) as MedicalHistory["category"];
+      const title = match
+        ? match[2] || condition.condition
+        : condition.condition;
 
       entries.push({
         id: condition.id,
         category: category,
-        title: title || 'Untitled',
+        title: title || "Untitled",
         description: condition.managedBy,
         date: condition.diagnosedDate,
-        status: condition.status === 'resolved' ? 'resolved' : 'active',
+        status: condition.status === "resolved" ? "resolved" : "active",
         severity: undefined,
         notes: condition.notes ?? undefined,
       });
@@ -203,11 +228,11 @@ export function useAggregatedMedicalHistory(
     medications.forEach((medication) => {
       entries.push({
         id: medication.id,
-        category: 'medication',
+        category: "medication",
         title: medication.name,
         description: medication.instructions ?? medication.frequency,
         date: medication.startDate,
-        status: medication.status === 'completed' ? 'resolved' : 'active',
+        status: medication.status === "completed" ? "resolved" : "active",
         severity: undefined,
         notes: medication.instructions ?? undefined,
       });
@@ -216,12 +241,14 @@ export function useAggregatedMedicalHistory(
     allergies.forEach((allergy) => {
       entries.push({
         id: allergy.id,
-        category: 'allergy',
+        category: "allergy",
         title: allergy.allergen,
         description: allergy.reaction,
         date: allergy.diagnosedDate ?? undefined,
-        status: 'active',
-        severity: (allergy.severity?.toLowerCase() as MedicalHistory['severity']) ?? undefined,
+        status: "active",
+        severity:
+          (allergy.severity?.toLowerCase() as MedicalHistory["severity"]) ??
+          undefined,
         notes: allergy.notes ?? undefined,
       });
     });
@@ -229,11 +256,11 @@ export function useAggregatedMedicalHistory(
     immunizations.forEach((immunization) => {
       entries.push({
         id: immunization.id,
-        category: 'immunization',
+        category: "immunization",
         title: immunization.vaccine,
         description: immunization.provider,
         date: immunization.date,
-        status: 'resolved',
+        status: "resolved",
         severity: undefined,
         notes: immunization.facility,
       });
@@ -242,11 +269,11 @@ export function useAggregatedMedicalHistory(
     procedures.forEach((procedure: any) => {
       entries.push({
         id: procedure.id,
-        category: 'surgery',
+        category: "surgery",
         title: procedure.procedureName,
         description: procedure.provider,
         date: procedure.procedureDate,
-        status: procedure.status === 'completed' ? 'resolved' : 'active',
+        status: procedure.status === "completed" ? "resolved" : "active",
         severity: undefined,
         notes: procedure.notes ?? procedure.outcome ?? undefined,
       });
@@ -255,11 +282,11 @@ export function useAggregatedMedicalHistory(
     medicalSummary?.recentVisits?.forEach((visit: any) => {
       entries.push({
         id: visit.id,
-        category: 'visit',
+        category: "visit",
         title: visit.provider,
         description: visit.facility,
         date: visit.date,
-        status: 'resolved',
+        status: "resolved",
         severity: undefined,
         notes: visit.notes ?? undefined,
       });
@@ -270,5 +297,13 @@ export function useAggregatedMedicalHistory(
       const bDate = b.date ? new Date(b.date).getTime() : 0;
       return bDate - aDate;
     });
-  }, [patientId, medicalSummary, medications, allergies, immunizations, procedures, physioHistory]);
+  }, [
+    patientId,
+    medicalSummary,
+    medications,
+    allergies,
+    immunizations,
+    procedures,
+    physioHistory,
+  ]);
 }

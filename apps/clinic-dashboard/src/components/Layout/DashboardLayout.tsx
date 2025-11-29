@@ -32,9 +32,9 @@ import {
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
   Message as MessageIcon,
-  FolderOpen as DocumentsIcon,
   LocalHospital as MedicalIcon,
   MedicalServices as TreatmentIcon,
+  Send as ReferralsIcon,
 } from "@mui/icons-material";
 import { useAuthActions, useAuthUser } from "../../stores/authStore";
 import { NotificationBell, TenantSelector } from "../shared";
@@ -123,14 +123,18 @@ const DashboardLayout: React.FC = () => {
       icon: <MedicalIcon />,
       path: "/medical-records",
     },
-    { text: "Treatment Plans", icon: <TreatmentIcon />, path: "/treatment-plans" },
+    {
+      text: "Treatment Plans",
+      icon: <TreatmentIcon />,
+      path: "/treatment-plans",
+    },
+    { text: "Referrals", icon: <ReferralsIcon />, path: "/referrals" },
     {
       text: "Messages",
       icon: <MessageIcon />,
       path: "/messages",
       badge: unreadCount,
     },
-    { text: "Documents", icon: <DocumentsIcon />, path: "/documents" },
     { text: "PROM", icon: <AssignmentIcon />, path: "/prom" },
     { text: "Analytics", icon: <AnalyticsIcon />, path: "/analytics" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
@@ -207,9 +211,7 @@ const DashboardLayout: React.FC = () => {
                   }}
                 >
                   {item.badge ? (
-                    <CountBadge count={item.badge}>
-                      {item.icon}
-                    </CountBadge>
+                    <CountBadge count={item.badge}>{item.icon}</CountBadge>
                   ) : (
                     item.icon
                   )}
@@ -238,9 +240,9 @@ const DashboardLayout: React.FC = () => {
               },
             }}
           >
-            <Avatar 
-              sx={{ 
-                width: 36, 
+            <Avatar
+              sx={{
+                width: 36,
                 height: 36,
                 background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
               }}
@@ -258,9 +260,9 @@ const DashboardLayout: React.FC = () => {
           </Box>
         ) : (
           <Box sx={{ display: "flex", justifyContent: "center" }}>
-            <Avatar 
-              sx={{ 
-                width: 36, 
+            <Avatar
+              sx={{
+                width: 36,
                 height: 36,
                 background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
               }}

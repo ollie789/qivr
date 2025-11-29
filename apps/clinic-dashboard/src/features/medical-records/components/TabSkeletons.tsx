@@ -1,6 +1,6 @@
-import React from 'react';
-import { Box, Skeleton, Grid } from '@mui/material';
-import { auraTokens } from '@qivr/design-system';
+import React from "react";
+import { Box, Skeleton, Grid } from "@mui/material";
+import { auraTokens } from "@qivr/design-system";
 
 export const DemographicsSkeleton: React.FC = () => (
   <Box sx={{ p: 3 }}>
@@ -10,17 +10,19 @@ export const DemographicsSkeleton: React.FC = () => (
           <Box
             sx={{
               p: 3,
-              bgcolor: 'background.paper',
+              bgcolor: "background.paper",
               borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
+              border: "1px solid",
+              borderColor: "divider",
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}
+            >
               <Skeleton variant="rounded" width={36} height={36} />
               <Skeleton variant="text" width={150} height={24} />
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {[1, 2, 3].map((j) => (
                 <Skeleton key={j} variant="rounded" height={40} />
               ))}
@@ -35,7 +37,7 @@ export const DemographicsSkeleton: React.FC = () => (
 export const PainAssessmentSkeleton: React.FC = () => (
   <Box sx={{ p: 3 }}>
     {/* Header */}
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
       <Box>
         <Skeleton variant="text" width={200} height={32} />
         <Skeleton variant="text" width={300} height={20} />
@@ -50,13 +52,15 @@ export const PainAssessmentSkeleton: React.FC = () => (
           <Box
             sx={{
               p: 2.5,
-              bgcolor: 'background.paper',
+              bgcolor: "background.paper",
               borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
+              border: "1px solid",
+              borderColor: "divider",
             }}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}
+            >
               <Skeleton variant="rounded" width={40} height={40} />
               <Skeleton variant="rounded" width={60} height={24} />
             </Box>
@@ -71,10 +75,10 @@ export const PainAssessmentSkeleton: React.FC = () => (
     <Box
       sx={{
         p: 3,
-        bgcolor: 'background.paper',
+        bgcolor: "background.paper",
         borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
+        border: "1px solid",
+        borderColor: "divider",
         mb: 3,
       }}
     >
@@ -90,20 +94,22 @@ export const PainAssessmentSkeleton: React.FC = () => (
           <Box
             sx={{
               p: 2.5,
-              bgcolor: 'background.paper',
+              bgcolor: "background.paper",
               borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
+              border: "1px solid",
+              borderColor: "divider",
             }}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}
+            >
               <Box>
                 <Skeleton variant="text" width={100} height={20} />
                 <Skeleton variant="text" width={60} height={16} />
               </Box>
               <Skeleton variant="rounded" width={50} height={24} />
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
               <Box sx={{ flex: 1 }}>
                 <Skeleton variant="text" width={80} height={16} />
                 <Skeleton variant="text" width={60} height={20} />
@@ -113,7 +119,7 @@ export const PainAssessmentSkeleton: React.FC = () => (
                 <Skeleton variant="text" width={60} height={20} />
               </Box>
             </Box>
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Box sx={{ display: "flex", gap: 0.5 }}>
               {[1, 2, 3].map((j) => (
                 <Skeleton key={j} variant="rounded" width={80} height={24} />
               ))}
@@ -128,7 +134,7 @@ export const PainAssessmentSkeleton: React.FC = () => (
 export const MedicalHistorySkeleton: React.FC = () => (
   <Box sx={{ p: 3 }}>
     {/* Header */}
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
       <Box>
         <Skeleton variant="text" width={180} height={32} />
         <Skeleton variant="text" width={320} height={20} />
@@ -143,14 +149,16 @@ export const MedicalHistorySkeleton: React.FC = () => (
           <Box
             sx={{
               p: 2.5,
-              bgcolor: 'background.paper',
+              bgcolor: "background.paper",
               borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
+              border: "1px solid",
+              borderColor: "divider",
               height: auraTokens.chart.sm,
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}
+            >
               <Skeleton variant="rounded" width={36} height={36} />
               <Box sx={{ flex: 1 }}>
                 <Skeleton variant="text" width={80} height={20} />
@@ -158,7 +166,10 @@ export const MedicalHistorySkeleton: React.FC = () => (
               </Box>
             </Box>
             {[1, 2, 3].map((j) => (
-              <Box key={j} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Box
+                key={j}
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
+              >
                 <Skeleton variant="circular" width={8} height={8} />
                 <Skeleton variant="text" width="80%" height={20} />
               </Box>
@@ -169,8 +180,8 @@ export const MedicalHistorySkeleton: React.FC = () => (
     </Grid>
 
     {/* Tabs */}
-    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-      <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+      <Box sx={{ display: "flex", gap: 2 }}>
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} variant="rounded" width={100} height={40} />
         ))}
@@ -180,10 +191,10 @@ export const MedicalHistorySkeleton: React.FC = () => (
     {/* List items */}
     <Box
       sx={{
-        bgcolor: 'background.paper',
+        bgcolor: "background.paper",
         borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
+        border: "1px solid",
+        borderColor: "divider",
       }}
     >
       {[1, 2, 3, 4].map((i) => (
@@ -191,23 +202,28 @@ export const MedicalHistorySkeleton: React.FC = () => (
           key={i}
           sx={{
             p: 2.5,
-            borderBottom: i < 4 ? '1px solid' : 'none',
-            borderColor: 'divider',
-            display: 'flex',
+            borderBottom: i < 4 ? "1px solid" : "none",
+            borderColor: "divider",
+            display: "flex",
             gap: 2,
           }}
         >
           <Skeleton variant="rounded" width={36} height={36} />
           <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
+            <Box sx={{ display: "flex", gap: 1, mb: 0.5 }}>
               <Skeleton variant="text" width={150} height={24} />
               <Skeleton variant="rounded" width={60} height={20} />
             </Box>
             <Skeleton variant="text" width="60%" height={20} />
           </Box>
-          <Box sx={{ textAlign: 'right' }}>
+          <Box sx={{ textAlign: "right" }}>
             <Skeleton variant="text" width={100} height={20} />
-            <Skeleton variant="rounded" width={80} height={24} sx={{ mt: 0.5 }} />
+            <Skeleton
+              variant="rounded"
+              width={80}
+              height={24}
+              sx={{ mt: 0.5 }}
+            />
           </Box>
         </Box>
       ))}
@@ -218,38 +234,53 @@ export const MedicalHistorySkeleton: React.FC = () => (
 export const TimelineSkeleton: React.FC = () => (
   <Box sx={{ p: 3 }}>
     {/* Header */}
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
       <Box>
         <Skeleton variant="text" width={150} height={32} />
         <Skeleton variant="text" width={250} height={20} />
       </Box>
-      <Box sx={{ display: 'flex', gap: 1 }}>
+      <Box sx={{ display: "flex", gap: 1 }}>
         <Skeleton variant="rounded" width={100} height={36} />
         <Skeleton variant="rounded" width={100} height={36} />
       </Box>
     </Box>
 
     {/* Timeline items */}
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {[1, 2, 3, 4, 5].map((i) => (
         <Box
           key={i}
           sx={{
-            display: 'flex',
+            display: "flex",
             gap: 2,
             p: 2.5,
-            bgcolor: 'background.paper',
+            bgcolor: "background.paper",
             borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
+            border: "1px solid",
+            borderColor: "divider",
           }}
         >
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
             <Skeleton variant="circular" width={40} height={40} />
-            {i < 5 && <Skeleton variant="rectangular" width={2} height={40} sx={{ mt: 1 }} />}
+            {i < 5 && (
+              <Skeleton
+                variant="rectangular"
+                width={2}
+                height={40}
+                sx={{ mt: 1 }}
+              />
+            )}
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+            >
               <Skeleton variant="text" width={200} height={24} />
               <Skeleton variant="text" width={100} height={20} />
             </Box>
@@ -265,7 +296,7 @@ export const TimelineSkeleton: React.FC = () => (
 export const DocumentsSkeleton: React.FC = () => (
   <Box sx={{ p: 3 }}>
     {/* Header */}
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
       <Box>
         <Skeleton variant="text" width={120} height={32} />
         <Skeleton variant="text" width={300} height={20} />
@@ -274,8 +305,8 @@ export const DocumentsSkeleton: React.FC = () => (
     </Box>
 
     {/* Filters */}
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-      <Box sx={{ display: 'flex', gap: 1 }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+      <Box sx={{ display: "flex", gap: 1 }}>
         {[1, 2, 3].map((i) => (
           <Skeleton key={i} variant="rounded" width={100} height={32} />
         ))}
@@ -290,14 +321,14 @@ export const DocumentsSkeleton: React.FC = () => (
           <Box
             sx={{
               p: 2.5,
-              bgcolor: 'background.paper',
+              bgcolor: "background.paper",
               borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
+              border: "1px solid",
+              borderColor: "divider",
               height: auraTokens.chart.md,
             }}
           >
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
               <Skeleton variant="rounded" width={48} height={48} />
               <Box sx={{ flex: 1 }}>
                 <Skeleton variant="text" width="80%" height={20} />
@@ -305,17 +336,81 @@ export const DocumentsSkeleton: React.FC = () => (
               </Box>
               <Skeleton variant="circular" width={32} height={32} />
             </Box>
-            <Box sx={{ display: 'flex', gap: 0.75, mb: 2 }}>
+            <Box sx={{ display: "flex", gap: 0.75, mb: 2 }}>
               <Skeleton variant="rounded" width={80} height={22} />
               <Skeleton variant="rounded" width={60} height={22} />
             </Box>
-            <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 2, mb: 2 }}>
+            <Box
+              sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: 2, mb: 2 }}
+            >
               <Skeleton variant="text" width={100} height={16} />
               <Skeleton variant="text" width="90%" height={20} />
             </Box>
-            <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+            <Box sx={{ display: "flex", gap: 1, mt: "auto" }}>
               <Skeleton variant="rounded" width="50%" height={32} />
               <Skeleton variant="rounded" width="50%" height={32} />
+            </Box>
+          </Box>
+        </Grid>
+      ))}
+    </Grid>
+  </Box>
+);
+
+export const ReferralsSkeleton: React.FC = () => (
+  <Box sx={{ p: 3 }}>
+    {/* Header */}
+    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+      <Box>
+        <Skeleton variant="text" width={120} height={32} />
+        <Skeleton variant="text" width={280} height={20} />
+      </Box>
+      <Skeleton variant="rounded" width={140} height={36} />
+    </Box>
+
+    {/* Section title */}
+    <Skeleton variant="text" width={180} height={28} sx={{ mb: 2 }} />
+
+    {/* Referral cards */}
+    <Grid container spacing={2.5}>
+      {[1, 2, 3].map((i) => (
+        <Grid key={i} size={{ xs: 12, sm: 6, lg: 4 }}>
+          <Box
+            sx={{
+              p: 2.5,
+              bgcolor: "background.paper",
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+              <Skeleton variant="rounded" width={48} height={48} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton variant="text" width="70%" height={22} />
+                <Skeleton variant="text" width={120} height={16} />
+              </Box>
+            </Box>
+            <Box sx={{ display: "flex", gap: 0.75, mb: 2 }}>
+              <Skeleton variant="rounded" width={70} height={24} />
+              <Skeleton variant="rounded" width={80} height={24} />
+            </Box>
+            <Box sx={{ mb: 2 }}>
+              <Skeleton variant="text" width={100} height={16} />
+              <Skeleton variant="text" width="90%" height={20} />
+              <Skeleton variant="text" width="70%" height={20} />
+            </Box>
+            <Box
+              sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: 2, mb: 2 }}
+            >
+              <Skeleton variant="text" width={80} height={16} />
+              <Skeleton variant="text" width="80%" height={20} />
+            </Box>
+            <Box sx={{ pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Skeleton variant="text" width={80} height={16} />
+                <Skeleton variant="text" width={80} height={16} />
+              </Box>
             </Box>
           </Box>
         </Grid>

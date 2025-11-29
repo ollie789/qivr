@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Box,
   Tabs,
@@ -11,29 +11,30 @@ import {
   DialogContent,
   DialogActions,
   Button,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Person as PersonIcon,
   Favorite as HeartIcon,
   MedicalServices as MedicalIcon,
   Timeline as TimelineIcon,
   Description as DocumentIcon,
+  Send as ReferralIcon,
   Save as SaveIcon,
-} from '@mui/icons-material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { format, parseISO } from 'date-fns';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSnackbar } from 'notistack';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+} from "@mui/icons-material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { format, parseISO } from "date-fns";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSnackbar } from "notistack";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   PageHeader,
   TabPanel,
   FormDialog,
   AuraButton,
   SelectField,
-} from '@qivr/design-system';
+} from "@qivr/design-system";
 
 import {
   PatientSidebar,
@@ -43,6 +44,7 @@ import {
   MedicalHistoryTab,
   TimelineTab,
   DocumentsTab,
+  ReferralsTab,
   PainBodyMap,
   type PainPoint,
   DemographicsSkeleton,
@@ -50,7 +52,8 @@ import {
   MedicalHistorySkeleton,
   TimelineSkeleton,
   DocumentsSkeleton,
-} from './components';
+  ReferralsSkeleton,
+} from "./components";
 
 import {
   usePatientList,
@@ -64,17 +67,25 @@ import {
   usePhysioHistory,
   usePainProgression,
   usePatientTimeline,
+  usePatientReferrals,
   useAggregatedMedicalHistory,
-} from './hooks';
+} from "./hooks";
 
-import { patientApi, type UpdatePatientDto } from '../../services/patientApi';
-import { medicalRecordsApi } from '../../services/medicalRecordsApi';
-import { documentApi } from '../../services/documentApi';
-import { MessageComposer } from '../../components/messaging';
-import type { Patient, MedicalHistory, PatientQuickStats } from './types';
+import { patientApi, type UpdatePatientDto } from "../../services/patientApi";
+import { medicalRecordsApi } from "../../services/medicalRecordsApi";
+import { documentApi } from "../../services/documentApi";
+import { MessageComposer } from "../../components/messaging";
+import type { Patient, MedicalHistory, PatientQuickStats } from "./types";
 
-const TAB_NAMES = ['demographics', 'pain', 'history', 'timeline', 'documents'] as const;
-type TabName = typeof TAB_NAMES[number];
+const TAB_NAMES = [
+  "demographics",
+  "pain",
+  "history",
+  "timeline",
+  "documents",
+  "referrals",
+] as const;
+type TabName = (typeof TAB_NAMES)[number];
 
 const MedicalRecordsPage: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
@@ -83,11 +94,13 @@ const MedicalRecordsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // URL state
-  const urlPatientId = searchParams.get('patientId');
-  const urlTab = searchParams.get('tab') as TabName | null;
+  const urlPatientId = searchParams.get("patientId");
+  const urlTab = searchParams.get("tab") as TabName | null;
 
   // State
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(urlPatientId);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    urlPatientId,
+  );
   const [activeTab, setActiveTab] = useState(() => {
     const tabIndex = urlTab ? TAB_NAMES.indexOf(urlTab) : 0;
     return tabIndex >= 0 ? tabIndex : 0;
@@ -98,28 +111,33 @@ const MedicalRecordsPage: React.FC = () => {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{ type: 'history'; id: string; title: string } | null>(null);
-  const [editingHistoryItem, setEditingHistoryItem] = useState<MedicalHistory | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{
+    type: "history";
+    id: string;
+    title: string;
+  } | null>(null);
+  const [editingHistoryItem, setEditingHistoryItem] =
+    useState<MedicalHistory | null>(null);
 
   // New entry states with validation
   const [newVital, setNewVital] = useState<{
     overallPainLevel: number;
-    functionalImpact: 'none' | 'mild' | 'moderate' | 'severe';
+    functionalImpact: "none" | "mild" | "moderate" | "severe";
     painPoints: PainPoint[];
     notes: string;
   }>({
     overallPainLevel: 0,
-    functionalImpact: 'none',
+    functionalImpact: "none",
     painPoints: [],
-    notes: '',
+    notes: "",
   });
 
   const [newHistory, setNewHistory] = useState<Partial<MedicalHistory>>({
-    category: 'injury',
-    title: '',
-    description: '',
-    status: 'active',
-    severity: 'mild',
+    category: "injury",
+    title: "",
+    description: "",
+    status: "active",
+    severity: "mild",
   });
 
   // Form validation state
@@ -132,7 +150,7 @@ const MedicalRecordsPage: React.FC = () => {
 
   const patient = useMemo(
     () => patients.find((p) => p.id === selectedPatientId) || null,
-    [patients, selectedPatientId]
+    [patients, selectedPatientId],
   );
 
   // Lazy loading - only fetch data for active tab
@@ -141,27 +159,39 @@ const MedicalRecordsPage: React.FC = () => {
   const shouldFetchHistory = activeTab === 2;
   const shouldFetchTimeline = activeTab === 3;
   const shouldFetchDocuments = activeTab === 4;
+  const shouldFetchReferrals = activeTab === 5;
 
-  const { data: medicalSummary, isLoading: isSummaryLoading } = useMedicalSummary(
-    shouldFetchSummary ? selectedPatientId : null
-  );
+  const { data: medicalSummary, isLoading: isSummaryLoading } =
+    useMedicalSummary(shouldFetchSummary ? selectedPatientId : null);
   const { data: vitalSigns = [], isLoading: isVitalsLoading } = useVitalSigns(
-    shouldFetchVitals ? selectedPatientId : null
+    shouldFetchVitals ? selectedPatientId : null,
   );
-  const { data: documents = [], refetch: refetchDocuments, isLoading: isDocumentsLoading } = useDocuments(
-    shouldFetchDocuments ? selectedPatientId : null
+  const {
+    data: documents = [],
+    refetch: refetchDocuments,
+    isLoading: isDocumentsLoading,
+  } = useDocuments(shouldFetchDocuments ? selectedPatientId : null);
+  const { data: referrals = [], isLoading: isReferralsLoading } =
+    usePatientReferrals(shouldFetchReferrals ? selectedPatientId : null);
+  const { data: medications = [], isLoading: isMedicationsLoading } =
+    useMedications(shouldFetchHistory ? selectedPatientId : null);
+  const { data: allergies = [] } = useAllergies(
+    shouldFetchHistory ? selectedPatientId : null,
   );
-  const { data: medications = [], isLoading: isMedicationsLoading } = useMedications(
-    shouldFetchHistory ? selectedPatientId : null
+  const { data: immunizations = [] } = useImmunizations(
+    shouldFetchHistory ? selectedPatientId : null,
   );
-  const { data: allergies = [] } = useAllergies(shouldFetchHistory ? selectedPatientId : null);
-  const { data: immunizations = [] } = useImmunizations(shouldFetchHistory ? selectedPatientId : null);
-  const { data: procedures = [] } = useProcedures(shouldFetchHistory ? selectedPatientId : null);
-  const { data: physioHistory = [] } = usePhysioHistory(shouldFetchHistory ? selectedPatientId : null);
-  const { data: painProgression } = usePainProgression(shouldFetchVitals ? selectedPatientId : null);
-  const { data: timeline = [], isLoading: isTimelineLoading } = usePatientTimeline(
-    shouldFetchTimeline ? selectedPatientId : null
+  const { data: procedures = [] } = useProcedures(
+    shouldFetchHistory ? selectedPatientId : null,
   );
+  const { data: physioHistory = [] } = usePhysioHistory(
+    shouldFetchHistory ? selectedPatientId : null,
+  );
+  const { data: painProgression } = usePainProgression(
+    shouldFetchVitals ? selectedPatientId : null,
+  );
+  const { data: timeline = [], isLoading: isTimelineLoading } =
+    usePatientTimeline(shouldFetchTimeline ? selectedPatientId : null);
 
   const medicalHistory = useAggregatedMedicalHistory(
     selectedPatientId,
@@ -170,15 +200,15 @@ const MedicalRecordsPage: React.FC = () => {
     allergies,
     immunizations,
     procedures,
-    physioHistory
+    physioHistory,
   );
 
   // Sync URL with state
   useEffect(() => {
     const params = new URLSearchParams();
-    if (selectedPatientId) params.set('patientId', selectedPatientId);
+    if (selectedPatientId) params.set("patientId", selectedPatientId);
     const tabName = TAB_NAMES[activeTab];
-    if (activeTab > 0 && tabName) params.set('tab', tabName);
+    if (activeTab > 0 && tabName) params.set("tab", tabName);
     setSearchParams(params, { replace: true });
   }, [selectedPatientId, activeTab, setSearchParams]);
 
@@ -203,12 +233,13 @@ const MedicalRecordsPage: React.FC = () => {
     const lastVisit = medicalSummary?.recentVisits?.[0]?.date;
 
     return {
-      bloodType: (patient as any).bloodType || 'Unknown',
-      allergiesCount: medicalHistory.filter((h) => h.category === 'allergy').length,
+      bloodType: (patient as any).bloodType || "Unknown",
+      allergiesCount: medicalHistory.filter((h) => h.category === "allergy")
+        .length,
       activeMedicationsCount: medicalHistory.filter(
-        (h) => h.category === 'medication' && h.status === 'active'
+        (h) => h.category === "medication" && h.status === "active",
       ).length,
-      lastVisit: lastVisit ? format(parseISO(lastVisit), 'MMM d, yyyy') : 'N/A',
+      lastVisit: lastVisit ? format(parseISO(lastVisit), "MMM d, yyyy") : "N/A",
     };
   }, [patient, medicalSummary, medicalHistory, isSummaryLoading]);
 
@@ -217,7 +248,7 @@ const MedicalRecordsPage: React.FC = () => {
     const errors: { painLevel?: string } = {};
 
     if (newVital.overallPainLevel < 0 || newVital.overallPainLevel > 10) {
-      errors.painLevel = 'Pain level must be between 0 and 10';
+      errors.painLevel = "Pain level must be between 0 and 10";
     }
 
     setVitalErrors(errors);
@@ -228,7 +259,7 @@ const MedicalRecordsPage: React.FC = () => {
     const errors: { title?: string } = {};
 
     if (!newHistory.title?.trim()) {
-      errors.title = 'Title is required';
+      errors.title = "Title is required";
     }
 
     setHistoryErrors(errors);
@@ -240,18 +271,22 @@ const MedicalRecordsPage: React.FC = () => {
     mutationFn: (updates: UpdatePatientDto) =>
       patientApi.updatePatient(selectedPatientId!, updates),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['medicalRecords', 'patients'] });
-      enqueueSnackbar('Patient information saved', { variant: 'success' });
+      queryClient.invalidateQueries({
+        queryKey: ["medicalRecords", "patients"],
+      });
+      enqueueSnackbar("Patient information saved", { variant: "success" });
       setEditMode(false);
     },
     onError: () => {
-      enqueueSnackbar('Failed to save patient information', { variant: 'error' });
+      enqueueSnackbar("Failed to save patient information", {
+        variant: "error",
+      });
     },
   });
 
   const addVitalMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedPatientId) throw new Error('No patient selected');
+      if (!selectedPatientId) throw new Error("No patient selected");
       return medicalRecordsApi.createVitalSigns({
         patientId: selectedPatientId,
         overallPainLevel: newVital.overallPainLevel,
@@ -261,48 +296,77 @@ const MedicalRecordsPage: React.FC = () => {
       });
     },
     onSuccess: () => {
-      enqueueSnackbar('Pain assessment recorded', { variant: 'success' });
+      enqueueSnackbar("Pain assessment recorded", { variant: "success" });
       setVitalDialogOpen(false);
-      setNewVital({ overallPainLevel: 0, functionalImpact: 'none', painPoints: [], notes: '' });
+      setNewVital({
+        overallPainLevel: 0,
+        functionalImpact: "none",
+        painPoints: [],
+        notes: "",
+      });
       setVitalErrors({});
-      queryClient.invalidateQueries({ queryKey: ['vitalSigns', selectedPatientId] });
+      queryClient.invalidateQueries({
+        queryKey: ["vitalSigns", selectedPatientId],
+      });
     },
     onError: () => {
-      enqueueSnackbar('Failed to record pain assessment', { variant: 'error' });
+      enqueueSnackbar("Failed to record pain assessment", { variant: "error" });
     },
   });
 
   const addHistoryMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedPatientId) throw new Error('No patient selected');
+      if (!selectedPatientId) throw new Error("No patient selected");
 
-      if (['injury', 'symptom', 'treatment', 'activity', 'occupation', 'goal'].includes(newHistory.category || '')) {
+      if (
+        [
+          "injury",
+          "symptom",
+          "treatment",
+          "activity",
+          "occupation",
+          "goal",
+        ].includes(newHistory.category || "")
+      ) {
         return medicalRecordsApi.createPhysioHistory({
           patientId: selectedPatientId,
-          category: newHistory.category || 'injury',
-          title: newHistory.title?.trim() || 'Untitled',
-          description: newHistory.description?.trim() || '',
+          category: newHistory.category || "injury",
+          title: newHistory.title?.trim() || "Untitled",
+          description: newHistory.description?.trim() || "",
           date: newHistory.date,
-          status: newHistory.status || 'active',
+          status: newHistory.status || "active",
           severity: newHistory.severity,
           notes: newHistory.notes,
         });
       }
 
-      throw new Error('Unsupported category');
+      throw new Error("Unsupported category");
     },
     onSuccess: () => {
-      const category = newHistory.category || 'injury';
-      enqueueSnackbar(`${category.charAt(0).toUpperCase() + category.slice(1)} added`, { variant: 'success' });
+      const category = newHistory.category || "injury";
+      enqueueSnackbar(
+        `${category.charAt(0).toUpperCase() + category.slice(1)} added`,
+        { variant: "success" },
+      );
       setHistoryDialogOpen(false);
-      setNewHistory({ category: 'injury', title: '', description: '', status: 'active', severity: 'mild' });
+      setNewHistory({
+        category: "injury",
+        title: "",
+        description: "",
+        status: "active",
+        severity: "mild",
+      });
       setHistoryErrors({});
       setEditingHistoryItem(null);
-      queryClient.invalidateQueries({ queryKey: ['physioHistory', selectedPatientId] });
-      queryClient.invalidateQueries({ queryKey: ['medicalSummary', selectedPatientId] });
+      queryClient.invalidateQueries({
+        queryKey: ["physioHistory", selectedPatientId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["medicalSummary", selectedPatientId],
+      });
     },
     onError: () => {
-      enqueueSnackbar('Failed to add entry', { variant: 'error' });
+      enqueueSnackbar("Failed to add entry", { variant: "error" });
     },
   });
 
@@ -312,9 +376,12 @@ const MedicalRecordsPage: React.FC = () => {
     setEditMode(false);
   }, []);
 
-  const handleTabChange = useCallback((_: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  }, []);
+  const handleTabChange = useCallback(
+    (_: React.SyntheticEvent, newValue: number) => {
+      setActiveTab(newValue);
+    },
+    [],
+  );
 
   const handleSavePatient = () => {
     if (!selectedPatientId || !editedPatient) return;
@@ -356,7 +423,7 @@ const MedicalRecordsPage: React.FC = () => {
   };
 
   const handleDeleteHistoryEntry = (item: MedicalHistory) => {
-    setItemToDelete({ type: 'history', id: item.id, title: item.title });
+    setItemToDelete({ type: "history", id: item.id, title: item.title });
     setDeleteConfirmOpen(true);
   };
 
@@ -366,10 +433,12 @@ const MedicalRecordsPage: React.FC = () => {
     try {
       // Note: Backend delete endpoint would be called here
       // await medicalRecordsApi.deletePhysioHistory(itemToDelete.id);
-      enqueueSnackbar(`${itemToDelete.title} deleted`, { variant: 'success' });
-      queryClient.invalidateQueries({ queryKey: ['physioHistory', selectedPatientId] });
+      enqueueSnackbar(`${itemToDelete.title} deleted`, { variant: "success" });
+      queryClient.invalidateQueries({
+        queryKey: ["physioHistory", selectedPatientId],
+      });
     } catch {
-      enqueueSnackbar('Failed to delete entry', { variant: 'error' });
+      enqueueSnackbar("Failed to delete entry", { variant: "error" });
     } finally {
       setDeleteConfirmOpen(false);
       setItemToDelete(null);
@@ -377,18 +446,20 @@ const MedicalRecordsPage: React.FC = () => {
   };
 
   const handleUploadDocument = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pdf,.jpg,.jpeg,.png';
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.jpg,.jpeg,.png";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file && selectedPatientId) {
         try {
           await documentApi.upload({ file, patientId: selectedPatientId });
           refetchDocuments();
-          enqueueSnackbar('Document uploaded successfully', { variant: 'success' });
+          enqueueSnackbar("Document uploaded successfully", {
+            variant: "success",
+          });
         } catch {
-          enqueueSnackbar('Failed to upload document', { variant: 'error' });
+          enqueueSnackbar("Failed to upload document", { variant: "error" });
         }
       }
     };
@@ -398,15 +469,15 @@ const MedicalRecordsPage: React.FC = () => {
   const handleDownloadDocument = async (docId: string) => {
     try {
       const { url } = await documentApi.getDownloadUrl(docId);
-      window.open(url, '_blank');
+      window.open(url, "_blank");
     } catch {
-      enqueueSnackbar('Failed to download document', { variant: 'error' });
+      enqueueSnackbar("Failed to download document", { variant: "error" });
     }
   };
 
   const handleCopyText = (text: string) => {
     navigator.clipboard.writeText(text);
-    enqueueSnackbar('Text copied to clipboard', { variant: 'success' });
+    enqueueSnackbar("Text copied to clipboard", { variant: "success" });
   };
 
   const handleScheduleAppointment = () => {
@@ -428,14 +499,27 @@ const MedicalRecordsPage: React.FC = () => {
         return isTimelineLoading;
       case 4:
         return isDocumentsLoading;
+      case 5:
+        return isReferralsLoading;
       default:
         return false;
     }
-  }, [activeTab, isSummaryLoading, isVitalsLoading, isMedicationsLoading, isTimelineLoading, isDocumentsLoading]);
+  }, [
+    activeTab,
+    isSummaryLoading,
+    isVitalsLoading,
+    isMedicationsLoading,
+    isTimelineLoading,
+    isDocumentsLoading,
+    isReferralsLoading,
+  ]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box className="page-enter" sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Box
+        className="page-enter"
+        sx={{ height: "100vh", display: "flex", flexDirection: "column" }}
+      >
         <PageHeader
           title="Medical Records"
           description="Comprehensive patient health information"
@@ -453,7 +537,7 @@ const MedicalRecordsPage: React.FC = () => {
           }
         />
 
-        <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', mt: 2 }}>
+        <Box sx={{ flex: 1, display: "flex", overflow: "hidden", mt: 2 }}>
           {/* Patient Sidebar */}
           <PatientSidebar
             patients={patients}
@@ -463,7 +547,14 @@ const MedicalRecordsPage: React.FC = () => {
           />
 
           {/* Main Content */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box
+            sx={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
             {/* Patient Header */}
             <PatientHeader
               patient={patient}
@@ -476,19 +567,52 @@ const MedicalRecordsPage: React.FC = () => {
 
             {/* Tabs */}
             {patient && (
-              <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+              <Box
+                sx={{
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
                 <Tabs value={activeTab} onChange={handleTabChange}>
-                  <Tab icon={<PersonIcon />} iconPosition="start" label="Demographics" />
-                  <Tab icon={<HeartIcon />} iconPosition="start" label="Pain Assessment" />
-                  <Tab icon={<MedicalIcon />} iconPosition="start" label="Medical History" />
-                  <Tab icon={<TimelineIcon />} iconPosition="start" label="Timeline" />
-                  <Tab icon={<DocumentIcon />} iconPosition="start" label="Documents" />
+                  <Tab
+                    icon={<PersonIcon />}
+                    iconPosition="start"
+                    label="Demographics"
+                  />
+                  <Tab
+                    icon={<HeartIcon />}
+                    iconPosition="start"
+                    label="Pain Assessment"
+                  />
+                  <Tab
+                    icon={<MedicalIcon />}
+                    iconPosition="start"
+                    label="Medical History"
+                  />
+                  <Tab
+                    icon={<TimelineIcon />}
+                    iconPosition="start"
+                    label="Timeline"
+                  />
+                  <Tab
+                    icon={<DocumentIcon />}
+                    iconPosition="start"
+                    label="Documents"
+                  />
+                  <Tab
+                    icon={<ReferralIcon />}
+                    iconPosition="start"
+                    label="Referrals"
+                  />
                 </Tabs>
               </Box>
             )}
 
             {/* Tab Content with Loading States */}
-            <Box sx={{ flex: 1, overflow: 'auto', bgcolor: alpha('#f8fafc', 0.5) }}>
+            <Box
+              sx={{ flex: 1, overflow: "auto", bgcolor: alpha("#f8fafc", 0.5) }}
+            >
               <TabPanel value={activeTab} index={0}>
                 {isTabLoading ? (
                   <DemographicsSkeleton />
@@ -497,7 +621,9 @@ const MedicalRecordsPage: React.FC = () => {
                     patient={patient}
                     editedPatient={editedPatient}
                     editMode={editMode}
-                    onPatientChange={(updates) => setEditedPatient({ ...editedPatient, ...updates })}
+                    onPatientChange={(updates) =>
+                      setEditedPatient({ ...editedPatient, ...updates })
+                    }
                   />
                 )}
               </TabPanel>
@@ -522,7 +648,13 @@ const MedicalRecordsPage: React.FC = () => {
                     medicalHistory={medicalHistory}
                     onAddEntry={() => {
                       setEditingHistoryItem(null);
-                      setNewHistory({ category: 'injury', title: '', description: '', status: 'active', severity: 'mild' });
+                      setNewHistory({
+                        category: "injury",
+                        title: "",
+                        description: "",
+                        status: "active",
+                        severity: "mild",
+                      });
                       setHistoryDialogOpen(true);
                     }}
                     onEditEntry={handleEditHistoryEntry}
@@ -548,6 +680,17 @@ const MedicalRecordsPage: React.FC = () => {
                     onUpload={handleUploadDocument}
                     onDownload={handleDownloadDocument}
                     onCopyText={handleCopyText}
+                  />
+                )}
+              </TabPanel>
+
+              <TabPanel value={activeTab} index={5}>
+                {isTabLoading ? (
+                  <ReferralsSkeleton />
+                ) : (
+                  <ReferralsTab
+                    referrals={referrals}
+                    patientId={selectedPatientId}
                   />
                 )}
               </TabPanel>
@@ -577,24 +720,41 @@ const MedicalRecordsPage: React.FC = () => {
                 inputProps={{ min: 0, max: 10 }}
                 value={newVital.overallPainLevel}
                 onChange={(e) => {
-                  const val = Math.max(0, Math.min(10, parseInt(e.target.value) || 0));
+                  const val = Math.max(
+                    0,
+                    Math.min(10, parseInt(e.target.value) || 0),
+                  );
                   setNewVital({ ...newVital, overallPainLevel: val });
                   if (vitalErrors.painLevel) setVitalErrors({});
                 }}
                 fullWidth
                 error={!!vitalErrors.painLevel}
-                helperText={vitalErrors.painLevel || '0 = No pain, 10 = Worst pain imaginable'}
+                helperText={
+                  vitalErrors.painLevel ||
+                  "0 = No pain, 10 = Worst pain imaginable"
+                }
               />
               <Box sx={{ mt: 2 }}>
                 <SelectField
                   label="Functional Impact"
                   value={newVital.functionalImpact}
-                  onChange={(value) => setNewVital({ ...newVital, functionalImpact: value as any })}
+                  onChange={(value) =>
+                    setNewVital({ ...newVital, functionalImpact: value as any })
+                  }
                   options={[
-                    { value: 'none', label: 'None - No impact on daily activities' },
-                    { value: 'mild', label: 'Mild - Minor limitations' },
-                    { value: 'moderate', label: 'Moderate - Significant limitations' },
-                    { value: 'severe', label: 'Severe - Unable to perform activities' },
+                    {
+                      value: "none",
+                      label: "None - No impact on daily activities",
+                    },
+                    { value: "mild", label: "Mild - Minor limitations" },
+                    {
+                      value: "moderate",
+                      label: "Moderate - Significant limitations",
+                    },
+                    {
+                      value: "severe",
+                      label: "Severe - Unable to perform activities",
+                    },
                   ]}
                   fullWidth
                 />
@@ -605,7 +765,9 @@ const MedicalRecordsPage: React.FC = () => {
                   multiline
                   rows={4}
                   value={newVital.notes}
-                  onChange={(e) => setNewVital({ ...newVital, notes: e.target.value })}
+                  onChange={(e) =>
+                    setNewVital({ ...newVital, notes: e.target.value })
+                  }
                   fullWidth
                   placeholder="Additional observations, triggers, relief factors..."
                 />
@@ -614,7 +776,9 @@ const MedicalRecordsPage: React.FC = () => {
             <Grid size={{ xs: 12, md: 7 }}>
               <PainBodyMap
                 value={newVital.painPoints}
-                onChange={(points) => setNewVital({ ...newVital, painPoints: points })}
+                onChange={(points) =>
+                  setNewVital({ ...newVital, painPoints: points })
+                }
               />
             </Grid>
           </Grid>
@@ -628,9 +792,13 @@ const MedicalRecordsPage: React.FC = () => {
             setHistoryErrors({});
             setEditingHistoryItem(null);
           }}
-          title={editingHistoryItem ? 'Edit Medical History Entry' : 'Add Medical History Entry'}
+          title={
+            editingHistoryItem
+              ? "Edit Medical History Entry"
+              : "Add Medical History Entry"
+          }
           onSubmit={handleAddHistory}
-          submitLabel={editingHistoryItem ? 'Save Changes' : 'Add Entry'}
+          submitLabel={editingHistoryItem ? "Save Changes" : "Add Entry"}
           submitDisabled={addHistoryMutation.isPending}
           loading={addHistoryMutation.isPending}
           maxWidth="sm"
@@ -639,15 +807,17 @@ const MedicalRecordsPage: React.FC = () => {
             <Grid size={12}>
               <SelectField
                 label="Category"
-                value={newHistory.category || 'injury'}
-                onChange={(value) => setNewHistory({ ...newHistory, category: value as any })}
+                value={newHistory.category || "injury"}
+                onChange={(value) =>
+                  setNewHistory({ ...newHistory, category: value as any })
+                }
                 options={[
-                  { value: 'injury', label: 'Previous Injury' },
-                  { value: 'symptom', label: 'Current Symptom' },
-                  { value: 'treatment', label: 'Treatment History' },
-                  { value: 'activity', label: 'Exercise/Activity' },
-                  { value: 'occupation', label: 'Occupation/Ergonomics' },
-                  { value: 'goal', label: 'Goal/Objective' },
+                  { value: "injury", label: "Previous Injury" },
+                  { value: "symptom", label: "Current Symptom" },
+                  { value: "treatment", label: "Treatment History" },
+                  { value: "activity", label: "Exercise/Activity" },
+                  { value: "occupation", label: "Occupation/Ergonomics" },
+                  { value: "goal", label: "Goal/Objective" },
                 ]}
                 fullWidth
               />
@@ -672,19 +842,23 @@ const MedicalRecordsPage: React.FC = () => {
                 multiline
                 rows={3}
                 value={newHistory.description}
-                onChange={(e) => setNewHistory({ ...newHistory, description: e.target.value })}
+                onChange={(e) =>
+                  setNewHistory({ ...newHistory, description: e.target.value })
+                }
                 fullWidth
               />
             </Grid>
             <Grid size={6}>
               <SelectField
                 label="Status"
-                value={newHistory.status || 'active'}
-                onChange={(value) => setNewHistory({ ...newHistory, status: value as any })}
+                value={newHistory.status || "active"}
+                onChange={(value) =>
+                  setNewHistory({ ...newHistory, status: value as any })
+                }
                 options={[
-                  { value: 'active', label: 'Active' },
-                  { value: 'resolved', label: 'Resolved' },
-                  { value: 'ongoing', label: 'Ongoing' },
+                  { value: "active", label: "Active" },
+                  { value: "resolved", label: "Resolved" },
+                  { value: "ongoing", label: "Ongoing" },
                 ]}
                 fullWidth
               />
@@ -692,13 +866,15 @@ const MedicalRecordsPage: React.FC = () => {
             <Grid size={6}>
               <SelectField
                 label="Severity"
-                value={newHistory.severity || 'mild'}
-                onChange={(value) => setNewHistory({ ...newHistory, severity: value as any })}
+                value={newHistory.severity || "mild"}
+                onChange={(value) =>
+                  setNewHistory({ ...newHistory, severity: value as any })
+                }
                 options={[
-                  { value: 'mild', label: 'Mild' },
-                  { value: 'moderate', label: 'Moderate' },
-                  { value: 'severe', label: 'Severe' },
-                  { value: 'critical', label: 'Critical' },
+                  { value: "mild", label: "Mild" },
+                  { value: "moderate", label: "Moderate" },
+                  { value: "severe", label: "Severe" },
+                  { value: "critical", label: "Critical" },
                 ]}
                 fullWidth
               />
@@ -708,7 +884,10 @@ const MedicalRecordsPage: React.FC = () => {
                 label="Date"
                 value={newHistory.date ? parseISO(newHistory.date) : null}
                 onChange={(date) =>
-                  setNewHistory({ ...newHistory, date: date ? date.toISOString() : undefined })
+                  setNewHistory({
+                    ...newHistory,
+                    date: date ? date.toISOString() : undefined,
+                  })
                 }
                 slotProps={{ textField: { fullWidth: true } }}
               />
@@ -718,8 +897,10 @@ const MedicalRecordsPage: React.FC = () => {
                 label="Notes"
                 multiline
                 rows={2}
-                value={newHistory.notes || ''}
-                onChange={(e) => setNewHistory({ ...newHistory, notes: e.target.value })}
+                value={newHistory.notes || ""}
+                onChange={(e) =>
+                  setNewHistory({ ...newHistory, notes: e.target.value })
+                }
                 fullWidth
                 placeholder="Additional notes..."
               />
@@ -728,14 +909,24 @@ const MedicalRecordsPage: React.FC = () => {
         </FormDialog>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} maxWidth="xs" fullWidth>
+        <Dialog
+          open={deleteConfirmOpen}
+          onClose={() => setDeleteConfirmOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
           <DialogTitle>Confirm Delete</DialogTitle>
           <DialogContent>
-            Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.
+            Are you sure you want to delete &ldquo;{itemToDelete?.title}&rdquo;?
+            This action cannot be undone.
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-            <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            <Button
+              onClick={handleConfirmDelete}
+              color="error"
+              variant="contained"
+            >
               Delete
             </Button>
           </DialogActions>
@@ -747,9 +938,9 @@ const MedicalRecordsPage: React.FC = () => {
             onClose={() => setMessageDialogOpen(false)}
             recipients={[
               {
-                id: selectedPatientId || '',
+                id: selectedPatientId || "",
                 name: `${patient.firstName} ${patient.lastName}`,
-                type: 'patient',
+                type: "patient",
               },
             ]}
           />
