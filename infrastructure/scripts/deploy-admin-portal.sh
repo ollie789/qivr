@@ -6,7 +6,7 @@ set -e
 
 REGION="ap-southeast-2"
 BUCKET_NAME="qivr-admin-portal"
-DISTRIBUTION_ID="" # Will be set after first deployment
+DISTRIBUTION_ID="E30RX4A147QBCE" # admin.qivr.pro
 
 echo "🚀 Deploying QIVR Admin Portal..."
 
