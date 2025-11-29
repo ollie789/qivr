@@ -23,6 +23,9 @@ public class AutoCreateUserMiddleware
             var email = context.User.FindFirst("email")?.Value 
                        ?? context.User.FindFirst("username")?.Value
                        ?? context.User.FindFirst("preferred_username")?.Value;
+            
+            // Extract issuer to determine tenant (contains Cognito pool ID)
+            var issuer = context.User.FindFirst("iss")?.Value;
 
             if (!string.IsNullOrEmpty(sub))
             {
@@ -46,7 +49,7 @@ public class AutoCreateUserMiddleware
                         var familyName = context.User.FindFirst("family_name")?.Value;
                         var phone = context.User.FindFirst("phone_number")?.Value;
 
-                        var user = await userService.GetOrCreateUserFromCognitoAsync(sub, email, givenName, familyName, phone);
+                        var user = await userService.GetOrCreateUserFromCognitoAsync(sub, email, givenName, familyName, phone, issuer);
                         
                         _logger.LogInformation("Auto-created user {Email} with tenant {TenantId}", user.Email, user.TenantId);
                         

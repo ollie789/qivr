@@ -63,17 +63,72 @@ public class UserService : IUserService
         return _mapper.Map<UserDto>(user);
     }
 
-    public async Task<UserDto> GetOrCreateUserFromCognitoAsync(string cognitoSub, string email, string? givenName, string? familyName, string? phone, CancellationToken cancellationToken = default)
+    public async Task<UserDto> GetOrCreateUserFromCognitoAsync(string cognitoSub, string email, string? givenName, string? familyName, string? phone, string? issuer = null, CancellationToken cancellationToken = default)
     {
+        // First try to find by Cognito sub
         var user = await _context.Users.FirstOrDefaultAsync(u => u.CognitoSub == cognitoSub, cancellationToken);
         
-        if (user == null)
+        if (user != null)
         {
-            _logger.LogWarning("User not found for Cognito sub: {CognitoSub}. User should be created during tenant registration.", cognitoSub);
-            throw new InvalidOperationException("User not found. Please register your clinic first.");
+            return _mapper.Map<UserDto>(user);
         }
         
-        // User exists, return it
+        // Try to find by email (user may have been created via intake)
+        user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+        
+        if (user != null)
+        {
+            // Link existing user to Cognito sub
+            user.CognitoSub = cognitoSub;
+            user.EmailVerified = true;
+            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Linked existing user {Email} to Cognito sub {Sub}", email, cognitoSub);
+            return _mapper.Map<UserDto>(user);
+        }
+        
+        // Create new user - find tenant from issuer (contains Cognito pool ID)
+        Tenant? tenant = null;
+        
+        if (!string.IsNullOrEmpty(issuer))
+        {
+            // Issuer format: https://cognito-idp.{region}.amazonaws.com/{poolId}
+            var poolId = issuer.Split('/').LastOrDefault();
+            if (!string.IsNullOrEmpty(poolId))
+            {
+                tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.CognitoUserPoolId == poolId, cancellationToken);
+                _logger.LogInformation("Found tenant by pool ID {PoolId}: {TenantId}", poolId, tenant?.Id);
+            }
+        }
+        
+        // Fall back to demo tenant
+        tenant ??= await _context.Tenants.FirstOrDefaultAsync(t => t.Slug == "demo-clinic", cancellationToken)
+            ?? await _context.Tenants.FirstAsync(cancellationToken);
+        
+        user = new User
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            CognitoSub = cognitoSub,
+            Email = email,
+            FirstName = givenName ?? "",
+            LastName = familyName ?? "",
+            Phone = phone,
+            UserType = UserType.Patient,
+            EmailVerified = true,
+            PhoneVerified = false,
+            Roles = new List<string>(),
+            Preferences = new Dictionary<string, object>(),
+            Consent = new Dictionary<string, object>(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(cancellationToken);
+        
+        _logger.LogInformation("Created new user {Email} in tenant {TenantId} from Cognito sub {Sub}", 
+            email, tenant.Id, cognitoSub);
+        
         return _mapper.Map<UserDto>(user);
     }
 }
