@@ -30,6 +30,7 @@ import DocumentChecklist from "./pages/DocumentChecklist";
 import HealthProgress from "./pages/HealthProgress";
 import Messages from "./pages/Messages";
 import TreatmentPlan from "./pages/TreatmentPlan";
+import Referrals from "./pages/Referrals";
 
 // Auth
 import { useAuth } from "./contexts/AuthContext";
@@ -68,9 +69,10 @@ export const AppContent: React.FC = () => {
           {/* Health Progress (Gamified Analytics) */}
           <Route path="/health-progress" element={<HealthProgress />} />
 
-          {/* Documents */}
+          {/* Documents & Referrals */}
           <Route path="/documents" element={<DocumentsEnhanced />} />
           <Route path="/documents/checklist" element={<DocumentChecklist />} />
+          <Route path="/referrals" element={<Referrals />} />
 
           {/* Evaluations */}
           <Route path="/evaluations" element={<Evaluations />} />

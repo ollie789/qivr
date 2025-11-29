@@ -31,6 +31,7 @@ import {
   Assessment as AssessmentIcon,
   Message as MessageIcon,
   MedicalServices as MedicalServicesIcon,
+  Send as SendIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
 import { AuraButton } from "@qivr/design-system";
@@ -39,12 +40,21 @@ const drawerWidth = 280;
 
 const menuItems = [
   { title: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
-  { title: "Health Progress", path: "/health-progress", icon: <TrendingUpIcon /> },
+  {
+    title: "Health Progress",
+    path: "/health-progress",
+    icon: <TrendingUpIcon />,
+  },
   { title: "Documents", path: "/documents", icon: <FolderIcon /> },
+  { title: "Referrals", path: "/referrals", icon: <SendIcon /> },
   { title: "Appointments", path: "/appointments", icon: <EventIcon /> },
   { title: "Messages", path: "/messages", icon: <MessageIcon /> },
   { title: "Assessments", path: "/proms", icon: <AssignmentIcon /> },
-  { title: "Treatment Plan", path: "/treatment-plan", icon: <MedicalServicesIcon /> },
+  {
+    title: "Treatment Plan",
+    path: "/treatment-plan",
+    icon: <MedicalServicesIcon />,
+  },
   { title: "Evaluations", path: "/evaluations", icon: <AssessmentIcon /> },
   { title: "Profile", path: "/profile", icon: <PersonIcon /> },
 ];
@@ -77,19 +87,19 @@ export const MainLayout: React.FC = () => {
 
       {/* User Info */}
       <Box sx={{ p: 2 }}>
-        <Box 
-          sx={{ 
-            display: "flex", 
-            alignItems: "center", 
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
             p: 1.5,
             borderRadius: auraTokens.borderRadius.md,
             background: `linear-gradient(135deg, ${theme.palette.primary.main}15 0%, ${theme.palette.primary.dark}10 100%)`,
             border: `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Avatar 
-            sx={{ 
-              mr: 2, 
+          <Avatar
+            sx={{
+              mr: 2,
               width: 36,
               height: 36,
               background: `linear-gradient(135deg, ${auraColors.blue.main} 0%, ${auraColors.blue.dark} 100%)`,
@@ -142,10 +152,7 @@ export const MainLayout: React.FC = () => {
             >
               <ListItemIcon
                 sx={{
-                  color:
-                    location.pathname === item.path
-                      ? "white"
-                      : "inherit",
+                  color: location.pathname === item.path ? "white" : "inherit",
                 }}
               >
                 {item.icon}
