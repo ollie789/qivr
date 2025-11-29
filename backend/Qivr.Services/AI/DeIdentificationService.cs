@@ -29,8 +29,10 @@ public class DeIdentificationService : IDeIdentificationService
     // Regular expressions for common PHI patterns
     private readonly Regex _ssnRegex = new(@"\b\d{3}-?\d{2}-?\d{4}\b", RegexOptions.Compiled);
     private readonly Regex _phoneRegex = new(@"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b", RegexOptions.Compiled);
+    private readonly Regex _auPhoneRegex = new(@"\b(?:\+?61[-.\s]?)?0?[45]\d{2}[-.\s]?\d{3}[-.\s]?\d{3}\b", RegexOptions.Compiled);
     private readonly Regex _emailRegex = new(@"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", RegexOptions.Compiled);
     private readonly Regex _mrnRegex = new(@"\b(?:MRN|Medical Record Number|Patient ID)[:\s]?\d{6,12}\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private readonly Regex _medicareRegex = new(@"\b\d{4}[-\s]?\d{5}[-\s]?\d\b", RegexOptions.Compiled);
     private readonly Regex _dateRegex = new(@"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2})\b", RegexOptions.Compiled);
     private readonly Regex _creditCardRegex = new(@"\b(?:\d{4}[-\s]?){3}\d{4}\b", RegexOptions.Compiled);
     private readonly Regex _ipAddressRegex = new(@"\b(?:\d{1,3}\.){3}\d{1,3}\b", RegexOptions.Compiled);
@@ -41,7 +43,8 @@ public class DeIdentificationService : IDeIdentificationService
         "name", "address", "street", "city", "state", "zip", "zipcode", "postal",
         "dob", "birth", "birthday", "ssn", "social security", "phone", "mobile",
         "email", "mrn", "medical record", "patient id", "insurance", "policy",
-        "employer", "occupation", "emergency contact", "next of kin"
+        "employer", "occupation", "emergency contact", "next of kin",
+        "medicare", "tfn", "tax file", "drivers licence", "passport"
     };
 
     public DeIdentificationService(
@@ -237,12 +240,22 @@ public class DeIdentificationService : IDeIdentificationService
             return replacement;
         });
 
-        // Replace phone numbers
+        // Replace phone numbers (US)
         text = _phoneRegex.Replace(text, match =>
         {
             var replacement = options.ReplacementStrategy == ReplacementStrategy.Mask 
                 ? "XXX-XXX-XXXX" 
                 : "[PHONE]";
+            replacements[match.Value] = replacement;
+            return replacement;
+        });
+
+        // Replace phone numbers (Australian)
+        text = _auPhoneRegex.Replace(text, match =>
+        {
+            var replacement = options.ReplacementStrategy == ReplacementStrategy.Mask 
+                ? "XXXX XXX XXX" 
+                : "[PHONE_AU]";
             replacements[match.Value] = replacement;
             return replacement;
         });
@@ -261,6 +274,16 @@ public class DeIdentificationService : IDeIdentificationService
         text = _mrnRegex.Replace(text, match =>
         {
             var replacement = "[MRN]";
+            replacements[match.Value] = replacement;
+            return replacement;
+        });
+
+        // Replace Medicare numbers (Australian)
+        text = _medicareRegex.Replace(text, match =>
+        {
+            var replacement = options.ReplacementStrategy == ReplacementStrategy.Mask 
+                ? "XXXX XXXXX X" 
+                : "[MEDICARE]";
             replacements[match.Value] = replacement;
             return replacement;
         });
