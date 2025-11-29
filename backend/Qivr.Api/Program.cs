@@ -176,6 +176,15 @@ builder.Services.AddCors(options =>
             .AllowCredentials()
             .WithExposedHeaders("X-Request-ID", "X-Tenant-Id", "X-Total-Count");
     });
+    
+    // Intake widget policy - allows any origin for embeddable widget
+    options.AddPolicy("IntakeWidget", policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .WithExposedHeaders("X-Request-ID");
+    });
 });
 
 // Configure Database

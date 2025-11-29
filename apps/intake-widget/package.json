@@ -1,0 +1,31 @@
+{
+  "name": "@qivr/intake-widget",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.5",
+    "@mui/icons-material": "^7.0.0",
+    "@mui/material": "^7.3.0",
+    "@qivr/design-system": "file:../../packages/design-system",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "typescript": "^5.4.3",
+    "vite": "^5.2.6"
+  },
+  "scripts": {
+    "dev": "vite --port 3030",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  }
+}

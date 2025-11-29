@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,7 @@ namespace Qivr.Api.Controllers;
 
 [ApiController]
 [Route("api/intake")]
+[EnableCors("IntakeWidget")]
 public class IntakeController : ControllerBase
 {
     private readonly QivrDbContext _dbContext;
