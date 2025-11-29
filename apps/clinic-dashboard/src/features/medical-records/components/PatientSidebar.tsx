@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { parseISO, differenceInYears } from 'date-fns';
-import { auraColors } from '@qivr/design-system';
+import { auraColors, auraTokens } from '@qivr/design-system';
 import type { Patient } from '../types';
 
 interface PatientSidebarProps {
@@ -59,10 +59,10 @@ export const PatientSidebar: React.FC<PatientSidebarProps> = ({
   return (
     <Box
       sx={{
-        width: 320,
+        width: auraTokens.responsive.detailSidebar,
         height: '100%',
         bgcolor: 'background.paper',
-        borderRight: '1px solid',
+        borderRight: { md: '1px solid' },
         borderColor: 'divider',
         display: 'flex',
         flexDirection: 'column',

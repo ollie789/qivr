@@ -103,16 +103,119 @@ export const auraTokens = {
   },
 
   // Responsive layout helpers - use with sx prop
-  // e.g., sx={{ maxWidth: auraTokens.responsive.dialog }}
+  // e.g., sx={{ width: auraTokens.responsive.sidebar }}
   responsive: {
+    // Sidebar widths - hidden on mobile, visible on md+
+    sidebar: { xs: 0, md: 260 },
+    sidebarFull: { xs: '100%', md: 260 },
+
+    // Patient/detail sidebars (wider)
+    detailSidebar: { xs: '100%', md: 320 },
+
+    // Message/conversation panels
+    messagePanel: { xs: '100%', md: 320 },
+    conversationList: { xs: '100%', md: 360 },
+
     // Dialog max-widths that respect screen size
     dialog: { xs: '95vw', sm: 520, md: 720 },
+    dialogSmall: { xs: '95vw', sm: 400 },
+    dialogLarge: { xs: '95vw', sm: '90vw', md: 900 },
+    dialogFullscreen: { xs: '100vw', md: '90vw' },
+
     // Drawer widths
-    drawer: { xs: '85vw', sm: 260 },
+    drawer: { xs: '85vw', sm: 280, md: 260 },
+
     // Card widths for grids
     card: { xs: '100%', sm: 320, md: 360 },
+    cardWide: { xs: '100%', sm: '100%', md: 480 },
+
     // Panel widths (notifications, menus)
-    panel: { xs: '90vw', sm: 320 },
+    panel: { xs: '90vw', sm: 320, md: 360 },
+
+    // Form container widths
+    formContainer: { xs: '100%', sm: '100%', md: 600 },
+    formContainerWide: { xs: '100%', sm: '100%', md: 800 },
+
+    // Content area max widths
+    contentNarrow: { xs: '100%', sm: 540, md: 720 },
+    contentMedium: { xs: '100%', sm: '100%', md: 960 },
+    contentWide: { xs: '100%', sm: '100%', md: 1200 },
+
+    // Search bar width
+    searchBar: { xs: '100%', sm: 300, md: 400 },
+  },
+
+  // Responsive heights - for panels, dialogs, content areas
+  responsiveHeights: {
+    // Message/chat areas
+    messageArea: { xs: 400, sm: 500, md: 600 },
+    messageAreaFull: { xs: 'calc(100vh - 200px)', sm: 'calc(100vh - 180px)', md: 'calc(100vh - 160px)' },
+
+    // Sidebar/panel heights
+    sidebarPanel: { xs: 300, sm: 400, md: 'auto' },
+
+    // Dialog content heights
+    dialogContent: { xs: '70vh', sm: '65vh', md: '60vh' },
+    dialogContentTall: { xs: '85vh', sm: '80vh', md: '75vh' },
+
+    // Card min heights
+    cardMin: { xs: 120, sm: 140, md: 160 },
+    statCard: { xs: 100, sm: 120, md: 140 },
+
+    // List/table areas
+    listArea: { xs: 300, sm: 400, md: 500 },
+    tableArea: { xs: 350, sm: 450, md: 600 },
+  },
+
+  // Responsive padding - for containers and sections
+  responsivePadding: {
+    // Page-level padding
+    page: { xs: 2, sm: 3, md: 4 },
+    pageX: { xs: 2, sm: 3, md: 4 },
+    pageY: { xs: 2, sm: 3, md: 3 },
+
+    // Section padding
+    section: { xs: 2, sm: 3, md: 4 },
+    sectionCompact: { xs: 1.5, sm: 2, md: 2.5 },
+
+    // Card padding
+    card: { xs: 2, sm: 2.5, md: 3 },
+    cardCompact: { xs: 1.5, sm: 2, md: 2 },
+
+    // Dialog padding
+    dialogContent: { xs: 2, sm: 3, md: 3 },
+  },
+
+  // Responsive gaps - for flex/grid layouts
+  responsiveGap: {
+    // Grid gaps
+    grid: { xs: 2, sm: 2.5, md: 3 },
+    gridCompact: { xs: 1.5, sm: 2, md: 2 },
+    gridWide: { xs: 2, sm: 3, md: 4 },
+
+    // Stack/flex gaps
+    stack: { xs: 1.5, sm: 2, md: 2 },
+    stackCompact: { xs: 1, sm: 1.5, md: 1.5 },
+    stackWide: { xs: 2, sm: 2.5, md: 3 },
+  },
+
+  // Display helpers - for showing/hiding elements at breakpoints
+  display: {
+    // Hide on mobile, show on tablet+
+    hideOnMobile: { xs: 'none', sm: 'block' },
+    hideOnMobileFlex: { xs: 'none', sm: 'flex' },
+
+    // Hide on mobile/tablet, show on desktop
+    hideUntilDesktop: { xs: 'none', md: 'block' },
+    hideUntilDesktopFlex: { xs: 'none', md: 'flex' },
+
+    // Show on mobile only
+    mobileOnly: { xs: 'block', sm: 'none' },
+    mobileOnlyFlex: { xs: 'flex', sm: 'none' },
+
+    // Show on mobile/tablet, hide on desktop
+    untilDesktop: { xs: 'block', md: 'none' },
+    untilDesktopFlex: { xs: 'flex', md: 'none' },
   },
 
   // Component heights - standardized sizes
@@ -132,6 +235,42 @@ export const auraTokens = {
       md: 44,
       lg: 52,
     },
+  },
+
+  // Avatar sizes - standardized scale
+  avatar: {
+    xs: 24,   // tiny inline avatars
+    sm: 32,   // list items, compact cards
+    md: 40,   // default avatar size
+    lg: 56,   // profile cards, headers
+    xl: 72,   // profile pages
+    xxl: 120, // profile edit pages
+  },
+
+  // Form control minimum widths
+  formControl: {
+    xs: 80,    // very compact (chip-like)
+    sm: 100,   // small selects
+    md: 120,   // default selects
+    lg: 150,   // medium inputs
+    xl: 200,   // larger inputs
+  },
+
+  // Chart/visualization heights
+  chart: {
+    xs: 150,   // sparklines, mini charts
+    sm: 200,   // compact charts
+    md: 280,   // default charts
+    lg: 400,   // detailed charts
+    xl: 500,   // full-page charts
+  },
+
+  // Responsive chart heights
+  responsiveChart: {
+    sparkline: { xs: 100, sm: 120, md: 150 },
+    compact: { xs: 150, sm: 180, md: 200 },
+    standard: { xs: 200, sm: 250, md: 280 },
+    detailed: { xs: 280, sm: 350, md: 400 },
   },
 
   // Input field tokens - consistent sizing across all input types
@@ -271,4 +410,164 @@ export const cardStyles = {
   },
 };
 
+/**
+ * Layout Patterns - Pre-built sx objects for common responsive layouts
+ * Use these to ensure consistent responsive behavior across the app
+ *
+ * Usage:
+ *   import { layoutPatterns } from '@qivr/design-system';
+ *   <Box sx={layoutPatterns.splitView.container}>
+ *     <Box sx={layoutPatterns.splitView.sidebar}>Sidebar</Box>
+ *     <Box sx={layoutPatterns.splitView.content}>Content</Box>
+ *   </Box>
+ */
+export const layoutPatterns = {
+  // Split view - sidebar + content (like Messages, Medical Records)
+  splitView: {
+    container: {
+      display: 'flex',
+      flexDirection: { xs: 'column', md: 'row' },
+      gap: auraTokens.responsiveGap.grid,
+      height: '100%',
+      minHeight: 0,
+    },
+    sidebar: {
+      width: auraTokens.responsive.detailSidebar,
+      flexShrink: 0,
+      display: { xs: 'none', md: 'block' },
+      overflow: 'auto',
+    },
+    sidebarAlwaysVisible: {
+      width: auraTokens.responsive.detailSidebar,
+      flexShrink: 0,
+      overflow: 'auto',
+    },
+    content: {
+      flex: 1,
+      minWidth: 0,
+      overflow: 'auto',
+    },
+  },
+
+  // Message/conversation layout
+  messageView: {
+    container: {
+      display: 'flex',
+      flexDirection: { xs: 'column', md: 'row' },
+      gap: auraTokens.responsiveGap.grid,
+      height: auraTokens.responsiveHeights.messageAreaFull,
+    },
+    list: {
+      width: auraTokens.responsive.conversationList,
+      flexShrink: 0,
+      display: { xs: 'none', md: 'block' },
+      overflow: 'auto',
+      borderRight: { md: '1px solid' },
+      borderColor: { md: 'divider' },
+    },
+    listMobile: {
+      width: '100%',
+      display: { xs: 'block', md: 'none' },
+      overflow: 'auto',
+    },
+    thread: {
+      flex: 1,
+      minWidth: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    },
+  },
+
+  // Page container with responsive padding
+  pageContainer: {
+    p: auraTokens.responsivePadding.page,
+    maxWidth: auraTokens.responsive.contentWide,
+    mx: 'auto',
+    width: '100%',
+  },
+
+  // Page container narrow (for forms, settings)
+  pageContainerNarrow: {
+    p: auraTokens.responsivePadding.page,
+    maxWidth: auraTokens.responsive.formContainerWide,
+    mx: 'auto',
+    width: '100%',
+  },
+
+  // Dialog responsive sizing
+  dialogResponsive: {
+    paper: {
+      width: auraTokens.responsive.dialog,
+      maxHeight: auraTokens.responsiveHeights.dialogContentTall,
+      m: { xs: 1, sm: 2 },
+    },
+    content: {
+      p: auraTokens.responsivePadding.dialogContent,
+      overflow: 'auto',
+    },
+  },
+
+  // Grid layouts
+  cardGrid: {
+    display: 'grid',
+    gap: auraTokens.responsiveGap.grid,
+    gridTemplateColumns: {
+      xs: '1fr',
+      sm: 'repeat(2, 1fr)',
+      md: 'repeat(3, 1fr)',
+      lg: 'repeat(4, 1fr)',
+    },
+  },
+  cardGridCompact: {
+    display: 'grid',
+    gap: auraTokens.responsiveGap.gridCompact,
+    gridTemplateColumns: {
+      xs: '1fr',
+      sm: 'repeat(2, 1fr)',
+      md: 'repeat(3, 1fr)',
+    },
+  },
+  statCardGrid: {
+    display: 'grid',
+    gap: auraTokens.responsiveGap.grid,
+    gridTemplateColumns: {
+      xs: '1fr',
+      sm: 'repeat(2, 1fr)',
+      md: 'repeat(4, 1fr)',
+    },
+  },
+
+  // Form layouts
+  formSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: auraTokens.responsiveGap.stack,
+    maxWidth: auraTokens.responsive.formContainer,
+  },
+  formRow: {
+    display: 'flex',
+    flexDirection: { xs: 'column', sm: 'row' },
+    gap: auraTokens.responsiveGap.stack,
+    '& > *': {
+      flex: { xs: '1 1 100%', sm: 1 },
+    },
+  },
+
+  // Mobile/desktop toggle patterns
+  showOnMobile: {
+    display: auraTokens.display.mobileOnly,
+  },
+  hideOnMobile: {
+    display: auraTokens.display.hideOnMobile,
+  },
+  showOnDesktop: {
+    display: auraTokens.display.hideUntilDesktop,
+  },
+  hideOnDesktop: {
+    display: auraTokens.display.untilDesktop,
+  },
+} as const;
+
 export type AuraTokens = typeof auraTokens;
+export type LayoutPatterns = typeof layoutPatterns;

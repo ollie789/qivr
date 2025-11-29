@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { auraColors, glassTokens } from '@qivr/design-system';
+import { auraColors, glassTokens, auraTokens } from '@qivr/design-system';
 
 interface BodyRegionData {
   region: string;
@@ -112,11 +112,11 @@ const BodyRegionChart: React.FC<BodyRegionChartProps> = ({
                   value={percentage}
                   sx={{
                     height: 8,
-                    borderRadius: 4,
+                    borderRadius: auraTokens.borderRadius.sm,
                     bgcolor: alpha(intensityColor, 0.1),
                     '& .MuiLinearProgress-bar': {
                       bgcolor: intensityColor,
-                      borderRadius: 4,
+                      borderRadius: auraTokens.borderRadius.sm,
                     },
                   }}
                 />
@@ -172,7 +172,7 @@ const BodyRegionChart: React.FC<BodyRegionChartProps> = ({
             contentStyle={{
               backgroundColor: theme.palette.background.paper,
               border: `1px solid ${theme.palette.divider}`,
-              borderRadius: 12,
+              borderRadius: auraTokens.borderRadius.md * 6,
               boxShadow: glassTokens.shadow.standard,
             }}
             formatter={(value: number, _name: string, props: any) => [

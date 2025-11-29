@@ -41,7 +41,7 @@ import {
 } from "@mui/icons-material";
 import { handleApiError } from "../../../lib/api-client";
 import { useProfileData } from "../hooks";
-import { PageLoader, FormDialog, FormSection, FormRow, AuraButton, Callout } from "@qivr/design-system";
+import { PageLoader, FormDialog, FormSection, FormRow, AuraButton, Callout, auraTokens } from "@qivr/design-system";
 import MedicalRecordsPage from "../../medical-records/components/MedicalRecordsPage";
 import type {
   EmergencyContact,
@@ -267,7 +267,7 @@ export const ProfilePage: React.FC = () => {
             <Box sx={{ position: "relative" }}>
               <Avatar
                 src={displayProfile?.photoUrl}
-                sx={{ width: 120, height: 120 }}
+                sx={{ width: auraTokens.avatar.xxl, height: auraTokens.avatar.xxl }}
               >
                 {displayProfile?.firstName?.[0]}
                 {displayProfile?.lastName?.[0]}

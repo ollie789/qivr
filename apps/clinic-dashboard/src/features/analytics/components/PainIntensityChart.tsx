@@ -120,7 +120,7 @@ const PainIntensityChart: React.FC<PainIntensityChartProps> = ({
         </Stack>
 
         {/* Gradient bar distribution */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-end', height: 180, gap: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-end', height: auraTokens.responsiveChart.compact, gap: 0.5 }}>
           {chartData.map((item) => {
             const height = (item.count / maxCount) * 150;
             return (

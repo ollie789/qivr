@@ -69,6 +69,7 @@ import {
   AuraEmptyState,
   NumberTextField,
   SelectField,
+  auraTokens,
 } from "@qivr/design-system";
 
 interface ClinicSettings {
@@ -784,7 +785,7 @@ export default function Settings() {
                                   })
                                 }
                                 disabled={!editMode}
-                                sx={{ mr: 2, width: 120 }}
+                                sx={{ mr: 2, width: auraTokens.formControl.md }}
                                 InputLabelProps={{ shrink: true }}
                               />
                               <TextField
@@ -807,7 +808,7 @@ export default function Settings() {
                                   })
                                 }
                                 disabled={!editMode}
-                                sx={{ width: 120 }}
+                                sx={{ width: auraTokens.formControl.md }}
                                 InputLabelProps={{ shrink: true }}
                               />
                             </>

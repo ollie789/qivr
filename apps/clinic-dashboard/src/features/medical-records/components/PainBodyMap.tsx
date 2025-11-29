@@ -12,7 +12,7 @@ import {
   Close as CloseIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
-import { auraColors } from '@qivr/design-system';
+import { auraColors, auraTokens } from '@qivr/design-system';
 
 export interface PainPoint {
   bodyPart: string;
@@ -131,8 +131,8 @@ export const PainBodyMap: React.FC<PainBodyMapProps> = ({
         {/* Body Map */}
         <Box
           sx={{
-            width: 200,
-            height: 400,
+            width: { xs: 160, sm: 180, md: 200 },
+            height: auraTokens.chart.lg,
             position: 'relative',
             bgcolor: alpha(auraColors.grey[100], 0.5),
             borderRadius: 3,
@@ -141,53 +141,56 @@ export const PainBodyMap: React.FC<PainBodyMapProps> = ({
             overflow: 'hidden',
           }}
         >
-          {/* Simple body outline */}
+          {/* Simple body outline - Head */}
           <Box
             sx={{
               position: 'absolute',
               top: '8%',
               left: '50%',
               transform: 'translateX(-50%)',
-              width: 30,
-              height: 30,
+              width: auraTokens.avatar.sm,
+              height: auraTokens.avatar.sm,
               borderRadius: '50%',
               border: '2px solid',
               borderColor: auraColors.grey[400],
             }}
           />
+          {/* Torso */}
           <Box
             sx={{
               position: 'absolute',
               top: '18%',
               left: '50%',
               transform: 'translateX(-50%)',
-              width: 60,
-              height: 80,
-              borderRadius: '30px 30px 20px 20px',
+              width: { xs: 50, sm: 55, md: 60 },
+              height: { xs: 70, sm: 75, md: 80 },
+              borderRadius: `${auraTokens.borderRadius.lg * 10}px ${auraTokens.borderRadius.lg * 10}px ${auraTokens.borderRadius.md * 10}px ${auraTokens.borderRadius.md * 10}px`,
               border: '2px solid',
               borderColor: auraColors.grey[400],
             }}
           />
+          {/* Left Leg */}
           <Box
             sx={{
               position: 'absolute',
               top: '55%',
               left: '35%',
-              width: 20,
-              height: 90,
-              borderRadius: 10,
+              width: { xs: 16, sm: 18, md: 20 },
+              height: { xs: 75, sm: 82, md: 90 },
+              borderRadius: auraTokens.borderRadius.md * 5,
               border: '2px solid',
               borderColor: auraColors.grey[400],
             }}
           />
+          {/* Right Leg */}
           <Box
             sx={{
               position: 'absolute',
               top: '55%',
               right: '35%',
-              width: 20,
-              height: 90,
-              borderRadius: 10,
+              width: { xs: 16, sm: 18, md: 20 },
+              height: { xs: 75, sm: 82, md: 90 },
+              borderRadius: auraTokens.borderRadius.md * 5,
               border: '2px solid',
               borderColor: auraColors.grey[400],
             }}
@@ -208,8 +211,8 @@ export const PainBodyMap: React.FC<PainBodyMapProps> = ({
                     left: `${region.x}%`,
                     top: `${region.y}%`,
                     transform: 'translate(-50%, -50%)',
-                    width: 24,
-                    height: 24,
+                    width: auraTokens.avatar.xs,
+                    height: auraTokens.avatar.xs,
                     borderRadius: '50%',
                     bgcolor: isSelected
                       ? alpha(getIntensityColor(intensity), 0.8)
@@ -236,7 +239,7 @@ export const PainBodyMap: React.FC<PainBodyMapProps> = ({
                   }}
                 >
                   {isSelected && (
-                    <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: 10 }}>
+                    <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: auraTokens.iconSize.xxs }}>
                       {intensity}
                     </Typography>
                   )}

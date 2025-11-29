@@ -16,7 +16,7 @@ import {
   Favorite as HeartIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { glassTokens, auraColors, AuraEmptyState, SelectField } from '@qivr/design-system';
+import { glassTokens, auraColors, AuraEmptyState, SelectField, auraTokens } from '@qivr/design-system';
 import type { TimelineEvent } from '../types';
 
 interface TimelineTabProps {
@@ -66,20 +66,20 @@ const TimelineCard: React.FC<{ event: TimelineEvent; isLast: boolean }> = ({ eve
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          width: 40,
+          width: auraTokens.avatar.md,
         }}
       >
         <Box
           sx={{
-            width: 40,
-            height: 40,
+            width: auraTokens.avatar.md,
+            height: auraTokens.avatar.md,
             borderRadius: '50%',
             bgcolor: alpha(statusColor, 0.1),
             color: statusColor,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            '& svg': { fontSize: 20 },
+            '& svg': { fontSize: auraTokens.iconSize.md },
           }}
         >
           {event.icon || getEventIcon(event.type)}

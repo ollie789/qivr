@@ -43,6 +43,7 @@ import {
   StatCardSkeleton,
   FilterChips,
   AuraButton,
+  auraTokens,
 } from "@qivr/design-system";
 
 interface Evaluation {
@@ -276,7 +277,7 @@ export const Evaluations = () => {
       {/* Search and Filter */}
       <Box sx={{ mb: 3 }}>
         <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
-          <Box sx={{ flexGrow: 1, maxWidth: 400 }}>
+          <Box sx={{ flexGrow: 1, maxWidth: auraTokens.responsive.searchBar }}>
             <SearchBar
               value={searchTerm}
               onChange={setSearchTerm}

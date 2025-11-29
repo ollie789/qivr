@@ -21,7 +21,7 @@ import {
 } from "@mui/icons-material";
 import { useAnalyticsDashboardData } from "../hooks/useAnalyticsDashboardData";
 import type { HealthGoal, HealthMetric } from "../../../types";
-import { InfoCard, SimpleLineChart, SimpleBarChart, AuraButton } from "@qivr/design-system";
+import { InfoCard, SimpleLineChart, SimpleBarChart, AuraButton, auraTokens } from "@qivr/design-system";
 
 const formatMetricValue = (metric: HealthMetric) => {
   const value = metric.value.toLocaleString();
@@ -53,7 +53,7 @@ const AnalyticsPage: React.FC = () => {
             Snapshot of key metrics, PROM performance, and active goals.
           </Typography>
         </Box>
-        <FormControl size="small" sx={{ minWidth: 160 }}>
+        <FormControl size="small" sx={{ minWidth: auraTokens.formControl.lg }}>
           <InputLabel id="analytics-range-label">Time Range</InputLabel>
           <Select
             labelId="analytics-range-label"

@@ -25,7 +25,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
-import { PainMap3DViewer, type PainMap3DData, InfoCard, Callout, AuraButton } from "@qivr/design-system";
+import { PainMap3DViewer, type PainMap3DData, InfoCard, Callout, AuraButton, auraTokens } from "@qivr/design-system";
 import MessageComposer from "../../../components/messaging/MessageComposer";
 
 interface PainPoint {
@@ -123,7 +123,7 @@ export const EvaluationViewer: React.FC<EvaluationViewerProps> = ({
     <Box sx={{ height: "100%", overflow: "auto" }}>
       {/* Header */}
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-        <Avatar sx={{ width: 56, height: 56, bgcolor: "primary.main" }}>
+        <Avatar sx={{ width: auraTokens.avatar.lg, height: auraTokens.avatar.lg, bgcolor: "primary.main" }}>
           {evaluation.patientName
             .split(" ")
             .map((n) => n[0])

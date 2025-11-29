@@ -10,6 +10,7 @@ import {
   AuraButton,
   AuraCard,
   SectionLoader,
+  auraTokens,
   type MessageListItem,
   type ThreadMessage,
 } from "@qivr/design-system";
@@ -145,9 +146,26 @@ export default function MessagesPage() {
       </Box>
 
       {/* Main Content */}
-      <Box sx={{ flex: 1, display: "flex", overflow: "hidden", p: 2, gap: 2 }}>
-        {/* Message List */}
-        <AuraCard sx={{ width: 380, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          overflow: "hidden",
+          p: auraTokens.responsivePadding.sectionCompact,
+          gap: auraTokens.responsiveGap.grid,
+        }}
+      >
+        {/* Message List - hidden on mobile when message selected */}
+        <AuraCard
+          sx={{
+            width: auraTokens.responsive.conversationList,
+            display: { xs: selectedMessageId ? 'none' : 'flex', md: 'flex' },
+            flexDirection: 'column',
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}
+        >
           <Box sx={{ flex: 1, overflow: 'auto' }}>
             {isLoading ? (
               <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
@@ -173,8 +191,16 @@ export default function MessagesPage() {
           </Box>
         </AuraCard>
 
-        {/* Message Thread */}
-        <AuraCard sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: 'hidden' }}>
+        {/* Message Thread - full width on mobile */}
+        <AuraCard
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            display: { xs: selectedMessageId ? 'flex' : 'none', md: 'flex' },
+            flexDirection: "column",
+            overflow: 'hidden',
+          }}
+        >
           {selectedMessage ? (
             <>
               <Box sx={{ 

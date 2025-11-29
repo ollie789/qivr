@@ -32,6 +32,7 @@ import {
   SelectField,
   ChartCardSkeleton,
   glassTokens,
+  auraTokens,
 } from '@qivr/design-system';
 import analyticsApi from '../services/analyticsApi';
 import {
@@ -281,7 +282,7 @@ const Analytics: React.FC = () => {
                 { value: '90', label: '90 days' },
               ]}
               size="small"
-              sx={{ minWidth: 120 }}
+              sx={{ minWidth: auraTokens.formControl.md }}
             />
             <AuraButton
               variant="outlined"

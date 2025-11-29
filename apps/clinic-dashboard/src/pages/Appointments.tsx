@@ -272,7 +272,7 @@ export default function Appointments() {
         </Paper>
 
         {/* Appointments List */}
-        <Paper sx={{ p: 3, width: 400, borderRadius: 3 }}>
+        <Paper sx={{ p: 3, width: auraTokens.responsive.detailSidebar, borderRadius: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
             {format(selectedDate, "EEEE, MMMM d")}
           </Typography>

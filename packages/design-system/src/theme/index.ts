@@ -16,3 +16,6 @@ export { default as sxConfig } from './sxConfig';
 
 // Glass effect system (unified tokens)
 export { glassTokens, glassEffect } from './auraTokens';
+
+// Layout patterns for responsive layouts
+export { layoutPatterns } from './auraTokens';

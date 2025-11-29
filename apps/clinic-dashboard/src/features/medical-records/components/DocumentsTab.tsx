@@ -21,7 +21,7 @@ import {
   CloudUpload as UploadIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { glassTokens, auraColors, AuraButton, AuraEmptyState } from '@qivr/design-system';
+import { glassTokens, auraColors, AuraButton, AuraEmptyState, auraTokens } from '@qivr/design-system';
 
 interface Document {
   id: string;
@@ -92,15 +92,15 @@ const DocumentCard: React.FC<{
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <Box
           sx={{
-            width: 48,
-            height: 48,
-            borderRadius: 2,
+            width: auraTokens.avatar.md,
+            height: auraTokens.avatar.md,
+            borderRadius: auraTokens.borderRadius.sm,
             bgcolor: alpha(auraColors.blue.main, 0.1),
             color: auraColors.blue.main,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            '& svg': { fontSize: 24 },
+            '& svg': { fontSize: auraTokens.iconSize.lg },
           }}
         >
           {getFileIcon(doc.mimeType, doc.fileName)}

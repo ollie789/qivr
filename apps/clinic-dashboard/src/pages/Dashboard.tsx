@@ -54,6 +54,7 @@ import {
   SelectField,
   ConfirmDialog,
   ChartCardSkeleton,
+  auraTokens,
 } from "@qivr/design-system";
 
 const Dashboard: React.FC = () => {
@@ -476,7 +477,7 @@ const Dashboard: React.FC = () => {
                 onChange={setChartPeriod}
                 size="small"
                 fullWidth={false}
-                sx={{ minWidth: 130 }}
+                sx={{ minWidth: auraTokens.formControl.lg }}
                 options={[
                   { value: "7d", label: "Last 7 days" },
                   { value: "30d", label: "Last 30 days" },

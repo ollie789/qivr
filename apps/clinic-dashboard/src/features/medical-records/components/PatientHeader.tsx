@@ -18,7 +18,7 @@ import {
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { format, parseISO, differenceInYears } from 'date-fns';
-import { AuraButton } from '@qivr/design-system';
+import { AuraButton, auraTokens } from '@qivr/design-system';
 import type { Patient, PatientQuickStats } from '../types';
 
 interface PatientHeaderProps {
@@ -114,8 +114,8 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
         {/* Avatar */}
         <Avatar
           sx={{
-            width: 72,
-            height: 72,
+            width: auraTokens.avatar.xl,
+            height: auraTokens.avatar.xl,
             bgcolor: 'primary.main',
             fontSize: '1.5rem',
             fontWeight: 600,
@@ -174,7 +174,7 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
                 py: 1.5,
                 bgcolor: 'action.hover',
                 borderRadius: 2,
-                minWidth: 100,
+                minWidth: auraTokens.formControl.sm,
                 textAlign: 'center',
               }}
             >

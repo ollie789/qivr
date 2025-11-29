@@ -19,7 +19,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { documentApi, RequiredDocument } from "../services/documentApi";
-import { FormDialog, Callout, AuraButton } from "@qivr/design-system";
+import { FormDialog, Callout, AuraButton, auraTokens } from "@qivr/design-system";
 
 export default function DocumentChecklist() {
   const { enqueueSnackbar } = useSnackbar();
@@ -82,7 +82,7 @@ export default function DocumentChecklist() {
     requiredCount > 0 ? (requiredCompleted / requiredCount) * 100 : 0;
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1000, mx: "auto" }}>
+    <Box sx={{ p: auraTokens.responsivePadding.page, maxWidth: auraTokens.responsive.contentMedium, mx: "auto" }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight={600} gutterBottom>
           📋 Document Checklist

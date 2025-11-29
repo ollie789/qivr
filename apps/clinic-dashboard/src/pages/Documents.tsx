@@ -171,7 +171,7 @@ export default function Documents() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1600, mx: 'auto' }}>
+    <Box sx={{ p: auraTokens.responsivePadding.page, maxWidth: auraTokens.responsive.contentWide, mx: 'auto' }}>
       <PageHeader
         title="Documents"
         description="Manage and organize patient documents"

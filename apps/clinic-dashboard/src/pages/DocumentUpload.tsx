@@ -139,7 +139,7 @@ export default function DocumentUpload() {
     selectedFile && selectedPatient && !uploadMutation.isPending;
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }}>
+    <Box sx={{ p: auraTokens.responsivePadding.page, maxWidth: auraTokens.responsive.contentMedium, mx: "auto" }}>
       <PageHeader
         title="Upload Document"
         description="Upload patient documents with automatic OCR extraction and intelligent classification"

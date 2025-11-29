@@ -22,7 +22,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useSnackbar } from "notistack";
 import { useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api-client";
-import { PainMap3D, auraStepper, AuraButton } from "@qivr/design-system";
+import { PainMap3D, auraStepper, AuraButton, auraTokens } from "@qivr/design-system";
 import { fetchProfile } from "../services/profileApi";
 
 const steps = [
@@ -253,7 +253,7 @@ export const IntakeForm: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 900, mx: "auto", p: 3 }}>
+    <Box sx={{ maxWidth: auraTokens.responsive.contentMedium, mx: "auto", p: auraTokens.responsivePadding.page }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
         Comprehensive Pain Assessment
       </Typography>

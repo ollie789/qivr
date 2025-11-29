@@ -13,7 +13,7 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
-import { LoadingSpinner, AuraButton, ConfirmDialog } from "@qivr/design-system";
+import { LoadingSpinner, AuraButton, ConfirmDialog, auraTokens } from "@qivr/design-system";
 import { EvaluationViewer } from "../../features/intake/components/EvaluationViewer";
 import { intakeApi } from "../../services/intakeApi";
 
@@ -129,7 +129,11 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
       maxWidth="lg"
       fullWidth
       PaperProps={{
-        sx: { height: "90vh" },
+        sx: {
+          height: auraTokens.responsiveHeights.dialogContentTall,
+          maxWidth: auraTokens.responsive.dialogLarge,
+          m: { xs: 1, sm: 2 },
+        },
       }}
     >
       <DialogTitle>

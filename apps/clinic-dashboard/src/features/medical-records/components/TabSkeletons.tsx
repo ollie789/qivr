@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Skeleton, Grid } from '@mui/material';
+import { auraTokens } from '@qivr/design-system';
 
 export const DemographicsSkeleton: React.FC = () => (
   <Box sx={{ p: 3 }}>
@@ -146,7 +147,7 @@ export const MedicalHistorySkeleton: React.FC = () => (
               borderRadius: 3,
               border: '1px solid',
               borderColor: 'divider',
-              height: 200,
+              height: auraTokens.chart.sm,
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
@@ -293,7 +294,7 @@ export const DocumentsSkeleton: React.FC = () => (
               borderRadius: 3,
               border: '1px solid',
               borderColor: 'divider',
-              height: 280,
+              height: auraTokens.chart.md,
             }}
           >
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>

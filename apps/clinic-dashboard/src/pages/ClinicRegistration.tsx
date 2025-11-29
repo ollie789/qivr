@@ -117,8 +117,8 @@ const ClinicRegistration: React.FC = () => {
         <AuraCard
           sx={{
             width: "100%",
-            maxWidth: 600,
-            p: 4,
+            maxWidth: auraTokens.responsive.dialog,
+            p: { xs: 3, sm: 4 },
             background:
               "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
           }}

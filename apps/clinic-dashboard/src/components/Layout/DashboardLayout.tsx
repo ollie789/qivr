@@ -434,7 +434,12 @@ const DashboardLayout: React.FC = () => {
         onClose={handleNotificationClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
-        PaperProps={{ sx: { width: 360, maxHeight: 400 } }}
+        PaperProps={{
+          sx: {
+            width: auraTokens.responsive.panel,
+            maxHeight: auraTokens.responsiveHeights.listArea,
+          },
+        }}
       >
         <Box sx={{ p: 2 }}>
           <Typography variant="h6">Notifications</Typography>

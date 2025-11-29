@@ -30,7 +30,7 @@ import {
 } from '@mui/icons-material';
 import { IconButton, Menu, MenuItem, ListItemIcon as MenuListItemIcon } from '@mui/material';
 import { format, parseISO } from 'date-fns';
-import { glassTokens, auraColors, AuraButton, AuraEmptyState } from '@qivr/design-system';
+import { glassTokens, auraColors, AuraButton, AuraEmptyState, auraTokens } from '@qivr/design-system';
 import type { MedicalHistory, MedicalHistoryCategory } from '../types';
 
 interface MedicalHistoryTabProps {
@@ -114,7 +114,7 @@ const CategoryCard: React.FC<{
             bgcolor: alpha(config.color, 0.1),
             color: config.color,
             display: 'flex',
-            '& svg': { fontSize: 20 },
+            '& svg': { fontSize: auraTokens.iconSize.md },
           }}
         >
           {config.icon}
@@ -137,10 +137,10 @@ const CategoryCard: React.FC<{
         <List dense disablePadding>
           {items.slice(0, 4).map((item) => (
             <ListItem key={item.id} disableGutters sx={{ py: 0.75 }}>
-              <ListItemIcon sx={{ minWidth: 28 }}>
+              <ListItemIcon sx={{ minWidth: auraTokens.avatar.xs + 4 }}>
                 <CircleIcon
                   sx={{
-                    fontSize: 8,
+                    fontSize: auraTokens.iconSize.xxs - 4,
                     color: getStatusColor(item.status),
                   }}
                 />

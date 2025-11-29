@@ -38,6 +38,7 @@ import {
   auraTokens,
   StatusAvatar,
   Callout,
+  layoutPatterns,
 } from "@qivr/design-system";
 
 const Messages: React.FC = () => {
@@ -221,13 +222,20 @@ const Messages: React.FC = () => {
 
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 3,
-          alignItems: "flex-start",
+          ...layoutPatterns.messageView.container,
+          minHeight: auraTokens.responsiveHeights.messageArea,
         }}
       >
-        <Paper sx={{ width: 320, minHeight: 620, flexShrink: 0 }}>
+        {/* Conversation list - hidden on mobile */}
+        <Paper
+          sx={{
+            width: auraTokens.responsive.conversationList,
+            minHeight: auraTokens.responsiveHeights.messageArea,
+            flexShrink: 0,
+            display: auraTokens.display.hideUntilDesktopFlex,
+            flexDirection: "column",
+          }}
+        >
           {conversationsLoading ? (
             <SectionLoader minHeight={200} />
           ) : conversationsError ? (
@@ -333,11 +341,13 @@ const Messages: React.FC = () => {
           )}
         </Paper>
 
+        {/* Message thread - full width on mobile */}
         <Paper
           sx={{
             flex: 1,
-            minHeight: 620,
-            p: 3,
+            minWidth: 0,
+            minHeight: auraTokens.responsiveHeights.messageArea,
+            p: auraTokens.responsivePadding.card,
             display: "flex",
             flexDirection: "column",
           }}
@@ -436,7 +446,7 @@ const Messages: React.FC = () => {
                                 <Chip
                                   label={message.messageType}
                                   size="small"
-                                  sx={{ height: 20, fontSize: "0.7rem" }}
+                                  sx={{ height: 22, fontSize: "0.75rem" }}
                                   color={
                                     message.messageType === "Medical"
                                       ? "error"
