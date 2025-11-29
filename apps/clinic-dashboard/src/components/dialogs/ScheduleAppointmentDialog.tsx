@@ -43,6 +43,7 @@ export interface ScheduleAppointmentDialogProps {
   intakeId?: string;
   treatmentPlanId?: string;
   appointmentType?: string;
+  initialDate?: Date;
   prefilledData?: {
     chiefComplaint?: string;
     urgency?: string;
@@ -122,6 +123,7 @@ export const ScheduleAppointmentDialog: React.FC<
   intakeId,
   treatmentPlanId,
   appointmentType: defaultAppointmentType,
+  initialDate,
   prefilledData,
 }) => {
   const { enqueueSnackbar } = useSnackbar();
@@ -135,7 +137,7 @@ export const ScheduleAppointmentDialog: React.FC<
     providerId: prefilledData?.preferredProvider || "",
     appointmentType:
       defaultAppointmentType || (intakeId ? "initial" : "followup"),
-    date: null as Date | null,
+    date: initialDate || null as Date | null,
     timeSlot: null as string | null,
     duration: 60,
     notes: prefilledData?.chiefComplaint || "",
