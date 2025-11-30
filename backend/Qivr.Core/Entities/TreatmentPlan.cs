@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Qivr.Core.Common;
 
 namespace Qivr.Core.Entities;
@@ -22,6 +23,7 @@ public enum PhaseStatus
     Paused
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MilestoneType
 {
     SessionCount,
