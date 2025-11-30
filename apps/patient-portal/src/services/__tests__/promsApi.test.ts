@@ -71,7 +71,7 @@ describe("promsApi", () => {
 
     const result = await fetchPromInstances("pending");
 
-    expect(mockClient.get).toHaveBeenCalledWith("/api/v1/proms/instances", {
+    expect(mockClient.get).toHaveBeenCalledWith("/api/proms/instances", {
       status: "pending",
     });
     expect(result[0]).toMatchObject({
@@ -89,7 +89,7 @@ describe("promsApi", () => {
     const result = await fetchPromInstances();
 
     expect(mockClient.get).toHaveBeenCalledWith(
-      "/api/v1/proms/instances",
+      "/api/proms/instances",
       undefined,
     );
     expect(result[0]?.status).toBe("pending");
@@ -115,7 +115,7 @@ describe("promsApi", () => {
     await submitPromResponse("instance-1", responses, 120);
 
     expect(mockClient.post).toHaveBeenCalledWith(
-      "/api/v1/proms/instances/instance-1/answers",
+      "/api/proms/instances/instance-1/answers",
       {
         answers: [
           { questionId: "q1", value: "yes" },
@@ -135,7 +135,7 @@ describe("promsApi", () => {
     });
 
     expect(mockClient.put).toHaveBeenCalledWith(
-      "/api/v1/proms/instances/instance-2/draft",
+      "/api/proms/instances/instance-2/draft",
       {
         responses: { q1: "draft" },
         lastQuestionIndex: 2,
@@ -150,14 +150,14 @@ describe("promsApi", () => {
 
     const result = await fetchPromStats();
 
-    expect(mockClient.get).toHaveBeenCalledWith("/api/v1/proms/instances");
+    expect(mockClient.get).toHaveBeenCalledWith("/api/proms/instances");
     expect(result.totalAssigned).toBe(2);
     expect(result.completed).toBe(1);
     expect(result.pending).toBe(1);
     expect(result.averageScore).toBeGreaterThanOrEqual(0);
   });
 
-  it("fetchPromInstance and fetchPromTemplate use legacy routes", async () => {
+  it("fetchPromInstance and fetchPromTemplate use correct routes", async () => {
     mockClient.get
       .mockResolvedValueOnce(apiInstances[0])
       .mockResolvedValueOnce(template);
@@ -165,14 +165,14 @@ describe("promsApi", () => {
     const instance = await fetchPromInstance("instance-3");
     expect(mockClient.get).toHaveBeenNthCalledWith(
       1,
-      "/api/v1/proms/instances/instance-3",
+      "/api/proms/instances/instance-3",
     );
     expect(instance.templateName).toEqual("PROM A");
 
     const tpl = await fetchPromTemplate("tmpl-1");
     expect(mockClient.get).toHaveBeenNthCalledWith(
       2,
-      "/api/v1/proms/templates/by-id/tmpl-1",
+      "/api/proms/templates/by-id/tmpl-1",
     );
     expect(tpl).toEqual(template);
   });

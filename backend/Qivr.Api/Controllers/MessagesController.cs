@@ -85,12 +85,12 @@ public class MessagesController : BaseApiController
                 Id = m.Id.ToString(),
                 Subject = m.Subject ?? "No Subject",
                 Content = m.Content,
-                From = m.SenderId == userId 
-                    ? "You" 
-                    : $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
-                To = m.DirectRecipientId == userId 
-                    ? "You" 
-                    : $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                From = m.SenderId == userId
+                    ? "You"
+                    : $"{m.Sender?.FirstName ?? ""} {m.Sender?.LastName ?? ""}".Trim(),
+                To = m.DirectRecipientId == userId
+                    ? "You"
+                    : $"{m.Recipient?.FirstName ?? ""} {m.Recipient?.LastName ?? ""}".Trim(),
                 Date = m.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 Category = m.MessageType,
                 Read = m.DirectRecipientId == userId ? m.IsRead : true,
@@ -129,12 +129,12 @@ public class MessagesController : BaseApiController
                 Id = m.Id.ToString(),
                 Subject = m.Subject ?? "No Subject",
                 Content = m.Content,
-                From = m.SenderId == userId 
-                    ? "You" 
-                    : $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
-                To = m.DirectRecipientId == userId 
-                    ? "You" 
-                    : $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                From = m.SenderId == userId
+                    ? "You"
+                    : $"{m.Sender?.FirstName ?? ""} {m.Sender?.LastName ?? ""}".Trim(),
+                To = m.DirectRecipientId == userId
+                    ? "You"
+                    : $"{m.Recipient?.FirstName ?? ""} {m.Recipient?.LastName ?? ""}".Trim(),
                 Date = m.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 Category = m.MessageType,
                 Read = m.DirectRecipientId == userId ? m.IsRead : true,
@@ -142,7 +142,7 @@ public class MessagesController : BaseApiController
                 HasAttachments = m.HasAttachments,
                 ParentMessageId = m.ParentMessageId?.ToString()
             }).ToList();
-            
+
         return Success(portalMessages);
     }
     
@@ -233,9 +233,9 @@ public class MessagesController : BaseApiController
             {
                 Id = m.Id,
                 SenderId = m.SenderId,
-                SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
+                SenderName = $"{m.Sender?.FirstName ?? ""} {m.Sender?.LastName ?? ""}".Trim(),
                 RecipientId = m.DirectRecipientId,
-                RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                RecipientName = $"{m.Recipient?.FirstName ?? ""} {m.Recipient?.LastName ?? ""}".Trim(),
                 ProviderProfileId = m.ProviderProfileId,
                 Subject = m.Subject ?? string.Empty,
                 Content = m.Content,
@@ -281,9 +281,9 @@ public class MessagesController : BaseApiController
             {
                 Id = m.Id,
                 SenderId = m.SenderId,
-                SenderName = $"{m.Sender?.FirstName} {m.Sender?.LastName}".Trim(),
+                SenderName = $"{m.Sender?.FirstName ?? ""} {m.Sender?.LastName ?? ""}".Trim(),
                 RecipientId = m.DirectRecipientId,
-                RecipientName = $"{m.Recipient?.FirstName} {m.Recipient?.LastName}".Trim(),
+                RecipientName = $"{m.Recipient?.FirstName ?? ""} {m.Recipient?.LastName ?? ""}".Trim(),
                 ProviderProfileId = m.ProviderProfileId,
                 Subject = m.Subject ?? string.Empty,
                 Content = m.Content,
@@ -382,7 +382,7 @@ public class MessagesController : BaseApiController
                 RecipientId = message.DirectRecipientId,
                 RecipientName = $"{message.Recipient?.FirstName ?? ""} {message.Recipient?.LastName ?? ""}".Trim(),
                 ProviderProfileId = message.ProviderProfileId,
-                Subject = message.Subject,
+                Subject = message.Subject ?? "",
                 Content = message.Content,
                 IsRead = message.IsRead,
                 Priority = Enum.TryParse<MessagePriority>(message.Priority, out var p) ? p : MessagePriority.Normal,
@@ -429,7 +429,7 @@ public class MessagesController : BaseApiController
                 RecipientId = message.DirectRecipientId,
                 RecipientName = $"{message.Recipient?.FirstName ?? ""} {message.Recipient?.LastName ?? ""}".Trim(),
                 ProviderProfileId = message.ProviderProfileId,
-                Subject = message.Subject,
+                Subject = message.Subject ?? "",
                 Content = message.Content,
                 IsRead = message.IsRead,
                 ReadAt = message.ReadAt,
@@ -625,7 +625,7 @@ public class MessagesController : BaseApiController
                 RecipientId = reply.DirectRecipientId,
                 RecipientName = $"{reply.Recipient?.FirstName ?? ""} {reply.Recipient?.LastName ?? ""}".Trim(),
                 ProviderProfileId = reply.ProviderProfileId,
-                Subject = reply.Subject,
+                Subject = reply.Subject ?? "",
                 Content = reply.Content,
                 IsRead = reply.IsRead,
                 Priority = Enum.TryParse<MessagePriority>(reply.Priority, out var p) ? p : MessagePriority.Normal,

@@ -84,9 +84,9 @@ public class PatientsController : TenantAwareController
                 .Select(u => new PatientSearchResultDto
                 {
                     Id = u.Id,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    Email = u.Email,
+                    FirstName = u.FirstName ?? "",
+                    LastName = u.LastName ?? "",
+                    Email = u.Email ?? "",
                     PhoneNumber = u.Phone ?? "",
                     DateOfBirth = u.DateOfBirth,
                     LastVisit = _context.Appointments
@@ -186,9 +186,9 @@ public class PatientsController : TenantAwareController
                 Items = paginatedResult.Items.Select(u => new PatientListItemDto
                 {
                     Id = u.Id,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    Email = u.Email,
+                    FirstName = u.FirstName ?? "",
+                    LastName = u.LastName ?? "",
+                    Email = u.Email ?? "",
                     PhoneNumber = u.Phone ?? "",
                     DateOfBirth = u.DateOfBirth,
                     MedicalRecordNumber = null, // MRN field doesn't exist in User entity
@@ -252,9 +252,9 @@ public class PatientsController : TenantAwareController
                 .Select(u => new PatientListItemDto
                 {
                     Id = u.Id,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    Email = u.Email,
+                    FirstName = u.FirstName ?? "",
+                    LastName = u.LastName ?? "",
+                    Email = u.Email ?? "",
                     PhoneNumber = u.Phone ?? "",
                     DateOfBirth = u.DateOfBirth,
                     MedicalRecordNumber = null, // MRN field doesn't exist in User entity
@@ -310,9 +310,9 @@ public class PatientsController : TenantAwareController
                 .Select(u => new PatientDetailsDto
                 {
                     Id = u.Id,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    Email = u.Email,
+                    FirstName = u.FirstName ?? "",
+                    LastName = u.LastName ?? "",
+                    Email = u.Email ?? "",
                     PhoneNumber = u.Phone ?? "",
                     DateOfBirth = u.DateOfBirth,
                     Gender = u.Gender,
@@ -441,9 +441,9 @@ public class PatientsController : TenantAwareController
             var result = new PatientDetailsDto
             {
                 Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
+                FirstName = user.FirstName ?? "",
+                LastName = user.LastName ?? "",
+                Email = user.Email ?? "",
                 DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
                 CreatedAt = user.CreatedAt,
@@ -546,7 +546,7 @@ public class PatientsController : TenantAwareController
                 type = "appointment",
                 date = a.ScheduledStart,
                 title = $"Appointment - {a.AppointmentType}",
-                description = $"with {a.Provider.FirstName} {a.Provider.LastName}",
+                description = $"with {a.Provider!.FirstName ?? ""} {a.Provider.LastName ?? ""}".Trim(),
                 status = a.Status.ToString(),
                 notes = a.Notes
             })
@@ -563,7 +563,7 @@ public class PatientsController : TenantAwareController
             {
                 type = "prom",
                 date = p.CompletedAt,
-                title = $"PROM - {p.Template.Name}",
+                title = $"PROM - {p.Template!.Name}",
                 description = $"Score: {p.Score}",
                 status = p.Status.ToString()
             })

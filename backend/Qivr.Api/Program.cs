@@ -24,7 +24,6 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Amazon.SQS;
 using Qivr.Api.Workers;
-using Qivr.Api.Services;
 using Qivr.Api.Config;
 using Microsoft.AspNetCore.HttpOverrides;
 using Qivr.Api.Hubs;

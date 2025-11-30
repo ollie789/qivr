@@ -28,8 +28,16 @@ public class BedrockService : IBedrockService
     private readonly IAmazonBedrockRuntime _bedrockClient;
     private readonly ILogger<BedrockService> _logger;
     private readonly BedrockConfiguration _configuration;
-    private readonly string _claudeModelId = "anthropic.claude-3-sonnet-20240229-v1:0";
     private readonly string _embeddingModelId = "amazon.titan-embed-text-v1";
+    
+    private string TextModelId => _configuration.ModelProvider?.ToLower() switch
+    {
+        "claude" => "anthropic.claude-3-sonnet-20240229-v1:0",
+        "titan" => "amazon.titan-text-express-v1",
+        _ => "amazon.nova-lite-v1:0"  // default to Nova
+    };
+    private bool UseClaude => _configuration.ModelProvider?.ToLower() == "claude";
+    private bool UseNova => !UseClaude && _configuration.ModelProvider?.ToLower() != "titan";
 
     public BedrockService(
         IConfiguration configuration,
@@ -45,44 +53,51 @@ public class BedrockService : IBedrockService
         };
 
         _bedrockClient = new AmazonBedrockRuntimeClient(config);
+        _logger.LogInformation("BedrockService initialized with provider: {Provider}", _configuration.ModelProvider ?? "titan");
     }
 
     public async Task<string> InvokeClaudeAsync(string prompt, BedrockModelOptions? options = null)
     {
+        options ??= new BedrockModelOptions();
+        
+        if (UseClaude)
+            return await InvokeClaudeInternalAsync(prompt, options);
+        if (UseNova)
+            return await InvokeNovaInternalAsync(prompt, null, options);
+        
+        return await InvokeTitanInternalAsync(prompt, options);
+    }
+
+    public async Task<BedrockResponse> InvokeClaudeWithStructuredOutputAsync(
+        string prompt, 
+        string systemPrompt, 
+        BedrockModelOptions? options = null)
+    {
+        options ??= new BedrockModelOptions();
+        
+        if (UseClaude)
+            return await InvokeClaudeStructuredInternalAsync(prompt, systemPrompt, options);
+        if (UseNova)
+            return await InvokeNovaStructuredInternalAsync(prompt, systemPrompt, options);
+        
+        return await InvokeTitanStructuredInternalAsync(prompt, systemPrompt, options);
+    }
+
+    private async Task<string> InvokeClaudeInternalAsync(string prompt, BedrockModelOptions options)
+    {
         try
         {
-            options ??= new BedrockModelOptions();
-            
             var requestBody = new
             {
                 anthropic_version = "bedrock-2023-05-31",
                 max_tokens = options.MaxTokens,
                 temperature = options.Temperature,
                 top_p = options.TopP,
-                messages = new[]
-                {
-                    new
-                    {
-                        role = "user",
-                        content = prompt
-                    }
-                }
+                messages = new[] { new { role = "user", content = prompt } }
             };
 
-            var request = new InvokeModelRequest
-            {
-                ModelId = _claudeModelId,
-                ContentType = "application/json",
-                Accept = "application/json",
-                Body = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(requestBody)))
-            };
-
-            var response = await _bedrockClient.InvokeModelAsync(request);
-            
-            using var reader = new StreamReader(response.Body);
-            var responseJson = await reader.ReadToEndAsync();
-            var responseData = JsonSerializer.Deserialize<ClaudeResponse>(responseJson);
-            
+            var response = await InvokeModelAsync(requestBody);
+            var responseData = JsonSerializer.Deserialize<ClaudeResponse>(response);
             return responseData?.Content?.FirstOrDefault()?.Text ?? string.Empty;
         }
         catch (Exception ex)
@@ -92,15 +107,57 @@ public class BedrockService : IBedrockService
         }
     }
 
-    public async Task<BedrockResponse> InvokeClaudeWithStructuredOutputAsync(
-        string prompt, 
-        string systemPrompt, 
-        BedrockModelOptions? options = null)
+    private async Task<string> InvokeTitanInternalAsync(string prompt, BedrockModelOptions options)
     {
         try
         {
-            options ??= new BedrockModelOptions();
-            
+            var requestBody = new
+            {
+                inputText = prompt,
+                textGenerationConfig = new
+                {
+                    maxTokenCount = options.MaxTokens,
+                    temperature = options.Temperature,
+                    topP = options.TopP
+                }
+            };
+
+            var response = await InvokeModelAsync(requestBody);
+            var responseData = JsonSerializer.Deserialize<TitanTextResponse>(response);
+            return responseData?.Results?.FirstOrDefault()?.OutputText ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking Titan model");
+            throw new BedrockException("Failed to invoke Titan model", ex);
+        }
+    }
+
+    private async Task<string> InvokeNovaInternalAsync(string prompt, string? systemPrompt, BedrockModelOptions options)
+    {
+        try
+        {
+            var messages = new[] { new { role = "user", content = new[] { new { text = prompt } } } };
+            object requestBody = systemPrompt != null
+                ? new { messages, system = new[] { new { text = systemPrompt } }, inferenceConfig = new { max_new_tokens = options.MaxTokens, temperature = options.Temperature, top_p = options.TopP } }
+                : new { messages, inferenceConfig = new { max_new_tokens = options.MaxTokens, temperature = options.Temperature, top_p = options.TopP } };
+
+            var response = await InvokeModelAsync(requestBody);
+            var responseData = JsonSerializer.Deserialize<NovaResponse>(response);
+            return responseData?.Output?.Message?.Content?.FirstOrDefault()?.Text ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking Nova model");
+            throw new BedrockException("Failed to invoke Nova model", ex);
+        }
+    }
+
+    private async Task<BedrockResponse> InvokeClaudeStructuredInternalAsync(
+        string prompt, string systemPrompt, BedrockModelOptions options)
+    {
+        try
+        {
             var requestBody = new
             {
                 anthropic_version = "bedrock-2023-05-31",
@@ -108,38 +165,18 @@ public class BedrockService : IBedrockService
                 temperature = options.Temperature,
                 top_p = options.TopP,
                 system = systemPrompt,
-                messages = new[]
-                {
-                    new
-                    {
-                        role = "user",
-                        content = prompt
-                    }
-                }
+                messages = new[] { new { role = "user", content = prompt } }
             };
 
-            var request = new InvokeModelRequest
-            {
-                ModelId = _claudeModelId,
-                ContentType = "application/json",
-                Accept = "application/json",
-                Body = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(requestBody)))
-            };
-
-            var response = await _bedrockClient.InvokeModelAsync(request);
-            
-            using var reader = new StreamReader(response.Body);
-            var responseJson = await reader.ReadToEndAsync();
-            var responseData = JsonSerializer.Deserialize<ClaudeResponse>(responseJson);
-            
-            // Parse the structured JSON from the response
+            var response = await InvokeModelAsync(requestBody);
+            var responseData = JsonSerializer.Deserialize<ClaudeResponse>(response);
             var content = responseData?.Content?.FirstOrDefault()?.Text ?? "{}";
-            
+
             return new BedrockResponse
             {
                 RawContent = content,
                 ParsedContent = ParseStructuredOutput(content),
-                ModelId = _claudeModelId,
+                ModelId = TextModelId,
                 Usage = new ModelUsage
                 {
                     InputTokens = responseData?.Usage?.InputTokens ?? 0,
@@ -154,15 +191,88 @@ public class BedrockService : IBedrockService
         }
     }
 
+    private async Task<BedrockResponse> InvokeTitanStructuredInternalAsync(
+        string prompt, string systemPrompt, BedrockModelOptions options)
+    {
+        try
+        {
+            var fullPrompt = $"{systemPrompt}\n\n{prompt}";
+            var requestBody = new
+            {
+                inputText = fullPrompt,
+                textGenerationConfig = new
+                {
+                    maxTokenCount = options.MaxTokens,
+                    temperature = options.Temperature,
+                    topP = options.TopP
+                }
+            };
+
+            var response = await InvokeModelAsync(requestBody);
+            var responseData = JsonSerializer.Deserialize<TitanTextResponse>(response);
+            var content = responseData?.Results?.FirstOrDefault()?.OutputText ?? "{}";
+
+            return new BedrockResponse
+            {
+                RawContent = content,
+                ParsedContent = ParseStructuredOutput(content),
+                ModelId = TextModelId,
+                Usage = new ModelUsage
+                {
+                    InputTokens = responseData?.InputTextTokenCount ?? 0,
+                    OutputTokens = responseData?.Results?.FirstOrDefault()?.TokenCount ?? 0
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking Titan model with structured output");
+            throw new BedrockException("Failed to invoke Titan model", ex);
+        }
+    }
+
+    private async Task<BedrockResponse> InvokeNovaStructuredInternalAsync(
+        string prompt, string systemPrompt, BedrockModelOptions options)
+    {
+        try
+        {
+            var content = await InvokeNovaInternalAsync(prompt, systemPrompt, options);
+
+            return new BedrockResponse
+            {
+                RawContent = content,
+                ParsedContent = ParseStructuredOutput(content),
+                ModelId = TextModelId,
+                Usage = new ModelUsage()
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking Nova model with structured output");
+            throw new BedrockException("Failed to invoke Nova model", ex);
+        }
+    }
+
+    private async Task<string> InvokeModelAsync(object requestBody)
+    {
+        var request = new InvokeModelRequest
+        {
+            ModelId = TextModelId,
+            ContentType = "application/json",
+            Accept = "application/json",
+            Body = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(requestBody)))
+        };
+
+        var response = await _bedrockClient.InvokeModelAsync(request);
+        using var reader = new StreamReader(response.Body);
+        return await reader.ReadToEndAsync();
+    }
+
     public async Task<List<string>> GenerateEmbeddingsAsync(string text)
     {
         try
         {
-            var requestBody = new
-            {
-                inputText = text
-            };
-
+            var requestBody = new { inputText = text };
             var request = new InvokeModelRequest
             {
                 ModelId = _embeddingModelId,
@@ -172,7 +282,6 @@ public class BedrockService : IBedrockService
             };
 
             var response = await _bedrockClient.InvokeModelAsync(request);
-            
             using var reader = new StreamReader(response.Body);
             var responseJson = await reader.ReadToEndAsync();
             var responseData = JsonSerializer.Deserialize<TitanEmbeddingResponse>(responseJson);
@@ -190,16 +299,10 @@ public class BedrockService : IBedrockService
     {
         try
         {
-            var prompt = $@"
-                Analyze the following content for safety concerns. 
-                Return JSON with format: 
-                {{
-                    ""is_safe"": boolean,
-                    ""concerns"": []
-                }}
-                
-                Content: {content}
-            ";
+            var prompt = $@"Analyze the following content for safety concerns. 
+Return JSON with format: {{""is_safe"": boolean, ""concerns"": []}}
+
+Content: {content}";
 
             var result = await InvokeClaudeWithStructuredOutputAsync(
                 prompt,
@@ -213,7 +316,6 @@ public class BedrockService : IBedrockService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking content safety");
-            // Default to safe if check fails
             return true;
         }
     }
@@ -222,7 +324,6 @@ public class BedrockService : IBedrockService
     {
         try
         {
-            // Extract JSON from the response if it's wrapped in markdown
             var jsonStart = content.IndexOf('{');
             var jsonEnd = content.LastIndexOf('}');
             
@@ -243,12 +344,11 @@ public class BedrockService : IBedrockService
     }
 }
 
-// Configuration and Models
+// Configuration
 public class BedrockConfiguration
 {
     public string Region { get; set; } = "us-east-1";
-    public string AccessKey { get; set; } = string.Empty;
-    public string SecretKey { get; set; } = string.Empty;
+    public string? ModelProvider { get; set; } = "titan"; // "titan" or "claude"
     public int MaxRetries { get; set; } = 3;
     public int TimeoutSeconds { get; set; } = 30;
 }
@@ -277,7 +377,7 @@ public class ModelUsage
     public int TotalTokens => InputTokens + OutputTokens;
 }
 
-// Claude Response Models
+// Response Models
 internal class ClaudeResponse
 {
     public List<ClaudeContent>? Content { get; set; }
@@ -297,21 +397,51 @@ internal class ClaudeUsage
     public int OutputTokens { get; set; }
 }
 
-// Titan Embedding Response
+internal class TitanTextResponse
+{
+    public int? InputTextTokenCount { get; set; }
+    public List<TitanTextResult>? Results { get; set; }
+}
+
+internal class TitanTextResult
+{
+    public string? OutputText { get; set; }
+    public int? TokenCount { get; set; }
+    public string? CompletionReason { get; set; }
+}
+
+internal class NovaResponse
+{
+    public NovaOutput? Output { get; set; }
+}
+
+internal class NovaOutput
+{
+    public NovaMessage? Message { get; set; }
+}
+
+internal class NovaMessage
+{
+    public List<NovaContent>? Content { get; set; }
+}
+
+internal class NovaContent
+{
+    public string? Text { get; set; }
+}
+
 internal class TitanEmbeddingResponse
 {
     public List<string>? Embedding { get; set; }
     public int? InputTextTokenCount { get; set; }
 }
 
-// Content Safety Models
 internal class ContentSafetyResult
 {
     public bool IsSafe { get; set; }
     public List<string> Concerns { get; set; } = new();
 }
 
-// Exceptions
 public class BedrockException : Exception
 {
     public BedrockException(string message) : base(message) { }

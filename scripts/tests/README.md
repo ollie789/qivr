@@ -1,26 +1,30 @@
 # Test Suite
 
-## Main E2E Test Suite
+## Unit Tests
+
+Each app has its own unit tests using Vitest:
 
 ```bash
-# Run comprehensive end-to-end tests
+# Patient Portal (15 tests)
+npm run test --workspace=@qivr/patient-portal
+
+# Backend (.NET)
+cd backend && dotnet test
+```
+
+## E2E Tests
+
+```bash
+# Main integration test suite
 node scripts/tests/test-live-system.mjs
 ```
 
-This test suite covers:
-- Authentication flow
-- Patient management
-- Appointments
-- Medical records
-- PROM system
-- Messaging
-- Analytics
-- Multi-tenant isolation
+Covers: Auth, Patients, Appointments, Medical Records, PROMs, Messaging, Analytics, Multi-tenant isolation.
 
 ## Manual Testing
 
-See [PATIENT-PORTAL-MANUAL-TEST.md](PATIENT-PORTAL-MANUAL-TEST.md) for manual testing procedures.
+See [PATIENT-PORTAL-MANUAL-TEST.md](PATIENT-PORTAL-MANUAL-TEST.md).
 
-## Test Credentials
+## Archived Scripts
 
-Tests use credentials from environment or default test accounts configured in the system.
+Historical test scripts are in `docs/archive/test-scripts/`.

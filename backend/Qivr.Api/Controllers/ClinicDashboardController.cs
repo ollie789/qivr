@@ -116,10 +116,10 @@ public class ClinicDashboardController : ControllerBase
             // Get recent PROM submissions for provider's patients
             var recentPromSubmissions = await _context.PromResponses
                 .Include(r => r.PromInstance)
-                .ThenInclude(i => i.Patient)
-                .Include(r => r.PromInstance.Template)
-                .Where(r => _context.Appointments
-                    .Any(a => a.PatientId == r.PromInstance.PatientId 
+                .ThenInclude(i => i!.Patient)
+                .Include(r => r.PromInstance!.Template)
+                .Where(r => r.PromInstance != null && _context.Appointments
+                    .Any(a => a.PatientId == r.PromInstance!.PatientId
                         && a.ProviderId == providerUserId))
                 .OrderByDescending(r => r.CreatedAt)
                 .Take(10)
@@ -204,7 +204,9 @@ public class ClinicDashboardController : ControllerBase
                 {
                     Id = a.Id,
                     PatientId = a.PatientId,
-                    PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                    PatientName = a.Patient != null
+                        ? $"{a.Patient.FirstName} {a.Patient.LastName}".Trim()
+                        : "Unknown Patient",
                     ScheduledStart = a.ScheduledStart,
                     ScheduledEnd = a.ScheduledEnd,
                     AppointmentType = a.AppointmentType,
@@ -346,8 +348,8 @@ public class ClinicDashboardController : ControllerBase
         // Simplified - in real implementation, this would use specific satisfaction surveys
         var scores = await _context.PromResponses
             .Include(r => r.PromInstance)
-            .Where(r => _context.Appointments
-                .Any(a => a.PatientId == r.PromInstance.PatientId 
+            .Where(r => r.PromInstance != null && _context.Appointments
+                .Any(a => a.PatientId == r.PromInstance!.PatientId
                     && a.ProviderId == providerId
                     && a.ScheduledStart >= start
                     && a.ScheduledStart < end))

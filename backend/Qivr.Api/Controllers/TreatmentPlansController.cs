@@ -156,7 +156,16 @@ public class TreatmentPlansController : BaseApiController
             PromConfig = plan.PromConfig,
             AiGeneratedSummary = plan.AiGeneratedSummary,
             AiConfidence = plan.AiConfidence,
-            AiRationale = plan.AiRationale
+            AiRationale = plan.AiRationale,
+            AiGeneratedAt = plan.AiGeneratedAt,
+            Patient = plan.Patient != null ? new PatientSummaryDto
+            {
+                Id = plan.Patient.Id,
+                FirstName = plan.Patient.FirstName ?? "",
+                LastName = plan.Patient.LastName ?? "",
+                Email = plan.Patient.Email,
+                Phone = plan.Patient.Phone
+            } : null
         });
     }
 
@@ -1220,4 +1229,15 @@ public class TreatmentPlanDetailDto : TreatmentPlanListDto
     public string? AiGeneratedSummary { get; set; }
     public double? AiConfidence { get; set; }
     public string? AiRationale { get; set; }
+    public DateTime? AiGeneratedAt { get; set; }
+    public PatientSummaryDto? Patient { get; set; }
+}
+
+public class PatientSummaryDto
+{
+    public Guid Id { get; set; }
+    public string FirstName { get; set; } = "";
+    public string LastName { get; set; } = "";
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
 }

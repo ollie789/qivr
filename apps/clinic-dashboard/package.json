@@ -43,6 +43,8 @@
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^16.0.0",
+    "jsdom": "^25.0.0",
     "@types/node": "^20.11.30",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

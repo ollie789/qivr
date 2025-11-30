@@ -452,8 +452,8 @@ export default function TreatmentPlan() {
               exerciseCount={totalTodayTasks}
               completedExerciseCount={completedTodayCount}
               isSubmitting={submitCheckInMutation.isPending}
-              alreadyCheckedIn={plan.checkInStatus.hasCheckedInToday}
-              lastCheckIn={plan.checkInStatus.lastCheckIn}
+              alreadyCheckedIn={plan.checkInStatus?.hasCheckedInToday ?? false}
+              lastCheckIn={plan.checkInStatus?.lastCheckIn}
             />
           </Box>
         </Box>

@@ -84,14 +84,14 @@ public class PatientDashboardController : ControllerBase
             // Get recent PROM responses
             var recentResponses = await _context.PromResponses
             .Include(r => r.PromInstance)
-                .ThenInclude(i => i.Template)
-                .Where(r => r.PromInstance.PatientId == userId)
+                .ThenInclude(i => i!.Template)
+                .Where(r => r.PromInstance != null && r.PromInstance.PatientId == userId)
                 .OrderByDescending(r => r.CreatedAt)
                 .Take(5)
                 .Select(r => new PromResponseSummaryDto
                 {
                     Id = r.Id,
-                    TemplateName = r.PromInstance.Template.Name,
+                    TemplateName = r.PromInstance!.Template!.Name,
                     CompletedAt = r.CreatedAt,
                     Score = r.Score,
                     Status = r.PromInstance.Status.ToString()
@@ -117,9 +117,9 @@ public class PatientDashboardController : ControllerBase
             // Get health metrics (from recent PROM scores)
             var healthMetrics = await _context.PromResponses
                 .Include(r => r.PromInstance)
-                .ThenInclude(i => i.Template)
-                .Where(r => r.PromInstance.PatientId == userId)
-                .GroupBy(r => r.PromInstance.Template.Name)
+                .ThenInclude(i => i!.Template)
+                .Where(r => r.PromInstance != null && r.PromInstance.PatientId == userId)
+                .GroupBy(r => r.PromInstance!.Template!.Name)
                 .Select(g => new HealthMetricDto
                 {
                     MetricName = g.Key,
@@ -245,8 +245,8 @@ public class PatientDashboardController : ControllerBase
         // Get recent vitals from PROM responses
         var recentVitals = await _context.PromResponses
             .Include(r => r.PromInstance)
-            .ThenInclude(i => i.Template)
-            .Where(r => r.PromInstance.PatientId == userId)
+            .ThenInclude(i => i!.Template)
+            .Where(r => r.PromInstance != null && r.PromInstance.PatientId == userId)
             .OrderByDescending(r => r.CreatedAt)
             .Take(10)
             .ToListAsync();
@@ -266,7 +266,7 @@ public class PatientDashboardController : ControllerBase
                 && a.Notes != null)
             .Select(a => new PatientMedicationDto
             {
-                Name = a.Notes,
+                Name = a.Notes ?? "",
                 StartDate = a.ScheduledStart,
                 Status = "Active"
             })
@@ -275,7 +275,7 @@ public class PatientDashboardController : ControllerBase
         var summary = new HealthSummaryDto
         {
             PatientId = userId,
-            PatientName = $"{patient.FirstName} {patient.LastName}",
+            PatientName = $"{patient.FirstName ?? ""} {patient.LastName ?? ""}".Trim(),
             DateOfBirth = patient.DateOfBirth,
             LastVisit = await _context.Appointments
                 .Where(a => a.PatientId == userId && a.Status == AppointmentStatus.Completed)
@@ -284,7 +284,7 @@ public class PatientDashboardController : ControllerBase
             ActiveMedications = medications,
             RecentVitals = recentVitals.Select(r => new PatientVitalSignDto
             {
-                Type = r.PromInstance.Template.Name,
+                Type = r.PromInstance?.Template?.Name ?? "Unknown",
                 Value = r.Score.ToString(),
                 Unit = "points",
                 RecordedAt = r.CreatedAt
