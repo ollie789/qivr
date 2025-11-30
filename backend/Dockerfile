@@ -1,6 +1,6 @@
-# Multi-stage build for .NET 8 API
-# Stage 1: Build (pin Alpine to 3.19 to match ICU 73 expected by .NET 8)
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.19 AS build
+# Multi-stage build for .NET 10 API
+# Stage 1: Build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview-alpine AS build
 WORKDIR /src
 
 # Copy csproj files and restore dependencies
@@ -20,7 +20,7 @@ FROM build AS publish
 RUN dotnet publish "Qivr.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Stage 3: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.19 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview-alpine AS final
 WORKDIR /app
 
 # Install required packages (update package index first)
