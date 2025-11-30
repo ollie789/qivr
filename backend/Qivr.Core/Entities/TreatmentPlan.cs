@@ -15,6 +15,7 @@ public enum TreatmentPlanStatus
     OnHold
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PhaseStatus
 {
     NotStarted,
@@ -34,6 +35,7 @@ public enum MilestoneType
     WeekComplete
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum DifficultyLevel
 {
     Beginner,
