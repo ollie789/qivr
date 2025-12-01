@@ -13,10 +13,10 @@ namespace Qivr.Api.Controllers.Partner;
 [Route("api/auth")]
 public class PartnerAuthController : ControllerBase
 {
-    private readonly QivrDbContext _context;
+    private readonly AdminReadOnlyDbContext _context;
     private readonly IConfiguration _config;
 
-    public PartnerAuthController(QivrDbContext context, IConfiguration config)
+    public PartnerAuthController(AdminReadOnlyDbContext context, IConfiguration config)
     {
         _context = context;
         _config = config;
