@@ -3,8 +3,8 @@ ALTER TABLE medical_devices ADD COLUMN IF NOT EXISTS technical_specifications TE
 ALTER TABLE medical_devices ADD COLUMN IF NOT EXISTS global_availability TEXT;
 
 -- Insert Medtronic as a research partner if not exists
-INSERT INTO research_partners (id, name, company_type, contact_email, is_active, created_at, updated_at)
-VALUES ('11111111-1111-1111-1111-111111111111', 'Medtronic', 'Manufacturer', 'partners@medtronic.com', true, NOW(), NOW())
+INSERT INTO research_partners (id, name, slug, contact_email, description, website, is_active, created_at, updated_at)
+VALUES ('11111111-1111-1111-1111-111111111111', 'Medtronic', 'medtronic', 'partners@medtronic.com', 'Global leader in medical technology, services, and solutions', 'https://www.medtronic.com', true, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert Medtronic orthopedic devices

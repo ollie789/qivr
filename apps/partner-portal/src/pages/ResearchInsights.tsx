@@ -18,6 +18,9 @@ import {
   LinearProgress,
   Tooltip,
   Paper,
+  // Button,
+  // Menu,
+  // CircularProgress,
 } from "@mui/material";
 import {
   Psychology,
@@ -30,6 +33,9 @@ import {
   ThumbDown,
   SentimentSatisfied,
   Warning,
+  // Download,
+  // TableChart,
+  // PictureAsPdf,
 } from "@mui/icons-material";
 import {
   BarChart,
@@ -94,9 +100,88 @@ export default function ResearchInsights() {
   const [tabValue, setTabValue] = useState(0);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [selectedPromType, setSelectedPromType] = useState<string>("ODI");
+  const [_exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
+  const [_isExporting, setIsExporting] = useState(false);
 
   // Common PROM types for spine/pain outcomes
   const promTypes = ["ODI", "NDI", "VAS", "SF-36", "EQ-5D", "PROMIS"];
+
+  // Export handlers
+  const _handleExportCSV = async () => {
+    setIsExporting(true);
+    setExportAnchor(null);
+    try {
+      // Build CSV from current data
+      const rows: string[] = [];
+
+      // Export perception metrics
+      if (perceptionData?.devices) {
+        rows.push("PERCEPTION METRICS");
+        rows.push("Device,Patients,PASS Rate,Success Rate,Avg Satisfaction,NPS");
+        perceptionData.devices.forEach((d) => {
+          if (!d.suppressedDueToPrivacy) {
+            rows.push(`"${d.deviceName}",${d.patientCount},${d.passRate?.toFixed(1) ?? "N/A"},${d.perceivedSuccessRate?.toFixed(1) ?? "N/A"},${d.averageSatisfaction?.toFixed(1) ?? "N/A"},${d.netPromoterScore?.toFixed(0) ?? "N/A"}`);
+          }
+        });
+        rows.push("");
+      }
+
+      // Export MCID analysis
+      if (mcidData?.devices) {
+        rows.push("MCID ANALYSIS");
+        rows.push("Device,PROM Type,Patients,Baseline,Follow-up,Change,Traditional MCID,Patient-Centered MCID,Responder Rate");
+        mcidData.devices.forEach((d) => {
+          if (!d.suppressedDueToPrivacy) {
+            d.mcidByPromType.forEach((m) => {
+              rows.push(`"${d.deviceName}","${m.promType}",${m.patientCount},${m.averageBaselineScore.toFixed(1)},${m.averageFollowUpScore.toFixed(1)},${m.averageChange.toFixed(1)},${m.traditionalMcid?.toFixed(1) ?? "N/A"},${m.patientCenteredMcid?.toFixed(1) ?? "N/A"},${m.responderRate.toFixed(1)}%`);
+            });
+          }
+        });
+        rows.push("");
+      }
+
+      // Export discordance
+      if (discordanceData?.devices) {
+        rows.push("DISCORDANCE ANALYSIS");
+        rows.push("Device,Patients,Concordant Success,Concordant Non-Success,Discordant Obj+/Subj-,Discordant Obj-/Subj+,Total Discordance");
+        discordanceData.devices.forEach((d) => {
+          if (!d.suppressedDueToPrivacy) {
+            rows.push(`"${d.deviceName}",${d.patientCount},${d.concordantSuccessCount},${d.concordantNonSuccessCount},${d.discordantObjectiveSuccessCount},${d.discordantSubjectiveSuccessCount},${d.totalDiscordanceRate.toFixed(1)}%`);
+          }
+        });
+      }
+
+      const csv = rows.join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `research-insights-${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const _handleExportJSON = () => {
+    setExportAnchor(null);
+    const data = {
+      exportDate: new Date().toISOString(),
+      selectedDevice: selectedDeviceId || "all",
+      perceptionMetrics: perceptionData?.devices,
+      mcidAnalysis: mcidData?.devices,
+      discordanceAnalysis: discordanceData?.devices,
+      cohortAnalytics: cohortData,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `research-insights-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const { data: devicesData } = useQuery({
     queryKey: ["devices-overview"],

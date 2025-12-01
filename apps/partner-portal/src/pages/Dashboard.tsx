@@ -14,6 +14,15 @@ import { TrendingUp, People, Devices, Assessment } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { deviceOutcomesApi } from "../services/api";
 import { useAuthStore } from "../stores/authStore";
+import { auraColors } from "../theme";
+
+// Aura design system stat card colors
+const STAT_COLORS = {
+  devices: auraColors.blue.main,
+  patients: auraColors.green.main,
+  procedures: auraColors.purple.main,
+  outcomes: auraColors.amber.main,
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -92,7 +101,7 @@ export default function Dashboard() {
             title="Total Devices"
             value={devices.length}
             icon={<Devices />}
-            color="#0ea5e9"
+            color={STAT_COLORS.devices}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -100,7 +109,7 @@ export default function Dashboard() {
             title="Total Patients"
             value={totalPatients.toLocaleString()}
             icon={<People />}
-            color="#10b981"
+            color={STAT_COLORS.patients}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -108,7 +117,7 @@ export default function Dashboard() {
             title="Procedures Tracked"
             value={totalProcedures.toLocaleString()}
             icon={<Assessment />}
-            color="#8b5cf6"
+            color={STAT_COLORS.procedures}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -116,7 +125,7 @@ export default function Dashboard() {
             title="Devices with Outcomes"
             value={devicesWithData}
             icon={<TrendingUp />}
-            color="#f59e0b"
+            color={STAT_COLORS.outcomes}
           />
         </Grid>
       </Grid>
