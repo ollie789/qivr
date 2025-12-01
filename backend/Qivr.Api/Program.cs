@@ -198,6 +198,28 @@ builder.Services.AddDbContext<QivrDbContext>(options =>
     options.UseSnakeCaseNamingConvention();
 });
 
+// Configure Admin Read-Only Database Context (uses read replica if configured)
+var readReplicaConnection = Environment.GetEnvironmentVariable("DATABASE_REPLICA_URL");
+var adminReadOnlyConnection = !string.IsNullOrWhiteSpace(readReplicaConnection)
+    ? BuildPgConnectionStringFromUrl(readReplicaConnection, builder.Environment.IsDevelopment())
+    : defaultConnection; // Fall back to primary if no replica configured
+
+builder.Services.AddDbContext<AdminReadOnlyDbContext>(options =>
+{
+    options.UseNpgsql(adminReadOnlyConnection,
+        npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(3);
+        });
+    options.UseSnakeCaseNamingConvention();
+});
+
+// Admin Audit Service
+builder.Services.AddScoped<Qivr.Infrastructure.Services.IAdminAuditService, Qivr.Infrastructure.Services.AdminAuditService>();
+
+// Admin Security IP Allowlist
+builder.Services.AddAdminIpAllowlist(builder.Configuration);
+
 // Configure Email Services
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
 builder.Services.Configure<EmailConfiguration>(builder.Configuration.GetSection("Email"));
@@ -589,6 +611,9 @@ app.UseStaticFiles();
 
 // Custom middleware
 app.UseMiddleware<GlobalErrorHandlingMiddleware>();
+
+// Admin IP Allowlist (before authentication for early rejection)
+app.UseAdminIpAllowlist();
 
 // Authentication must run before tenant resolution so JWT claims are available
 app.UseAuthentication();

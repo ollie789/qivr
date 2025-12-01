@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using Qivr.Infrastructure.Services;
 using Stripe;
 
 namespace Qivr.Api.Controllers.Admin;
@@ -9,6 +11,7 @@ namespace Qivr.Api.Controllers.Admin;
 /// <summary>
 /// Admin billing operations using Stripe API.
 /// Provides invoice history, payment methods, and billing management.
+/// All write operations are audit logged.
 /// </summary>
 [ApiController]
 [Route("api/admin/billing")]
@@ -16,15 +19,21 @@ namespace Qivr.Api.Controllers.Admin;
 public class AdminBillingController : ControllerBase
 {
     private readonly QivrDbContext _context;
+    private readonly AdminReadOnlyDbContext _readOnlyContext;
+    private readonly IAdminAuditService _auditService;
     private readonly IConfiguration _config;
     private readonly ILogger<AdminBillingController> _logger;
 
     public AdminBillingController(
         QivrDbContext context,
+        AdminReadOnlyDbContext readOnlyContext,
+        IAdminAuditService auditService,
         IConfiguration config,
         ILogger<AdminBillingController> logger)
     {
         _context = context;
+        _readOnlyContext = readOnlyContext;
+        _auditService = auditService;
         _config = config;
         _logger = logger;
 
@@ -34,12 +43,13 @@ public class AdminBillingController : ControllerBase
 
     /// <summary>
     /// Get billing overview across all tenants
+    /// Uses read replica for performance
     /// </summary>
     [HttpGet("overview")]
     public async Task<IActionResult> GetBillingOverview(CancellationToken ct)
     {
-        // Calculate MRR from tenant plans
-        var tenants = await _context.Tenants
+        // Calculate MRR from tenant plans using read replica
+        var tenants = await _readOnlyContext.Tenants
             .Where(t => t.DeletedAt == null && t.IsActive)
             .Select(t => new { t.Plan, t.Status })
             .ToListAsync(ct);
@@ -298,6 +308,16 @@ public class AdminBillingController : ControllerBase
             tenant.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync(ct);
 
+            // Audit log the Stripe customer creation
+            await _auditService.LogAsync(
+                AdminActions.BillingStripeCustomerCreate,
+                "Tenant",
+                tenantId,
+                tenant.Name,
+                previousState: new { stripeCustomerId = (string?)null },
+                newState: new { stripeCustomerId = customer.Id },
+                ct: ct);
+
             _logger.LogInformation("Created Stripe customer {CustomerId} for tenant {TenantId}", customer.Id, tenantId);
 
             return Ok(new
@@ -308,6 +328,16 @@ public class AdminBillingController : ControllerBase
         }
         catch (StripeException ex)
         {
+            // Audit log the failure
+            await _auditService.LogAsync(
+                AdminActions.BillingStripeCustomerCreate,
+                "Tenant",
+                tenantId,
+                tenant.Name,
+                success: false,
+                errorMessage: ex.Message,
+                ct: ct);
+
             _logger.LogError(ex, "Failed to create Stripe customer for tenant {TenantId}", tenantId);
             return StatusCode(500, new { error = "Failed to create Stripe customer" });
         }

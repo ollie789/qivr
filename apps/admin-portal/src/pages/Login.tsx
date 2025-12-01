@@ -31,12 +31,20 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
+  const { isAuthenticated } = useAuthStore();
+
   useEffect(() => {
+    // If already authenticated in store, redirect immediately
+    if (isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+    // Otherwise check Cognito session
     checkSession().then((valid) => {
-      if (valid) navigate("/dashboard");
+      if (valid) navigate("/dashboard", { replace: true });
       setCheckingSession(false);
     });
-  }, []);
+  }, [isAuthenticated]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

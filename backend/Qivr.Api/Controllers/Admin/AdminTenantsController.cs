@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using Qivr.Infrastructure.Services;
 
 namespace Qivr.Api.Controllers.Admin;
 
 /// <summary>
 /// Tenant management actions that require production DB write access.
-/// Read operations should use AdminAnalyticsController (Athena) instead.
+/// Read operations use read replica, write operations use primary DB.
+/// All write operations are audit logged.
 /// </summary>
 [ApiController]
 [Route("api/admin/tenants")]
@@ -16,32 +18,41 @@ namespace Qivr.Api.Controllers.Admin;
 public class AdminTenantsController : ControllerBase
 {
     private readonly QivrDbContext _context;
+    private readonly AdminReadOnlyDbContext _readOnlyContext;
+    private readonly IAdminAuditService _auditService;
     private readonly ILogger<AdminTenantsController> _logger;
 
-    public AdminTenantsController(QivrDbContext context, ILogger<AdminTenantsController> logger)
+    public AdminTenantsController(
+        QivrDbContext context,
+        AdminReadOnlyDbContext readOnlyContext,
+        IAdminAuditService auditService,
+        ILogger<AdminTenantsController> logger)
     {
         _context = context;
+        _readOnlyContext = readOnlyContext;
+        _auditService = auditService;
         _logger = logger;
     }
 
     /// <summary>
     /// Get tenant details including usage stats
+    /// Uses read replica for performance
     /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetTenant(Guid id, CancellationToken ct)
     {
-        var tenant = await _context.Tenants
-            .AsNoTracking()
+        // Use read-only context for read operations
+        var tenant = await _readOnlyContext.Tenants
             .FirstOrDefaultAsync(t => t.Id == id, ct);
 
         if (tenant == null) return NotFound();
 
-        // Get usage stats
-        var patientCount = await _context.Users
+        // Get usage stats from read replica
+        var patientCount = await _readOnlyContext.Users
             .CountAsync(u => u.TenantId == id && u.UserType == UserType.Patient && u.DeletedAt == null, ct);
-        var staffCount = await _context.Users
+        var staffCount = await _readOnlyContext.Users
             .CountAsync(u => u.TenantId == id && u.UserType != UserType.Patient && u.DeletedAt == null, ct);
-        var appointmentCount = await _context.Appointments
+        var appointmentCount = await _readOnlyContext.Appointments
             .CountAsync(a => a.TenantId == id && a.ScheduledStart >= DateTime.UtcNow.AddMonths(-1), ct);
 
         // Feature flags from Settings
@@ -103,9 +114,20 @@ public class AdminTenantsController : ControllerBase
         var tenant = await _context.Tenants.FindAsync(new object[] { id }, ct);
         if (tenant == null) return NotFound();
 
+        var previousStatus = tenant.Status;
         tenant.Status = TenantStatus.Suspended;
         tenant.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
+
+        // Audit log the suspension
+        await _auditService.LogAsync(
+            AdminActions.TenantSuspend,
+            "Tenant",
+            id,
+            tenant.Name,
+            previousState: new { status = previousStatus.ToString() },
+            newState: new { status = TenantStatus.Suspended.ToString() },
+            ct: ct);
 
         _logger.LogWarning("Tenant {TenantId} ({TenantName}) suspended by admin", id, tenant.Name);
         return Ok(new { success = true, status = "suspended" });
@@ -120,9 +142,20 @@ public class AdminTenantsController : ControllerBase
         var tenant = await _context.Tenants.FindAsync(new object[] { id }, ct);
         if (tenant == null) return NotFound();
 
+        var previousStatus = tenant.Status;
         tenant.Status = TenantStatus.Active;
         tenant.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
+
+        // Audit log the activation
+        await _auditService.LogAsync(
+            AdminActions.TenantActivate,
+            "Tenant",
+            id,
+            tenant.Name,
+            previousState: new { status = previousStatus.ToString() },
+            newState: new { status = TenantStatus.Active.ToString() },
+            ct: ct);
 
         _logger.LogInformation("Tenant {TenantId} ({TenantName}) activated by admin", id, tenant.Name);
         return Ok(new { success = true, status = "active" });
@@ -142,6 +175,16 @@ public class AdminTenantsController : ControllerBase
         tenant.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
 
+        // Audit log the plan change
+        await _auditService.LogAsync(
+            AdminActions.TenantPlanUpdate,
+            "Tenant",
+            id,
+            tenant.Name,
+            previousState: new { plan = oldPlan },
+            newState: new { plan = request.Plan },
+            ct: ct);
+
         _logger.LogInformation("Tenant {TenantId} plan changed: {OldPlan} → {NewPlan}", id, oldPlan, request.Plan);
         return Ok(new { success = true, plan = tenant.Plan });
     }
@@ -155,11 +198,23 @@ public class AdminTenantsController : ControllerBase
         var tenant = await _context.Tenants.FindAsync(new object[] { id }, ct);
         if (tenant == null) return NotFound();
 
+        var previousFlags = new Dictionary<string, object>(tenant.Settings);
+
         foreach (var (key, value) in flags)
             tenant.Settings[key] = value;
 
         tenant.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
+
+        // Audit log the feature flag changes
+        await _auditService.LogAsync(
+            AdminActions.TenantFeatureUpdate,
+            "Tenant",
+            id,
+            tenant.Name,
+            previousState: previousFlags,
+            newState: tenant.Settings,
+            ct: ct);
 
         _logger.LogInformation("Feature flags updated for tenant {TenantId}", id);
         return Ok(new { success = true, featureFlags = tenant.Settings });
@@ -174,9 +229,20 @@ public class AdminTenantsController : ControllerBase
         var tenant = await _context.Tenants.FindAsync(new object[] { id }, ct);
         if (tenant == null) return NotFound();
 
+        var previousStatus = tenant.Status;
         tenant.DeletedAt = DateTime.UtcNow;
         tenant.Status = TenantStatus.Cancelled;
         await _context.SaveChangesAsync(ct);
+
+        // Audit log the deletion (critical operation)
+        await _auditService.LogAsync(
+            AdminActions.TenantDelete,
+            "Tenant",
+            id,
+            tenant.Name,
+            previousState: new { status = previousStatus.ToString(), deletedAt = (DateTime?)null },
+            newState: new { status = TenantStatus.Cancelled.ToString(), deletedAt = tenant.DeletedAt },
+            ct: ct);
 
         _logger.LogWarning("Tenant {TenantId} ({TenantName}) marked for deletion by admin", id, tenant.Name);
         return Ok(new { success = true, message = "Tenant will be permanently deleted in 30 days" });

@@ -86,6 +86,7 @@ public class QivrDbContext : DbContext
     public DbSet<ProviderSchedule> ProviderSchedules => Set<ProviderSchedule>();
     public DbSet<ProviderTimeOff> ProviderTimeOffs => Set<ProviderTimeOff>();
     public DbSet<ProviderScheduleOverride> ProviderScheduleOverrides => Set<ProviderScheduleOverride>();
+    public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
 
     private static Dictionary<string, object> DeserializeJsonSafely(string v)
     {
@@ -864,6 +865,41 @@ public class QivrDbContext : DbContext
 
         ConfigureMedicalRecords(modelBuilder);
         ConfigureProviderScheduling(modelBuilder);
+        ConfigureAdminAuditLog(modelBuilder, jsonComparer, jsonConverter);
+    }
+
+    private void ConfigureAdminAuditLog(ModelBuilder modelBuilder, ValueComparer<Dictionary<string, object>> jsonComparer, ValueConverter<Dictionary<string, object>, string> jsonConverter)
+    {
+        modelBuilder.Entity<AdminAuditLog>(entity =>
+        {
+            entity.ToTable("admin_audit_logs");
+            entity.HasKey(e => e.Id);
+
+            // Indexes for efficient querying
+            entity.HasIndex(e => e.AdminUserId);
+            entity.HasIndex(e => new { e.ResourceType, e.ResourceId });
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.Action);
+
+            entity.Property(e => e.Action).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ResourceType).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.AdminUserId).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.AdminEmail).HasMaxLength(255);
+            entity.Property(e => e.ResourceName).HasMaxLength(255);
+            entity.Property(e => e.IpAddress).HasMaxLength(45);
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+            entity.Property(e => e.CorrelationId).HasMaxLength(100);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(1000);
+
+            // JSON columns for state snapshots
+            entity.Property(e => e.PreviousState).HasColumnType("jsonb");
+            entity.Property(e => e.NewState).HasColumnType("jsonb");
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => string.IsNullOrEmpty(v) ? null : JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null));
+        });
     }
 
     public override int SaveChanges()

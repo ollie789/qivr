@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { CircularProgress, Box } from "@mui/material";
 import AdminLayout from "./components/AdminLayout";
 import { useAuthStore } from "./stores/authStore";
@@ -25,7 +25,14 @@ const Loading = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, checkSession } = useAuthStore();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    checkSession().finally(() => setChecking(false));
+  }, []);
+
+  if (checking) return <Loading />;
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
