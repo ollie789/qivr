@@ -1,14 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Box,
-  Card,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Card, TextField, Button, Typography, Alert } from "@mui/material";
 import { useAuthStore } from "../stores/authStore";
 
 export default function Login() {
@@ -29,15 +21,6 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { isAuthenticated } = useAuthStore();
-
-  // Redirect if already authenticated (AuthProvider already checked session)
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -47,7 +30,7 @@ export default function Login() {
     setLoading(false);
 
     if (result.success) {
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } else if (result.mfaSetupRequired) {
       await setupMfa();
     } else if (!result.mfaRequired && result.error) {
@@ -86,22 +69,6 @@ export default function Login() {
       setError(result.error || "Invalid code");
     }
   };
-
-  if (checkingSession) {
-    return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          bgcolor: "#0f172a",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <Box
