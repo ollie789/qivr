@@ -199,9 +199,13 @@ export default function TreatmentPlans() {
     const selected = appointmentsNeedingPlans.filter((a) =>
       selectedAppointments.has(a.id)
     );
-    if (selected.length > 0) {
-      setShowBulkCreateDialog(true);
+    if (selected.length === 0) {
+      enqueueSnackbar("Please select at least one appointment to generate a treatment plan", {
+        variant: "warning",
+      });
+      return;
     }
+    setShowBulkCreateDialog(true);
   };
 
   const getAppointmentDateLabel = (apt: Appointment) => {

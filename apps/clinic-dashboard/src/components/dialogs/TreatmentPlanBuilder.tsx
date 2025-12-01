@@ -222,7 +222,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     },
     onError: (error: any) => {
       setIsGenerating(false);
-      enqueueSnackbar(error?.message || "Failed to generate treatment plan", {
+      console.error("Treatment plan generation failed:", error);
+      enqueueSnackbar(error?.response?.data?.message || error?.message || "Failed to generate treatment plan. Please try again.", {
         variant: "error",
       });
     },
@@ -347,7 +348,10 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   };
 
   const handleGeneratePlan = async () => {
-    if (!selectedPatient) return;
+    if (!selectedPatient) {
+      enqueueSnackbar("Please select a patient first", { variant: "warning" });
+      return;
+    }
     setIsGenerating(true);
     generateMutation.mutate({
       patientId: selectedPatient.id,
