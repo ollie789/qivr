@@ -1,11 +1,11 @@
 import { FeatureFlags } from "../types/tenant";
 import { getIdToken } from "./cognitoAuth";
 
-// Use production API unless explicitly set or running locally
+// Use production API - admin portal always calls clinic.qivr.pro backend
 const API_BASE =
   import.meta.env.VITE_ADMIN_API_URL ||
   (window.location.hostname === "localhost"
-    ? "http://localhost:5000/api/admin"
+    ? "http://localhost:5050/api/admin"
     : "https://clinic.qivr.pro/api/admin");
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {

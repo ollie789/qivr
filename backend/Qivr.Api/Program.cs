@@ -237,6 +237,9 @@ builder.Services.AddScoped<IModernEmailService, ModernEmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
+
+// Memory cache for feature flags and caching
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
 // Configure Audit and Notification Services
