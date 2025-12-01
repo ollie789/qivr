@@ -160,8 +160,10 @@ public class TenantMiddleware
             "/api/auth/forgot-password",
             "/api/auth/refresh",
             "/api/auth/refresh-token",
+            "/api/auth/partner-login",  // Partner portal login
             "/api/tenants",
             "/api/admin",  // Admin portal endpoints (use separate auth)
+            "/api/partner",  // Partner portal endpoints (use partner auth)
             "/api/migration",
             "/api/debug",  // Debug endpoints for testing
             "/webhooks",
