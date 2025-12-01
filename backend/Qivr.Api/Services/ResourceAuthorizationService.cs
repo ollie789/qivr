@@ -43,24 +43,29 @@ public class ResourceAuthorizationService : IResourceAuthorizationService
 
     public Guid GetCurrentTenantId(HttpContext context)
     {
-        // Try to get tenant from header first
-        if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantHeader))
-        {
-            if (Guid.TryParse(tenantHeader.ToString(), out var tenantId))
-            {
-                return tenantId;
-            }
-        }
-        
-        // Try to get from claims
-        var tenantClaim = context.User.FindFirst("tenant_id") ?? 
+        // SECURITY: Always prefer JWT claims over headers to prevent tenant spoofing
+        // Headers should only be used as fallback for unauthenticated requests or service-to-service calls
+
+        // Try to get from claims first (trusted source)
+        var tenantClaim = context.User.FindFirst("tenant_id") ??
                           context.User.FindFirst("tenantId");
-        
+
         if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var claimTenantId))
         {
             return claimTenantId;
         }
-        
+
+        // Only fall back to header if no claims available (e.g., webhooks with API key auth)
+        // This should be restricted to specific trusted scenarios
+        if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantHeader))
+        {
+            if (Guid.TryParse(tenantHeader.ToString(), out var tenantId))
+            {
+                _logger.LogWarning("Using X-Tenant-Id header as fallback - ensure this is a trusted request path");
+                return tenantId;
+            }
+        }
+
         _logger.LogWarning("Unable to extract tenant ID from request");
         return Guid.Empty;
     }

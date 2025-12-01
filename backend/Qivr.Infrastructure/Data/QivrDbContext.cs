@@ -913,9 +913,8 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.NewState).HasColumnType("jsonb");
             entity.Property(e => e.Metadata)
                 .HasColumnType("jsonb")
-                .HasConversion(
-                    v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                    v => string.IsNullOrEmpty(v) ? null : JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null));
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
         });
     }
 

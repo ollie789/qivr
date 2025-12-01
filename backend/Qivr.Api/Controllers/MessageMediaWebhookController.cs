@@ -44,11 +44,13 @@ namespace Qivr.Api.Controllers
                 _logger.LogInformation("Received MessageMedia webhook: MessageId={MessageId}, From={From}, Content={Content}",
                     webhook.MessageId, webhook.From, webhook.Content);
                 
-                // Extract tenant from header or use default
+                // Extract tenant from header - SECURITY: require explicit tenant
                 var tenantHeader = Request.Headers["X-Tenant-Id"].FirstOrDefault();
-                var tenantId = Guid.TryParse(tenantHeader, out var tid) 
-                    ? tid 
-                    : Guid.Parse("00000000-0000-0000-0000-000000000001");
+                if (!Guid.TryParse(tenantHeader, out var tenantId))
+                {
+                    _logger.LogWarning("MessageMedia webhook rejected: missing or invalid X-Tenant-Id header");
+                    return BadRequest(new { error = "X-Tenant-Id header is required" });
+                }
                 
                 // Set tenant context for RLS
                 await SetTenantContext(tenantId, cancellationToken);

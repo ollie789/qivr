@@ -1,11 +1,17 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
 
 namespace Qivr.Api.Controllers;
 
+/// <summary>
+/// Debug endpoints - restricted to SuperAdmin only.
+/// These should be disabled in production.
+/// </summary>
 [ApiController]
 [Route("api/debug")]
+[Authorize(Roles = "SuperAdmin")]
 public class DebugController : ControllerBase
 {
     private readonly QivrDbContext _context;

@@ -37,8 +37,14 @@ public class IdempotencyMiddleware
         }
 
         var tenantId = context.User.FindFirst("tenant_id")?.Value
-                        ?? context.Items["TenantId"] as string
-                        ?? "00000000-0000-0000-0000-000000000001";
+                        ?? context.Items["TenantId"] as string;
+
+        // SECURITY: Require valid tenant ID - don't fall back to a default
+        if (string.IsNullOrWhiteSpace(tenantId) || !Guid.TryParse(tenantId, out _))
+        {
+            await _next(context);
+            return;
+        }
 
         // Lookup existing idempotency record
         var existing = await db.Database.SqlQueryRaw<IdemRow>(

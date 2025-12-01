@@ -24,9 +24,18 @@ public class WebhooksController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> MessageMediaInbound([FromBody] MessageMediaInboundPayload payload)
     {
+        // SECURITY: Require explicit tenant - no hardcoded fallback
         var tenantHeader = Request.Headers["X-Tenant-Id"].FirstOrDefault();
-        var defaultTenant = _configuration["Security:DefaultTenantId"] ?? "00000000-0000-0000-0000-000000000001";
-        var tenantId = Guid.TryParse(tenantHeader, out var tid) ? tid : Guid.Parse(defaultTenant);
+        if (!Guid.TryParse(tenantHeader, out var tenantId))
+        {
+            var configuredDefault = _configuration["Security:DefaultTenantId"];
+            if (string.IsNullOrWhiteSpace(configuredDefault))
+            {
+                _logger.LogWarning("SMS webhook rejected: missing X-Tenant-Id and no default configured");
+                return Ok(); // Return OK to prevent webhook retries, but don't process
+            }
+            tenantId = Guid.Parse(configuredDefault);
+        }
 
         // Ensure RLS tenant context
         await _db.Database.ExecuteSqlInterpolatedAsync($"SELECT set_config('app.tenant_id', {tenantId.ToString()}, true)");

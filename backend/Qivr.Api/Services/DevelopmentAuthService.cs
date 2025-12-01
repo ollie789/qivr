@@ -240,7 +240,8 @@ public class DevelopmentAuthService : ICognitoAuthService
             return _settings.DefaultTenantId!;
         }
 
-        return "00000000-0000-0000-0000-000000000001";
+        // SECURITY: Require explicit configuration in dev auth settings
+        throw new InvalidOperationException("Development auth requires DefaultTenantId to be configured in DevAuth settings");
     }
 
     private static string GenerateRefreshToken()

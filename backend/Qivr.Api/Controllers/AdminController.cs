@@ -7,7 +7,7 @@ namespace Qivr.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[AllowAnonymous]
+[Authorize(Roles = "Admin,SuperAdmin")]
 public class AdminController : ControllerBase
 {
     private readonly QivrDbContext _context;

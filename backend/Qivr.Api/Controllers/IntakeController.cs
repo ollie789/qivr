@@ -62,9 +62,18 @@ public class IntakeController : ControllerBase
             _logger.LogInformation("Intake submission received from {Email}", request.ContactInfo.Email);
             
             // If no clinic ID provided, use default from Security settings
-            var tenantId = Guid.TryParse(clinicId, out var tid) 
-                ? tid 
-                : Guid.Parse(_configuration["Security:DefaultTenantId"] ?? "00000000-0000-0000-0000-000000000001");
+            // SECURITY: Require explicit configuration - no hardcoded fallback
+            var configuredDefault = _configuration["Security:DefaultTenantId"];
+            if (!Guid.TryParse(clinicId, out var tid))
+            {
+                if (string.IsNullOrWhiteSpace(configuredDefault))
+                {
+                    _logger.LogError("Intake submission rejected: no clinic ID provided and Security:DefaultTenantId not configured");
+                    return BadRequest(new { error = "Clinic ID is required" });
+                }
+                tid = Guid.Parse(configuredDefault);
+            }
+            var tenantId = tid;
             
             // Create evaluation record
             var evaluationId = Guid.NewGuid();

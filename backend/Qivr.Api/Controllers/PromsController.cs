@@ -367,16 +367,21 @@ public class PromsController : BaseApiController
 	// When anonymous/public: allow default tenant fallback from header or config pattern
 	private Guid GetTenantIdOrDefault()
 	{
-		if (User?.Identity?.IsAuthenticated == true) 
+		if (User?.Identity?.IsAuthenticated == true)
 		{
 			var tenantId = CurrentTenantId;
 			if (tenantId.HasValue) return tenantId.Value;
 		}
 		var header = HttpContext.Request.Headers["X-Clinic-Id"].FirstOrDefault();
 		if (Guid.TryParse(header, out var tidFromHeader)) return tidFromHeader;
-		// fallback default public tenant
-		return Guid.Parse(HttpContext.RequestServices.GetRequiredService<IConfiguration>()
-			["DefaultTenantId"] ?? "00000000-0000-0000-0000-000000000001");
+
+		// SECURITY: Require explicit tenant configuration - no hardcoded fallback
+		var configuredDefault = HttpContext.RequestServices.GetRequiredService<IConfiguration>()["Security:DefaultTenantId"];
+		if (string.IsNullOrWhiteSpace(configuredDefault))
+		{
+			throw new InvalidOperationException("No tenant ID provided and Security:DefaultTenantId not configured");
+		}
+		return Guid.Parse(configuredDefault);
 	}
 
 	// CurrentUserId removed - using BaseApiController property
