@@ -15,12 +15,12 @@ namespace Qivr.Api.Controllers.Partner;
 [Authorize(Policy = "Partner")]
 public class DeviceOutcomesController : ControllerBase
 {
-    private readonly QivrDbContext _context;
+    private readonly AdminReadOnlyDbContext _context;
     private readonly ILogger<DeviceOutcomesController> _logger;
     private const int MinKAnonymity = 5; // Minimum patients for data to be shown
 
     public DeviceOutcomesController(
-        QivrDbContext context,
+        AdminReadOnlyDbContext context,
         ILogger<DeviceOutcomesController> logger)
     {
         _context = context;

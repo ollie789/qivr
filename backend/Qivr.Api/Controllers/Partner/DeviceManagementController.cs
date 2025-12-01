@@ -12,9 +12,9 @@ namespace Qivr.Api.Controllers.Partner;
 [Authorize(Policy = "Partner")]
 public class DeviceManagementController : ControllerBase
 {
-    private readonly QivrDbContext _db;
+    private readonly AdminReadOnlyDbContext _db;
 
-    public DeviceManagementController(QivrDbContext db)
+    public DeviceManagementController(AdminReadOnlyDbContext db)
     {
         _db = db;
     }

@@ -15,11 +15,11 @@ namespace Qivr.Api.Controllers.Partner;
 [Authorize(Policy = "Partner")]
 public class PartnerProfileController : ControllerBase
 {
-    private readonly QivrDbContext _context;
+    private readonly AdminReadOnlyDbContext _context;
     private readonly ILogger<PartnerProfileController> _logger;
 
     public PartnerProfileController(
-        QivrDbContext context,
+        AdminReadOnlyDbContext context,
         ILogger<PartnerProfileController> logger)
     {
         _context = context;

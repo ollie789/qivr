@@ -15,10 +15,10 @@ namespace Qivr.Api.Controllers.Partner;
 [Authorize(Policy = "Partner")]
 public class ResearchAnalyticsController : ControllerBase
 {
-    private readonly QivrDbContext _db;
+    private readonly AdminReadOnlyDbContext _db;
     private const int K_ANONYMITY_THRESHOLD = 5;
 
-    public ResearchAnalyticsController(QivrDbContext db)
+    public ResearchAnalyticsController(AdminReadOnlyDbContext db)
     {
         _db = db;
     }
