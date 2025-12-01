@@ -35,6 +35,28 @@ public class AdminTenantsController : ControllerBase
     }
 
     /// <summary>
+    /// List all tenants for admin portal
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> ListTenants(CancellationToken ct)
+    {
+        var tenants = await _readOnlyContext.Tenants
+            .OrderBy(t => t.Name)
+            .Select(t => new {
+                t.Id,
+                t.Name,
+                t.Slug,
+                Status = t.Status.ToString().ToLower(),
+                t.Plan,
+                t.CreatedAt,
+                t.IsActive
+            })
+            .ToListAsync(ct);
+
+        return Ok(tenants);
+    }
+
+    /// <summary>
     /// Get tenant details including usage stats
     /// Uses read replica for performance
     /// </summary>
