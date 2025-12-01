@@ -32,6 +32,9 @@ public static class AuthenticationExtensions
         
         // Configure JWT authentication with multiple valid issuers
         // Also add API Key authentication for external API access
+        // Partner JWT key
+        var partnerJwtKey = configuration["Jwt:Key"] ?? "qivr-partner-default-key-change-in-production-32chars";
+        
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -39,6 +42,20 @@ public static class AuthenticationExtensions
         })
         .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
             ApiKeyAuthenticationHandler.SchemeName, _ => { })
+        .AddJwtBearer("Partner", partnerOptions =>
+        {
+            partnerOptions.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(partnerJwtKey.PadRight(32))),
+                ValidateIssuer = true,
+                ValidIssuer = "qivr-partner",
+                ValidateAudience = true,
+                ValidAudience = "qivr-partner-portal",
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+        })
         .AddJwtBearer(options =>
         {
             // Don't set Authority - we'll validate multiple issuers manually
@@ -270,6 +287,14 @@ public static class AuthenticationExtensions
 
             options.AddPolicy("RequireTenant", policy =>
                 policy.RequireClaim("tenant_id"));
+
+            // Partner authentication policy
+            options.AddPolicy("Partner", policy =>
+            {
+                policy.AuthenticationSchemes.Add("Partner");
+                policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+                policy.RequireClaim("partner_id");
+            });
 
             // API Key authentication policy for external API access
             options.AddPolicy("ApiKeyAuthenticated", policy =>

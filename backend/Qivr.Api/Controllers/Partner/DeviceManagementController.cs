@@ -9,7 +9,7 @@ namespace Qivr.Api.Controllers.Partner;
 
 [ApiController]
 [Route("api/partner/devices")]
-[Authorize]
+[Authorize(Policy = "Partner")]
 public class DeviceManagementController : ControllerBase
 {
     private readonly QivrDbContext _db;

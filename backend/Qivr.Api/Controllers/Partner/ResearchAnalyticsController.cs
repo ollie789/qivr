@@ -12,7 +12,7 @@ namespace Qivr.Api.Controllers.Partner;
 /// </summary>
 [ApiController]
 [Route("api/partner/research")]
-[Authorize]
+[Authorize(Policy = "Partner")]
 public class ResearchAnalyticsController : ControllerBase
 {
     private readonly QivrDbContext _db;

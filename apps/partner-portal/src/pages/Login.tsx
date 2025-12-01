@@ -11,6 +11,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useAuthStore } from "../stores/authStore";
+import { authApi } from "../services/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -26,20 +27,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // For demo purposes, accept any login and create a mock session
-      // In production, this would call the actual auth API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Mock partner login
-      login("mock-token-" + Date.now(), {
-        id: "partner-demo",
-        name: "Medtronic",
-        slug: "medtronic",
-      });
-
+      const response = await authApi.login(email, password);
+      login(response.token, response.partner);
       navigate("/dashboard");
-    } catch {
-      setError("Invalid credentials. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
       setLoading(false);
     }
@@ -94,16 +86,16 @@ export default function Login() {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Email"
-              type="email"
+              label="Partner ID or Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               sx={{ mb: 2 }}
+              placeholder="medtronic"
             />
             <TextField
               fullWidth
-              label="Password"
+              label="API Key"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

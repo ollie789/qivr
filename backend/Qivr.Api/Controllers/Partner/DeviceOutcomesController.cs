@@ -12,7 +12,7 @@ namespace Qivr.Api.Controllers.Partner;
 /// </summary>
 [ApiController]
 [Route("api/research-partner/device-outcomes")]
-[Authorize]
+[Authorize(Policy = "Partner")]
 public class DeviceOutcomesController : ControllerBase
 {
     private readonly QivrDbContext _context;

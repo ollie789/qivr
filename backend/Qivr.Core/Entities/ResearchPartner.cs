@@ -37,6 +37,12 @@ public class ResearchPartner : BaseEntity
     [MaxLength(100)]
     public string? CognitoUserPoolId { get; set; }
 
+    /// <summary>
+    /// Hashed API key for simple partner authentication
+    /// </summary>
+    [MaxLength(128)]
+    public string? ApiKeyHash { get; set; }
+
     // Navigation properties
     public virtual ICollection<PartnerClinicAffiliation> ClinicAffiliations { get; set; } = new List<PartnerClinicAffiliation>();
     public virtual ICollection<MedicalDevice> Devices { get; set; } = new List<MedicalDevice>();
