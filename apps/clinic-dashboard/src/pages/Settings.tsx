@@ -48,6 +48,7 @@ import {
   Warning as WarningIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
+  Science as ScienceIcon,
 } from "@mui/icons-material";
 import { CopyButton, Callout, AuraCard } from "@qivr/design-system";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -181,7 +182,8 @@ export default function Settings() {
   const [notificationPreferences, setNotificationPreferences] =
     useState<NotificationPreferences | null>(null);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<ProviderMember | null>(null);
+  const [selectedProvider, setSelectedProvider] =
+    useState<ProviderMember | null>(null);
 
   const [settings, setSettings] = useState<ClinicSettings>({
     clinic: {
@@ -426,11 +428,11 @@ export default function Settings() {
         name: "Integration Key",
         description: "Generated from settings",
         expiresInDays: 365,
-        scopes: ["read", "write"]
+        scopes: ["read", "write"],
       });
       setApiKeys([...apiKeys, response.data]);
       enqueueSnackbar("API key generated successfully", { variant: "success" });
-    } catch (error) {
+    } catch {
       enqueueSnackbar("Failed to generate API key", { variant: "error" });
     }
   };
@@ -464,6 +466,7 @@ export default function Settings() {
           <Tab icon={<PaymentIcon />} label="Billing" />
           <Tab icon={<ApiIcon />} label="Integrations" />
           <Tab icon={<SecurityIcon />} label="Security" />
+          <Tab icon={<ScienceIcon />} label="Research Partners" />
         </Tabs>
 
         {/* Clinic Info Tab */}
@@ -1213,7 +1216,10 @@ export default function Settings() {
                                   <VisibilityIcon />
                                 )}
                               </IconButton>
-                              <CopyButton text={settings.integrations.ehr.apiKey} tooltip="Copy API key" />
+                              <CopyButton
+                                text={settings.integrations.ehr.apiKey}
+                                tooltip="Copy API key"
+                              />
                             </InputAdornment>
                           ),
                         }}
@@ -1286,6 +1292,11 @@ export default function Settings() {
               </>
             </AuraCard>
           </Box>
+        </DesignTabPanel>
+
+        {/* Research Partners Tab */}
+        <DesignTabPanel value={tabValue} index={7}>
+          <ResearchPartnersTab />
         </DesignTabPanel>
       </Paper>
 
@@ -1431,6 +1442,177 @@ export default function Settings() {
           providerId={selectedProvider.id}
           providerName={selectedProvider.name}
         />
+      )}
+    </Box>
+  );
+}
+
+// Research Partners Tab Component
+function ResearchPartnersTab() {
+  const { enqueueSnackbar } = useSnackbar();
+  const queryClient = useQueryClient();
+  const { canMakeApiCalls } = useAuthGuard();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["clinic-partners"],
+    queryFn: () => api.get("/api/clinic/partners"),
+    enabled: canMakeApiCalls,
+  });
+
+  const requestMutation = useMutation({
+    mutationFn: ({ partnerId, level }: { partnerId: string; level: string }) =>
+      api.post(`/api/clinic/partners/${partnerId}/request`, {
+        dataSharingLevel: level,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clinic-partners"] });
+      enqueueSnackbar("Partnership request submitted", { variant: "success" });
+    },
+    onError: () =>
+      enqueueSnackbar("Failed to submit request", { variant: "error" }),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (partnerId: string) =>
+      api.delete(`/api/clinic/partners/${partnerId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clinic-partners"] });
+      enqueueSnackbar("Partnership revoked", { variant: "success" });
+    },
+    onError: () =>
+      enqueueSnackbar("Failed to revoke partnership", { variant: "error" }),
+  });
+
+  const partners = data?.partners || [];
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h6" gutterBottom>
+        Research Partners
+      </Typography>
+      <Typography color="text.secondary" sx={{ mb: 3 }}>
+        Opt-in to share anonymized outcome data with medical device
+        manufacturers for research purposes.
+      </Typography>
+
+      <Box sx={{ mb: 3 }}>
+        <Callout variant="info">
+          Data sharing is always anonymized and aggregated. Patient identities
+          are never shared.
+        </Callout>
+      </Box>
+
+      {isLoading ? (
+        <SectionLoader minHeight={200} />
+      ) : partners.length === 0 ? (
+        <AuraEmptyState
+          title="No research partners available"
+          description="Check back later for partnership opportunities"
+        />
+      ) : (
+        <Grid container spacing={2}>
+          {partners.map((partner: any) => (
+            <Grid size={{ xs: 12, md: 6 }} key={partner.id}>
+              <AuraCard>
+                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+                  <Avatar
+                    sx={{ width: 48, height: 48, bgcolor: "primary.main" }}
+                  >
+                    {partner.logoUrl ? (
+                      <img
+                        src={partner.logoUrl}
+                        alt=""
+                        style={{ width: "100%" }}
+                      />
+                    ) : (
+                      partner.name.charAt(0)
+                    )}
+                  </Avatar>
+                  <Box sx={{ flex: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        {partner.name}
+                      </Typography>
+                      {partner.affiliation ? (
+                        <Chip
+                          size="small"
+                          label={partner.affiliation.status}
+                          color={
+                            partner.affiliation.status === "Active"
+                              ? "success"
+                              : partner.affiliation.status === "Pending"
+                                ? "warning"
+                                : "default"
+                          }
+                        />
+                      ) : null}
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
+                      {partner.description ||
+                        `${partner.deviceCount} devices tracked`}
+                    </Typography>
+                    {partner.affiliation ? (
+                      <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Sharing: {partner.affiliation.dataSharingLevel}
+                        </Typography>
+                        {partner.affiliation.status === "Active" && (
+                          <AuraButton
+                            size="small"
+                            color="error"
+                            onClick={() => revokeMutation.mutate(partner.id)}
+                            disabled={revokeMutation.isPending}
+                          >
+                            Revoke
+                          </AuraButton>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                        <AuraButton
+                          size="small"
+                          variant="outlined"
+                          onClick={() =>
+                            requestMutation.mutate({
+                              partnerId: partner.id,
+                              level: "Aggregated",
+                            })
+                          }
+                          disabled={requestMutation.isPending}
+                        >
+                          Share Aggregated
+                        </AuraButton>
+                        <AuraButton
+                          size="small"
+                          variant="contained"
+                          onClick={() =>
+                            requestMutation.mutate({
+                              partnerId: partner.id,
+                              level: "Detailed",
+                            })
+                          }
+                          disabled={requestMutation.isPending}
+                        >
+                          Share Detailed
+                        </AuraButton>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </AuraCard>
+            </Grid>
+          ))}
+        </Grid>
       )}
     </Box>
   );
