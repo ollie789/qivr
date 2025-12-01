@@ -142,17 +142,27 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
             .ToList();
 
         // Treatment outcomes (patients with multiple PROMs showing improvement)
-        var patientOutcomes = await _context.PromResponses
+        var promResponsesForOutcomes = await _context.PromResponses
             .Where(p => p.TenantId == tenantId && p.CompletedAt >= from && p.CompletedAt <= to)
             .GroupBy(p => p.PatientId)
             .Where(g => g.Count() >= 2)
-            .Select(g => new
-            {
-                PatientId = g.Key,
-                FirstScore = g.OrderBy(p => p.CompletedAt).First().Score,
-                LastScore = g.OrderByDescending(p => p.CompletedAt).First().Score
-            })
+            .Select(g => g.Key)
             .ToListAsync(cancellationToken);
+
+        var patientOutcomes = new List<(Guid PatientId, decimal FirstScore, decimal LastScore)>();
+        foreach (var patientId in promResponsesForOutcomes)
+        {
+            var scores = await _context.PromResponses
+                .Where(p => p.PatientId == patientId && p.TenantId == tenantId && p.CompletedAt >= from && p.CompletedAt <= to)
+                .OrderBy(p => p.CompletedAt)
+                .Select(p => p.Score)
+                .ToListAsync(cancellationToken);
+            
+            if (scores.Count >= 2)
+            {
+                patientOutcomes.Add((patientId, scores.First(), scores.Last()));
+            }
+        }
 
         var improvedCount = patientOutcomes.Count(o => o.LastScore > o.FirstScore);
         var improvementRate = patientOutcomes.Any() ? (double)improvedCount / patientOutcomes.Count * 100 : 0;

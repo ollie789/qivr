@@ -18,9 +18,9 @@ import {
   LinearProgress,
   Tooltip,
   Paper,
-  // Button,
-  // Menu,
-  // CircularProgress,
+  Button,
+  Menu,
+  CircularProgress,
 } from "@mui/material";
 import {
   Psychology,
@@ -33,9 +33,9 @@ import {
   ThumbDown,
   SentimentSatisfied,
   Warning,
-  // Download,
-  // TableChart,
-  // PictureAsPdf,
+  Download,
+  TableChart,
+  DataObject,
 } from "@mui/icons-material";
 import {
   BarChart,
@@ -54,6 +54,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { researchApi, deviceOutcomesApi } from "../services/api";
 import { auraColors } from "../theme";
 import type {
@@ -96,18 +97,124 @@ const DISCORDANCE_COLORS = [
   auraColors.purple.main, // Discordant Obj-/Subj+
 ];
 
+// Skeleton loading components for better UX
+function CardSkeleton() {
+  return (
+    <Card>
+      <CardContent>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+          <Skeleton variant="text" width={180} height={32} />
+          <Skeleton variant="rounded" width={80} height={24} />
+        </Box>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <Skeleton variant="rounded" height={80} />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <Skeleton variant="rounded" height={80} />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <Skeleton variant="rounded" height={80} />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <Skeleton variant="rounded" height={80} />
+          </Grid>
+        </Grid>
+        <Box sx={{ mt: 3 }}>
+          <Skeleton variant="rounded" height={200} />
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CohortSkeleton() {
+  return (
+    <Grid container spacing={3}>
+      <Grid size={12}>
+        <Grid container spacing={2}>
+          {[1, 2, 3, 4].map((i) => (
+            <Grid size={{ xs: 6, md: 3 }} key={i}>
+              <Paper sx={{ p: 2, textAlign: "center" }}>
+                <Skeleton variant="text" width="60%" height={40} sx={{ mx: "auto" }} />
+                <Skeleton variant="text" width="40%" sx={{ mx: "auto" }} />
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      </Grid>
+      <Grid size={{ xs: 12, md: 6 }}>
+        <Card>
+          <CardContent>
+            <Skeleton variant="text" width={150} height={24} sx={{ mb: 2 }} />
+            <Skeleton variant="rounded" height={250} />
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid size={{ xs: 12, md: 6 }}>
+        <Card>
+          <CardContent>
+            <Skeleton variant="text" width={150} height={24} sx={{ mb: 2 }} />
+            <Skeleton variant="rounded" height={250} />
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid size={12}>
+        <Card>
+          <CardContent>
+            <Skeleton variant="text" width={200} height={24} sx={{ mb: 2 }} />
+            <Skeleton variant="rounded" height={150} />
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+}
+
+function RecoverySkeleton() {
+  return (
+    <Grid container spacing={3}>
+      <Grid size={{ xs: 12, md: 4 }}>
+        <Card>
+          <CardContent>
+            <Skeleton variant="text" width={120} height={24} sx={{ mb: 2 }} />
+            <Skeleton variant="text" width="80%" height={36} />
+            <Skeleton variant="text" width="60%" sx={{ mt: 1 }} />
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid size={{ xs: 12, md: 8 }}>
+        <Card>
+          <CardContent>
+            <Skeleton variant="text" width={150} height={24} sx={{ mb: 2 }} />
+            <Skeleton variant="rounded" height={300} />
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid size={12}>
+        <Card>
+          <CardContent>
+            <Skeleton variant="text" width={180} height={24} sx={{ mb: 2 }} />
+            <Skeleton variant="rounded" height={200} />
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+}
+
 export default function ResearchInsights() {
   const [tabValue, setTabValue] = useState(0);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [selectedPromType, setSelectedPromType] = useState<string>("ODI");
-  const [_exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
-  const [_isExporting, setIsExporting] = useState(false);
+  const [exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Common PROM types for spine/pain outcomes
   const promTypes = ["ODI", "NDI", "VAS", "SF-36", "EQ-5D", "PROMIS"];
 
   // Export handlers
-  const _handleExportCSV = async () => {
+  const handleExportCSV = async () => {
     setIsExporting(true);
     setExportAnchor(null);
     try {
@@ -164,7 +271,7 @@ export default function ResearchInsights() {
     }
   };
 
-  const _handleExportJSON = () => {
+  const handleExportJSON = () => {
     setExportAnchor(null);
     const data = {
       exportDate: new Date().toISOString(),
@@ -227,11 +334,37 @@ export default function ResearchInsights() {
 
   return (
     <Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-        <Psychology sx={{ fontSize: 32, color: "primary.main" }} />
-        <Typography variant="h4" fontWeight={700}>
-          Research Insights
-        </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Psychology sx={{ fontSize: 32, color: "primary.main" }} />
+          <Typography variant="h4" fontWeight={700}>
+            Research Insights
+          </Typography>
+        </Box>
+        <Box>
+          <Button
+            variant="outlined"
+            startIcon={isExporting ? <CircularProgress size={16} /> : <Download />}
+            onClick={(e) => setExportAnchor(e.currentTarget)}
+            disabled={isExporting}
+          >
+            Export Data
+          </Button>
+          <Menu
+            anchorEl={exportAnchor}
+            open={Boolean(exportAnchor)}
+            onClose={() => setExportAnchor(null)}
+          >
+            <MenuItem onClick={handleExportCSV}>
+              <TableChart sx={{ mr: 1 }} fontSize="small" />
+              Export as CSV
+            </MenuItem>
+            <MenuItem onClick={handleExportJSON}>
+              <DataObject sx={{ mr: 1 }} fontSize="small" />
+              Export as JSON
+            </MenuItem>
+          </Menu>
+        </Box>
       </Box>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         Perfect Study perception metrics, MCID analysis, and outcome research
@@ -290,7 +423,7 @@ export default function ResearchInsights() {
       {/* Perception Metrics Tab */}
       <TabPanel value={tabValue} index={0}>
         {perceptionLoading ? (
-          <Skeleton variant="rectangular" height={400} />
+          <CardSkeleton />
         ) : perceptionDevices.length === 0 ? (
           <Alert severity="info">
             No perception data available yet. Data will appear as patients
@@ -310,7 +443,7 @@ export default function ResearchInsights() {
       {/* MCID Analysis Tab */}
       <TabPanel value={tabValue} index={1}>
         {mcidLoading ? (
-          <Skeleton variant="rectangular" height={400} />
+          <CardSkeleton />
         ) : mcidDevices.length === 0 ? (
           <Alert severity="info">
             Insufficient data for MCID analysis. More baseline and follow-up
@@ -330,7 +463,7 @@ export default function ResearchInsights() {
       {/* Discordance Tab */}
       <TabPanel value={tabValue} index={2}>
         {discordanceLoading ? (
-          <Skeleton variant="rectangular" height={400} />
+          <CardSkeleton />
         ) : discordanceDevices.length === 0 ? (
           <Alert severity="info">
             No discordance data available. This requires both objective PROM
@@ -1106,72 +1239,85 @@ function CohortAnalyticsSection({
             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
               Device Enrollment Breakdown
             </Typography>
-            <Box sx={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <th style={{ textAlign: "left", padding: "12px 8px" }}>
-                      Device
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      Patients
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      Procedures
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      With Baseline
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      Baseline %
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.deviceBreakdown.map((device) => (
-                    <tr
-                      key={device.deviceId}
-                      style={{ borderBottom: "1px solid #f3f4f6" }}
-                    >
-                      <td style={{ padding: "12px 8px" }}>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <Typography variant="body2">
-                            {device.deviceName}
-                          </Typography>
-                          <Chip
-                            label={device.deviceCode}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Box>
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        {device.patientCount}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        {device.procedureCount}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        {device.withBaseline}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        <Chip
-                          label={`${device.patientCount > 0 ? ((device.withBaseline / device.patientCount) * 100).toFixed(0) : 0}%`}
-                          size="small"
-                          color={
-                            device.withBaseline / device.patientCount >= 0.8
-                              ? "success"
-                              : "warning"
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Box>
+            <DataGrid
+              rows={data.deviceBreakdown.map((device) => ({
+                id: device.deviceId,
+                ...device,
+                baselinePercent: device.patientCount > 0
+                  ? (device.withBaseline / device.patientCount) * 100
+                  : 0,
+              }))}
+              columns={[
+                {
+                  field: "deviceName",
+                  headerName: "Device",
+                  flex: 1,
+                  minWidth: 200,
+                  renderCell: (params) => (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">{params.value}</Typography>
+                      <Chip
+                        label={params.row.deviceCode}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Box>
+                  ),
+                },
+                {
+                  field: "patientCount",
+                  headerName: "Patients",
+                  type: "number",
+                  width: 100,
+                  align: "right",
+                  headerAlign: "right",
+                },
+                {
+                  field: "procedureCount",
+                  headerName: "Procedures",
+                  type: "number",
+                  width: 110,
+                  align: "right",
+                  headerAlign: "right",
+                },
+                {
+                  field: "withBaseline",
+                  headerName: "With Baseline",
+                  type: "number",
+                  width: 120,
+                  align: "right",
+                  headerAlign: "right",
+                },
+                {
+                  field: "baselinePercent",
+                  headerName: "Baseline %",
+                  width: 120,
+                  align: "right",
+                  headerAlign: "right",
+                  renderCell: (params) => (
+                    <Chip
+                      label={`${params.value.toFixed(0)}%`}
+                      size="small"
+                      color={params.value >= 80 ? "success" : "warning"}
+                    />
+                  ),
+                },
+              ] as GridColDef[]}
+              autoHeight
+              disableRowSelectionOnClick
+              hideFooter={data.deviceBreakdown.length <= 10}
+              initialState={{
+                sorting: { sortModel: [{ field: "patientCount", sort: "desc" }] },
+              }}
+              sx={{
+                border: "none",
+                "& .MuiDataGrid-cell": { py: 1.5 },
+                "& .MuiDataGrid-columnHeaders": {
+                  bgcolor: "grey.50",
+                  borderRadius: 1,
+                },
+              }}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -1301,66 +1447,85 @@ function RecoveryTimelineSection({
             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
               Recovery Data Points
             </Typography>
-            <Box sx={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <th style={{ textAlign: "left", padding: "12px 8px" }}>
-                      Timepoint
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      n
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      Average
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      Median
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      IQR
-                    </th>
-                    <th style={{ textAlign: "right", padding: "12px 8px" }}>
-                      Change from Baseline
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chartData.map((point, idx) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                      <td style={{ padding: "12px 8px", fontWeight: 500 }}>
-                        {point.week}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        {point.n}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        {point.average.toFixed(1)}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        {point.median.toFixed(1)}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        {point.p25.toFixed(1)} - {point.p75.toFixed(1)}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "12px 8px" }}>
-                        <Chip
-                          label={`${point.change >= 0 ? "+" : ""}${point.change.toFixed(1)}`}
-                          size="small"
-                          color={
-                            point.change < 0
-                              ? "success"
-                              : point.change > 0
-                                ? "error"
-                                : "default"
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Box>
+            <DataGrid
+              rows={chartData.map((point, idx) => ({
+                id: idx,
+                ...point,
+                iqr: `${point.p25.toFixed(1)} - ${point.p75.toFixed(1)}`,
+              }))}
+              columns={[
+                {
+                  field: "week",
+                  headerName: "Timepoint",
+                  flex: 1,
+                  minWidth: 120,
+                },
+                {
+                  field: "n",
+                  headerName: "n",
+                  type: "number",
+                  width: 80,
+                  align: "right",
+                  headerAlign: "right",
+                },
+                {
+                  field: "average",
+                  headerName: "Average",
+                  type: "number",
+                  width: 100,
+                  align: "right",
+                  headerAlign: "right",
+                  valueFormatter: (value: number) => value.toFixed(1),
+                },
+                {
+                  field: "median",
+                  headerName: "Median",
+                  type: "number",
+                  width: 100,
+                  align: "right",
+                  headerAlign: "right",
+                  valueFormatter: (value: number) => value.toFixed(1),
+                },
+                {
+                  field: "iqr",
+                  headerName: "IQR",
+                  width: 120,
+                  align: "right",
+                  headerAlign: "right",
+                },
+                {
+                  field: "change",
+                  headerName: "Change from Baseline",
+                  width: 180,
+                  align: "right",
+                  headerAlign: "right",
+                  renderCell: (params) => (
+                    <Chip
+                      label={`${params.value >= 0 ? "+" : ""}${params.value.toFixed(1)}`}
+                      size="small"
+                      color={
+                        params.value < 0
+                          ? "success"
+                          : params.value > 0
+                            ? "error"
+                            : "default"
+                      }
+                    />
+                  ),
+                },
+              ] as GridColDef[]}
+              autoHeight
+              disableRowSelectionOnClick
+              hideFooter
+              sx={{
+                border: "none",
+                "& .MuiDataGrid-cell": { py: 1.5 },
+                "& .MuiDataGrid-columnHeaders": {
+                  bgcolor: "grey.50",
+                  borderRadius: 1,
+                },
+              }}
+            />
           </CardContent>
         </Card>
       </Grid>
