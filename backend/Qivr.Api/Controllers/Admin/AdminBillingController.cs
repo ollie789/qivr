@@ -561,16 +561,26 @@ public class AdminBillingController : ControllerBase
 
             var cutoff = DateTime.UtcNow.AddDays(days);
             var upcoming = subscriptions.Data
-                .Where(s => s.CurrentPeriodEnd <= cutoff)
+                .Where(s => s.Items.Data.Any())
                 .Select(s => new
                 {
-                    subscriptionId = s.Id,
-                    customerId = s.CustomerId,
-                    status = s.Status,
-                    currentPeriodEnd = s.CurrentPeriodEnd,
-                    daysUntilRenewal = (s.CurrentPeriodEnd - DateTime.UtcNow).Days,
-                    cancelAtPeriodEnd = s.CancelAtPeriodEnd,
-                    amount = s.Items.Data.FirstOrDefault()?.Price?.UnitAmount / 100m ?? 0
+                    subscription = s,
+                    periodEnd = s.Items.Data
+                        .Where(i => i.CurrentPeriodEnd.HasValue)
+                        .Select(i => i.CurrentPeriodEnd!.Value)
+                        .DefaultIfEmpty(DateTime.MaxValue)
+                        .Max()
+                })
+                .Where(x => x.periodEnd <= cutoff)
+                .Select(x => new
+                {
+                    subscriptionId = x.subscription.Id,
+                    customerId = x.subscription.CustomerId,
+                    status = x.subscription.Status,
+                    currentPeriodEnd = x.periodEnd,
+                    daysUntilRenewal = (x.periodEnd - DateTime.UtcNow).Days,
+                    cancelAtPeriodEnd = x.subscription.CancelAtPeriodEnd,
+                    amount = x.subscription.Items.Data.FirstOrDefault()?.Price?.UnitAmount / 100m ?? 0
                 })
                 .OrderBy(s => s.daysUntilRenewal)
                 .ToList();

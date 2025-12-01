@@ -30,7 +30,8 @@ export default function Login() {
     setLoading(false);
 
     if (result.success) {
-      navigate("/dashboard", { replace: true });
+      // Small delay to ensure store state propagates
+      setTimeout(() => navigate("/dashboard", { replace: true }), 100);
     } else if (result.mfaSetupRequired) {
       await setupMfa();
     } else if (!result.mfaRequired && result.error) {

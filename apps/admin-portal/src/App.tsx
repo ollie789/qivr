@@ -27,8 +27,18 @@ const Loading = () => (
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  console.log("[ProtectedRoute] isAuthenticated:", isAuthenticated);
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // Debug bypass - add ?bypass=1 to URL to skip auth
+  const bypass =
+    new URLSearchParams(window.location.search).get("bypass") === "1";
+
+  console.log(
+    "[ProtectedRoute] isAuthenticated:",
+    isAuthenticated,
+    "bypass:",
+    bypass,
+  );
+  if (!isAuthenticated && !bypass) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
