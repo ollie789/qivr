@@ -32,11 +32,11 @@ public abstract class DatabaseTestBase : IAsyncLifetime
     public virtual async Task InitializeAsync()
     {
         // Create context with proper naming convention
-        var options = TestDatabaseHelper.CreateOptions(_testName);
+        var options = TestDatabaseHelper.CreateOptions();
         Context = new QivrDbContext(options);
         
-        // Initialize the test database (creates schema, applies migrations if needed)
-        await TestDatabaseHelper.InitializeTestDatabase(Context, _testName);
+        // Ensure database is created
+        await Context.Database.EnsureCreatedAsync();
         
         // For now, don't use transactions - we'll clean up manually
         // _transaction = await Context.Database.BeginTransactionAsync();
@@ -223,7 +223,7 @@ public abstract class DatabaseTestBase : IAsyncLifetime
     /// </summary>
     protected QivrDbContext CreateScopedContext()
     {
-        var options = TestDatabaseHelper.CreateOptions(_testName);
+        var options = TestDatabaseHelper.CreateOptions();
         var scopedContext = new QivrDbContext(options);
         // Set the tenant ID on the scoped context
         scopedContext.SetTenantId(TenantId);
