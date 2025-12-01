@@ -13,6 +13,7 @@ import DeviceManagement from "./pages/DeviceManagement";
 import Compare from "./pages/Compare";
 import Affiliations from "./pages/Affiliations";
 import Settings from "./pages/Settings";
+import ResearchInsights from "./pages/ResearchInsights";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +59,7 @@ function App() {
                 />
                 <Route path="/affiliations" element={<Affiliations />} />
                 <Route path="/compare" element={<Compare />} />
+                <Route path="/research" element={<ResearchInsights />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route
                   path="/"

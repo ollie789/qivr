@@ -20,6 +20,7 @@ const ResearchPartners = lazy(() => import("./pages/ResearchPartners"));
 const ResearchPartnerDetail = lazy(
   () => import("./pages/ResearchPartnerDetail"),
 );
+const Diagnostics = lazy(() => import("./pages/Diagnostics"));
 
 const Loading = () => (
   <Box
@@ -100,6 +101,7 @@ export default function App() {
               element={<ResearchPartnerDetail />}
             />
             <Route path="settings" element={<Settings />} />
+            <Route path="diagnostics" element={<Diagnostics />} />
           </Route>
         </Routes>
       </Suspense>

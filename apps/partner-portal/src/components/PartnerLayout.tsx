@@ -26,6 +26,7 @@ import {
   Settings,
   Business,
   Inventory,
+  Psychology,
 } from "@mui/icons-material";
 import { useAuthStore } from "../stores/authStore";
 
@@ -34,6 +35,7 @@ const DRAWER_WIDTH = 260;
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: <Dashboard /> },
   { path: "/devices", label: "Device Outcomes", icon: <Devices /> },
+  { path: "/research", label: "Research Insights", icon: <Psychology /> },
   { path: "/device-management", label: "Manage Devices", icon: <Inventory /> },
   { path: "/compare", label: "Compare Devices", icon: <CompareArrows /> },
   { path: "/affiliations", label: "Affiliated Clinics", icon: <Business /> },

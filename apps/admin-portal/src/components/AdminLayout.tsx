@@ -30,6 +30,7 @@ import {
   SupportAgent,
   Api,
   Science,
+  BugReport,
 } from "@mui/icons-material";
 import { useAuthStore } from "../stores/authStore";
 
@@ -46,6 +47,7 @@ const navItems = [
   { path: "/research-partners", label: "Research Partners", icon: <Science /> },
   { path: "/feature-flags", label: "Feature Flags", icon: <Flag /> },
   { path: "/usage", label: "Usage Analytics", icon: <BarChart /> },
+  { path: "/diagnostics", label: "Diagnostics", icon: <BugReport /> },
   { path: "/settings", label: "Settings", icon: <Settings /> },
 ];
 

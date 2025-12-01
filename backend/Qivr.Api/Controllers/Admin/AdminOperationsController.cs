@@ -529,6 +529,56 @@ public class AdminOperationsController : ControllerBase
             return $"{(int)uptime.TotalHours}h {uptime.Minutes}m";
         return $"{uptime.Minutes}m {uptime.Seconds}s";
     }
+
+    /// <summary>
+    /// Get CloudWatch logs for debugging
+    /// </summary>
+    [HttpGet("logs")]
+    public async Task<IActionResult> GetLogs(
+        [FromQuery] string logGroup = "/ecs/qivr-api",
+        [FromQuery] string? filterPattern = null,
+        [FromQuery] int minutes = 5,
+        [FromQuery] int limit = 50,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var cwLogs = HttpContext.RequestServices.GetService<Amazon.CloudWatchLogs.IAmazonCloudWatchLogs>();
+            if (cwLogs == null)
+            {
+                return Ok(new { events = Array.Empty<object>(), message = "CloudWatch Logs not configured" });
+            }
+
+            var startTime = DateTimeOffset.UtcNow.AddMinutes(-minutes).ToUnixTimeMilliseconds();
+            var request = new Amazon.CloudWatchLogs.Model.FilterLogEventsRequest
+            {
+                LogGroupName = logGroup,
+                StartTime = startTime,
+                Limit = limit
+            };
+
+            if (!string.IsNullOrEmpty(filterPattern))
+            {
+                request.FilterPattern = filterPattern;
+            }
+
+            var response = await cwLogs.FilterLogEventsAsync(request, ct);
+
+            var events = response.Events.Select(e => new
+            {
+                timestamp = e.Timestamp,
+                message = e.Message,
+                logStreamName = e.LogStreamName
+            }).ToList();
+
+            return Ok(new { events, count = events.Count, logGroup, filterPattern, minutes });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch CloudWatch logs");
+            return Ok(new { events = Array.Empty<object>(), error = ex.Message });
+        }
+    }
 }
 
 public class HealthCheck
