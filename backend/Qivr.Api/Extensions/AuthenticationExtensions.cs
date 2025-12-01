@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Qivr.Api.Authentication;
 using Qivr.Api.Config;
 using Qivr.Api.Services;
 using System.Security.Cryptography;
@@ -30,11 +31,14 @@ public static class AuthenticationExtensions
         var adminIssuer = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{adminPoolId}";
         
         // Configure JWT authentication with multiple valid issuers
+        // Also add API Key authentication for external API access
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
         })
+        .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+            ApiKeyAuthenticationHandler.SchemeName, _ => { })
         .AddJwtBearer(options =>
         {
             // Don't set Authority - we'll validate multiple issuers manually
@@ -243,9 +247,32 @@ public static class AuthenticationExtensions
             
             options.AddPolicy("SuperAdminOnly", policy =>
                 policy.RequireRole("SuperAdmin"));
-                
+
             options.AddPolicy("RequireTenant", policy =>
                 policy.RequireClaim("tenant_id"));
+
+            // API Key authentication policy for external API access
+            options.AddPolicy("ApiKeyAuthenticated", policy =>
+            {
+                policy.AuthenticationSchemes.Add(ApiKeyAuthenticationHandler.SchemeName);
+                policy.RequireClaim("auth_type", "api_key");
+            });
+
+            // External API with read scope
+            options.AddPolicy("ExternalApiRead", policy =>
+            {
+                policy.AuthenticationSchemes.Add(ApiKeyAuthenticationHandler.SchemeName);
+                policy.RequireClaim("auth_type", "api_key");
+                policy.RequireClaim("scope", "read");
+            });
+
+            // External API with write scope
+            options.AddPolicy("ExternalApiWrite", policy =>
+            {
+                policy.AuthenticationSchemes.Add(ApiKeyAuthenticationHandler.SchemeName);
+                policy.RequireClaim("auth_type", "api_key");
+                policy.RequireClaim("scope", "write");
+            });
         });
         
         return services;

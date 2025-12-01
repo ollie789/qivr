@@ -36,6 +36,7 @@ const navItems = [
   { path: "/billing", label: "Billing", icon: <CreditCard /> },
   { path: "/feature-flags", label: "Feature Flags", icon: <Flag /> },
   { path: "/usage", label: "Usage Analytics", icon: <BarChart /> },
+  { path: "/settings", label: "Settings", icon: <Settings /> },
 ];
 
 export default function AdminLayout() {

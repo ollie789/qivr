@@ -16,11 +16,19 @@ import {
   Menu,
   MenuItem,
   Skeleton,
+  Button,
 } from "@mui/material";
-import { Search, MoreVert, Pause, PlayArrow } from "@mui/icons-material";
+import {
+  Search,
+  MoreVert,
+  Pause,
+  PlayArrow,
+  Download,
+} from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { adminApi } from "../services/api";
+import { exportTenantsData } from "../services/export";
 
 export default function Tenants() {
   const queryClient = useQueryClient();
@@ -78,7 +86,16 @@ export default function Tenants() {
       </Box>
 
       <Card>
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
+        <Box
+          sx={{
+            p: 2,
+            borderBottom: 1,
+            borderColor: "divider",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <TextField
             placeholder="Search tenants..."
             size="small"
@@ -93,6 +110,20 @@ export default function Tenants() {
             }}
             sx={{ width: 300 }}
           />
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Download />}
+            onClick={() => {
+              exportTenantsData(filteredTenants);
+              enqueueSnackbar("Tenants exported to CSV", {
+                variant: "success",
+              });
+            }}
+            disabled={filteredTenants.length === 0}
+          >
+            Export CSV
+          </Button>
         </Box>
 
         <TableContainer>

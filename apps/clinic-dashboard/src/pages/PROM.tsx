@@ -79,6 +79,7 @@ import {
   FormDialog,
   FilterToolbar,
   ConfirmDialog,
+  AuraChartCard,
 } from "@qivr/design-system";
 
 interface TabPanelProps {
@@ -224,18 +225,34 @@ const PROM: React.FC = () => {
     if (!value) return "—";
     try {
       return format(parseISO(value), "MMM dd, yyyy");
-    } catch (error) {
+    } catch {
       return "—";
     }
   };
 
   // Chart data - using design system colors
   const statusChartData = [
-    { name: "Completed", value: statistics.completed, color: auraColors.green.main },
-    { name: "Pending", value: statistics.pending, color: auraColors.orange.main },
-    { name: "In Progress", value: statistics.inProgress, color: auraColors.blue.main },
+    {
+      name: "Completed",
+      value: statistics.completed,
+      color: auraColors.green.main,
+    },
+    {
+      name: "Pending",
+      value: statistics.pending,
+      color: auraColors.orange.main,
+    },
+    {
+      name: "In Progress",
+      value: statistics.inProgress,
+      color: auraColors.blue.main,
+    },
     { name: "Expired", value: statistics.expired, color: auraColors.red.main },
-    { name: "Cancelled", value: statistics.cancelled, color: auraColors.grey[500] },
+    {
+      name: "Cancelled",
+      value: statistics.cancelled,
+      color: auraColors.grey[500],
+    },
   ];
 
   // Type for trends data accumulator
@@ -349,7 +366,10 @@ const PROM: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box className="page-enter" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Box
+        className="page-enter"
+        sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+      >
         <PageHeader
           title="Patient Reported Outcome Measures (PROM)"
           description="Manage questionnaires and track patient-reported outcomes"
@@ -464,7 +484,14 @@ const PROM: React.FC = () => {
         )}
 
         {/* Main Content Tabs */}
-        <Paper sx={{ flex: 1, display: "flex", flexDirection: "column", borderRadius: 3 }}>
+        <Paper
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            borderRadius: 3,
+          }}
+        >
           <Tabs
             value={currentTab}
             onChange={handleTabChange}
@@ -511,7 +538,13 @@ const PROM: React.FC = () => {
                 <Grid container spacing={3}>
                   {templates.map((template) => (
                     <Grid size={{ xs: 12, md: 6, lg: 4 }} key={template.id}>
-                      <AuraCard sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <AuraCard
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          height: "100%",
+                        }}
+                      >
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="h6" gutterBottom>
                             {template.name}
@@ -563,7 +596,9 @@ const PROM: React.FC = () => {
                           <Tooltip title="Delete Template" arrow>
                             <IconButton
                               size="small"
-                              onClick={() => handleDeleteTemplateClick(template)}
+                              onClick={() =>
+                                handleDeleteTemplateClick(template)
+                              }
                               aria-label="Delete template"
                             >
                               <DeleteIcon />
@@ -631,7 +666,9 @@ const PROM: React.FC = () => {
                     </AuraButton>
                   </>
                 }
-                showFilterChips={filterStatus !== "all" || !!dateRange.start || !!dateRange.end}
+                showFilterChips={
+                  filterStatus !== "all" || !!dateRange.start || !!dateRange.end
+                }
               />
 
               <TableContainer component={Paper}>
@@ -727,7 +764,10 @@ const PROM: React.FC = () => {
                             </Tooltip>
                             {response.status === "pending" && (
                               <Tooltip title="Send Reminder" arrow>
-                                <IconButton size="small" aria-label="Send reminder email">
+                                <IconButton
+                                  size="small"
+                                  aria-label="Send reminder email"
+                                >
                                   <EmailIcon />
                                 </IconButton>
                               </Tooltip>
@@ -750,7 +790,11 @@ const PROM: React.FC = () => {
                     setPage(0);
                   }}
                   labelDisplayedRows={({ from, to, count }) => (
-                    <TableLabelDisplayedRows from={from} to={to} count={count} />
+                    <TableLabelDisplayedRows
+                      from={from}
+                      to={to}
+                      count={count}
+                    />
                   )}
                 />
               </TableContainer>
@@ -761,10 +805,7 @@ const PROM: React.FC = () => {
             {/* Analytics Tab */}
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Paper sx={{ p: 2, borderRadius: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Response Status Distribution
-                  </Typography>
+                <AuraChartCard title="Response Status Distribution">
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -784,51 +825,123 @@ const PROM: React.FC = () => {
                       <ChartTooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                </Paper>
+                </AuraChartCard>
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
-                <Paper sx={{ p: 2, borderRadius: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Completion Trends
-                  </Typography>
+                <AuraChartCard title="Completion Trends">
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={trendsData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis yAxisId="left" />
-                      <YAxis yAxisId="right" orientation="right" />
-                      <ChartTooltip />
+                      <defs>
+                        <linearGradient
+                          id="colorResponses"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor={auraColors.blue.main}
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor={auraColors.blue.main}
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="colorScore"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor={auraColors.green.main}
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor={auraColors.green.main}
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="var(--qivr-palette-divider, #E2E8F0)"
+                      />
+                      <XAxis
+                        dataKey="date"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fontSize: 12,
+                          fill: "var(--qivr-palette-text-secondary)",
+                        }}
+                      />
+                      <YAxis
+                        yAxisId="left"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fontSize: 12,
+                          fill: "var(--qivr-palette-text-secondary)",
+                        }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fontSize: 12,
+                          fill: "var(--qivr-palette-text-secondary)",
+                        }}
+                      />
+                      <ChartTooltip
+                        contentStyle={{
+                          backgroundColor:
+                            "var(--qivr-palette-background-paper)",
+                          border: "1px solid var(--qivr-palette-divider)",
+                          borderRadius: 12,
+                        }}
+                      />
                       <Legend />
                       <Line
                         yAxisId="left"
                         type="monotone"
                         dataKey="count"
                         stroke={auraColors.blue.main}
+                        strokeWidth={2}
                         name="Responses"
+                        dot={false}
                       />
                       <Line
                         yAxisId="right"
                         type="monotone"
                         dataKey="avgScore"
                         stroke={auraColors.green.main}
+                        strokeWidth={2}
                         name="Avg Score"
+                        dot={false}
                       />
                     </LineChart>
                   </ResponsiveContainer>
-                </Paper>
+                </AuraChartCard>
               </Grid>
 
               <Grid size={12}>
-                <Paper sx={{ p: 2, borderRadius: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Template Performance
-                  </Typography>
+                <AuraChartCard title="Template Performance">
                   <Callout variant="info">
                     Detailed analytics for individual templates and questions
                     will be displayed here
                   </Callout>
-                </Paper>
+                </AuraChartCard>
               </Grid>
             </Grid>
           </TabPanel>

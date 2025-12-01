@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -6,10 +6,9 @@ import {
   Stack,
   Tab,
   Tabs,
-  Paper,
   alpha,
   useTheme,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Area,
   AreaChart,
@@ -22,14 +21,19 @@ import {
   YAxis,
   Line,
   LineChart,
-} from 'recharts';
-import { auraTokens, auraColors, glassTokens } from '@qivr/design-system';
+} from "recharts";
+import {
+  auraTokens,
+  auraColors,
+  glassTokens,
+  AuraChartCard,
+} from "@qivr/design-system";
 
 interface MetricTab {
   key: string;
   title: string;
   value: string | number;
-  format?: 'number' | 'currency' | 'percent';
+  format?: "number" | "currency" | "percent";
 }
 
 interface ChartDataPoint {
@@ -43,7 +47,7 @@ interface ClinicMetricsChartProps {
   tabs: MetricTab[];
   data: Record<string, ChartDataPoint[]>;
   height?: number;
-  chartType?: 'area' | 'bar' | 'line';
+  chartType?: "area" | "bar" | "line";
 }
 
 const LegendButton: React.FC<{
@@ -57,16 +61,16 @@ const LegendButton: React.FC<{
     disableRipple
     onClick={onClick}
     sx={{
-      display: 'flex',
-      alignItems: 'center',
+      display: "flex",
+      alignItems: "center",
       gap: 1,
       px: 1.5,
       py: 0.5,
       borderRadius: auraTokens.borderRadius.sm,
       opacity: active ? 1 : 0.4,
       transition: auraTokens.transitions.default,
-      '&:hover': {
-        bgcolor: 'action.hover',
+      "&:hover": {
+        bgcolor: "action.hover",
       },
     }}
   >
@@ -102,12 +106,15 @@ const LegendButton: React.FC<{
   </ButtonBase>
 );
 
-const formatValue = (value: number | string, format?: 'number' | 'currency' | 'percent'): string => {
-  if (typeof value === 'string') return value;
+const formatValue = (
+  value: number | string,
+  format?: "number" | "currency" | "percent",
+): string => {
+  if (typeof value === "string") return value;
   switch (format) {
-    case 'currency':
+    case "currency":
       return `$${value.toLocaleString()}`;
-    case 'percent':
+    case "percent":
       return `${value}%`;
     default:
       return value.toLocaleString();
@@ -118,7 +125,7 @@ const ClinicMetricsChart: React.FC<ClinicMetricsChartProps> = ({
   tabs,
   data,
   height = 300,
-  chartType = 'area',
+  chartType = "area",
 }) => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
@@ -128,7 +135,10 @@ const ClinicMetricsChart: React.FC<ClinicMetricsChartProps> = ({
   const currentTab = tabs[activeTab];
   const chartData = currentTab?.key ? data[currentTab.key] || [] : [];
 
-  const gradientId = useMemo(() => `gradient-${currentTab?.key || 'default'}`, [currentTab?.key]);
+  const gradientId = useMemo(
+    () => `gradient-${currentTab?.key || "default"}`,
+    [currentTab?.key],
+  );
 
   const renderChart = () => {
     const commonProps = {
@@ -149,10 +159,14 @@ const ClinicMetricsChart: React.FC<ClinicMetricsChartProps> = ({
       boxShadow: glassTokens.shadow.standard,
     };
 
-    if (chartType === 'bar') {
+    if (chartType === "bar") {
       return (
         <BarChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={theme.palette.divider}
+          />
           <XAxis dataKey="name" {...commonAxisProps} />
           <YAxis {...commonAxisProps} />
           <Tooltip contentStyle={tooltipStyle} />
@@ -176,10 +190,14 @@ const ClinicMetricsChart: React.FC<ClinicMetricsChartProps> = ({
       );
     }
 
-    if (chartType === 'line') {
+    if (chartType === "line") {
       return (
         <LineChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={theme.palette.divider}
+          />
           <XAxis dataKey="name" {...commonAxisProps} />
           <YAxis {...commonAxisProps} />
           <Tooltip contentStyle={tooltipStyle} />
@@ -212,16 +230,48 @@ const ClinicMetricsChart: React.FC<ClinicMetricsChartProps> = ({
     return (
       <AreaChart {...commonProps}>
         <defs>
-          <linearGradient id={`${gradientId}-actual`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={auraColors.blue.main} stopOpacity={0.3} />
-            <stop offset="95%" stopColor={auraColors.blue.main} stopOpacity={0} />
+          <linearGradient
+            id={`${gradientId}-actual`}
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="1"
+          >
+            <stop
+              offset="5%"
+              stopColor={auraColors.blue.main}
+              stopOpacity={0.3}
+            />
+            <stop
+              offset="95%"
+              stopColor={auraColors.blue.main}
+              stopOpacity={0}
+            />
           </linearGradient>
-          <linearGradient id={`${gradientId}-projected`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={auraColors.green.main} stopOpacity={0.2} />
-            <stop offset="95%" stopColor={auraColors.green.main} stopOpacity={0} />
+          <linearGradient
+            id={`${gradientId}-projected`}
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="1"
+          >
+            <stop
+              offset="5%"
+              stopColor={auraColors.green.main}
+              stopOpacity={0.2}
+            />
+            <stop
+              offset="95%"
+              stopColor={auraColors.green.main}
+              stopOpacity={0}
+            />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          vertical={false}
+          stroke={theme.palette.divider}
+        />
         <XAxis dataKey="name" {...commonAxisProps} />
         <YAxis {...commonAxisProps} />
         <Tooltip contentStyle={tooltipStyle} />
@@ -252,70 +302,67 @@ const ClinicMetricsChart: React.FC<ClinicMetricsChartProps> = ({
     );
   };
 
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        height: '100%',
-        p: { xs: 2, md: 3 },
-        bgcolor: 'background.paper',
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 3,
-        boxShadow: glassTokens.shadow.subtle,
-      }}
-    >
-      {/* Tab Header with Values */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(_, val) => setActiveTab(val)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            '& .MuiTabs-indicator': {
-              height: 3,
-              borderRadius: '3px 3px 0 0',
-            },
-          }}
-        >
-          {tabs.map((tab, index) => (
-            <Tab
-              key={tab.key}
-              sx={{
-                alignItems: 'flex-start',
-                textAlign: 'left',
-                px: 0,
-                py: 1.5,
-                mr: 4,
-                minWidth: 'auto',
-              }}
-              label={
-                <Box>
-                  <Typography
-                    variant="caption"
-                    fontWeight={600}
-                    color="text.secondary"
-                    sx={{ display: 'block', mb: 0.5 }}
-                  >
-                    {tab.title}
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    fontWeight={600}
-                    color={activeTab === index ? 'text.primary' : 'text.secondary'}
-                  >
-                    {formatValue(tab.value, tab.format)}
-                  </Typography>
-                </Box>
-              }
-            />
-          ))}
-        </Tabs>
-      </Box>
+  const tabsHeader = (
+    <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2, mx: -3, px: 3 }}>
+      <Tabs
+        value={activeTab}
+        onChange={(_, val) => setActiveTab(val)}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{
+          "& .MuiTabs-indicator": { height: 3, borderRadius: "3px 3px 0 0" },
+        }}
+      >
+        {tabs.map((tab, index) => (
+          <Tab
+            key={tab.key}
+            sx={{
+              alignItems: "flex-start",
+              textAlign: "left",
+              px: 0,
+              py: 1.5,
+              mr: 4,
+              minWidth: "auto",
+            }}
+            label={
+              <Box>
+                <Typography
+                  variant="caption"
+                  fontWeight={600}
+                  color="text.secondary"
+                  sx={{ display: "block", mb: 0.5 }}
+                >
+                  {tab.title}
+                </Typography>
+                <Typography
+                  variant="h5"
+                  fontWeight={600}
+                  color={
+                    activeTab === index ? "text.primary" : "text.secondary"
+                  }
+                >
+                  {formatValue(tab.value, tab.format)}
+                </Typography>
+              </Box>
+            }
+          />
+        ))}
+      </Tabs>
+    </Box>
+  );
 
-      {/* Legend */}
-      <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mb: 2 }}>
+  return (
+    <AuraChartCard
+      title=""
+      sx={{ "& > div:first-of-type": { display: "none" } }}
+    >
+      {tabsHeader}
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent="flex-end"
+        sx={{ mb: 2 }}
+      >
         <LegendButton
           label="Actual"
           color={auraColors.blue.main}
@@ -332,12 +379,10 @@ const ClinicMetricsChart: React.FC<ClinicMetricsChartProps> = ({
           />
         )}
       </Stack>
-
-      {/* Chart */}
       <ResponsiveContainer width="100%" height={height}>
         {renderChart()}
       </ResponsiveContainer>
-    </Paper>
+    </AuraChartCard>
   );
 };
 

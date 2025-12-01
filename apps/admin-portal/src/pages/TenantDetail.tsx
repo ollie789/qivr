@@ -12,46 +12,129 @@ import {
   Tab,
   Divider,
   LinearProgress,
+  Skeleton,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
-import { ArrowBack, Edit, CreditCard } from "@mui/icons-material";
+import {
+  ArrowBack,
+  Edit,
+  CreditCard,
+  Block,
+  CheckCircle,
+} from "@mui/icons-material";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { adminApi } from "../services/api";
+import { useSnackbar } from "notistack";
 
 export default function TenantDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
   const [tab, setTab] = useState(0);
+  const [showPlanDialog, setShowPlanDialog] = useState(false);
+  const [newPlan, setNewPlan] = useState("");
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
+  const [flagsChanged, setFlagsChanged] = useState(false);
 
-  // Mock data - replace with API
-  const tenant = {
-    id,
-    name: "Sydney Physio Clinic",
-    slug: "sydney-physio",
-    status: "active",
-    planTier: "professional",
-    createdAt: "2024-06-15",
-    contactEmail: "admin@sydneyphysio.com.au",
-    contactName: "Dr. Sarah Chen",
-    billingCustomerId: "cus_abc123",
-    featureFlags: {
-      aiTriage: true,
-      aiTreatmentPlans: true,
-      documentOcr: true,
-      smsReminders: true,
-      apiAccess: false,
-      customBranding: false,
-      hipaaAuditLogs: true,
+  const {
+    data: tenant,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["tenant", id],
+    queryFn: () => adminApi.getTenant(id!),
+    enabled: !!id,
+  });
+
+  // Initialize feature flags when tenant loads
+  if (tenant && Object.keys(featureFlags).length === 0) {
+    setFeatureFlags(tenant.featureFlags);
+  }
+
+  const suspendMutation = useMutation({
+    mutationFn: () => adminApi.suspendTenant(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant", id] });
+      enqueueSnackbar("Tenant suspended", { variant: "success" });
     },
-    usage: { practitioners: 6, patients: 847, storageGb: 12.4, aiCalls: 234 },
-    limits: {
-      maxPractitioners: 10,
-      maxPatients: 2000,
-      maxStorageGb: 50,
-      maxAiCallsPerMonth: 1000,
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: () => adminApi.activateTenant(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant", id] });
+      enqueueSnackbar("Tenant activated", { variant: "success" });
     },
+  });
+
+  const updatePlanMutation = useMutation({
+    mutationFn: (plan: string) => adminApi.updatePlan(id!, plan),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant", id] });
+      setShowPlanDialog(false);
+      enqueueSnackbar("Plan updated", { variant: "success" });
+    },
+  });
+
+  const updateFlagsMutation = useMutation({
+    mutationFn: (flags: Record<string, boolean>) =>
+      adminApi.updateFeatureFlags(id!, flags),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant", id] });
+      setFlagsChanged(false);
+      enqueueSnackbar("Feature flags updated", { variant: "success" });
+    },
+  });
+
+  const handleFlagChange = (key: string, value: boolean) => {
+    setFeatureFlags((prev) => ({ ...prev, [key]: value }));
+    setFlagsChanged(true);
   };
 
   const usagePercent = (current: number, max: number) =>
     Math.min((current / max) * 100, 100);
+
+  if (isLoading) {
+    return (
+      <Box>
+        <Skeleton variant="rectangular" height={60} sx={{ mb: 3 }} />
+        <Skeleton variant="rectangular" height={400} />
+      </Box>
+    );
+  }
+
+  if (error || !tenant) {
+    return (
+      <Box>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate("/tenants")}
+          sx={{ mb: 2 }}
+        >
+          Back to Tenants
+        </Button>
+        <Alert severity="error">
+          Failed to load tenant details. The tenant may not exist.
+        </Alert>
+      </Box>
+    );
+  }
+
+  const planPrices: Record<string, number> = {
+    starter: 99,
+    professional: 299,
+    enterprise: 599,
+  };
 
   return (
     <Box>
@@ -76,7 +159,11 @@ export default function TenantDetail() {
             {tenant.name}
           </Typography>
           <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
-            <Chip label={tenant.status} color="success" size="small" />
+            <Chip
+              label={tenant.status}
+              color={tenant.status === "active" ? "success" : "warning"}
+              size="small"
+            />
             <Chip
               label={tenant.planTier}
               size="small"
@@ -85,11 +172,39 @@ export default function TenantDetail() {
           </Box>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
+          {tenant.status === "active" ? (
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<Block />}
+              onClick={() => suspendMutation.mutate()}
+              disabled={suspendMutation.isPending}
+            >
+              Suspend
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              color="success"
+              startIcon={<CheckCircle />}
+              onClick={() => activateMutation.mutate()}
+              disabled={activateMutation.isPending}
+            >
+              Activate
+            </Button>
+          )}
           <Button variant="outlined" startIcon={<CreditCard />}>
             Billing Portal
           </Button>
-          <Button variant="contained" startIcon={<Edit />}>
-            Edit
+          <Button
+            variant="contained"
+            startIcon={<Edit />}
+            onClick={() => {
+              setNewPlan(tenant.planTier);
+              setShowPlanDialog(true);
+            }}
+          >
+            Change Plan
           </Button>
         </Box>
       </Box>
@@ -125,15 +240,25 @@ export default function TenantDetail() {
                 </Box>
                 <Box>
                   <Typography variant="caption" color="text.secondary">
-                    Contact
+                    Email
                   </Typography>
-                  <Typography>{tenant.contactName}</Typography>
+                  <Typography>{tenant.contactEmail || "-"}</Typography>
                 </Box>
                 <Box>
                   <Typography variant="caption" color="text.secondary">
-                    Email
+                    Phone
                   </Typography>
-                  <Typography>{tenant.contactEmail}</Typography>
+                  <Typography>{tenant.phone || "-"}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Location
+                  </Typography>
+                  <Typography>
+                    {[tenant.city, tenant.state, tenant.country]
+                      .filter(Boolean)
+                      .join(", ") || "-"}
+                  </Typography>
                 </Box>
                 <Box>
                   <Typography variant="caption" color="text.secondary">
@@ -145,9 +270,9 @@ export default function TenantDetail() {
                 </Box>
                 <Box sx={{ border: "none !important" }}>
                   <Typography variant="caption" color="text.secondary">
-                    Stripe ID
+                    Timezone
                   </Typography>
-                  <Typography>{tenant.billingCustomerId}</Typography>
+                  <Typography>{tenant.timezone || "UTC"}</Typography>
                 </Box>
               </Box>
             </Card>
@@ -159,9 +284,9 @@ export default function TenantDetail() {
               </Typography>
               {[
                 {
-                  label: "Practitioners",
-                  current: tenant.usage.practitioners,
-                  max: tenant.limits.maxPractitioners,
+                  label: "Staff",
+                  current: tenant.usage.staff,
+                  max: tenant.limits.maxStaff,
                 },
                 {
                   label: "Patients",
@@ -170,12 +295,12 @@ export default function TenantDetail() {
                 },
                 {
                   label: "Storage (GB)",
-                  current: tenant.usage.storageGb,
+                  current: 0, // TODO: Add storage tracking
                   max: tenant.limits.maxStorageGb,
                 },
                 {
-                  label: "AI Calls",
-                  current: tenant.usage.aiCalls,
+                  label: "AI Calls/Month",
+                  current: 0, // TODO: Add AI call tracking
                   max: tenant.limits.maxAiCallsPerMonth,
                 },
               ].map((item) => (
@@ -199,6 +324,13 @@ export default function TenantDetail() {
                   />
                 </Box>
               ))}
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="body2">Appointments this month</Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {tenant.usage.appointmentsThisMonth}
+                </Typography>
+              </Box>
             </Card>
           </Grid>
         </Grid>
@@ -213,10 +345,15 @@ export default function TenantDetail() {
             Toggle features for this tenant
           </Typography>
           <Grid container spacing={2}>
-            {Object.entries(tenant.featureFlags).map(([key, value]) => (
+            {Object.entries(featureFlags).map(([key, value]) => (
               <Grid size={{ xs: 12, sm: 6, md: 4 }} key={key}>
                 <FormControlLabel
-                  control={<Switch checked={value} />}
+                  control={
+                    <Switch
+                      checked={value}
+                      onChange={(e) => handleFlagChange(key, e.target.checked)}
+                    />
+                  }
                   label={key
                     .replace(/([A-Z])/g, " $1")
                     .replace(/^./, (s) => s.toUpperCase())}
@@ -225,7 +362,13 @@ export default function TenantDetail() {
             ))}
           </Grid>
           <Divider sx={{ my: 3 }} />
-          <Button variant="contained">Save Changes</Button>
+          <Button
+            variant="contained"
+            disabled={!flagsChanged || updateFlagsMutation.isPending}
+            onClick={() => updateFlagsMutation.mutate(featureFlags)}
+          >
+            {updateFlagsMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
         </Card>
       )}
 
@@ -234,17 +377,40 @@ export default function TenantDetail() {
           <Typography variant="h6" fontWeight={600} gutterBottom>
             Usage Analytics
           </Typography>
-          <Box
-            sx={{
-              height: 300,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "text.secondary",
-            }}
-          >
-            Usage charts - integrate with API data
-          </Box>
+          <Grid container spacing={3} sx={{ mt: 1 }}>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <Typography color="text.secondary" variant="body2">
+                Total Patients
+              </Typography>
+              <Typography variant="h4" fontWeight={700}>
+                {tenant.usage.patients}
+              </Typography>
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <Typography color="text.secondary" variant="body2">
+                Staff Members
+              </Typography>
+              <Typography variant="h4" fontWeight={700}>
+                {tenant.usage.staff}
+              </Typography>
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <Typography color="text.secondary" variant="body2">
+                Appointments (30 days)
+              </Typography>
+              <Typography variant="h4" fontWeight={700}>
+                {tenant.usage.appointmentsThisMonth}
+              </Typography>
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <Typography color="text.secondary" variant="body2">
+                Plan Tier
+              </Typography>
+              <Typography variant="h4" fontWeight={700}>
+                {tenant.planTier}
+              </Typography>
+            </Grid>
+          </Grid>
         </Card>
       )}
 
@@ -260,23 +426,69 @@ export default function TenantDetail() {
           >
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
               <Typography>Current Plan</Typography>
-              <Chip label="Professional - $299/mo" color="primary" />
+              <Chip
+                label={`${tenant.planTier.charAt(0).toUpperCase() + tenant.planTier.slice(1)} - $${planPrices[tenant.planTier] || 0}/mo`}
+                color="primary"
+              />
             </Box>
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Typography>Next Invoice</Typography>
-              <Typography>Dec 15, 2024 - $299.00</Typography>
+              <Typography>Status</Typography>
+              <Chip
+                label={tenant.status}
+                color={tenant.status === "active" ? "success" : "warning"}
+                size="small"
+              />
             </Box>
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Typography>Payment Method</Typography>
-              <Typography>Visa •••• 4242</Typography>
+              <Typography>Customer Since</Typography>
+              <Typography>
+                {new Date(tenant.createdAt).toLocaleDateString()}
+              </Typography>
             </Box>
           </Box>
           <Box sx={{ mt: 3, display: "flex", gap: 2 }}>
             <Button variant="outlined">View Invoices</Button>
-            <Button variant="outlined">Change Plan</Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setNewPlan(tenant.planTier);
+                setShowPlanDialog(true);
+              }}
+            >
+              Change Plan
+            </Button>
           </Box>
         </Card>
       )}
+
+      {/* Change Plan Dialog */}
+      <Dialog open={showPlanDialog} onClose={() => setShowPlanDialog(false)}>
+        <DialogTitle>Change Plan</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Plan</InputLabel>
+            <Select
+              value={newPlan}
+              label="Plan"
+              onChange={(e) => setNewPlan(e.target.value)}
+            >
+              <MenuItem value="starter">Starter ($99/mo)</MenuItem>
+              <MenuItem value="professional">Professional ($299/mo)</MenuItem>
+              <MenuItem value="enterprise">Enterprise ($599/mo)</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowPlanDialog(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => updatePlanMutation.mutate(newPlan)}
+            disabled={updatePlanMutation.isPending}
+          >
+            Update Plan
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
