@@ -533,6 +533,7 @@ public class TreatmentPlansController : BaseApiController
 
             var plan = await _context.TreatmentPlans
                 .Include(t => t.Provider)
+                .Include(t => t.Patient)
                 .Where(t => t.TenantId == tenantId && t.PatientId == userId && t.DeletedAt == null)
                 .Where(t => t.Status == TreatmentPlanStatus.Active)
                 .OrderByDescending(t => t.StartDate)
@@ -569,42 +570,124 @@ public class TreatmentPlansController : BaseApiController
                 .OrderBy(p => p.DueDate)
                 .FirstOrDefaultAsync();
 
-        return Ok(new PatientTreatmentPlanView
-        {
-            Id = plan.Id,
-            Title = plan.Title,
-            Diagnosis = plan.Diagnosis,
-            Status = plan.Status,
-            ProgressPercentage = plan.ProgressPercentage,
-            CompletedSessions = plan.CompletedSessions,
-            TotalSessions = plan.TotalSessions,
-            CurrentWeek = plan.CurrentWeek,
-            TotalWeeks = plan.DurationWeeks,
-            CurrentPhase = currentPhase != null ? new TreatmentPhaseView
+            // Get today's check-in status
+            var today = DateTime.UtcNow.Date;
+            var todaysCheckIn = plan.CheckIns?.FirstOrDefault(c => c.Date.Date == today);
+            var lastCheckIn = plan.CheckIns?.OrderByDescending(c => c.Date).FirstOrDefault();
+
+            // Map today's exercises to TodayTaskDto
+            var todaysTasks = todaysExercises.Select(e => {
+                var todayCompletion = e.Completions?.FirstOrDefault(c => c.CompletedAt.Date == today);
+                return new TodayTaskDto
+                {
+                    ExerciseId = e.Id.ToString(),
+                    Name = e.Name,
+                    Sets = e.Sets,
+                    Reps = e.Reps,
+                    HoldSeconds = e.HoldSeconds,
+                    Instructions = e.Instructions,
+                    Description = e.Description,
+                    Category = e.Category,
+                    BodyRegion = e.BodyRegion,
+                    Difficulty = e.Difficulty.ToString(),
+                    IsCompleted = todayCompletion != null,
+                    CompletedAt = todayCompletion?.CompletedAt.ToString("o")
+                };
+            }).ToList();
+
+            // Map phases to PatientPhaseDto
+            var phaseDtos = (plan.Phases ?? new List<TreatmentPhase>()).Select(p => new PatientPhaseDto
             {
-                PhaseNumber = currentPhase.PhaseNumber,
-                Name = currentPhase.Name,
-                Goals = currentPhase.Goals,
-                ProgressPercentage = currentPhase.PhaseProgressPercentage
-            } : null,
-            TodaysExercises = todaysExercises,
-            NextAppointment = nextAppointment != null ? new AppointmentSummary
+                PhaseNumber = p.PhaseNumber,
+                Name = p.Name,
+                Description = p.Description,
+                DurationWeeks = p.DurationWeeks,
+                Goals = p.Goals ?? new List<string>(),
+                Status = p.Status.ToString(),
+                StartDate = p.StartDate != default ? p.StartDate.ToString("o") : null,
+                EndDate = p.EndDate?.ToString("o"),
+                SessionsPerWeek = p.SessionsPerWeek,
+                PhaseProgressPercentage = p.PhaseProgressPercentage,
+                Exercises = (p.Exercises ?? new List<Exercise>()).Select(e => new PatientExerciseDto
+                {
+                    Id = e.Id.ToString(),
+                    Name = e.Name,
+                    Description = e.Description,
+                    Instructions = e.Instructions,
+                    Sets = e.Sets,
+                    Reps = e.Reps,
+                    HoldSeconds = e.HoldSeconds,
+                    Frequency = e.Frequency,
+                    Category = e.Category,
+                    BodyRegion = e.BodyRegion,
+                    Difficulty = e.Difficulty.ToString(),
+                    VideoUrl = e.VideoUrl,
+                    ImageUrl = e.ThumbnailUrl
+                }).ToList()
+            }).ToList();
+
+            // Map milestones to PatientMilestoneDto
+            var milestoneDtos = (plan.Milestones ?? new List<TreatmentMilestone>()).Select(m => new PatientMilestoneDto
             {
-                Id = nextAppointment.Id,
-                ScheduledStart = nextAppointment.ScheduledStart,
-                AppointmentType = nextAppointment.AppointmentType
-            } : null,
-            PendingProm = pendingProm != null ? new PromInstanceSummary
+                Id = m.Id.ToString(),
+                Type = m.Type.ToString(),
+                Title = m.Title,
+                Description = m.Description,
+                TargetDate = null, // Milestones don't have target dates in this model
+                AchievedDate = m.CompletedAt?.ToString("o"),
+                IsAchieved = m.IsCompleted,
+                PointsAwarded = m.PointsAwarded,
+                Icon = GetMilestoneIcon(m.Type)
+            }).ToList();
+
+            // Calculate estimated end date
+            var estimatedEndDate = plan.StartDate.AddDays(plan.DurationWeeks * 7);
+
+            return Ok(new PatientTreatmentPlanView
             {
-                Id = pendingProm.Id,
-                TemplateName = pendingProm.Template?.Name ?? "Assessment",
-                DueDate = pendingProm.DueDate
-            } : null,
-            Milestones = plan.Milestones ?? new List<TreatmentMilestone>(),
-            CurrentStreak = plan.ExerciseStreak,
-            PointsEarned = plan.PointsEarned,
-            Phases = plan.Phases ?? new List<TreatmentPhase>()
-        });
+                Id = plan.Id,
+                Title = plan.Title,
+                Diagnosis = plan.Diagnosis,
+                PatientName = $"{plan.Patient?.FirstName} {plan.Patient?.LastName}".Trim(),
+                Status = plan.Status.ToString(),
+                StartDate = plan.StartDate.ToString("o"),
+                EstimatedEndDate = estimatedEndDate.ToString("o"),
+                OverallProgress = plan.ProgressPercentage,
+                CurrentPhase = currentPhase?.PhaseNumber ?? 1,
+                TotalPhases = plan.Phases?.Count ?? 0,
+                CompletedSessions = plan.CompletedSessions,
+                TotalSessions = plan.TotalSessions,
+                CurrentWeek = plan.CurrentWeek,
+                TotalWeeks = plan.DurationWeeks,
+                CurrentStreak = plan.ExerciseStreak,
+                TotalPoints = plan.PointsEarned,
+                TodaysTasks = todaysTasks,
+                Phases = phaseDtos,
+                Milestones = milestoneDtos,
+                CheckInStatus = new CheckInStatusDto
+                {
+                    HasCheckedInToday = todaysCheckIn != null,
+                    LastCheckIn = lastCheckIn != null ? new LastCheckInDto
+                    {
+                        PainLevel = lastCheckIn.PainLevel,
+                        Mood = lastCheckIn.Mood,
+                        Notes = lastCheckIn.Notes,
+                        Date = lastCheckIn.Date.ToString("o")
+                    } : null
+                },
+                NextAppointment = nextAppointment != null ? new AppointmentSummary
+                {
+                    Id = nextAppointment.Id,
+                    ScheduledStart = nextAppointment.ScheduledStart,
+                    AppointmentType = nextAppointment.AppointmentType
+                } : null,
+                PendingProm = pendingProm != null ? new PromInstanceSummary
+                {
+                    Id = pendingProm.Id,
+                    TemplateName = pendingProm.Template?.Name ?? "Assessment",
+                    DueDate = pendingProm.DueDate
+                } : null
+            });
         }
         catch (Exception ex)
         {
@@ -1042,6 +1125,20 @@ public class TreatmentPlansController : BaseApiController
         return true; // Default to daily
     }
 
+    private static string GetMilestoneIcon(MilestoneType type)
+    {
+        return type switch
+        {
+            MilestoneType.SessionCount => "calendar",
+            MilestoneType.PainReduction => "heart",
+            MilestoneType.PromImprovement => "trending-up",
+            MilestoneType.PhaseComplete => "flag",
+            MilestoneType.ExerciseStreak => "flame",
+            MilestoneType.WeekComplete => "check-circle",
+            _ => "star"
+        };
+    }
+
     #endregion
 }
 
@@ -1112,20 +1209,100 @@ public class PatientTreatmentPlanView
     public Guid Id { get; set; }
     public string Title { get; set; } = "";
     public string? Diagnosis { get; set; }
-    public TreatmentPlanStatus Status { get; set; }
-    public decimal ProgressPercentage { get; set; }
+    public string PatientName { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string StartDate { get; set; } = "";
+    public string? EstimatedEndDate { get; set; }
+    public decimal OverallProgress { get; set; }
+    public int CurrentPhase { get; set; }
+    public int TotalPhases { get; set; }
     public int CompletedSessions { get; set; }
     public int TotalSessions { get; set; }
     public int CurrentWeek { get; set; }
     public int TotalWeeks { get; set; }
-    public TreatmentPhaseView? CurrentPhase { get; set; }
-    public List<Exercise> TodaysExercises { get; set; } = new();
+    public int CurrentStreak { get; set; }
+    public int TotalPoints { get; set; }
+    public List<TodayTaskDto> TodaysTasks { get; set; } = new();
+    public List<PatientPhaseDto> Phases { get; set; } = new();
+    public List<PatientMilestoneDto> Milestones { get; set; } = new();
+    public CheckInStatusDto CheckInStatus { get; set; } = new();
     public AppointmentSummary? NextAppointment { get; set; }
     public PromInstanceSummary? PendingProm { get; set; }
-    public List<TreatmentMilestone> Milestones { get; set; } = new();
-    public int CurrentStreak { get; set; }
-    public int PointsEarned { get; set; }
-    public List<TreatmentPhase> Phases { get; set; } = new();
+}
+
+public class TodayTaskDto
+{
+    public string ExerciseId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public int Sets { get; set; }
+    public int Reps { get; set; }
+    public int? HoldSeconds { get; set; }
+    public string? Instructions { get; set; }
+    public string? Description { get; set; }
+    public string? Category { get; set; }
+    public string? BodyRegion { get; set; }
+    public string? Difficulty { get; set; }
+    public bool IsCompleted { get; set; }
+    public string? CompletedAt { get; set; }
+}
+
+public class PatientPhaseDto
+{
+    public int PhaseNumber { get; set; }
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public int DurationWeeks { get; set; }
+    public List<string> Goals { get; set; } = new();
+    public string Status { get; set; } = "NotStarted";
+    public string? StartDate { get; set; }
+    public string? EndDate { get; set; }
+    public List<PatientExerciseDto> Exercises { get; set; } = new();
+    public int SessionsPerWeek { get; set; }
+    public decimal PhaseProgressPercentage { get; set; }
+}
+
+public class PatientExerciseDto
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public string? Instructions { get; set; }
+    public int Sets { get; set; }
+    public int Reps { get; set; }
+    public int? HoldSeconds { get; set; }
+    public string? Frequency { get; set; }
+    public string? Category { get; set; }
+    public string? BodyRegion { get; set; }
+    public string? Difficulty { get; set; }
+    public string? VideoUrl { get; set; }
+    public string? ImageUrl { get; set; }
+}
+
+public class PatientMilestoneDto
+{
+    public string Id { get; set; } = "";
+    public string Type { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string? Description { get; set; }
+    public string? TargetDate { get; set; }
+    public string? AchievedDate { get; set; }
+    public bool IsAchieved { get; set; }
+    public int PointsAwarded { get; set; }
+    public string? Icon { get; set; }
+}
+
+public class CheckInStatusDto
+{
+    public bool HasCheckedInToday { get; set; }
+    public LastCheckInDto? LastCheckIn { get; set; }
+}
+
+public class LastCheckInDto
+{
+    public int PainLevel { get; set; }
+    public int Mood { get; set; }
+    public string? Notes { get; set; }
+    public string Date { get; set; } = "";
 }
 
 public class TreatmentPhaseView

@@ -628,7 +628,7 @@ public class MedicalRecordsController : BaseApiController
                 Id = a.Id,
                 Date = a.ScheduledStart,
                 Provider = a.Provider != null ? a.Provider.FullName : "Unknown",
-                Facility = a.LocationDetails != null && a.LocationDetails.ContainsKey("address") ? a.LocationDetails["address"].ToString() : "Clinic",
+                Facility = a.LocationDetails != null && a.LocationDetails.ContainsKey("address") && a.LocationDetails["address"] != null ? a.LocationDetails["address"].ToString() : "Clinic",
                 Notes = a.Notes
             })
             .ToListAsync(cancellationToken);

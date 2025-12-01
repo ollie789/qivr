@@ -411,7 +411,7 @@ public class ClinicManagementController : ControllerBase
         };
 
         var updated = await _clinicService.UpdateProviderAsync(tenantId, providerId, request);
-        if (updated == null)
+        if (!updated)
         {
             return NotFound(new { error = "Provider not found." });
         }

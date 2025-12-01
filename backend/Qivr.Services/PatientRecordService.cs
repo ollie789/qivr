@@ -351,8 +351,8 @@ public class PatientRecordService : IPatientRecordService
             MedicalRecordNumber = $"MRN-{DateTime.UtcNow.Year}-{patientId.ToString().Substring(0, 8).ToUpper()}",
             LastVisit = lastVisit,
             NextAppointment = nextAppointment,
-            ActiveConditions = medicalHistory.ChronicConditions?.Count ?? 0,
-            ActiveMedications = medicalHistory.CurrentMedications?.Count ?? 0,
+            ActiveConditions = medicalHistory?.ChronicConditions?.Count ?? 0,
+            ActiveMedications = medicalHistory?.CurrentMedications?.Count ?? 0,
             RecentPromScore = recentPromScore,
             RiskLevel = CalculateRiskLevel(recentPromScore ?? 0),
             ComplianceRate = await CalculateComplianceRate(tenantId, patientId)

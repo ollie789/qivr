@@ -18,9 +18,8 @@ public class DevelopmentAuthenticationHandler : AuthenticationHandler<Authentica
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        ISystemClock clock,
         IOptions<DevAuthSettings> devAuthOptions,
-        IConfiguration configuration) : base(options, logger, encoder, clock)
+        IConfiguration configuration) : base(options, logger, encoder)
     {
         _devAuthSettings = devAuthOptions.Value;
         var secret = configuration["Jwt:SecretKey"] ?? "dev-secret-key-for-testing-only-32-characters-minimum";

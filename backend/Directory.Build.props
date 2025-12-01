@@ -2,11 +2,16 @@
   <PropertyGroup>
     <!-- Suppress specific warning codes that are not critical -->
     <NoWarn>$(NoWarn);CS8618;CS8625;CS1998</NoWarn>
-    
+
     <!-- Keep nullable warnings as warnings, not errors -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    
+
     <!-- Still analyze nullability but don't fail builds -->
     <Nullable>annotations</Nullable>
   </PropertyGroup>
+
+  <!-- Override vulnerable transitive dependencies -->
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
 </Project>

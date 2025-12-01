@@ -124,7 +124,10 @@ public static class CursorPaginationHelper
                 filter = Expression.Lambda<Func<T, bool>>(combined, parameter);
             }
 
-            query = query.Where(filter as Expression<Func<T, bool>>);
+            if (filter != null)
+            {
+                query = query.Where((Expression<Func<T, bool>>)filter);
+            }
         }
 
         // Apply sorting

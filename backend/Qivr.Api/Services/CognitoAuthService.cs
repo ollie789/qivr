@@ -198,7 +198,7 @@ public class CognitoAuthService : ICognitoAuthService
             var response = await _cognitoClient.SignUpAsync(signUpRequest);
             
             // Determine tenant - use provided tenantId or create new one
-            Tenant tenant;
+            Tenant? tenant;
             if (request.TenantId != Guid.Empty)
             {
                 // Patient joining existing clinic

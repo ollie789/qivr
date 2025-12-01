@@ -6,6 +6,7 @@ namespace Qivr.Core.Entities;
 
 #region Enums
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum TreatmentPlanStatus
 {
     Draft,
