@@ -50,7 +50,7 @@ interface LogEvent {
 const API_BASE =
   import.meta.env.VITE_ADMIN_API_URL?.replace("/api/admin", "") ||
   (window.location.hostname === "localhost"
-    ? "http://localhost:5050"
+    ? "http://localhost:5001"
     : "https://clinic.qivr.pro");
 
 const API_ENDPOINTS = [

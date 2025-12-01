@@ -299,3 +299,34 @@ export interface RecoveryTimelineResponse {
   patientCount: number;
   dataPoints: RecoveryDataPoint[];
 }
+
+// ==========================================
+// Demographic Stratification Types
+// ==========================================
+
+export interface DemographicSubgroup {
+  label: string;
+  patientCount: number;
+  averageBaselineScore: number;
+  averageFollowUpScore: number;
+  averageImprovement: number;
+  percentImproved: number;
+  suppressedDueToPrivacy: boolean;
+}
+
+export interface DeviceDemographicBreakdown {
+  deviceId: string;
+  deviceName: string;
+  deviceCode: string;
+  patientCount: number;
+  suppressedDueToPrivacy: boolean;
+  ageGroups: DemographicSubgroup[];
+  genderGroups: DemographicSubgroup[];
+  geographicGroups: DemographicSubgroup[];
+}
+
+export interface DemographicStratificationResponse {
+  devices: DeviceDemographicBreakdown[];
+  totalPatients: number;
+  patientsWithDemographics: number;
+}

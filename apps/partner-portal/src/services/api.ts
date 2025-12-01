@@ -16,6 +16,7 @@ import type {
   DeviceDiscordanceAnalysis,
   CohortAnalyticsResponse,
   RecoveryTimelineResponse,
+  DemographicStratificationResponse,
 } from "../types/outcomes";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
@@ -267,5 +268,13 @@ export const researchApi = {
     return fetchWithAuth(
       `/partner/research/recovery-timeline/${deviceId}?promType=${promType}`,
     );
+  },
+
+  // Get demographic stratification data
+  getDemographics: async (
+    deviceId?: string,
+  ): Promise<DemographicStratificationResponse> => {
+    const query = deviceId ? `?deviceId=${deviceId}` : "";
+    return fetchWithAuth(`/partner/research/demographics${query}`);
   },
 };

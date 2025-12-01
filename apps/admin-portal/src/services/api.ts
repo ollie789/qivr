@@ -5,7 +5,7 @@ import { getIdToken } from "./cognitoAuth";
 const API_BASE =
   import.meta.env.VITE_ADMIN_API_URL ||
   (window.location.hostname === "localhost"
-    ? "http://localhost:5050/api/admin"
+    ? "http://localhost:5001/api/admin"
     : "https://clinic.qivr.pro/api/admin");
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {

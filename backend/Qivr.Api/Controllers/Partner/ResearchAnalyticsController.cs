@@ -23,18 +23,25 @@ public class ResearchAnalyticsController : ControllerBase
         _db = db;
     }
 
-    private Guid GetPartnerId()
+    /// <summary>
+    /// Get partner ID from JWT claims or X-Partner-Id header.
+    /// Returns null if no valid partner ID can be determined.
+    /// </summary>
+    private Guid? GetPartnerId()
     {
-        var partnerIdClaim = User.FindFirst("partner_id")?.Value;
+        // Try JWT claim first (production auth)
+        var partnerIdClaim = User.FindFirst("partner_id")?.Value
+            ?? User.FindFirst("custom:partner_id")?.Value;
         if (Guid.TryParse(partnerIdClaim, out var partnerId))
             return partnerId;
 
+        // Fallback to header for development/testing
         var headerPartnerId = Request.Headers["X-Partner-Id"].FirstOrDefault();
         if (Guid.TryParse(headerPartnerId, out var headerParsedId))
             return headerParsedId;
 
-        var partner = _db.Set<ResearchPartner>().FirstOrDefault();
-        return partner?.Id ?? Guid.Empty;
+        // No valid partner ID - return null (caller must handle)
+        return null;
     }
 
     /// <summary>
@@ -45,9 +52,11 @@ public class ResearchAnalyticsController : ControllerBase
     public async Task<IActionResult> GetPerceptionMetrics([FromQuery] Guid? deviceId = null)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var deviceIds = await _db.Set<MedicalDevice>()
-            .Where(d => d.PartnerId == partnerId && d.IsActive)
+            .Where(d => d.PartnerId == partnerId.Value && d.IsActive)
             .Where(d => deviceId == null || d.Id == deviceId)
             .Select(d => d.Id)
             .ToListAsync();
@@ -183,9 +192,11 @@ public class ResearchAnalyticsController : ControllerBase
     public async Task<IActionResult> GetMcidAnalysis([FromQuery] Guid? deviceId = null, [FromQuery] string? promType = null)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var deviceIds = await _db.Set<MedicalDevice>()
-            .Where(d => d.PartnerId == partnerId && d.IsActive)
+            .Where(d => d.PartnerId == partnerId.Value && d.IsActive)
             .Where(d => deviceId == null || d.Id == deviceId)
             .Select(d => d.Id)
             .ToListAsync();
@@ -358,9 +369,11 @@ public class ResearchAnalyticsController : ControllerBase
     public async Task<IActionResult> GetDiscordanceAnalysis([FromQuery] Guid? deviceId = null)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var deviceIds = await _db.Set<MedicalDevice>()
-            .Where(d => d.PartnerId == partnerId && d.IsActive)
+            .Where(d => d.PartnerId == partnerId.Value && d.IsActive)
             .Where(d => deviceId == null || d.Id == deviceId)
             .Select(d => d.Id)
             .ToListAsync();
@@ -470,9 +483,11 @@ public class ResearchAnalyticsController : ControllerBase
     public async Task<IActionResult> GetCohortAnalytics()
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var deviceIds = await _db.Set<MedicalDevice>()
-            .Where(d => d.PartnerId == partnerId && d.IsActive)
+            .Where(d => d.PartnerId == partnerId.Value && d.IsActive)
             .Select(d => d.Id)
             .ToListAsync();
 
@@ -556,9 +571,11 @@ public class ResearchAnalyticsController : ControllerBase
     public async Task<IActionResult> GetRecoveryTimeline(Guid deviceId, [FromQuery] string promType = "ODI")
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var device = await _db.Set<MedicalDevice>()
-            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == partnerId);
+            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == partnerId.Value);
 
         if (device == null)
             return NotFound(new { error = "Device not found" });
@@ -640,6 +657,252 @@ public class ResearchAnalyticsController : ControllerBase
             SuppressedDueToPrivacy = false,
             PatientCount = patientIds.Count,
             DataPoints = weeklyData
+        });
+    }
+
+    /// <summary>
+    /// Get demographic stratification of outcomes by age, gender, and region
+    /// Enables subgroup analysis for research publications
+    /// </summary>
+    [HttpGet("demographics")]
+    public async Task<IActionResult> GetDemographicStratification([FromQuery] Guid? deviceId = null)
+    {
+        var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
+
+        var deviceIds = await _db.Set<MedicalDevice>()
+            .Where(d => d.PartnerId == partnerId.Value && d.IsActive)
+            .Where(d => deviceId == null || d.Id == deviceId)
+            .Select(d => d.Id)
+            .ToListAsync();
+
+        // Get device usages with baseline scores
+        var usages = await _db.Set<PatientDeviceUsage>()
+            .Include(u => u.Device)
+            .Where(u => deviceIds.Contains(u.DeviceId))
+            .Where(u => u.BaselineScore.HasValue)
+            .ToListAsync();
+
+        // Get patient IDs from usages
+        var patientUserIds = usages.Select(u => u.PatientId).Distinct().ToList();
+
+        // Get patients by their UserId (which links to PatientDeviceUsage.PatientId)
+        var patients = await _db.Set<Patient>()
+            .Where(p => patientUserIds.Contains(p.UserId))
+            .ToListAsync();
+
+        var patientDict = patients.ToDictionary(p => p.UserId);
+
+        // Get follow-up scores for each patient
+        var followUpPromData = await _db.Set<PromInstance>()
+            .Where(p => patientUserIds.Contains(p.PatientId))
+            .Where(p => p.Status == PromStatus.Completed && p.Score.HasValue)
+            .Where(p => p.InstanceType == PromInstanceType.FollowUp || p.InstanceType == PromInstanceType.FinalOutcome)
+            .GroupBy(p => p.PatientId)
+            .Select(g => new { PatientId = g.Key, LatestScore = g.OrderByDescending(p => p.CompletedAt).First().Score })
+            .ToListAsync();
+
+        var followUpDict = followUpPromData.ToDictionary(p => p.PatientId, p => p.LatestScore);
+
+        // Build combined usage data with demographics
+        var usageData = usages
+            .Where(u => patientDict.ContainsKey(u.PatientId))
+            .Select(u => {
+                var patient = patientDict[u.PatientId];
+                return new {
+                    u.PatientId,
+                    u.DeviceId,
+                    DeviceName = u.Device?.Name ?? "Unknown",
+                    DeviceCode = u.Device?.DeviceCode ?? "",
+                    u.BaselineScore,
+                    LatestFollowUpScore = followUpDict.GetValueOrDefault(u.PatientId),
+                    PatientDob = patient.DateOfBirth,
+                    PatientGender = patient.Gender,
+                    PatientState = patient.State
+                };
+            })
+            .ToList();
+
+        var totalPatients = usageData.Select(u => u.PatientId).Distinct().Count();
+
+        // Age group stratification
+        var ageGroups = new List<DemographicSubgroup>();
+        var ageRanges = new[] { (0, 30, "Under 30"), (30, 45, "30-44"), (45, 60, "45-59"), (60, 75, "60-74"), (75, 200, "75+") };
+
+        foreach (var (minAge, maxAge, label) in ageRanges)
+        {
+            var groupData = usageData
+                .Where(u => {
+                    var age = DateTime.Today.Year - u.PatientDob.Year;
+                    if (u.PatientDob.Date > DateTime.Today.AddYears(-age)) age--;
+                    return age >= minAge && age < maxAge;
+                })
+                .ToList();
+
+            var patientCount = groupData.Select(u => u.PatientId).Distinct().Count();
+            if (patientCount < K_ANONYMITY_THRESHOLD)
+            {
+                ageGroups.Add(new DemographicSubgroup
+                {
+                    Label = label,
+                    PatientCount = patientCount,
+                    SuppressedDueToPrivacy = true
+                });
+                continue;
+            }
+
+            var baselines = groupData.Where(u => u.BaselineScore.HasValue).Select(u => u.BaselineScore!.Value).ToList();
+            var followUps = groupData.Where(u => u.LatestFollowUpScore.HasValue).Select(u => u.LatestFollowUpScore!.Value).ToList();
+            var changes = groupData
+                .Where(u => u.BaselineScore.HasValue && u.LatestFollowUpScore.HasValue)
+                .Select(u => u.LatestFollowUpScore!.Value - u.BaselineScore!.Value)
+                .ToList();
+
+            ageGroups.Add(new DemographicSubgroup
+            {
+                Label = label,
+                PatientCount = patientCount,
+                SuppressedDueToPrivacy = false,
+                AverageBaselineScore = baselines.Any() ? baselines.Average() : null,
+                AverageFollowUpScore = followUps.Any() ? followUps.Average() : null,
+                AverageChange = changes.Any() ? changes.Average() : null,
+                ResponderRate = changes.Any() ? (decimal)changes.Count(c => c < -10) / changes.Count * 100 : null
+            });
+        }
+
+        // Gender stratification
+        var genderGroups = new List<DemographicSubgroup>();
+        var genders = new[] { "Male", "Female", "Other" };
+
+        foreach (var gender in genders)
+        {
+            var groupData = usageData
+                .Where(u => u.PatientGender.Equals(gender, StringComparison.OrdinalIgnoreCase) ||
+                           (gender == "Other" && !genders.Take(2).Any(g => u.PatientGender.Equals(g, StringComparison.OrdinalIgnoreCase))))
+                .ToList();
+
+            var patientCount = groupData.Select(u => u.PatientId).Distinct().Count();
+            if (patientCount < K_ANONYMITY_THRESHOLD)
+            {
+                if (patientCount > 0)
+                {
+                    genderGroups.Add(new DemographicSubgroup
+                    {
+                        Label = gender,
+                        PatientCount = patientCount,
+                        SuppressedDueToPrivacy = true
+                    });
+                }
+                continue;
+            }
+
+            var baselines = groupData.Where(u => u.BaselineScore.HasValue).Select(u => u.BaselineScore!.Value).ToList();
+            var followUps = groupData.Where(u => u.LatestFollowUpScore.HasValue).Select(u => u.LatestFollowUpScore!.Value).ToList();
+            var changes = groupData
+                .Where(u => u.BaselineScore.HasValue && u.LatestFollowUpScore.HasValue)
+                .Select(u => u.LatestFollowUpScore!.Value - u.BaselineScore!.Value)
+                .ToList();
+
+            genderGroups.Add(new DemographicSubgroup
+            {
+                Label = gender,
+                PatientCount = patientCount,
+                SuppressedDueToPrivacy = false,
+                AverageBaselineScore = baselines.Any() ? baselines.Average() : null,
+                AverageFollowUpScore = followUps.Any() ? followUps.Average() : null,
+                AverageChange = changes.Any() ? changes.Average() : null,
+                ResponderRate = changes.Any() ? (decimal)changes.Count(c => c < -10) / changes.Count * 100 : null
+            });
+        }
+
+        // Geographic stratification (by state)
+        var stateGroups = new List<DemographicSubgroup>();
+        var states = usageData.Select(u => u.PatientState).Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList();
+
+        foreach (var state in states)
+        {
+            var groupData = usageData.Where(u => u.PatientState == state).ToList();
+            var patientCount = groupData.Select(u => u.PatientId).Distinct().Count();
+
+            if (patientCount < K_ANONYMITY_THRESHOLD)
+            {
+                stateGroups.Add(new DemographicSubgroup
+                {
+                    Label = state,
+                    PatientCount = patientCount,
+                    SuppressedDueToPrivacy = true
+                });
+                continue;
+            }
+
+            var baselines = groupData.Where(u => u.BaselineScore.HasValue).Select(u => u.BaselineScore!.Value).ToList();
+            var followUps = groupData.Where(u => u.LatestFollowUpScore.HasValue).Select(u => u.LatestFollowUpScore!.Value).ToList();
+            var changes = groupData
+                .Where(u => u.BaselineScore.HasValue && u.LatestFollowUpScore.HasValue)
+                .Select(u => u.LatestFollowUpScore!.Value - u.BaselineScore!.Value)
+                .ToList();
+
+            stateGroups.Add(new DemographicSubgroup
+            {
+                Label = state,
+                PatientCount = patientCount,
+                SuppressedDueToPrivacy = false,
+                AverageBaselineScore = baselines.Any() ? baselines.Average() : null,
+                AverageFollowUpScore = followUps.Any() ? followUps.Average() : null,
+                AverageChange = changes.Any() ? changes.Average() : null,
+                ResponderRate = changes.Any() ? (decimal)changes.Count(c => c < -10) / changes.Count * 100 : null
+            });
+        }
+
+        // Device breakdown with demographics
+        var deviceBreakdown = new List<DeviceDemographicBreakdown>();
+        foreach (var devId in deviceIds)
+        {
+            var deviceData = usageData.Where(u => u.DeviceId == devId).ToList();
+            var device = deviceData.FirstOrDefault();
+            if (device == null) continue;
+
+            var patientCount = deviceData.Select(u => u.PatientId).Distinct().Count();
+            if (patientCount < K_ANONYMITY_THRESHOLD)
+            {
+                deviceBreakdown.Add(new DeviceDemographicBreakdown
+                {
+                    DeviceId = devId,
+                    DeviceName = device.DeviceName,
+                    DeviceCode = device.DeviceCode,
+                    PatientCount = patientCount,
+                    SuppressedDueToPrivacy = true
+                });
+                continue;
+            }
+
+            var ages = deviceData.Select(u => {
+                var age = DateTime.Today.Year - u.PatientDob.Year;
+                if (u.PatientDob.Date > DateTime.Today.AddYears(-age)) age--;
+                return age;
+            }).ToList();
+
+            deviceBreakdown.Add(new DeviceDemographicBreakdown
+            {
+                DeviceId = devId,
+                DeviceName = device.DeviceName,
+                DeviceCode = device.DeviceCode,
+                PatientCount = patientCount,
+                SuppressedDueToPrivacy = false,
+                AverageAge = ages.Average(),
+                MalePercent = (decimal)deviceData.Count(u => u.PatientGender.Equals("Male", StringComparison.OrdinalIgnoreCase)) / patientCount * 100,
+                FemalePercent = (decimal)deviceData.Count(u => u.PatientGender.Equals("Female", StringComparison.OrdinalIgnoreCase)) / patientCount * 100
+            });
+        }
+
+        return Ok(new DemographicStratificationResponse
+        {
+            TotalPatients = totalPatients,
+            AgeGroups = ageGroups,
+            GenderGroups = genderGroups,
+            GeographicGroups = stateGroups.OrderByDescending(s => s.PatientCount).ToList(),
+            DeviceBreakdown = deviceBreakdown
         });
     }
 }
@@ -801,4 +1064,37 @@ public class RecoveryDataPoint
     public decimal MinScore { get; set; }
     public decimal MaxScore { get; set; }
     public decimal AverageChangeFromBaseline { get; set; }
+}
+
+// Demographic stratification DTOs
+public class DemographicStratificationResponse
+{
+    public int TotalPatients { get; set; }
+    public List<DemographicSubgroup> AgeGroups { get; set; } = new();
+    public List<DemographicSubgroup> GenderGroups { get; set; } = new();
+    public List<DemographicSubgroup> GeographicGroups { get; set; } = new();
+    public List<DeviceDemographicBreakdown> DeviceBreakdown { get; set; } = new();
+}
+
+public class DemographicSubgroup
+{
+    public string Label { get; set; } = string.Empty;
+    public int PatientCount { get; set; }
+    public bool SuppressedDueToPrivacy { get; set; }
+    public decimal? AverageBaselineScore { get; set; }
+    public decimal? AverageFollowUpScore { get; set; }
+    public decimal? AverageChange { get; set; }
+    public decimal? ResponderRate { get; set; }
+}
+
+public class DeviceDemographicBreakdown
+{
+    public Guid DeviceId { get; set; }
+    public string DeviceName { get; set; } = string.Empty;
+    public string DeviceCode { get; set; } = string.Empty;
+    public int PatientCount { get; set; }
+    public bool SuppressedDueToPrivacy { get; set; }
+    public double? AverageAge { get; set; }
+    public decimal? MalePercent { get; set; }
+    public decimal? FemalePercent { get; set; }
 }

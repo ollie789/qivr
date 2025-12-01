@@ -36,6 +36,7 @@ import {
   Download,
   TableChart,
   DataObject,
+  PeopleAlt,
 } from "@mui/icons-material";
 import {
   BarChart,
@@ -61,6 +62,7 @@ import type {
   DevicePerceptionMetrics,
   DeviceMcidAnalysis,
   DeviceDiscordanceAnalysis,
+  DeviceDemographicBreakdown,
 } from "../types/outcomes";
 
 interface TabPanelProps {
@@ -136,7 +138,12 @@ function CohortSkeleton() {
           {[1, 2, 3, 4].map((i) => (
             <Grid size={{ xs: 6, md: 3 }} key={i}>
               <Paper sx={{ p: 2, textAlign: "center" }}>
-                <Skeleton variant="text" width="60%" height={40} sx={{ mx: "auto" }} />
+                <Skeleton
+                  variant="text"
+                  width="60%"
+                  height={40}
+                  sx={{ mx: "auto" }}
+                />
                 <Skeleton variant="text" width="40%" sx={{ mx: "auto" }} />
               </Paper>
             </Grid>
@@ -224,10 +231,14 @@ export default function ResearchInsights() {
       // Export perception metrics
       if (perceptionData?.devices) {
         rows.push("PERCEPTION METRICS");
-        rows.push("Device,Patients,PASS Rate,Success Rate,Avg Satisfaction,NPS");
+        rows.push(
+          "Device,Patients,PASS Rate,Success Rate,Avg Satisfaction,NPS",
+        );
         perceptionData.devices.forEach((d) => {
           if (!d.suppressedDueToPrivacy) {
-            rows.push(`"${d.deviceName}",${d.patientCount},${d.passRate?.toFixed(1) ?? "N/A"},${d.perceivedSuccessRate?.toFixed(1) ?? "N/A"},${d.averageSatisfaction?.toFixed(1) ?? "N/A"},${d.netPromoterScore?.toFixed(0) ?? "N/A"}`);
+            rows.push(
+              `"${d.deviceName}",${d.patientCount},${d.passRate?.toFixed(1) ?? "N/A"},${d.perceivedSuccessRate?.toFixed(1) ?? "N/A"},${d.averageSatisfaction?.toFixed(1) ?? "N/A"},${d.netPromoterScore?.toFixed(0) ?? "N/A"}`,
+            );
           }
         });
         rows.push("");
@@ -236,11 +247,15 @@ export default function ResearchInsights() {
       // Export MCID analysis
       if (mcidData?.devices) {
         rows.push("MCID ANALYSIS");
-        rows.push("Device,PROM Type,Patients,Baseline,Follow-up,Change,Traditional MCID,Patient-Centered MCID,Responder Rate");
+        rows.push(
+          "Device,PROM Type,Patients,Baseline,Follow-up,Change,Traditional MCID,Patient-Centered MCID,Responder Rate",
+        );
         mcidData.devices.forEach((d) => {
           if (!d.suppressedDueToPrivacy) {
             d.mcidByPromType.forEach((m) => {
-              rows.push(`"${d.deviceName}","${m.promType}",${m.patientCount},${m.averageBaselineScore.toFixed(1)},${m.averageFollowUpScore.toFixed(1)},${m.averageChange.toFixed(1)},${m.traditionalMcid?.toFixed(1) ?? "N/A"},${m.patientCenteredMcid?.toFixed(1) ?? "N/A"},${m.responderRate.toFixed(1)}%`);
+              rows.push(
+                `"${d.deviceName}","${m.promType}",${m.patientCount},${m.averageBaselineScore.toFixed(1)},${m.averageFollowUpScore.toFixed(1)},${m.averageChange.toFixed(1)},${m.traditionalMcid?.toFixed(1) ?? "N/A"},${m.patientCenteredMcid?.toFixed(1) ?? "N/A"},${m.responderRate.toFixed(1)}%`,
+              );
             });
           }
         });
@@ -250,10 +265,14 @@ export default function ResearchInsights() {
       // Export discordance
       if (discordanceData?.devices) {
         rows.push("DISCORDANCE ANALYSIS");
-        rows.push("Device,Patients,Concordant Success,Concordant Non-Success,Discordant Obj+/Subj-,Discordant Obj-/Subj+,Total Discordance");
+        rows.push(
+          "Device,Patients,Concordant Success,Concordant Non-Success,Discordant Obj+/Subj-,Discordant Obj-/Subj+,Total Discordance",
+        );
         discordanceData.devices.forEach((d) => {
           if (!d.suppressedDueToPrivacy) {
-            rows.push(`"${d.deviceName}",${d.patientCount},${d.concordantSuccessCount},${d.concordantNonSuccessCount},${d.discordantObjectiveSuccessCount},${d.discordantSubjectiveSuccessCount},${d.totalDiscordanceRate.toFixed(1)}%`);
+            rows.push(
+              `"${d.deviceName}",${d.patientCount},${d.concordantSuccessCount},${d.concordantNonSuccessCount},${d.discordantObjectiveSuccessCount},${d.discordantSubjectiveSuccessCount},${d.totalDiscordanceRate.toFixed(1)}%`,
+            );
           }
         });
       }
@@ -281,7 +300,9 @@ export default function ResearchInsights() {
       discordanceAnalysis: discordanceData?.devices,
       cohortAnalytics: cohortData,
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -297,29 +318,49 @@ export default function ResearchInsights() {
 
   const devices = devicesData?.devices || [];
 
-  const { data: perceptionData, isLoading: perceptionLoading } = useQuery({
+  const {
+    data: perceptionData,
+    isLoading: perceptionLoading,
+    error: perceptionError,
+  } = useQuery({
     queryKey: ["perception-metrics", selectedDeviceId],
     queryFn: () =>
       researchApi.getPerceptionMetrics(selectedDeviceId || undefined),
   });
 
-  const { data: mcidData, isLoading: mcidLoading } = useQuery({
+  const {
+    data: mcidData,
+    isLoading: mcidLoading,
+    error: mcidError,
+  } = useQuery({
     queryKey: ["mcid-analysis", selectedDeviceId],
     queryFn: () => researchApi.getMcidAnalysis(selectedDeviceId || undefined),
   });
 
-  const { data: discordanceData, isLoading: discordanceLoading } = useQuery({
+  const {
+    data: discordanceData,
+    isLoading: discordanceLoading,
+    error: discordanceError,
+  } = useQuery({
     queryKey: ["discordance", selectedDeviceId],
     queryFn: () =>
       researchApi.getDiscordanceAnalysis(selectedDeviceId || undefined),
   });
 
-  const { data: cohortData, isLoading: cohortLoading } = useQuery({
+  const {
+    data: cohortData,
+    isLoading: cohortLoading,
+    error: cohortError,
+  } = useQuery({
     queryKey: ["cohort-analytics"],
     queryFn: () => researchApi.getCohortAnalytics(),
   });
 
-  const { data: recoveryData, isLoading: recoveryLoading } = useQuery({
+  const {
+    data: recoveryData,
+    isLoading: recoveryLoading,
+    error: recoveryError,
+  } = useQuery({
     queryKey: ["recovery-timeline", selectedDeviceId, selectedPromType],
     queryFn: () =>
       selectedDeviceId
@@ -328,13 +369,29 @@ export default function ResearchInsights() {
     enabled: !!selectedDeviceId,
   });
 
+  const {
+    data: demographicsData,
+    isLoading: demographicsLoading,
+    error: demographicsError,
+  } = useQuery({
+    queryKey: ["demographics", selectedDeviceId],
+    queryFn: () => researchApi.getDemographics(selectedDeviceId || undefined),
+  });
+
   const perceptionDevices = perceptionData?.devices || [];
   const mcidDevices = mcidData?.devices || [];
   const discordanceDevices = discordanceData?.devices || [];
 
   return (
     <Box>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 1,
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Psychology sx={{ fontSize: 32, color: "primary.main" }} />
           <Typography variant="h4" fontWeight={700}>
@@ -344,7 +401,9 @@ export default function ResearchInsights() {
         <Box>
           <Button
             variant="outlined"
-            startIcon={isExporting ? <CircularProgress size={16} /> : <Download />}
+            startIcon={
+              isExporting ? <CircularProgress size={16} /> : <Download />
+            }
             onClick={(e) => setExportAnchor(e.currentTarget)}
             disabled={isExporting}
           >
@@ -417,6 +476,7 @@ export default function ResearchInsights() {
             iconPosition="start"
             label="Recovery Timeline"
           />
+          <Tab icon={<PeopleAlt />} iconPosition="start" label="Demographics" />
         </Tabs>
       </Box>
 
@@ -424,6 +484,10 @@ export default function ResearchInsights() {
       <TabPanel value={tabValue} index={0}>
         {perceptionLoading ? (
           <CardSkeleton />
+        ) : perceptionError ? (
+          <Alert severity="error">
+            Failed to load perception metrics. Please try again later.
+          </Alert>
         ) : perceptionDevices.length === 0 ? (
           <Alert severity="info">
             No perception data available yet. Data will appear as patients
@@ -444,6 +508,10 @@ export default function ResearchInsights() {
       <TabPanel value={tabValue} index={1}>
         {mcidLoading ? (
           <CardSkeleton />
+        ) : mcidError ? (
+          <Alert severity="error">
+            Failed to load MCID analysis. Please try again later.
+          </Alert>
         ) : mcidDevices.length === 0 ? (
           <Alert severity="info">
             Insufficient data for MCID analysis. More baseline and follow-up
@@ -464,6 +532,10 @@ export default function ResearchInsights() {
       <TabPanel value={tabValue} index={2}>
         {discordanceLoading ? (
           <CardSkeleton />
+        ) : discordanceError ? (
+          <Alert severity="error">
+            Failed to load discordance analysis. Please try again later.
+          </Alert>
         ) : discordanceDevices.length === 0 ? (
           <Alert severity="info">
             No discordance data available. This requires both objective PROM
@@ -483,7 +555,11 @@ export default function ResearchInsights() {
       {/* Cohort Analytics Tab */}
       <TabPanel value={tabValue} index={3}>
         {cohortLoading ? (
-          <Skeleton variant="rectangular" height={400} />
+          <CohortSkeleton />
+        ) : cohortError ? (
+          <Alert severity="error">
+            Failed to load cohort analytics. Please try again later.
+          </Alert>
         ) : !cohortData ? (
           <Alert severity="info">No cohort data available.</Alert>
         ) : (
@@ -514,7 +590,11 @@ export default function ResearchInsights() {
             Please select a specific device to view its recovery timeline.
           </Alert>
         ) : recoveryLoading ? (
-          <Skeleton variant="rectangular" height={400} />
+          <RecoverySkeleton />
+        ) : recoveryError ? (
+          <Alert severity="error">
+            Failed to load recovery timeline. Please try again later.
+          </Alert>
         ) : !recoveryData || recoveryData.suppressedDueToPrivacy ? (
           <Alert severity="warning">
             Insufficient data for recovery timeline (minimum 5 patients required
@@ -522,6 +602,28 @@ export default function ResearchInsights() {
           </Alert>
         ) : (
           <RecoveryTimelineSection data={recoveryData} />
+        )}
+      </TabPanel>
+
+      {/* Demographics Tab */}
+      <TabPanel value={tabValue} index={5}>
+        {demographicsLoading ? (
+          <CohortSkeleton />
+        ) : demographicsError ? (
+          <Alert severity="error">
+            Failed to load demographics data. Please try again later.
+          </Alert>
+        ) : !demographicsData || demographicsData.devices.length === 0 ? (
+          <Alert severity="info">
+            No demographic data available. Data will appear as patients with
+            demographic information complete device procedures.
+          </Alert>
+        ) : (
+          <DemographicsSection
+            devices={demographicsData.devices}
+            totalPatients={demographicsData.totalPatients}
+            patientsWithDemographics={demographicsData.patientsWithDemographics}
+          />
         )}
       </TabPanel>
     </Box>
@@ -1243,71 +1345,78 @@ function CohortAnalyticsSection({
               rows={data.deviceBreakdown.map((device) => ({
                 id: device.deviceId,
                 ...device,
-                baselinePercent: device.patientCount > 0
-                  ? (device.withBaseline / device.patientCount) * 100
-                  : 0,
+                baselinePercent:
+                  device.patientCount > 0
+                    ? (device.withBaseline / device.patientCount) * 100
+                    : 0,
               }))}
-              columns={[
-                {
-                  field: "deviceName",
-                  headerName: "Device",
-                  flex: 1,
-                  minWidth: 200,
-                  renderCell: (params) => (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography variant="body2">{params.value}</Typography>
+              columns={
+                [
+                  {
+                    field: "deviceName",
+                    headerName: "Device",
+                    flex: 1,
+                    minWidth: 200,
+                    renderCell: (params) => (
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Typography variant="body2">{params.value}</Typography>
+                        <Chip
+                          label={params.row.deviceCode}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Box>
+                    ),
+                  },
+                  {
+                    field: "patientCount",
+                    headerName: "Patients",
+                    type: "number",
+                    width: 100,
+                    align: "right",
+                    headerAlign: "right",
+                  },
+                  {
+                    field: "procedureCount",
+                    headerName: "Procedures",
+                    type: "number",
+                    width: 110,
+                    align: "right",
+                    headerAlign: "right",
+                  },
+                  {
+                    field: "withBaseline",
+                    headerName: "With Baseline",
+                    type: "number",
+                    width: 120,
+                    align: "right",
+                    headerAlign: "right",
+                  },
+                  {
+                    field: "baselinePercent",
+                    headerName: "Baseline %",
+                    width: 120,
+                    align: "right",
+                    headerAlign: "right",
+                    renderCell: (params) => (
                       <Chip
-                        label={params.row.deviceCode}
+                        label={`${params.value.toFixed(0)}%`}
                         size="small"
-                        variant="outlined"
+                        color={params.value >= 80 ? "success" : "warning"}
                       />
-                    </Box>
-                  ),
-                },
-                {
-                  field: "patientCount",
-                  headerName: "Patients",
-                  type: "number",
-                  width: 100,
-                  align: "right",
-                  headerAlign: "right",
-                },
-                {
-                  field: "procedureCount",
-                  headerName: "Procedures",
-                  type: "number",
-                  width: 110,
-                  align: "right",
-                  headerAlign: "right",
-                },
-                {
-                  field: "withBaseline",
-                  headerName: "With Baseline",
-                  type: "number",
-                  width: 120,
-                  align: "right",
-                  headerAlign: "right",
-                },
-                {
-                  field: "baselinePercent",
-                  headerName: "Baseline %",
-                  width: 120,
-                  align: "right",
-                  headerAlign: "right",
-                  renderCell: (params) => (
-                    <Chip
-                      label={`${params.value.toFixed(0)}%`}
-                      size="small"
-                      color={params.value >= 80 ? "success" : "warning"}
-                    />
-                  ),
-                },
-              ] as GridColDef[]}
+                    ),
+                  },
+                ] as GridColDef[]
+              }
               autoHeight
               disableRowSelectionOnClick
               hideFooter={data.deviceBreakdown.length <= 10}
               initialState={{
-                sorting: { sortModel: [{ field: "patientCount", sort: "desc" }] },
+                sorting: {
+                  sortModel: [{ field: "patientCount", sort: "desc" }],
+                },
               }}
               sx={{
                 border: "none",
@@ -1453,67 +1562,69 @@ function RecoveryTimelineSection({
                 ...point,
                 iqr: `${point.p25.toFixed(1)} - ${point.p75.toFixed(1)}`,
               }))}
-              columns={[
-                {
-                  field: "week",
-                  headerName: "Timepoint",
-                  flex: 1,
-                  minWidth: 120,
-                },
-                {
-                  field: "n",
-                  headerName: "n",
-                  type: "number",
-                  width: 80,
-                  align: "right",
-                  headerAlign: "right",
-                },
-                {
-                  field: "average",
-                  headerName: "Average",
-                  type: "number",
-                  width: 100,
-                  align: "right",
-                  headerAlign: "right",
-                  valueFormatter: (value: number) => value.toFixed(1),
-                },
-                {
-                  field: "median",
-                  headerName: "Median",
-                  type: "number",
-                  width: 100,
-                  align: "right",
-                  headerAlign: "right",
-                  valueFormatter: (value: number) => value.toFixed(1),
-                },
-                {
-                  field: "iqr",
-                  headerName: "IQR",
-                  width: 120,
-                  align: "right",
-                  headerAlign: "right",
-                },
-                {
-                  field: "change",
-                  headerName: "Change from Baseline",
-                  width: 180,
-                  align: "right",
-                  headerAlign: "right",
-                  renderCell: (params) => (
-                    <Chip
-                      label={`${params.value >= 0 ? "+" : ""}${params.value.toFixed(1)}`}
-                      size="small"
-                      color={
-                        params.value < 0
-                          ? "success"
-                          : params.value > 0
-                            ? "error"
-                            : "default"
-                      }
-                    />
-                  ),
-                },
-              ] as GridColDef[]}
+              columns={
+                [
+                  {
+                    field: "week",
+                    headerName: "Timepoint",
+                    flex: 1,
+                    minWidth: 120,
+                  },
+                  {
+                    field: "n",
+                    headerName: "n",
+                    type: "number",
+                    width: 80,
+                    align: "right",
+                    headerAlign: "right",
+                  },
+                  {
+                    field: "average",
+                    headerName: "Average",
+                    type: "number",
+                    width: 100,
+                    align: "right",
+                    headerAlign: "right",
+                    valueFormatter: (value: number) => value.toFixed(1),
+                  },
+                  {
+                    field: "median",
+                    headerName: "Median",
+                    type: "number",
+                    width: 100,
+                    align: "right",
+                    headerAlign: "right",
+                    valueFormatter: (value: number) => value.toFixed(1),
+                  },
+                  {
+                    field: "iqr",
+                    headerName: "IQR",
+                    width: 120,
+                    align: "right",
+                    headerAlign: "right",
+                  },
+                  {
+                    field: "change",
+                    headerName: "Change from Baseline",
+                    width: 180,
+                    align: "right",
+                    headerAlign: "right",
+                    renderCell: (params) => (
+                      <Chip
+                        label={`${params.value >= 0 ? "+" : ""}${params.value.toFixed(1)}`}
+                        size="small"
+                        color={
+                          params.value < 0
+                            ? "success"
+                            : params.value > 0
+                              ? "error"
+                              : "default"
+                        }
+                      />
+                    ),
+                  },
+                ] as GridColDef[]
+              }
               autoHeight
               disableRowSelectionOnClick
               hideFooter
@@ -1528,6 +1639,400 @@ function RecoveryTimelineSection({
             />
           </CardContent>
         </Card>
+      </Grid>
+    </Grid>
+  );
+}
+
+// Demographics Section Component
+function DemographicsSection({
+  devices,
+  totalPatients,
+  patientsWithDemographics,
+}: {
+  devices: DeviceDemographicBreakdown[];
+  totalPatients: number;
+  patientsWithDemographics: number;
+}) {
+  // Colors for subgroup charts
+  const AGE_COLORS = [
+    auraColors.blue[300],
+    auraColors.blue[400],
+    auraColors.blue[500],
+    auraColors.blue[600],
+    auraColors.blue[700],
+  ];
+
+  const GENDER_COLORS = [
+    auraColors.purple.main,
+    auraColors.green.main,
+    auraColors.grey[500],
+  ];
+
+  const GEO_COLORS = [
+    auraColors.amber[400],
+    auraColors.amber[500],
+    auraColors.amber[600],
+    auraColors.amber[700],
+    auraColors.amber[800],
+  ];
+
+  return (
+    <Grid container spacing={3}>
+      {/* Summary Stats */}
+      <Grid size={12}>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 6, md: 4 }}>
+            <Paper sx={{ p: 2, textAlign: "center" }}>
+              <Typography variant="h4" fontWeight={700} color="primary.main">
+                {totalPatients.toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Patients
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid size={{ xs: 6, md: 4 }}>
+            <Paper sx={{ p: 2, textAlign: "center" }}>
+              <Typography variant="h4" fontWeight={700} color="success.main">
+                {patientsWithDemographics.toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                With Demographics
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Paper sx={{ p: 2, textAlign: "center" }}>
+              <Typography variant="h4" fontWeight={700}>
+                {totalPatients > 0
+                  ? ((patientsWithDemographics / totalPatients) * 100).toFixed(
+                      1,
+                    )
+                  : 0}
+                %
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Demographic Coverage
+              </Typography>
+            </Paper>
+          </Grid>
+        </Grid>
+      </Grid>
+
+      {/* Per-device demographic breakdowns */}
+      {devices.map((device) => (
+        <Grid size={12} key={device.deviceId}>
+          <Card>
+            <CardContent>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
+              >
+                <Typography variant="h6" fontWeight={600}>
+                  {device.deviceName}
+                </Typography>
+                <Chip label={device.deviceCode} size="small" />
+                <Chip
+                  label={`${device.patientCount} patients`}
+                  size="small"
+                  variant="outlined"
+                />
+              </Box>
+
+              {device.suppressedDueToPrivacy ? (
+                <Alert severity="warning" icon={<Warning />}>
+                  Data suppressed due to privacy (fewer than 5 patients)
+                </Alert>
+              ) : (
+                <Grid container spacing={3}>
+                  {/* Age Group Breakdown */}
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      gutterBottom
+                    >
+                      By Age Group
+                    </Typography>
+                    {device.ageGroups.length === 0 ? (
+                      <Typography color="text.secondary" variant="body2">
+                        No age data available
+                      </Typography>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <PieChart>
+                            <Pie
+                              data={device.ageGroups.filter(
+                                (g) =>
+                                  !g.suppressedDueToPrivacy &&
+                                  g.patientCount > 0,
+                              )}
+                              dataKey="patientCount"
+                              nameKey="label"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={70}
+                              label={({ name, percent }) =>
+                                `${name} ${(percent * 100).toFixed(0)}%`
+                              }
+                              labelLine={false}
+                            >
+                              {device.ageGroups
+                                .filter(
+                                  (g) =>
+                                    !g.suppressedDueToPrivacy &&
+                                    g.patientCount > 0,
+                                )
+                                .map((_, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={AGE_COLORS[index % AGE_COLORS.length]}
+                                  />
+                                ))}
+                            </Pie>
+                            <RechartsTooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <Box sx={{ mt: 2 }}>
+                          {device.ageGroups
+                            .filter((g) => !g.suppressedDueToPrivacy)
+                            .map((group) => (
+                              <Box
+                                key={group.label}
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  py: 0.5,
+                                  borderBottom: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              >
+                                <Typography variant="body2">
+                                  {group.label}
+                                </Typography>
+                                <Box sx={{ display: "flex", gap: 2 }}>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    Δ {group.averageImprovement.toFixed(1)}
+                                  </Typography>
+                                  <Chip
+                                    label={`${group.percentImproved.toFixed(0)}%`}
+                                    size="small"
+                                    color={
+                                      group.percentImproved >= 50
+                                        ? "success"
+                                        : "default"
+                                    }
+                                  />
+                                </Box>
+                              </Box>
+                            ))}
+                        </Box>
+                      </>
+                    )}
+                  </Grid>
+
+                  {/* Gender Breakdown */}
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      gutterBottom
+                    >
+                      By Gender
+                    </Typography>
+                    {device.genderGroups.length === 0 ? (
+                      <Typography color="text.secondary" variant="body2">
+                        No gender data available
+                      </Typography>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart
+                            data={device.genderGroups.filter(
+                              (g) =>
+                                !g.suppressedDueToPrivacy && g.patientCount > 0,
+                            )}
+                            layout="vertical"
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" />
+                            <YAxis
+                              dataKey="label"
+                              type="category"
+                              width={80}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <RechartsTooltip />
+                            <Bar dataKey="patientCount" name="Patients">
+                              {device.genderGroups
+                                .filter(
+                                  (g) =>
+                                    !g.suppressedDueToPrivacy &&
+                                    g.patientCount > 0,
+                                )
+                                .map((_, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={
+                                      GENDER_COLORS[
+                                        index % GENDER_COLORS.length
+                                      ]
+                                    }
+                                  />
+                                ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                        <Box sx={{ mt: 2 }}>
+                          {device.genderGroups
+                            .filter((g) => !g.suppressedDueToPrivacy)
+                            .map((group) => (
+                              <Box
+                                key={group.label}
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  py: 0.5,
+                                  borderBottom: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              >
+                                <Typography variant="body2">
+                                  {group.label}
+                                </Typography>
+                                <Box sx={{ display: "flex", gap: 2 }}>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    Δ {group.averageImprovement.toFixed(1)}
+                                  </Typography>
+                                  <Chip
+                                    label={`${group.percentImproved.toFixed(0)}%`}
+                                    size="small"
+                                    color={
+                                      group.percentImproved >= 50
+                                        ? "success"
+                                        : "default"
+                                    }
+                                  />
+                                </Box>
+                              </Box>
+                            ))}
+                        </Box>
+                      </>
+                    )}
+                  </Grid>
+
+                  {/* Geographic Breakdown */}
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      gutterBottom
+                    >
+                      By Region
+                    </Typography>
+                    {device.geographicGroups.length === 0 ? (
+                      <Typography color="text.secondary" variant="body2">
+                        No geographic data available
+                      </Typography>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart
+                            data={device.geographicGroups
+                              .filter(
+                                (g) =>
+                                  !g.suppressedDueToPrivacy &&
+                                  g.patientCount > 0,
+                              )
+                              .slice(0, 5)}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                            <YAxis />
+                            <RechartsTooltip />
+                            <Bar dataKey="patientCount" name="Patients">
+                              {device.geographicGroups
+                                .filter(
+                                  (g) =>
+                                    !g.suppressedDueToPrivacy &&
+                                    g.patientCount > 0,
+                                )
+                                .slice(0, 5)
+                                .map((_, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={GEO_COLORS[index % GEO_COLORS.length]}
+                                  />
+                                ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                        <Box sx={{ mt: 2 }}>
+                          {device.geographicGroups
+                            .filter((g) => !g.suppressedDueToPrivacy)
+                            .slice(0, 5)
+                            .map((group) => (
+                              <Box
+                                key={group.label}
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  py: 0.5,
+                                  borderBottom: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              >
+                                <Typography variant="body2">
+                                  {group.label}
+                                </Typography>
+                                <Box sx={{ display: "flex", gap: 2 }}>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    Δ {group.averageImprovement.toFixed(1)}
+                                  </Typography>
+                                  <Chip
+                                    label={`${group.percentImproved.toFixed(0)}%`}
+                                    size="small"
+                                    color={
+                                      group.percentImproved >= 50
+                                        ? "success"
+                                        : "default"
+                                    }
+                                  />
+                                </Box>
+                              </Box>
+                            ))}
+                        </Box>
+                      </>
+                    )}
+                  </Grid>
+                </Grid>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+
+      {/* Research Note */}
+      <Grid size={12}>
+        <Alert severity="info" icon={<Info />}>
+          <Typography variant="body2">
+            <strong>For Research Publications:</strong> Demographic
+            stratification enables subgroup analysis for outcomes research. All
+            data follows k-anonymity protection (minimum 5 patients per
+            subgroup). Use this data to identify differential treatment
+            responses across patient populations.
+          </Typography>
+        </Alert>
       </Grid>
     </Grid>
   );

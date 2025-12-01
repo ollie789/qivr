@@ -1,5 +1,9 @@
 version: 0.2
 
+env:
+  variables:
+    FORCE_BUILD_ALL: "false"
+
 phases:
   install:
     runtime-versions:
@@ -12,6 +16,33 @@ phases:
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/qivr-api
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
+
+      # Detect what changed since last successful build
+      - |
+        echo "Detecting changes..."
+        PREV_COMMIT=$(aws ssm get-parameter --name /qivr/last-successful-build --query Parameter.Value --output text 2>/dev/null || echo "")
+        if [ -z "$PREV_COMMIT" ] || [ "$FORCE_BUILD_ALL" = "true" ]; then
+          echo "No previous build found or force build - building all"
+          BUILD_BACKEND=true
+          BUILD_CLINIC=true
+          BUILD_PATIENT=true
+          BUILD_ADMIN=true
+          BUILD_PARTNER=true
+        else
+          echo "Comparing $PREV_COMMIT to $CODEBUILD_RESOLVED_SOURCE_VERSION"
+          CHANGED_FILES=$(git diff --name-only $PREV_COMMIT $CODEBUILD_RESOLVED_SOURCE_VERSION 2>/dev/null || echo "all")
+          if [ "$CHANGED_FILES" = "all" ]; then
+            BUILD_BACKEND=true; BUILD_CLINIC=true; BUILD_PATIENT=true; BUILD_ADMIN=true; BUILD_PARTNER=true
+          else
+            BUILD_BACKEND=$(echo "$CHANGED_FILES" | grep -q "^backend/\|^packages/" && echo true || echo false)
+            BUILD_CLINIC=$(echo "$CHANGED_FILES" | grep -q "^apps/clinic-dashboard/\|^packages/" && echo true || echo false)
+            BUILD_PATIENT=$(echo "$CHANGED_FILES" | grep -q "^apps/patient-portal/\|^packages/" && echo true || echo false)
+            BUILD_ADMIN=$(echo "$CHANGED_FILES" | grep -q "^apps/admin-portal/\|^packages/" && echo true || echo false)
+            BUILD_PARTNER=$(echo "$CHANGED_FILES" | grep -q "^apps/partner-portal/\|^packages/" && echo true || echo false)
+          fi
+        fi
+        echo "BUILD_BACKEND=$BUILD_BACKEND BUILD_CLINIC=$BUILD_CLINIC BUILD_PATIENT=$BUILD_PATIENT BUILD_ADMIN=$BUILD_ADMIN BUILD_PARTNER=$BUILD_PARTNER"
+
       - docker buildx create --name multi --use 2>/dev/null || docker buildx use multi
       - docker buildx inspect --bootstrap
 
@@ -19,75 +50,131 @@ phases:
     commands:
       - echo Build started on `date`
 
-      # Start Docker build in background (takes longest)
-      - echo Building Docker image...
-      - docker buildx build --platform linux/amd64 -t $REPOSITORY_URI:$IMAGE_TAG -t $REPOSITORY_URI:latest --push ./backend &
-      - DOCKER_PID=$!
-
-      # While Docker builds, install npm deps and build frontends in parallel
-      - echo Installing Node.js dependencies...
-      - npm ci --legacy-peer-deps 2>/dev/null || npm install --legacy-peer-deps
-
-      # Build shared packages first (required by frontends)
-      - echo Building shared packages...
-      - cd packages/http && npm run build && cd ../..
-      - cd packages/design-system && npm run build && cd ../..
-
-      # Build frontends in parallel
-      - echo Building frontends...
-      - (cd apps/clinic-dashboard && npm run build) &
-      - CLINIC_PID=$!
-      - (cd apps/patient-portal && npm run build) &
-      - PATIENT_PID=$!
-      - (cd apps/admin-portal && npm run build) &
-      - ADMIN_PID=$!
-
-      # Wait for frontend builds
-      - wait $CLINIC_PID
-      - wait $PATIENT_PID
-      - wait $ADMIN_PID
-
-      # Wait for Docker build to complete
-      - echo Waiting for Docker build...
-      - wait $DOCKER_PID
-
-      # Run database migrations using .NET 10 Docker image
-      - echo Running database migrations...
+      # Start Docker build in background if backend changed
       - |
-        DB_SECRET=$(aws secretsmanager get-secret-value --secret-id qivr/production/database --query SecretString --output text)
-        DB_HOST=$(echo $DB_SECRET | jq -r '.host')
-        DB_USER=$(echo $DB_SECRET | jq -r '.username')
-        DB_PASS=$(echo $DB_SECRET | jq -r '.password')
-        DB_NAME=$(echo $DB_SECRET | jq -r '.database')
-        docker run --rm --platform linux/amd64 \
-          -e "ConnectionStrings__DefaultConnection=Host=$DB_HOST;Database=$DB_NAME;Username=$DB_USER;Password=$DB_PASS" \
-          -v $(pwd)/backend:/app \
-          -w /app \
-          mcr.microsoft.com/dotnet/sdk:10.0-preview-alpine \
-          sh -c "dotnet tool restore && dotnet ef database update --project Qivr.Infrastructure --startup-project Qivr.Api" \
-          || echo "Migration completed or no pending migrations"
+        if [ "$BUILD_BACKEND" = "true" ]; then
+          echo "Building Docker image..."
+          docker buildx build --platform linux/amd64 -t $REPOSITORY_URI:$IMAGE_TAG -t $REPOSITORY_URI:latest --push ./backend &
+          DOCKER_PID=$!
+        else
+          echo "Skipping backend build - no changes"
+          DOCKER_PID=""
+        fi
+
+      # Only install deps if any frontend needs building
+      - |
+        if [ "$BUILD_CLINIC" = "true" ] || [ "$BUILD_PATIENT" = "true" ] || [ "$BUILD_ADMIN" = "true" ] || [ "$BUILD_PARTNER" = "true" ]; then
+          echo "Installing Node.js dependencies..."
+          npm ci --legacy-peer-deps 2>/dev/null || npm install --legacy-peer-deps
+          echo "Building shared packages..."
+          cd packages/http && npm run build && cd ../..
+          cd packages/design-system && npm run build && cd ../..
+        fi
+
+      # Build only changed frontends in parallel
+      - |
+        PIDS=""
+        if [ "$BUILD_CLINIC" = "true" ]; then
+          echo "Building clinic-dashboard..."
+          (cd apps/clinic-dashboard && npm run build) &
+          PIDS="$PIDS $!"
+        fi
+        if [ "$BUILD_PATIENT" = "true" ]; then
+          echo "Building patient-portal..."
+          (cd apps/patient-portal && npm run build) &
+          PIDS="$PIDS $!"
+        fi
+        if [ "$BUILD_ADMIN" = "true" ]; then
+          echo "Building admin-portal..."
+          (cd apps/admin-portal && npm run build) &
+          PIDS="$PIDS $!"
+        fi
+        if [ "$BUILD_PARTNER" = "true" ]; then
+          echo "Building partner-portal..."
+          (cd apps/partner-portal && npm run build) &
+          PIDS="$PIDS $!"
+        fi
+        for pid in $PIDS; do wait $pid; done
+
+      # Wait for Docker build if it was started
+      - |
+        if [ -n "$DOCKER_PID" ]; then
+          echo "Waiting for Docker build..."
+          wait $DOCKER_PID
+        fi
+
+      # Run migrations only if backend changed
+      - |
+        if [ "$BUILD_BACKEND" = "true" ]; then
+          echo "Running database migrations..."
+          DB_SECRET=$(aws secretsmanager get-secret-value --secret-id qivr/production/database --query SecretString --output text)
+          DB_HOST=$(echo $DB_SECRET | jq -r '.host')
+          DB_USER=$(echo $DB_SECRET | jq -r '.username')
+          DB_PASS=$(echo $DB_SECRET | jq -r '.password')
+          DB_NAME=$(echo $DB_SECRET | jq -r '.database')
+          docker run --rm --platform linux/amd64 \
+            -e "ConnectionStrings__DefaultConnection=Host=$DB_HOST;Database=$DB_NAME;Username=$DB_USER;Password=$DB_PASS" \
+            -v $(pwd)/backend:/app \
+            -w /app \
+            mcr.microsoft.com/dotnet/sdk:10.0-preview-alpine \
+            sh -c "dotnet tool restore && dotnet ef database update --project Qivr.Infrastructure --startup-project Qivr.Api" \
+            || echo "Migration completed or no pending migrations"
+        fi
 
   post_build:
     commands:
       - echo Build completed on `date`
 
-      # Deploy frontends to S3 in parallel
-      - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION &
-      - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION &
-      - aws s3 sync apps/admin-portal/dist/ s3://qivr-admin-portal --delete --region $AWS_DEFAULT_REGION &
-      - wait
+      # Deploy only changed frontends
+      - |
+        if [ "$BUILD_CLINIC" = "true" ]; then
+          echo "Deploying clinic-dashboard..."
+          aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION &
+        fi
+        if [ "$BUILD_PATIENT" = "true" ]; then
+          echo "Deploying patient-portal..."
+          aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION &
+        fi
+        if [ "$BUILD_ADMIN" = "true" ]; then
+          echo "Deploying admin-portal..."
+          aws s3 sync apps/admin-portal/dist/ s3://qivr-admin-portal --delete --region $AWS_DEFAULT_REGION &
+        fi
+        if [ "$BUILD_PARTNER" = "true" ]; then
+          echo "Deploying partner-portal..."
+          aws s3 sync apps/partner-portal/dist/ s3://qivr-partner-portal --delete --region $AWS_DEFAULT_REGION &
+        fi
+        wait
 
-      # Invalidate CloudFront caches in parallel
-      - aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*" &
-      - aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*" &
-      - aws cloudfront create-invalidation --distribution-id E30RX4A147QBCE --paths "/*" &
+      # Invalidate only changed CloudFront distributions
+      - |
+        if [ "$BUILD_CLINIC" = "true" ]; then
+          aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*" &
+        fi
+        if [ "$BUILD_PATIENT" = "true" ]; then
+          aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*" &
+        fi
+        if [ "$BUILD_ADMIN" = "true" ]; then
+          aws cloudfront create-invalidation --distribution-id E30RX4A147QBCE --paths "/*" &
+        fi
+        if [ "$BUILD_PARTNER" = "true" ]; then
+          aws cloudfront create-invalidation --distribution-id E3TORP1KMGHC6H --paths "/*" &
+        fi
 
-      # Update ECS service
-      - sed "s|IMAGE_URI_PLACEHOLDER|$REPOSITORY_URI:$IMAGE_TAG|g" task-definition-template.json > task-definition-new.json
-      - NEW_TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://task-definition-new.json --query 'taskDefinition.taskDefinitionArn' --output text)
-      - aws ecs update-service --cluster qivr_cluster --service qivr-api --task-definition $NEW_TASK_DEF --force-new-deployment
-      - printf '[{"name":"qivr-api","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
-      - wait
+      # Update ECS service only if backend changed
+      - |
+        if [ "$BUILD_BACKEND" = "true" ]; then
+          echo "Updating ECS service..."
+          sed "s|IMAGE_URI_PLACEHOLDER|$REPOSITORY_URI:$IMAGE_TAG|g" task-definition-template.json > task-definition-new.json
+          NEW_TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://task-definition-new.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          aws ecs update-service --cluster qivr_cluster --service qivr-api --task-definition $NEW_TASK_DEF --force-new-deployment
+          printf '[{"name":"qivr-api","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+        else
+          echo '[]' > imagedefinitions.json
+        fi
+        wait
+
+      # Store successful build commit for next comparison
+      - aws ssm put-parameter --name /qivr/last-successful-build --value $CODEBUILD_RESOLVED_SOURCE_VERSION --type String --overwrite
 
 artifacts:
   files:

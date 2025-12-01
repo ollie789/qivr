@@ -19,21 +19,38 @@ public class DeviceManagementController : ControllerBase
         _db = db;
     }
 
-    // For demo, get partner ID from a claim or header
-    private Guid GetPartnerId()
+    /// <summary>
+    /// Get partner ID from JWT claims or X-Partner-Id header.
+    /// Returns null if no valid partner ID can be determined.
+    /// </summary>
+    private Guid? GetPartnerId()
     {
-        var partnerIdClaim = User.FindFirst("partner_id")?.Value;
+        // Try JWT claim first (production auth)
+        var partnerIdClaim = User.FindFirst("partner_id")?.Value
+            ?? User.FindFirst("custom:partner_id")?.Value;
         if (Guid.TryParse(partnerIdClaim, out var partnerId))
             return partnerId;
 
-        // Fallback for demo - get from header or use first partner
+        // Fallback to header for development/testing
         var headerPartnerId = Request.Headers["X-Partner-Id"].FirstOrDefault();
         if (Guid.TryParse(headerPartnerId, out var headerParsedId))
             return headerParsedId;
 
-        // Demo fallback
-        var partner = _db.Set<ResearchPartner>().FirstOrDefault();
-        return partner?.Id ?? Guid.Empty;
+        // No valid partner ID - return null (caller must handle)
+        return null;
+    }
+
+    /// <summary>
+    /// Get partner ID or return 401 Unauthorized
+    /// </summary>
+    private ActionResult<Guid> RequirePartnerId()
+    {
+        var partnerId = GetPartnerId();
+        if (partnerId == null)
+        {
+            return Unauthorized(new { message = "Partner authentication required. Please provide a valid partner_id claim or X-Partner-Id header." });
+        }
+        return partnerId.Value;
     }
 
     /// <summary>
@@ -43,9 +60,11 @@ public class DeviceManagementController : ControllerBase
     public async Task<IActionResult> GetDevices([FromQuery] bool includeInactive = false)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var query = _db.Set<MedicalDevice>()
-            .Where(d => d.PartnerId == partnerId);
+            .Where(d => d.PartnerId == partnerId.Value);
 
         if (!includeInactive)
             query = query.Where(d => d.IsActive);
@@ -79,9 +98,11 @@ public class DeviceManagementController : ControllerBase
     public async Task<IActionResult> GetDevice(Guid deviceId)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var device = await _db.Set<MedicalDevice>()
-            .Where(d => d.Id == deviceId && d.PartnerId == partnerId)
+            .Where(d => d.Id == deviceId && d.PartnerId == partnerId.Value)
             .Select(d => new DeviceDetail
             {
                 Id = d.Id,
@@ -112,10 +133,12 @@ public class DeviceManagementController : ControllerBase
     public async Task<IActionResult> CreateDevice([FromBody] CreateDeviceRequest request)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         // Check for duplicate device code
         var existingCode = await _db.Set<MedicalDevice>()
-            .AnyAsync(d => d.PartnerId == partnerId && d.DeviceCode == request.DeviceCode);
+            .AnyAsync(d => d.PartnerId == partnerId.Value && d.DeviceCode == request.DeviceCode);
 
         if (existingCode)
             return BadRequest(new { error = "A device with this code already exists" });
@@ -123,7 +146,7 @@ public class DeviceManagementController : ControllerBase
         var device = new MedicalDevice
         {
             Id = Guid.NewGuid(),
-            PartnerId = partnerId,
+            PartnerId = partnerId.Value,
             Name = request.Name,
             DeviceCode = request.DeviceCode,
             Category = request.Category,
@@ -152,9 +175,11 @@ public class DeviceManagementController : ControllerBase
     public async Task<IActionResult> UpdateDevice(Guid deviceId, [FromBody] UpdateDeviceRequest request)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var device = await _db.Set<MedicalDevice>()
-            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == partnerId);
+            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == partnerId.Value);
 
         if (device == null)
             return NotFound(new { error = "Device not found" });
@@ -163,7 +188,7 @@ public class DeviceManagementController : ControllerBase
         if (request.DeviceCode != device.DeviceCode)
         {
             var existingCode = await _db.Set<MedicalDevice>()
-                .AnyAsync(d => d.PartnerId == partnerId && d.DeviceCode == request.DeviceCode && d.Id != deviceId);
+                .AnyAsync(d => d.PartnerId == partnerId.Value && d.DeviceCode == request.DeviceCode && d.Id != deviceId);
 
             if (existingCode)
                 return BadRequest(new { error = "A device with this code already exists" });
@@ -189,9 +214,11 @@ public class DeviceManagementController : ControllerBase
     public async Task<IActionResult> ArchiveDevice(Guid deviceId)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var device = await _db.Set<MedicalDevice>()
-            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == partnerId);
+            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == partnerId.Value);
 
         if (device == null)
             return NotFound(new { error = "Device not found" });
@@ -211,9 +238,11 @@ public class DeviceManagementController : ControllerBase
     public async Task<IActionResult> RestoreDevice(Guid deviceId)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var device = await _db.Set<MedicalDevice>()
-            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == partnerId);
+            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == partnerId.Value);
 
         if (device == null)
             return NotFound(new { error = "Device not found" });
@@ -233,9 +262,11 @@ public class DeviceManagementController : ControllerBase
     public async Task<IActionResult> BulkCreateDevices([FromBody] BulkCreateRequest request)
     {
         var partnerId = GetPartnerId();
+        if (partnerId == null)
+            return Unauthorized(new { message = "Partner authentication required" });
 
         var existingCodes = await _db.Set<MedicalDevice>()
-            .Where(d => d.PartnerId == partnerId)
+            .Where(d => d.PartnerId == partnerId.Value)
             .Select(d => d.DeviceCode)
             .ToListAsync();
 
@@ -253,7 +284,7 @@ public class DeviceManagementController : ControllerBase
             var device = new MedicalDevice
             {
                 Id = Guid.NewGuid(),
-                PartnerId = partnerId,
+                PartnerId = partnerId.Value,
                 Name = item.Name,
                 DeviceCode = item.DeviceCode,
                 Category = item.Category,
