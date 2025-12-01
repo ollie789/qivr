@@ -598,9 +598,10 @@ public class MedicalRecordsController : BaseApiController
 
     private async Task<MedicalSummaryDto> BuildMedicalSummaryAsync(Guid tenantId, Guid patientId, CancellationToken cancellationToken)
     {
+        // SECURITY: Use tenant-filtered query to prevent cross-tenant data access
         var patient = await _context.Users
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == patientId, cancellationToken);
+            .Where(u => u.TenantId == tenantId && u.Id == patientId)
+            .FirstOrDefaultAsync(cancellationToken);
 
         var now = DateTime.UtcNow;
         var upcomingAppointments = await _context.Appointments
