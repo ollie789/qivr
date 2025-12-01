@@ -55,6 +55,11 @@ const featureDefinitions = [
     name: "HIPAA Audit Logs",
     description: "Detailed access logging for compliance",
   },
+  {
+    key: "researchPartnerDataSharing",
+    name: "Research Partner Data Sharing",
+    description: "Allow sharing de-identified data with research partners",
+  },
 ];
 
 const planDefaults: Record<string, Record<string, boolean>> = {
@@ -66,6 +71,7 @@ const planDefaults: Record<string, Record<string, boolean>> = {
     apiAccess: false,
     customBranding: false,
     hipaaAuditLogs: false,
+    researchPartnerDataSharing: false,
   },
   professional: {
     aiTriage: true,
@@ -75,6 +81,7 @@ const planDefaults: Record<string, Record<string, boolean>> = {
     apiAccess: false,
     customBranding: false,
     hipaaAuditLogs: true,
+    researchPartnerDataSharing: false,
   },
   enterprise: {
     aiTriage: true,
@@ -84,6 +91,7 @@ const planDefaults: Record<string, Record<string, boolean>> = {
     apiAccess: true,
     customBranding: true,
     hipaaAuditLogs: true,
+    researchPartnerDataSharing: true,
   },
 };
 

@@ -109,22 +109,26 @@ public class AdminTenantsController : ControllerBase
         "starter" => new Dictionary<string, bool>
         {
             ["aiTriage"] = false, ["aiTreatmentPlans"] = false, ["documentOcr"] = true,
-            ["smsReminders"] = false, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = false
+            ["smsReminders"] = false, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = false,
+            ["researchPartnerDataSharing"] = false
         },
         "professional" => new Dictionary<string, bool>
         {
             ["aiTriage"] = true, ["aiTreatmentPlans"] = true, ["documentOcr"] = true,
-            ["smsReminders"] = true, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = true
+            ["smsReminders"] = true, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = true,
+            ["researchPartnerDataSharing"] = false
         },
         "enterprise" => new Dictionary<string, bool>
         {
             ["aiTriage"] = true, ["aiTreatmentPlans"] = true, ["documentOcr"] = true,
-            ["smsReminders"] = true, ["apiAccess"] = true, ["customBranding"] = true, ["hipaaAuditLogs"] = true
+            ["smsReminders"] = true, ["apiAccess"] = true, ["customBranding"] = true, ["hipaaAuditLogs"] = true,
+            ["researchPartnerDataSharing"] = true
         },
         _ => new Dictionary<string, bool>
         {
             ["aiTriage"] = false, ["aiTreatmentPlans"] = false, ["documentOcr"] = true,
-            ["smsReminders"] = false, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = false
+            ["smsReminders"] = false, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = false,
+            ["researchPartnerDataSharing"] = false
         }
     };
 

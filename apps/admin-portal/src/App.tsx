@@ -16,6 +16,10 @@ const Operations = lazy(() => import("./pages/Operations"));
 const Insights = lazy(() => import("./pages/Insights"));
 const Support = lazy(() => import("./pages/Support"));
 const ExternalApi = lazy(() => import("./pages/ExternalApi"));
+const ResearchPartners = lazy(() => import("./pages/ResearchPartners"));
+const ResearchPartnerDetail = lazy(
+  () => import("./pages/ResearchPartnerDetail"),
+);
 
 const Loading = () => (
   <Box
@@ -90,6 +94,11 @@ export default function App() {
             <Route path="insights" element={<Insights />} />
             <Route path="support" element={<Support />} />
             <Route path="external-api" element={<ExternalApi />} />
+            <Route path="research-partners" element={<ResearchPartners />} />
+            <Route
+              path="research-partners/:id"
+              element={<ResearchPartnerDetail />}
+            />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
