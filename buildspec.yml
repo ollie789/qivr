@@ -13,21 +13,40 @@ phases:
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/qivr-api
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
-      # Enable Buildx for multi-arch builds
-      - echo Enabling Docker Buildx...
-      - docker buildx version || true
-      - docker buildx create --name multi --use || docker buildx use multi
+      - docker buildx create --name multi --use 2>/dev/null || docker buildx use multi
       - docker buildx inspect --bootstrap
 
   build:
     commands:
       - echo Build started on `date`
 
-      # Build and push multi-arch backend image
-      - echo Building multi-arch Docker image and pushing to ECR...
-      - docker buildx build --platform linux/amd64 -t $REPOSITORY_URI:$IMAGE_TAG -t $REPOSITORY_URI:latest --push ./backend
+      # Start Docker build in background (takes longest)
+      - echo Building Docker image...
+      - docker buildx build --platform linux/amd64 -t $REPOSITORY_URI:$IMAGE_TAG -t $REPOSITORY_URI:latest --push ./backend &
+      - DOCKER_PID=$!
 
-      # Run database migrations
+      # While Docker builds, install npm deps and build frontends in parallel
+      - echo Installing Node.js dependencies...
+      - npm ci --legacy-peer-deps 2>/dev/null || npm install --legacy-peer-deps
+
+      - echo Building packages and frontends...
+      - npm run build:packages --if-present || (cd packages/http && npm run build && cd ../.. && cd packages/design-system && npm run build && cd ../..)
+      
+      # Build frontends in parallel
+      - cd apps/clinic-dashboard && npm run build &
+      - CLINIC_PID=$!
+      - cd apps/patient-portal && npm run build &
+      - PATIENT_PID=$!
+      
+      # Wait for frontend builds
+      - wait $CLINIC_PID
+      - wait $PATIENT_PID
+      
+      # Wait for Docker build to complete
+      - echo Waiting for Docker build...
+      - wait $DOCKER_PID
+
+      # Run database migrations (after Docker push completes)
       - echo Running database migrations...
       - |
         DB_SECRET=$(aws secretsmanager get-secret-value --secret-id qivr/production/database --query SecretString --output text)
@@ -37,65 +56,29 @@ phases:
         DB_NAME=$(echo $DB_SECRET | jq -r '.database')
         export ConnectionStrings__DefaultConnection="Host=$DB_HOST;Database=$DB_NAME;Username=$DB_USER;Password=$DB_PASS"
         cd backend/Qivr.Api
-        dotnet tool restore || dotnet tool install --global dotnet-ef
-        dotnet ef database update --project ../Qivr.Infrastructure --startup-project . --verbose || echo "Migration completed or no pending migrations"
+        dotnet tool restore 2>/dev/null || dotnet tool install --global dotnet-ef
+        dotnet ef database update --project ../Qivr.Infrastructure --startup-project . || echo "Migration completed or no pending migrations"
         cd ../..
-
-      # Build frontends
-      - echo Installing Node.js dependencies...
-      - rm -f package-lock.json
-      - npm install --legacy-peer-deps
-
-      - echo Building http package...
-      - cd packages/http
-      - npm run build
-      - cd ../..
-
-      - echo Building design system...
-      - cd packages/design-system
-      - npm run build
-      - cd ../..
-
-      - echo Building clinic dashboard...
-      - cd apps/clinic-dashboard
-      - npm run build
-      - cd ../..
-
-      - echo Building patient portal...
-      - cd apps/patient-portal
-      - npm run build
-      - cd ../..
 
   post_build:
     commands:
       - echo Build completed on `date`
 
-      # Deploy frontends to S3
-      - echo Deploying clinic dashboard to S3...
-      - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION
+      # Deploy frontends to S3 in parallel
+      - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION &
+      - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION &
+      - wait
 
-      - echo Deploying patient portal to S3...
-      - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION
+      # Invalidate CloudFront caches in parallel
+      - aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*" &
+      - aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*" &
 
-      - echo Invalidating CloudFront caches...
-      - aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
-      - aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*"
-
-      # Create new task definition
-      - echo Creating new task definition...
+      # Update ECS service
       - sed "s|IMAGE_URI_PLACEHOLDER|$REPOSITORY_URI:$IMAGE_TAG|g" task-definition-template.json > task-definition-new.json
-
-      # Register new task definition
-      - echo Registering new task definition...
       - NEW_TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://task-definition-new.json --query 'taskDefinition.taskDefinitionArn' --output text)
-      - echo "New task definition:" $NEW_TASK_DEF
-
-      # Update service with new task definition
-      - echo Updating ECS service...
       - aws ecs update-service --cluster qivr_cluster --service qivr-api --task-definition $NEW_TASK_DEF --force-new-deployment
-
-      - echo Writing image definitions file...
       - printf '[{"name":"qivr-api","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - wait
 
 artifacts:
   files:
