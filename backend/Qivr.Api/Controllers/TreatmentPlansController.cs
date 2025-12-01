@@ -343,7 +343,9 @@ public class TreatmentPlansController : BaseApiController
         }
         catch (TreatmentPlanGenerationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogError(ex, "Treatment plan generation failed for patient {PatientId}", request.PatientId);
+            var errorDetail = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(new { error = $"Failed to generate treatment plan: {errorDetail}" });
         }
     }
 

@@ -223,9 +223,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     onError: (error: any) => {
       setIsGenerating(false);
       console.error("Treatment plan generation failed:", error);
-      enqueueSnackbar(error?.response?.data?.message || error?.message || "Failed to generate treatment plan. Please try again.", {
-        variant: "error",
-      });
+      const errorMessage = error?.response?.data?.error
+        || error?.response?.data?.message
+        || error?.message
+        || "Failed to generate treatment plan. The AI service may be unavailable.";
+      enqueueSnackbar(errorMessage, { variant: "error" });
     },
   });
 
