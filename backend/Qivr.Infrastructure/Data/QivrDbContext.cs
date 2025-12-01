@@ -1129,6 +1129,12 @@ public class QivrDbContext : DbContext
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                     v => JsonSerializer.Deserialize<List<DailyCheckIn>>(v, (JsonSerializerOptions?)null) ?? new List<DailyCheckIn>());
 
+            // Research partner device tracking - separate from PatientDeviceUsage.TreatmentPlanId
+            entity.HasOne(e => e.LinkedDeviceUsage)
+                .WithMany()
+                .HasForeignKey(e => e.LinkedDeviceUsageId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasQueryFilter(e => e.DeletedAt == null && e.TenantId == GetTenantId());
         });
 

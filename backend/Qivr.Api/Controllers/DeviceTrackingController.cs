@@ -64,9 +64,9 @@ public class DeviceTrackingController : ControllerBase
             return Ok(new { devices = Array.Empty<object>(), message = "No affiliated research partners" });
         }
 
-        var query = _context.MedicalDevices
-            .Where(d => affiliatedPartnerIds.Contains(d.PartnerId) && d.IsActive)
-            .Include(d => d.Partner);
+        IQueryable<MedicalDevice> query = _context.MedicalDevices
+            .Include(d => d.Partner)
+            .Where(d => affiliatedPartnerIds.Contains(d.PartnerId) && d.IsActive);
 
         if (!string.IsNullOrEmpty(category))
             query = query.Where(d => d.Category == category);

@@ -108,6 +108,14 @@ public class TreatmentPlan : DeletableEntity
     // === NEW: Approval Workflow ===
     public DateTime? ApprovedAt { get; set; }
     public Guid? ApprovedBy { get; set; }
+
+    // === NEW: Research Partner Device Tracking ===
+    /// <summary>
+    /// Link to device usage record if this treatment plan is associated with a medical device
+    /// (e.g., post-surgery rehab for a spinal implant)
+    /// </summary>
+    public Guid? LinkedDeviceUsageId { get; set; }
+    public virtual PatientDeviceUsage? LinkedDeviceUsage { get; set; }
 }
 
 #endregion

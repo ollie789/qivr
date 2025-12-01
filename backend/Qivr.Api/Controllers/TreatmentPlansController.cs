@@ -191,13 +191,39 @@ public class TreatmentPlansController : BaseApiController
                 Status = TreatmentPlanStatus.Active,
                 Sessions = request.Sessions ?? new(),
                 Exercises = request.Exercises ?? new(),
-                Phases = new(),
+                Phases = request.Phases ?? new(),
                 Milestones = new(),
-                Notes = BuildNotes(request)
+                Notes = BuildNotes(request),
+                // AI generation metadata
+                AiGeneratedSummary = request.AiGeneratedSummary,
+                AiRationale = request.AiRationale,
+                AiConfidence = request.AiConfidence,
+                AiGeneratedAt = request.AiGeneratedSummary != null ? DateTime.UtcNow : null,
+                SourceEvaluationId = request.SourceEvaluationId
             };
 
             _context.TreatmentPlans.Add(plan);
             await _context.SaveChangesAsync();
+
+            // If a device was linked, find/create the device usage record and link it
+            if (request.LinkedDeviceId.HasValue)
+            {
+                // Find the most recent device usage for this patient with this device
+                var deviceUsage = await _context.PatientDeviceUsages
+                    .Where(u => u.PatientId == request.PatientId
+                        && u.DeviceId == request.LinkedDeviceId.Value
+                        && u.TenantId == tenantId)
+                    .OrderByDescending(u => u.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (deviceUsage != null)
+                {
+                    // Link the treatment plan to the device usage
+                    deviceUsage.TreatmentPlanId = plan.Id;
+                    plan.LinkedDeviceUsageId = deviceUsage.Id;
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             return CreatedAtAction(nameof(Get), new { id = plan.Id }, plan);
         }
@@ -1164,6 +1190,16 @@ public class CreateTreatmentPlanRequest
     public List<TreatmentSession>? Sessions { get; set; }
     public List<Exercise>? Exercises { get; set; }
     public string? Notes { get; set; }
+
+    // Phase-based fields (for AI-generated plans)
+    public List<TreatmentPhase>? Phases { get; set; }
+    public string? AiGeneratedSummary { get; set; }
+    public string? AiRationale { get; set; }
+    public double? AiConfidence { get; set; }
+    public Guid? SourceEvaluationId { get; set; }
+
+    // Research partner device tracking
+    public Guid? LinkedDeviceId { get; set; }
 }
 
 public class UpdateTreatmentPlanRequest

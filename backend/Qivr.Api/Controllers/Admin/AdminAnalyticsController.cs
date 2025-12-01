@@ -50,8 +50,8 @@ public class AdminAnalyticsController : ControllerBase
                 Status = t.Status.ToString().ToLower(),
                 Plan = t.Plan,
                 t.CreatedAt,
-                PatientCount = _db.Users.Count(u => u.TenantId == t.Id && u.UserType == Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null),
-                StaffCount = _db.Users.Count(u => u.TenantId == t.Id && u.UserType != Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null)
+                PatientCount = t.Users.Count(u => u.UserType == Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null),
+                StaffCount = t.Users.Count(u => u.UserType != Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null)
             })
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(ct);
@@ -160,8 +160,8 @@ public class AdminAnalyticsController : ControllerBase
             {
                 TenantId = t.Id,
                 TenantName = t.Name,
-                Appointments = _db.Appointments.Count(a => a.TenantId == t.Id && a.CreatedAt >= since),
-                Patients = _db.Users.Count(u => u.TenantId == t.Id && u.UserType == Qivr.Core.Entities.UserType.Patient && u.CreatedAt >= since)
+                Appointments = t.Appointments.Count(a => a.CreatedAt >= since),
+                Patients = t.Users.Count(u => u.UserType == Qivr.Core.Entities.UserType.Patient && u.CreatedAt >= since)
             })
             .ToListAsync(ct);
 

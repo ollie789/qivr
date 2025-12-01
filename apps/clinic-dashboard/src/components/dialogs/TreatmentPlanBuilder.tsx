@@ -40,9 +40,15 @@ import {
   Callout,
   auraTokens,
 } from "@qivr/design-system";
-import { treatmentPlansApi, exerciseLibraryApi } from "../../lib/api";
+import {
+  treatmentPlansApi,
+  exerciseLibraryApi,
+  deviceTrackingApi,
+  AvailableDevice,
+} from "../../lib/api";
 import { patientApi } from "../../services/patientApi";
 import { intakeApi } from "../../services/intakeApi";
+import { DeviceSelector } from "../devices/DeviceSelector";
 
 export interface BulkPatient {
   id: string;
@@ -139,6 +145,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   const [phases, setPhases] = useState<Phase[]>([]);
   const [generatedPlan, setGeneratedPlan] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<AvailableDevice | null>(
+    null,
+  );
 
   // Queries
   const { data: patientsData } = useQuery({
@@ -167,7 +176,12 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   // Steps based on mode
   const steps = useMemo(() => {
     if (isBulkMode) {
-      return ["Review Patients", "AI Generation Settings", "Processing", "Complete"];
+      return [
+        "Review Patients",
+        "AI Generation Settings",
+        "Processing",
+        "Complete",
+      ];
     }
     if (!initialPatient) {
       return creationMode === "ai"
@@ -208,7 +222,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 difficulty: e.difficulty,
               })) || [],
             sessionsPerWeek: p.sessionsPerWeek || 2,
-          }))
+          })),
         );
       }
       setBasicInfo((prev) => ({
@@ -223,10 +237,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     onError: (error: any) => {
       setIsGenerating(false);
       console.error("Treatment plan generation failed:", error);
-      const errorMessage = error?.response?.data?.error
-        || error?.response?.data?.message
-        || error?.message
-        || "Failed to generate treatment plan. The AI service may be unavailable.";
+      const errorMessage =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to generate treatment plan. The AI service may be unavailable.";
       enqueueSnackbar(errorMessage, { variant: "error" });
     },
   });
@@ -276,17 +291,23 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
           patientId: currentPatient.id,
           preferredDurationWeeks: basicInfo.durationWeeks,
           sessionsPerWeek: basicInfo.sessionsPerWeek,
-          focusAreas: basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
-          contraindications: basicInfo.contraindications.length > 0 ? basicInfo.contraindications : undefined,
+          focusAreas:
+            basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
+          contraindications:
+            basicInfo.contraindications.length > 0
+              ? basicInfo.contraindications
+              : undefined,
         });
 
         // Create the plan
         await treatmentPlansApi.create({
           patientId: currentPatient.id,
           title: generatedPlan.title || `Treatment Plan for ${patientName}`,
-          diagnosis: generatedPlan.diagnosis || currentPatient.reasonForVisit || "",
+          diagnosis:
+            generatedPlan.diagnosis || currentPatient.reasonForVisit || "",
           startDate: new Date().toISOString(),
-          durationWeeks: generatedPlan.totalDurationWeeks || basicInfo.durationWeeks,
+          durationWeeks:
+            generatedPlan.totalDurationWeeks || basicInfo.durationWeeks,
           phases: generatedPlan.phases || [],
           aiGeneratedSummary: generatedPlan.summary,
           aiRationale: generatedPlan.rationale,
@@ -294,10 +315,16 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         });
 
         completed.push(patientName);
-        setBulkProgress((prev) => ({ ...prev, completed: [...prev.completed, patientName] }));
-      } catch (error) {
+        setBulkProgress((prev) => ({
+          ...prev,
+          completed: [...prev.completed, patientName],
+        }));
+      } catch {
         failed.push(patientName);
-        setBulkProgress((prev) => ({ ...prev, failed: [...prev.failed, patientName] }));
+        setBulkProgress((prev) => ({
+          ...prev,
+          failed: [...prev.failed, patientName],
+        }));
       }
     }
 
@@ -305,14 +332,20 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
 
     if (completed.length > 0) {
-      enqueueSnackbar(`Created ${completed.length} treatment plan${completed.length !== 1 ? "s" : ""} successfully!`, {
-        variant: "success",
-      });
+      enqueueSnackbar(
+        `Created ${completed.length} treatment plan${completed.length !== 1 ? "s" : ""} successfully!`,
+        {
+          variant: "success",
+        },
+      );
     }
     if (failed.length > 0) {
-      enqueueSnackbar(`Failed to create ${failed.length} plan${failed.length !== 1 ? "s" : ""}`, {
-        variant: "error",
-      });
+      enqueueSnackbar(
+        `Failed to create ${failed.length} plan${failed.length !== 1 ? "s" : ""}`,
+        {
+          variant: "error",
+        },
+      );
     }
 
     // Move to complete step
@@ -335,6 +368,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     setPhases([]);
     setGeneratedPlan(null);
     setIsGenerating(false);
+    setSelectedDevice(null);
     setBulkProgress({ current: 0, total: 0, completed: [], failed: [] });
     setIsBulkProcessing(false);
     onClose();
@@ -357,24 +391,49 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       evaluationId: evaluationId,
       preferredDurationWeeks: basicInfo.durationWeeks,
       sessionsPerWeek: basicInfo.sessionsPerWeek,
-      focusAreas: basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
-      contraindications: basicInfo.contraindications.length > 0 ? basicInfo.contraindications : undefined,
+      focusAreas:
+        basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
+      contraindications:
+        basicInfo.contraindications.length > 0
+          ? basicInfo.contraindications
+          : undefined,
     });
   };
 
-  const handleCreatePlan = () => {
+  const handleCreatePlan = async () => {
     if (!selectedPatient) return;
+
+    // Record device usage if a device was selected
+    if (selectedDevice) {
+      try {
+        await deviceTrackingApi.recordUsage({
+          deviceId: selectedDevice.id,
+          patientId: selectedPatient.id,
+          procedureType: basicInfo.diagnosis || undefined,
+          notes: `Linked to treatment plan: ${basicInfo.title || "Treatment Plan"}`,
+        });
+      } catch (error) {
+        console.error("Failed to record device usage:", error);
+        // Continue creating the plan even if device recording fails
+      }
+    }
+
     createMutation.mutate({
       patientId: selectedPatient.id,
-      title: basicInfo.title || `Treatment Plan for ${selectedPatient.firstName} ${selectedPatient.lastName}`,
+      title:
+        basicInfo.title ||
+        `Treatment Plan for ${selectedPatient.firstName} ${selectedPatient.lastName}`,
       diagnosis: basicInfo.diagnosis,
-      startDate: basicInfo.startDate ? new Date(basicInfo.startDate).toISOString() : new Date().toISOString(),
+      startDate: basicInfo.startDate
+        ? new Date(basicInfo.startDate).toISOString()
+        : new Date().toISOString(),
       durationWeeks: basicInfo.durationWeeks,
       phases: phases,
       aiGeneratedSummary: generatedPlan?.summary,
       aiRationale: generatedPlan?.rationale,
       aiConfidence: generatedPlan?.confidence,
       sourceEvaluationId: evaluationId,
+      linkedDeviceId: selectedDevice?.id,
     });
   };
 
@@ -399,7 +458,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   };
 
   const handleUpdatePhase = (index: number, updates: Partial<Phase>) => {
-    setPhases(prev => {
+    setPhases((prev) => {
       const updated = [...prev];
       if (updated[index]) {
         updated[index] = { ...updated[index], ...updates };
@@ -409,25 +468,30 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   };
 
   const handleAddExerciseToPhase = (phaseIndex: number, exercise: Exercise) => {
-    setPhases(prev => {
+    setPhases((prev) => {
       const updated = [...prev];
       if (updated[phaseIndex]) {
         updated[phaseIndex] = {
           ...updated[phaseIndex],
-          exercises: [...updated[phaseIndex].exercises, exercise]
+          exercises: [...updated[phaseIndex].exercises, exercise],
         };
       }
       return updated;
     });
   };
 
-  const handleRemoveExerciseFromPhase = (phaseIndex: number, exerciseIndex: number) => {
-    setPhases(prev => {
+  const handleRemoveExerciseFromPhase = (
+    phaseIndex: number,
+    exerciseIndex: number,
+  ) => {
+    setPhases((prev) => {
       const updated = [...prev];
       if (updated[phaseIndex]) {
         updated[phaseIndex] = {
           ...updated[phaseIndex],
-          exercises: updated[phaseIndex].exercises.filter((_, i) => i !== exerciseIndex)
+          exercises: updated[phaseIndex].exercises.filter(
+            (_, i) => i !== exerciseIndex,
+          ),
         };
       }
       return updated;
@@ -460,7 +524,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       case "AI Generation":
         return !isGenerating;
       case "Basic Info":
-        return !!basicInfo.title && !!basicInfo.startDate && basicInfo.durationWeeks > 0;
+        return (
+          !!basicInfo.title &&
+          !!basicInfo.startDate &&
+          basicInfo.durationWeeks > 0
+        );
       case "Phases & Exercises":
       case "Review & Customize":
         return phases.length > 0 && phases.every((p) => p.exercises.length > 0);
@@ -469,7 +537,17 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       default:
         return true;
     }
-  }, [activeStep, selectedPatient, basicInfo, phases, isGenerating, steps, isBulkMode, bulkPatients, isBulkProcessing]);
+  }, [
+    activeStep,
+    selectedPatient,
+    basicInfo,
+    phases,
+    isGenerating,
+    steps,
+    isBulkMode,
+    bulkPatients,
+    isBulkProcessing,
+  ]);
 
   const handleNext = () => {
     const currentStepName = steps[activeStep];
@@ -511,17 +589,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
           return (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <Typography variant="h6" gutterBottom>
-                Creating Treatment Plans for {bulkPatients.length} Patient{bulkPatients.length !== 1 ? "s" : ""}
+                Creating Treatment Plans for {bulkPatients.length} Patient
+                {bulkPatients.length !== 1 ? "s" : ""}
               </Typography>
               <Callout variant="info">
                 <Typography variant="body2">
-                  AI will generate personalized treatment plans for each patient based on their
-                  medical history, evaluations, and the settings you configure in the next step.
+                  AI will generate personalized treatment plans for each patient
+                  based on their medical history, evaluations, and the settings
+                  you configure in the next step.
                 </Typography>
               </Callout>
               <List dense>
                 {bulkPatients.map((patient, index) => (
-                  <ListItem key={patient.id} sx={{ bgcolor: "action.hover", borderRadius: 1, mb: 0.5 }}>
+                  <ListItem
+                    key={patient.id}
+                    sx={{ bgcolor: "action.hover", borderRadius: 1, mb: 0.5 }}
+                  >
                     <ListItemIcon>
                       <Avatar sx={{ width: 32, height: 32 }}>
                         {patient.firstName.charAt(0)}
@@ -535,7 +618,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                           : patient.appointmentType || "Patient"
                       }
                     />
-                    <Chip label={`#${index + 1}`} size="small" variant="outlined" />
+                    <Chip
+                      label={`#${index + 1}`}
+                      size="small"
+                      variant="outlined"
+                    />
                   </ListItem>
                 ))}
               </List>
@@ -546,8 +633,13 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
           return (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <FormSection title="AI Generation Settings">
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Configure default settings for all plans. AI will adapt each plan to the individual patient.
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  Configure default settings for all plans. AI will adapt each
+                  plan to the individual patient.
                 </Typography>
 
                 <FormRow>
@@ -592,7 +684,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                       {...params}
                       label="Focus Areas (optional)"
                       placeholder="e.g., Lower Back, Shoulder"
-                      helperText="Leave empty to let AI determine based on each patient&apos;s needs"
+                      helperText="Leave empty to let AI determine based on each patient's needs"
                     />
                   )}
                   sx={{ mt: 2 }}
@@ -627,7 +719,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
         case "Processing":
           return (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}
+            >
               <Box sx={{ textAlign: "center" }}>
                 <CircularProgress size={64} />
                 <Typography variant="h6" sx={{ mt: 2 }}>
@@ -646,12 +740,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
               {bulkProgress.completed.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle2" color="success.main" gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    color="success.main"
+                    gutterBottom
+                  >
                     Completed ({bulkProgress.completed.length}):
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {bulkProgress.completed.map((name) => (
-                      <Chip key={name} label={name} size="small" color="success" variant="outlined" />
+                      <Chip
+                        key={name}
+                        label={name}
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                      />
                     ))}
                   </Box>
                 </Box>
@@ -659,12 +763,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
               {bulkProgress.failed.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle2" color="error.main" gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    color="error.main"
+                    gutterBottom
+                  >
                     Failed ({bulkProgress.failed.length}):
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {bulkProgress.failed.map((name) => (
-                      <Chip key={name} label={name} size="small" color="error" variant="outlined" />
+                      <Chip
+                        key={name}
+                        label={name}
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                      />
                     ))}
                   </Box>
                 </Box>
@@ -674,24 +788,42 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
         case "Complete":
           return (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}
+            >
               <Box sx={{ textAlign: "center" }}>
-                <Avatar sx={{ width: 64, height: 64, bgcolor: "success.main", mx: "auto", mb: 2 }}>
+                <Avatar
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    bgcolor: "success.main",
+                    mx: "auto",
+                    mb: 2,
+                  }}
+                >
                   <CheckCircle sx={{ fontSize: 40 }} />
                 </Avatar>
                 <Typography variant="h5" fontWeight={600}>
                   Bulk Creation Complete!
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-                  {bulkProgress.completed.length} plan{bulkProgress.completed.length !== 1 ? "s" : ""} created successfully
-                  {bulkProgress.failed.length > 0 && `, ${bulkProgress.failed.length} failed`}
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  {bulkProgress.completed.length} plan
+                  {bulkProgress.completed.length !== 1 ? "s" : ""} created
+                  successfully
+                  {bulkProgress.failed.length > 0 &&
+                    `, ${bulkProgress.failed.length} failed`}
                 </Typography>
               </Box>
 
               {bulkProgress.completed.length > 0 && (
                 <Callout variant="success">
                   <Typography variant="body2">
-                    <strong>Created plans for:</strong> {bulkProgress.completed.join(", ")}
+                    <strong>Created plans for:</strong>{" "}
+                    {bulkProgress.completed.join(", ")}
                   </Typography>
                 </Callout>
               )}
@@ -699,7 +831,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               {bulkProgress.failed.length > 0 && (
                 <Callout variant="error">
                   <Typography variant="body2">
-                    <strong>Failed for:</strong> {bulkProgress.failed.join(", ")}
+                    <strong>Failed for:</strong>{" "}
+                    {bulkProgress.failed.join(", ")}
                   </Typography>
                   <Typography variant="caption">
                     You can try creating plans for these patients individually.
@@ -744,15 +877,17 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 },
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
+              >
                 <Avatar sx={{ bgcolor: "primary.main" }}>
                   <AIIcon />
                 </Avatar>
                 <Typography variant="h6">AI-Assisted</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
-                Let AI analyze the patient&apos;s evaluation, medical history, and
-                PROM scores to generate a personalized treatment plan with
+                Let AI analyze the patient&apos;s evaluation, medical history,
+                and PROM scores to generate a personalized treatment plan with
                 recommended exercises and phases.
               </Typography>
               <Chip
@@ -778,7 +913,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 },
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
+              >
                 <Avatar sx={{ bgcolor: "grey.600" }}>
                   <ManualIcon />
                 </Avatar>
@@ -794,9 +931,10 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
           {evaluationId && evaluationData && (
             <Callout variant="info">
               <Typography variant="body2">
-                <strong>Evaluation detected:</strong> This plan will be linked to
-                the patient&apos;s recent evaluation, allowing AI to use symptoms,
-                pain maps, and questionnaire responses for better recommendations.
+                <strong>Evaluation detected:</strong> This plan will be linked
+                to the patient&apos;s recent evaluation, allowing AI to use
+                symptoms, pain maps, and questionnaire responses for better
+                recommendations.
               </Typography>
             </Callout>
           )}
@@ -986,6 +1124,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 inputProps={{ min: 1, max: 7 }}
               />
             </FormRow>
+
+            {/* Optional: Link to implanted device for outcome tracking */}
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Link to Medical Device (Optional)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                If this treatment plan is related to an implanted device, select
+                it to track outcomes for research partners.
+              </Typography>
+              <DeviceSelector
+                value={selectedDevice}
+                onChange={setSelectedDevice}
+                showRecent={true}
+              />
+            </Box>
           </FormSection>
         );
 
@@ -1011,7 +1165,13 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               </Callout>
             )}
 
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <Typography variant="h6">Treatment Phases</Typography>
               <Chip
                 icon={<Add />}
@@ -1067,10 +1227,13 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               <Typography variant="subtitle2" color="text.secondary">
                 Plan Details
               </Typography>
-              <Typography variant="body1">{basicInfo.title || "Treatment Plan"}</Typography>
+              <Typography variant="body1">
+                {basicInfo.title || "Treatment Plan"}
+              </Typography>
               <Typography variant="body2" color="text.secondary">
                 {basicInfo.durationWeeks} weeks | {phases.length} phases |{" "}
-                {phases.reduce((acc, p) => acc + p.exercises.length, 0)} exercises
+                {phases.reduce((acc, p) => acc + p.exercises.length, 0)}{" "}
+                exercises
               </Typography>
             </Box>
 
@@ -1089,12 +1252,37 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 {phase.goals.length > 0 && (
                   <Box sx={{ mt: 1 }}>
                     {phase.goals.map((goal, i) => (
-                      <Chip key={i} label={goal} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                      <Chip
+                        key={i}
+                        label={goal}
+                        size="small"
+                        sx={{ mr: 0.5, mb: 0.5 }}
+                      />
                     ))}
                   </Box>
                 )}
               </Box>
             ))}
+
+            {selectedDevice && (
+              <Box
+                sx={{
+                  bgcolor: "primary.50",
+                  borderRadius: 2,
+                  p: 2,
+                  border: "1px solid",
+                  borderColor: "primary.200",
+                }}
+              >
+                <Typography variant="subtitle2" color="text.secondary">
+                  Linked Device (for outcome tracking)
+                </Typography>
+                <Typography variant="body1">{selectedDevice.name}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {selectedDevice.partnerName} | {selectedDevice.deviceCode}
+                </Typography>
+              </Box>
+            )}
 
             {generatedPlan?.rationale && (
               <Callout variant="info">
@@ -1122,13 +1310,37 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     <StepperDialog
       open={open}
       onClose={handleClose}
-      title={isBulkMode ? `Create ${bulkPatients.length} Treatment Plans` : "Create Treatment Plan"}
-      steps={isBulkMode ? steps : (creationMode === null ? ["Select Mode"] : steps)}
-      activeStep={isBulkMode ? (showAsComplete ? steps.length - 1 : activeStep) : (creationMode === null ? 0 : activeStep)}
-      onNext={isBulkMode ? handleNext : (creationMode === null ? () => {} : handleNext)}
-      onBack={isBulkMode ? handleBack : (creationMode === null ? () => {} : handleBack)}
+      title={
+        isBulkMode
+          ? `Create ${bulkPatients.length} Treatment Plans`
+          : "Create Treatment Plan"
+      }
+      steps={
+        isBulkMode ? steps : creationMode === null ? ["Select Mode"] : steps
+      }
+      activeStep={
+        isBulkMode
+          ? showAsComplete
+            ? steps.length - 1
+            : activeStep
+          : creationMode === null
+            ? 0
+            : activeStep
+      }
+      onNext={
+        isBulkMode ? handleNext : creationMode === null ? () => {} : handleNext
+      }
+      onBack={
+        isBulkMode ? handleBack : creationMode === null ? () => {} : handleBack
+      }
       onComplete={isBulkMode ? handleClose : handleCreatePlan}
-      isStepValid={isBulkMode ? (showAsComplete || isStepValid) : (creationMode === null ? false : isStepValid)}
+      isStepValid={
+        isBulkMode
+          ? showAsComplete || isStepValid
+          : creationMode === null
+            ? false
+            : isStepValid
+      }
       loading={createMutation.isPending || isGenerating || isBulkProcessingStep}
       maxWidth="md"
       completeLabel={isBulkComplete ? "Done" : "Create Plan"}
@@ -1200,12 +1412,18 @@ const PhaseEditor: React.FC<PhaseEditorProps> = ({
   return (
     <Accordion defaultExpanded={phaseIndex === 0}>
       <AccordionSummary expandIcon={<ExpandMore />}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}>
+        <Box
+          sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}
+        >
           <Typography variant="subtitle1" fontWeight={600}>
             Phase {phase.phaseNumber}: {phase.name}
           </Typography>
           <Chip label={`${phase.durationWeeks}w`} size="small" />
-          <Chip label={`${phase.exercises.length} exercises`} size="small" variant="outlined" />
+          <Chip
+            label={`${phase.exercises.length} exercises`}
+            size="small"
+            variant="outlined"
+          />
           <Box sx={{ flexGrow: 1 }} />
           <IconButton
             size="small"
@@ -1301,7 +1519,14 @@ const PhaseEditor: React.FC<PhaseEditorProps> = ({
 
         {/* Exercises */}
         <Box sx={{ mt: 2 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 1,
+            }}
+          >
             <Typography variant="subtitle2">Exercises</Typography>
             <Chip
               icon={<Add />}
@@ -1363,16 +1588,21 @@ const PhaseEditor: React.FC<PhaseEditorProps> = ({
               <List dense sx={{ maxHeight: 300, overflow: "auto" }}>
                 {exerciseLibrary
                   .filter(
-                    (e) =>
-                      !phase.exercises.some((pe) => pe.name === e.name)
+                    (e) => !phase.exercises.some((pe) => pe.name === e.name),
                   )
                   .map((exercise) => (
                     <ListItem
                       key={exercise.id}
                       disablePadding
-                      sx={{ bgcolor: "background.paper", mb: 0.5, borderRadius: 1 }}
+                      sx={{
+                        bgcolor: "background.paper",
+                        mb: 0.5,
+                        borderRadius: 1,
+                      }}
                     >
-                      <ListItemButton onClick={() => handleSelectExercise(exercise)}>
+                      <ListItemButton
+                        onClick={() => handleSelectExercise(exercise)}
+                      >
                         <ListItemIcon>
                           <FitnessCenter fontSize="small" />
                         </ListItemIcon>
