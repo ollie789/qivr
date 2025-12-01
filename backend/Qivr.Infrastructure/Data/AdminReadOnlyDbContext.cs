@@ -27,6 +27,7 @@ public class AdminReadOnlyDbContext : DbContext
     public DbSet<TreatmentPlan> TreatmentPlans => Set<TreatmentPlan>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -135,6 +136,17 @@ public class AdminReadOnlyDbContext : DbContext
             entity.HasIndex(e => e.CreatedAt);
             entity.Property(e => e.Action).HasMaxLength(100);
             entity.Property(e => e.ResourceType).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<ApiKey>(entity =>
+        {
+            entity.ToTable("api_keys");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId);
+            entity.Property(e => e.Scopes).HasConversion(
+                v => string.Join(",", v),
+                v => v.Split(",", StringSplitOptions.RemoveEmptyEntries).ToList()
+            );
         });
     }
 

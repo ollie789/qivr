@@ -161,6 +161,7 @@ public class TenantMiddleware
             "/api/auth/refresh",
             "/api/auth/refresh-token",
             "/api/tenants",
+            "/api/admin",  // Admin portal endpoints (use separate auth)
             "/api/migration",
             "/api/debug",  // Debug endpoints for testing
             "/webhooks",

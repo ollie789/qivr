@@ -422,6 +422,101 @@ export const supportApi = {
     ),
 };
 
+// External API key management
+export interface ExternalApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  description?: string;
+  partnerName?: string;
+  contactEmail?: string;
+  tenantId: string;
+  tenantName?: string;
+  tenantSlug?: string;
+  scopes: string[];
+  isActive: boolean;
+  expiresAt?: string;
+  lastUsedAt?: string;
+  rateLimitPerHour: number;
+  createdAt: string;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
+  description?: string;
+  partnerName?: string;
+  contactEmail?: string;
+  tenantId: string;
+  scopes?: string[];
+  expiresAt?: string;
+  rateLimitPerHour?: number;
+}
+
+export interface CreateApiKeyResponse {
+  id: string;
+  name: string;
+  apiKey: string; // Full key - only shown once!
+  keyPrefix: string;
+  tenantId: string;
+  tenantName: string;
+  scopes: string[];
+  expiresAt?: string;
+  rateLimitPerHour: number;
+  warning: string;
+}
+
+export const externalApiService = {
+  getApiKeys: (tenantId?: string, includeRevoked = false) => {
+    const params = new URLSearchParams();
+    if (tenantId) params.set("tenantId", tenantId);
+    if (includeRevoked) params.set("includeRevoked", "true");
+    return request<{ keys: ExternalApiKey[] }>(`/external-api/keys?${params}`);
+  },
+  getApiKey: (id: string) =>
+    request<ExternalApiKey>(`/external-api/keys/${id}`),
+  createApiKey: (data: CreateApiKeyRequest) =>
+    request<CreateApiKeyResponse>("/external-api/keys", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateApiKey: (
+    id: string,
+    data: Partial<Omit<CreateApiKeyRequest, "tenantId">>,
+  ) =>
+    request<{ id: string; updated: boolean }>(`/external-api/keys/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  revokeApiKey: (id: string, reason?: string) =>
+    request<{ id: string; revoked: boolean }>(
+      `/external-api/keys/${id}/revoke`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      },
+    ),
+  activateApiKey: (id: string) =>
+    request<{ id: string; activated: boolean }>(
+      `/external-api/keys/${id}/activate`,
+      { method: "POST" },
+    ),
+  deleteApiKey: (id: string) =>
+    request<{ id: string; deleted: boolean }>(`/external-api/keys/${id}`, {
+      method: "DELETE",
+    }),
+  regenerateApiKey: (id: string) =>
+    request<CreateApiKeyResponse>(`/external-api/keys/${id}/regenerate`, {
+      method: "POST",
+    }),
+  getUsageStats: (tenantId?: string, days = 30) => {
+    const params = new URLSearchParams();
+    if (tenantId) params.set("tenantId", tenantId);
+    params.set("days", days.toString());
+    return request<any>(`/external-api/usage?${params}`);
+  },
+  getDocs: () => request<any>("/external-api/docs"),
+};
+
 // Extended billing API for churn/renewals
 export const billingExtendedApi = {
   getChurnAnalysis: (months = 6) =>
