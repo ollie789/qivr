@@ -25,6 +25,9 @@ import {
   Menu as MenuIcon,
   Logout,
   Settings,
+  MonitorHeart,
+  Insights,
+  SupportAgent,
 } from "@mui/icons-material";
 import { useAuthStore } from "../stores/authStore";
 
@@ -34,6 +37,9 @@ const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: <Dashboard /> },
   { path: "/tenants", label: "Tenants", icon: <Business /> },
   { path: "/billing", label: "Billing", icon: <CreditCard /> },
+  { path: "/operations", label: "Operations", icon: <MonitorHeart /> },
+  { path: "/insights", label: "Insights", icon: <Insights /> },
+  { path: "/support", label: "Support Tools", icon: <SupportAgent /> },
   { path: "/feature-flags", label: "Feature Flags", icon: <Flag /> },
   { path: "/usage", label: "Usage Analytics", icon: <BarChart /> },
   { path: "/settings", label: "Settings", icon: <Settings /> },

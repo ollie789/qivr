@@ -565,11 +565,7 @@ public class AdminBillingController : ControllerBase
                 .Select(s => new
                 {
                     subscription = s,
-                    periodEnd = s.Items.Data
-                        .Where(i => i.CurrentPeriodEnd.HasValue)
-                        .Select(i => i.CurrentPeriodEnd!.Value)
-                        .DefaultIfEmpty(DateTime.MaxValue)
-                        .Max()
+                    periodEnd = s.Items.Data.Max(i => i.CurrentPeriodEnd)
                 })
                 .Where(x => x.periodEnd <= cutoff)
                 .Select(x => new

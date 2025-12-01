@@ -12,6 +12,9 @@ const Billing = lazy(() => import("./pages/Billing"));
 const FeatureFlags = lazy(() => import("./pages/FeatureFlags"));
 const Usage = lazy(() => import("./pages/Usage"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Operations = lazy(() => import("./pages/Operations"));
+const Insights = lazy(() => import("./pages/Insights"));
+const Support = lazy(() => import("./pages/Support"));
 
 const Loading = () => (
   <Box
@@ -82,6 +85,9 @@ export default function App() {
             <Route path="billing" element={<Billing />} />
             <Route path="feature-flags" element={<FeatureFlags />} />
             <Route path="usage" element={<Usage />} />
+            <Route path="operations" element={<Operations />} />
+            <Route path="insights" element={<Insights />} />
+            <Route path="support" element={<Support />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>

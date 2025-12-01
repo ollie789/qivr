@@ -92,6 +92,26 @@ public static class AuthenticationExtensions
                         var logger = context.HttpContext.RequestServices
                             .GetRequiredService<ILogger<Program>>();
                         
+                        // Check if this is from the admin pool
+                        var issuer = context.Principal?.Claims
+                            .FirstOrDefault(c => c.Type == "iss")?.Value ?? "";
+                        var isAdminPoolUser = issuer.Contains(adminPoolId);
+                        
+                        if (isAdminPoolUser)
+                        {
+                            // Admin pool users get SuperAdmin role automatically
+                            // They don't need to exist in the database
+                            logger.LogInformation("Admin pool user authenticated from issuer: {Issuer}", issuer);
+                            
+                            if (!claimsIdentity.HasClaim(System.Security.Claims.ClaimTypes.Role, "SuperAdmin"))
+                            {
+                                claimsIdentity.AddClaim(new System.Security.Claims.Claim(
+                                    System.Security.Claims.ClaimTypes.Role, 
+                                    "SuperAdmin"));
+                            }
+                            return; // Skip database lookup for admin users
+                        }
+                        
                         // Get the Cognito sub claim (user ID in Cognito)
                         var subClaim = context.Principal?.Claims
                             .FirstOrDefault(c => c.Type == "sub" || c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
