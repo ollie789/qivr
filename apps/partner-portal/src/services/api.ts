@@ -11,6 +11,11 @@ import type {
   UpdateDeviceRequest,
   DeviceMetadata,
   BulkCreateResult,
+  DevicePerceptionMetrics,
+  DeviceMcidAnalysis,
+  DeviceDiscordanceAnalysis,
+  CohortAnalyticsResponse,
+  RecoveryTimelineResponse,
 } from "../types/outcomes";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -214,5 +219,53 @@ export const deviceManagementApi = {
   // Get metadata for autocomplete (categories, body regions)
   getMetadata: async (): Promise<DeviceMetadata> => {
     return fetchWithAuth("/partner/devices/metadata");
+  },
+};
+
+// Research Analytics API (Perfect Study)
+export const researchApi = {
+  // Get perception metrics (GPE, PASS, Satisfaction, NPS)
+  getPerceptionMetrics: async (
+    deviceId?: string,
+  ): Promise<{ devices: DevicePerceptionMetrics[] }> => {
+    const query = deviceId ? `?deviceId=${deviceId}` : "";
+    return fetchWithAuth(`/partner/research/perception-metrics${query}`);
+  },
+
+  // Get MCID analysis with patient-centered thresholds
+  getMcidAnalysis: async (
+    deviceId?: string,
+    promType?: string,
+  ): Promise<{ devices: DeviceMcidAnalysis[] }> => {
+    const params = new URLSearchParams();
+    if (deviceId) params.set("deviceId", deviceId);
+    if (promType) params.set("promType", promType);
+    const query = params.toString();
+    return fetchWithAuth(
+      `/partner/research/mcid-analysis${query ? `?${query}` : ""}`,
+    );
+  },
+
+  // Get discordance analysis (objective vs subjective)
+  getDiscordanceAnalysis: async (
+    deviceId?: string,
+  ): Promise<{ devices: DeviceDiscordanceAnalysis[] }> => {
+    const query = deviceId ? `?deviceId=${deviceId}` : "";
+    return fetchWithAuth(`/partner/research/discordance${query}`);
+  },
+
+  // Get cohort analytics (enrollment, compliance)
+  getCohortAnalytics: async (): Promise<CohortAnalyticsResponse> => {
+    return fetchWithAuth("/partner/research/cohort-analytics");
+  },
+
+  // Get recovery timeline for a specific device
+  getRecoveryTimeline: async (
+    deviceId: string,
+    promType: string = "ODI",
+  ): Promise<RecoveryTimelineResponse> => {
+    return fetchWithAuth(
+      `/partner/research/recovery-timeline/${deviceId}?promType=${promType}`,
+    );
   },
 };

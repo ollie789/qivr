@@ -22,7 +22,13 @@ public class S3StorageService : IStorageService
         _s3Client = s3Client;
         _settings = settings.Value;
         _logger = logger;
-
+        
+        _logger.LogInformation("S3StorageService initialized with Bucket: {Bucket}, Region: {Region}", 
+            _settings.BucketName ?? "(not set)", _settings.Region ?? "(not set)");
+    }
+    
+    private void EnsureBucketConfigured()
+    {
         if (string.IsNullOrEmpty(_settings.BucketName))
         {
             throw new InvalidOperationException("S3 bucket name is not configured");
@@ -31,6 +37,7 @@ public class S3StorageService : IStorageService
 
     public async Task<string> UploadAsync(Stream stream, string key, string contentType, Dictionary<string, string>? metadata = null)
     {
+        EnsureBucketConfigured();
         try
         {
             var request = new PutObjectRequest
@@ -91,6 +98,7 @@ public class S3StorageService : IStorageService
 
     public async Task<Stream> DownloadAsync(string key)
     {
+        EnsureBucketConfigured();
         try
         {
             var request = new GetObjectRequest
@@ -126,6 +134,7 @@ public class S3StorageService : IStorageService
 
     public async Task DeleteAsync(string key)
     {
+        EnsureBucketConfigured();
         try
         {
             var request = new DeleteObjectRequest
@@ -152,6 +161,7 @@ public class S3StorageService : IStorageService
 
     public async Task<bool> ExistsAsync(string key)
     {
+        EnsureBucketConfigured();
         try
         {
             var request = new GetObjectMetadataRequest
@@ -176,6 +186,7 @@ public class S3StorageService : IStorageService
 
     public async Task<string> GetPresignedUrlAsync(string key, TimeSpan expiry)
     {
+        EnsureBucketConfigured();
         try
         {
             var request = new GetPreSignedUrlRequest
@@ -202,6 +213,7 @@ public class S3StorageService : IStorageService
 
     public async Task<IEnumerable<string>> ListAsync(string prefix)
     {
+        EnsureBucketConfigured();
         try
         {
             var request = new ListObjectsV2Request
@@ -243,6 +255,7 @@ public class S3StorageService : IStorageService
     /// </summary>
     public async Task<string> GetUploadPresignedUrlAsync(string key, string contentType, TimeSpan expiry, Dictionary<string, string>? metadata = null)
     {
+        EnsureBucketConfigured();
         try
         {
             var request = new GetPreSignedUrlRequest

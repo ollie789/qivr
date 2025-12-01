@@ -165,3 +165,137 @@ export interface BulkCreateResult {
   skippedCodes: string[];
   message: string;
 }
+
+// ==========================================
+// Research Analytics Types (Perfect Study)
+// ==========================================
+
+// Perception Metrics
+export interface GpeDistribution {
+  veryMuchWorse: number;
+  muchWorse: number;
+  slightlyWorse: number;
+  noChange: number;
+  slightlyBetter: number;
+  muchBetter: number;
+  veryMuchBetter: number;
+  averageGpe: number | null;
+  totalResponses: number;
+}
+
+export interface DevicePerceptionMetrics {
+  deviceId: string;
+  deviceName: string;
+  deviceCode: string;
+  patientCount: number;
+  suppressedDueToPrivacy: boolean;
+  gpeDistribution?: GpeDistribution;
+  passRate: number | null;
+  passResponses: number;
+  averageSatisfaction: number | null;
+  satisfactionResponses: number;
+  perceivedSuccessRate: number | null;
+  successResponses: number;
+  averageExpectationMatch: number | null;
+  expectationResponses: number;
+  netPromoterScore: number | null;
+  npsResponses: number;
+}
+
+// MCID Analysis
+export interface PromTypeMcid {
+  promType: string;
+  patientCount: number;
+  averageBaselineScore: number;
+  averageFollowUpScore: number;
+  averageChange: number;
+  averagePercentChange: number;
+  traditionalMcid: number | null;
+  patientCenteredMcid: number | null;
+  responderRate: number;
+  respondersCount: number;
+}
+
+export interface DeviceMcidAnalysis {
+  deviceId: string;
+  deviceName: string;
+  deviceCode: string;
+  patientCount: number;
+  suppressedDueToPrivacy: boolean;
+  mcidByPromType: PromTypeMcid[];
+}
+
+// Discordance Analysis
+export interface DeviceDiscordanceAnalysis {
+  deviceId: string;
+  deviceName: string;
+  deviceCode: string;
+  patientCount: number;
+  suppressedDueToPrivacy: boolean;
+  concordantSuccessCount: number;
+  concordantSuccessRate: number;
+  concordantNonSuccessCount: number;
+  concordantNonSuccessRate: number;
+  discordantObjectiveSuccessCount: number;
+  discordantObjectiveSuccessRate: number;
+  discordantSubjectiveSuccessCount: number;
+  discordantSubjectiveSuccessRate: number;
+  totalDiscordanceRate: number;
+}
+
+// Cohort Analytics
+export interface FollowUpInterval {
+  weeksPostProcedure: number;
+  totalScheduled: number;
+  completed: number;
+  completionRate: number;
+  withPerceptionData: number;
+}
+
+export interface MonthlyEnrollment {
+  year: number;
+  month: number;
+  newPatients: number;
+  procedures: number;
+}
+
+export interface DeviceEnrollment {
+  deviceId: string;
+  deviceName: string;
+  deviceCode: string;
+  patientCount: number;
+  procedureCount: number;
+  withBaseline: number;
+}
+
+export interface CohortAnalyticsResponse {
+  totalPatients: number;
+  totalProcedures: number;
+  patientsWithBaseline: number;
+  baselineCompletionRate: number;
+  followUpIntervals: FollowUpInterval[];
+  monthlyEnrollment: MonthlyEnrollment[];
+  deviceBreakdown: DeviceEnrollment[];
+}
+
+// Recovery Timeline
+export interface RecoveryDataPoint {
+  weeksPostProcedure: number;
+  patientCount: number;
+  averageScore: number;
+  medianScore: number;
+  percentile25: number;
+  percentile75: number;
+  minScore: number;
+  maxScore: number;
+  averageChangeFromBaseline: number;
+}
+
+export interface RecoveryTimelineResponse {
+  deviceId: string;
+  deviceName: string;
+  promType: string;
+  suppressedDueToPrivacy: boolean;
+  patientCount: number;
+  dataPoints: RecoveryDataPoint[];
+}

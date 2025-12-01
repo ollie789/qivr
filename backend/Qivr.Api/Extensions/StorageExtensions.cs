@@ -11,11 +11,24 @@ public static class StorageExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Configure storage settings
-        services.Configure<StorageSettings>(configuration.GetSection("Storage"));
+        // Configure storage settings - bind directly from configuration
+        services.Configure<StorageSettings>(options =>
+        {
+            var section = configuration.GetSection("Storage");
+            section.Bind(options);
+            
+            // Also check for direct env var overrides
+            options.Provider = configuration["Storage:Provider"] ?? configuration["Storage__Provider"] ?? options.Provider;
+            options.BucketName = configuration["Storage:BucketName"] ?? configuration["Storage__BucketName"] ?? options.BucketName;
+            options.Region = configuration["Storage:Region"] ?? configuration["Storage__Region"] ?? options.Region;
+        });
         
-        var storageSettings = configuration.GetSection("Storage").Get<StorageSettings>() 
-            ?? new StorageSettings();
+        var storageSettings = new StorageSettings();
+        configuration.GetSection("Storage").Bind(storageSettings);
+        // Also check direct env vars
+        storageSettings.Provider = configuration["Storage:Provider"] ?? configuration["Storage__Provider"] ?? storageSettings.Provider;
+        storageSettings.BucketName = configuration["Storage:BucketName"] ?? configuration["Storage__BucketName"] ?? storageSettings.BucketName;
+        storageSettings.Region = configuration["Storage:Region"] ?? configuration["Storage__Region"] ?? storageSettings.Region;
 
         // Register the appropriate storage service based on configuration
         if (storageSettings.Provider?.ToUpperInvariant() == "S3")

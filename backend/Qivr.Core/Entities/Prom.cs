@@ -48,6 +48,46 @@ public class PromInstance : TenantEntity
     /// </summary>
     public int? WeeksPostProcedure { get; set; }
 
+    // === Perfect Study Perception Metrics ===
+    /// <summary>
+    /// Global Perceived Effect (GPE) 7-point scale: -3 to +3
+    /// -3=Very much worse, -2=Much worse, -1=Slightly worse, 0=No change,
+    /// +1=Slightly better, +2=Much better, +3=Very much better
+    /// </summary>
+    public int? GlobalPerceivedEffect { get; set; }
+
+    /// <summary>
+    /// Patient Acceptable Symptom State (PASS): true = acceptable, false = not acceptable
+    /// "Taking into account all the activities you do, do you consider your current state satisfactory?"
+    /// </summary>
+    public bool? PatientAcceptableSymptomState { get; set; }
+
+    /// <summary>
+    /// Overall satisfaction with treatment outcome (1-10 scale)
+    /// </summary>
+    public int? SatisfactionScore { get; set; }
+
+    /// <summary>
+    /// Did the outcome meet expectations? (1=Much worse than expected, 5=As expected, 9=Much better than expected)
+    /// </summary>
+    public int? ExpectationMatch { get; set; }
+
+    /// <summary>
+    /// Perceived treatment success: true = successful, false = not successful
+    /// "Do you consider your treatment to have been successful?"
+    /// </summary>
+    public bool? PerceivedSuccess { get; set; }
+
+    /// <summary>
+    /// Would recommend this treatment to others (1-10 scale, Net Promoter Score style)
+    /// </summary>
+    public int? WouldRecommend { get; set; }
+
+    /// <summary>
+    /// Free-text patient narrative about their experience (vectorized for analysis)
+    /// </summary>
+    public string? PatientNarrative { get; set; }
+
     // Navigation properties
     public virtual PromTemplate? Template { get; set; }
     public virtual User? Patient { get; set; }
