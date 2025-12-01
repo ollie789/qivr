@@ -1,10 +1,12 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Qivr.Api.Contracts;
+using Qivr.Api.Filters;
 using Qivr.Api.Options;
 using Qivr.Api.Services;
 using Qivr.Api.Utilities;
@@ -13,8 +15,10 @@ using Qivr.Infrastructure.Data;
 namespace Qivr.Api.Controllers
 {
     [ApiController]
-    [AllowAnonymous] // Consider adding HMAC verification
+    [AllowAnonymous]
     [Route("webhooks/messagemedia")]
+    [EnableRateLimiting("webhook")]
+    [ValidateWebhookSignature] // SECURITY: Validates HMAC signature from MessageMedia
     public sealed class MessageMediaWebhookController : ControllerBase
     {
         private readonly QivrDbContext _db;

@@ -1,12 +1,16 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Qivr.Api.Filters;
 using Qivr.Infrastructure.Data;
 
 namespace Qivr.Api.Controllers;
 
 [ApiController]
-[Route("webhooks")] 
+[Route("webhooks")]
+[EnableRateLimiting("webhook")]
+[ValidateWebhookSignature] // SECURITY: Validates HMAC signature
 public class WebhooksController : ControllerBase
 {
     private readonly QivrDbContext _db;

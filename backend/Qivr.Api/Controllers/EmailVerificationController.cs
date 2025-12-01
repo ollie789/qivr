@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Qivr.Api.Services;
 
 namespace Qivr.Api.Controllers;
@@ -24,6 +25,7 @@ public class EmailVerificationController : ControllerBase
     /// </summary>
     [HttpPost("verify")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
     {
         if (string.IsNullOrWhiteSpace(request?.Token))
@@ -53,6 +55,7 @@ public class EmailVerificationController : ControllerBase
     /// </summary>
     [HttpPost("resend")]
     [AllowAnonymous]
+    [EnableRateLimiting("password-reset")]
     public async Task<IActionResult> ResendVerificationEmail([FromBody] ResendVerificationRequest request)
     {
         if (string.IsNullOrWhiteSpace(request?.Email))
@@ -75,11 +78,14 @@ public class EmailVerificationController : ControllerBase
     /// </summary>
     [HttpPost("test")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> TestVerificationEmail([FromBody] TestEmailRequest request)
     {
-        // Only allow in development
-        if (!Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Development", StringComparison.OrdinalIgnoreCase) ?? false)
+        // SECURITY: Only allow in development environment - double check
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (string.IsNullOrEmpty(env) || !env.Equals("Development", StringComparison.OrdinalIgnoreCase))
         {
+            _logger.LogWarning("Attempted to access test email endpoint in non-development environment: {Env}", env);
             return NotFound();
         }
 
@@ -87,10 +93,10 @@ public class EmailVerificationController : ControllerBase
             request.Email ?? "test@example.com",
             "test-token-12345");
 
-        return Ok(new 
-        { 
-            success = true, 
-            message = "Test email sent. Check Mailhog at http://localhost:8025" 
+        return Ok(new
+        {
+            success = true,
+            message = "Test email sent. Check Mailhog at http://localhost:8025"
         });
     }
 

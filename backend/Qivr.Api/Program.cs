@@ -332,13 +332,26 @@ builder.Services.AddCsrfProtection();
 // builder.Services.AddSecretsManager();
 
 // Configure Authentication - Always use Cognito for production
-var useDevelopmentAuth = builder.Environment.IsDevelopment() &&
-    (builder.Configuration.GetValue<bool?>("DevAuth:Enabled")
-        ?? builder.Configuration.GetValue<bool?>("UseMockAuth")
-        ?? false);
+// SECURITY: DevAuth is ONLY allowed in Development environment
+var devAuthRequested = builder.Configuration.GetValue<bool?>("DevAuth:Enabled")
+    ?? builder.Configuration.GetValue<bool?>("UseMockAuth")
+    ?? false;
+
+if (devAuthRequested && !builder.Environment.IsDevelopment())
+{
+    // CRITICAL: Fail fast if someone tries to enable DevAuth in non-development environment
+    Log.Fatal("SECURITY VIOLATION: DevAuth:Enabled is set to true in {Environment} environment. " +
+        "This is only allowed in Development. Application will not start.", builder.Environment.EnvironmentName);
+    throw new InvalidOperationException(
+        $"DevAuth cannot be enabled in {builder.Environment.EnvironmentName} environment. " +
+        "This is a critical security violation.");
+}
+
+var useDevelopmentAuth = builder.Environment.IsDevelopment() && devAuthRequested;
 
 if (useDevelopmentAuth)
 {
+    Log.Warning("Using DEVELOPMENT authentication - this should never appear in production logs!");
     builder.Services.AddDevelopmentAuthentication(builder.Configuration);
 }
 else
@@ -462,6 +475,7 @@ builder.Services.Configure<Qivr.Api.Options.SqsOptions>(builder.Configuration.Ge
 builder.Services.Configure<Qivr.Api.Options.FeaturesOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.Configure<Qivr.Api.Options.BrandingOptions>(builder.Configuration.GetSection("Branding"));
 builder.Services.Configure<Qivr.Api.Options.NotificationsOptions>(builder.Configuration.GetSection("Notifications"));
+builder.Services.Configure<Qivr.Api.Options.MessageMediaOptions>(builder.Configuration.GetSection("MessageMedia"));
 
 // Ensure Intake connection string is always resolved securely
 builder.Services.PostConfigure<Qivr.Api.Options.IntakeDbOptions>(options =>

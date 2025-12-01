@@ -92,7 +92,7 @@ public class AdminAuditService : IAdminAuditService
                 CorrelationId = httpContext?.TraceIdentifier,
                 Success = success,
                 ErrorMessage = errorMessage,
-                Metadata = metadata
+                Metadata = metadata != null ? JsonSerializer.Serialize(metadata) : null
             };
 
             _context.Set<AdminAuditLog>().Add(auditLog);

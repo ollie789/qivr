@@ -911,10 +911,7 @@ public class QivrDbContext : DbContext
             // JSON columns for state snapshots
             entity.Property(e => e.PreviousState).HasColumnType("jsonb");
             entity.Property(e => e.NewState).HasColumnType("jsonb");
-            entity.Property(e => e.Metadata)
-                .HasColumnType("jsonb")
-                .HasConversion(jsonConverter)
-                .Metadata.SetValueComparer(jsonComparer);
+            entity.Property(e => e.Metadata).HasColumnType("jsonb");
         });
     }
 

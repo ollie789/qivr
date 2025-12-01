@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
 using Qivr.Core.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace Qivr.Api.Controllers;
 
@@ -21,6 +23,7 @@ public class TenantOnboardingController : ControllerBase
 
     [HttpPost("register-clinic")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> RegisterClinic([FromBody] ClinicRegistrationRequest request)
     {
         try
@@ -166,15 +169,40 @@ public class TenantOnboardingController : ControllerBase
     public class ClinicRegistrationRequest
     {
         public string CognitoSub { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Clinic name is required")]
+        [MaxLength(200, ErrorMessage = "Clinic name cannot exceed 200 characters")]
         public string ClinicName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [MaxLength(254, ErrorMessage = "Email cannot exceed 254 characters")]
         public string Email { get; set; } = string.Empty;
+
+        [MaxLength(20, ErrorMessage = "Phone cannot exceed 20 characters")]
         public string Phone { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "First name is required")]
+        [MaxLength(100, ErrorMessage = "First name cannot exceed 100 characters")]
         public string FirstName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Last name is required")]
+        [MaxLength(100, ErrorMessage = "Last name cannot exceed 100 characters")]
         public string LastName { get; set; } = string.Empty;
+
+        [MaxLength(500, ErrorMessage = "Address cannot exceed 500 characters")]
         public string Address { get; set; } = string.Empty;
+
+        [MaxLength(100, ErrorMessage = "City cannot exceed 100 characters")]
         public string City { get; set; } = string.Empty;
+
+        [MaxLength(100, ErrorMessage = "State cannot exceed 100 characters")]
         public string State { get; set; } = string.Empty;
+
+        [MaxLength(20, ErrorMessage = "Zip code cannot exceed 20 characters")]
         public string ZipCode { get; set; } = string.Empty;
+
+        [MaxLength(100, ErrorMessage = "Country cannot exceed 100 characters")]
         public string? Country { get; set; }
     }
 }

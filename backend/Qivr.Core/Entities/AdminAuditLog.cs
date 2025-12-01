@@ -88,9 +88,9 @@ public class AdminAuditLog : BaseEntity
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Additional metadata as JSON
+    /// Additional metadata as JSON string
     /// </summary>
-    public Dictionary<string, object>? Metadata { get; set; }
+    public string? Metadata { get; set; }
 }
 
 /// <summary>
