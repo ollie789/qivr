@@ -104,6 +104,13 @@ public class AdminReadOnlyDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.LocationType).HasConversion<string>();
             entity.HasOne<Tenant>().WithMany(t => t.Appointments).HasForeignKey(e => e.TenantId);
+            entity.Ignore(e => e.CancelledByUser);
+            entity.Ignore(e => e.Patient);
+            entity.Ignore(e => e.Provider);
+            entity.Ignore(e => e.ProviderProfile);
+            entity.Ignore(e => e.Evaluation);
+            entity.Ignore(e => e.TreatmentPlan);
+            entity.Ignore(e => e.LocationDetails);
         });
 
         modelBuilder.Entity<PromResponse>(entity =>
