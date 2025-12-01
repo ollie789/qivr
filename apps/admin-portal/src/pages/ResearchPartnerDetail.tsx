@@ -43,6 +43,8 @@ import {
   UpdatePartnerRequest,
   CreateAffiliationRequest,
   UpdateAffiliationRequest,
+  CreateDeviceRequest,
+  UpdateDeviceRequest,
 } from "../services/api";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -69,6 +71,16 @@ export default function ResearchPartnerDetail() {
       dataSharingLevel: "Aggregated",
       notes: "",
     });
+  const [deviceOpen, setDeviceOpen] = useState(false);
+  const [editDeviceOpen, setEditDeviceOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [deviceForm, setDeviceForm] = useState<CreateDeviceRequest>({
+    name: "",
+    deviceCode: "",
+    category: "",
+    bodyRegion: "",
+    description: "",
+  });
 
   // Load partner details
   const { data: partner, isLoading } = useQuery({
@@ -164,6 +176,64 @@ export default function ResearchPartnerDetail() {
     },
   });
 
+  // Device mutations
+  const addDeviceMutation = useMutation({
+    mutationFn: (data: CreateDeviceRequest) =>
+      researchPartnersApi.createDevice(id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["research-partner", id] });
+      enqueueSnackbar("Device added", { variant: "success" });
+      setDeviceOpen(false);
+      setDeviceForm({
+        name: "",
+        deviceCode: "",
+        category: "",
+        bodyRegion: "",
+        description: "",
+      });
+    },
+    onError: (error: Error) => {
+      enqueueSnackbar(error.message || "Failed to add device", {
+        variant: "error",
+      });
+    },
+  });
+
+  const updateDeviceMutation = useMutation({
+    mutationFn: ({
+      deviceId,
+      data,
+    }: {
+      deviceId: string;
+      data: UpdateDeviceRequest;
+    }) => researchPartnersApi.updateDevice(id!, deviceId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["research-partner", id] });
+      enqueueSnackbar("Device updated", { variant: "success" });
+      setEditDeviceOpen(false);
+      setSelectedDevice(null);
+    },
+    onError: (error: Error) => {
+      enqueueSnackbar(error.message || "Failed to update device", {
+        variant: "error",
+      });
+    },
+  });
+
+  const deleteDeviceMutation = useMutation({
+    mutationFn: (deviceId: string) =>
+      researchPartnersApi.deleteDevice(id!, deviceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["research-partner", id] });
+      enqueueSnackbar("Device deleted", { variant: "success" });
+    },
+    onError: (error: Error) => {
+      enqueueSnackbar(error.message || "Failed to delete device", {
+        variant: "error",
+      });
+    },
+  });
+
   const handleOpenEdit = () => {
     if (partner) {
       setEditForm({
@@ -188,6 +258,21 @@ export default function ResearchPartnerDetail() {
       });
       setSelectedAffiliation(affiliationId);
       setEditAffiliationOpen(true);
+    }
+  };
+
+  const handleEditDevice = (deviceId: string) => {
+    const device = partner?.devices.find((d) => d.id === deviceId);
+    if (device) {
+      setDeviceForm({
+        name: device.name,
+        deviceCode: device.deviceCode,
+        category: device.category || "",
+        bodyRegion: device.bodyRegion || "",
+        description: "",
+      });
+      setSelectedDevice(deviceId);
+      setEditDeviceOpen(true);
     }
   };
 
@@ -524,58 +609,85 @@ export default function ResearchPartnerDetail() {
 
         {/* Devices Tab */}
         {tab === 2 && (
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Device</TableCell>
-                <TableCell>Code</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Body Region</TableCell>
-                <TableCell align="center">Usage</TableCell>
-                <TableCell>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {partner.devices.length === 0 ? (
+          <Box>
+            <Box sx={{ p: 2, display: "flex", justifyContent: "flex-end" }}>
+              <Button startIcon={<Add />} onClick={() => setDeviceOpen(true)}>
+                Add Device
+              </Button>
+            </Box>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">
-                      No devices registered yet
-                    </Typography>
-                  </TableCell>
+                  <TableCell>Device</TableCell>
+                  <TableCell>Code</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Body Region</TableCell>
+                  <TableCell align="center">Usage</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ) : (
-                partner.devices.map((device) => (
-                  <TableRow key={device.id}>
-                    <TableCell>
-                      <Typography fontWeight={500}>{device.name}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontFamily="monospace">
-                        {device.deviceCode}
+              </TableHead>
+              <TableBody>
+                {partner.devices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">
+                        No devices registered yet
                       </Typography>
                     </TableCell>
-                    <TableCell>{device.category || "-"}</TableCell>
-                    <TableCell>{device.bodyRegion || "-"}</TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={device.usageCount}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={device.isActive ? "Active" : "Inactive"}
-                        size="small"
-                        color={device.isActive ? "success" : "default"}
-                      />
-                    </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  partner.devices.map((device) => (
+                    <TableRow key={device.id}>
+                      <TableCell>
+                        <Typography fontWeight={500}>{device.name}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontFamily="monospace">
+                          {device.deviceCode}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{device.category || "-"}</TableCell>
+                      <TableCell>{device.bodyRegion || "-"}</TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={device.usageCount}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={device.isActive ? "Active" : "Inactive"}
+                          size="small"
+                          color={device.isActive ? "success" : "default"}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditDevice(device.id)}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            if (confirm(`Delete device ${device.name}?`)) {
+                              deleteDeviceMutation.mutate(device.id);
+                            }
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Box>
         )}
 
         {/* Studies Tab */}
@@ -886,6 +998,189 @@ export default function ResearchPartnerDetail() {
             disabled={updateAffiliationMutation.isPending}
           >
             {updateAffiliationMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Device Dialog */}
+      <Dialog
+        open={deviceOpen}
+        onClose={() => setDeviceOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Add Device</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <TextField
+              label="Device Name"
+              required
+              value={deviceForm.name}
+              onChange={(e) =>
+                setDeviceForm({ ...deviceForm, name: e.target.value })
+              }
+              placeholder="e.g., Infuse Bone Graft"
+            />
+            <TextField
+              label="Device Code"
+              required
+              value={deviceForm.deviceCode}
+              onChange={(e) =>
+                setDeviceForm({ ...deviceForm, deviceCode: e.target.value })
+              }
+              placeholder="e.g., MDT-INF-001"
+            />
+            <FormControl>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={deviceForm.category}
+                label="Category"
+                onChange={(e) =>
+                  setDeviceForm({ ...deviceForm, category: e.target.value })
+                }
+              >
+                <MenuItem value="">None</MenuItem>
+                <MenuItem value="Spinal Implant">Spinal Implant</MenuItem>
+                <MenuItem value="Bone Graft">Bone Graft</MenuItem>
+                <MenuItem value="Disc Replacement">Disc Replacement</MenuItem>
+                <MenuItem value="Fixation Device">Fixation Device</MenuItem>
+                <MenuItem value="Joint Replacement">Joint Replacement</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl>
+              <InputLabel>Body Region</InputLabel>
+              <Select
+                value={deviceForm.bodyRegion}
+                label="Body Region"
+                onChange={(e) =>
+                  setDeviceForm({ ...deviceForm, bodyRegion: e.target.value })
+                }
+              >
+                <MenuItem value="">None</MenuItem>
+                <MenuItem value="Cervical">Cervical</MenuItem>
+                <MenuItem value="Thoracic">Thoracic</MenuItem>
+                <MenuItem value="Lumbar">Lumbar</MenuItem>
+                <MenuItem value="Sacral">Sacral</MenuItem>
+                <MenuItem value="Hip">Hip</MenuItem>
+                <MenuItem value="Knee">Knee</MenuItem>
+                <MenuItem value="Shoulder">Shoulder</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="Description"
+              multiline
+              rows={2}
+              value={deviceForm.description}
+              onChange={(e) =>
+                setDeviceForm({ ...deviceForm, description: e.target.value })
+              }
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeviceOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => addDeviceMutation.mutate(deviceForm)}
+            disabled={
+              !deviceForm.name ||
+              !deviceForm.deviceCode ||
+              addDeviceMutation.isPending
+            }
+          >
+            {addDeviceMutation.isPending ? "Adding..." : "Add Device"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Device Dialog */}
+      <Dialog
+        open={editDeviceOpen}
+        onClose={() => setEditDeviceOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Edit Device</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <TextField
+              label="Device Name"
+              required
+              value={deviceForm.name}
+              onChange={(e) =>
+                setDeviceForm({ ...deviceForm, name: e.target.value })
+              }
+            />
+            <TextField
+              label="Device Code"
+              required
+              value={deviceForm.deviceCode}
+              onChange={(e) =>
+                setDeviceForm({ ...deviceForm, deviceCode: e.target.value })
+              }
+            />
+            <FormControl>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={deviceForm.category}
+                label="Category"
+                onChange={(e) =>
+                  setDeviceForm({ ...deviceForm, category: e.target.value })
+                }
+              >
+                <MenuItem value="">None</MenuItem>
+                <MenuItem value="Spinal Implant">Spinal Implant</MenuItem>
+                <MenuItem value="Bone Graft">Bone Graft</MenuItem>
+                <MenuItem value="Disc Replacement">Disc Replacement</MenuItem>
+                <MenuItem value="Fixation Device">Fixation Device</MenuItem>
+                <MenuItem value="Joint Replacement">Joint Replacement</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl>
+              <InputLabel>Body Region</InputLabel>
+              <Select
+                value={deviceForm.bodyRegion}
+                label="Body Region"
+                onChange={(e) =>
+                  setDeviceForm({ ...deviceForm, bodyRegion: e.target.value })
+                }
+              >
+                <MenuItem value="">None</MenuItem>
+                <MenuItem value="Cervical">Cervical</MenuItem>
+                <MenuItem value="Thoracic">Thoracic</MenuItem>
+                <MenuItem value="Lumbar">Lumbar</MenuItem>
+                <MenuItem value="Sacral">Sacral</MenuItem>
+                <MenuItem value="Hip">Hip</MenuItem>
+                <MenuItem value="Knee">Knee</MenuItem>
+                <MenuItem value="Shoulder">Shoulder</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDeviceOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (selectedDevice) {
+                updateDeviceMutation.mutate({
+                  deviceId: selectedDevice,
+                  data: {
+                    name: deviceForm.name,
+                    deviceCode: deviceForm.deviceCode,
+                    category: deviceForm.category || undefined,
+                    bodyRegion: deviceForm.bodyRegion || undefined,
+                  },
+                });
+              }
+            }}
+            disabled={updateDeviceMutation.isPending}
+          >
+            {updateDeviceMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </DialogActions>
       </Dialog>

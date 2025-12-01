@@ -125,4 +125,7 @@ public static class AdminActions
     public const string ResearchPartnerAffiliationCreate = "research_partner.affiliation.create";
     public const string ResearchPartnerAffiliationUpdate = "research_partner.affiliation.update";
     public const string ResearchPartnerAffiliationDelete = "research_partner.affiliation.delete";
+    public const string ResearchPartnerDeviceCreate = "research_partner.device.create";
+    public const string ResearchPartnerDeviceUpdate = "research_partner.device.update";
+    public const string ResearchPartnerDeviceDelete = "research_partner.device.delete";
 }

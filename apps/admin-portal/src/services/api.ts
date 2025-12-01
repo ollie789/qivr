@@ -636,6 +636,23 @@ export interface UpdateAffiliationRequest {
   notes?: string;
 }
 
+export interface CreateDeviceRequest {
+  name: string;
+  deviceCode: string;
+  category?: string;
+  bodyRegion?: string;
+  description?: string;
+}
+
+export interface UpdateDeviceRequest {
+  name?: string;
+  deviceCode?: string;
+  category?: string;
+  bodyRegion?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
 export const researchPartnersApi = {
   // Partner CRUD
   getPartners: () => request<ResearchPartnerListItem[]>("/research-partners"),
@@ -696,5 +713,33 @@ export const researchPartnersApi = {
   getAvailableClinics: (partnerId: string) =>
     request<AvailableClinic[]>(
       `/research-partners/${partnerId}/available-clinics`,
+    ),
+
+  // Devices
+  getDevices: (partnerId: string) =>
+    request<DeviceResponse[]>(`/research-partners/${partnerId}/devices`),
+  createDevice: (partnerId: string, data: CreateDeviceRequest) =>
+    request<{ id: string }>(`/research-partners/${partnerId}/devices`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateDevice: (
+    partnerId: string,
+    deviceId: string,
+    data: UpdateDeviceRequest,
+  ) =>
+    request<{ success: boolean }>(
+      `/research-partners/${partnerId}/devices/${deviceId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+    ),
+  deleteDevice: (partnerId: string, deviceId: string) =>
+    request<{ success: boolean }>(
+      `/research-partners/${partnerId}/devices/${deviceId}`,
+      {
+        method: "DELETE",
+      },
     ),
 };

@@ -464,6 +464,171 @@ public class AdminResearchPartnersController : ControllerBase
         return Ok(availableClinics);
     }
 
+    // ========== Devices ==========
+
+    /// <summary>
+    /// List devices for a partner
+    /// </summary>
+    [HttpGet("{id:guid}/devices")]
+    public async Task<IActionResult> GetDevices(Guid id, CancellationToken ct)
+    {
+        var partner = await _readOnlyContext.ResearchPartners.FindAsync(new object[] { id }, ct);
+        if (partner == null) return NotFound();
+
+        var deviceUsageCounts = await _readOnlyContext.PatientDeviceUsages
+            .Where(u => u.Device != null && u.Device.PartnerId == id)
+            .GroupBy(u => u.DeviceId)
+            .Select(g => new { DeviceId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.DeviceId, x => x.Count, ct);
+
+        var devices = await _readOnlyContext.MedicalDevices
+            .Where(d => d.PartnerId == id)
+            .OrderBy(d => d.Name)
+            .Select(d => new DeviceResponse
+            {
+                Id = d.Id,
+                Name = d.Name,
+                DeviceCode = d.DeviceCode,
+                Category = d.Category,
+                BodyRegion = d.BodyRegion,
+                IsActive = d.IsActive,
+                UsageCount = deviceUsageCounts.GetValueOrDefault(d.Id, 0)
+            })
+            .ToListAsync(ct);
+
+        return Ok(devices);
+    }
+
+    /// <summary>
+    /// Create a new device for a partner
+    /// </summary>
+    [HttpPost("{id:guid}/devices")]
+    public async Task<IActionResult> CreateDevice(Guid id, [FromBody] CreateDeviceRequest request, CancellationToken ct)
+    {
+        var partner = await _context.ResearchPartners.FindAsync(new object[] { id }, ct);
+        if (partner == null) return NotFound();
+
+        // Check for duplicate device code within partner
+        var existingCode = await _context.MedicalDevices
+            .AnyAsync(d => d.PartnerId == id && d.DeviceCode == request.DeviceCode, ct);
+        if (existingCode)
+        {
+            return BadRequest(new { error = "A device with this code already exists for this partner" });
+        }
+
+        var device = new MedicalDevice
+        {
+            PartnerId = id,
+            Name = request.Name,
+            DeviceCode = request.DeviceCode,
+            Category = request.Category,
+            BodyRegion = request.BodyRegion,
+            Description = request.Description,
+            IsActive = true
+        };
+
+        _context.MedicalDevices.Add(device);
+        await _context.SaveChangesAsync(ct);
+
+        await _auditService.LogAsync(
+            AdminActions.ResearchPartnerDeviceCreate,
+            "MedicalDevice",
+            device.Id,
+            $"{partner.Name} - {device.Name}",
+            newState: JsonSerializer.Serialize(device),
+            ct: ct);
+
+        _logger.LogInformation("Created device {DeviceName} for partner {PartnerName}", device.Name, partner.Name);
+        return CreatedAtAction(nameof(GetDevices), new { id }, new { id = device.Id });
+    }
+
+    /// <summary>
+    /// Update a device
+    /// </summary>
+    [HttpPut("{id:guid}/devices/{deviceId:guid}")]
+    public async Task<IActionResult> UpdateDevice(Guid id, Guid deviceId, [FromBody] UpdateDeviceRequest request, CancellationToken ct)
+    {
+        var device = await _context.MedicalDevices
+            .Include(d => d.Partner)
+            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == id, ct);
+
+        if (device == null) return NotFound();
+
+        var previousState = JsonSerializer.Serialize(new
+        {
+            device.Name,
+            device.DeviceCode,
+            device.Category,
+            device.BodyRegion,
+            device.Description,
+            device.IsActive
+        });
+
+        if (!string.IsNullOrEmpty(request.Name)) device.Name = request.Name;
+        if (request.DeviceCode != null) device.DeviceCode = request.DeviceCode;
+        if (request.Category != null) device.Category = request.Category;
+        if (request.BodyRegion != null) device.BodyRegion = request.BodyRegion;
+        if (request.Description != null) device.Description = request.Description;
+        if (request.IsActive.HasValue) device.IsActive = request.IsActive.Value;
+
+        device.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(ct);
+
+        await _auditService.LogAsync(
+            AdminActions.ResearchPartnerDeviceUpdate,
+            "MedicalDevice",
+            device.Id,
+            $"{device.Partner?.Name} - {device.Name}",
+            previousState: previousState,
+            newState: JsonSerializer.Serialize(new
+            {
+                device.Name,
+                device.DeviceCode,
+                device.Category,
+                device.BodyRegion,
+                device.Description,
+                device.IsActive
+            }),
+            ct: ct);
+
+        return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// Delete a device (only if not used)
+    /// </summary>
+    [HttpDelete("{id:guid}/devices/{deviceId:guid}")]
+    public async Task<IActionResult> DeleteDevice(Guid id, Guid deviceId, CancellationToken ct)
+    {
+        var device = await _context.MedicalDevices
+            .Include(d => d.Partner)
+            .FirstOrDefaultAsync(d => d.Id == deviceId && d.PartnerId == id, ct);
+
+        if (device == null) return NotFound();
+
+        // Check if device is in use
+        var usageCount = await _context.PatientDeviceUsages
+            .CountAsync(u => u.DeviceId == deviceId, ct);
+
+        if (usageCount > 0)
+        {
+            return BadRequest(new { error = $"Cannot delete device with {usageCount} usage records. Deactivate instead." });
+        }
+
+        var deviceName = $"{device.Partner?.Name} - {device.Name}";
+        _context.MedicalDevices.Remove(device);
+        await _context.SaveChangesAsync(ct);
+
+        await _auditService.LogAsync(
+            AdminActions.ResearchPartnerDeviceDelete,
+            "MedicalDevice",
+            deviceId,
+            deviceName,
+            ct: ct);
+
+        return Ok(new { success = true });
+    }
+
     // ========== Helper Methods ==========
 
     private static string GenerateSlug(string name)
@@ -577,4 +742,23 @@ public class UpdateAffiliationRequest
     public string? Status { get; set; }
     public string? DataSharingLevel { get; set; }
     public string? Notes { get; set; }
+}
+
+public class CreateDeviceRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string DeviceCode { get; set; } = string.Empty;
+    public string? Category { get; set; }
+    public string? BodyRegion { get; set; }
+    public string? Description { get; set; }
+}
+
+public class UpdateDeviceRequest
+{
+    public string? Name { get; set; }
+    public string? DeviceCode { get; set; }
+    public string? Category { get; set; }
+    public string? BodyRegion { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
 }
