@@ -71,6 +71,15 @@ export interface CreateAppointmentRequest {
   sendReminder?: boolean;
 }
 
+export interface UpdateAppointmentRequest {
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  status?: Appointment["status"];
+  actualStart?: string;
+  actualEnd?: string;
+  notes?: string;
+}
+
 export interface AppointmentSlot {
   start: string;
   end: string;
@@ -153,7 +162,7 @@ class AppointmentsApi {
 
   async updateAppointment(
     id: string,
-    data: Partial<CreateAppointmentRequest>,
+    data: UpdateAppointmentRequest,
   ): Promise<Appointment> {
     const response = await apiClient.put<AppointmentDto>(
       `/api/appointments/${id}`,

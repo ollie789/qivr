@@ -340,11 +340,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
   const handleModeSelect = (mode: CreationMode) => {
     setCreationMode(mode);
-    if (initialPatient) {
-      setActiveStep(0);
-    } else {
-      setActiveStep(1);
-    }
+    // Always start at step 0 - which is "Patient" if no initialPatient, or first content step if patient provided
+    setActiveStep(0);
   };
 
   const handleGeneratePlan = async () => {
@@ -493,13 +490,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     // Bulk mode - can't go back during processing
     if (isBulkMode && isBulkProcessing) return;
 
-    if (activeStep === 0 && initialPatient) {
+    // At step 0, go back to mode selection
+    if (activeStep === 0 && !isBulkMode) {
       setCreationMode(null);
-      return;
-    }
-    if (activeStep === 1 && !initialPatient && !isBulkMode) {
-      setCreationMode(null);
-      setActiveStep(0);
       return;
     }
     setActiveStep((prev) => prev - 1);
