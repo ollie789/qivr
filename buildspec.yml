@@ -32,18 +32,21 @@ phases:
       - echo Building shared packages...
       - cd packages/http && npm run build && cd ../..
       - cd packages/design-system && npm run build && cd ../..
-      
+
       # Build frontends in parallel
       - echo Building frontends...
       - (cd apps/clinic-dashboard && npm run build) &
       - CLINIC_PID=$!
       - (cd apps/patient-portal && npm run build) &
       - PATIENT_PID=$!
-      
+      - (cd apps/admin-portal && npm run build) &
+      - ADMIN_PID=$!
+
       # Wait for frontend builds
       - wait $CLINIC_PID
       - wait $PATIENT_PID
-      
+      - wait $ADMIN_PID
+
       # Wait for Docker build to complete
       - echo Waiting for Docker build...
       - wait $DOCKER_PID
@@ -71,11 +74,13 @@ phases:
       # Deploy frontends to S3 in parallel
       - aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION &
       - aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION &
+      - aws s3 sync apps/admin-portal/dist/ s3://qivr-admin-portal --delete --region $AWS_DEFAULT_REGION &
       - wait
 
       # Invalidate CloudFront caches in parallel
       - aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*" &
       - aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*" &
+      - aws cloudfront create-invalidation --distribution-id E30RX4A147QBCE --paths "/*" &
 
       # Update ECS service
       - sed "s|IMAGE_URI_PLACEHOLDER|$REPOSITORY_URI:$IMAGE_TAG|g" task-definition-template.json > task-definition-new.json
