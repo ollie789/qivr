@@ -415,9 +415,342 @@ public class AdminBillingController : ControllerBase
             return StatusCode(500, new { error = "Failed to fetch transactions from Stripe" });
         }
     }
+
+    /// <summary>
+    /// Get churn analysis - cancelled tenants and reasons
+    /// </summary>
+    [HttpGet("churn")]
+    public async Task<IActionResult> GetChurnAnalysis([FromQuery] int months = 6, CancellationToken ct = default)
+    {
+        var since = DateTime.UtcNow.AddMonths(-months);
+
+        // Get cancelled/suspended tenants
+        var churned = await _readOnlyContext.Tenants
+            .Where(t => !t.IsActive || t.DeletedAt != null)
+            .Select(t => new
+            {
+                t.Id,
+                t.Name,
+                t.Slug,
+                t.CreatedAt,
+                t.UpdatedAt,
+                plan = t.Settings.ContainsKey("plan") ? t.Settings["plan"].ToString() : "starter",
+                status = t.IsActive ? "active" : "churned"
+            })
+            .ToListAsync(ct);
+
+        // Group by month
+        var churnByMonth = churned
+            .GroupBy(t => new { Year = t.UpdatedAt.Year, Month = t.UpdatedAt.Month })
+            .Select(g => new
+            {
+                month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                count = g.Count()
+            })
+            .OrderBy(g => g.month)
+            .ToList();
+
+        // Churn by plan
+        var churnByPlan = churned
+            .GroupBy(t => t.plan)
+            .Select(g => new { plan = g.Key, count = g.Count() })
+            .ToList();
+
+        // Calculate lifetime metrics
+        var avgLifetimeDays = churned.Any()
+            ? churned.Average(t => (t.UpdatedAt - t.CreatedAt).TotalDays)
+            : 0;
+
+        return Ok(new
+        {
+            period = $"Last {months} months",
+            summary = new
+            {
+                totalChurned = churned.Count,
+                avgLifetimeDays = Math.Round(avgLifetimeDays, 1),
+                churnRate = 0.0 // Would calculate from total active tenants
+            },
+            churnByMonth,
+            churnByPlan,
+            recentChurns = churned
+                .OrderByDescending(t => t.UpdatedAt)
+                .Take(10)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.Name,
+                    t.Slug,
+                    t.plan,
+                    lifetimeDays = (int)(t.UpdatedAt - t.CreatedAt).TotalDays,
+                    churnedAt = t.UpdatedAt
+                })
+        });
+    }
+
+    /// <summary>
+    /// Get revenue breakdown by region and plan
+    /// </summary>
+    [HttpGet("revenue-breakdown")]
+    public async Task<IActionResult> GetRevenueBreakdown(CancellationToken ct)
+    {
+        var planPrices = new Dictionary<string, decimal>
+        {
+            ["starter"] = 99m,
+            ["professional"] = 299m,
+            ["enterprise"] = 599m
+        };
+
+        var tenants = await _readOnlyContext.Tenants
+            .Where(t => t.IsActive && t.DeletedAt == null)
+            .Select(t => new
+            {
+                plan = t.Settings.ContainsKey("plan") ? t.Settings["plan"].ToString() : "starter",
+                region = t.State ?? "Unknown"
+            })
+            .ToListAsync(ct);
+
+        // Revenue by plan
+        var byPlan = tenants
+            .GroupBy(t => t.plan)
+            .Select(g => new
+            {
+                plan = g.Key,
+                count = g.Count(),
+                mrr = g.Count() * planPrices.GetValueOrDefault(g.Key ?? "starter", 99m)
+            })
+            .OrderByDescending(p => p.mrr)
+            .ToList();
+
+        // Revenue by region
+        var byRegion = tenants
+            .GroupBy(t => t.region)
+            .Select(g => new
+            {
+                region = g.Key,
+                count = g.Count(),
+                mrr = g.Sum(t => planPrices.GetValueOrDefault(t.plan ?? "starter", 99m))
+            })
+            .OrderByDescending(r => r.mrr)
+            .ToList();
+
+        var totalMrr = byPlan.Sum(p => p.mrr);
+
+        return Ok(new
+        {
+            totalMrr,
+            totalArr = totalMrr * 12,
+            byPlan,
+            byRegion
+        });
+    }
+
+    /// <summary>
+    /// Get upcoming subscription renewals
+    /// </summary>
+    [HttpGet("renewals")]
+    public async Task<IActionResult> GetUpcomingRenewals([FromQuery] int days = 30, CancellationToken ct = default)
+    {
+        try
+        {
+            var subscriptionService = new SubscriptionService();
+            var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
+            {
+                Limit = 100,
+                Status = "active"
+            }, cancellationToken: ct);
+
+            var cutoff = DateTime.UtcNow.AddDays(days);
+            var upcoming = subscriptions.Data
+                .Where(s => s.CurrentPeriodEnd <= cutoff)
+                .Select(s => new
+                {
+                    subscriptionId = s.Id,
+                    customerId = s.CustomerId,
+                    status = s.Status,
+                    currentPeriodEnd = s.CurrentPeriodEnd,
+                    daysUntilRenewal = (s.CurrentPeriodEnd - DateTime.UtcNow).Days,
+                    cancelAtPeriodEnd = s.CancelAtPeriodEnd,
+                    amount = s.Items.Data.FirstOrDefault()?.Price?.UnitAmount / 100m ?? 0
+                })
+                .OrderBy(s => s.daysUntilRenewal)
+                .ToList();
+
+            return Ok(new
+            {
+                period = $"Next {days} days",
+                totalRenewals = upcoming.Count,
+                totalRevenue = upcoming.Sum(r => r.amount),
+                atRiskOfChurn = upcoming.Count(r => r.cancelAtPeriodEnd),
+                renewals = upcoming
+            });
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch upcoming renewals");
+            return StatusCode(500, new { error = "Failed to fetch renewals from Stripe" });
+        }
+    }
+
+    /// <summary>
+    /// Get failed payments
+    /// </summary>
+    [HttpGet("failed-payments")]
+    public async Task<IActionResult> GetFailedPayments([FromQuery] int days = 30, CancellationToken ct = default)
+    {
+        try
+        {
+            var since = DateTime.UtcNow.AddDays(-days);
+            var chargeService = new ChargeService();
+            var charges = await chargeService.ListAsync(new ChargeListOptions
+            {
+                Limit = 100,
+                Created = new DateRangeOptions { GreaterThanOrEqual = since }
+            }, cancellationToken: ct);
+
+            var failed = charges.Data
+                .Where(c => c.Status == "failed")
+                .Select(c => new
+                {
+                    id = c.Id,
+                    amount = c.Amount / 100m,
+                    currency = c.Currency.ToUpper(),
+                    customerId = c.CustomerId,
+                    customerEmail = c.BillingDetails?.Email,
+                    failureCode = c.FailureCode,
+                    failureMessage = c.FailureMessage,
+                    created = c.Created
+                })
+                .OrderByDescending(c => c.created)
+                .ToList();
+
+            return Ok(new
+            {
+                period = $"Last {days} days",
+                totalFailed = failed.Count,
+                totalAmount = failed.Sum(f => f.amount),
+                byFailureCode = failed
+                    .GroupBy(f => f.failureCode ?? "unknown")
+                    .Select(g => new { code = g.Key, count = g.Count() })
+                    .OrderByDescending(g => g.count),
+                failures = failed
+            });
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch failed payments");
+            return StatusCode(500, new { error = "Failed to fetch failed payments from Stripe" });
+        }
+    }
+
+    /// <summary>
+    /// Resend an invoice
+    /// </summary>
+    [HttpPost("invoices/{invoiceId}/resend")]
+    public async Task<IActionResult> ResendInvoice(string invoiceId, CancellationToken ct)
+    {
+        try
+        {
+            var invoiceService = new InvoiceService();
+            var invoice = await invoiceService.SendInvoiceAsync(invoiceId, cancellationToken: ct);
+
+            await _auditService.LogAsync(
+                "billing.invoice.resend",
+                "Invoice",
+                Guid.Empty,
+                invoiceId,
+                newState: new { invoiceId, status = invoice.Status },
+                ct: ct);
+
+            return Ok(new { success = true, invoiceId = invoice.Id, status = invoice.Status });
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Failed to resend invoice {InvoiceId}", invoiceId);
+            return StatusCode(500, new { error = "Failed to resend invoice" });
+        }
+    }
+
+    /// <summary>
+    /// Void an invoice
+    /// </summary>
+    [HttpPost("invoices/{invoiceId}/void")]
+    public async Task<IActionResult> VoidInvoice(string invoiceId, CancellationToken ct)
+    {
+        try
+        {
+            var invoiceService = new InvoiceService();
+            var invoice = await invoiceService.VoidInvoiceAsync(invoiceId, cancellationToken: ct);
+
+            await _auditService.LogAsync(
+                "billing.invoice.void",
+                "Invoice",
+                Guid.Empty,
+                invoiceId,
+                newState: new { invoiceId, status = invoice.Status },
+                ct: ct);
+
+            return Ok(new { success = true, invoiceId = invoice.Id, status = invoice.Status });
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Failed to void invoice {InvoiceId}", invoiceId);
+            return StatusCode(500, new { error = "Failed to void invoice" });
+        }
+    }
+
+    /// <summary>
+    /// Create a refund
+    /// </summary>
+    [HttpPost("charges/{chargeId}/refund")]
+    public async Task<IActionResult> RefundCharge(string chargeId, [FromBody] RefundRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var refundService = new RefundService();
+            var options = new RefundCreateOptions
+            {
+                Charge = chargeId,
+                Reason = request.Reason ?? RefundReasons.RequestedByCustomer
+            };
+
+            if (request.Amount.HasValue)
+            {
+                options.Amount = (long)(request.Amount.Value * 100);
+            }
+
+            var refund = await refundService.CreateAsync(options, cancellationToken: ct);
+
+            await _auditService.LogAsync(
+                "billing.refund.create",
+                "Charge",
+                Guid.Empty,
+                chargeId,
+                newState: new { chargeId, refundId = refund.Id, amount = refund.Amount / 100m, reason = request.Reason },
+                ct: ct);
+
+            return Ok(new
+            {
+                success = true,
+                refundId = refund.Id,
+                amount = refund.Amount / 100m,
+                status = refund.Status
+            });
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Failed to refund charge {ChargeId}", chargeId);
+            return StatusCode(500, new { error = "Failed to create refund" });
+        }
+    }
 }
 
 public class PortalSessionRequest
 {
     public string? ReturnUrl { get; set; }
+}
+
+public class RefundRequest
+{
+    public decimal? Amount { get; set; }
+    public string? Reason { get; set; }
 }

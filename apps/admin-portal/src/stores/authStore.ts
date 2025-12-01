@@ -56,6 +56,11 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email, password) => {
         const result = await cognitoAuth.signIn(email, password);
+        console.log(
+          "[authStore] login result:",
+          result.success,
+          result.challengeName,
+        );
 
         if (result.success && result.session) {
           set({
@@ -65,6 +70,7 @@ export const useAuthStore = create<AuthState>()(
             mfaSetupRequired: false,
             pendingUser: null,
           });
+          console.log("[authStore] login - set isAuthenticated: true");
           return { success: true };
         }
 
@@ -142,6 +148,7 @@ export const useAuthStore = create<AuthState>()(
 
       checkSession: async () => {
         const session = await cognitoAuth.getCurrentSession();
+        console.log("[authStore] checkSession - session:", !!session);
         if (session) {
           set({ user: parseUserFromSession(session), isAuthenticated: true });
           return true;

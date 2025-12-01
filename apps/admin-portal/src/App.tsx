@@ -27,6 +27,7 @@ const Loading = () => (
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  console.log("[ProtectedRoute] isAuthenticated:", isAuthenticated);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
@@ -39,7 +40,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (checkedRef.current) return;
     checkedRef.current = true;
-    checkSession().finally(() => setReady(true));
+    console.log("[AuthProvider] Checking session...");
+    checkSession().then((valid) => {
+      console.log("[AuthProvider] Session valid:", valid);
+      setReady(true);
+    });
   }, [checkSession]);
 
   if (!ready) return <Loading />;
