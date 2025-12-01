@@ -3,6 +3,14 @@ import type {
   DeviceOutcomeSummaryResponse,
   DeviceOutcomeTimelineResponse,
   DeviceComparisonResponse,
+  PartnerProfile,
+  Affiliation,
+  PartnerStats,
+  ManagedDevice,
+  CreateDeviceRequest,
+  UpdateDeviceRequest,
+  DeviceMetadata,
+  BulkCreateResult,
 } from "../types/outcomes";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -104,5 +112,107 @@ export const authApi = {
     logoUrl?: string;
   }> => {
     return fetchWithAuth("/research-partner/me");
+  },
+};
+
+export const partnerApi = {
+  // Get partner profile
+  getProfile: async (): Promise<PartnerProfile> => {
+    return fetchWithAuth("/research-partner/me");
+  },
+
+  // Get affiliated clinics
+  getAffiliations: async (): Promise<{ affiliations: Affiliation[] }> => {
+    return fetchWithAuth("/research-partner/affiliations");
+  },
+
+  // Get partner statistics
+  getStats: async (): Promise<PartnerStats> => {
+    return fetchWithAuth("/research-partner/stats");
+  },
+
+  // Export data as CSV
+  exportData: async (deviceId?: string): Promise<Blob> => {
+    const token = localStorage.getItem("partner_token");
+    const url = deviceId
+      ? `${API_BASE}/research-partner/export?deviceId=${deviceId}`
+      : `${API_BASE}/research-partner/export`;
+
+    const response = await fetch(url, {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Export failed");
+    }
+
+    return response.blob();
+  },
+};
+
+// Device Management API
+export const deviceManagementApi = {
+  // Get all devices with management info
+  getDevices: async (
+    includeInactive = false,
+  ): Promise<{ devices: ManagedDevice[] }> => {
+    return fetchWithAuth(`/partner/devices?includeInactive=${includeInactive}`);
+  },
+
+  // Get single device
+  getDevice: async (deviceId: string): Promise<ManagedDevice> => {
+    return fetchWithAuth(`/partner/devices/${deviceId}`);
+  },
+
+  // Create a new device
+  createDevice: async (
+    data: CreateDeviceRequest,
+  ): Promise<{ id: string; message: string }> => {
+    return fetchWithAuth("/partner/devices", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Update an existing device
+  updateDevice: async (
+    deviceId: string,
+    data: UpdateDeviceRequest,
+  ): Promise<{ message: string }> => {
+    return fetchWithAuth(`/partner/devices/${deviceId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Archive a device
+  archiveDevice: async (deviceId: string): Promise<{ message: string }> => {
+    return fetchWithAuth(`/partner/devices/${deviceId}/archive`, {
+      method: "POST",
+    });
+  },
+
+  // Restore an archived device
+  restoreDevice: async (deviceId: string): Promise<{ message: string }> => {
+    return fetchWithAuth(`/partner/devices/${deviceId}/restore`, {
+      method: "POST",
+    });
+  },
+
+  // Bulk create devices
+  bulkCreate: async (
+    devices: CreateDeviceRequest[],
+  ): Promise<BulkCreateResult> => {
+    return fetchWithAuth("/partner/devices/bulk", {
+      method: "POST",
+      body: JSON.stringify({ devices }),
+    });
+  },
+
+  // Get metadata for autocomplete (categories, body regions)
+  getMetadata: async (): Promise<DeviceMetadata> => {
+    return fetchWithAuth("/partner/devices/metadata");
   },
 };

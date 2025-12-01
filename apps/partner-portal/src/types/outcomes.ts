@@ -87,3 +87,81 @@ export interface Partner {
   logoUrl?: string;
   contactEmail?: string;
 }
+
+export interface PartnerProfile {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl?: string;
+  contactEmail?: string;
+  website?: string;
+  description?: string;
+  deviceCount: number;
+  affiliatedClinicCount: number;
+}
+
+export interface Affiliation {
+  id: string;
+  tenantId: string;
+  clinicName: string;
+  status: string;
+  dataSharingLevel: string;
+  approvedAt?: string;
+  notes?: string;
+  patientCount: number;
+}
+
+export interface PartnerStats {
+  totalDevices: number;
+  totalAffiliatedClinics: number;
+  totalPatients: number;
+  totalProcedures: number;
+  totalPromResponses: number;
+  monthlyTrend: MonthlyDataPoint[];
+}
+
+export interface MonthlyDataPoint {
+  year: number;
+  month: number;
+  procedureCount: number;
+  patientCount: number;
+}
+
+// Device Management Types
+export interface ManagedDevice {
+  id: string;
+  name: string;
+  deviceCode: string;
+  category?: string;
+  bodyRegion?: string;
+  description?: string;
+  udiCode?: string;
+  isActive: boolean;
+  createdAt: string;
+  usageCount: number;
+  patientCount: number;
+  updatedAt?: string;
+}
+
+export interface CreateDeviceRequest {
+  name: string;
+  deviceCode: string;
+  category?: string;
+  bodyRegion?: string;
+  description?: string;
+  udiCode?: string;
+}
+
+export interface UpdateDeviceRequest extends CreateDeviceRequest {}
+
+export interface DeviceMetadata {
+  categories: string[];
+  bodyRegions: string[];
+}
+
+export interface BulkCreateResult {
+  created: number;
+  skipped: number;
+  skippedCodes: string[];
+  message: string;
+}

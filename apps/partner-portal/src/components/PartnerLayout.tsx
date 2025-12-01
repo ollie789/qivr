@@ -20,12 +20,12 @@ import {
 import {
   Dashboard,
   Devices,
-  Timeline,
   CompareArrows,
   Menu as MenuIcon,
   Logout,
   Settings,
-  Assessment,
+  Business,
+  Inventory,
 } from "@mui/icons-material";
 import { useAuthStore } from "../stores/authStore";
 
@@ -33,10 +33,11 @@ const DRAWER_WIDTH = 260;
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: <Dashboard /> },
-  { path: "/devices", label: "My Devices", icon: <Devices /> },
-  { path: "/outcomes", label: "Outcome Reports", icon: <Assessment /> },
-  { path: "/trends", label: "Trends & Timeline", icon: <Timeline /> },
-  { path: "/compare", label: "Device Comparison", icon: <CompareArrows /> },
+  { path: "/devices", label: "Device Outcomes", icon: <Devices /> },
+  { path: "/device-management", label: "Manage Devices", icon: <Inventory /> },
+  { path: "/compare", label: "Compare Devices", icon: <CompareArrows /> },
+  { path: "/affiliations", label: "Affiliated Clinics", icon: <Business /> },
+  { path: "/settings", label: "Settings & Export", icon: <Settings /> },
 ];
 
 export default function PartnerLayout() {

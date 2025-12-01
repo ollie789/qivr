@@ -89,12 +89,12 @@ public class PatientsController : TenantAwareController
                     Email = u.Email ?? "",
                     PhoneNumber = u.Phone ?? "",
                     DateOfBirth = u.DateOfBirth,
-                    LastVisit = _context.Appointments
-                        .Where(a => a.PatientId == u.Id && a.Status == AppointmentStatus.Completed)
+                    LastVisit = u.PatientAppointments
+                        .Where(a => a.Status == AppointmentStatus.Completed)
                         .OrderByDescending(a => a.ScheduledStart)
                         .Select(a => a.ScheduledStart)
                         .FirstOrDefault(),
-                    MedicalRecordNumber = null, // MRN field doesn't exist in User entity
+                    MedicalRecordNumber = null,
                     IsActive = true
                 })
                 .ToListAsync();
