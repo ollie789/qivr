@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Qivr.Core.Common;
 
 namespace Qivr.Core.Entities;
@@ -30,10 +31,27 @@ public class PromInstance : TenantEntity
     public Dictionary<string, object>? ResponseData { get; set; }  // Raw response data
     public decimal? Score { get; set; }
     public DateTime? ReminderSentAt { get; set; }
-    
+
+    // === NEW: Treatment Plan & Device Outcome Tracking ===
+    /// <summary>
+    /// Links this PROM to a treatment plan for outcome tracking
+    /// </summary>
+    public Guid? TreatmentPlanId { get; set; }
+
+    /// <summary>
+    /// Type of PROM in treatment context (baseline, follow-up, etc.)
+    /// </summary>
+    public PromInstanceType InstanceType { get; set; } = PromInstanceType.Standard;
+
+    /// <summary>
+    /// For follow-up PROMs, weeks since treatment/procedure started
+    /// </summary>
+    public int? WeeksPostProcedure { get; set; }
+
     // Navigation properties
     public virtual PromTemplate? Template { get; set; }
     public virtual User? Patient { get; set; }
+    public virtual TreatmentPlan? TreatmentPlan { get; set; }
     public virtual ICollection<PromResponse> Responses { get; set; } = new List<PromResponse>();
     public virtual ICollection<PromBookingRequest> BookingRequests { get; set; } = new List<PromBookingRequest>();
 }
@@ -45,6 +63,22 @@ public enum PromStatus
     Completed,
     Expired,
     Cancelled
+}
+
+/// <summary>
+/// Type of PROM instance for tracking device/treatment outcomes
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PromInstanceType
+{
+    /// <summary>Standard PROM not linked to treatment outcome</summary>
+    Standard,
+    /// <summary>Baseline measurement at start of treatment or pre-surgery</summary>
+    Baseline,
+    /// <summary>Follow-up measurement during or after treatment</summary>
+    FollowUp,
+    /// <summary>Final outcome measurement at end of treatment</summary>
+    FinalOutcome
 }
 
 public class PromBookingRequest : TenantEntity

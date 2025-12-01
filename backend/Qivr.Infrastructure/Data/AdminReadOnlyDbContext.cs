@@ -61,16 +61,12 @@ public class AdminReadOnlyDbContext : DbContext
         {
             entity.ToTable("tenants");
             entity.HasKey(e => e.Id);
-            // Ignore properties not in database
+            entity.Property(e => e.Status).HasConversion<string>();
+            // Ignore properties not in database or not needed
             entity.Ignore(e => e.Metadata);
-            entity.Ignore(e => e.DeletedAt);
-            entity.Ignore(e => e.Status);
             entity.Ignore(e => e.CognitoUserPoolId);
             entity.Ignore(e => e.CognitoUserPoolClientId);
             entity.Ignore(e => e.CognitoUserPoolDomain);
-            entity.Ignore(e => e.Plan);
-            entity.Ignore(e => e.Timezone);
-            entity.Ignore(e => e.Locale);
             entity.Ignore(e => e.Description);
             entity.Ignore(e => e.Address);
             entity.Ignore(e => e.City);
@@ -88,6 +84,7 @@ public class AdminReadOnlyDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.CognitoSub).HasColumnName("cognito_id");
             entity.Property(e => e.UserType).HasConversion<string>().HasColumnName("role");
+            entity.HasOne<Tenant>().WithMany(t => t.Users).HasForeignKey(e => e.TenantId);
             entity.Ignore(e => e.Roles);
             entity.Ignore(e => e.Consent);
             entity.Ignore(e => e.AvatarUrl);
@@ -98,7 +95,6 @@ public class AdminReadOnlyDbContext : DbContext
             entity.Ignore(e => e.LastLoginAt);
             entity.Ignore(e => e.CreatedBy);
             entity.Ignore(e => e.UpdatedBy);
-            entity.Ignore(e => e.DeletedAt);
         });
 
         modelBuilder.Entity<Appointment>(entity =>
@@ -107,6 +103,7 @@ public class AdminReadOnlyDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.LocationType).HasConversion<string>();
+            entity.HasOne<Tenant>().WithMany(t => t.Appointments).HasForeignKey(e => e.TenantId);
         });
 
         modelBuilder.Entity<PromResponse>(entity =>

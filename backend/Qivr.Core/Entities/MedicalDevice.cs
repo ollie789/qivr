@@ -95,10 +95,33 @@ public class PatientDeviceUsage : TenantEntity
     /// </summary>
     public Guid RecordedBy { get; set; }
 
+    // === Baseline PROM Scores for Outcome Tracking ===
+    /// <summary>
+    /// Baseline PROM instance ID captured at or near procedure time
+    /// </summary>
+    public Guid? BaselinePromInstanceId { get; set; }
+
+    /// <summary>
+    /// Baseline PROM score (e.g., ODI score before surgery)
+    /// </summary>
+    public decimal? BaselineScore { get; set; }
+
+    /// <summary>
+    /// PROM template key used for baseline (e.g., "ODI", "NDI", "PHQ-9")
+    /// </summary>
+    [MaxLength(50)]
+    public string? BaselinePromType { get; set; }
+
+    /// <summary>
+    /// Date the baseline PROM was captured
+    /// </summary>
+    public DateTime? BaselineCapturedAt { get; set; }
+
     // Navigation properties
     public virtual MedicalDevice? Device { get; set; }
     public virtual User? Patient { get; set; }
     public virtual Appointment? Appointment { get; set; }
     public virtual TreatmentPlan? TreatmentPlan { get; set; }
     public virtual User? RecordedByUser { get; set; }
+    public virtual PromInstance? BaselinePromInstance { get; set; }
 }

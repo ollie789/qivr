@@ -642,19 +642,27 @@ public class QivrDbContext : DbContext
             entity.ToTable("prom_instances");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.PatientId });
+            entity.HasIndex(e => e.TreatmentPlanId);
             entity.Property(e => e.ResponseData).HasConversion(jsonConverter);
             entity.Property(e => e.Status).HasConversion<string>();
-            
+            entity.Property(e => e.InstanceType).HasConversion<string>();
+
             entity.HasOne(e => e.Patient)
                 .WithMany()
                 .HasForeignKey(e => e.PatientId)
                 .OnDelete(DeleteBehavior.Cascade);
-                
+
             entity.HasOne(e => e.Template)
                 .WithMany(i => i.Instances)
                 .HasForeignKey(e => e.TemplateId)
                 .OnDelete(DeleteBehavior.Cascade);
-                
+
+            // Treatment plan link for device outcome tracking
+            entity.HasOne(e => e.TreatmentPlan)
+                .WithMany()
+                .HasForeignKey(e => e.TreatmentPlanId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
@@ -1388,6 +1396,14 @@ public class QivrDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.RecordedBy)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Baseline PROM link for outcome tracking
+            entity.HasOne(e => e.BaselinePromInstance)
+                .WithMany()
+                .HasForeignKey(e => e.BaselinePromInstanceId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property(e => e.BaselinePromType).HasMaxLength(50);
 
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
