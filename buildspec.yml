@@ -28,13 +28,16 @@ phases:
       - echo Installing Node.js dependencies...
       - npm ci --legacy-peer-deps 2>/dev/null || npm install --legacy-peer-deps
 
-      - echo Building packages and frontends...
-      - npm run build:packages --if-present || (cd packages/http && npm run build && cd ../.. && cd packages/design-system && npm run build && cd ../..)
+      # Build shared packages first (required by frontends)
+      - echo Building shared packages...
+      - cd packages/http && npm run build && cd ../..
+      - cd packages/design-system && npm run build && cd ../..
       
       # Build frontends in parallel
-      - cd apps/clinic-dashboard && npm run build &
+      - echo Building frontends...
+      - (cd apps/clinic-dashboard && npm run build) &
       - CLINIC_PID=$!
-      - cd apps/patient-portal && npm run build &
+      - (cd apps/patient-portal && npm run build) &
       - PATIENT_PID=$!
       
       # Wait for frontend builds
