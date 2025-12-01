@@ -4,7 +4,6 @@ phases:
   install:
     runtime-versions:
       nodejs: 20
-      dotnet: 8.0
 
   pre_build:
     commands:
@@ -46,7 +45,7 @@ phases:
       - echo Waiting for Docker build...
       - wait $DOCKER_PID
 
-      # Run database migrations (after Docker push completes)
+      # Run database migrations using .NET 10 Docker image
       - echo Running database migrations...
       - |
         DB_SECRET=$(aws secretsmanager get-secret-value --secret-id qivr/production/database --query SecretString --output text)
@@ -54,11 +53,13 @@ phases:
         DB_USER=$(echo $DB_SECRET | jq -r '.username')
         DB_PASS=$(echo $DB_SECRET | jq -r '.password')
         DB_NAME=$(echo $DB_SECRET | jq -r '.database')
-        export ConnectionStrings__DefaultConnection="Host=$DB_HOST;Database=$DB_NAME;Username=$DB_USER;Password=$DB_PASS"
-        cd backend/Qivr.Api
-        dotnet tool restore 2>/dev/null || dotnet tool install --global dotnet-ef
-        dotnet ef database update --project ../Qivr.Infrastructure --startup-project . || echo "Migration completed or no pending migrations"
-        cd ../..
+        docker run --rm \
+          -e "ConnectionStrings__DefaultConnection=Host=$DB_HOST;Database=$DB_NAME;Username=$DB_USER;Password=$DB_PASS" \
+          -v $(pwd)/backend:/app \
+          -w /app \
+          mcr.microsoft.com/dotnet/sdk:10.0-preview-alpine \
+          sh -c "dotnet tool restore && dotnet ef database update --project Qivr.Infrastructure --startup-project Qivr.Api" \
+          || echo "Migration completed or no pending migrations"
 
   post_build:
     commands:
