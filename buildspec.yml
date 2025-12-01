@@ -53,7 +53,7 @@ phases:
         DB_USER=$(echo $DB_SECRET | jq -r '.username')
         DB_PASS=$(echo $DB_SECRET | jq -r '.password')
         DB_NAME=$(echo $DB_SECRET | jq -r '.database')
-        docker run --rm \
+        docker run --rm --platform linux/amd64 \
           -e "ConnectionStrings__DefaultConnection=Host=$DB_HOST;Database=$DB_NAME;Username=$DB_USER;Password=$DB_PASS" \
           -v $(pwd)/backend:/app \
           -w /app \
