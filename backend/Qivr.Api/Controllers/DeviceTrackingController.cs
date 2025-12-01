@@ -40,20 +40,7 @@ public class DeviceTrackingController : ControllerBase
         var tenantId = GetTenantId();
         if (tenantId == null) return Unauthorized();
 
-        // Check if tenant has research partner data sharing enabled
-        var tenant = await _context.Tenants.FindAsync(new object[] { tenantId.Value }, ct);
-        if (tenant == null) return NotFound();
-
-        // Check feature flag
-        var featureEnabled = tenant.Settings.TryGetValue("researchPartnerDataSharing", out var val)
-            && (val is bool b && b || bool.TryParse(val?.ToString(), out var parsed) && parsed);
-
-        if (!featureEnabled)
-        {
-            return Ok(new { devices = Array.Empty<object>(), message = "Research partner data sharing is not enabled for this clinic" });
-        }
-
-        // Get devices from affiliated partners
+        // Get devices from affiliated partners (active affiliations only)
         var affiliatedPartnerIds = await _context.PartnerClinicAffiliations
             .Where(a => a.TenantId == tenantId && a.Status == AffiliationStatus.Active)
             .Select(a => a.PartnerId)
@@ -61,7 +48,7 @@ public class DeviceTrackingController : ControllerBase
 
         if (!affiliatedPartnerIds.Any())
         {
-            return Ok(new { devices = Array.Empty<object>(), message = "No affiliated research partners" });
+            return Ok(new { devices = Array.Empty<object>(), message = "No affiliated research partners. Enable data sharing in Settings → Research Partners." });
         }
 
         IQueryable<MedicalDevice> query = _context.MedicalDevices

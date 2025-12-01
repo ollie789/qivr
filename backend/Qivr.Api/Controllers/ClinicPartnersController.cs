@@ -71,8 +71,9 @@ public class ClinicPartnersController : ControllerBase
         {
             PartnerId = partnerId,
             TenantId = tenantId,
-            Status = AffiliationStatus.Pending,
+            Status = AffiliationStatus.Active, // Auto-approve for now
             DataSharingLevel = Enum.Parse<DataSharingLevel>(request.DataSharingLevel ?? "Aggregated"),
+            ApprovedAt = DateTime.UtcNow,
             Notes = request.Notes
         };
 
