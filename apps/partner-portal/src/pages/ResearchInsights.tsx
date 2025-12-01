@@ -93,6 +93,10 @@ const DISCORDANCE_COLORS = [
 export default function ResearchInsights() {
   const [tabValue, setTabValue] = useState(0);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [selectedPromType, setSelectedPromType] = useState<string>("ODI");
+
+  // Common PROM types for spine/pain outcomes
+  const promTypes = ["ODI", "NDI", "VAS", "SF-36", "EQ-5D", "PROMIS"];
 
   const { data: devicesData } = useQuery({
     queryKey: ["devices-overview"],
@@ -124,10 +128,10 @@ export default function ResearchInsights() {
   });
 
   const { data: recoveryData, isLoading: recoveryLoading } = useQuery({
-    queryKey: ["recovery-timeline", selectedDeviceId],
+    queryKey: ["recovery-timeline", selectedDeviceId, selectedPromType],
     queryFn: () =>
       selectedDeviceId
-        ? researchApi.getRecoveryTimeline(selectedDeviceId)
+        ? researchApi.getRecoveryTimeline(selectedDeviceId, selectedPromType)
         : Promise.resolve(null),
     enabled: !!selectedDeviceId,
   });
@@ -271,6 +275,22 @@ export default function ResearchInsights() {
 
       {/* Recovery Timeline Tab */}
       <TabPanel value={tabValue} index={4}>
+        <Box sx={{ mb: 3 }}>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>PROM Type</InputLabel>
+            <Select
+              value={selectedPromType}
+              onChange={(e) => setSelectedPromType(e.target.value)}
+              label="PROM Type"
+            >
+              {promTypes.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
         {!selectedDeviceId ? (
           <Alert severity="info">
             Please select a specific device to view its recovery timeline.
@@ -279,8 +299,8 @@ export default function ResearchInsights() {
           <Skeleton variant="rectangular" height={400} />
         ) : !recoveryData || recoveryData.suppressedDueToPrivacy ? (
           <Alert severity="warning">
-            Insufficient data for recovery timeline (minimum 5 patients
-            required).
+            Insufficient data for recovery timeline (minimum 5 patients required
+            for {selectedPromType}).
           </Alert>
         ) : (
           <RecoveryTimelineSection data={recoveryData} />

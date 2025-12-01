@@ -18,7 +18,7 @@ import type {
   RecoveryTimelineResponse,
 } from "../types/outcomes";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 async function fetchWithAuth<T>(
   endpoint: string,

@@ -38,6 +38,18 @@ public class MedicalDevice : BaseEntity
     public string? Description { get; set; }
 
     /// <summary>
+    /// Technical specifications of the device
+    /// </summary>
+    [MaxLength(4000)]
+    public string? TechnicalSpecifications { get; set; }
+
+    /// <summary>
+    /// Global availability and regulatory status
+    /// </summary>
+    [MaxLength(2000)]
+    public string? GlobalAvailability { get; set; }
+
+    /// <summary>
     /// FDA UDI (Unique Device Identifier) if available
     /// </summary>
     [MaxLength(100)]
