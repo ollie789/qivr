@@ -154,7 +154,7 @@ export const useAuthStore = create<AuthState>()(
       name: "admin-auth",
       partialize: (state) => ({
         user: state.user,
-        isAuthenticated: state.isAuthenticated,
+        // Don't persist isAuthenticated - always verify with Cognito
       }),
     },
   ),

@@ -21,7 +21,6 @@ export default function Login() {
     mfaRequired,
     mfaSetupRequired,
     totpSecret,
-    checkSession,
   } = useAuthStore();
 
   const [email, setEmail] = useState("");
@@ -29,22 +28,15 @@ export default function Login() {
   const [mfaCode, setMfaCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
 
   const { isAuthenticated } = useAuthStore();
 
+  // Redirect if already authenticated (AuthProvider already checked session)
   useEffect(() => {
-    // If already authenticated in store, redirect immediately
     if (isAuthenticated) {
       navigate("/dashboard", { replace: true });
-      return;
     }
-    // Otherwise check Cognito session
-    checkSession().then((valid) => {
-      if (valid) navigate("/dashboard", { replace: true });
-      setCheckingSession(false);
-    });
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

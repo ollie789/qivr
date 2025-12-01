@@ -19,46 +19,55 @@ const Loading = () => (
     justifyContent="center"
     alignItems="center"
     minHeight="100vh"
+    bgcolor="#0f172a"
   >
     <CircularProgress />
   </Box>
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, checkSession } = useAuthStore();
-  const [checking, setChecking] = useState(true);
+  const { isAuthenticated } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function AuthProvider({ children }: { children: React.ReactNode }) {
+  const checkSession = useAuthStore((s) => s.checkSession);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    checkSession().finally(() => setChecking(false));
-  }, []);
+    checkSession().finally(() => setReady(true));
+  }, [checkSession]);
 
-  if (checking) return <Loading />;
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!ready) return <Loading />;
+  return <>{children}</>;
 }
 
 export default function App() {
   return (
-    <Suspense fallback={<Loading />}>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="tenants" element={<Tenants />} />
-          <Route path="tenants/:id" element={<TenantDetail />} />
-          <Route path="billing" element={<Billing />} />
-          <Route path="feature-flags" element={<FeatureFlags />} />
-          <Route path="usage" element={<Usage />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
-    </Suspense>
+    <AuthProvider>
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="tenants" element={<Tenants />} />
+            <Route path="tenants/:id" element={<TenantDetail />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="feature-flags" element={<FeatureFlags />} />
+            <Route path="usage" element={<Usage />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </AuthProvider>
   );
 }
