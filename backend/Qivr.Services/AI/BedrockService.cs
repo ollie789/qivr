@@ -412,21 +412,25 @@ internal class TitanTextResult
 
 internal class NovaResponse
 {
+    [System.Text.Json.Serialization.JsonPropertyName("output")]
     public NovaOutput? Output { get; set; }
 }
 
 internal class NovaOutput
 {
+    [System.Text.Json.Serialization.JsonPropertyName("message")]
     public NovaMessage? Message { get; set; }
 }
 
 internal class NovaMessage
 {
+    [System.Text.Json.Serialization.JsonPropertyName("content")]
     public List<NovaContent>? Content { get; set; }
 }
 
 internal class NovaContent
 {
+    [System.Text.Json.Serialization.JsonPropertyName("text")]
     public string? Text { get; set; }
 }
 
