@@ -88,6 +88,14 @@ public class QivrDbContext : DbContext
     public DbSet<ProviderScheduleOverride> ProviderScheduleOverrides => Set<ProviderScheduleOverride>();
     public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
 
+    // Research Partner entities
+    public DbSet<ResearchPartner> ResearchPartners => Set<ResearchPartner>();
+    public DbSet<PartnerClinicAffiliation> PartnerClinicAffiliations => Set<PartnerClinicAffiliation>();
+    public DbSet<ResearchStudy> ResearchStudies => Set<ResearchStudy>();
+    public DbSet<StudyEnrollment> StudyEnrollments => Set<StudyEnrollment>();
+    public DbSet<MedicalDevice> MedicalDevices => Set<MedicalDevice>();
+    public DbSet<PatientDeviceUsage> PatientDeviceUsages => Set<PatientDeviceUsage>();
+
     private static Dictionary<string, object> DeserializeJsonSafely(string v)
     {
         if (string.IsNullOrEmpty(v) || v == "NULL" || v == "null") 
@@ -866,6 +874,7 @@ public class QivrDbContext : DbContext
         ConfigureMedicalRecords(modelBuilder);
         ConfigureProviderScheduling(modelBuilder);
         ConfigureAdminAuditLog(modelBuilder, jsonComparer, jsonConverter);
+        ConfigureResearchPartner(modelBuilder, jsonComparer, jsonConverter);
     }
 
     private void ConfigureAdminAuditLog(ModelBuilder modelBuilder, ValueComparer<Dictionary<string, object>> jsonComparer, ValueConverter<Dictionary<string, object>, string> jsonConverter)
@@ -1200,6 +1209,179 @@ public class QivrDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ProviderId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+    }
+
+    private void ConfigureResearchPartner(ModelBuilder modelBuilder, ValueComparer<Dictionary<string, object>> jsonComparer, ValueConverter<Dictionary<string, object>, string> jsonConverter)
+    {
+        var nullableJsonConverter = new ValueConverter<Dictionary<string, object>?, string>(
+            v => v == null ? "{}" : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => string.IsNullOrEmpty(v) || v == "{}" ? null : JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null)
+        );
+
+        // ResearchPartner configuration
+        modelBuilder.Entity<ResearchPartner>(entity =>
+        {
+            entity.ToTable("research_partners");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.Name);
+
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Slug).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ContactEmail).HasMaxLength(255);
+            entity.Property(e => e.LogoUrl).HasMaxLength(500);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Website).HasMaxLength(200);
+            entity.Property(e => e.CognitoUserPoolId).HasMaxLength(100);
+        });
+
+        // PartnerClinicAffiliation configuration
+        modelBuilder.Entity<PartnerClinicAffiliation>(entity =>
+        {
+            entity.ToTable("partner_clinic_affiliations");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PartnerId, e.TenantId }).IsUnique();
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => e.Status);
+
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.DataSharingLevel).HasConversion<string>();
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasOne(e => e.Partner)
+                .WithMany(p => p.ClinicAffiliations)
+                .HasForeignKey(e => e.PartnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ResearchStudy configuration
+        modelBuilder.Entity<ResearchStudy>(entity =>
+        {
+            entity.ToTable("research_studies");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.PartnerId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.ProtocolId);
+
+            entity.Property(e => e.Title).HasMaxLength(300).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(2000);
+            entity.Property(e => e.ProtocolId).HasMaxLength(100);
+            entity.Property(e => e.Status).HasConversion<string>();
+
+            entity.Property(e => e.InclusionCriteria)
+                .HasColumnType("jsonb")
+                .HasConversion(nullableJsonConverter);
+
+            entity.Property(e => e.ExclusionCriteria)
+                .HasColumnType("jsonb")
+                .HasConversion(nullableJsonConverter);
+
+            entity.HasOne(e => e.Partner)
+                .WithMany(p => p.Studies)
+                .HasForeignKey(e => e.PartnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // StudyEnrollment configuration
+        modelBuilder.Entity<StudyEnrollment>(entity =>
+        {
+            entity.ToTable("study_enrollments");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.StudyId, e.PatientId }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.PatientId });
+            entity.HasIndex(e => e.Status);
+
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.ConsentVersion).HasMaxLength(50);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasOne(e => e.Study)
+                .WithMany(s => s.Enrollments)
+                .HasForeignKey(e => e.StudyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // MedicalDevice configuration
+        modelBuilder.Entity<MedicalDevice>(entity =>
+        {
+            entity.ToTable("medical_devices");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.PartnerId);
+            entity.HasIndex(e => new { e.PartnerId, e.DeviceCode }).IsUnique();
+            entity.HasIndex(e => e.Category);
+            entity.HasIndex(e => e.BodyRegion);
+
+            entity.Property(e => e.Name).HasMaxLength(300).IsRequired();
+            entity.Property(e => e.DeviceCode).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Category).HasMaxLength(100);
+            entity.Property(e => e.BodyRegion).HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.UdiCode).HasMaxLength(100);
+
+            entity.HasOne(e => e.Partner)
+                .WithMany(p => p.Devices)
+                .HasForeignKey(e => e.PartnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // PatientDeviceUsage configuration
+        modelBuilder.Entity<PatientDeviceUsage>(entity =>
+        {
+            entity.ToTable("patient_device_usages");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.PatientId });
+            entity.HasIndex(e => e.DeviceId);
+            entity.HasIndex(e => e.ProcedureDate);
+            entity.HasIndex(e => new { e.TenantId, e.DeviceId, e.ProcedureDate });
+
+            entity.Property(e => e.ProcedureType).HasMaxLength(300);
+            entity.Property(e => e.ImplantLocation).HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+
+            entity.HasOne(e => e.Device)
+                .WithMany(d => d.UsageRecords)
+                .HasForeignKey(e => e.DeviceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Appointment)
+                .WithMany()
+                .HasForeignKey(e => e.AppointmentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.TreatmentPlan)
+                .WithMany()
+                .HasForeignKey(e => e.TreatmentPlanId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.RecordedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.RecordedBy)
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });

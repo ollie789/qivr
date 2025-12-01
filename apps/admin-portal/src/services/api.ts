@@ -536,3 +536,165 @@ export const billingExtendedApi = {
       body: JSON.stringify({ amount, reason }),
     }),
 };
+
+// Research Partners API
+export interface ResearchPartnerListItem {
+  id: string;
+  name: string;
+  slug: string;
+  contactEmail?: string;
+  logoUrl?: string;
+  isActive: boolean;
+  createdAt: string;
+  clinicCount: number;
+  deviceCount: number;
+  studyCount: number;
+}
+
+export interface ResearchPartnerDetail {
+  id: string;
+  name: string;
+  slug: string;
+  contactEmail?: string;
+  logoUrl?: string;
+  description?: string;
+  website?: string;
+  isActive: boolean;
+  cognitoUserPoolId?: string;
+  createdAt: string;
+  updatedAt: string;
+  affiliations: AffiliationResponse[];
+  devices: DeviceResponse[];
+  studies: StudyResponse[];
+}
+
+export interface AffiliationResponse {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  status: string;
+  dataSharingLevel: string;
+  approvedAt?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface DeviceResponse {
+  id: string;
+  name: string;
+  deviceCode: string;
+  category?: string;
+  bodyRegion?: string;
+  isActive: boolean;
+  usageCount: number;
+}
+
+export interface StudyResponse {
+  id: string;
+  title: string;
+  status: string;
+  protocolId?: string;
+  startDate?: string;
+  endDate?: string;
+  targetEnrollment: number;
+  currentEnrollment: number;
+}
+
+export interface AvailableClinic {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface CreatePartnerRequest {
+  name: string;
+  contactEmail?: string;
+  logoUrl?: string;
+  description?: string;
+  website?: string;
+}
+
+export interface UpdatePartnerRequest {
+  name?: string;
+  contactEmail?: string;
+  logoUrl?: string;
+  description?: string;
+  website?: string;
+}
+
+export interface CreateAffiliationRequest {
+  tenantId: string;
+  status?: string;
+  dataSharingLevel?: string;
+  notes?: string;
+}
+
+export interface UpdateAffiliationRequest {
+  status?: string;
+  dataSharingLevel?: string;
+  notes?: string;
+}
+
+export const researchPartnersApi = {
+  // Partner CRUD
+  getPartners: () => request<ResearchPartnerListItem[]>("/research-partners"),
+  getPartner: (id: string) =>
+    request<ResearchPartnerDetail>(`/research-partners/${id}`),
+  createPartner: (data: CreatePartnerRequest) =>
+    request<{ id: string; slug: string }>("/research-partners", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updatePartner: (id: string, data: UpdatePartnerRequest) =>
+    request<{ success: boolean }>(`/research-partners/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deletePartner: (id: string) =>
+    request<{ success: boolean }>(`/research-partners/${id}`, {
+      method: "DELETE",
+    }),
+  activatePartner: (id: string) =>
+    request<{ success: boolean }>(`/research-partners/${id}/activate`, {
+      method: "POST",
+    }),
+  deactivatePartner: (id: string) =>
+    request<{ success: boolean }>(`/research-partners/${id}/deactivate`, {
+      method: "POST",
+    }),
+
+  // Affiliations
+  getAffiliations: (partnerId: string) =>
+    request<AffiliationResponse[]>(
+      `/research-partners/${partnerId}/affiliations`,
+    ),
+  addAffiliation: (partnerId: string, data: CreateAffiliationRequest) =>
+    request<{ id: string }>(`/research-partners/${partnerId}/affiliations`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateAffiliation: (
+    partnerId: string,
+    affiliationId: string,
+    data: UpdateAffiliationRequest,
+  ) =>
+    request<{ success: boolean }>(
+      `/research-partners/${partnerId}/affiliations/${affiliationId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+    ),
+  deleteAffiliation: (partnerId: string, affiliationId: string) =>
+    request<{ success: boolean }>(
+      `/research-partners/${partnerId}/affiliations/${affiliationId}`,
+      {
+        method: "DELETE",
+      },
+    ),
+  getAvailableClinics: (partnerId: string) =>
+    request<AvailableClinic[]>(
+      `/research-partners/${partnerId}/available-clinics`,
+    ),
+};

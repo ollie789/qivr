@@ -29,6 +29,14 @@ public class AdminReadOnlyDbContext : DbContext
     public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
 
+    // Research Partner entities
+    public DbSet<ResearchPartner> ResearchPartners => Set<ResearchPartner>();
+    public DbSet<PartnerClinicAffiliation> PartnerClinicAffiliations => Set<PartnerClinicAffiliation>();
+    public DbSet<ResearchStudy> ResearchStudies => Set<ResearchStudy>();
+    public DbSet<StudyEnrollment> StudyEnrollments => Set<StudyEnrollment>();
+    public DbSet<MedicalDevice> MedicalDevices => Set<MedicalDevice>();
+    public DbSet<PatientDeviceUsage> PatientDeviceUsages => Set<PatientDeviceUsage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -147,6 +155,53 @@ public class AdminReadOnlyDbContext : DbContext
                 v => string.Join(",", v),
                 v => v.Split(",", StringSplitOptions.RemoveEmptyEntries).ToList()
             );
+        });
+
+        // Research Partner entities
+        modelBuilder.Entity<ResearchPartner>(entity =>
+        {
+            entity.ToTable("research_partners");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<PartnerClinicAffiliation>(entity =>
+        {
+            entity.ToTable("partner_clinic_affiliations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.DataSharingLevel).HasConversion<string>();
+            entity.HasOne(e => e.Partner).WithMany(p => p.ClinicAffiliations).HasForeignKey(e => e.PartnerId);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId);
+        });
+
+        modelBuilder.Entity<ResearchStudy>(entity =>
+        {
+            entity.ToTable("research_studies");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.HasOne(e => e.Partner).WithMany(p => p.Studies).HasForeignKey(e => e.PartnerId);
+        });
+
+        modelBuilder.Entity<StudyEnrollment>(entity =>
+        {
+            entity.ToTable("study_enrollments");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.HasOne(e => e.Study).WithMany(s => s.Enrollments).HasForeignKey(e => e.StudyId);
+        });
+
+        modelBuilder.Entity<MedicalDevice>(entity =>
+        {
+            entity.ToTable("medical_devices");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Partner).WithMany(p => p.Devices).HasForeignKey(e => e.PartnerId);
+        });
+
+        modelBuilder.Entity<PatientDeviceUsage>(entity =>
+        {
+            entity.ToTable("patient_device_usages");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Device).WithMany(d => d.UsageRecords).HasForeignKey(e => e.DeviceId);
         });
     }
 

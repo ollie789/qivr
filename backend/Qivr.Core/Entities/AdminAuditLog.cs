@@ -115,4 +115,14 @@ public static class AdminActions
     // API Key actions
     public const string ApiKeyCreate = "apikey.create";
     public const string ApiKeyRevoke = "apikey.revoke";
+
+    // Research Partner actions
+    public const string ResearchPartnerCreate = "research_partner.create";
+    public const string ResearchPartnerUpdate = "research_partner.update";
+    public const string ResearchPartnerActivate = "research_partner.activate";
+    public const string ResearchPartnerDeactivate = "research_partner.deactivate";
+    public const string ResearchPartnerDelete = "research_partner.delete";
+    public const string ResearchPartnerAffiliationCreate = "research_partner.affiliation.create";
+    public const string ResearchPartnerAffiliationUpdate = "research_partner.affiliation.update";
+    public const string ResearchPartnerAffiliationDelete = "research_partner.affiliation.delete";
 }
