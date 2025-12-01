@@ -216,7 +216,7 @@ export function DailyCheckIn({
                       transition: "all 0.2s",
                       bgcolor: isSelected
                         ? alpha(
-                            theme.palette[item.color as keyof typeof theme.palette] as any,
+                            (theme.palette[item.color as keyof typeof theme.palette] as any)?.main ?? theme.palette.primary.main,
                             0.1
                           )
                         : "transparent",

@@ -64,6 +64,6 @@ export async function deleteMessage(messageId: string): Promise<void> {
 }
 
 export async function getUnreadCount(): Promise<number> {
-  const response = await apiClient.get<{ count: number }>('/api/messages/unread/count');
+  const response = await apiClient.get<{ count: number }>('/api/messages/unread-count');
   return response.count;
 }
