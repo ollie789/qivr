@@ -28,6 +28,7 @@ import {
   MonitorHeart,
   Insights,
   SupportAgent,
+  Api,
 } from "@mui/icons-material";
 import { useAuthStore } from "../stores/authStore";
 
@@ -40,6 +41,7 @@ const navItems = [
   { path: "/operations", label: "Operations", icon: <MonitorHeart /> },
   { path: "/insights", label: "Insights", icon: <Insights /> },
   { path: "/support", label: "Support Tools", icon: <SupportAgent /> },
+  { path: "/external-api", label: "External API", icon: <Api /> },
   { path: "/feature-flags", label: "Feature Flags", icon: <Flag /> },
   { path: "/usage", label: "Usage Analytics", icon: <BarChart /> },
   { path: "/settings", label: "Settings", icon: <Settings /> },

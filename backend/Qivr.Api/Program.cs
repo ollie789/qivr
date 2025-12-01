@@ -27,6 +27,8 @@ using Qivr.Api.Workers;
 using Qivr.Api.Config;
 using Microsoft.AspNetCore.HttpOverrides;
 using Qivr.Api.Hubs;
+using Qivr.Core.Interfaces;
+using Qivr.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -235,6 +237,7 @@ builder.Services.AddScoped<IModernEmailService, ModernEmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
 // Configure Audit and Notification Services
 builder.Services.AddScoped<IAuditLogger, DbAuditLogger>();
@@ -265,6 +268,9 @@ builder.Services.AddScoped<IAiTriageService, AiTriageService>();
 builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
 builder.Services.AddAWSService<Amazon.Textract.IAmazonTextract>();
 builder.Services.AddAWSService<Amazon.Athena.IAmazonAthena>(); // For Admin Analytics
+builder.Services.AddAWSService<Amazon.CloudWatch.IAmazonCloudWatch>(); // For Operations Metrics
+builder.Services.AddAWSService<Amazon.CloudWatchLogs.IAmazonCloudWatchLogs>(); // For Log Insights
+builder.Services.AddScoped<Qivr.Api.Services.ICloudWatchMetricsService, Qivr.Api.Services.CloudWatchMetricsService>();
 builder.Services.AddScoped<IS3Service, S3Service>();
 builder.Services.AddScoped<ITextractService, TextractService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();

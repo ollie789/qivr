@@ -3,6 +3,7 @@ using Amazon.SQS.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Qivr.Api.Services;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
 using System.Diagnostics;
@@ -21,17 +22,20 @@ public class AdminOperationsController : ControllerBase
     private readonly IConfiguration _config;
     private readonly ILogger<AdminOperationsController> _logger;
     private readonly IAmazonSQS? _sqs;
+    private readonly ICloudWatchMetricsService? _cloudWatch;
 
     public AdminOperationsController(
         AdminReadOnlyDbContext readOnlyContext,
         IConfiguration config,
         ILogger<AdminOperationsController> logger,
-        IAmazonSQS? sqs = null)
+        IAmazonSQS? sqs = null,
+        ICloudWatchMetricsService? cloudWatch = null)
     {
         _readOnlyContext = readOnlyContext;
         _config = config;
         _logger = logger;
         _sqs = sqs;
+        _cloudWatch = cloudWatch;
     }
 
     /// <summary>
@@ -68,16 +72,53 @@ public class AdminOperationsController : ControllerBase
     }
 
     /// <summary>
-    /// Get API performance metrics
+    /// Get API performance metrics from CloudWatch
     /// </summary>
     [HttpGet("metrics")]
     public async Task<IActionResult> GetMetrics([FromQuery] int hours = 24, CancellationToken ct = default)
     {
-        // In production, these would come from CloudWatch or similar
-        // For now, return mock/calculated data
-        var since = DateTime.UtcNow.AddHours(-hours);
+        if (_cloudWatch != null)
+        {
+            var metrics = await _cloudWatch.GetApiMetricsAsync(hours, ct);
+            return Ok(new
+            {
+                period = metrics.Period,
+                dataSource = metrics.DataSource,
+                apiMetrics = new
+                {
+                    totalRequests = metrics.TotalRequests,
+                    avgLatencyMs = Math.Round(metrics.AvgLatencyMs, 2),
+                    p95LatencyMs = Math.Round(metrics.P95LatencyMs, 2),
+                    p99LatencyMs = Math.Round(metrics.P99LatencyMs, 2),
+                    errorRate = Math.Round(metrics.ErrorRate, 4),
+                    successRate = Math.Round(metrics.SuccessRate, 4),
+                    total4xxErrors = metrics.Total4xxErrors,
+                    total5xxErrors = metrics.Total5xxErrors
+                },
+                requestsByHour = metrics.RequestsByHour.Select(h => new
+                {
+                    timestamp = h.Timestamp,
+                    hour = h.Hour,
+                    requests = h.Requests,
+                    avgLatencyMs = Math.Round(h.AvgLatencyMs, 2)
+                }),
+                topEndpoints = metrics.TopEndpoints.Select(e => new
+                {
+                    endpoint = e.Endpoint,
+                    count = e.Count,
+                    avgMs = Math.Round(e.AvgLatencyMs, 2)
+                }),
+                errorBreakdown = metrics.ErrorBreakdown.Select(e => new
+                {
+                    code = e.Code,
+                    count = e.Count,
+                    description = e.Description
+                })
+            });
+        }
 
-        // Get request counts from audit logs as proxy
+        // Fallback: Get request counts from audit logs as proxy
+        var since = DateTime.UtcNow.AddHours(-hours);
         var auditLogs = await _readOnlyContext.AdminAuditLogs
             .Where(l => l.CreatedAt >= since)
             .GroupBy(l => new { Hour = l.CreatedAt.Hour })
@@ -87,35 +128,27 @@ public class AdminOperationsController : ControllerBase
         return Ok(new
         {
             period = $"Last {hours} hours",
+            dataSource = "audit_logs_estimate",
             apiMetrics = new
             {
-                totalRequests = auditLogs.Sum(l => l.Count) * 100, // Estimate
-                avgLatencyMs = 45, // Would come from APM
-                p95LatencyMs = 120,
-                p99LatencyMs = 250,
-                errorRate = 0.02,
-                successRate = 99.98
+                totalRequests = auditLogs.Sum(l => l.Count) * 100,
+                avgLatencyMs = 0,
+                p95LatencyMs = 0,
+                p99LatencyMs = 0,
+                errorRate = 0,
+                successRate = 0,
+                total4xxErrors = 0,
+                total5xxErrors = 0
             },
             requestsByHour = Enumerable.Range(0, 24).Select(h => new
             {
+                timestamp = DateTime.UtcNow.Date.AddHours(h),
                 hour = h,
-                requests = auditLogs.FirstOrDefault(l => l.Hour == h)?.Count * 100 ?? Random.Shared.Next(50, 200)
+                requests = auditLogs.FirstOrDefault(l => l.Hour == h)?.Count * 100 ?? 0,
+                avgLatencyMs = 0
             }),
-            topEndpoints = new[]
-            {
-                new { endpoint = "GET /api/appointments", count = 15420, avgMs = 35 },
-                new { endpoint = "GET /api/patients", count = 12350, avgMs = 42 },
-                new { endpoint = "POST /api/prom-responses", count = 8920, avgMs = 58 },
-                new { endpoint = "GET /api/documents", count = 6540, avgMs = 78 },
-                new { endpoint = "POST /api/messages", count = 4230, avgMs = 45 }
-            },
-            errorBreakdown = new[]
-            {
-                new { code = 400, count = 124, description = "Bad Request" },
-                new { code = 401, count = 89, description = "Unauthorized" },
-                new { code = 404, count = 56, description = "Not Found" },
-                new { code = 500, count = 12, description = "Internal Server Error" }
-            }
+            topEndpoints = Array.Empty<object>(),
+            errorBreakdown = Array.Empty<object>()
         });
     }
 
@@ -219,7 +252,7 @@ public class AdminOperationsController : ControllerBase
     }
 
     /// <summary>
-    /// Get failed jobs and alerts
+    /// Get failed jobs and alerts from audit logs and CloudWatch alarms
     /// </summary>
     [HttpGet("alerts")]
     public async Task<IActionResult> GetAlerts([FromQuery] int hours = 24, CancellationToken ct = default)
@@ -233,60 +266,104 @@ public class AdminOperationsController : ControllerBase
             .Take(50)
             .Select(l => new
             {
-                id = l.Id,
+                id = l.Id.ToString(),
                 timestamp = l.CreatedAt,
                 type = "admin_operation_failed",
                 severity = "warning",
                 action = l.Action,
                 resource = $"{l.ResourceType}/{l.ResourceId}",
                 error = l.ErrorMessage,
-                admin = l.AdminEmail
+                admin = l.AdminEmail,
+                message = $"Admin operation '{l.Action}' failed on {l.ResourceType}"
             })
             .ToListAsync(ct);
-
-        // In production, also check:
-        // - CloudWatch alarms
-        // - Failed ETL jobs
-        // - Email delivery failures
-        // - Payment failures
 
         var alerts = new List<object>();
         alerts.AddRange(failedOps);
 
-        // Add sample system alerts
-        alerts.Add(new
+        // Get CloudWatch alarms if available
+        if (_cloudWatch != null)
         {
-            id = Guid.NewGuid(),
-            timestamp = DateTime.UtcNow.AddHours(-2),
-            type = "high_error_rate",
-            severity = "warning",
-            message = "Error rate exceeded 1% threshold",
-            details = "API error rate was 1.2% between 14:00-14:15 UTC"
-        });
+            var cloudWatchAlerts = await _cloudWatch.GetAlarmsAsync(ct);
+            foreach (var alert in cloudWatchAlerts.Where(a => a.Timestamp >= since))
+            {
+                alerts.Add(new
+                {
+                    id = alert.Id,
+                    timestamp = alert.Timestamp,
+                    type = alert.Type,
+                    severity = alert.Severity,
+                    message = alert.Message,
+                    metricName = alert.MetricName,
+                    ns = alert.Namespace
+                });
+            }
+        }
+
+        // Count by severity
+        var byCritical = 0;
+        var byWarning = 0;
+        var byInfo = 0;
+        var byError = 0;
+
+        foreach (var alert in alerts)
+        {
+            var severity = ((dynamic)alert).severity?.ToString() ?? "info";
+            switch (severity)
+            {
+                case "critical": byCritical++; break;
+                case "error": byError++; break;
+                case "warning": byWarning++; break;
+                default: byInfo++; break;
+            }
+        }
 
         return Ok(new
         {
             period = $"Last {hours} hours",
+            dataSource = _cloudWatch != null ? "cloudwatch+audit_logs" : "audit_logs",
             totalAlerts = alerts.Count,
             bySeverity = new
             {
-                critical = alerts.Count(a => ((dynamic)a).severity == "critical"),
-                warning = alerts.Count(a => ((dynamic)a).severity == "warning"),
-                info = alerts.Count(a => ((dynamic)a).severity == "info")
+                critical = byCritical,
+                error = byError,
+                warning = byWarning,
+                info = byInfo
             },
-            alerts = alerts.OrderByDescending(a => ((dynamic)a).timestamp).Take(20)
+            alerts = alerts.OrderByDescending(a => ((dynamic)a).timestamp).Take(50)
         });
     }
 
     /// <summary>
-    /// Get ETL job status
+    /// Get ETL job status from CloudWatch Lambda metrics
     /// </summary>
     [HttpGet("etl-status")]
-    public IActionResult GetEtlStatus()
+    public async Task<IActionResult> GetEtlStatus(CancellationToken ct)
     {
-        // In production, query CloudWatch Logs or Lambda metrics
+        if (_cloudWatch != null)
+        {
+            var lambdaStatuses = await _cloudWatch.GetLambdaStatusAsync(ct);
+            return Ok(new
+            {
+                dataSource = "cloudwatch",
+                jobs = lambdaStatuses.Select(l => new
+                {
+                    name = l.DisplayName,
+                    lambdaName = l.FunctionName,
+                    schedule = l.Schedule,
+                    lastRun = l.LastRun,
+                    lastStatus = l.LastStatus,
+                    lastDuration = l.AvgDurationMs > 0 ? $"{Math.Round(l.AvgDurationMs / 1000, 1)}s" : "N/A",
+                    invocationsLast24h = l.InvocationsLast24h,
+                    errorsLast24h = l.ErrorsLast24h
+                })
+            });
+        }
+
+        // Fallback: Return static configuration
         return Ok(new
         {
+            dataSource = "static",
             jobs = new[]
             {
                 new
@@ -294,30 +371,33 @@ public class AdminOperationsController : ControllerBase
                     name = "Tenant Data Extract",
                     lambdaName = "qivr-etl-extract",
                     schedule = "Daily at 01:00 UTC",
-                    lastRun = DateTime.UtcNow.Date.AddHours(1),
-                    lastStatus = "success",
-                    lastDuration = "12s",
-                    recordsProcessed = 14
+                    lastRun = (DateTime?)null,
+                    lastStatus = "unknown",
+                    lastDuration = "N/A",
+                    invocationsLast24h = 0,
+                    errorsLast24h = 0
                 },
                 new
                 {
                     name = "PROM Outcomes Aggregation",
                     lambdaName = "qivr-etl-prom",
                     schedule = "Daily at 02:00 UTC",
-                    lastRun = DateTime.UtcNow.Date.AddHours(2),
-                    lastStatus = "success",
-                    lastDuration = "45s",
-                    recordsProcessed = 0
+                    lastRun = (DateTime?)null,
+                    lastStatus = "unknown",
+                    lastDuration = "N/A",
+                    invocationsLast24h = 0,
+                    errorsLast24h = 0
                 },
                 new
                 {
                     name = "Usage Stats Rollup",
                     lambdaName = "qivr-etl-usage",
                     schedule = "Hourly",
-                    lastRun = DateTime.UtcNow.AddHours(-1),
-                    lastStatus = "success",
-                    lastDuration = "8s",
-                    recordsProcessed = 156
+                    lastRun = (DateTime?)null,
+                    lastStatus = "unknown",
+                    lastDuration = "N/A",
+                    invocationsLast24h = 0,
+                    errorsLast24h = 0
                 }
             }
         });

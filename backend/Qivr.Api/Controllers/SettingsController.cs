@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Qivr.Core.Interfaces;
 using Qivr.Infrastructure.Data;
 using Qivr.Services;
 using Qivr.Api.Exceptions;
@@ -11,16 +12,31 @@ public class SettingsController : BaseApiController
 {
     private readonly QivrDbContext _context;
     private readonly ISettingsService _settingsService;
+    private readonly IFeatureFlagService _featureFlags;
     private readonly ILogger<SettingsController> _logger;
 
     public SettingsController(
         QivrDbContext context,
         ISettingsService settingsService,
+        IFeatureFlagService featureFlags,
         ILogger<SettingsController> logger)
     {
         _context = context;
         _settingsService = settingsService;
+        _featureFlags = featureFlags;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Get feature flags for current tenant
+    /// </summary>
+    [HttpGet("features")]
+    [ProducesResponseType(typeof(Dictionary<string, bool>), 200)]
+    public async Task<IActionResult> GetFeatureFlags()
+    {
+        var tenantId = RequireTenantId();
+        var flags = await _featureFlags.GetAllFlagsAsync(tenantId);
+        return Success(flags);
     }
 
     /// <summary>

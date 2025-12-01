@@ -19,6 +19,8 @@
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.500" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.500" />
     <PackageReference Include="AWSSDK.SQS" Version="3.7.400" />
+    <PackageReference Include="AWSSDK.CloudWatch" Version="3.7.500" />
+    <PackageReference Include="AWSSDK.CloudWatchLogs" Version="3.7.500" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageReference Include="MediatR" Version="12.2.0" />

@@ -13,14 +13,14 @@ public interface IOcrQueueService
 
 public class OcrQueueService : IOcrQueueService
 {
-    private readonly IAmazonSQS _sqsClient;
+    private readonly IAmazonSQS? _sqsClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OcrQueueService> _logger;
 
     public OcrQueueService(
-        IAmazonSQS sqsClient,
         IConfiguration configuration,
-        ILogger<OcrQueueService> logger)
+        ILogger<OcrQueueService> logger,
+        IAmazonSQS? sqsClient = null)
     {
         _sqsClient = sqsClient;
         _configuration = configuration;
@@ -29,6 +29,12 @@ public class OcrQueueService : IOcrQueueService
 
     public async Task QueueDocumentForOcrAsync(Guid documentId, string s3Bucket, string s3Key, CancellationToken cancellationToken = default)
     {
+        if (_sqsClient == null)
+        {
+            _logger.LogWarning("SQS client not configured, skipping OCR processing");
+            return;
+        }
+
         var queueUrl = _configuration["AWS:OcrQueueUrl"];
         if (string.IsNullOrEmpty(queueUrl))
         {

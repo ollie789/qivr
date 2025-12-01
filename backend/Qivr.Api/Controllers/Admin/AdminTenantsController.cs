@@ -55,17 +55,16 @@ public class AdminTenantsController : ControllerBase
         var appointmentCount = await _readOnlyContext.Appointments
             .CountAsync(a => a.TenantId == id && a.ScheduledStart >= DateTime.UtcNow.AddMonths(-1), ct);
 
-        // Feature flags from Settings
-        var featureFlags = new Dictionary<string, bool>
+        // Feature flags: start with plan defaults, then apply tenant overrides
+        var featureFlags = GetPlanDefaultFlags(tenant.Plan);
+        foreach (var key in featureFlags.Keys.ToList())
         {
-            ["aiTriage"] = tenant.Settings.TryGetValue("aiTriage", out var at) && Convert.ToBoolean(at),
-            ["aiTreatmentPlans"] = tenant.Settings.TryGetValue("aiTreatmentPlans", out var atp) && Convert.ToBoolean(atp),
-            ["documentOcr"] = tenant.Settings.TryGetValue("documentOcr", out var doc) && Convert.ToBoolean(doc),
-            ["smsReminders"] = tenant.Settings.TryGetValue("smsReminders", out var sms) && Convert.ToBoolean(sms),
-            ["apiAccess"] = tenant.Settings.TryGetValue("apiAccess", out var api) && Convert.ToBoolean(api),
-            ["customBranding"] = tenant.Settings.TryGetValue("customBranding", out var cb) && Convert.ToBoolean(cb),
-            ["hipaaAuditLogs"] = tenant.Settings.TryGetValue("hipaaAuditLogs", out var hal) && Convert.ToBoolean(hal),
-        };
+            if (tenant.Settings.TryGetValue(key, out var val))
+            {
+                if (val is bool b) featureFlags[key] = b;
+                else if (bool.TryParse(val?.ToString(), out var parsed)) featureFlags[key] = parsed;
+            }
+        }
 
         // Plan limits based on tier
         var limits = GetPlanLimits(tenant.Plan);
@@ -103,6 +102,30 @@ public class AdminTenantsController : ControllerBase
         "professional" => new PlanLimits { MaxStaff = 10, MaxPatients = 2000, MaxStorageGb = 50, MaxAiCallsPerMonth = 1000 },
         "enterprise" => new PlanLimits { MaxStaff = 50, MaxPatients = 10000, MaxStorageGb = 500, MaxAiCallsPerMonth = 10000 },
         _ => new PlanLimits { MaxStaff = 3, MaxPatients = 500, MaxStorageGb = 10, MaxAiCallsPerMonth = 100 }
+    };
+
+    private static Dictionary<string, bool> GetPlanDefaultFlags(string plan) => plan.ToLower() switch
+    {
+        "starter" => new Dictionary<string, bool>
+        {
+            ["aiTriage"] = false, ["aiTreatmentPlans"] = false, ["documentOcr"] = true,
+            ["smsReminders"] = false, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = false
+        },
+        "professional" => new Dictionary<string, bool>
+        {
+            ["aiTriage"] = true, ["aiTreatmentPlans"] = true, ["documentOcr"] = true,
+            ["smsReminders"] = true, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = true
+        },
+        "enterprise" => new Dictionary<string, bool>
+        {
+            ["aiTriage"] = true, ["aiTreatmentPlans"] = true, ["documentOcr"] = true,
+            ["smsReminders"] = true, ["apiAccess"] = true, ["customBranding"] = true, ["hipaaAuditLogs"] = true
+        },
+        _ => new Dictionary<string, bool>
+        {
+            ["aiTriage"] = false, ["aiTreatmentPlans"] = false, ["documentOcr"] = true,
+            ["smsReminders"] = false, ["apiAccess"] = false, ["customBranding"] = false, ["hipaaAuditLogs"] = false
+        }
     };
 
     /// <summary>
