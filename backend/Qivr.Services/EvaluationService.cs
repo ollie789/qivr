@@ -34,7 +34,7 @@ public class EvaluationService : IEvaluationService
         {
             PatientId = dto.PatientId,
             TenantId = patient.TenantId,
-            EvaluationNumber = GenerateEvaluationNumber(),
+            EvaluationNumber = await GenerateEvaluationNumberAsync(cancellationToken),
             ChiefComplaint = dto.ChiefComplaint,
             Symptoms = dto.Symptoms,
             QuestionnaireResponses = dto.QuestionnaireResponses,
@@ -194,9 +194,23 @@ public class EvaluationService : IEvaluationService
         _logger.LogInformation("Evaluation {EvaluationId} status updated to {Status}", id, status);
     }
 
-    private string GenerateEvaluationNumber()
+    private async Task<string> GenerateEvaluationNumberAsync(CancellationToken cancellationToken)
     {
-        return $"EVAL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+        // Use database sequence for collision-safe sequential numbers
+        // This ensures unique, monotonically increasing evaluation numbers even under high concurrency
+        try
+        {
+            var sequenceValue = await _context.Database
+                .SqlQuery<long>($"SELECT nextval('qivr.evaluation_number_seq')")
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return $"EVAL-{DateTime.UtcNow:yyyy}-{sequenceValue:D6}";
+        }
+        catch
+        {
+            // Fallback if sequence doesn't exist - use timestamp + longer GUID for uniqueness
+            return $"EVAL-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString("N")[..12].ToUpper()}";
+        }
     }
 }
 

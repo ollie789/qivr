@@ -95,10 +95,31 @@ export interface DataTableProps<T = any> {
    * Get unique key for each row
    */
   getRowId?: (row: T, index: number) => string | number;
+  /**
+   * Server-side pagination: total count of all records
+   */
+  totalCount?: number;
+  /**
+   * Server-side pagination: current page (0-indexed)
+   */
+  page?: number;
+  /**
+   * Server-side pagination: page change handler
+   */
+  onPageChange?: (page: number) => void;
+  /**
+   * Server-side pagination: rows per page change handler
+   */
+  onRowsPerPageChange?: (rowsPerPage: number) => void;
+  /**
+   * Available page size options
+   */
+  rowsPerPageOptions?: number[];
 }
 
 /**
- * A feature-rich data table with sorting, filtering, and pagination
+ * A feature-rich data table with sorting, filtering, and pagination.
+ * Supports both client-side and server-side pagination.
  */
 export function DataTable<T = any>({
   columns,
@@ -112,12 +133,25 @@ export function DataTable<T = any>({
   pageSize: initialPageSize = 10,
   onRowClick,
   getRowId = (_row, index) => index,
+  // Server-side pagination props
+  totalCount,
+  page: controlledPage,
+  onPageChange,
+  onRowsPerPageChange,
+  rowsPerPageOptions = [5, 10, 25],
 }: DataTableProps<T>) {
-  const [page, setPage] = useState(0);
+  // Determine if using server-side pagination
+  const isServerPaginated = totalCount !== undefined && onPageChange !== undefined;
+
+  // Internal state for client-side pagination
+  const [internalPage, setInternalPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(initialPageSize);
   const [orderBy, setOrderBy] = useState<string | null>(null);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Use controlled or internal page
+  const page = isServerPaginated ? (controlledPage ?? 0) : internalPage;
 
   const handleSort = (columnId: string) => {
     const isAsc = orderBy === columnId && order === 'asc';
@@ -129,12 +163,35 @@ export function DataTable<T = any>({
     const query = event.target.value;
     setSearchQuery(query);
     onSearch?.(query);
-    setPage(0); // Reset to first page on search
+    if (isServerPaginated) {
+      onPageChange?.(0);
+    } else {
+      setInternalPage(0);
+    }
   };
 
-  // Sort data if orderBy is set
+  const handlePageChange = (_: unknown, newPage: number) => {
+    if (isServerPaginated) {
+      onPageChange?.(newPage);
+    } else {
+      setInternalPage(newPage);
+    }
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setRowsPerPage(newRowsPerPage);
+    if (isServerPaginated) {
+      onRowsPerPageChange?.(newRowsPerPage);
+      onPageChange?.(0);
+    } else {
+      setInternalPage(0);
+    }
+  };
+
+  // Sort data if orderBy is set (client-side only)
   const sortedData = React.useMemo(() => {
-    if (!orderBy) return data;
+    if (!orderBy || isServerPaginated) return data;
 
     return [...data].sort((a, b) => {
       const aValue = (a as any)[orderBy];
@@ -144,12 +201,17 @@ export function DataTable<T = any>({
       if (aValue > bValue) return order === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [data, orderBy, order]);
+  }, [data, orderBy, order, isServerPaginated]);
 
-  // Paginate data
-  const paginatedData = paginated
-    ? sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-    : sortedData;
+  // Paginate data (client-side only - server-side data is already paginated)
+  const displayData = isServerPaginated
+    ? data
+    : paginated
+      ? sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+      : sortedData;
+
+  // Total count for pagination
+  const paginationCount = isServerPaginated ? totalCount : sortedData.length;
 
   if (loading) {
     return <SkeletonLoader type="table" count={rowsPerPage} />;
@@ -188,7 +250,7 @@ export function DataTable<T = any>({
                   align={column.align}
                   style={{ width: column.width }}
                 >
-                  {column.sortable ? (
+                  {column.sortable && !isServerPaginated ? (
                     <TableSortLabel
                       active={orderBy === column.id}
                       direction={orderBy === column.id ? order : 'asc'}
@@ -204,7 +266,7 @@ export function DataTable<T = any>({
             </TableRow>
           </TableHead>
           <TableBody>
-            {paginatedData.map((row, index) => (
+            {displayData.map((row, index) => (
               <TableRow
                 key={getRowId(row, index)}
                 hover={!!onRowClick}
@@ -222,17 +284,15 @@ export function DataTable<T = any>({
         </Table>
       </TableContainer>
 
-      {paginated && data.length > 0 && (
+      {paginated && (data.length > 0 || isServerPaginated) && (
         <TablePagination
           component="div"
-          count={sortedData.length}
+          count={paginationCount}
           page={page}
-          onPageChange={(_, newPage) => setPage(newPage)}
+          onPageChange={handlePageChange}
           rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          rowsPerPageOptions={rowsPerPageOptions}
         />
       )}
     </Box>

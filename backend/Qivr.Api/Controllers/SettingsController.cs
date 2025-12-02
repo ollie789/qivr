@@ -40,7 +40,7 @@ public class SettingsController : BaseApiController
     }
 
     /// <summary>
-    /// Get user settings
+    /// Get user settings (all categories - use category-specific endpoints for better performance)
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(UserSettingsDto), 200)]
@@ -201,6 +201,98 @@ public class SettingsController : BaseApiController
         await _settingsService.UpdateUserSettingsAsync(tenantId, userId, userSettings);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Get specific setting category (lightweight alternative to GET /settings)
+    /// </summary>
+    [HttpGet("{category}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> GetSettingCategory(string category)
+    {
+        var validCategories = new[] { "profile", "notifications", "privacy", "security", "accessibility" };
+        if (!validCategories.Contains(category.ToLower()))
+        {
+            throw new ValidationException($"Invalid category: {category}");
+        }
+
+        var userId = CurrentUserId;
+        var tenantId = RequireTenantId();
+
+        // Fetch only what's needed for each category
+        switch (category.ToLower())
+        {
+            case "profile":
+                var user = await _context.Users
+                    .AsNoTracking()
+                    .Where(u => u.TenantId == tenantId && u.Id == userId)
+                    .Select(u => new ProfileSettingsDto
+                    {
+                        FirstName = u.FirstName ?? "",
+                        LastName = u.LastName ?? "",
+                        Email = u.Email,
+                        Phone = u.Phone ?? "",
+                        DateOfBirth = u.DateOfBirth != null ? u.DateOfBirth.Value.ToString("yyyy-MM-dd") : ""
+                    })
+                    .FirstOrDefaultAsync();
+                return Success(user ?? new ProfileSettingsDto());
+
+            case "notifications":
+                var notifPrefs = await _context.NotificationPreferences
+                    .AsNoTracking()
+                    .Where(n => n.TenantId == tenantId && n.UserId == userId)
+                    .Select(n => new NotificationSettingsDto
+                    {
+                        Appointments = n.AppointmentReminders,
+                        LabResults = n.PromReminders,
+                        Prescriptions = true,
+                        Messages = n.EvaluationNotifications,
+                        Promotions = n.ClinicAnnouncements,
+                        Channels = new NotificationChannelsDto
+                        {
+                            Email = n.EmailEnabled,
+                            Sms = n.SmsEnabled,
+                            Push = n.PushEnabled,
+                            Phone = n.SmsEnabled
+                        },
+                        QuietHours = n.QuietHoursStart != null ? new QuietHoursDto
+                        {
+                            Enabled = true,
+                            Start = $"{n.QuietHoursStart:D2}:00",
+                            End = $"{n.QuietHoursEnd:D2}:00"
+                        } : new QuietHoursDto { Enabled = false }
+                    })
+                    .FirstOrDefaultAsync();
+                return Success(notifPrefs ?? new NotificationSettingsDto());
+
+            case "privacy":
+            case "security":
+            case "accessibility":
+                // These are stored in user preferences JSONB
+                var preferences = await _context.Users
+                    .AsNoTracking()
+                    .Where(u => u.TenantId == tenantId && u.Id == userId)
+                    .Select(u => u.Preferences)
+                    .FirstOrDefaultAsync();
+
+                if (preferences != null && preferences.TryGetValue(category, out var settingsJson))
+                {
+                    return Success(settingsJson);
+                }
+
+                // Return defaults
+                return category.ToLower() switch
+                {
+                    "privacy" => Success(new PrivacySettingsDto()),
+                    "security" => Success(new SecuritySettingsDto { LoginAlerts = true, SessionTimeout = 30 }),
+                    "accessibility" => Success(new AccessibilitySettingsDto { FontSize = 16, Language = "en", Theme = "light" }),
+                    _ => Success(new { })
+                };
+
+            default:
+                return BadRequest("Unknown category");
+        }
     }
 
     /// <summary>

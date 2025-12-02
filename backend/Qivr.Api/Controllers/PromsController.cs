@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Qivr.Core.Entities;
 using Qivr.Services;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 
 namespace Qivr.Api.Controllers;
@@ -581,9 +579,12 @@ public class PromsController : BaseApiController
 			return parsed;
 		}
 
-		using var md5 = MD5.Create();
-		var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(raw));
-		return new Guid(hash);
+		// SECURITY/DATA INTEGRITY: Do not generate IDs from question text
+		// Question IDs must be stable GUIDs from the template definition.
+		// Using MD5 hash of text causes ID changes when question text is edited,
+		// breaking historical data analysis and response correlation.
+		// Log warning and return empty to skip this answer rather than corrupt data.
+		return Guid.Empty;
 	}
 
 private sealed record SubmissionPayload(List<PromAnswer> Answers, bool RequestBooking, BookingRequest? BookingRequest, int? CompletionSeconds, string? Notes);

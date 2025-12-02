@@ -26,6 +26,20 @@ public interface IPromInstanceService
     Task<bool> CancelPromInstanceAsync(Guid tenantId, Guid instanceId, string reason, CancellationToken ct = default);
     Task<BookingRequestDto> RequestBookingAsync(Guid tenantId, Guid instanceId, BookingRequest request, CancellationToken ct = default);
     Task<PromPreviewDto> GetPromPreviewAsync(Guid tenantId, Guid templateId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Get paginated instances with DB-side stats calculation (efficient for large datasets)
+    /// </summary>
+    Task<PromInstancePagedResult> GetPromInstancesPagedAsync(
+        Guid tenantId,
+        Guid? templateId = null,
+        string? status = null,
+        Guid? patientId = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken ct = default);
 }
 
 public class PromInstanceService : IPromInstanceService
@@ -408,43 +422,84 @@ public class PromInstanceService : IPromInstanceService
             query = query.Where(i => i.CreatedAt <= endDate.Value);
         }
 
-        var instances = await query.ToListAsync(ct);
+        // Push aggregation to database instead of loading all records
+        var stats = await query
+            .GroupBy(_ => 1) // Group all into single result
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Completed = g.Count(i => i.Status == PromStatus.Completed),
+                Pending = g.Count(i => i.Status == PromStatus.Pending && i.DueDate >= now),
+                Scheduled = g.Count(i => i.Status == PromStatus.Pending && i.ScheduledFor > now),
+                Expired = g.Count(i => i.Status != PromStatus.Completed && i.Status != PromStatus.Cancelled && i.DueDate < now),
+                Cancelled = g.Count(i => i.Status == PromStatus.Cancelled),
+                AverageScore = g.Where(i => i.Score != null).Average(i => (double?)i.Score) ?? 0d
+            })
+            .FirstOrDefaultAsync(ct);
 
-        var total = instances.Count;
-        var completed = instances.Count(i => i.Status == PromStatus.Completed);
-        var pending = instances.Count(i => i.Status == PromStatus.Pending && i.DueDate >= now);
-        var scheduled = instances.Count(i => i.Status == PromStatus.Pending && i.ScheduledFor > now);
-        var expired = instances.Count(i => i.Status != PromStatus.Completed && i.DueDate < now);
-        var cancelled = instances.Count(i => i.Status == PromStatus.Cancelled);
+        if (stats == null)
+        {
+            return new PromInstanceStats();
+        }
 
-        var completionTimes = instances
-            .Where(i => i.Status == PromStatus.Completed)
-            .Select(i => ExtractDouble(EnsureMetadata(i), MetadataCompletionSecondsKey))
-            .Where(v => v.HasValue)
-            .Select(v => v!.Value / 60d)
-            .ToList();
+        var completionRate = stats.Total == 0 ? 0d : (double)stats.Completed / stats.Total * 100d;
 
-        var averageCompletion = completionTimes.Count > 0 ? completionTimes.Average() : 0d;
-        var averageScore = instances
-            .Where(i => i.Score.HasValue)
-            .Select(i => (double)i.Score!.Value)
-            .DefaultIfEmpty(0d)
-            .Average();
+        // For completion time, we still need to query completed instances with JSONB data
+        // But limit to recent completions to avoid loading too much
+        var averageCompletionMinutes = 0d;
+        var completedWithTime = await query
+            .Where(i => i.Status == PromStatus.Completed && i.Score != null)
+            .OrderByDescending(i => i.CompletedAt)
+            .Take(100) // Sample last 100 for average completion time
+            .Select(i => i.ResponseData)
+            .ToListAsync(ct);
 
-        var completionRate = total == 0 ? 0d : (double)completed / total * 100d;
+        if (completedWithTime.Count > 0)
+        {
+            var completionTimes = completedWithTime
+                .Select(rd => ExtractCompletionSeconds(rd))
+                .Where(v => v.HasValue && v.Value > 0)
+                .Select(v => v!.Value / 60d)
+                .ToList();
+
+            if (completionTimes.Count > 0)
+            {
+                averageCompletionMinutes = completionTimes.Average();
+            }
+        }
 
         return new PromInstanceStats
         {
-            TotalSent = total,
-            Completed = completed,
-            Pending = pending,
-            Scheduled = scheduled,
-            Expired = expired,
-            Cancelled = cancelled,
+            TotalSent = stats.Total,
+            Completed = stats.Completed,
+            Pending = stats.Pending,
+            Scheduled = stats.Scheduled,
+            Expired = stats.Expired,
+            Cancelled = stats.Cancelled,
             CompletionRate = Math.Round(completionRate, 2),
-            AverageCompletionTimeMinutes = Math.Round(averageCompletion, 2),
-            AverageScore = Math.Round(averageScore, 2)
+            AverageCompletionTimeMinutes = Math.Round(averageCompletionMinutes, 2),
+            AverageScore = Math.Round(stats.AverageScore, 2)
         };
+    }
+
+    private static double? ExtractCompletionSeconds(Dictionary<string, object>? responseData)
+    {
+        if (responseData == null || !responseData.TryGetValue(MetadataCompletionSecondsKey, out var raw) || raw == null)
+        {
+            return null;
+        }
+
+        if (raw is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.Number when element.TryGetDouble(out var val) => val,
+                JsonValueKind.String when double.TryParse(element.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) => parsed,
+                _ => null
+            };
+        }
+
+        return double.TryParse(raw.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result : null;
     }
 
     public async Task<bool> CancelPromInstanceAsync(Guid tenantId, Guid instanceId, string reason, CancellationToken ct = default)
@@ -542,6 +597,93 @@ public class PromInstanceService : IPromInstanceService
             EstimatedTimeMinutes = estimatedMinutes,
             QuestionCount = questions.Count,
             Questions = questions
+        };
+    }
+
+    public async Task<PromInstancePagedResult> GetPromInstancesPagedAsync(
+        Guid tenantId,
+        Guid? templateId = null,
+        string? status = null,
+        Guid? patientId = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var query = _db.PromInstances.AsNoTracking().Where(i => i.TenantId == tenantId);
+
+        if (templateId.HasValue)
+        {
+            query = query.Where(i => i.TemplateId == templateId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PromStatus>(status, true, out var parsedStatus))
+        {
+            query = query.Where(i => i.Status == parsedStatus);
+        }
+
+        if (patientId.HasValue)
+        {
+            query = query.Where(i => i.PatientId == patientId.Value);
+        }
+
+        if (startDate.HasValue)
+        {
+            var start = DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc);
+            query = query.Where(i => i.CreatedAt >= start);
+        }
+
+        if (endDate.HasValue)
+        {
+            var end = DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc);
+            query = query.Where(i => i.CreatedAt <= end);
+        }
+
+        // Get stats with DB-side aggregation (single query)
+        var stats = await query
+            .GroupBy(_ => 1)
+            .Select(g => new PromResponseStatistics
+            {
+                Total = g.Count(),
+                CompletedCount = g.Count(i => i.Status == PromStatus.Completed),
+                PendingCount = g.Count(i => i.Status == PromStatus.Pending),
+                InProgressCount = g.Count(i => i.Status == PromStatus.InProgress),
+                ExpiredCount = g.Count(i => i.Status != PromStatus.Completed && i.Status != PromStatus.Cancelled && i.DueDate < now),
+                CancelledCount = g.Count(i => i.Status == PromStatus.Cancelled),
+                AverageScore = g.Where(i => i.Score != null).Average(i => (double?)i.Score) ?? 0d,
+                LastCompleted = g.Where(i => i.Status == PromStatus.Completed).Max(i => (DateTime?)i.CompletedAt),
+                NextDue = g.Where(i => i.Status == PromStatus.Pending || i.Status == PromStatus.InProgress)
+                           .Min(i => (DateTime?)i.DueDate)
+            })
+            .FirstOrDefaultAsync(ct) ?? new PromResponseStatistics();
+
+        stats.CompletionRate = stats.Total > 0 ? Math.Round((double)stats.CompletedCount / stats.Total * 100d, 2) : 0d;
+
+        // Get paginated data
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+        var safePage = Math.Max(page, 1);
+        var skip = (safePage - 1) * safePageSize;
+
+        var instances = await query
+            .OrderByDescending(i => i.CreatedAt)
+            .Skip(skip)
+            .Take(safePageSize)
+            .Include(i => i.Template)
+            .Include(i => i.Patient)
+            .Include(i => i.BookingRequests)
+            .ToListAsync(ct);
+
+        var data = instances.Select(MapToDto).ToList();
+
+        return new PromInstancePagedResult
+        {
+            Data = data,
+            Total = stats.Total,
+            Page = safePage,
+            PageSize = safePageSize,
+            Stats = stats
         };
     }
 
@@ -1259,6 +1401,36 @@ public class PromQuestionDto
     public string Type { get; set; } = string.Empty;
     public bool Required { get; set; }
     public string[]? Options { get; set; }
+}
+
+/// <summary>
+/// Paginated result with DB-side calculated statistics
+/// </summary>
+public class PromInstancePagedResult
+{
+    public IReadOnlyList<PromInstanceDto> Data { get; set; } = Array.Empty<PromInstanceDto>();
+    public int Total { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public PromResponseStatistics Stats { get; set; } = new();
+}
+
+/// <summary>
+/// Statistics calculated at database level for efficiency
+/// </summary>
+public class PromResponseStatistics
+{
+    public int Total { get; set; }
+    public int CompletedCount { get; set; }
+    public int PendingCount { get; set; }
+    public int InProgressCount { get; set; }
+    public int ExpiredCount { get; set; }
+    public int CancelledCount { get; set; }
+    public double CompletionRate { get; set; }
+    public double AverageScore { get; set; }
+    public DateTime? NextDue { get; set; }
+    public DateTime? LastCompleted { get; set; }
+    public int Streak { get; set; } // Calculated client-side if needed
 }
 
 [Flags]

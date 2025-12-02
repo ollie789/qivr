@@ -207,6 +207,148 @@ public class EvaluationsController : BaseApiController
     }
 
     /// <summary>
+    /// Get lightweight evaluation history for the current patient (Patient App)
+    /// Returns only essential fields to minimize payload
+    /// </summary>
+    [HttpGet("history")]
+    [ProducesResponseType(typeof(List<EvaluationHistoryDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyHistory(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        // Get the current patient's ID
+        Guid patientId;
+        if (User.IsInRole("Patient"))
+        {
+            var cognitoId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(cognitoId))
+            {
+                return Unauthorized(new { message = "Unable to identify patient" });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.CognitoSub == cognitoId, cancellationToken);
+            if (user == null)
+            {
+                return NotFound(new { message = "Patient not found" });
+            }
+            patientId = user.Id;
+        }
+        else
+        {
+            // Staff can view their own evaluations too (if they are also patients)
+            patientId = CurrentUserId;
+        }
+
+        // Fetch lightweight history - only essential fields
+        var query = _context.Evaluations
+            .AsNoTracking()
+            .Where(e => e.PatientId == patientId)
+            .OrderByDescending(e => e.CreatedAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var history = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(e => new EvaluationHistoryDto
+            {
+                Id = e.Id,
+                EvaluationNumber = e.EvaluationNumber,
+                Date = e.CreatedAt,
+                Status = e.Status.ToString().ToLowerInvariant(),
+                ChiefComplaint = e.ChiefComplaint,
+                // Get primary pain region from the first pain map
+                PrimaryPainRegion = e.PainMaps.OrderByDescending(p => p.PainIntensity).Select(p => p.BodyRegion).FirstOrDefault()
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(new
+        {
+            data = history,
+            pagination = new
+            {
+                page,
+                pageSize,
+                totalCount,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+            }
+        });
+    }
+
+    /// <summary>
+    /// Add clinical notes to an evaluation (Staff only)
+    /// Notes are appended, preserving patient's original submission
+    /// </summary>
+    [HttpPost("{id}/notes")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddClinicalNote(
+        Guid id,
+        [FromBody] AddNoteRequest request,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        var evaluation = await _context.Evaluations
+            .FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken);
+
+        if (evaluation == null)
+            return NotFound();
+
+        // Get current user info for attribution
+        var currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        var userName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}".Trim() : "Staff";
+
+        // Create structured note with timestamp and attribution
+        var clinicalNote = new ClinicalNote
+        {
+            Id = Guid.NewGuid(),
+            AuthorId = userId,
+            AuthorName = userName,
+            Content = request.Content,
+            NoteType = request.NoteType ?? "general",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        // Append to existing clinical notes (stored in QuestionnaireResponses for now)
+        // In production, consider a dedicated ClinicalNotes table
+        var responses = evaluation.QuestionnaireResponses ?? new Dictionary<string, object>();
+
+        var existingNotes = new List<ClinicalNote>();
+        if (responses.TryGetValue("clinicalNotes", out var notesObj) && notesObj is List<object> notesList)
+        {
+            // Deserialize existing notes
+            foreach (var note in notesList)
+            {
+                if (note is System.Text.Json.JsonElement jsonElement)
+                {
+                    var existing = System.Text.Json.JsonSerializer.Deserialize<ClinicalNote>(jsonElement.GetRawText());
+                    if (existing != null) existingNotes.Add(existing);
+                }
+            }
+        }
+
+        existingNotes.Add(clinicalNote);
+        responses["clinicalNotes"] = existingNotes;
+        evaluation.QuestionnaireResponses = responses;
+        evaluation.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Clinical note added to evaluation {EvaluationId} by {UserId}", id, userId);
+
+        return Ok(new
+        {
+            noteId = clinicalNote.Id,
+            addedAt = clinicalNote.CreatedAt,
+            addedBy = userName
+        });
+    }
+
+    /// <summary>
     /// Delete an evaluation
     /// </summary>
     [HttpDelete("{id}")]
@@ -236,21 +378,51 @@ public class EvaluationsController : BaseApiController
     [Authorize(Policy = "StaffOnly")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> LinkToMedicalRecord(Guid id, [FromBody] LinkMedicalRecordRequest request, CancellationToken cancellationToken)
     {
         var tenantId = RequireTenantId();
+
+        // Validate the target patient exists and belongs to this tenant
+        var targetPatient = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == request.PatientId && u.TenantId == tenantId, cancellationToken);
+
+        if (targetPatient == null)
+        {
+            _logger.LogWarning("Attempted to link evaluation {EvaluationId} to non-existent or cross-tenant patient {PatientId}",
+                id, request.PatientId);
+            return BadRequest(new { message = "Patient not found or does not belong to this clinic" });
+        }
+
+        // Validate user is a Patient type
+        if (targetPatient.UserType != UserType.Patient)
+        {
+            _logger.LogWarning("Attempted to link evaluation {EvaluationId} to non-patient user {UserId} with type {UserType}",
+                id, request.PatientId, targetPatient.UserType);
+            return BadRequest(new { message = "Target user is not a patient" });
+        }
+
         var evaluation = await _context.Evaluations
             .FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken);
 
         if (evaluation == null)
             return NotFound();
 
+        // Prevent re-linking already archived evaluations
+        if (evaluation.Status == EvaluationStatus.Archived && evaluation.PatientId != Guid.Empty)
+        {
+            _logger.LogWarning("Attempted to re-link already archived evaluation {EvaluationId}", id);
+            return BadRequest(new { message = "Evaluation is already linked to a patient record" });
+        }
+
         evaluation.PatientId = request.PatientId;
         evaluation.Status = EvaluationStatus.Archived;
+        evaluation.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
-        
-        _logger.LogInformation("Linked evaluation {Id} to patient {PatientId}", id, request.PatientId);
-        return Ok();
+
+        _logger.LogInformation("Linked evaluation {Id} to patient {PatientId} by user {UserId}",
+            id, request.PatientId, CurrentUserId);
+        return Ok(new { linkedAt = DateTime.UtcNow, patientName = $"{targetPatient.FirstName} {targetPatient.LastName}".Trim() });
     }
 }
 
@@ -300,4 +472,30 @@ public class AnalysisResponse
 public class LinkMedicalRecordRequest
 {
     public Guid PatientId { get; set; }
+}
+
+public class EvaluationHistoryDto
+{
+    public Guid Id { get; set; }
+    public string EvaluationNumber { get; set; } = string.Empty;
+    public DateTime Date { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string ChiefComplaint { get; set; } = string.Empty;
+    public string? PrimaryPainRegion { get; set; }
+}
+
+public class AddNoteRequest
+{
+    public string Content { get; set; } = string.Empty;
+    public string? NoteType { get; set; }
+}
+
+public class ClinicalNote
+{
+    public Guid Id { get; set; }
+    public Guid AuthorId { get; set; }
+    public string AuthorName { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string NoteType { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
 }

@@ -6,14 +6,6 @@ import {
   Grid,
   Chip,
   IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TablePagination,
   Menu,
   MenuItem,
 } from "@mui/material";
@@ -26,9 +18,6 @@ import {
   Download as DownloadIcon,
   Print as PrintIcon,
   Share as ShareIcon,
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Remove as RemoveIcon,
   Add as AddIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -38,69 +27,79 @@ import apiClient from "../lib/api-client";
 import {
   SearchBar,
   AuraStatCard,
-  AuraEmptyState,
   AuraErrorState,
   StatCardSkeleton,
   FilterChips,
   AuraButton,
+  DataTable,
+  type DataTableColumn,
   auraTokens,
 } from "@qivr/design-system";
 
-interface Evaluation {
+// Lightweight DTO from /api/evaluations/history endpoint
+interface EvaluationHistoryItem {
   id: string;
   evaluationNumber: string;
   date: string;
+  status: string;
   chiefComplaint: string;
-  symptoms: string[];
-  status: "completed" | "in-progress" | "pending" | "cancelled";
-  urgency: "low" | "medium" | "high" | "critical";
-  provider?: string;
-  followUpDate?: string;
-  score?: number;
-  trend?: "improving" | "stable" | "declining";
-  lastUpdated: string;
+  primaryPainRegion?: string;
+}
+
+interface EvaluationHistoryResponse {
+  data: EvaluationHistoryItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+  };
 }
 
 export const Evaluations = () => {
   const navigate = useNavigate();
-  const {
-    data: evaluations = [],
-    isLoading: loading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["evaluations"],
-    queryFn: async () => {
-      const data = await apiClient.get<Evaluation[]>("/api/evaluations");
-      console.log("Evaluations fetched:", data);
-      return data;
-    },
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
-  });
-
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedEvaluation, setSelectedEvaluation] =
-    useState<Evaluation | null>(null);
+    useState<EvaluationHistoryItem | null>(null);
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
+  // Use lightweight /api/evaluations/history endpoint with server-side pagination
+  const {
+    data: historyResponse,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["evaluationHistory", page + 1, rowsPerPage],
+    queryFn: async () => {
+      const response = await apiClient.get<EvaluationHistoryResponse>(
+        "/api/evaluations/history",
+        { page: page + 1, pageSize: rowsPerPage }
+      );
+      return response;
+    },
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+  });
+
+  const evaluations = historyResponse?.data ?? [];
+  const totalCount = historyResponse?.pagination?.totalCount ?? 0;
+
+  const handleChangePage = (newPage: number) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+  const handleChangeRowsPerPage = (newRowsPerPage: number) => {
+    setRowsPerPage(newRowsPerPage);
     setPage(0);
   };
 
   const handleMenuClick = (
     event: React.MouseEvent<HTMLElement>,
-    evaluation: Evaluation,
+    evaluation: EvaluationHistoryItem,
   ) => {
     setAnchorEl(event.currentTarget);
     setSelectedEvaluation(evaluation);
@@ -116,63 +115,104 @@ export const Evaluations = () => {
   };
 
   const getStatusColor = (status: string): ChipProps["color"] => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "completed":
+      case "reviewed":
+      case "triaged":
         return "success";
       case "in-progress":
+      case "reviewing":
         return "warning";
       case "pending":
         return "info";
       case "cancelled":
+      case "archived":
         return "error";
       default:
         return "default";
     }
   };
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "critical":
-        return "error.main";
-      case "high":
-        return "warning.main";
-      case "medium":
-        return "warning.main";
-      case "low":
-        return "success.main";
-      default:
-        return "text.secondary";
-    }
-  };
-
-  const getTrendIcon = (trend?: string) => {
-    switch (trend) {
-      case "improving":
-        return <TrendingUpIcon sx={{ color: "success.main", fontSize: 20 }} />;
-      case "declining":
-        return <TrendingDownIcon sx={{ color: "error.main", fontSize: 20 }} />;
-      case "stable":
-        return <RemoveIcon sx={{ color: "info.main", fontSize: 20 }} />;
-      default:
-        return null;
-    }
-  };
-
+  // Client-side filtering for search (server pagination handles page/size)
   const filteredEvaluations = evaluations.filter((evaluation) => {
     const matchesSearch =
+      !searchTerm ||
       evaluation.chiefComplaint
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       evaluation.evaluationNumber
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      evaluation.symptoms.some((s) =>
-        s.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
+      (evaluation.primaryPainRegion?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesFilter =
-      filterStatus === "all" || evaluation.status === filterStatus;
+      filterStatus === "all" || evaluation.status.toLowerCase() === filterStatus.toLowerCase();
     return matchesSearch && matchesFilter;
   });
+
+  // Define columns for Aura DataTable
+  const columns: DataTableColumn<EvaluationHistoryItem>[] = [
+    {
+      id: "evaluationNumber",
+      label: "Evaluation #",
+      render: (row) => (
+        <Typography variant="body2" fontWeight="medium">
+          {row.evaluationNumber}
+        </Typography>
+      ),
+    },
+    {
+      id: "date",
+      label: "Date",
+      render: (row) => format(new Date(row.date), "MMM dd, yyyy"),
+    },
+    {
+      id: "chiefComplaint",
+      label: "Chief Complaint",
+      render: (row) => (
+        <Typography variant="body2">{row.chiefComplaint}</Typography>
+      ),
+    },
+    {
+      id: "primaryPainRegion",
+      label: "Pain Region",
+      render: (row) =>
+        row.primaryPainRegion ? (
+          <Chip label={row.primaryPainRegion} size="small" variant="outlined" />
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            -
+          </Typography>
+        ),
+    },
+    {
+      id: "status",
+      label: "Status",
+      render: (row) => (
+        <Chip
+          label={row.status.replace("-", " ")}
+          color={getStatusColor(row.status)}
+          size="small"
+        />
+      ),
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      align: "right",
+      render: (row) => (
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMenuClick(e, row);
+          }}
+          aria-label={`Actions for evaluation ${row.evaluationNumber}`}
+        >
+          <MoreVertIcon />
+        </IconButton>
+      ),
+    },
+  ];
 
   if (error) {
     return (
@@ -234,7 +274,7 @@ export const Evaluations = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <AuraStatCard
                 title="Total Evaluations"
-                value={evaluations.length}
+                value={totalCount}
                 icon={<AssessmentIcon />}
                 iconColor="primary"
               />
@@ -244,8 +284,9 @@ export const Evaluations = () => {
               <AuraStatCard
                 title="Completed"
                 value={
-                  evaluations.filter((e) => e.status === "completed").length
+                  evaluations.filter((e) => ["completed", "reviewed", "triaged"].includes(e.status.toLowerCase())).length
                 }
+                subtitle="on this page"
                 icon={<CheckCircleIcon />}
                 iconColor="success"
               />
@@ -255,8 +296,9 @@ export const Evaluations = () => {
               <AuraStatCard
                 title="In Progress"
                 value={
-                  evaluations.filter((e) => e.status === "in-progress").length
+                  evaluations.filter((e) => ["in-progress", "reviewing"].includes(e.status.toLowerCase())).length
                 }
+                subtitle="on this page"
                 icon={<ScheduleIcon />}
                 iconColor="warning"
               />
@@ -265,7 +307,8 @@ export const Evaluations = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <AuraStatCard
                 title="Pending Review"
-                value={evaluations.filter((e) => e.status === "pending").length}
+                value={evaluations.filter((e) => e.status.toLowerCase() === "pending").length}
+                subtitle="on this page"
                 icon={<InfoIcon />}
                 iconColor="info"
               />
@@ -328,156 +371,34 @@ export const Evaluations = () => {
         )}
       </Box>
 
-      {/* Evaluations Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Evaluation #</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Chief Complaint</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Urgency</TableCell>
-              <TableCell>Provider</TableCell>
-              <TableCell>Score/Trend</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredEvaluations.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} sx={{ border: 0, p: 0 }}>
-                  <AuraEmptyState
-                    title="No evaluations found"
-                    description={
-                      searchTerm || filterStatus !== "all"
-                        ? "Try adjusting your search or filters"
-                        : "Start your first intake evaluation to begin tracking your health journey"
-                    }
-                    actionText={
-                      searchTerm || filterStatus !== "all"
-                        ? undefined
-                        : "New Intake"
-                    }
-                    onAction={
-                      searchTerm || filterStatus !== "all"
-                        ? undefined
-                        : () => navigate("/evaluations/new")
-                    }
-                  />
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredEvaluations
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((evaluation) => (
-                  <TableRow
-                    key={evaluation.id}
-                    hover
-                    sx={{ 
-                      cursor: "pointer",
-                      '& td': { py: { xs: 2, md: 1.5 } }
-                    }}
-                    onClick={() => handleViewDetails(evaluation.id)}
-                  >
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="medium">
-                        {evaluation.evaluationNumber}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(evaluation.date), "MMM dd, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2">
-                          {evaluation.chiefComplaint}
-                        </Typography>
-                        <Box sx={{ display: "flex", gap: 0.5, mt: 0.5 }}>
-                          {evaluation.symptoms
-                            .slice(0, 2)
-                            .map((symptom, index) => (
-                              <Chip
-                                key={index}
-                                label={symptom}
-                                size="small"
-                                variant="outlined"
-                              />
-                            ))}
-                          {evaluation.symptoms.length > 2 && (
-                            <Chip
-                              label={`+${evaluation.symptoms.length - 2}`}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={evaluation.status.replace("-", " ")}
-                        color={getStatusColor(evaluation.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: "50%",
-                            bgcolor: getUrgencyColor(evaluation.urgency),
-                          }}
-                        />
-                        <Typography variant="body2" textTransform="capitalize">
-                          {evaluation.urgency}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{evaluation.provider || "-"}</TableCell>
-                    <TableCell>
-                      {evaluation.score && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <Typography variant="body2">
-                            {evaluation.score}
-                          </Typography>
-                          {getTrendIcon(evaluation.trend)}
-                        </Box>
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMenuClick(e, evaluation);
-                        }}
-                        aria-label={`Actions for evaluation ${evaluation.evaluationNumber}`}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-            )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={filteredEvaluations.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </TableContainer>
+      {/* Evaluations Table - Aura DataTable with server-side pagination */}
+      <DataTable
+        columns={columns}
+        data={filteredEvaluations}
+        loading={loading}
+        emptyState={{
+          title: "No evaluations found",
+          description:
+            searchTerm || filterStatus !== "all"
+              ? "Try adjusting your search or filters"
+              : "Start your first intake evaluation to begin tracking your health journey",
+          actionText:
+            searchTerm || filterStatus !== "all" ? undefined : "New Intake",
+          onAction:
+            searchTerm || filterStatus !== "all"
+              ? undefined
+              : () => navigate("/evaluations/new"),
+        }}
+        paginated
+        totalCount={totalCount}
+        page={page}
+        pageSize={rowsPerPage}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[5, 10, 25]}
+        onRowClick={(row) => handleViewDetails(row.id)}
+        getRowId={(row) => row.id}
+      />
 
       {/* Action Menu */}
       <Menu

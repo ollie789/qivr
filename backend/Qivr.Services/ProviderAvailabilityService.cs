@@ -55,14 +55,17 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     {
         var availableSlots = new List<Qivr.Core.Interfaces.TimeSlot>();
 
+        // IMPORTANT: Normalize date to UTC to prevent timezone comparison issues
+        var utcDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+
         // Check if provider is available on this date
-        if (!await IsProviderAvailableOnDate(providerId, date))
+        if (!await IsProviderAvailableOnDate(providerId, utcDate))
         {
             return availableSlots;
         }
 
         // Get provider's working hours for the day (considering overrides)
-        var workingHours = await GetProviderWorkingHoursForDate(providerId, date);
+        var workingHours = await GetProviderWorkingHoursForDate(providerId, utcDate);
         if (!workingHours.IsWorkingDay || (workingHours.Start == TimeSpan.Zero && workingHours.End == TimeSpan.Zero))
         {
             return availableSlots;
@@ -70,21 +73,38 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
         // Get the schedule to determine buffer time
         var schedule = await _context.ProviderSchedules
-            .FirstOrDefaultAsync(s => s.ProviderId == providerId && s.DayOfWeek == date.DayOfWeek);
+            .FirstOrDefaultAsync(s => s.ProviderId == providerId && s.DayOfWeek == utcDate.DayOfWeek);
         var bufferMinutes = schedule?.BufferMinutes ?? 0;
         var slotDuration = schedule?.DefaultSlotDurationMinutes ?? durationMinutes;
 
         // Get existing appointments for the provider on this date
+        // Use date range to avoid timezone edge cases
+        var dayStart = utcDate;
+        var dayEnd = utcDate.AddDays(1);
+
         var existingAppointments = await _context.Appointments
-            .Where(a => a.ProviderId == providerId
-                && a.ScheduledStart.Date == date.Date
+            .Where(a => a.ProviderProfileId == providerId
+                && a.ScheduledStart >= dayStart
+                && a.ScheduledStart < dayEnd
                 && a.Status != AppointmentStatus.Cancelled)
             .OrderBy(a => a.ScheduledStart)
             .ToListAsync();
 
+        // Also check by ProviderId (user ID) for backwards compatibility
+        if (!existingAppointments.Any())
+        {
+            existingAppointments = await _context.Appointments
+                .Where(a => a.ProviderId == providerId
+                    && a.ScheduledStart >= dayStart
+                    && a.ScheduledStart < dayEnd
+                    && a.Status != AppointmentStatus.Cancelled)
+                .OrderBy(a => a.ScheduledStart)
+                .ToListAsync();
+        }
+
         // Generate time slots
-        var currentSlotStart = date.Date.Add(workingHours.Start);
-        var endOfDay = date.Date.Add(workingHours.End);
+        var currentSlotStart = utcDate.Add(workingHours.Start);
+        var endOfDay = utcDate.Add(workingHours.End);
 
         while (currentSlotStart.AddMinutes(slotDuration) <= endOfDay)
         {
@@ -93,8 +113,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             // Skip break time if configured
             if (workingHours.BreakStart.HasValue && workingHours.BreakEnd.HasValue)
             {
-                var breakStart = date.Date.Add(workingHours.BreakStart.Value);
-                var breakEnd = date.Date.Add(workingHours.BreakEnd.Value);
+                var breakStart = utcDate.Add(workingHours.BreakStart.Value);
+                var breakEnd = utcDate.Add(workingHours.BreakEnd.Value);
 
                 if (currentSlotStart < breakEnd && currentSlotEnd > breakStart)
                 {
@@ -105,23 +125,23 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             }
 
             // Check if slot conflicts with existing appointments (including buffer)
-            bool isAvailable = !existingAppointments.Any(a =>
+            // Using the correct overlap formula: StartA < EndB AND EndA > StartB
+            bool hasConflict = existingAppointments.Any(a =>
             {
                 var apptStartWithBuffer = a.ScheduledStart.AddMinutes(-bufferMinutes);
                 var apptEndWithBuffer = a.ScheduledEnd.AddMinutes(bufferMinutes);
 
-                return (currentSlotStart >= apptStartWithBuffer && currentSlotStart < apptEndWithBuffer) ||
-                       (currentSlotEnd > apptStartWithBuffer && currentSlotEnd <= apptEndWithBuffer) ||
-                       (currentSlotStart <= apptStartWithBuffer && currentSlotEnd >= apptEndWithBuffer);
+                // Two intervals [A,B) and [C,D) overlap if A < D AND B > C
+                return currentSlotStart < apptEndWithBuffer && currentSlotEnd > apptStartWithBuffer;
             });
 
             // Only add future slots
-            if (isAvailable && currentSlotStart > DateTime.UtcNow)
+            if (!hasConflict && currentSlotStart > DateTime.UtcNow)
             {
                 availableSlots.Add(new Qivr.Core.Interfaces.TimeSlot
                 {
-                    Start = currentSlotStart,
-                    End = currentSlotEnd,
+                    Start = DateTime.SpecifyKind(currentSlotStart, DateTimeKind.Utc),
+                    End = DateTime.SpecifyKind(currentSlotEnd, DateTimeKind.Utc),
                     IsAvailable = true
                 });
             }
@@ -134,43 +154,56 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<bool> IsSlotAvailable(Guid providerId, DateTime startTime, DateTime endTime)
     {
+        // IMPORTANT: Normalize to UTC to prevent timezone comparison issues
+        var utcStart = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
+        var utcEnd = endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc);
+
+        // Validate: Start must be before End
+        if (utcStart >= utcEnd)
+        {
+            _logger.LogWarning("Invalid slot: start {Start} >= end {End}", utcStart, utcEnd);
+            return false;
+        }
+
         // Check if provider is available on this date
-        if (!await IsProviderAvailableOnDate(providerId, startTime.Date))
+        if (!await IsProviderAvailableOnDate(providerId, utcStart.Date))
         {
             return false;
         }
 
         // Check if provider works during this time
-        var workingHours = await GetProviderWorkingHoursForDate(providerId, startTime.Date);
+        var workingHours = await GetProviderWorkingHoursForDate(providerId, utcStart.Date);
         if (!workingHours.IsWorkingDay)
         {
             return false;
         }
 
-        var startTimeOfDay = startTime.TimeOfDay;
-        var endTimeOfDay = endTime.TimeOfDay;
+        var startTimeOfDay = utcStart.TimeOfDay;
+        var endTimeOfDay = utcEnd.TimeOfDay;
 
         if (startTimeOfDay < workingHours.Start || endTimeOfDay > workingHours.End)
         {
             return false;
         }
 
-        // Check break time
+        // Check break time overlap
         if (workingHours.BreakStart.HasValue && workingHours.BreakEnd.HasValue)
         {
+            // Break overlaps if: startTimeOfDay < breakEnd AND endTimeOfDay > breakStart
             if (startTimeOfDay < workingHours.BreakEnd.Value && endTimeOfDay > workingHours.BreakStart.Value)
             {
                 return false; // Overlaps with break
             }
         }
 
-        // Check for conflicts with existing appointments
+        // Check for conflicts with existing appointments using correct overlap formula:
+        // Two intervals [A,B) and [C,D) overlap if A < D AND B > C
+        // Check both ProviderProfileId and ProviderId for backwards compatibility
         var hasConflict = await _context.Appointments
-            .AnyAsync(a => a.ProviderId == providerId
+            .AnyAsync(a => (a.ProviderProfileId == providerId || a.ProviderId == providerId)
                 && a.Status != AppointmentStatus.Cancelled
-                && ((startTime >= a.ScheduledStart && startTime < a.ScheduledEnd) ||
-                    (endTime > a.ScheduledStart && endTime <= a.ScheduledEnd) ||
-                    (startTime <= a.ScheduledStart && endTime >= a.ScheduledEnd)));
+                && utcStart < a.ScheduledEnd
+                && utcEnd > a.ScheduledStart);
 
         return !hasConflict;
     }
@@ -388,7 +421,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             if (providerProfile == null) continue;
 
             var isAvailable = await IsProviderAvailableOnDate(providerProfile.Id, date);
-            var slots = isAvailable ? await GetAvailableSlots(user.Id, date) : new List<Qivr.Core.Interfaces.TimeSlot>();
+            // FIX: Use providerProfile.Id, not user.Id - GetAvailableSlots expects provider profile ID
+            var slots = isAvailable ? await GetAvailableSlots(providerProfile.Id, date) : new List<Qivr.Core.Interfaces.TimeSlot>();
 
             _logger.LogInformation("Provider {ProviderId} ({Name}) has {SlotCount} available slots",
                 providerProfile.Id, $"{user.FirstName} {user.LastName}", slots.Count);

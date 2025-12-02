@@ -24,6 +24,17 @@ public class AdminBillingController : ControllerBase
     private readonly IConfiguration _config;
     private readonly ILogger<AdminBillingController> _logger;
 
+    /// <summary>
+    /// Centralized plan pricing - single source of truth for MRR calculations.
+    /// Update this dictionary when plan prices change.
+    /// </summary>
+    private static readonly Dictionary<string, decimal> PlanPrices = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["starter"] = 99m,
+        ["professional"] = 299m,
+        ["enterprise"] = 599m
+    };
+
     public AdminBillingController(
         QivrDbContext context,
         AdminReadOnlyDbContext readOnlyContext,
@@ -54,20 +65,13 @@ public class AdminBillingController : ControllerBase
             .Select(t => new { t.Plan, t.Status })
             .ToListAsync(ct);
 
-        var planPrices = new Dictionary<string, decimal>
-        {
-            ["starter"] = 99m,
-            ["professional"] = 299m,
-            ["enterprise"] = 599m
-        };
-
         var mrr = tenants
             .Where(t => t.Status == Core.Entities.TenantStatus.Active)
-            .Sum(t => planPrices.GetValueOrDefault(t.Plan.ToLower(), 0m));
+            .Sum(t => PlanPrices.GetValueOrDefault(t.Plan ?? "starter", 0m));
 
         var planBreakdown = tenants
-            .GroupBy(t => t.Plan.ToLower())
-            .Select(g => new { Plan = g.Key, Count = g.Count(), Revenue = g.Count() * planPrices.GetValueOrDefault(g.Key, 0m) })
+            .GroupBy(t => (t.Plan ?? "starter").ToLowerInvariant())
+            .Select(g => new { Plan = g.Key, Count = g.Count(), Revenue = g.Count() * PlanPrices.GetValueOrDefault(g.Key, 0m) })
             .ToList();
 
         return Ok(new
@@ -214,18 +218,11 @@ public class AdminBillingController : ControllerBase
         if (string.IsNullOrEmpty(stripeCustomerId))
         {
             // Return calculated subscription based on plan
-            var planPrices = new Dictionary<string, decimal>
-            {
-                ["starter"] = 99m,
-                ["professional"] = 299m,
-                ["enterprise"] = 599m
-            };
-
             return Ok(new
             {
                 hasStripeSubscription = false,
                 plan = tenant.Plan,
-                price = planPrices.GetValueOrDefault(tenant.Plan.ToLower(), 0m),
+                price = PlanPrices.GetValueOrDefault(tenant.Plan ?? "starter", 0m),
                 status = tenant.Status.ToString().ToLower(),
                 message = "Subscription managed manually (no Stripe link)"
             });
@@ -434,7 +431,7 @@ public class AdminBillingController : ControllerBase
                 t.Slug,
                 t.CreatedAt,
                 t.UpdatedAt,
-                plan = t.Settings.ContainsKey("plan") ? t.Settings["plan"].ToString() : "starter",
+                plan = t.Plan ?? "starter",
                 status = t.IsActive ? "active" : "churned"
             })
             .ToListAsync(ct);
@@ -493,30 +490,24 @@ public class AdminBillingController : ControllerBase
     [HttpGet("revenue-breakdown")]
     public async Task<IActionResult> GetRevenueBreakdown(CancellationToken ct)
     {
-        var planPrices = new Dictionary<string, decimal>
-        {
-            ["starter"] = 99m,
-            ["professional"] = 299m,
-            ["enterprise"] = 599m
-        };
-
+        // Use tenant.Plan column directly instead of settings JSONB
         var tenants = await _readOnlyContext.Tenants
             .Where(t => t.IsActive && t.DeletedAt == null)
             .Select(t => new
             {
-                plan = t.Settings.ContainsKey("plan") ? t.Settings["plan"].ToString() : "starter",
+                plan = t.Plan ?? "starter",
                 region = t.State ?? "Unknown"
             })
             .ToListAsync(ct);
 
-        // Revenue by plan
+        // Revenue by plan (case-insensitive grouping)
         var byPlan = tenants
-            .GroupBy(t => t.plan)
+            .GroupBy(t => t.plan, StringComparer.OrdinalIgnoreCase)
             .Select(g => new
             {
-                plan = g.Key,
+                plan = g.Key.ToLowerInvariant(),
                 count = g.Count(),
-                mrr = g.Count() * planPrices.GetValueOrDefault(g.Key ?? "starter", 99m)
+                mrr = g.Count() * PlanPrices.GetValueOrDefault(g.Key, 99m)
             })
             .OrderByDescending(p => p.mrr)
             .ToList();
@@ -528,7 +519,7 @@ public class AdminBillingController : ControllerBase
             {
                 region = g.Key,
                 count = g.Count(),
-                mrr = g.Sum(t => planPrices.GetValueOrDefault(t.plan ?? "starter", 99m))
+                mrr = g.Sum(t => PlanPrices.GetValueOrDefault(t.plan, 99m))
             })
             .OrderByDescending(r => r.mrr)
             .ToList();
