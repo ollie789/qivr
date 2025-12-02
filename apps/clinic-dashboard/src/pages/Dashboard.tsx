@@ -186,16 +186,16 @@ const Dashboard: React.FC = () => {
   const derivedStats = React.useMemo(() => {
     if (dashboardMetrics) {
       return {
-        todayAppointments: dashboardMetrics.todayAppointments,
-        pendingIntakes: dashboardMetrics.pendingIntakes,
-        activePatients: dashboardMetrics.totalPatients,
-        completedToday: dashboardMetrics.completedToday,
-        averageWaitTime: dashboardMetrics.averageWaitTime,
+        todayAppointments: dashboardMetrics.todayAppointments ?? 0,
+        pendingIntakes: dashboardMetrics.pendingIntakes ?? 0,
+        activePatients: dashboardMetrics.totalPatients ?? 0,
+        completedToday: dashboardMetrics.completedToday ?? 0,
+        averageWaitTime: dashboardMetrics.averageWaitTime ?? 0,
         patientSatisfaction: clinicalAnalytics?.patientSatisfaction ?? 4.5,
-        completionRate: dashboardMetrics.completionRate,
-        noShowRate: dashboardMetrics.noShowRate,
-        staffUtilization: dashboardMetrics.staffUtilization,
-        estimatedRevenue: dashboardMetrics.estimatedRevenue,
+        completionRate: dashboardMetrics.completionRate ?? 0,
+        noShowRate: dashboardMetrics.noShowRate ?? 0,
+        staffUtilization: dashboardMetrics.staffUtilization ?? 0,
+        estimatedRevenue: dashboardMetrics.estimatedRevenue ?? 0,
       };
     }
 
@@ -207,7 +207,7 @@ const Dashboard: React.FC = () => {
       averageWaitTime: 0,
       patientSatisfaction: 0,
     };
-  }, [dashboardMetrics]);
+  }, [dashboardMetrics, clinicalAnalytics]);
 
   const stats = React.useMemo(
     () => [
