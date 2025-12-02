@@ -417,7 +417,7 @@ public class PatientsController : TenantAwareController
         try
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == patientId && u.UserType == UserType.Patient && !u.IsDeleted);
+                .FirstOrDefaultAsync(u => u.Id == patientId && u.UserType == UserType.Patient && u.DeletedAt == null);
 
             if (user == null)
                 return NotFound();
@@ -470,7 +470,7 @@ public class PatientsController : TenantAwareController
         try
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == patientId && u.UserType == UserType.Patient && !u.IsDeleted);
+                .FirstOrDefaultAsync(u => u.Id == patientId && u.UserType == UserType.Patient && u.DeletedAt == null);
 
             if (user == null)
                 return NotFound();

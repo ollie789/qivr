@@ -28,7 +28,7 @@ public class ApiKeysController : BaseApiController
         var tenantId = RequireTenantId();
         
         var keys = await _context.ApiKeys
-            .Where(k => k.TenantId == tenantId && !k.IsDeleted)
+            .Where(k => k.TenantId == tenantId && k.DeletedAt == null)
             .OrderByDescending(k => k.CreatedAt)
             .Select(k => new ApiKeyDto
             {
@@ -111,7 +111,7 @@ public class ApiKeysController : BaseApiController
         var tenantId = RequireTenantId();
         
         var apiKey = await _context.ApiKeys
-            .FirstOrDefaultAsync(k => k.Id == id && k.TenantId == tenantId && !k.IsDeleted);
+            .FirstOrDefaultAsync(k => k.Id == id && k.TenantId == tenantId && k.DeletedAt == null);
 
         if (apiKey == null)
             return NotFound();
