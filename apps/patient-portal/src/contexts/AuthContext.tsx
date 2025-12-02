@@ -146,6 +146,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       console.log("Login response:", response);
 
       const userInfo = response.userInfo;
+      if (!userInfo) {
+        throw new Error("Login failed - unable to retrieve user info");
+      }
       setIsAuthenticated(true);
 
       setUser({
