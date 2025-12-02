@@ -947,10 +947,19 @@ public class QivrDbContext : DbContext
     {
         if (_httpContextAccessor?.HttpContext != null)
         {
-            var tenantClaim = _httpContextAccessor.HttpContext.User.FindFirst("tenant_id");
-            if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var tenantId))
+            // 1. Try from HttpContext.Items (set by TenantMiddleware from X-Tenant-Id header)
+            if (_httpContextAccessor.HttpContext.Items.TryGetValue("TenantId", out var itemTenantId) && itemTenantId is Guid tenantGuid)
             {
-                _tenantId = tenantId;
+                _tenantId = tenantGuid;
+            }
+            // 2. Fallback to JWT claim
+            else
+            {
+                var tenantClaim = _httpContextAccessor.HttpContext.User.FindFirst("tenant_id");
+                if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var tenantId))
+                {
+                    _tenantId = tenantId;
+                }
             }
             
             _userId = _httpContextAccessor.HttpContext.User.FindFirst("sub")?.Value;
