@@ -250,10 +250,8 @@ public class QivrDbContext : DbContext
         });
 
         // User configuration
-        // NOTE: Database has: id, cognito_sub, email, email_verified, phone, phone_verified,
-        //       first_name, last_name, date_of_birth, gender, user_type, roles (text[]),
-        //       avatar_url, preferences (text/json), consent (text/json), last_login_at,
-        //       created_by, updated_by, created_at, updated_at, tenant_id, deleted_at
+        // NOTE: Database only has: id, cognito_id, email, phone, first_name, last_name, 
+        //       role, metadata, created_at, updated_at, tenant_id
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("users");
@@ -261,22 +259,22 @@ public class QivrDbContext : DbContext
             entity.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
             entity.HasIndex(e => e.CognitoSub).IsUnique();
 
-            // UserType is stored as string in DB column 'user_type'
-            entity.Property(e => e.UserType).HasConversion<string>();
+            // Map to actual DB column names
+            entity.Property(e => e.CognitoSub).HasColumnName("cognito_id");
+            entity.Property(e => e.UserType).HasConversion<string>().HasColumnName("role");
+            entity.Property(e => e.Preferences).HasConversion(jsonConverter).HasColumnName("metadata");
+            entity.Ignore(e => e.Preferences); // Use metadata column via Preferences
 
-            // Roles is stored as text[] array
-            entity.Property(e => e.Roles)
-                .HasConversion(stringListConverter)
-                .Metadata.SetValueComparer(stringListComparer);
-
-            // Preferences and Consent are stored as text (JSON string)
-            entity.Property(e => e.Preferences)
-                .HasConversion(jsonConverter)
-                .Metadata.SetValueComparer(jsonComparer);
-
-            entity.Property(e => e.Consent)
-                .HasConversion(jsonConverter)
-                .Metadata.SetValueComparer(jsonComparer);
+            // Ignore properties not in database
+            entity.Ignore(e => e.EmailVerified);
+            entity.Ignore(e => e.PhoneVerified);
+            entity.Ignore(e => e.DateOfBirth);
+            entity.Ignore(e => e.Gender);
+            entity.Ignore(e => e.Roles);
+            entity.Ignore(e => e.Consent);
+            entity.Ignore(e => e.LastLoginAt);
+            entity.Ignore(e => e.CreatedBy);
+            entity.Ignore(e => e.UpdatedBy);
 
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Users)
