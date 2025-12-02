@@ -17,13 +17,14 @@ public class GlobalExceptionHandler : IExceptionHandler
         Exception exception,
         CancellationToken cancellationToken)
     {
-        _logger.LogError(exception, "Unhandled exception occurred");
+        _logger.LogError(exception, "Unhandled exception: {Message}\n{StackTrace}", 
+            exception.Message, exception.StackTrace);
 
         var problemDetails = new ProblemDetails
         {
             Status = StatusCodes.Status500InternalServerError,
             Title = "An error occurred",
-            Detail = exception.Message // NOTE: In production, consider hiding the raw message
+            Detail = exception.Message
         };
 
         httpContext.Response.StatusCode = problemDetails.Status.Value;
