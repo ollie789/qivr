@@ -136,6 +136,45 @@ public class PromService : IPromService
 			return null;
 		}
 
+		// SECURITY/DATA INTEGRITY: Check if template has been used in any instances
+		// If it has, we must create a new version instead of modifying in place
+		var hasBeenUsed = await _db.PromInstances
+			.AnyAsync(i => i.TemplateId == templateId, ct);
+
+		// Structural changes require versioning if template has been used
+		var isStructuralChange = request.Questions != null ||
+			request.ScoringMethod != null ||
+			request.ScoringRules != null;
+
+		if (hasBeenUsed && isStructuralChange)
+		{
+			_logger.LogInformation(
+				"Template {TemplateId} has been used - creating new version instead of modifying",
+				templateId);
+
+			// Create a new version instead of modifying
+			var newVersionRequest = new CreatePromTemplateDto
+			{
+				Key = template.Key, // Same key = triggers versioning in CreateOrVersionTemplateAsync
+				Name = request.Name ?? template.Name,
+				Description = request.Description ?? template.Description,
+				Category = request.Category ?? template.Category,
+				Frequency = request.Frequency ?? template.Frequency,
+				Questions = request.Questions ?? template.Questions,
+				ScoringMethod = request.ScoringMethod ?? template.ScoringMethod,
+				ScoringRules = request.ScoringRules ?? template.ScoringRules
+			};
+
+			// Deactivate old version
+			template.IsActive = false;
+			template.UpdatedAt = DateTime.UtcNow;
+			await _db.SaveChangesAsync(ct);
+
+			// Create new version
+			return await CreateOrVersionTemplateAsync(tenantId, newVersionRequest, ct);
+		}
+
+		// Safe to modify in place - either no instances or only metadata changes
 		if (!string.IsNullOrWhiteSpace(request.Name)) template.Name = request.Name.Trim();
 		if (request.Description != null) template.Description = request.Description;
 		if (!string.IsNullOrWhiteSpace(request.Category)) template.Category = request.Category.Trim();

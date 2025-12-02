@@ -117,40 +117,17 @@ public class IntakeController : ControllerBase
             await intakeContext.Database.ExecuteSqlInterpolatedAsync($"SELECT set_config('app.tenant_id', {tenantId.ToString()}, true)", cancellationToken);
 
             // Ensure a patient user exists (or create one) to satisfy NOT NULL FK
-            var existingUser = await intakeContext.Users
-                .IgnoreQueryFilters()
-                .Where(u => u.TenantId == tenantId && u.Email == request.ContactInfo.Email)
-                .Select(u => u.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            Guid patientId;
-            if (existingUser != Guid.Empty)
-            {
-                patientId = existingUser;
-            }
-            else
-            {
-                var newUser = new User
-                {
-                    Id = Guid.NewGuid(),
-                    TenantId = tenantId,
-                    CognitoSub = $"intake-{Guid.NewGuid()}",
-                    Email = request.ContactInfo.Email,
-                    EmailVerified = false,
-                    PhoneVerified = false,
-                    FirstName = request.PersonalInfo.FirstName,
-                    LastName = request.PersonalInfo.LastName,
-                    Phone = request.ContactInfo.Phone,
-                    UserType = UserType.Patient,
-                    Roles = new List<string>(),
-                    Preferences = new Dictionary<string, object>(),
-                    Consent = new Dictionary<string, object>(),
-                    CreatedAt = now,
-                    UpdatedAt = now
-                };
-                intakeContext.Users.Add(newUser);
-                patientId = newUser.Id;
-            }
+            // RACE CONDITION FIX: Use INSERT ... ON CONFLICT DO NOTHING pattern
+            // Two simultaneous intakes for the same email could both try to create
+            var patientId = await FindOrCreatePatientAsync(
+                intakeContext,
+                tenantId,
+                request.ContactInfo.Email,
+                request.PersonalInfo.FirstName,
+                request.PersonalInfo.LastName,
+                request.ContactInfo.Phone,
+                now,
+                cancellationToken);
 
             // Generate evaluation number
             var evaluationNumber = $"E-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8]}";
@@ -343,9 +320,100 @@ public class IntakeController : ControllerBase
         };
     }
     
+    /// <summary>
+    /// Find or create a patient user with race condition handling.
+    /// Uses Postgres INSERT ... ON CONFLICT DO NOTHING to handle simultaneous creates.
+    /// </summary>
+    private async Task<Guid> FindOrCreatePatientAsync(
+        QivrDbContext context,
+        Guid tenantId,
+        string email,
+        string firstName,
+        string lastName,
+        string phone,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        // First attempt: check if user exists
+        var existingUserId = await context.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.TenantId == tenantId && u.Email == email)
+            .Select(u => u.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingUserId != Guid.Empty)
+        {
+            return existingUserId;
+        }
+
+        // User doesn't exist - try to create with conflict handling
+        var newUserId = Guid.NewGuid();
+        var cognitoSub = $"intake-{Guid.NewGuid()}";
+
+        try
+        {
+            // Use raw SQL with ON CONFLICT DO NOTHING to handle race conditions
+            // This is atomic and prevents duplicate key errors
+            var rowsAffected = await context.Database.ExecuteSqlInterpolatedAsync($@"
+                INSERT INTO qivr.users (
+                    id, tenant_id, cognito_sub, email, email_verified, phone_verified,
+                    first_name, last_name, phone, user_type, roles, preferences, consent,
+                    created_at, updated_at
+                ) VALUES (
+                    {newUserId}, {tenantId}, {cognitoSub}, {email}, false, false,
+                    {firstName}, {lastName}, {phone}, 'Patient', '[]'::jsonb, '{{}}'::jsonb, '{{}}'::jsonb,
+                    {now}, {now}
+                )
+                ON CONFLICT (tenant_id, email) DO NOTHING
+            ", cancellationToken);
+
+            if (rowsAffected > 0)
+            {
+                _logger.LogInformation("Created new patient user {UserId} for intake", newUserId);
+                return newUserId;
+            }
+
+            // Insert was skipped due to conflict - another request created the user
+            // Re-fetch the existing user ID
+            var actualUserId = await context.Users
+                .IgnoreQueryFilters()
+                .Where(u => u.TenantId == tenantId && u.Email == email)
+                .Select(u => u.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (actualUserId != Guid.Empty)
+            {
+                _logger.LogDebug("Found existing user {UserId} after conflict", actualUserId);
+                return actualUserId;
+            }
+
+            // This shouldn't happen, but handle it gracefully
+            throw new InvalidOperationException($"Failed to find or create user for email: {email}");
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("duplicate key") == true ||
+                                           ex.InnerException?.Message.Contains("unique constraint") == true)
+        {
+            // Race condition occurred - retry the lookup
+            _logger.LogDebug("Handled duplicate key race condition for email {Email}", email);
+
+            var actualUserId = await context.Users
+                .IgnoreQueryFilters()
+                .Where(u => u.TenantId == tenantId && u.Email == email)
+                .Select(u => u.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (actualUserId != Guid.Empty)
+            {
+                return actualUserId;
+            }
+
+            throw; // Re-throw if we still can't find the user
+        }
+    }
+
     private async Task EnqueueIntakeForProcessing(
-        Guid intakeId, 
-        Guid evaluationId, 
+        Guid intakeId,
+        Guid evaluationId,
         Guid tenantId,
         string patientEmail,
         string patientName,
