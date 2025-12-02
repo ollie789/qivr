@@ -2,6 +2,7 @@ using Amazon.Athena;
 using Amazon.Athena.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using Qivr.Infrastructure.Data;
 
@@ -39,7 +40,7 @@ public class AdminAnalyticsController : ControllerBase
     [HttpGet("tenants")]
     public async Task<IActionResult> GetTenants(CancellationToken ct)
     {
-        // Always use DB for tenant list - needs to be real-time
+        // Get tenants
         var tenants = await _db.Tenants
             .Where(t => t.DeletedAt == null)
             .Select(t => new
@@ -48,18 +49,43 @@ public class AdminAnalyticsController : ControllerBase
                 t.Name,
                 t.Slug,
                 Status = t.Status.ToString().ToLower(),
-                Plan = t.Plan,
+                Plan = t.Plan ?? "starter",
                 t.CreatedAt,
-                PatientCount = t.Users.Count(u => u.UserType == Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null),
-                StaffCount = t.Users.Count(u => u.UserType != Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null)
             })
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(ct);
 
-        return Ok(tenants);
+        // Get user counts per tenant in a separate query to avoid LINQ translation issues
+        var userCounts = await _db.Users
+            .Where(u => u.DeletedAt == null)
+            .GroupBy(u => u.TenantId)
+            .Select(g => new
+            {
+                TenantId = g.Key,
+                PatientCount = g.Count(u => u.UserType == Qivr.Core.Entities.UserType.Patient),
+                StaffCount = g.Count(u => u.UserType != Qivr.Core.Entities.UserType.Patient)
+            })
+            .ToListAsync(ct);
+
+        var countsDict = userCounts.ToDictionary(x => x.TenantId);
+
+        var result = tenants.Select(t => new
+        {
+            t.Id,
+            t.Name,
+            t.Slug,
+            t.Status,
+            t.Plan,
+            t.CreatedAt,
+            PatientCount = countsDict.TryGetValue(t.Id, out var c) ? c.PatientCount : 0,
+            StaffCount = countsDict.TryGetValue(t.Id, out var s) ? s.StaffCount : 0
+        });
+
+        return Ok(result);
     }
 
     [HttpGet("dashboard")]
+    [OutputCache(PolicyName = "DashboardStats")]
     public async Task<IActionResult> GetDashboardStats(CancellationToken ct)
     {
         // Try Athena for dashboard stats (uses latest partition)
@@ -105,7 +131,7 @@ public class AdminAnalyticsController : ControllerBase
         var totalPatients = await _db.Users.CountAsync(u => u.UserType == Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null, ct);
         var totalStaff = await _db.Users.CountAsync(u => u.UserType != Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null, ct);
 
-        var mrrDb = tenants.Sum(t => t.Plan.ToLower() switch
+        var mrrDb = tenants.Sum(t => (t.Plan ?? "").ToLower() switch
         {
             "starter" => 99,
             "professional" => 299,
@@ -125,6 +151,7 @@ public class AdminAnalyticsController : ControllerBase
     }
 
     [HttpGet("usage")]
+    [OutputCache(PolicyName = "AdminAnalytics", VaryByQueryKeys = ["days"])]
     public async Task<IActionResult> GetUsageStats([FromQuery] int days = 30, CancellationToken ct = default)
     {
         // Try Athena for historical usage
@@ -169,6 +196,7 @@ public class AdminAnalyticsController : ControllerBase
     }
 
     [HttpGet("prom-outcomes")]
+    [OutputCache(PolicyName = "AdminAnalytics", VaryByQueryKeys = ["region", "promType"])]
     public async Task<IActionResult> GetPromOutcomes([FromQuery] string? region, [FromQuery] string? promType, CancellationToken ct = default)
     {
         // PROM outcomes require Athena - anonymized aggregates with k-anonymity
@@ -220,6 +248,7 @@ public class AdminAnalyticsController : ControllerBase
     }
 
     [HttpGet("revenue-trend")]
+    [OutputCache(PolicyName = "AdminAnalytics", VaryByQueryKeys = ["months"])]
     public async Task<IActionResult> GetRevenueTrend([FromQuery] int months = 6, CancellationToken ct = default)
     {
         // Try Athena for revenue trend

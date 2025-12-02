@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -31,6 +32,18 @@ using Qivr.Core.Interfaces;
 using Qivr.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// =============================================================================
+// HTTP/3 (QUIC) Configuration - Reduces latency for mobile clients
+// =============================================================================
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Configure HTTPS endpoint with HTTP/1.1, HTTP/2, and HTTP/3 support
+    options.ConfigureEndpointDefaults(listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
+    });
+});
 
 // Helper function to expand environment variable placeholders
 static string ExpandEnvPlaceholders(string? value)
@@ -306,9 +319,30 @@ if (builder.Configuration.GetValue<bool>("Features:EnableRedisCache", true))
         options.Configuration = redisConnection;
         options.InstanceName = "qivr-";
     });
-    
+
     builder.Services.AddSingleton<ICacheService, CacheService>();
-    
+
+    // Output Caching with Redis for high-traffic endpoints (e.g., admin analytics)
+    builder.Services.AddOutputCache(options =>
+    {
+        // Default policy: cache for 60 seconds
+        options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromSeconds(60)));
+
+        // Admin Analytics policy: cache aggregated data for 5 minutes
+        options.AddPolicy("AdminAnalytics", policy =>
+            policy.Expire(TimeSpan.FromMinutes(5))
+                  .Tag("admin-analytics"));
+
+        // Short-lived cache for dashboard stats (1 minute)
+        options.AddPolicy("DashboardStats", policy =>
+            policy.Expire(TimeSpan.FromMinutes(1))
+                  .Tag("dashboard"));
+    });
+    builder.Services.AddStackExchangeRedisOutputCache(options =>
+    {
+        options.Configuration = redisConnection;
+    });
+
     Console.WriteLine($"Redis caching enabled with connection: {(redisConnection.Contains("@") ? "[REDACTED]" : redisConnection)}");
 }
 else
@@ -316,7 +350,19 @@ else
     // Use in-memory cache as fallback
     builder.Services.AddDistributedMemoryCache();
     builder.Services.AddSingleton<ICacheService, CacheService>();
-    
+
+    // In-memory output caching for development
+    builder.Services.AddOutputCache(options =>
+    {
+        options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromSeconds(60)));
+        options.AddPolicy("AdminAnalytics", policy =>
+            policy.Expire(TimeSpan.FromMinutes(5))
+                  .Tag("admin-analytics"));
+        options.AddPolicy("DashboardStats", policy =>
+            policy.Expire(TimeSpan.FromMinutes(1))
+                  .Tag("dashboard"));
+    });
+
     Console.WriteLine("Redis caching disabled. Using in-memory cache (not suitable for production)");
 }
 
@@ -464,10 +510,20 @@ else
     Log.Information("OpenTelemetry disabled");
 }
 
-// Add Health Checks
+// =============================================================================
+// Health Checks Configuration
+// =============================================================================
+// Tags:
+//   - "live": Used by liveness probe (/health/live) - basic process health
+//   - "ready": Used by readiness probe (/health/ready) - dependency health
 builder.Services.AddHealthChecks()
-    .AddNpgSql(defaultConnection!)
-    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
+    // Liveness: Simple self-check - if this fails, the process is unhealthy
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(),
+        tags: ["live"])
+    // Readiness: Database connectivity - don't accept traffic if DB is down
+    .AddNpgSql(defaultConnection!, name: "database", tags: ["ready"])
+    // Readiness: Redis connectivity (if enabled)
+    .AddRedis(redisConnection, name: "redis", tags: ["ready"]);
 
 // Register application services
 builder.Services.AddQivrServices(builder.Configuration);
@@ -665,8 +721,32 @@ app.UseAuthorization();
 // Rate limiting
 app.UseRateLimiter();
 
+// Output caching (after auth/rate limiting, before endpoints)
+app.UseOutputCache();
+
 // Map endpoints
 app.MapControllers();
+
+// =============================================================================
+// Health Check Endpoints - Kubernetes/ECS compatible probes
+// =============================================================================
+// Liveness probe: "Am I crashing?" - Returns healthy if the process is running
+// ECS/K8s will restart the container if this fails
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live"),
+    ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+// Readiness probe: "Can I accept traffic?" - Returns healthy if all dependencies are ready
+// ECS/K8s will stop sending traffic if this fails (but won't restart)
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+// Legacy /health endpoint for backwards compatibility (checks everything)
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
@@ -716,12 +796,6 @@ static string BuildPgConnectionStringFromUrl(string url, bool isDevelopment)
         // Safer way to handle SSL mode mapping
         SslMode = isDevelopment ? Npgsql.SslMode.Disable : Npgsql.SslMode.Require
     };
-
-    // Handle Trust Server Certificate for dev
-    if (isDevelopment && builder.SslMode != Npgsql.SslMode.Disable)
-    {
-        builder.TrustServerCertificate = true;
-    }
 
     return builder.ToString();
 }

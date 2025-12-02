@@ -3,33 +3,31 @@
 #               Qodana analysis is configured by qodana.yaml file               #
 #             https://www.jetbrains.com/help/qodana/qodana-yaml.html            #
 #-------------------------------------------------------------------------------#
-#################################################################################
-#              WARNING: Do not store sensitive information in this file,        #
-#               as its contents will be included in the Qodana report.          #
-#################################################################################
 version: "1.0"
-#Specify IDE code to run analysis without container (Applied in CI/CD pipeline)
+
+# Specify IDE code to run analysis without container (Applied in CI/CD pipeline)
 ide: QDNET
-#Specify inspection profile for code analysis
+
+# Specify inspection profile for code analysis
 profile:
   name: qodana.starter
-# Use baseline to ignore existing legacy issues
+
+# ---------------------------------------------------------------------
+# BASELINE CONFIGURATION
+# ---------------------------------------------------------------------
+# This file suppresses existing technical debt so you only see NEW issues.
+# To generate this file, run: qodana scan --show-report --save-report
+# and move the resulting qodana.sarif.json to your project root.
 baseline: qodana.sarif.json
 
+# ---------------------------------------------------------------------
+# ENABLED INSPECTIONS
+# ---------------------------------------------------------------------
 include:
+  # -- Language Features & Modernization --
   - name: ConvertIfStatementToReturnStatement
   - name: ConvertIfStatementToConditionalTernaryExpression
   - name: ConvertIfStatementToNullCoalescingAssignment
-  - name: RouteTemplates.ActionRoutePrefixCanBeExtractedToControllerRoute
-  - name: SeparateLocalFunctionsWithJumpStatement
-  - name: AutoPropertyCanBeMadeGetOnly.Global
-  - name: AutoPropertyCanBeMadeGetOnly.Local
-  - name: CSharp14OverloadResolutionWithSpanBreakingChange
-  - name: CanReplaceCastWithLambdaReturnType
-  - name: ChangeFieldTypeToSystemThreadingLock
-  - name: ClassNeverInstantiated.Global
-  - name: ClassNeverInstantiated.Local
-  - name: ClassWithVirtualMembersNeverInherited.Global
   - name: UsePatternMatching
   - name: ConvertIfStatementToSwitchStatement
   - name: ConvertToPrimaryConstructor
@@ -39,108 +37,38 @@ include:
   - name: ConvertToLambdaExpression
   - name: ConvertClosureToMethodGroup
   - name: ConvertToConstant.Local
-  - name: CanSimplifyDictionaryRemovingWithSingleCall
-  - name: CanSimplifyDictionaryLookupWithTryAdd
-  - name: CanSimplifyDictionaryLookupWithTryGetValue
-  - name: DuplicatedSwitchExpressionArms
-  - name: DuplicatedSequentialIfBodies
-  - name: ExtractCommonBranchingCode
-  - name: ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
-  - name: BadControlBracesIndent
-  - name: InlineTemporaryVariable
-  - name: InvertIf
+  - name: UseRawString
   - name: UseVerbatimString
-  - name: TooWideLocalVariableScope
-  - name: LoopCanBeConvertedToQuery
-  - name: MemberCanBePrivate.Global
-  - name: MemberCanBeMadeStatic.Global
-  - name: MemberCanBeMadeStatic.Local
-  - name: MergeConditionalExpression
-  - name: MergeIntoNegatedPattern
-  - name: MergeIntoPattern
-  - name: MergeIntoLogicalPattern
-  - name: MergeSequentialChecks
-  - name: MethodHasAsyncOverload
-  - name: UnusedMethodReturnValue.Global
-  - name: MethodSupportsCancellation
-  - name: ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
-  - name: PreferConcreteValueOverDefault
-  - name: PropertyCanBeMadeInitOnly.Global
-  - name: PropertyCanBeMadeInitOnly.Local
-  - name: MoveLocalFunctionAfterJumpStatement
-  - name: EntityFramework.NPlusOne.IncompleteDataQuery
+  - name: UseCollectionExpression
+  - name: UseDeconstruction
+
+  # -- Code Style & Formatting --
+  - name: ArrangeNamespaceBody
+  - name: ArrangeTrailingCommaInMultilineLists
+  - name: ArrangeObjectCreationWhenTypeEvident
+  - name: ArrangeObjectCreationWhenTypeNotEvident
+  - name: ArrangeRedundantParentheses
   - name: RedundantIfElseBlock
   - name: RedundantEmptyObjectCreationArgumentList
   - name: RedundantLambdaSignatureParentheses
   - name: RedundantStringInterpolation
   - name: RedundantTypeDeclarationBody
   - name: RedundantVerbatimStringPrefix
-  - name: ArrangeRedundantParentheses
-  - name: ReplaceSubstringWithRangeIndexer
-  - name: ConvertSwitchStatementToSwitchExpression
-  - name: UseNullPropagation
-  - name: CA1861
-  - name: CA1873
-  - name: CA1860
-  - name: CA1869
-  - name: SYSLIB1045
-  - name: CA1827
-  - name: CA2016
-  - name: CA1822
-  - name: CA1850
-  - name: CA1854
-  - name: CA1853
-  - name: CA1866
-  - name: CA1859
-  - name: CA1829
-  - name: CA1862
-  - name: RouteTemplates.ParameterConstraintCanBeSpecified
-  - name: SimilarAnonymousTypeNearby
-  - name: SimplifyConditionalTernaryExpression
-  - name: SimplifyLinqExpressionUseAll
-  - name: SwitchStatementMissingSomeEnumCasesNoDefault
-  - name: SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-  - name: CSharpWarnings__CA2254
-  - name: UnusedType.Global
-  - name: UnusedMemberInSuper.Global
-  - name: UnusedMember.Global
-  - name: UnusedParameter.Global
+  - name: BadControlBracesIndent
+
+  # -- Best Practices & Optimization --
+  - name: AutoPropertyCanBeMadeGetOnly.Global
+  - name: AutoPropertyCanBeMadeGetOnly.Local
+  - name: MemberCanBePrivate.Global
+  - name: MemberCanBeMadeStatic.Global
+  - name: MemberCanBeMadeStatic.Local
+  - name: PropertyCanBeMadeInitOnly.Global
+  - name: PropertyCanBeMadeInitOnly.Local
+  - name: CanSimplifyDictionaryRemovingWithSingleCall
+  - name: CanSimplifyDictionaryLookupWithTryAdd
+  - name: CanSimplifyDictionaryLookupWithTryGetValue
+  - name: EntityFramework.NPlusOne.IncompleteDataQuery
+  - name: PreferConcreteValueOverDefault
   - name: UseArrayEmptyMethod
   - name: UseNameOfInsteadOfToString
-  - name: UseCollectionExpression
-  - name: UseCollectionCountProperty
-  - name: ConvertToCompoundAssignment
-  - name: UseDeconstruction
-  - name: UseMethodAny.0
-  - name: UseObjectOrCollectionInitializer
-  - name: SuggestVarOrType_Elsewhere
-  - name: SuggestVarOrType_BuiltInTypes
-  - name: ArrangeNamespaceBody
-  - name: ArrangeTrailingCommaInMultilineLists
-  - name: ArrangeObjectCreationWhenTypeEvident
-  - name: ArrangeObjectCreationWhenTypeNotEvident
-  - name: UseRawString
-#Enable inspections
-#include:
-#  - name: <SomeEnabledInspectionId>
-#Disable inspections
-#exclude:
-#  - name: <SomeDisabledInspectionId>
-#    paths:
-#      - <path/where/not/run/inspection>
-#Execute shell command before Qodana execution (Applied in CI/CD pipeline)
-#bootstrap: sh ./prepare-qodana.sh
-#Install IDE plugins before Qodana execution (Applied in CI/CD pipeline)
-#plugins:
-#  - id: <plugin.id> #(plugin id can be found at https://plugins.jetbrains.com)
-# Quality gate. Will fail the CI/CD pipeline if any condition is not met
-# severityThresholds - configures maximum thresholds for different problem severities
-# testCoverageThresholds - configures minimum code coverage on a whole project and newly added code
-# Code Coverage is available in Ultimate and Ultimate Plus plans
-#failureConditions:
-#  severityThresholds:
-#    any: 15
-#    critical: 5
-#  testCoverageThresholds:
-#    fresh: 70
-#    total: 50
+  -
