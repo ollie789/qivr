@@ -38,26 +38,68 @@ public class AdminAnalyticsController : ControllerBase
     }
 
     [HttpGet("tenants")]
-    public async Task<IActionResult> GetTenants(CancellationToken ct)
+    public async Task<IActionResult> GetTenants(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? status = null,
+        [FromQuery] string? plan = null,
+        [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
-        // Get tenants
+        // Validate pagination
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 10, 100);
+
+        // Build query with filters
+        var query = _db.Tenants
+            .Where(t => t.DeletedAt == null);
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<Qivr.Core.Entities.TenantStatus>(status, true, out var statusEnum))
+        {
+            query = query.Where(t => t.Status == statusEnum);
+        }
+
+        if (!string.IsNullOrEmpty(plan))
+        {
+            // Case-insensitive comparison using EF.Functions.ILike for PostgreSQL
+            query = query.Where(t => EF.Functions.ILike(t.Plan, plan));
+        }
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            query = query.Where(t => EF.Functions.ILike(t.Name, $"%{search}%") ||
+                                     EF.Functions.ILike(t.Slug, $"%{search}%"));
+        }
+
+        // Get total count for pagination metadata
+        var totalCount = await query.CountAsync(ct);
+
+        // Get paginated tenant IDs first (lightweight query)
+        var tenantIds = await query
+            .OrderByDescending(t => t.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(t => t.Id)
+            .ToListAsync(ct);
+
+        // Get tenant details only for the page
         var tenants = await _db.Tenants
-            .Where(t => t.DeletedAt == null)
+            .Where(t => tenantIds.Contains(t.Id))
             .Select(t => new
             {
                 t.Id,
                 t.Name,
                 t.Slug,
-                Status = t.Status.ToString().ToLower(),
+                Status = t.Status.ToString().ToLowerInvariant(),
                 Plan = t.Plan ?? "starter",
                 t.CreatedAt,
             })
-            .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(ct);
 
-        // Get user counts per tenant in a separate query to avoid LINQ translation issues
+        // Get user counts only for tenants in this page
         var userCounts = await _db.Users
-            .Where(u => u.DeletedAt == null)
+            .Where(u => u.DeletedAt == null && tenantIds.Contains(u.TenantId))
             .GroupBy(u => u.TenantId)
             .Select(g => new
             {
@@ -69,19 +111,34 @@ public class AdminAnalyticsController : ControllerBase
 
         var countsDict = userCounts.ToDictionary(x => x.TenantId);
 
-        var result = tenants.Select(t => new
-        {
-            t.Id,
-            t.Name,
-            t.Slug,
-            t.Status,
-            t.Plan,
-            t.CreatedAt,
-            PatientCount = countsDict.TryGetValue(t.Id, out var c) ? c.PatientCount : 0,
-            StaffCount = countsDict.TryGetValue(t.Id, out var s) ? s.StaffCount : 0
-        });
+        // Maintain order from original query
+        var orderedTenants = tenantIds
+            .Select(id => tenants.First(t => t.Id == id))
+            .Select(t => new
+            {
+                t.Id,
+                t.Name,
+                t.Slug,
+                t.Status,
+                t.Plan,
+                t.CreatedAt,
+                PatientCount = countsDict.TryGetValue(t.Id, out var c) ? c.PatientCount : 0,
+                StaffCount = countsDict.TryGetValue(t.Id, out var s) ? s.StaffCount : 0
+            });
 
-        return Ok(result);
+        return Ok(new
+        {
+            data = orderedTenants,
+            pagination = new
+            {
+                page,
+                pageSize,
+                totalCount,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                hasNextPage = page * pageSize < totalCount,
+                hasPreviousPage = page > 1
+            }
+        });
     }
 
     [HttpGet("dashboard")]
@@ -125,23 +182,23 @@ public class AdminAnalyticsController : ControllerBase
             }
         }
 
-        // Fallback to DB
-        var tenants = await _db.Tenants.Where(t => t.DeletedAt == null).ToListAsync(ct);
-        var activeTenants = tenants.Count(t => t.Status == Qivr.Core.Entities.TenantStatus.Active);
+        // Fallback to DB - use aggregate queries instead of loading all data
+        var totalTenants = await _db.Tenants.CountAsync(t => t.DeletedAt == null, ct);
+        var activeTenants = await _db.Tenants.CountAsync(t => t.DeletedAt == null && t.Status == Qivr.Core.Entities.TenantStatus.Active, ct);
         var totalPatients = await _db.Users.CountAsync(u => u.UserType == Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null, ct);
         var totalStaff = await _db.Users.CountAsync(u => u.UserType != Qivr.Core.Entities.UserType.Patient && u.DeletedAt == null, ct);
 
-        var mrrDb = tenants.Sum(t => (t.Plan ?? "").ToLower() switch
-        {
-            "starter" => 99,
-            "professional" => 299,
-            "enterprise" => 599,
-            _ => 0
-        });
+        // Calculate MRR using database-side case-insensitive comparison
+        // Use ILike for PostgreSQL case-insensitive matching
+        var starterCount = await _db.Tenants.CountAsync(t => t.DeletedAt == null && EF.Functions.ILike(t.Plan, "starter"), ct);
+        var professionalCount = await _db.Tenants.CountAsync(t => t.DeletedAt == null && EF.Functions.ILike(t.Plan, "professional"), ct);
+        var enterpriseCount = await _db.Tenants.CountAsync(t => t.DeletedAt == null && EF.Functions.ILike(t.Plan, "enterprise"), ct);
+
+        var mrrDb = (starterCount * 99) + (professionalCount * 299) + (enterpriseCount * 599);
 
         return Ok(new
         {
-            totalTenants = tenants.Count.ToString(),
+            totalTenants = totalTenants.ToString(),
             activeTenants = activeTenants.ToString(),
             totalPatients = totalPatients.ToString(),
             totalStaff = totalStaff.ToString(),
@@ -276,21 +333,35 @@ public class AdminAnalyticsController : ControllerBase
             }
         }
 
-        // Fallback to DB
+        // Fallback to DB - compute MRR using a CASE expression that PostgreSQL can translate
         var since = DateTime.UtcNow.AddMonths(-months);
-        var tenantsByMonth = await _db.Tenants
+
+        // First get the raw data grouped by month
+        var rawData = await _db.Tenants
             .Where(t => t.CreatedAt >= since && t.DeletedAt == null)
             .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month })
             .Select(g => new
             {
-                Month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                Year = g.Key.Year,
+                Month = g.Key.Month,
                 NewTenants = g.Count(),
-                MrrAdded = g.Sum(t => t.Plan.ToLower() == "starter" ? 99 :
-                                      t.Plan.ToLower() == "professional" ? 299 :
-                                      t.Plan.ToLower() == "enterprise" ? 599 : 0)
+                // Count by plan type using case-insensitive matching
+                StarterCount = g.Count(t => EF.Functions.ILike(t.Plan, "starter")),
+                ProfessionalCount = g.Count(t => EF.Functions.ILike(t.Plan, "professional")),
+                EnterpriseCount = g.Count(t => EF.Functions.ILike(t.Plan, "enterprise"))
+            })
+            .ToListAsync(ct);
+
+        // Calculate MRR in memory (simple arithmetic, not a scaling concern)
+        var tenantsByMonth = rawData
+            .Select(g => new
+            {
+                Month = $"{g.Year}-{g.Month:D2}",
+                g.NewTenants,
+                MrrAdded = (g.StarterCount * 99) + (g.ProfessionalCount * 299) + (g.EnterpriseCount * 599)
             })
             .OrderBy(x => x.Month)
-            .ToListAsync(ct);
+            .ToList();
 
         return Ok(tenantsByMonth);
     }

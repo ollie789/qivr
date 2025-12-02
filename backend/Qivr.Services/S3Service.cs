@@ -12,6 +12,33 @@ public interface IS3Service
     Task<Stream> DownloadFileAsync(string s3Key, CancellationToken cancellationToken = default);
     Task<string> GetPresignedDownloadUrlAsync(string s3Key, int expirationMinutes = 60);
     Task DeleteFileAsync(string s3Key, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generate a presigned URL for direct client upload to S3 (bypasses API server memory)
+    /// </summary>
+    PresignedUploadResult GetPresignedUploadUrl(Guid tenantId, string fileName, string contentType, long maxFileSizeBytes = 52428800);
+
+    /// <summary>
+    /// Verify that an upload was completed successfully
+    /// </summary>
+    Task<S3ObjectMetadata?> VerifyUploadAsync(string s3Key, CancellationToken cancellationToken = default);
+}
+
+public class PresignedUploadResult
+{
+    public string UploadUrl { get; set; } = string.Empty;
+    public string S3Key { get; set; } = string.Empty;
+    public string S3Bucket { get; set; } = string.Empty;
+    public DateTime ExpiresAt { get; set; }
+    public Dictionary<string, string> RequiredHeaders { get; set; } = new();
+}
+
+public class S3ObjectMetadata
+{
+    public string S3Key { get; set; } = string.Empty;
+    public long ContentLength { get; set; }
+    public string ContentType { get; set; } = string.Empty;
+    public DateTime LastModified { get; set; }
 }
 
 public class S3Service : IS3Service
@@ -115,5 +142,93 @@ public class S3Service : IS3Service
             _logger.LogError(ex, "Failed to delete file from S3: {S3Key}", s3Key);
             throw;
         }
+    }
+
+    public PresignedUploadResult GetPresignedUploadUrl(Guid tenantId, string fileName, string contentType, long maxFileSizeBytes = 52428800)
+    {
+        // Generate a unique S3 key with tenant isolation
+        var s3Key = $"documents/{tenantId}/{Guid.NewGuid()}/{SanitizeFileName(fileName)}";
+        var expiresAt = DateTime.UtcNow.AddMinutes(15); // 15 minute window for upload
+
+        try
+        {
+            var request = new GetPreSignedUrlRequest
+            {
+                BucketName = _bucketName,
+                Key = s3Key,
+                Expires = expiresAt,
+                Verb = HttpVerb.PUT,
+                ContentType = contentType,
+                Headers =
+                {
+                    ["x-amz-server-side-encryption"] = "AES256"
+                }
+            };
+
+            var uploadUrl = _s3Client.GetPreSignedURL(request);
+
+            _logger.LogInformation("Generated presigned upload URL for tenant {TenantId}: {S3Key}", tenantId, s3Key);
+
+            return new PresignedUploadResult
+            {
+                UploadUrl = uploadUrl,
+                S3Key = s3Key,
+                S3Bucket = _bucketName,
+                ExpiresAt = expiresAt,
+                RequiredHeaders = new Dictionary<string, string>
+                {
+                    ["Content-Type"] = contentType,
+                    ["x-amz-server-side-encryption"] = "AES256"
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate presigned upload URL for: {FileName}", fileName);
+            throw;
+        }
+    }
+
+    public async Task<S3ObjectMetadata?> VerifyUploadAsync(string s3Key, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new GetObjectMetadataRequest
+            {
+                BucketName = _bucketName,
+                Key = s3Key
+            };
+
+            var response = await _s3Client.GetObjectMetadataAsync(request, cancellationToken);
+
+            return new S3ObjectMetadata
+            {
+                S3Key = s3Key,
+                ContentLength = response.ContentLength,
+                ContentType = response.Headers.ContentType,
+                LastModified = response.LastModified
+            };
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning("S3 object not found during verification: {S3Key}", s3Key);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to verify S3 upload: {S3Key}", s3Key);
+            throw;
+        }
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        // Remove path separators and dangerous characters
+        var sanitized = Path.GetFileName(fileName);
+        foreach (var c in Path.GetInvalidFileNameChars())
+        {
+            sanitized = sanitized.Replace(c, '_');
+        }
+        return sanitized;
     }
 }

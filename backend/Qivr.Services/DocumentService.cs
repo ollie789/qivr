@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Qivr.Core.Entities;
@@ -14,7 +15,7 @@ public interface IDocumentService
     Task DeleteDocumentAsync(Guid id, Guid tenantId, Guid userId, CancellationToken cancellationToken = default);
     Task<Document?> ClassifyDocumentAsync(Guid id, Guid tenantId, string documentType, Guid userId, CancellationToken cancellationToken = default);
     Task<Document?> AssignDocumentAsync(Guid id, Guid tenantId, Guid assignedTo, Guid userId, CancellationToken cancellationToken = default);
-    Task LogAuditAsync(Guid documentId, Guid userId, string action, string? ipAddress = null, CancellationToken cancellationToken = default);
+    Task LogAuditAsync(Guid documentId, Guid userId, string action, string? ipAddress = null, string? userAgent = null, CancellationToken cancellationToken = default);
 }
 
 public class DocumentService : IDocumentService
@@ -23,6 +24,7 @@ public class DocumentService : IDocumentService
     private readonly IS3Service _s3Service;
     private readonly ITextractService _textractService;
     private readonly IResilientOcrService _resilientOcrService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<DocumentService> _logger;
 
     public DocumentService(
@@ -30,12 +32,14 @@ public class DocumentService : IDocumentService
         IS3Service s3Service,
         ITextractService textractService,
         IResilientOcrService resilientOcrService,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<DocumentService> logger)
     {
         _context = context;
         _s3Service = s3Service;
         _textractService = textractService;
         _resilientOcrService = resilientOcrService;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -68,7 +72,7 @@ public class DocumentService : IDocumentService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Log audit
-        await LogAuditAsync(document.Id, dto.UploadedBy, "uploaded", dto.IpAddress, cancellationToken);
+        await LogAuditAsync(document.Id, dto.UploadedBy, "uploaded", dto.IpAddress, null, cancellationToken);
 
         // Queue for resilient OCR processing (with retry support)
         var priority = dto.IsUrgent ? 10 : 0; // Higher priority for urgent documents
@@ -146,7 +150,7 @@ public class DocumentService : IDocumentService
         document.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
         
-        await LogAuditAsync(id, userId, "deleted", null, cancellationToken);
+        await LogAuditAsync(id, userId, "deleted", cancellationToken: cancellationToken);
         
         _logger.LogInformation("Document soft deleted: {DocumentId}", id);
     }
@@ -162,7 +166,7 @@ public class DocumentService : IDocumentService
         document.DocumentType = documentType;
         await _context.SaveChangesAsync(cancellationToken);
 
-        await LogAuditAsync(id, userId, "classified", null, cancellationToken);
+        await LogAuditAsync(id, userId, "classified", cancellationToken: cancellationToken);
 
         return document;
     }
@@ -178,23 +182,41 @@ public class DocumentService : IDocumentService
         document.AssignedTo = assignedTo;
         await _context.SaveChangesAsync(cancellationToken);
 
-        await LogAuditAsync(id, userId, "assigned", null, cancellationToken);
+        await LogAuditAsync(id, userId, "assigned", cancellationToken: cancellationToken);
 
         return document;
     }
 
-    public async Task LogAuditAsync(Guid documentId, Guid userId, string action, string? ipAddress = null, CancellationToken cancellationToken = default)
+    public async Task LogAuditAsync(Guid documentId, Guid userId, string action, string? ipAddress = null, string? userAgent = null, CancellationToken cancellationToken = default)
     {
+        var httpContext = _httpContextAccessor.HttpContext;
+
         var auditLog = new DocumentAuditLog
         {
             DocumentId = documentId,
             UserId = userId,
             Action = action,
-            IpAddress = ipAddress
+            IpAddress = ipAddress ?? GetClientIp(httpContext),
+            UserAgent = userAgent ?? httpContext?.Request.Headers["User-Agent"].FirstOrDefault(),
+            CorrelationId = httpContext?.TraceIdentifier
         };
 
         _context.DocumentAuditLogs.Add(auditLog);
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string? GetClientIp(HttpContext? context)
+    {
+        if (context == null) return null;
+
+        // Check for forwarded header (load balancer/proxy)
+        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwardedFor))
+        {
+            return forwardedFor.Split(',')[0].Trim();
+        }
+
+        return context.Connection.RemoteIpAddress?.ToString();
     }
 }
 

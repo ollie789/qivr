@@ -208,24 +208,33 @@ public class QivrDbContext : DbContext
         );
 
         // Tenant configuration
+        // NOTE: Database schema has these columns: id, slug, name, status (int), plan, timezone, locale,
+        //       settings (text/json), metadata (text/json), deleted_at, created_at, updated_at
         modelBuilder.Entity<Tenant>(entity =>
         {
             entity.ToTable("tenants");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Slug).IsUnique();
+
+            // Status is stored as integer in DB
+            entity.Property(e => e.Status).HasConversion<int>();
+
+            // Settings is stored as text (JSON string) in DB, not jsonb
             entity.Property(e => e.Settings)
                 .HasConversion(jsonConverter)
-                .HasColumnType("jsonb");
-            entity.Ignore(e => e.Metadata); // Database doesn't have metadata column
-            entity.Ignore(e => e.DeletedAt); // Database uses is_active instead
-            entity.Ignore(e => e.Status); // Database doesn't have status column
-            entity.Ignore(e => e.CognitoUserPoolId); // Not stored in database
-            entity.Ignore(e => e.CognitoUserPoolClientId); // Not stored in database
-            entity.Ignore(e => e.CognitoUserPoolDomain); // Not stored in database
-            entity.Ignore(e => e.Plan); // Database doesn't have plan column
-            entity.Ignore(e => e.Timezone); // Database doesn't have timezone column
-            entity.Ignore(e => e.Locale); // Database doesn't have locale column
-            // Ignore clinic properties that don't exist in database yet
+                .Metadata.SetValueComparer(jsonComparer);
+
+            // Metadata is stored as text (JSON string) in DB
+            entity.Property(e => e.Metadata)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
+
+            // These Cognito properties are not in the database
+            entity.Ignore(e => e.CognitoUserPoolId);
+            entity.Ignore(e => e.CognitoUserPoolClientId);
+            entity.Ignore(e => e.CognitoUserPoolDomain);
+
+            // Clinic properties don't exist in database yet
             entity.Ignore(e => e.Description);
             entity.Ignore(e => e.Address);
             entity.Ignore(e => e.City);
@@ -235,51 +244,47 @@ public class QivrDbContext : DbContext
             entity.Ignore(e => e.Phone);
             entity.Ignore(e => e.Email);
             entity.Ignore(e => e.IsActive);
-            // Ignore clinic properties that don't exist in database
-            entity.Ignore(e => e.Description);
-            entity.Ignore(e => e.Address);
-            entity.Ignore(e => e.City);
-            entity.Ignore(e => e.State);
-            entity.Ignore(e => e.ZipCode);
-            entity.Ignore(e => e.Country);
-            entity.Ignore(e => e.Phone);
-            entity.Ignore(e => e.Email);
-            entity.Ignore(e => e.IsActive);
-            // No query filter since DeletedAt doesn't exist in database
+
+            // Query filter for soft deletes
+            entity.HasQueryFilter(e => e.DeletedAt == null);
         });
 
         // User configuration
+        // NOTE: Database has: id, cognito_sub, email, email_verified, phone, phone_verified,
+        //       first_name, last_name, date_of_birth, gender, user_type, roles (text[]),
+        //       avatar_url, preferences (text/json), consent (text/json), last_login_at,
+        //       created_by, updated_by, created_at, updated_at, tenant_id, deleted_at
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("users");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
             entity.HasIndex(e => e.CognitoSub).IsUnique();
-            entity.Property(e => e.CognitoSub).HasColumnName("cognito_id");
-            entity.Property(e => e.UserType).HasConversion<string>().HasColumnName("role");
-            entity.Ignore(e => e.Roles); // Roles are stored in a separate table or derived from UserType
-            entity.Property(e => e.Preferences).HasConversion(jsonConverter).HasColumnName("metadata");
-            entity.Ignore(e => e.Consent); // Database doesn't have consent column
-            entity.Ignore(e => e.AvatarUrl); // Database doesn't have avatar_url column
-            entity.Ignore(e => e.DateOfBirth); // Database doesn't have date_of_birth column
-            entity.Ignore(e => e.Gender); // Database doesn't have gender column
-            entity.Ignore(e => e.EmailVerified); // Database doesn't have email_verified column
-            entity.Ignore(e => e.PhoneVerified); // Database doesn't have phone_verified column
-            entity.Ignore(e => e.LastLoginAt); // Database doesn't have last_login_at column
-            entity.Ignore(e => e.CreatedBy); // Database doesn't have created_by column
-            entity.Ignore(e => e.UpdatedBy); // Database doesn't have updated_by column
-            entity.Ignore(e => e.DeletedAt); // Database uses is_active instead
-            
+
+            // UserType is stored as string in DB column 'user_type'
+            entity.Property(e => e.UserType).HasConversion<string>();
+
+            // Roles is stored as text[] array
+            entity.Property(e => e.Roles)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
+
+            // Preferences and Consent are stored as text (JSON string)
+            entity.Property(e => e.Preferences)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
+
+            entity.Property(e => e.Consent)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
+
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Users)
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
-                
-            // Modified query filter - no DeletedAt check, optionally filter by tenant
-            if (_tenantId.HasValue)
-            {
-                entity.HasQueryFilter(e => e.TenantId == GetTenantId());
-            }
+
+            // Query filter for soft deletes and tenant isolation
+            entity.HasQueryFilter(e => e.DeletedAt == null && e.TenantId == GetTenantId());
         });
 
         // Evaluation configuration

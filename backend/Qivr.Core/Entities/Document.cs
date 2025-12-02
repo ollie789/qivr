@@ -49,9 +49,15 @@ public class DocumentAuditLog
     public string Action { get; set; } = string.Empty; // uploaded, viewed, downloaded, deleted, classified, assigned
     public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }
+
+    /// <summary>
+    /// Request correlation ID for tracing (HIPAA/GDPR compliance)
+    /// </summary>
+    public string? CorrelationId { get; set; }
+
     public Dictionary<string, object>? Metadata { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    
+
     // Navigation properties
     public virtual Document? Document { get; set; }
     public virtual User? User { get; set; }

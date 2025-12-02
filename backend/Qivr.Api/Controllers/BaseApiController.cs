@@ -233,7 +233,21 @@ public abstract class BaseApiController : ControllerBase
     /// </summary>
     protected string? GetClientIpAddress()
     {
+        // Check for forwarded header (load balancer/proxy)
+        var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwardedFor))
+        {
+            return forwardedFor.Split(',')[0].Trim();
+        }
         return HttpContext.Connection.RemoteIpAddress?.ToString();
+    }
+
+    /// <summary>
+    /// Gets the User-Agent header
+    /// </summary>
+    protected string? GetUserAgent()
+    {
+        return HttpContext.Request.Headers["User-Agent"].FirstOrDefault();
     }
 
     /// <summary>

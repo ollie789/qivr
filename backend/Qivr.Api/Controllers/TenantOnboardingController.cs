@@ -42,12 +42,21 @@ public class TenantOnboardingController : ControllerBase
                 return BadRequest(new { error = "User already belongs to a clinic" });
             }
 
+            // Generate and validate slug uniqueness
+            var slug = GenerateSlug(request.ClinicName);
+            var slugExists = await _context.Tenants.AnyAsync(t => t.Slug == slug);
+            if (slugExists)
+            {
+                // Append a unique suffix to make it unique
+                slug = $"{slug}-{Guid.NewGuid().ToString("N")[..6]}";
+            }
+
             // Create tenant
             var tenant = new Tenant
             {
                 Id = Guid.NewGuid(),
                 Name = request.ClinicName,
-                Slug = GenerateSlug(request.ClinicName),
+                Slug = slug,
                 Settings = new Dictionary<string, object>
                 {
                     ["features"] = new[] { "appointments", "analytics", "messaging" },
@@ -159,11 +168,32 @@ public class TenantOnboardingController : ControllerBase
 
     private string GenerateSlug(string name)
     {
-        return name.ToLowerInvariant()
+        if (string.IsNullOrWhiteSpace(name))
+            return $"clinic-{Guid.NewGuid().ToString("N")[..8]}";
+
+        var slug = name.ToLowerInvariant()
             .Replace(" ", "-")
             .Replace("&", "and")
-            .Where(c => char.IsLetterOrDigit(c) || c == '-')
-            .Aggregate("", (current, c) => current + c);
+            .Replace("'", "")
+            .Replace("\"", "");
+
+        // Keep only alphanumeric and hyphens
+        slug = new string(slug.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray());
+
+        // Remove consecutive hyphens and trim hyphens from ends
+        while (slug.Contains("--"))
+            slug = slug.Replace("--", "-");
+        slug = slug.Trim('-');
+
+        // Ensure minimum length and valid format
+        if (string.IsNullOrEmpty(slug) || slug.Length < 3)
+            slug = $"clinic-{Guid.NewGuid().ToString("N")[..8]}";
+
+        // Max length 50 for URLs
+        if (slug.Length > 50)
+            slug = slug[..50].TrimEnd('-');
+
+        return slug;
     }
 
     public class ClinicRegistrationRequest

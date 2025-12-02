@@ -64,6 +64,15 @@ public class EnhancedTenantService : IEnhancedTenantService
     {
         _logger.LogInformation("Creating SaaS tenant {TenantName} for user {UserId}", name, userId);
 
+        // Generate and validate slug uniqueness
+        var slug = GenerateSlug(name);
+        var slugExists = await _context.Tenants.AnyAsync(t => t.Slug == slug, cancellationToken);
+        if (slugExists)
+        {
+            // Append a unique suffix to make it unique
+            slug = $"{slug}-{Guid.NewGuid().ToString("N")[..6]}";
+        }
+
         // Create Cognito User Pool for tenant isolation
         var userPoolId = await _saasTenantService.CreateTenantUserPoolAsync(name, cancellationToken);
         var userPoolClientId = await _saasTenantService.CreateTenantUserPoolClientAsync(userPoolId, name, cancellationToken);
@@ -71,7 +80,7 @@ public class EnhancedTenantService : IEnhancedTenantService
         var tenant = new Tenant
         {
             Name = name,
-            Slug = GenerateSlug(name),
+            Slug = slug,
             Status = TenantStatus.Active,
             Plan = "starter",
             Timezone = "Australia/Sydney",
@@ -104,9 +113,31 @@ public class EnhancedTenantService : IEnhancedTenantService
 
     private string GenerateSlug(string name)
     {
-        return name.ToLowerInvariant()
+        if (string.IsNullOrWhiteSpace(name))
+            return $"clinic-{Guid.NewGuid().ToString("N")[..8]}";
+
+        var slug = name.ToLowerInvariant()
             .Replace(" ", "-")
+            .Replace("&", "and")
             .Replace("'", "")
-            .Replace("&", "and");
+            .Replace("\"", "");
+
+        // Keep only alphanumeric and hyphens
+        slug = new string(slug.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray());
+
+        // Remove consecutive hyphens and trim hyphens from ends
+        while (slug.Contains("--"))
+            slug = slug.Replace("--", "-");
+        slug = slug.Trim('-');
+
+        // Ensure minimum length and valid format
+        if (string.IsNullOrEmpty(slug) || slug.Length < 3)
+            slug = $"clinic-{Guid.NewGuid().ToString("N")[..8]}";
+
+        // Max length 50 for URLs
+        if (slug.Length > 50)
+            slug = slug[..50].TrimEnd('-');
+
+        return slug;
     }
 }

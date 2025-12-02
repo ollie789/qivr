@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Qivr.Services;
 
 namespace Qivr.Api.Controllers;
@@ -22,6 +23,7 @@ public class TenantsController : BaseApiController
     }
 
     [HttpGet]
+    [OutputCache(Duration = 300, VaryByHeaderNames = ["Authorization"])] // Cache per user for 5 mins
     [ProducesResponseType(typeof(IEnumerable<TenantSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAccessibleTenants(CancellationToken cancellationToken)
     {
@@ -65,9 +67,25 @@ public class TenantsController : BaseApiController
 
     [HttpGet("{tenantId:guid}")]
     [ProducesResponseType(typeof(TenantSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTenant(Guid tenantId, CancellationToken cancellationToken)
     {
+        // Security: Verify user has access to this tenant
+        var cognitoSub = User.FindFirst("sub")?.Value;
+        var userTenants = await _tenantService.GetTenantsForUserAsync(CurrentUserId, cognitoSub, cancellationToken);
+
+        // Also allow if user's current tenant context matches
+        var currentTenant = CurrentTenantId;
+        var hasAccess = userTenants.Any(t => t.Id == tenantId) || currentTenant == tenantId;
+
+        if (!hasAccess)
+        {
+            _logger.LogWarning("User {UserId} attempted to access tenant {TenantId} without permission",
+                CurrentUserId, tenantId);
+            return Forbid();
+        }
+
         var tenant = await _tenantService.GetTenantAsync(tenantId, cancellationToken);
         if (tenant == null)
         {
