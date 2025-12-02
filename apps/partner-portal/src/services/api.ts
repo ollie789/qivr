@@ -19,13 +19,15 @@ import type {
   DemographicStratificationResponse,
 } from "../types/outcomes";
 
+import { getIdToken } from "./cognitoAuth";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 async function fetchWithAuth<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const token = localStorage.getItem("partner_token");
+  const token = await getIdToken();
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,

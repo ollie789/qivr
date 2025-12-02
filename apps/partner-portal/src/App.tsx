@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import {
   ThemeProvider,
@@ -14,7 +14,6 @@ import PartnerLayout from "./components/PartnerLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 
-// Lazy load larger pages to reduce initial bundle size
 const Devices = lazy(() => import("./pages/Devices"));
 const DeviceDetail = lazy(() => import("./pages/DeviceDetail"));
 const DeviceManagement = lazy(() => import("./pages/DeviceManagement"));
@@ -23,7 +22,6 @@ const Affiliations = lazy(() => import("./pages/Affiliations"));
 const Settings = lazy(() => import("./pages/Settings"));
 const ResearchInsights = lazy(() => import("./pages/ResearchInsights"));
 
-// Loading fallback component
 function PageLoader() {
   return (
     <Box
@@ -40,21 +38,27 @@ function PageLoader() {
 }
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-    },
-  },
+  defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 1 } },
 });
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+function AuthProvider({ children }: { children: React.ReactNode }) {
+  const checkSession = useAuthStore((s) => s.checkSession);
+  const [ready, setReady] = useState(false);
+  const checkedRef = useRef(false);
 
+  useEffect(() => {
+    if (checkedRef.current) return;
+    checkedRef.current = true;
+    checkSession().finally(() => setReady(true));
+  }, [checkSession]);
+
+  if (!ready) return <PageLoader />;
   return <>{children}</>;
 }
 
@@ -65,79 +69,84 @@ function App() {
         <CssBaseline />
         <SnackbarProvider maxSnack={3}>
           <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <PartnerLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="/dashboard" element={<Dashboard />} />
+            <AuthProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
                 <Route
-                  path="/devices"
                   element={
-                    <Suspense fallback={<PageLoader />}>
-                      <Devices />
-                    </Suspense>
+                    <ProtectedRoute>
+                      <PartnerLayout />
+                    </ProtectedRoute>
                   }
-                />
+                >
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route
+                    path="/devices"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <Devices />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/devices/:deviceId"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <DeviceDetail />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/device-management"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <DeviceManagement />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/affiliations"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <Affiliations />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/compare"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <Compare />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/research"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <ResearchInsights />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/settings"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <Settings />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/"
+                    element={<Navigate to="/dashboard" replace />}
+                  />
+                </Route>
                 <Route
-                  path="/devices/:deviceId"
-                  element={
-                    <Suspense fallback={<PageLoader />}>
-                      <DeviceDetail />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/device-management"
-                  element={
-                    <Suspense fallback={<PageLoader />}>
-                      <DeviceManagement />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/affiliations"
-                  element={
-                    <Suspense fallback={<PageLoader />}>
-                      <Affiliations />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/compare"
-                  element={
-                    <Suspense fallback={<PageLoader />}>
-                      <Compare />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/research"
-                  element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ResearchInsights />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <Suspense fallback={<PageLoader />}>
-                      <Settings />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/"
+                  path="*"
                   element={<Navigate to="/dashboard" replace />}
                 />
-              </Route>
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+              </Routes>
+            </AuthProvider>
           </BrowserRouter>
         </SnackbarProvider>
       </ThemeProvider>

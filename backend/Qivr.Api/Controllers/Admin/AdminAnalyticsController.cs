@@ -176,6 +176,17 @@ public class AdminAnalyticsController : ControllerBase
         {
             try
             {
+                // SECURITY FIX: Validate inputs to prevent SQL Injection in Athena query
+                if (!string.IsNullOrEmpty(region) && !System.Text.RegularExpressions.Regex.IsMatch(region, "^[a-zA-Z0-9\\s-]+$"))
+                {
+                    return BadRequest("Invalid region format");
+                }
+
+                if (!string.IsNullOrEmpty(promType) && !System.Text.RegularExpressions.Regex.IsMatch(promType, "^[a-zA-Z0-9\\-]+$"))
+                {
+                    return BadRequest("Invalid PROM type format");
+                }
+
                 var where = "WHERE patient_count >= 5"; // K-anonymity enforced in ETL
                 if (!string.IsNullOrEmpty(region)) where += $" AND region = '{region}'";
                 if (!string.IsNullOrEmpty(promType)) where += $" AND prom_type = '{promType}'";

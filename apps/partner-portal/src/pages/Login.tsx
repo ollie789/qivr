@@ -11,7 +11,6 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useAuthStore } from "../stores/authStore";
-import { authApi } from "../services/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -26,15 +25,13 @@ export default function Login() {
     setError("");
     setLoading(true);
 
-    try {
-      const response = await authApi.login(email, password);
-      login(response.token, response.partner);
+    const result = await login(email, password);
+    if (result.success) {
       navigate("/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid credentials");
-    } finally {
-      setLoading(false);
+    } else {
+      setError(result.error || "Invalid credentials");
     }
+    setLoading(false);
   };
 
   return (
@@ -86,16 +83,16 @@ export default function Login() {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Partner ID or Email"
+              label="Email"
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               sx={{ mb: 2 }}
-              placeholder="medtronic"
             />
             <TextField
               fullWidth
-              label="API Key"
+              label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -25,10 +25,15 @@ public static class AuthenticationExtensions
         var cognitoSettings = configuration.GetSection("Cognito").Get<CognitoSettings>() 
             ?? throw new InvalidOperationException("Cognito settings not configured");
         
-        // Admin pool ID for the admin portal
+        // Pool IDs for different portals
         var adminPoolId = configuration["Cognito:AdminPoolId"] ?? "ap-southeast-2_BEFWL83lO";
+        var patientPoolId = configuration["Cognito:PatientPoolId"] ?? "ap-southeast-2_ZMcriKNGJ";
+        var partnerPoolId = configuration["Cognito:PartnerPoolId"] ?? "ap-southeast-2_vAW6TyxJx";
+        
         var mainIssuer = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{cognitoSettings.UserPoolId}";
         var adminIssuer = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{adminPoolId}";
+        var patientIssuer = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{patientPoolId}";
+        var partnerIssuer = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{partnerPoolId}";
         
         // Configure JWT authentication with multiple valid issuers
         // Also add API Key authentication for external API access
@@ -65,7 +70,7 @@ public static class AuthenticationExtensions
                 ValidateIssuer = true,
                 ValidateAudience = false, // Cognito access tokens don't have an 'aud' claim
                 ValidateLifetime = true,
-                ValidIssuers = new[] { mainIssuer, adminIssuer }, // Accept both pools
+                ValidIssuers = new[] { mainIssuer, adminIssuer, patientIssuer, partnerIssuer }, // Accept all pools
                 ClockSkew = TimeSpan.Zero,
                 IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
                 {
@@ -113,6 +118,7 @@ public static class AuthenticationExtensions
                         var issuer = context.Principal?.Claims
                             .FirstOrDefault(c => c.Type == "iss")?.Value ?? "";
                         var isAdminPoolUser = issuer.Contains(adminPoolId);
+                        var isPartnerPoolUser = issuer.Contains(partnerPoolId);
                         
                         if (isAdminPoolUser)
                         {
@@ -127,6 +133,31 @@ public static class AuthenticationExtensions
                                     "SuperAdmin"));
                             }
                             return; // Skip database lookup for admin users
+                        }
+                        
+                        if (isPartnerPoolUser)
+                        {
+                            // Partner pool users - look up partner by email
+                            logger.LogInformation("Partner pool user authenticated from issuer: {Issuer}", issuer);
+                            var email = context.Principal?.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+                            
+                            if (!string.IsNullOrEmpty(email))
+                            {
+                                var dbContext = context.HttpContext.RequestServices.GetService<Qivr.Infrastructure.Data.AdminReadOnlyDbContext>();
+                                if (dbContext != null)
+                                {
+                                    var partner = await dbContext.ResearchPartners
+                                        .FirstOrDefaultAsync(p => p.ContactEmail == email && p.IsActive);
+                                    
+                                    if (partner != null)
+                                    {
+                                        claimsIdentity.AddClaim(new System.Security.Claims.Claim("partner_id", partner.Id.ToString()));
+                                        claimsIdentity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Partner"));
+                                        logger.LogInformation("Partner {PartnerId} authenticated: {Email}", partner.Id, email);
+                                    }
+                                }
+                            }
+                            return; // Skip regular user lookup for partners
                         }
                         
                         // Get the Cognito sub claim (user ID in Cognito)

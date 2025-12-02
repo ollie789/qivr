@@ -97,6 +97,8 @@ if (expandedCognito.Count > 0)
 
 // Configure ProblemDetails for consistent error responses
 builder.Services.AddProblemDetails();
+// ADDED: Register the new global exception handler
+builder.Services.AddExceptionHandler<Qivr.Api.Infrastructure.GlobalExceptionHandler>();
 
 // Configure Serilog
 var loggerConfig = new LoggerConfiguration()
@@ -116,6 +118,9 @@ builder.Services.AddApiVersioningConfiguration();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        // OPTIMIZATION: Use Source Generators for faster JSON serialization
+        options.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, QivrJsonContext.Default);
+
         // Use camelCase for JSON property names to match frontend conventions
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
@@ -633,7 +638,7 @@ app.Use(async (ctx, next) =>
 app.UseStaticFiles();
 
 // Custom middleware
-app.UseMiddleware<GlobalErrorHandlingMiddleware>();
+// REMOVED: app.UseMiddleware<GlobalErrorHandlingMiddleware>();
 
 // Admin IP Allowlist (before authentication for early rejection)
 app.UseAdminIpAllowlist();
@@ -697,49 +702,28 @@ app.Run();
 static string BuildPgConnectionStringFromUrl(string url, bool isDevelopment)
 {
     // Supports postgres://user:pass@host:port/dbname?sslmode=require
+    // UPDATED: Use NpgsqlConnectionStringBuilder for safe parsing
     var uri = new Uri(url);
-    var userInfo = uri.UserInfo.Split(':', 2, StringSplitOptions.None);
-    var username = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(0) ?? string.Empty);
-    var password = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(1) ?? string.Empty);
-    var database = uri.AbsolutePath.TrimStart('/');
+    var userInfo = uri.UserInfo.Split(':', 2);
 
-    // Extract sslmode if provided without relying on System.Web
-    // uri.Query may start with '?', so trim it first
-    var rawQuery = uri.Query.StartsWith("?") ? uri.Query.Substring(1) : uri.Query;
-    string? sslMode = null;
-    if (!string.IsNullOrEmpty(rawQuery))
+    var builder = new Npgsql.NpgsqlConnectionStringBuilder
     {
-        foreach (var pair in rawQuery.Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var kv = pair.Split('=', 2, StringSplitOptions.None);
-            if (kv.Length == 2 && string.Equals(kv[0], "sslmode", StringComparison.OrdinalIgnoreCase))
-            {
-                sslMode = Uri.UnescapeDataString(kv[1]);
-                break;
-            }
-        }
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        Username = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(0) ?? ""),
+        Password = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(1) ?? ""),
+        // Safer way to handle SSL mode mapping
+        SslMode = isDevelopment ? Npgsql.SslMode.Disable : Npgsql.SslMode.Require
+    };
+
+    // Handle Trust Server Certificate for dev
+    if (isDevelopment && builder.SslMode != Npgsql.SslMode.Disable)
+    {
+        builder.TrustServerCertificate = true;
     }
 
-    // Default SSL behavior: require in non-development if not specified
-    if (string.IsNullOrWhiteSpace(sslMode))
-    {
-        sslMode = isDevelopment ? "Disable" : "Require";
-    }
-
-    var host = uri.Host;
-    var port = uri.Port > 0 ? uri.Port.ToString() : "5432";
-
-    // Build Npgsql connection string
-    var sb = new StringBuilder();
-    sb.Append($"Host={host};Port={port};Database={database};Username={username};Password={password};SslMode={sslMode}");
-
-    // In development, allow trusting server certs if SSL is enabled
-    if (sslMode is not null && !sslMode.Equals("Disable", StringComparison.OrdinalIgnoreCase) && isDevelopment)
-    {
-        sb.Append(";Trust Server Certificate=true");
-    }
-
-    return sb.ToString();
+    return builder.ToString();
 }
 
 // Make the Program class public so it can be referenced in tests
