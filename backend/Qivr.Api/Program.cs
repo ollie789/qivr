@@ -271,6 +271,7 @@ builder.Services.AddScoped<IQuietHoursService, QuietHoursService>();
 builder.Services.AddScoped<INotificationGate, NotificationGate>();
 builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
 builder.Services.AddScoped<IAppointmentWaitlistService, AppointmentWaitlistService>();
+builder.Services.AddSingleton<Qivr.Services.Security.IMessageEncryptionService, Qivr.Services.Security.MessageEncryptionService>();
 builder.Services.AddScoped<IMessagingService, MessagingService>();
 builder.Services.AddScoped<IPromSchedulingService, PromSchedulingService>();
 builder.Services.AddScoped<ISmartNotificationService, SmartNotificationService>();

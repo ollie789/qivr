@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Qivr.Core.Entities;
 using Qivr.Infrastructure.Data;
+using Qivr.Services.Security;
 
 namespace Qivr.Services;
 
@@ -21,45 +22,53 @@ public class MessagingService : IMessagingService
 {
     private readonly QivrDbContext _context;
     private readonly ILogger<MessagingService> _logger;
+    private readonly IMessageEncryptionService _encryptionService;
+    private readonly IS3Service _s3Service;
 
-    public MessagingService(QivrDbContext context, ILogger<MessagingService> logger)
+    public MessagingService(
+        QivrDbContext context,
+        ILogger<MessagingService> logger,
+        IMessageEncryptionService encryptionService,
+        IS3Service s3Service)
     {
         _context = context;
         _logger = logger;
+        _encryptionService = encryptionService;
+        _s3Service = s3Service;
     }
 
     public async Task<IEnumerable<ConversationSummary>> GetConversationsAsync(Guid tenantId, Guid userId)
     {
-        // Get all conversations for the user grouped by other participant
-        var conversations = await _context.Messages
-            .Include(m => m.Sender)
-            .Include(m => m.Recipient)
-            .Include(m => m.ProviderProfile)
+        // Optimized: Single query with projection to avoid N+1
+        // Uses a subquery to get conversation summaries with participant info in one round-trip
+        var conversationSummaries = await _context.Messages
             .Where(m => m.TenantId == tenantId && (m.SenderId == userId || m.DirectRecipientId == userId))
             .GroupBy(m => m.SenderId == userId ? m.DirectRecipientId : m.SenderId)
             .Select(g => new
             {
                 ParticipantId = g.Key,
-                Messages = g.ToList()
+                LastMessageContent = g.OrderByDescending(m => m.CreatedAt).Select(m => m.Content).FirstOrDefault(),
+                LastMessageTime = g.Max(m => m.CreatedAt),
+                LastMessageSenderId = g.OrderByDescending(m => m.CreatedAt).Select(m => m.SenderId).FirstOrDefault(),
+                UnreadCount = g.Count(m => m.DirectRecipientId == userId && !m.IsRead),
+                TotalMessages = g.Count(),
+                HasAttachments = g.Any(m => m.HasAttachments),
+                IsUrgent = g.Any(m => m.Priority == "High" || m.Priority == "Urgent")
             })
             .ToListAsync();
 
+        // Get all participant IDs and fetch users in a single query
+        var participantIds = conversationSummaries.Select(c => c.ParticipantId).Distinct().ToList();
+        var participants = await _context.Users
+            .Where(u => participantIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u);
+
         var summaries = new List<ConversationSummary>();
 
-        foreach (var conversation in conversations)
+        foreach (var conversation in conversationSummaries)
         {
-            var participant = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == conversation.ParticipantId);
-
-            if (participant == null) continue;
-
-            var orderedMessages = conversation.Messages
-                .OrderByDescending(m => m.CreatedAt)
-                .ToList();
-
-            var lastMessage = orderedMessages.FirstOrDefault();
-            var unreadCount = conversation.Messages
-                .Count(m => m.DirectRecipientId == userId && !m.IsRead);
+            if (!participants.TryGetValue(conversation.ParticipantId, out var participant))
+                continue;
 
             summaries.Add(new ConversationSummary
             {
@@ -67,13 +76,13 @@ public class MessagingService : IMessagingService
                 ParticipantName = $"{participant.FirstName} {participant.LastName}".Trim(),
                 ParticipantAvatar = participant.AvatarUrl,
                 ParticipantRole = participant.UserType.ToString(),
-                LastMessage = lastMessage?.Content ?? "",
-                LastMessageTime = lastMessage?.CreatedAt ?? DateTime.MinValue,
-                LastMessageSender = lastMessage?.SenderId == userId ? "You" : participant.FirstName,
-                UnreadCount = unreadCount,
-                TotalMessages = conversation.Messages.Count,
-                HasAttachments = conversation.Messages.Any(m => m.HasAttachments),
-                IsUrgent = conversation.Messages.Any(m => m.Priority == "High" || m.Priority == "Urgent")
+                LastMessage = conversation.LastMessageContent ?? "",
+                LastMessageTime = conversation.LastMessageTime,
+                LastMessageSender = conversation.LastMessageSenderId == userId ? "You" : participant.FirstName,
+                UnreadCount = conversation.UnreadCount,
+                TotalMessages = conversation.TotalMessages,
+                HasAttachments = conversation.HasAttachments,
+                IsUrgent = conversation.IsUrgent
             });
         }
 
@@ -115,6 +124,12 @@ public class MessagingService : IMessagingService
         if (unreadMessages.Any())
         {
             await _context.SaveChangesAsync();
+        }
+
+        // Decrypt message content for display
+        foreach (var message in messages)
+        {
+            message.Content = _encryptionService.Decrypt(message.Content, tenantId);
         }
 
         // Get participant info
@@ -186,6 +201,9 @@ public class MessagingService : IMessagingService
             throw new ArgumentException("Sender not found");
         }
         
+        // SECURITY: Encrypt message content for PHI compliance
+        var encryptedContent = _encryptionService.Encrypt(messageDto.Content, tenantId);
+
         var message = new Message
         {
             Id = Guid.NewGuid(),
@@ -195,7 +213,7 @@ public class MessagingService : IMessagingService
             SenderRole = sender.UserType.ToString(),
             DirectRecipientId = messageDto.RecipientId,
             DirectSubject = messageDto.Subject,
-            Content = messageDto.Content,
+            Content = encryptedContent,
             DirectMessageType = messageDto.MessageType ?? "General",
             DirectPriority = messageDto.Priority ?? "Normal",
             ParentMessageId = messageDto.ParentMessageId,
@@ -206,13 +224,59 @@ public class MessagingService : IMessagingService
             UpdatedAt = DateTime.UtcNow
         };
 
-        // Handle attachments if any
+        // Handle attachments - upload to S3, create Document records
         if (messageDto.Attachments?.Any() == true)
         {
-            // In production, save attachments to storage and store references
-            // For now, just log
-            _logger.LogInformation("Message {MessageId} has {Count} attachments", 
-                message.Id, messageDto.Attachments.Count());
+            // Process first attachment (Message entity supports single attachment via AttachmentId)
+            var attachment = messageDto.Attachments.First();
+            if (!string.IsNullOrEmpty(attachment.Base64Data))
+            {
+                try
+                {
+                    var fileBytes = Convert.FromBase64String(attachment.Base64Data);
+                    using var stream = new MemoryStream(fileBytes);
+                    var s3Key = await _s3Service.UploadFileAsync(
+                        stream,
+                        $"messages/{tenantId}/{message.Id}/{attachment.FileName}",
+                        attachment.ContentType);
+
+                    // Create a Document record for the attachment
+                    var document = new Document
+                    {
+                        Id = Guid.NewGuid(),
+                        TenantId = tenantId,
+                        PatientId = messageDto.RecipientId, // Associate with recipient
+                        FileName = attachment.FileName,
+                        S3Key = s3Key,
+                        MimeType = attachment.ContentType,
+                        FileSize = attachment.FileSize,
+                        DocumentType = "MessageAttachment",
+                        Status = "ready",
+                        UploadedBy = senderId,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Documents.Add(document);
+                    message.AttachmentId = document.Id;
+
+                    _logger.LogInformation("Uploaded message attachment {FileName} to S3 key {S3Key}, Document {DocumentId}",
+                        attachment.FileName, s3Key, document.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to upload attachment {FileName} for message {MessageId}",
+                        attachment.FileName, message.Id);
+                    // Continue without attachment
+                }
+            }
+
+            // Log if multiple attachments were provided (only first is processed)
+            if (messageDto.Attachments.Count() > 1)
+            {
+                _logger.LogWarning("Message {MessageId} had {Count} attachments, only first was processed. Consider implementing multi-attachment support.",
+                    message.Id, messageDto.Attachments.Count());
+            }
         }
 
         _context.Messages.Add(message);
@@ -270,10 +334,18 @@ public class MessagingService : IMessagingService
             query = query.Where(m => m.DirectRecipientId == userId && !m.IsRead);
         }
 
-        return await query
+        var messages = await query
             .OrderByDescending(m => m.CreatedAt)
             .Take(100) // Limit for performance
             .ToListAsync();
+
+        // Decrypt content for display
+        foreach (var message in messages)
+        {
+            message.Content = _encryptionService.Decrypt(message.Content, tenantId);
+        }
+
+        return messages;
     }
 
     public async Task MarkMessagesAsReadAsync(Guid tenantId, Guid userId, IEnumerable<Guid> messageIds)
@@ -306,6 +378,12 @@ public class MessagingService : IMessagingService
             .Include(m => m.Recipient)
             .Include(m => m.ProviderProfile)
             .FirstOrDefaultAsync(m => m.Id == messageId && m.TenantId == tenantId);
+
+        // Decrypt content for display
+        if (message != null)
+        {
+            message.Content = _encryptionService.Decrypt(message.Content, tenantId);
+        }
 
         return message;
     }
@@ -357,9 +435,12 @@ public class MessagingService : IMessagingService
         }
 
         // Determine the recipient (reply to the other party in the conversation)
-        var recipientId = parentMessage.SenderId == senderId 
-            ? parentMessage.DirectRecipientId 
+        var recipientId = parentMessage.SenderId == senderId
+            ? parentMessage.DirectRecipientId
             : parentMessage.SenderId;
+
+        // SECURITY: Encrypt reply content
+        var encryptedContent = _encryptionService.Encrypt(content, tenantId);
 
         var reply = new Message
         {
@@ -368,7 +449,7 @@ public class MessagingService : IMessagingService
             SenderId = senderId,
             DirectRecipientId = recipientId,
             Subject = $"Re: {parentMessage.Subject ?? "No Subject"}",
-            Content = content,
+            Content = encryptedContent,
             MessageType = parentMessage.MessageType,
             Priority = "Normal",
             ParentMessageId = parentMessageId,

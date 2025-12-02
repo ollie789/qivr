@@ -154,13 +154,7 @@ public class TenantMiddleware
         {
             "/health",
             "/swagger",
-            "/api/auth/register",
-            "/api/auth/login",
-            "/api/auth/signup",
-            "/api/auth/forgot-password",
-            "/api/auth/refresh",
-            "/api/auth/refresh-token",
-            "/api/auth/partner-login",  // Partner portal login
+            "/api/auth",  // All auth endpoints (login, signup, user-info, refresh, etc.)
             "/api/tenants",
             "/api/admin",  // Admin portal endpoints (use separate auth)
             "/api/partner",  // Partner portal endpoints (use partner auth)
