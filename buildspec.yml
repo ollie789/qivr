@@ -103,23 +103,7 @@ phases:
           wait $DOCKER_PID || echo "Docker build completed with warnings"
         fi
 
-      # Run migrations only if backend changed
-      - |
-        if [ "$BUILD_BACKEND" = "true" ]; then
-          echo "Running database migrations..."
-          DB_SECRET=$(aws secretsmanager get-secret-value --secret-id qivr/production/database --query SecretString --output text)
-          DB_HOST=$(echo $DB_SECRET | jq -r '.host')
-          DB_USER=$(echo $DB_SECRET | jq -r '.username')
-          DB_PASS=$(echo $DB_SECRET | jq -r '.password')
-          DB_NAME=$(echo $DB_SECRET | jq -r '.database')
-          docker run --rm --platform linux/amd64 \
-            -e "ConnectionStrings__DefaultConnection=Host=$DB_HOST;Database=$DB_NAME;Username=$DB_USER;Password=$DB_PASS" \
-            -v $(pwd)/backend:/app \
-            -w /app \
-            mcr.microsoft.com/dotnet/sdk:10.0-preview-alpine \
-            sh -c "dotnet tool restore && dotnet ef database update --project Qivr.Infrastructure --startup-project Qivr.Api" \
-            || echo "Migration completed or no pending migrations"
-        fi
+      # Migrations are managed manually via SQL - not run in CI/CD
 
   post_build:
     commands:

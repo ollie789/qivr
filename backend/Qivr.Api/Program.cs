@@ -751,8 +751,8 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
 // Map SignalR hub
 app.MapHub<NotificationHub>("/hubs/notifications");
 
-// Apply migrations when flagged via configuration
-var applyMigrations = Environment.GetEnvironmentVariable("APPLY_MIGRATIONS")?.ToLower() != "false";
+// Migrations are managed manually via SQL - disabled by default
+var applyMigrations = Environment.GetEnvironmentVariable("APPLY_MIGRATIONS")?.ToLower() == "true";
 if (applyMigrations)
 {
     Log.Information("Applying database migrations...");
