@@ -518,9 +518,10 @@ public class CognitoAuthService : ICognitoAuthService
             
             var attributes = response.UserAttributes.ToDictionary(a => a.Name, a => a.Value);
             
-            // Look up user from database by Cognito sub
+            // Look up user from database by Cognito sub (ignore tenant filter - user may not have tenant context yet)
             var dbUser = await _dbContext.Users
-                .FirstOrDefaultAsync(u => u.CognitoSub == response.Username);
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(u => u.CognitoSub == response.Username && u.DeletedAt == null);
             
             return new UserInfo
             {
