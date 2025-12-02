@@ -213,8 +213,9 @@ public static class AuthenticationExtensions
                                         if (dbContext != null)
                                         {
                                             var userEntity = await dbContext.Users
+                                                .IgnoreQueryFilters()
                                                 .AsNoTracking()
-                                                .FirstOrDefaultAsync(u => u.CognitoSub == subClaim.Value);
+                                                .FirstOrDefaultAsync(u => u.CognitoSub == subClaim.Value && u.DeletedAt == null);
                                             
                                             if (userEntity != null && userEntity.TenantId != Guid.Empty)
                                             {
