@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
@@ -62,19 +63,28 @@ public class AiTriageService : IAiTriageService
 
     public async Task<TriageSummary> GenerateTriageSummaryAsync(Guid patientId, TriageRequest request)
     {
+        // Track if AI processing succeeded
+        bool aiProcessingSucceeded = true;
+        string? aiFailureReason = null;
+
         try
         {
             // De-identify patient data before AI processing
             var deidentifiedSymptoms = await _deIdentificationService.DeIdentifyAsync(
                 request.Symptoms,
-                new DeIdentificationOptions { EnableReIdentification = true }
+                new DeIdentificationOptions { EnableReIdentification = true, UseAiDetection = true }
             );
 
             var deidentifiedHistory = request.MedicalHistory != null
-                ? await _deIdentificationService.DeIdentifyAsync(request.MedicalHistory)
+                ? await _deIdentificationService.DeIdentifyAsync(request.MedicalHistory,
+                    new DeIdentificationOptions { UseAiDetection = true })
                 : null;
 
-            // Create triage data object
+            // De-identify medications to prevent PHI leakage via rare drug names
+            // Convert brand names to generic class where possible
+            var sanitizedMedications = SanitizeMedications(request.CurrentMedications);
+
+            // Create triage data object with de-identified data
             var triageData = new TriageData
             {
                 PatientId = patientId,
@@ -83,20 +93,53 @@ public class AiTriageService : IAiTriageService
                 VitalSigns = request.VitalSigns,
                 Duration = request.Duration,
                 Severity = request.Severity,
-                Medications = request.CurrentMedications,
-                Allergies = request.Allergies,
+                Medications = sanitizedMedications,
+                Allergies = SanitizeAllergies(request.Allergies), // Also sanitize allergies
                 Age = request.Age,
                 Timestamp = DateTime.UtcNow
             };
 
-            // Generate AI triage summary
-            var aiSummary = await GenerateAiTriageSummary(triageData);
+            // Initialize with fallback values
+            AiTriageSummaryResult aiSummary;
+            List<RiskFlag> riskFlags;
+            UrgencyAssessment urgency;
 
-            // Detect risk flags
-            var riskFlags = await DetectRiskFlagsAsync(triageData);
+            // Attempt AI triage with fallback handling
+            try
+            {
+                aiSummary = await GenerateAiTriageSummary(triageData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "AI triage summary generation failed, using fallback");
+                aiProcessingSucceeded = false;
+                aiFailureReason = "AI summary generation failed";
+                aiSummary = CreateFallbackAiSummary(triageData);
+            }
 
-            // Assess urgency
-            var urgency = await AssessUrgencyAsync(triageData);
+            // Detect risk flags - use rule-based even if AI fails
+            try
+            {
+                riskFlags = await DetectRiskFlagsAsync(triageData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Risk flag detection failed, using rule-based only");
+                riskFlags = DetectRuleBasedRiskFlags(triageData);
+            }
+
+            // Assess urgency with fallback
+            try
+            {
+                urgency = await AssessUrgencyAsync(triageData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "AI urgency assessment failed, using rule-based");
+                aiProcessingSucceeded = false;
+                aiFailureReason ??= "AI urgency assessment failed";
+                urgency = CreateFallbackUrgencyAssessment(triageData, riskFlags);
+            }
 
             // Create comprehensive triage summary
             var summary = new TriageSummary
@@ -113,17 +156,21 @@ public class AiTriageService : IAiTriageService
                 UrgencyRationale = urgency.Rationale,
                 RecommendedTimeframe = urgency.RecommendedTimeframe,
                 PossibleConditions = aiSummary.PossibleConditions,
-                RequiresClinicianReview = riskFlags.Any(r => r.Severity == RiskSeverity.Critical) || 
+                // Mark for clinician review if AI failed OR if high risk detected
+                RequiresClinicianReview = !aiProcessingSucceeded ||
+                                        riskFlags.Any(r => r.Severity == RiskSeverity.Critical) ||
                                         urgency.Level.ToLower() == "urgent",
                 GeneratedAt = DateTime.UtcNow,
                 DeIdentificationMappingId = deidentifiedSymptoms.MappingId,
-                Confidence = aiSummary.Confidence
+                Confidence = aiProcessingSucceeded ? aiSummary.Confidence : 0.0,
+                AiProcessingStatus = aiProcessingSucceeded ? "completed" : "fallback",
+                AiFailureReason = aiFailureReason
             };
 
             // Store triage summary
             await SaveTriageSummary(summary);
 
-            // If high risk, automatically submit for clinician review
+            // If high risk or AI failed, automatically submit for clinician review
             if (summary.RequiresClinicianReview)
             {
                 await SubmitForClinicianReviewAsync(summary);
@@ -133,9 +180,237 @@ public class AiTriageService : IAiTriageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating triage summary for patient {PatientId}", patientId);
-            throw new TriageException("Failed to generate triage summary", ex);
+            _logger.LogError(ex, "Critical error generating triage summary for patient {PatientId}", patientId);
+
+            // Even on critical failure, return a manual-review summary rather than failing completely
+            return CreateManualReviewSummary(patientId, request, ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Sanitize medication list to prevent PHI leakage via rare/identifying drug combinations
+    /// </summary>
+    private List<string> SanitizeMedications(List<string>? medications)
+    {
+        if (medications == null || !medications.Any())
+            return new List<string>();
+
+        return medications.Select(med =>
+        {
+            // Remove dosage specifics that could be identifying
+            var sanitized = Regex.Replace(med, @"\d+\s*(mg|mcg|ml|units?|iu)\b", "[DOSE]", RegexOptions.IgnoreCase);
+
+            // Remove prescriber names that might be embedded ("prescribed by Dr. Smith")
+            sanitized = Regex.Replace(sanitized, @"\b(dr\.?|doctor)\s+[a-z]+\b", "[PRESCRIBER]", RegexOptions.IgnoreCase);
+
+            // Remove pharmacy names
+            sanitized = Regex.Replace(sanitized, @"\b(pharmacy|cvs|walgreens|chemist|priceline)\b", "[PHARMACY]", RegexOptions.IgnoreCase);
+
+            return sanitized.Trim();
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Sanitize allergies list similarly
+    /// </summary>
+    private List<string> SanitizeAllergies(List<string>? allergies)
+    {
+        if (allergies == null || !allergies.Any())
+            return new List<string>();
+
+        return allergies.Select(allergy =>
+        {
+            // Remove incident details that might contain identifying info
+            var sanitized = Regex.Replace(allergy, @"\b(at|in|during)\s+[a-z0-9\s]+\s+(hospital|clinic|surgery)\b", "", RegexOptions.IgnoreCase);
+            return sanitized.Trim();
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Create a fallback AI summary when Bedrock is unavailable
+    /// </summary>
+    private AiTriageSummaryResult CreateFallbackAiSummary(TriageData data)
+    {
+        return new AiTriageSummaryResult
+        {
+            ChiefComplaint = ExtractChiefComplaint(data.Symptoms),
+            Summary = "AI analysis unavailable. Manual clinical review required.",
+            SymptomAnalysis = new Dictionary<string, object>
+            {
+                ["primary_symptoms"] = data.Symptoms.Split(new[] { ',', ';', '.' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => s.Length > 2)
+                    .Take(5)
+                    .ToList(),
+                ["status"] = "pending_manual_review"
+            },
+            PossibleConditions = new List<PossibleCondition>(),
+            Confidence = 0.0
+        };
+    }
+
+    /// <summary>
+    /// Create fallback urgency assessment based on rules
+    /// </summary>
+    private UrgencyAssessment CreateFallbackUrgencyAssessment(TriageData data, List<RiskFlag> riskFlags)
+    {
+        // Use rule-based urgency when AI fails
+        var hasCriticalFlags = riskFlags.Any(r => r.Severity == RiskSeverity.Critical);
+        var hasHighFlags = riskFlags.Any(r => r.Severity == RiskSeverity.High);
+        var hasCriticalSymptoms = _criticalSymptoms.Any(cs => data.Symptoms.ToLower().Contains(cs));
+
+        string level;
+        int score;
+        string timeframe;
+
+        if (hasCriticalFlags || hasCriticalSymptoms)
+        {
+            level = "urgent";
+            score = 9;
+            timeframe = "immediate";
+        }
+        else if (hasHighFlags)
+        {
+            level = "high";
+            score = 7;
+            timeframe = "within 1 hour";
+        }
+        else
+        {
+            // Default to cautious assessment when AI unavailable
+            level = "high";
+            score = 6;
+            timeframe = "within 4 hours";
+        }
+
+        return new UrgencyAssessment
+        {
+            Level = level,
+            Score = score,
+            RecommendedTimeframe = timeframe,
+            Rationale = "AI assessment unavailable - urgency determined by rule-based analysis. Manual review required.",
+            AssessedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Create a manual review summary when everything fails
+    /// </summary>
+    private TriageSummary CreateManualReviewSummary(Guid patientId, TriageRequest request, string errorMessage)
+    {
+        var summary = new TriageSummary
+        {
+            Id = Guid.NewGuid(),
+            PatientId = patientId,
+            RequestId = request.Id,
+            ChiefComplaint = ExtractChiefComplaint(request.Symptoms),
+            SummaryText = "System error during triage processing. Immediate manual review required.",
+            SymptomAnalysis = new Dictionary<string, object>
+            {
+                ["raw_symptoms"] = request.Symptoms,
+                ["error"] = "Processing failed"
+            },
+            RiskFlags = new List<RiskFlag>
+            {
+                new RiskFlag
+                {
+                    Type = RiskType.Other,
+                    Description = "Automated triage failed - manual review required",
+                    Severity = RiskSeverity.High,
+                    RequiresImmediateAction = true
+                }
+            },
+            UrgencyLevel = "high",
+            UrgencyScore = 7,
+            UrgencyRationale = "Default high priority due to system error",
+            RecommendedTimeframe = "within 1 hour",
+            PossibleConditions = new List<PossibleCondition>(),
+            RequiresClinicianReview = true,
+            GeneratedAt = DateTime.UtcNow,
+            Confidence = 0.0,
+            AiProcessingStatus = "failed",
+            AiFailureReason = errorMessage
+        };
+
+        // Fire and forget save - don't let save failure cascade
+        Task.Run(async () =>
+        {
+            try
+            {
+                await SaveTriageSummary(summary);
+                await SubmitForClinicianReviewAsync(summary);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save manual review summary");
+            }
+        });
+
+        return summary;
+    }
+
+    /// <summary>
+    /// Extract chief complaint from symptoms text
+    /// </summary>
+    private string ExtractChiefComplaint(string symptoms)
+    {
+        if (string.IsNullOrWhiteSpace(symptoms))
+            return "Unspecified complaint";
+
+        // Take first sentence or first 100 chars
+        var firstSentence = symptoms.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        if (firstSentence != null && firstSentence.Length <= 100)
+            return firstSentence.Trim();
+
+        return symptoms.Length > 100 ? symptoms.Substring(0, 100) + "..." : symptoms;
+    }
+
+    /// <summary>
+    /// Detect risk flags using rules only (no AI)
+    /// </summary>
+    private List<RiskFlag> DetectRuleBasedRiskFlags(TriageData data)
+    {
+        var riskFlags = new List<RiskFlag>();
+        var symptomLower = data.Symptoms.ToLower();
+
+        // Check for critical symptoms
+        foreach (var criticalSymptom in _criticalSymptoms)
+        {
+            if (symptomLower.Contains(criticalSymptom))
+            {
+                riskFlags.Add(new RiskFlag
+                {
+                    Type = RiskType.CriticalSymptom,
+                    Description = $"Critical symptom detected: {criticalSymptom}",
+                    Severity = RiskSeverity.Critical,
+                    RequiresImmediateAction = true
+                });
+            }
+        }
+
+        // Check vital signs
+        if (data.VitalSigns != null)
+        {
+            riskFlags.AddRange(AssessVitalSignRisks(data.VitalSigns));
+        }
+
+        // Check red flag conditions
+        foreach (var condition in _redFlagConditions)
+        {
+            var matchCount = condition.Value.Count(symptom => symptomLower.Contains(symptom));
+            if (matchCount >= 2)
+            {
+                riskFlags.Add(new RiskFlag
+                {
+                    Type = RiskType.RedFlagCondition,
+                    Description = $"Multiple {condition.Key} red flags detected",
+                    Severity = RiskSeverity.High,
+                    RequiresImmediateAction = matchCount >= 3
+                });
+            }
+        }
+
+        return riskFlags;
     }
 
     public async Task<List<RiskFlag>> DetectRiskFlagsAsync(TriageData data)

@@ -76,6 +76,17 @@ public class TriageSummary
     public DateTime GeneratedAt { get; set; }
     public Guid? DeIdentificationMappingId { get; set; }
     public double Confidence { get; set; }
+
+    /// <summary>
+    /// Status of AI processing: "completed", "fallback", or "failed"
+    /// </summary>
+    public string? AiProcessingStatus { get; set; }
+
+    /// <summary>
+    /// Reason for AI processing failure, if applicable
+    /// </summary>
+    public string? AiFailureReason { get; set; }
+
     public UrgencyAssessment UrgencyAssessment => new()
     {
         Level = UrgencyLevel,

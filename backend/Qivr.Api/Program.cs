@@ -8,8 +8,6 @@ using Microsoft.OpenApi.Models;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using OpenTelemetry.Instrumentation.AWS;
-using OpenTelemetry.ResourceDetectors.AWS;
 using Qivr.Api.Extensions;
 using Qivr.Api.Middleware;
 using Qivr.Api.Services;
@@ -455,11 +453,13 @@ builder.Services.AddVersionedSwagger(builder.Configuration);
 
 // Configure OpenTelemetry with AWS X-Ray
 var enableTelemetry = builder.Configuration.GetValue<bool>("OpenTelemetry:Enabled", false);
-if (enableTelemetry)
+var otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
+
+// Only enable if explicitly enabled AND endpoint is configured
+if (enableTelemetry && !string.IsNullOrWhiteSpace(otlpEndpoint) && Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var otlpUri))
 {
     var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "qivr-api";
     var serviceVersion = builder.Configuration["OpenTelemetry:ServiceVersion"] ?? "1.0.0";
-    var otlpEndpoint = builder.Configuration["OpenTelemetry:Endpoint"];
     
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource
@@ -477,37 +477,32 @@ if (enableTelemetry)
                 .AddAspNetCoreInstrumentation(options =>
                 {
                     options.Filter = (httpContext) =>
-                    {
-                        // Don't trace health checks
-                        return !httpContext.Request.Path.StartsWithSegments("/health");
-                    };
+                        !httpContext.Request.Path.StartsWithSegments("/health") &&
+                        !httpContext.Request.Path.StartsWithSegments("/metrics");
                 })
-                .AddHttpClientInstrumentation()
-                .AddAWSInstrumentation() // AWS SDK instrumentation
-                .AddXRayTraceId() // Use X-Ray trace ID format
-                .AddOtlpExporter(options =>
+                .AddHttpClientInstrumentation(options =>
                 {
-                    // AWS X-Ray OTLP endpoint (via ADOT Collector)
-                    options.Endpoint = new Uri(otlpEndpoint ?? "http://localhost:4317");
-                });
+                    options.FilterHttpRequestMessage = (request) =>
+                        request.RequestUri?.Host != "localhost"; // Skip local calls
+                })
+                .AddOtlpExporter(options => options.Endpoint = otlpUri);
         })
         .WithMetrics(metrics =>
         {
             metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
-                .AddOtlpExporter(options =>
-                {
-                    options.Endpoint = new Uri(otlpEndpoint ?? "http://localhost:4317");
-                });
+                .AddOtlpExporter(options => options.Endpoint = otlpUri);
         });
     
-    Log.Information("OpenTelemetry enabled with AWS X-Ray - Service: {ServiceName}, Version: {ServiceVersion}, Environment: {Environment}", 
-        serviceName, serviceVersion, builder.Environment.EnvironmentName);
+    Log.Information("OpenTelemetry enabled - Service: {ServiceName}, Endpoint: {Endpoint}", serviceName, otlpEndpoint);
 }
 else
 {
-    Log.Information("OpenTelemetry disabled");
+    if (enableTelemetry)
+        Log.Warning("OpenTelemetry enabled but endpoint not configured or invalid - skipping");
+    else
+        Log.Information("OpenTelemetry disabled");
 }
 
 // =============================================================================

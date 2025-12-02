@@ -32,6 +32,20 @@ public class TriageData
     public List<string>? Allergies { get; set; }
     public int? Age { get; set; }
     public DateTime Timestamp { get; set; }
+    public PainMapData? PainMapData { get; set; }
+}
+
+public class PainMapData
+{
+    public List<PainRegion> Regions { get; set; } = new();
+}
+
+public class PainRegion
+{
+    public string MeshName { get; set; } = string.Empty;
+    public string? AnatomicalName { get; set; }
+    public string Quality { get; set; } = string.Empty;
+    public int Intensity { get; set; }
 }
 
 // Vital Signs
@@ -57,7 +71,7 @@ public class TriageSummary
     public string SummaryText { get; set; } = string.Empty;
     public Dictionary<string, object> SymptomAnalysis { get; set; } = new();
     public List<RiskFlag> RiskFlags { get; set; } = new();
-    public UrgencyLevel UrgencyLevel { get; set; }
+    public string UrgencyLevel { get; set; } = string.Empty;
     public int UrgencyScore { get; set; }
     public string UrgencyRationale { get; set; } = string.Empty;
     public string RecommendedTimeframe { get; set; } = string.Empty;
@@ -66,7 +80,17 @@ public class TriageSummary
     public DateTime GeneratedAt { get; set; }
     public Guid? DeIdentificationMappingId { get; set; }
     public double Confidence { get; set; }
-    
+
+    /// <summary>
+    /// Status of AI processing: "completed", "fallback", or "failed"
+    /// </summary>
+    public string? AiProcessingStatus { get; set; }
+
+    /// <summary>
+    /// Reason for AI processing failure, if applicable
+    /// </summary>
+    public string? AiFailureReason { get; set; }
+
     // Navigation properties
     public virtual User? Patient { get; set; }
     public virtual ClinicianReview? ClinicianReview { get; set; }
@@ -105,7 +129,7 @@ public enum RiskSeverity
 // Urgency Assessment
 public class UrgencyAssessment
 {
-    public UrgencyLevel Level { get; set; }
+    public string Level { get; set; } = string.Empty;
     public int Score { get; set; }
     public string RecommendedTimeframe { get; set; } = string.Empty;
     public string Rationale { get; set; } = string.Empty;
@@ -158,10 +182,10 @@ public class ClinicianReview
     public string? ClinicianNotes { get; set; }
     public string? ClinicianRecommendations { get; set; }
     public bool? AgreesWithAiAssessment { get; set; }
-    public UrgencyLevel? ClinicianUrgencyOverride { get; set; }
+    public string? ClinicianUrgencyOverride { get; set; }
     public List<string>? AdditionalOrders { get; set; }
     public List<RiskFlag> RiskFlags { get; set; } = new();
-    public UrgencyLevel UrgencyLevel { get; set; }
+    public string UrgencyLevel { get; set; } = string.Empty;
     public string ChiefComplaint { get; set; } = string.Empty;
     
     // Navigation properties

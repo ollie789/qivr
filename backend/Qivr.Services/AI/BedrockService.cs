@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.BedrockRuntime;
@@ -320,26 +321,138 @@ Content: {content}";
         }
     }
 
+    /// <summary>
+    /// Robustly parse JSON from LLM output, handling common issues like:
+    /// - Preamble text before JSON ("Here is the JSON: {...}")
+    /// - Trailing text after JSON
+    /// - Markdown code blocks (```json {...} ```)
+    /// - Multiple JSON objects (takes first complete one)
+    /// </summary>
     private Dictionary<string, object> ParseStructuredOutput(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            _logger.LogWarning("Empty content received for JSON parsing");
+            return new Dictionary<string, object>();
+        }
+
+        try
+        {
+            // Step 1: Try to extract JSON from markdown code blocks first
+            var codeBlockMatch = Regex.Match(content, @"```(?:json)?\s*(\{[\s\S]*?\})\s*```", RegexOptions.Singleline);
+            if (codeBlockMatch.Success)
+            {
+                var jsonFromBlock = codeBlockMatch.Groups[1].Value;
+                var parsed = TryParseJson(jsonFromBlock);
+                if (parsed != null)
+                    return parsed;
+            }
+
+            // Step 2: Find the first complete JSON object using bracket matching
+            var jsonContent = ExtractFirstJsonObject(content);
+            if (!string.IsNullOrEmpty(jsonContent))
+            {
+                var parsed = TryParseJson(jsonContent);
+                if (parsed != null)
+                    return parsed;
+            }
+
+            // Step 3: Try parsing the raw content as-is (maybe it's already clean JSON)
+            var directParsed = TryParseJson(content);
+            if (directParsed != null)
+                return directParsed;
+
+            _logger.LogWarning("Failed to parse JSON from LLM output. Content preview: {Preview}",
+                content.Length > 200 ? content.Substring(0, 200) + "..." : content);
+            return new Dictionary<string, object>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Exception during JSON parsing from LLM output");
+            return new Dictionary<string, object>();
+        }
+    }
+
+    /// <summary>
+    /// Extract the first complete JSON object from text using bracket matching
+    /// </summary>
+    private string? ExtractFirstJsonObject(string content)
+    {
+        var jsonStart = content.IndexOf('{');
+        if (jsonStart < 0)
+            return null;
+
+        int braceCount = 0;
+        bool inString = false;
+        bool escape = false;
+
+        for (int i = jsonStart; i < content.Length; i++)
+        {
+            char c = content[i];
+
+            if (escape)
+            {
+                escape = false;
+                continue;
+            }
+
+            if (c == '\\' && inString)
+            {
+                escape = true;
+                continue;
+            }
+
+            if (c == '"' && !escape)
+            {
+                inString = !inString;
+                continue;
+            }
+
+            if (!inString)
+            {
+                if (c == '{')
+                    braceCount++;
+                else if (c == '}')
+                {
+                    braceCount--;
+                    if (braceCount == 0)
+                    {
+                        // Found complete JSON object
+                        return content.Substring(jsonStart, i - jsonStart + 1);
+                    }
+                }
+            }
+        }
+
+        // Fallback: try simple substring if bracket matching failed
+        var jsonEnd = content.LastIndexOf('}');
+        if (jsonEnd > jsonStart)
+        {
+            return content.Substring(jsonStart, jsonEnd - jsonStart + 1);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Attempt to parse JSON string, returning null on failure
+    /// </summary>
+    private Dictionary<string, object>? TryParseJson(string json)
     {
         try
         {
-            var jsonStart = content.IndexOf('{');
-            var jsonEnd = content.LastIndexOf('}');
-            
-            if (jsonStart >= 0 && jsonEnd > jsonStart)
+            var options = new JsonSerializerOptions
             {
-                var jsonContent = content.Substring(jsonStart, jsonEnd - jsonStart + 1);
-                return JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent) 
-                    ?? new Dictionary<string, object>();
-            }
+                PropertyNameCaseInsensitive = true,
+                AllowTrailingCommas = true,
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };
 
-            return JsonSerializer.Deserialize<Dictionary<string, object>>(content) 
-                ?? new Dictionary<string, object>();
+            return JsonSerializer.Deserialize<Dictionary<string, object>>(json, options);
         }
         catch
         {
-            return new Dictionary<string, object>();
+            return null;
         }
     }
 }
