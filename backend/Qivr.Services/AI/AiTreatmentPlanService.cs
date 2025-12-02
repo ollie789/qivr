@@ -540,8 +540,8 @@ Ensure:
             Title = content.GetValueOrDefault("title")?.ToString() ?? "Treatment Plan",
             Diagnosis = content.GetValueOrDefault("diagnosis")?.ToString(),
             Summary = content.GetValueOrDefault("summary")?.ToString(),
-            TotalDurationWeeks = Convert.ToInt32(content.GetValueOrDefault("totalDurationWeeks") ?? 8),
-            Confidence = Convert.ToDouble(content.GetValueOrDefault("confidence") ?? 0.8),
+            TotalDurationWeeks = GetIntValue(content.GetValueOrDefault("totalDurationWeeks"), 8),
+            Confidence = GetDoubleValue(content.GetValueOrDefault("confidence"), 0.8),
             Rationale = content.GetValueOrDefault("rationale")?.ToString()
         };
 
@@ -746,6 +746,20 @@ Ensure:
             "WeekComplete" => "CalendarMonth",
             _ => "Star"
         };
+    }
+
+    private static int GetIntValue(object? value, int defaultValue)
+    {
+        if (value == null) return defaultValue;
+        if (value is JsonElement je) return je.TryGetInt32(out var i) ? i : defaultValue;
+        return Convert.ToInt32(value);
+    }
+
+    private static double GetDoubleValue(object? value, double defaultValue)
+    {
+        if (value == null) return defaultValue;
+        if (value is JsonElement je) return je.TryGetDouble(out var d) ? d : defaultValue;
+        return Convert.ToDouble(value);
     }
 
     #endregion

@@ -23,8 +23,52 @@ namespace Qivr.Infrastructure.Data.Migrations
                 maxLength: 128,
                 nullable: true);
 
+            // Add missing pain_maps columns for 3D pain drawing support
+            migrationBuilder.AddColumn<string>(
+                name: "avatar_type",
+                schema: "qivr",
+                table: "pain_maps",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "body_subdivision",
+                schema: "qivr",
+                table: "pain_maps",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "view_orientation",
+                schema: "qivr",
+                table: "pain_maps",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "depth_indicator",
+                schema: "qivr",
+                table: "pain_maps",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "submission_source",
+                schema: "qivr",
+                table: "pain_maps",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "drawing_data_json",
+                schema: "qivr",
+                table: "pain_maps",
+                type: "jsonb",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "intake_submissions",
+                schema: "qivr",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -46,6 +90,7 @@ namespace Qivr.Infrastructure.Data.Migrations
                     table.ForeignKey(
                         name: "fk_intake_submissions_evaluations_evaluation_id",
                         column: x => x.evaluation_id,
+                        principalSchema: "qivr",
                         principalTable: "evaluations",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -53,6 +98,7 @@ namespace Qivr.Infrastructure.Data.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "ix_intake_submissions_evaluation_id",
+                schema: "qivr",
                 table: "intake_submissions",
                 column: "evaluation_id");
         }
@@ -61,7 +107,38 @@ namespace Qivr.Infrastructure.Data.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "intake_submissions");
+                name: "intake_submissions",
+                schema: "qivr");
+
+            migrationBuilder.DropColumn(
+                name: "drawing_data_json",
+                schema: "qivr",
+                table: "pain_maps");
+
+            migrationBuilder.DropColumn(
+                name: "submission_source",
+                schema: "qivr",
+                table: "pain_maps");
+
+            migrationBuilder.DropColumn(
+                name: "depth_indicator",
+                schema: "qivr",
+                table: "pain_maps");
+
+            migrationBuilder.DropColumn(
+                name: "view_orientation",
+                schema: "qivr",
+                table: "pain_maps");
+
+            migrationBuilder.DropColumn(
+                name: "body_subdivision",
+                schema: "qivr",
+                table: "pain_maps");
+
+            migrationBuilder.DropColumn(
+                name: "avatar_type",
+                schema: "qivr",
+                table: "pain_maps");
 
             migrationBuilder.DropColumn(
                 name: "api_key_hash",
