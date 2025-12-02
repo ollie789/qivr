@@ -55,7 +55,8 @@ public class UserService : IUserService
 
     public async Task<UserDto?> GetUserByCognitoSubAsync(string cognitoSub, CancellationToken cancellationToken = default)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.CognitoSub == cognitoSub, cancellationToken);
+        // IgnoreQueryFilters needed because tenant context isn't set during JWT validation
+        var user = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.CognitoSub == cognitoSub && u.DeletedAt == null, cancellationToken);
         if (user != null)
         {
             _logger.LogInformation("Found user {Email} with UserType: {UserType}", user.Email, user.UserType);
