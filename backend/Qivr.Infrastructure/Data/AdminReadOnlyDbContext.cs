@@ -76,6 +76,9 @@ public class AdminReadOnlyDbContext : DbContext
             entity.Ignore(e => e.Phone);
             entity.Ignore(e => e.Email);
             entity.Ignore(e => e.IsActive);
+            // Ignore navigation properties not configured in this context
+            entity.Ignore(e => e.BrandThemes);
+            entity.Ignore(e => e.Evaluations);
         });
 
         modelBuilder.Entity<User>(entity =>

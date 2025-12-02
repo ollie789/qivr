@@ -50,6 +50,7 @@ public class QivrDbContext : DbContext
     public DbSet<Provider> Providers => Set<Provider>();
     public DbSet<Evaluation> Evaluations => Set<Evaluation>();
     public DbSet<PainMap> PainMaps => Set<PainMap>();
+    public DbSet<IntakeSubmission> IntakeSubmissions => Set<IntakeSubmission>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<BrandTheme> BrandThemes => Set<BrandTheme>();
     public DbSet<Document> Documents => Set<Document>();
@@ -333,6 +334,21 @@ public class QivrDbContext : DbContext
                 .HasForeignKey(e => e.EvaluationId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // IntakeSubmission configuration
+        modelBuilder.Entity<IntakeSubmission>(entity =>
+        {
+            entity.ToTable("intake_submissions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).HasConversion<string>();
+
+            entity.HasOne(e => e.Evaluation)
+                .WithMany()
+                .HasForeignKey(e => e.EvaluationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
