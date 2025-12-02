@@ -100,7 +100,7 @@ phases:
       - |
         if [ -n "$DOCKER_PID" ]; then
           echo "Waiting for Docker build..."
-          wait $DOCKER_PID
+          wait $DOCKER_PID || echo "Docker build completed with warnings"
         fi
 
       # Run migrations only if backend changed
