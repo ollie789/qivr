@@ -15,7 +15,6 @@ public class User : DeletableEntity, IAuditable
     public string? Gender { get; set; }
     public UserType UserType { get; set; } = UserType.Patient;
     public List<string> Roles { get; set; } = new(); // Derived from UserRoles table
-    public string? AvatarUrl { get; set; }
     public Dictionary<string, object> Preferences { get; set; } = new(); // Stored as JSON in metadata column
     public Dictionary<string, object> Consent { get; set; } = new();
     public DateTime? LastLoginAt { get; set; }
