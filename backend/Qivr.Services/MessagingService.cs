@@ -74,7 +74,7 @@ public class MessagingService : IMessagingService
             {
                 ParticipantId = conversation.ParticipantId,
                 ParticipantName = $"{participant.FirstName} {participant.LastName}".Trim(),
-                ParticipantAvatar = participant.AvatarUrl,
+                ParticipantAvatar = null, // Avatar stored in user metadata if needed
                 ParticipantRole = participant.UserType.ToString(),
                 LastMessage = conversation.LastMessageContent ?? "",
                 LastMessageTime = conversation.LastMessageTime,
@@ -140,7 +140,7 @@ public class MessagingService : IMessagingService
         {
             ParticipantId = otherUserId,
             ParticipantName = participant != null ? $"{participant.FirstName} {participant.LastName}".Trim() : "Unknown",
-            ParticipantAvatar = participant?.AvatarUrl,
+            ParticipantAvatar = null, // Avatar stored in user metadata if needed
             Messages = messages.OrderBy(m => m.CreatedAt), // Return in chronological order for display
             CurrentPage = page,
             PageSize = pageSize,

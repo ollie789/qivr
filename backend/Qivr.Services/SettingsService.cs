@@ -52,7 +52,7 @@ public class SettingsService : ISettingsService
                 Phone = user.Phone ?? "",
                 DateOfBirth = user.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
                 Gender = user.Gender ?? "",
-                AvatarUrl = user.AvatarUrl
+                AvatarUrl = null // Avatar URL stored in user preferences/metadata if needed
             },
             Notifications = BuildNotificationSettings(notificationPrefs),
             Privacy = GetPrivacySettings(user.Preferences),

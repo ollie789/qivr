@@ -90,7 +90,6 @@ public class AdminReadOnlyDbContext : DbContext
             entity.HasOne<Tenant>().WithMany(t => t.Users).HasForeignKey(e => e.TenantId);
             entity.Ignore(e => e.Roles);
             entity.Ignore(e => e.Consent);
-            entity.Ignore(e => e.AvatarUrl);
             entity.Ignore(e => e.DateOfBirth);
             entity.Ignore(e => e.Gender);
             entity.Ignore(e => e.EmailVerified);

@@ -250,8 +250,7 @@ public class QivrDbContext : DbContext
         });
 
         // User configuration
-        // NOTE: Database only has: id, cognito_id, email, phone, first_name, last_name, 
-        //       role, metadata, created_at, updated_at, tenant_id
+        // Run sql/migrations/001_add_user_columns.sql to add missing columns
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("users");
@@ -262,19 +261,15 @@ public class QivrDbContext : DbContext
             // Map to actual DB column names
             entity.Property(e => e.CognitoSub).HasColumnName("cognito_id");
             entity.Property(e => e.UserType).HasConversion<string>().HasColumnName("role");
-            entity.Property(e => e.Preferences).HasConversion(jsonConverter).HasColumnName("metadata");
-            entity.Ignore(e => e.Preferences); // Use metadata column via Preferences
-
-            // Ignore properties not in database
-            entity.Ignore(e => e.EmailVerified);
-            entity.Ignore(e => e.PhoneVerified);
-            entity.Ignore(e => e.DateOfBirth);
-            entity.Ignore(e => e.Gender);
-            entity.Ignore(e => e.Roles);
-            entity.Ignore(e => e.Consent);
-            entity.Ignore(e => e.LastLoginAt);
-            entity.Ignore(e => e.CreatedBy);
-            entity.Ignore(e => e.UpdatedBy);
+            
+            // JSON columns
+            entity.Property(e => e.Preferences)
+                .HasConversion(jsonConverter).HasColumnName("metadata");
+            entity.Property(e => e.Consent)
+                .HasConversion(jsonConverter);
+            entity.Property(e => e.Roles)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
 
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Users)
