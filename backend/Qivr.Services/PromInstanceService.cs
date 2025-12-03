@@ -1288,22 +1288,20 @@ public class PromInstanceService : IPromInstanceService
 
         if (plan == null) return null;
 
-        var weeksIntoTreatment = plan.StartDate.HasValue
-            ? (int)Math.Floor((DateTime.UtcNow - plan.StartDate.Value).TotalDays / 7)
-            : 0;
+        var weeksIntoTreatment = (int)Math.Floor((DateTime.UtcNow - plan.StartDate).TotalDays / 7);
 
         // Find current phase based on weeks into treatment
         var currentPhase = plan.Phases
             .OrderBy(p => p.PhaseNumber)
-            .FirstOrDefault(p => p.Status == "InProgress")
+            .FirstOrDefault(p => p.Status == PhaseStatus.InProgress)
             ?? plan.Phases.OrderBy(p => p.PhaseNumber).FirstOrDefault();
 
         // Get all exercises from all phases
         var exercises = plan.Phases
-            .SelectMany(phase => (phase.Exercises ?? new List<TreatmentExercise>())
+            .SelectMany(phase => (phase.Exercises ?? new List<Exercise>())
                 .Select(ex => new TreatmentExerciseDto
                 {
-                    Id = ex.ExerciseTemplateId ?? Guid.NewGuid(),
+                    Id = Guid.TryParse(ex.Id, out var exId) ? exId : Guid.NewGuid(),
                     Name = ex.Name,
                     Description = ex.Instructions,
                     PhaseNumber = phase.PhaseNumber
@@ -1318,7 +1316,7 @@ public class PromInstanceService : IPromInstanceService
             CurrentPhaseNumber = currentPhase?.PhaseNumber ?? 1,
             CurrentPhaseName = currentPhase?.Name,
             WeeksIntoTreatment = weeksIntoTreatment,
-            TotalWeeks = plan.DurationWeeks ?? 8,
+            TotalWeeks = plan.DurationWeeks > 0 ? plan.DurationWeeks : 8,
             Exercises = exercises,
             HasTreatmentPlan = true
         };
@@ -1342,7 +1340,7 @@ public class PromInstanceService : IPromInstanceService
 
         var currentPhase = plan?.Phases?
             .OrderBy(p => p.PhaseNumber)
-            .FirstOrDefault(p => p.Status == "InProgress");
+            .FirstOrDefault(p => p.Status == PhaseStatus.InProgress);
 
         ExerciseComplianceLevel? compliance = null;
         if (!string.IsNullOrEmpty(request.ExerciseCompliance) &&
@@ -1425,15 +1423,15 @@ public class PromInstanceService : IPromInstanceService
 
         // Exercise feedback aggregation
         var allExercises = plan.Phases?
-            .SelectMany(p => p.Exercises ?? new List<TreatmentExercise>())
-            .ToList() ?? new List<TreatmentExercise>();
+            .SelectMany(p => p.Exercises ?? new List<Exercise>())
+            .ToList() ?? new List<Exercise>();
 
         var exerciseFeedback = allExercises.Select(ex => new ExerciseFeedbackSummary
         {
-            ExerciseId = ex.ExerciseTemplateId ?? Guid.Empty,
+            ExerciseId = Guid.TryParse(ex.Id, out var exId) ? exId : Guid.Empty,
             ExerciseName = ex.Name,
-            HelpfulCount = feedbacks.Count(f => f.HelpfulExerciseIds?.Contains(ex.ExerciseTemplateId ?? Guid.Empty) == true),
-            ProblematicCount = feedbacks.Count(f => f.ProblematicExerciseIds?.Contains(ex.ExerciseTemplateId ?? Guid.Empty) == true)
+            HelpfulCount = feedbacks.Count(f => f.HelpfulExerciseIds?.Contains(Guid.TryParse(ex.Id, out var hId) ? hId : Guid.Empty) == true),
+            ProblematicCount = feedbacks.Count(f => f.ProblematicExerciseIds?.Contains(Guid.TryParse(ex.Id, out var pId) ? pId : Guid.Empty) == true)
         }).ToList();
 
         // Common barriers
