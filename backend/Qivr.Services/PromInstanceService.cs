@@ -751,6 +751,7 @@ public class PromInstanceService : IPromInstanceService
             TemplateName = instance.Template?.Name ?? string.Empty,
             PatientId = instance.PatientId,
             PatientName = patientName,
+            TreatmentPlanId = instance.TreatmentPlanId,
             Status = instance.Status.ToString(),
             CreatedAt = instance.CreatedAt,
             ScheduledAt = instance.ScheduledFor,
@@ -1556,6 +1557,7 @@ public class PromInstanceDto
     public string TemplateName { get; set; } = string.Empty;
     public Guid PatientId { get; set; }
     public string PatientName { get; set; } = string.Empty;
+    public Guid? TreatmentPlanId { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime ScheduledAt { get; set; }

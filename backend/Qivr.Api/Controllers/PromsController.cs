@@ -629,7 +629,7 @@ private sealed record SubmissionPayload(List<PromAnswer> Answers, bool RequestBo
 		CancellationToken ct)
 	{
 		var tenantId = GetTenantIdOrDefault();
-		var userId = GetUserId();
+		var userId = CurrentUserId;
 
 		var result = await _promInstanceService.SubmitTreatmentProgressAsync(
 			tenantId, instanceId, userId, request, ct);
@@ -700,82 +700,4 @@ public class SavePromDraftRequest
 	public Dictionary<string, JsonElement>? Responses { get; set; }
 	public int? LastQuestionIndex { get; set; }
 	public int? CompletionSeconds { get; set; }
-}
-
-// === Treatment Progress Feedback DTOs ===
-
-public class TreatmentProgressFeedbackDto
-{
-	public Guid Id { get; set; }
-	public Guid PromInstanceId { get; set; }
-	public Guid TreatmentPlanId { get; set; }
-	public Guid PatientId { get; set; }
-	public int? OverallEffectivenessRating { get; set; }
-	public int? PainComparedToStart { get; set; }
-	public string? ExerciseCompliance { get; set; }
-	public int? SessionsCompletedThisWeek { get; set; }
-	public List<Guid>? HelpfulExerciseIds { get; set; }
-	public List<Guid>? ProblematicExerciseIds { get; set; }
-	public string? ExerciseComments { get; set; }
-	public List<string>? Barriers { get; set; }
-	public string? Suggestions { get; set; }
-	public bool? WantsClinicianDiscussion { get; set; }
-	public int? CurrentPhaseNumber { get; set; }
-	public DateTime SubmittedAt { get; set; }
-}
-
-public class SubmitTreatmentProgressRequest
-{
-	public int? OverallEffectivenessRating { get; set; }
-	public int? PainComparedToStart { get; set; }
-	public string? ExerciseCompliance { get; set; }
-	public int? SessionsCompletedThisWeek { get; set; }
-	public List<Guid>? HelpfulExerciseIds { get; set; }
-	public List<Guid>? ProblematicExerciseIds { get; set; }
-	public string? ExerciseComments { get; set; }
-	public List<string>? Barriers { get; set; }
-	public string? Suggestions { get; set; }
-	public bool? WantsClinicianDiscussion { get; set; }
-}
-
-public class TreatmentProgressContextDto
-{
-	public Guid TreatmentPlanId { get; set; }
-	public string TreatmentPlanTitle { get; set; } = string.Empty;
-	public string? Diagnosis { get; set; }
-	public int CurrentPhaseNumber { get; set; }
-	public string? CurrentPhaseName { get; set; }
-	public int WeeksIntoTreatment { get; set; }
-	public int TotalWeeks { get; set; }
-	public List<TreatmentExerciseDto> Exercises { get; set; } = new();
-}
-
-public class TreatmentExerciseDto
-{
-	public Guid Id { get; set; }
-	public string Name { get; set; } = string.Empty;
-	public string? Description { get; set; }
-	public int PhaseNumber { get; set; }
-}
-
-public class TreatmentProgressAggregateDto
-{
-	public Guid TreatmentPlanId { get; set; }
-	public string TreatmentPlanTitle { get; set; } = string.Empty;
-	public int TotalFeedbackCount { get; set; }
-	public double AverageEffectivenessRating { get; set; }
-	public double AveragePainImprovement { get; set; }
-	public Dictionary<string, int> ComplianceDistribution { get; set; } = new();
-	public List<ExerciseFeedbackSummary> ExerciseFeedback { get; set; } = new();
-	public List<string> CommonBarriers { get; set; } = new();
-	public int PatientsWantingDiscussion { get; set; }
-	public List<TreatmentProgressFeedbackDto> RecentFeedback { get; set; } = new();
-}
-
-public class ExerciseFeedbackSummary
-{
-	public Guid ExerciseId { get; set; }
-	public string ExerciseName { get; set; } = string.Empty;
-	public int HelpfulCount { get; set; }
-	public int ProblematicCount { get; set; }
 }
