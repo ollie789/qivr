@@ -1111,17 +1111,26 @@ Date: ________________________
                       {/* Symptoms */}
                       {evaluation?.symptoms &&
                         evaluation.symptoms.length > 0 && (
-                          <InfoCard title="Symptoms" sx={{ mb: 3 }}>
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              flexWrap="wrap"
-                              useFlexGap
-                            >
-                              {evaluation.symptoms.map((symptom, idx) => (
-                                <Chip key={idx} label={symptom} size="small" />
-                              ))}
-                            </Stack>
+                          <InfoCard
+                            title={`Symptoms (${evaluation.symptoms.length})`}
+                            sx={{ mb: 2 }}
+                          >
+                            <Box sx={{ maxHeight: 100, overflow: "auto" }}>
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                flexWrap="wrap"
+                                useFlexGap
+                              >
+                                {evaluation.symptoms.map((symptom, idx) => (
+                                  <Chip
+                                    key={idx}
+                                    label={symptom}
+                                    size="small"
+                                  />
+                                ))}
+                              </Stack>
+                            </Box>
                           </InfoCard>
                         )}
 
