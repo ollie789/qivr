@@ -265,6 +265,59 @@ export const intakeApi = {
       patientId: patientId,
     });
   },
+
+  async generateAiTriage(
+    intakeId: string,
+    data: {
+      symptoms?: string[];
+      chiefComplaint?: string;
+      duration?: string;
+      painLevel?: number;
+      medicalHistory?: string;
+      currentMedications?: string;
+      allergies?: string;
+    },
+  ): Promise<{
+    summary: string;
+    riskFactors: string[];
+    recommendations: string[];
+    urgency: string;
+  }> {
+    const response = await apiClient.post(
+      `/api/evaluations/${intakeId}/ai-triage`,
+      data,
+    );
+    return response;
+  },
+
+  async addTriageNote(
+    intakeId: string,
+    content: string,
+  ): Promise<{
+    id: string;
+    content: string;
+    createdAt: string;
+    createdBy: string;
+  }> {
+    const response = await apiClient.post(
+      `/api/evaluations/${intakeId}/notes`,
+      { content },
+    );
+    return response;
+  },
+
+  async getTriageNotes(intakeId: string): Promise<
+    Array<{
+      id: string;
+      content: string;
+      createdAt: string;
+      createdBy: string;
+      type: string;
+    }>
+  > {
+    const response = await apiClient.get(`/api/evaluations/${intakeId}/notes`);
+    return Array.isArray(response) ? response : [];
+  },
 };
 
 export default intakeApi;

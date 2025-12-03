@@ -186,7 +186,7 @@ public class EvaluationsController : BaseApiController
     }
 
     /// <summary>
-    /// Submit AI analysis for evaluation
+    /// Submit AI analysis for evaluation (legacy endpoint)
     /// </summary>
     [HttpPost("{id}/analyze")]
     [Authorize(Policy = "StaffOnly")]
@@ -196,15 +196,216 @@ public class EvaluationsController : BaseApiController
         Guid id,
         CancellationToken cancellationToken)
     {
-        // Clinician review gate placeholder: require staff role and log request
-        _logger.LogInformation("AI analysis requested for evaluation {Id}", id);
-        return Ok(new AnalysisResponse
+        // Redirect to new ai-triage endpoint
+        return await GenerateAiTriage(id, new AiTriageRequest(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Generate AI triage analysis for an evaluation
+    /// Analyzes symptoms, pain levels, and medical history to provide triage recommendations
+    /// </summary>
+    [HttpPost("{id}/ai-triage")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(typeof(AiTriageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GenerateAiTriage(
+        Guid id,
+        [FromBody] AiTriageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = RequireTenantId();
+
+        var evaluation = await _context.Evaluations
+            .Include(e => e.PainMaps)
+            .FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken);
+
+        if (evaluation == null)
+            return NotFound();
+
+        _logger.LogInformation("Generating AI triage for evaluation {Id}", id);
+
+        // Build context from evaluation data
+        var painLevel = evaluation.PainMaps?.MaxBy(p => p.PainIntensity)?.PainIntensity ?? request.PainLevel ?? 5;
+        var symptoms = evaluation.Symptoms ?? request.Symptoms ?? new List<string>();
+        var chiefComplaint = evaluation.ChiefComplaint ?? request.ChiefComplaint ?? "Not specified";
+
+        // Generate triage analysis (rule-based for now, can be replaced with actual AI)
+        var (summary, riskFactors, recommendations, urgency) = GenerateTriageAnalysis(
+            chiefComplaint,
+            symptoms,
+            painLevel,
+            request.Duration,
+            request.MedicalHistory,
+            request.CurrentMedications,
+            request.Allergies
+        );
+
+        // Save AI triage results to evaluation
+        evaluation.AiSummary = summary;
+        evaluation.AiRiskFlags = riskFactors;
+        evaluation.AiRecommendations = recommendations;
+        evaluation.AiProcessedAt = DateTime.UtcNow;
+        evaluation.Urgency = MapUrgencyToEnum(urgency);
+        evaluation.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("AI triage generated for evaluation {Id}: urgency={Urgency}", id, urgency);
+
+        return Ok(new AiTriageResponse
         {
-            Summary = "Pending clinician-reviewed AI summary.",
-            RiskFlags = Array.Empty<string>(),
-            RecommendedActions = Array.Empty<string>()
+            Summary = summary,
+            RiskFactors = riskFactors,
+            Recommendations = recommendations,
+            Urgency = urgency
         });
     }
+
+    private (string summary, List<string> riskFactors, List<string> recommendations, string urgency) GenerateTriageAnalysis(
+        string chiefComplaint,
+        List<string> symptoms,
+        int painLevel,
+        string? duration,
+        string? medicalHistory,
+        string? currentMedications,
+        string? allergies)
+    {
+        var riskFactors = new List<string>();
+        var recommendations = new List<string>();
+        var urgencyScore = 0;
+
+        // Pain level assessment
+        if (painLevel >= 8)
+        {
+            riskFactors.Add("Severe pain level (8+/10)");
+            urgencyScore += 3;
+        }
+        else if (painLevel >= 6)
+        {
+            riskFactors.Add("Moderate-high pain level (6-7/10)");
+            urgencyScore += 2;
+        }
+        else if (painLevel >= 4)
+        {
+            urgencyScore += 1;
+        }
+
+        // Symptom analysis
+        var severeSymptoms = new[] { "numbness", "tingling", "weakness", "loss of function", "radiating pain", "difficulty breathing", "chest pain" };
+        var moderateSymptoms = new[] { "swelling", "stiffness", "limited range of motion", "muscle spasm" };
+
+        foreach (var symptom in symptoms.Select(s => s.ToLowerInvariant()))
+        {
+            if (severeSymptoms.Any(ss => symptom.Contains(ss)))
+            {
+                riskFactors.Add($"Concerning symptom: {symptom}");
+                urgencyScore += 2;
+            }
+            else if (moderateSymptoms.Any(ms => symptom.Contains(ms)))
+            {
+                urgencyScore += 1;
+            }
+        }
+
+        // Duration assessment
+        if (!string.IsNullOrEmpty(duration))
+        {
+            var durationLower = duration.ToLowerInvariant();
+            if (durationLower.Contains("acute") || durationLower.Contains("sudden") || durationLower.Contains("today") || durationLower.Contains("hours"))
+            {
+                riskFactors.Add("Acute onset");
+                urgencyScore += 2;
+            }
+            else if (durationLower.Contains("chronic") || durationLower.Contains("months") || durationLower.Contains("years"))
+            {
+                recommendations.Add("Consider chronic pain management program");
+            }
+        }
+
+        // Chief complaint keywords
+        var urgentKeywords = new[] { "accident", "injury", "fall", "trauma", "sudden", "worst", "unbearable" };
+        if (urgentKeywords.Any(k => chiefComplaint.ToLowerInvariant().Contains(k)))
+        {
+            riskFactors.Add("Chief complaint suggests acute injury/trauma");
+            urgencyScore += 2;
+        }
+
+        // Medical history considerations
+        if (!string.IsNullOrEmpty(medicalHistory))
+        {
+            var historyLower = medicalHistory.ToLowerInvariant();
+            if (historyLower.Contains("diabetes") || historyLower.Contains("heart") || historyLower.Contains("cancer"))
+            {
+                riskFactors.Add("Relevant medical history requires consideration");
+                recommendations.Add("Review patient's comorbidities before treatment planning");
+            }
+        }
+
+        // Determine urgency level
+        string urgency;
+        if (urgencyScore >= 6)
+            urgency = "critical";
+        else if (urgencyScore >= 4)
+            urgency = "high";
+        else if (urgencyScore >= 2)
+            urgency = "medium";
+        else
+            urgency = "low";
+
+        // Generate recommendations based on analysis
+        if (urgency == "critical" || urgency == "high")
+        {
+            recommendations.Insert(0, "Priority scheduling recommended");
+            recommendations.Add("Consider same-day or next-day appointment");
+        }
+
+        if (painLevel >= 6)
+        {
+            recommendations.Add("Assess need for pain management intervention");
+        }
+
+        if (symptoms.Any(s => s.ToLowerInvariant().Contains("numbness") || s.ToLowerInvariant().Contains("tingling")))
+        {
+            recommendations.Add("Neurological assessment recommended");
+        }
+
+        if (recommendations.Count == 0)
+        {
+            recommendations.Add("Standard evaluation appointment recommended");
+        }
+
+        // Generate summary
+        var summaryParts = new List<string>
+        {
+            $"Patient presents with {chiefComplaint}.",
+            $"Pain level: {painLevel}/10.",
+        };
+
+        if (symptoms.Any())
+        {
+            summaryParts.Add($"Associated symptoms: {string.Join(", ", symptoms.Take(3))}.");
+        }
+
+        summaryParts.Add($"Triage assessment: {urgency.ToUpperInvariant()} priority.");
+
+        if (riskFactors.Any())
+        {
+            summaryParts.Add($"Key considerations: {string.Join("; ", riskFactors.Take(2))}.");
+        }
+
+        var summary = string.Join(" ", summaryParts);
+
+        return (summary, riskFactors, recommendations, urgency);
+    }
+
+    private static UrgencyLevel MapUrgencyToEnum(string urgency) => urgency.ToLowerInvariant() switch
+    {
+        "critical" => UrgencyLevel.Urgent,
+        "high" => UrgencyLevel.High,
+        "medium" => UrgencyLevel.Medium,
+        "low" => UrgencyLevel.Low,
+        _ => UrgencyLevel.Medium
+    };
 
     /// <summary>
     /// Get lightweight evaluation history for the current patient (Patient App)
@@ -342,10 +543,80 @@ public class EvaluationsController : BaseApiController
 
         return Ok(new
         {
-            noteId = clinicalNote.Id,
-            addedAt = clinicalNote.CreatedAt,
-            addedBy = userName
+            id = clinicalNote.Id,
+            content = clinicalNote.Content,
+            createdAt = clinicalNote.CreatedAt,
+            createdBy = userName,
+            type = clinicalNote.NoteType
         });
+    }
+
+    /// <summary>
+    /// Get all clinical notes for an evaluation
+    /// </summary>
+    [HttpGet("{id}/notes")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetClinicalNotes(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = RequireTenantId();
+
+        var evaluation = await _context.Evaluations
+            .FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken);
+
+        if (evaluation == null)
+            return NotFound();
+
+        var notes = new List<object>();
+        var responses = evaluation.QuestionnaireResponses ?? new Dictionary<string, object>();
+
+        if (responses.TryGetValue("clinicalNotes", out var notesObj))
+        {
+            if (notesObj is List<object> notesList)
+            {
+                foreach (var note in notesList)
+                {
+                    if (note is System.Text.Json.JsonElement jsonElement)
+                    {
+                        var existing = System.Text.Json.JsonSerializer.Deserialize<ClinicalNote>(jsonElement.GetRawText());
+                        if (existing != null)
+                        {
+                            notes.Add(new
+                            {
+                                id = existing.Id,
+                                content = existing.Content,
+                                createdAt = existing.CreatedAt,
+                                createdBy = existing.AuthorName,
+                                type = existing.NoteType
+                            });
+                        }
+                    }
+                }
+            }
+            else if (notesObj is System.Text.Json.JsonElement jsonArray && jsonArray.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var noteElement in jsonArray.EnumerateArray())
+                {
+                    var existing = System.Text.Json.JsonSerializer.Deserialize<ClinicalNote>(noteElement.GetRawText());
+                    if (existing != null)
+                    {
+                        notes.Add(new
+                        {
+                            id = existing.Id,
+                            content = existing.Content,
+                            createdAt = existing.CreatedAt,
+                            createdBy = existing.AuthorName,
+                            type = existing.NoteType
+                        });
+                    }
+                }
+            }
+        }
+
+        return Ok(notes);
     }
 
     /// <summary>
@@ -498,4 +769,23 @@ public class ClinicalNote
     public string Content { get; set; } = string.Empty;
     public string NoteType { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+}
+
+public class AiTriageRequest
+{
+    public List<string>? Symptoms { get; set; }
+    public string? ChiefComplaint { get; set; }
+    public string? Duration { get; set; }
+    public int? PainLevel { get; set; }
+    public string? MedicalHistory { get; set; }
+    public string? CurrentMedications { get; set; }
+    public string? Allergies { get; set; }
+}
+
+public class AiTriageResponse
+{
+    public string Summary { get; set; } = string.Empty;
+    public List<string> RiskFactors { get; set; } = new();
+    public List<string> Recommendations { get; set; } = new();
+    public string Urgency { get; set; } = string.Empty;
 }

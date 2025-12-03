@@ -33,7 +33,6 @@ import {
 import {
   Close as CloseIcon,
   Delete as DeleteIcon,
-  PersonAdd as PersonAddIcon,
   Schedule as ScheduleIcon,
   Message as MessageIcon,
   Warning as WarningIcon,
@@ -52,9 +51,9 @@ import {
   Psychology as PsychologyIcon,
   AutoAwesome as AutoAwesomeIcon,
   Verified as VerifiedIcon,
-  Keyboard as KeyboardIcon,
   Description as DescriptionIcon,
   Sms as SmsIcon,
+  Keyboard as KeyboardIcon,
   ContentCopy as CopyIcon,
   RotateLeft as RotateLeftIcon,
   RotateRight as RotateRightIcon,
@@ -63,7 +62,6 @@ import {
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
-import { useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   LineChart,
@@ -91,7 +89,6 @@ import {
 import { intakeApi } from "../../services/intakeApi";
 import { ScheduleAppointmentDialog } from "./ScheduleAppointmentDialog";
 import MessageComposer from "../messaging/MessageComposer";
-import api from "../../lib/api-client";
 
 interface IntakeData {
   id: string;
@@ -232,7 +229,6 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
-  const navigate = useNavigate();
 
   const [tabValue, setTabValue] = useState(0);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -431,21 +427,33 @@ Date: ________________________
   const { data: activityLog = [] } = useQuery({
     queryKey: ["intakeActivity", intake?.id],
     queryFn: async () => {
-      // This would be a real API call - for now return mock data based on status
-      const activities: TriageNote[] = [];
-      if (fullDetails?.notes) {
-        activities.push({
-          id: "1",
-          content: fullDetails.notes,
-          createdBy: "System",
-          createdAt:
-            fullDetails.evaluation?.submittedAt || new Date().toISOString(),
-          type: "note",
-        });
+      try {
+        const notes = await intakeApi.getTriageNotes(intake!.id);
+        return notes.map((note) => ({
+          id: note.id,
+          content: note.content,
+          createdBy: note.createdBy || "Staff",
+          createdAt: note.createdAt,
+          type: (note.type || "note") as TriageNote["type"],
+        }));
+      } catch {
+        // Fallback to notes from fullDetails if API fails
+        if (fullDetails?.notes) {
+          return [
+            {
+              id: "1",
+              content: fullDetails.notes,
+              createdBy: "System",
+              createdAt:
+                fullDetails.evaluation?.submittedAt || new Date().toISOString(),
+              type: "note" as const,
+            },
+          ];
+        }
+        return [];
       }
-      return activities;
     },
-    enabled: open && !!intake?.id && !!fullDetails,
+    enabled: open && !!intake?.id,
   });
 
   // Fetch pain history for the patient (mock data for now - would be real API)
@@ -502,7 +510,7 @@ Date: ________________________
   // Add note mutation
   const addNoteMutation = useMutation({
     mutationFn: async (content: string) => {
-      await api.post(`/api/evaluations/${intake!.id}/notes`, { content });
+      await intakeApi.addTriageNote(intake!.id, content);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -513,6 +521,34 @@ Date: ________________________
     },
     onError: () => {
       enqueueSnackbar("Failed to add note", { variant: "error" });
+    },
+  });
+
+  // Generate AI triage mutation
+  const generateTriageMutation = useMutation({
+    mutationFn: async () => {
+      const data = {
+        symptoms: evaluation?.symptoms,
+        chiefComplaint: intake?.chiefComplaint,
+        duration: evaluation?.duration,
+        painLevel: evaluation?.painLevel,
+        medicalHistory: evaluation?.medicalConditions,
+        currentMedications: evaluation?.currentMedications,
+        allergies: evaluation?.allergies,
+      };
+      return intakeApi.generateAiTriage(intake!.id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["intakeDetails", intake?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
+      enqueueSnackbar("AI triage generated successfully", {
+        variant: "success",
+      });
+    },
+    onError: () => {
+      enqueueSnackbar("Failed to generate AI triage", { variant: "error" });
     },
   });
 
@@ -566,8 +602,8 @@ Date: ________________________
         fullWidth
         PaperProps={{
           sx: {
-            height: "90vh",
-            maxHeight: 900,
+            height: "85vh",
+            maxHeight: 800,
             display: "flex",
             flexDirection: "column",
           },
@@ -673,15 +709,7 @@ Date: ________________________
 
               <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
-              {/* Quick Actions */}
-              <AuraButton
-                variant="outlined"
-                size="small"
-                startIcon={<MessageIcon />}
-                onClick={() => setMessageOpen(true)}
-              >
-                Message
-              </AuraButton>
+              {/* Primary Action */}
               <AuraButton
                 variant="contained"
                 size="small"
@@ -691,7 +719,7 @@ Date: ________________________
                 Schedule
               </AuraButton>
 
-              {/* More Menu */}
+              {/* More Menu - consolidated actions */}
               <IconButton onClick={(e) => setMoreMenuAnchor(e.currentTarget)}>
                 <MoreVertIcon />
               </IconButton>
@@ -702,26 +730,14 @@ Date: ________________________
               >
                 <MenuItem
                   onClick={() => {
-                    navigate(`/medical-records/new?intakeId=${intake.id}`);
+                    setMessageOpen(true);
                     setMoreMenuAnchor(null);
                   }}
                 >
                   <ListItemIcon>
-                    <PersonAddIcon fontSize="small" />
+                    <MessageIcon fontSize="small" />
                   </ListItemIcon>
-                  Create Medical Record
-                </MenuItem>
-                <Divider />
-                <MenuItem
-                  onClick={() => {
-                    setReferralDialogOpen(true);
-                    setMoreMenuAnchor(null);
-                  }}
-                >
-                  <ListItemIcon>
-                    <DescriptionIcon fontSize="small" />
-                  </ListItemIcon>
-                  Draft Referral Letter (R)
+                  Send Message
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
@@ -733,7 +749,19 @@ Date: ________________________
                   <ListItemIcon>
                     <SmsIcon fontSize="small" />
                   </ListItemIcon>
-                  Send SMS (T)
+                  Send SMS
+                </MenuItem>
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    setReferralDialogOpen(true);
+                    setMoreMenuAnchor(null);
+                  }}
+                >
+                  <ListItemIcon>
+                    <DescriptionIcon fontSize="small" />
+                  </ListItemIcon>
+                  Draft Referral Letter
                 </MenuItem>
                 <Divider />
                 <MenuItem
@@ -749,16 +777,6 @@ Date: ________________________
                   Delete Intake
                 </MenuItem>
               </Menu>
-
-              {/* Keyboard Shortcuts Hint */}
-              <Tooltip title="Keyboard shortcuts (?)">
-                <IconButton
-                  onClick={() => setShowKeyboardShortcuts(true)}
-                  size="small"
-                >
-                  <KeyboardIcon />
-                </IconButton>
-              </Tooltip>
 
               <IconButton onClick={onClose} size="small">
                 <CloseIcon />
@@ -836,19 +854,19 @@ Date: ________________________
                         </Box>
                       </AuraCard>
 
-                      {/* Key Clinical Details */}
-                      <Grid container spacing={2} sx={{ mb: 3 }}>
+                      {/* Key Clinical Details - Compact */}
+                      <Grid container spacing={1.5} sx={{ mb: 2 }}>
                         <Grid size={{ xs: 6, sm: 3 }}>
                           <AuraCard>
-                            <Box sx={{ p: 2, textAlign: "center" }}>
+                            <Box sx={{ p: 1.5, textAlign: "center" }}>
                               <Typography
-                                variant="overline"
+                                variant="caption"
                                 color="text.secondary"
                               >
                                 Pain Level
                               </Typography>
                               <Typography
-                                variant="h4"
+                                variant="h5"
                                 color={
                                   (evaluation?.painLevel || 0) >= 7
                                     ? "error.main"
@@ -867,14 +885,14 @@ Date: ________________________
                         </Grid>
                         <Grid size={{ xs: 6, sm: 3 }}>
                           <AuraCard>
-                            <Box sx={{ p: 2, textAlign: "center" }}>
+                            <Box sx={{ p: 1.5, textAlign: "center" }}>
                               <Typography
-                                variant="overline"
+                                variant="caption"
                                 color="text.secondary"
                               >
                                 Duration
                               </Typography>
-                              <Typography variant="h6">
+                              <Typography variant="body1" fontWeight={600}>
                                 {evaluation?.duration || "Not specified"}
                               </Typography>
                             </Box>
@@ -882,14 +900,14 @@ Date: ________________________
                         </Grid>
                         <Grid size={{ xs: 6, sm: 3 }}>
                           <AuraCard>
-                            <Box sx={{ p: 2, textAlign: "center" }}>
+                            <Box sx={{ p: 1.5, textAlign: "center" }}>
                               <Typography
-                                variant="overline"
+                                variant="caption"
                                 color="text.secondary"
                               >
                                 Onset
                               </Typography>
-                              <Typography variant="h6">
+                              <Typography variant="body1" fontWeight={600}>
                                 {evaluation?.onset || "Not specified"}
                               </Typography>
                             </Box>
@@ -897,14 +915,14 @@ Date: ________________________
                         </Grid>
                         <Grid size={{ xs: 6, sm: 3 }}>
                           <AuraCard>
-                            <Box sx={{ p: 2, textAlign: "center" }}>
+                            <Box sx={{ p: 1.5, textAlign: "center" }}>
                               <Typography
-                                variant="overline"
+                                variant="caption"
                                 color="text.secondary"
                               >
                                 Pattern
                               </Typography>
-                              <Typography variant="h6">
+                              <Typography variant="body1" fontWeight={600}>
                                 {evaluation?.pattern || "Constant"}
                               </Typography>
                             </Box>
@@ -1144,7 +1162,7 @@ Date: ________________________
                                 </Typography>
                               </Box>
                             </Stack>
-                            <Box sx={{ height: 200 }}>
+                            <Box sx={{ height: 150 }}>
                               <ResponsiveContainer width="100%" height="100%">
                                 <LineChart
                                   data={painHistory}
@@ -1575,52 +1593,57 @@ Date: ________________________
                           </Box>
                         </AuraCard>
                       ) : (
-                        <AuraCard sx={{ mb: auraTokens.spacing.lg }}>
+                        <AuraCard sx={{ mb: 2 }}>
                           <Box
                             sx={{
-                              p: auraTokens.spacing.lg,
+                              p: 2,
                               textAlign: "center",
                             }}
                           >
                             <Avatar
                               sx={{
-                                bgcolor: auraColors.grey[200],
-                                width: auraTokens.iconSize.xxl,
-                                height: auraTokens.iconSize.xxl,
+                                bgcolor: auraColors.blue.light,
+                                width: 48,
+                                height: 48,
                                 mx: "auto",
-                                mb: auraTokens.spacing.md,
+                                mb: 1.5,
                               }}
                             >
-                              <PsychologyIcon
-                                sx={{ color: auraColors.grey[500] }}
+                              <AutoAwesomeIcon
+                                sx={{ color: auraColors.blue.main }}
                               />
                             </Avatar>
                             <Typography
-                              variant="subtitle1"
-                              fontWeight={auraTokens.fontWeights.semibold}
+                              variant="subtitle2"
+                              fontWeight={600}
                               gutterBottom
                             >
-                              AI Analysis Pending
+                              Generate AI Triage
                             </Typography>
                             <Typography
                               variant="body2"
                               color="text.secondary"
-                              sx={{ mb: auraTokens.spacing.md }}
+                              sx={{ mb: 1.5 }}
                             >
-                              AI triage analysis will be generated when you
-                              create a medical record for this patient.
+                              Analyze intake data to generate triage
+                              recommendations.
                             </Typography>
                             <AuraButton
-                              variant="outlined"
+                              variant="contained"
                               size="small"
-                              startIcon={<PersonAddIcon />}
-                              onClick={() =>
-                                navigate(
-                                  `/medical-records/new?intakeId=${intake.id}`,
+                              startIcon={
+                                generateTriageMutation.isPending ? (
+                                  <CircularProgress size={16} color="inherit" />
+                                ) : (
+                                  <AutoAwesomeIcon />
                                 )
                               }
+                              onClick={() => generateTriageMutation.mutate()}
+                              disabled={generateTriageMutation.isPending}
                             >
-                              Create Medical Record
+                              {generateTriageMutation.isPending
+                                ? "Analyzing..."
+                                : "Generate Triage"}
                             </AuraButton>
                           </Box>
                         </AuraCard>

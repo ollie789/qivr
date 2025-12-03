@@ -8,13 +8,8 @@ import {
   Tab,
   Paper,
   Stack,
-  Avatar,
-  Chip,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  IconButton,
+  CircularProgress,
+  Button,
 } from "@mui/material";
 import {
   People as PeopleIcon,
@@ -28,14 +23,13 @@ import {
   AccessTime as AccessTimeIcon,
   CheckCircle as CheckCircleIcon,
   Star as StarIcon,
-  Delete as DeleteIcon,
   Warning as WarningIcon,
   Today as TodayIcon,
+  Cancel as CancelIcon,
 } from "@mui/icons-material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { subDays, format } from "date-fns";
-import { useSnackbar } from "notistack";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import {
   PageHeader,
@@ -51,15 +45,8 @@ import {
   auraTokens,
   GreetingCard,
   InfoCard,
-  DashboardMenu,
-  CardHeaderAction,
-  ConfirmDialog,
-  SkeletonLoader,
-  AuraEmptyState,
 } from "@qivr/design-system";
 import analyticsApi from "../services/analyticsApi";
-import dashboardApi from "../services/dashboardApi";
-import { appointmentsApi } from "../services/appointmentsApi";
 import {
   TopDiagnosesCard,
   AppointmentTrendCard,
@@ -81,15 +68,10 @@ import { useAuthUser } from "../stores/authStore";
 const Analytics: React.FC = () => {
   const [dateRange, setDateRange] = useState("30");
   const [activeTab, setActiveTab] = useState(0);
-  const [deleteConfirm, setDeleteConfirm] = useState<{
-    open: boolean;
-    appointmentId: string | null;
-  }>({ open: false, appointmentId: null });
 
   const navigate = useNavigate();
   const user = useAuthUser();
   const { canMakeApiCalls } = useAuthGuard();
-  const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
   const tenantId = user?.tenantId;
 
@@ -145,35 +127,6 @@ const Analytics: React.FC = () => {
     },
     enabled: canMakeApiCalls && Boolean(tenantId),
   });
-
-  // Today's appointments (for Today tab)
-  const { data: appointmentsData, isLoading: appointmentsLoading } = useQuery({
-    queryKey: ["today-appointments"],
-    queryFn: dashboardApi.getTodayAppointments,
-    enabled: canMakeApiCalls,
-    refetchInterval: 60000,
-  });
-
-  // Recent activity (for Today tab)
-  const { data: activityData, isLoading: activityLoading } = useQuery({
-    queryKey: ["recent-activity"],
-    queryFn: dashboardApi.getRecentActivity,
-    enabled: canMakeApiCalls,
-    refetchInterval: 30000,
-  });
-
-  const handleDeleteAppointment = async () => {
-    if (!deleteConfirm.appointmentId) return;
-    try {
-      await appointmentsApi.deleteAppointment(deleteConfirm.appointmentId);
-      queryClient.invalidateQueries({ queryKey: ["today-appointments"] });
-      enqueueSnackbar("Appointment deleted", { variant: "success" });
-    } catch {
-      enqueueSnackbar("Failed to delete appointment", { variant: "error" });
-    } finally {
-      setDeleteConfirm({ open: false, appointmentId: null });
-    }
-  };
 
   const isLoading = metricsLoading || clinicalLoading;
   const isFetching = metricsFetching || clinicalFetching;
@@ -587,205 +540,291 @@ const Analytics: React.FC = () => {
                 ))}
           </Grid>
 
-          {/* Appointments & Activity Row */}
+          {/* Action Center & Capacity Row */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            {/* Today's Appointments */}
+            {/* Action Center - Today */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <InfoCard
-                title="Today's Appointments"
-                action={
-                  <CardHeaderAction>
-                    <DashboardMenu
-                      menuItems={[
-                        {
-                          label: "Refresh",
-                          onClick: () =>
-                            queryClient.invalidateQueries({
-                              queryKey: ["today-appointments"],
-                            }),
-                        },
-                        {
-                          label: "View All",
-                          onClick: () => navigate("/appointments"),
-                        },
-                        {
-                          label: "Export",
-                          onClick: () =>
-                            enqueueSnackbar("Export coming soon", {
-                              variant: "info",
-                            }),
-                        },
-                      ]}
-                    />
-                  </CardHeaderAction>
-                }
-              >
-                <List>
-                  {appointmentsLoading ? (
-                    <SkeletonLoader type="list" count={3} />
-                  ) : appointmentsData?.length ? (
-                    appointmentsData.map((apt) => (
-                      <ListItem
-                        key={apt.id}
-                        sx={{ px: 0 }}
-                        secondaryAction={
-                          <IconButton
-                            edge="end"
-                            size="small"
-                            onClick={() =>
-                              setDeleteConfirm({
-                                open: true,
-                                appointmentId: apt.id,
-                              })
-                            }
-                            sx={{ color: "error.main" }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        }
+              <InfoCard title="Action Center – Today">
+                <Stack spacing={1}>
+                  {/* High-risk patients - using low PROM scores as proxy */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: "error.50",
+                      border: "1px solid",
+                      borderColor: "error.200",
+                    }}
+                  >
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                    >
+                      <WarningIcon sx={{ color: "error.main" }} />
+                      <Typography variant="body2" fontWeight={500}>
+                        High pain intensity patients
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography
+                        variant="h6"
+                        fontWeight={600}
+                        color="error.main"
                       >
-                        <ListItemAvatar>
-                          <Avatar>
-                            {apt.patientName
-                              .split(" ")
-                              .map((segment: string) => segment[0])
-                              .join("")}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={apt.patientName}
-                          secondary={`${apt.time} - ${apt.type}`}
-                        />
-                        <Chip
-                          label={apt.status}
-                          size="small"
-                          color={
-                            apt.status === "completed"
-                              ? "success"
-                              : apt.status === "in-progress"
-                                ? "info"
-                                : apt.status === "scheduled"
-                                  ? "default"
-                                  : "warning"
-                          }
-                          variant="outlined"
-                        />
-                      </ListItem>
-                    ))
-                  ) : (
-                    <AuraEmptyState
-                      icon={<CalendarIcon />}
-                      title="No appointments today"
-                      description="Your schedule is clear for today."
-                      actionText="Schedule New"
-                      onAction={() => navigate("/appointments")}
-                      sx={{ py: 3 }}
-                    />
-                  )}
-                </List>
-                <AuraButton
-                  fullWidth
-                  variant="outlined"
-                  sx={{ mt: 2 }}
-                  onClick={() => navigate("/appointments")}
-                >
-                  View All Appointments
-                </AuraButton>
+                        {painAnalytics?.totalPainMaps || 0}
+                      </Typography>
+                      <Button
+                        size="small"
+                        onClick={() => navigate("/patients")}
+                      >
+                        View
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  {/* Intakes needing review */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: "warning.50",
+                      border: "1px solid",
+                      borderColor: "warning.200",
+                    }}
+                  >
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                    >
+                      <AssignmentIcon sx={{ color: "warning.main" }} />
+                      <Typography variant="body2" fontWeight={500}>
+                        Intakes pending triage
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography
+                        variant="h6"
+                        fontWeight={600}
+                        color="warning.main"
+                      >
+                        {dashboardMetrics?.pendingIntakes || 0}
+                      </Typography>
+                      <Button size="small" onClick={() => navigate("/intake")}>
+                        View
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  {/* Cancellations / No-shows */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: "grey.50",
+                      border: "1px solid",
+                      borderColor: "grey.200",
+                    }}
+                  >
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                    >
+                      <CancelIcon sx={{ color: "grey.600" }} />
+                      <Typography variant="body2" fontWeight={500}>
+                        Cancellations / No-shows
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="h6" fontWeight={600}>
+                        {(dashboardMetrics?.cancelledToday || 0) +
+                          (dashboardMetrics?.noShowToday || 0)}
+                      </Typography>
+                      <Button
+                        size="small"
+                        onClick={() => navigate("/appointments")}
+                      >
+                        View
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  {/* Evaluations */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: "info.50",
+                      border: "1px solid",
+                      borderColor: "info.200",
+                    }}
+                  >
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                    >
+                      <AssessmentIcon sx={{ color: "info.main" }} />
+                      <Typography variant="body2" fontWeight={500}>
+                        Total evaluations
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography
+                        variant="h6"
+                        fontWeight={600}
+                        color="info.main"
+                      >
+                        {clinicalAnalytics?.totalEvaluations || 0}
+                      </Typography>
+                      <Button
+                        size="small"
+                        onClick={() => navigate("/patients")}
+                      >
+                        View
+                      </Button>
+                    </Box>
+                  </Box>
+                </Stack>
               </InfoCard>
             </Grid>
 
-            {/* Recent Intakes */}
+            {/* Capacity & Flow - Today */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <InfoCard
-                title="Recent Intake Submissions"
-                action={
-                  <CardHeaderAction>
-                    <DashboardMenu
-                      menuItems={[
-                        {
-                          label: "Refresh",
-                          onClick: () =>
-                            queryClient.invalidateQueries({
-                              queryKey: ["recent-activity"],
-                            }),
-                        },
-                        {
-                          label: "View Queue",
-                          onClick: () => navigate("/intake"),
-                        },
-                        {
-                          label: "Export",
-                          onClick: () =>
-                            enqueueSnackbar("Export coming soon", {
-                              variant: "info",
-                            }),
-                        },
-                      ]}
-                    />
-                  </CardHeaderAction>
-                }
-              >
-                <List>
-                  {activityLoading ? (
-                    <SkeletonLoader type="list" count={3} />
-                  ) : activityData?.length ? (
-                    activityData
-                      .filter((activity: any) => activity.type === "intake")
-                      .slice(0, 3)
-                      .map((activity: any) => (
-                        <ListItem key={activity.id} sx={{ px: 0 }}>
-                          <ListItemAvatar>
-                            <Avatar
-                              sx={{
-                                bgcolor:
-                                  activity.status === "urgent"
-                                    ? "error.main"
-                                    : "grey.500",
-                              }}
-                            >
-                              {activity.status === "urgent" ? (
-                                <WarningIcon />
-                              ) : (
-                                (activity.patientName?.[0] ?? "?")
-                              )}
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={activity.patientName}
-                            secondary={`${activity.description} • ${new Date(activity.timestamp).toLocaleTimeString()}`}
-                          />
-                          <Chip
-                            label={activity.status || "pending"}
-                            size="small"
-                            color={
-                              activity.status === "urgent"
-                                ? "error"
-                                : activity.status === "pending"
-                                  ? "warning"
-                                  : "default"
-                            }
-                          />
-                        </ListItem>
-                      ))
-                  ) : (
-                    <AuraEmptyState
-                      icon={<AssignmentIcon />}
-                      title="No recent intakes"
-                      description="No intake submissions to review."
-                      actionText="View Queue"
-                      onAction={() => navigate("/intake")}
-                      sx={{ py: 3 }}
-                    />
-                  )}
-                </List>
-                <AuraButton
-                  fullWidth
-                  variant="outlined"
-                  sx={{ mt: 2 }}
-                  onClick={() => navigate("/intake")}
-                >
-                  Review Intake Queue
-                </AuraButton>
+              <InfoCard title="Today's Capacity & Flow">
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  {/* Capacity Donut */}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <Box sx={{ position: "relative", width: 100, height: 100 }}>
+                      <CircularProgress
+                        variant="determinate"
+                        value={100}
+                        size={100}
+                        thickness={8}
+                        sx={{ color: "grey.200", position: "absolute" }}
+                      />
+                      <CircularProgress
+                        variant="determinate"
+                        value={Math.min(
+                          dashboardMetrics?.completionRate || 0,
+                          100,
+                        )}
+                        size={100}
+                        thickness={8}
+                        sx={{ color: "primary.main" }}
+                      />
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          top: "50%",
+                          left: "50%",
+                          transform: "translate(-50%, -50%)",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography variant="h5" fontWeight={700}>
+                          {Math.round(dashboardMetrics?.completionRate || 0)}%
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Complete
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {dashboardMetrics?.completedToday || 0} of{" "}
+                        {dashboardMetrics?.todayAppointments || 0} completed
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {(dashboardMetrics?.todayAppointments || 0) -
+                          (dashboardMetrics?.completedToday || 0)}{" "}
+                        remaining
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Stats chips */}
+                  <Grid container spacing={2}>
+                    <Grid size={6}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "grey.50",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography variant="h6" fontWeight={600}>
+                          {Math.round(dashboardMetrics?.noShowRate || 0)}%
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          No-show rate
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid size={6}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "grey.50",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography variant="h6" fontWeight={600}>
+                          {dashboardMetrics?.averageWaitTime || 0}m
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Avg wait time
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid size={6}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "primary.50",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          fontWeight={600}
+                          color="primary.main"
+                        >
+                          {dashboardMetrics?.newPatientsThisMonth || 0}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          New this month
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid size={6}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "grey.50",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography variant="h6" fontWeight={600}>
+                          {Math.round(dashboardMetrics?.staffUtilization || 0)}%
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Staff utilization
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
               </InfoCard>
             </Grid>
           </Grid>
@@ -1465,16 +1504,6 @@ const Analytics: React.FC = () => {
           </Grid>
         </>
       )}
-
-      <ConfirmDialog
-        open={deleteConfirm.open}
-        title="Delete Appointment"
-        message="Are you sure you want to delete this appointment? This action cannot be undone."
-        severity="error"
-        confirmText="Delete"
-        onConfirm={handleDeleteAppointment}
-        onClose={() => setDeleteConfirm({ open: false, appointmentId: null })}
-      />
     </Box>
   );
 };
