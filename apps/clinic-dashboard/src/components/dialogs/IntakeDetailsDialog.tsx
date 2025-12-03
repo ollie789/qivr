@@ -1006,7 +1006,7 @@ Date: ________________________
               {/* Clinical Info Tab */}
               <TabPanel value={tabValue} index={0}>
                 <Box sx={{ p: 3 }}>
-                  <Grid container spacing={3}>
+                  <Grid container spacing={3} alignItems="flex-start">
                     {/* Left Column - Chief Complaint & Pain */}
                     <Grid size={{ xs: 12, lg: 6 }}>
                       {/* Chief Complaint - Prominent */}

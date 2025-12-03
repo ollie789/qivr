@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   TextField,
   Typography,
@@ -9,27 +9,27 @@ import {
   IconButton,
   Alert,
   CircularProgress,
-  Collapse,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  ListItemSecondaryAction,
-  ListItemButton,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Grid,
   LinearProgress,
+  InputAdornment,
+  Divider,
+  Collapse,
+  Stack,
+  Paper,
 } from "@mui/material";
 import {
   AutoAwesome as AIIcon,
-  Edit as ManualIcon,
-  ExpandMore,
   FitnessCenter,
   Add,
   Delete,
   CheckCircle,
+  Search as SearchIcon,
+  ExpandMore,
+  ExpandLess,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,7 +38,7 @@ import {
   FormSection,
   FormRow,
   Callout,
-  auraTokens,
+  AuraButton,
 } from "@qivr/design-system";
 import {
   treatmentPlansApi,
@@ -71,7 +71,6 @@ export interface TreatmentPlanBuilderProps {
   };
   evaluationId?: string;
   onSuccess?: (planId: string) => void;
-  /** For bulk creation - array of patients to create plans for */
   bulkPatients?: BulkPatient[];
 }
 
@@ -97,9 +96,56 @@ interface Phase {
   goals: string[];
   exercises: Exercise[];
   sessionsPerWeek: number;
+  expanded?: boolean;
 }
 
-type CreationMode = "ai" | "manual" | null;
+// Body region templates with suggested phases
+const BODY_REGION_TEMPLATES: Record<string, { phases: Omit<Phase, "phaseNumber">[] }> = {
+  "Lower Back": {
+    phases: [
+      { name: "Pain Management", description: "Focus on pain reduction and gentle mobility", durationWeeks: 2, goals: ["Reduce pain levels", "Improve mobility"], exercises: [], sessionsPerWeek: 2, expanded: true },
+      { name: "Core Strengthening", description: "Progressive core strengthening", durationWeeks: 3, goals: ["Build core strength", "Improve stability"], exercises: [], sessionsPerWeek: 3 },
+      { name: "Functional Recovery", description: "Return to normal activities", durationWeeks: 3, goals: ["Return to daily activities", "Prevent recurrence"], exercises: [], sessionsPerWeek: 3 },
+    ],
+  },
+  "Neck": {
+    phases: [
+      { name: "Pain Relief", description: "Reduce pain and tension", durationWeeks: 2, goals: ["Reduce pain", "Decrease muscle tension"], exercises: [], sessionsPerWeek: 2, expanded: true },
+      { name: "Mobility & Strength", description: "Improve range of motion and strength", durationWeeks: 3, goals: ["Improve cervical mobility", "Strengthen neck muscles"], exercises: [], sessionsPerWeek: 3 },
+      { name: "Postural Training", description: "Long-term posture correction", durationWeeks: 3, goals: ["Correct posture", "Maintain gains"], exercises: [], sessionsPerWeek: 2 },
+    ],
+  },
+  "Shoulder": {
+    phases: [
+      { name: "Acute Phase", description: "Pain management and gentle mobility", durationWeeks: 2, goals: ["Reduce inflammation", "Maintain range of motion"], exercises: [], sessionsPerWeek: 2, expanded: true },
+      { name: "Strengthening", description: "Rotator cuff and scapular strengthening", durationWeeks: 4, goals: ["Strengthen rotator cuff", "Improve scapular control"], exercises: [], sessionsPerWeek: 3 },
+      { name: "Return to Activity", description: "Sport/work-specific training", durationWeeks: 2, goals: ["Return to full activity", "Prevent re-injury"], exercises: [], sessionsPerWeek: 3 },
+    ],
+  },
+  "Knee": {
+    phases: [
+      { name: "Initial Recovery", description: "Reduce swelling and pain", durationWeeks: 2, goals: ["Reduce swelling", "Restore basic mobility"], exercises: [], sessionsPerWeek: 2, expanded: true },
+      { name: "Strength Building", description: "Quadriceps and hamstring strengthening", durationWeeks: 4, goals: ["Build quad strength", "Improve balance"], exercises: [], sessionsPerWeek: 3 },
+      { name: "Functional Phase", description: "Return to normal activities", durationWeeks: 2, goals: ["Full weight bearing", "Return to activities"], exercises: [], sessionsPerWeek: 3 },
+    ],
+  },
+  "Hip": {
+    phases: [
+      { name: "Mobility Phase", description: "Restore hip range of motion", durationWeeks: 2, goals: ["Improve hip mobility", "Reduce pain"], exercises: [], sessionsPerWeek: 2, expanded: true },
+      { name: "Strengthening", description: "Hip and glute strengthening", durationWeeks: 4, goals: ["Strengthen hip muscles", "Improve stability"], exercises: [], sessionsPerWeek: 3 },
+      { name: "Functional Integration", description: "Return to full function", durationWeeks: 2, goals: ["Full functional recovery", "Prevent recurrence"], exercises: [], sessionsPerWeek: 3 },
+    ],
+  },
+  "General": {
+    phases: [
+      { name: "Phase 1", description: "Initial treatment phase", durationWeeks: 2, goals: ["Reduce symptoms", "Establish baseline"], exercises: [], sessionsPerWeek: 2, expanded: true },
+      { name: "Phase 2", description: "Progressive treatment", durationWeeks: 3, goals: ["Build strength", "Improve function"], exercises: [], sessionsPerWeek: 3 },
+      { name: "Phase 3", description: "Maintenance and discharge", durationWeeks: 3, goals: ["Maintain gains", "Independent management"], exercises: [], sessionsPerWeek: 2 },
+    ],
+  },
+};
+
+const BODY_REGIONS = ["Lower Back", "Neck", "Shoulder", "Knee", "Hip", "Ankle", "Wrist", "General"];
 
 export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   open,
@@ -112,7 +158,6 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
   const [activeStep, setActiveStep] = useState(0);
-  const [creationMode, setCreationMode] = useState<CreationMode>(null);
 
   // Bulk mode state
   const isBulkMode = bulkPatients.length > 0;
@@ -135,6 +180,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   const [basicInfo, setBasicInfo] = useState({
     title: "",
     diagnosis: "",
+    bodyRegion: "",
     startDate: new Date().toISOString().split("T")[0],
     durationWeeks: 8,
     sessionsPerWeek: 2,
@@ -143,17 +189,20 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   });
 
   const [phases, setPhases] = useState<Phase[]>([]);
-  const [generatedPlan, setGeneratedPlan] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<AvailableDevice | null>(
-    null,
-  );
+  const [selectedDevice, setSelectedDevice] = useState<AvailableDevice | null>(null);
+
+  // Exercise browser state
+  const [exerciseSearch, setExerciseSearch] = useState("");
+  const [exerciseFilterCategory, setExerciseFilterCategory] = useState<string>("all");
+  const [exerciseFilterRegion, setExerciseFilterRegion] = useState<string>("all");
+  const [expandedPhaseIndex, setExpandedPhaseIndex] = useState<number | null>(0);
 
   // Queries
   const { data: patientsData } = useQuery({
     queryKey: ["patients-list"],
     queryFn: () => patientApi.getPatients({ limit: 100 }),
-    enabled: !initialPatient,
+    enabled: !initialPatient && !isBulkMode,
   });
   const patients = patientsData?.data || [];
 
@@ -170,35 +219,52 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
   const { data: exerciseLibrary } = useQuery({
     queryKey: ["exercise-library"],
-    queryFn: () => exerciseLibraryApi.list({ pageSize: 100 }),
+    queryFn: () => exerciseLibraryApi.list({ pageSize: 200 }),
   });
 
-  // Steps based on mode
+  const allExercises = exerciseLibrary?.data || [];
+
+  // Filter exercises based on search and filters
+  const filteredExercises = useMemo(() => {
+    return allExercises.filter((ex: any) => {
+      const matchesSearch = !exerciseSearch ||
+        ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+        ex.description?.toLowerCase().includes(exerciseSearch.toLowerCase());
+      const matchesCategory = exerciseFilterCategory === "all" || ex.category === exerciseFilterCategory;
+      const matchesRegion = exerciseFilterRegion === "all" || ex.bodyRegion === exerciseFilterRegion;
+      return matchesSearch && matchesCategory && matchesRegion;
+    });
+  }, [allExercises, exerciseSearch, exerciseFilterCategory, exerciseFilterRegion]);
+
+  // Steps
   const steps = useMemo(() => {
     if (isBulkMode) {
-      return [
-        "Review Patients",
-        "AI Generation Settings",
-        "Processing",
-        "Complete",
-      ];
+      return ["Review Patients", "Settings", "Processing", "Complete"];
     }
-    if (!initialPatient) {
-      return creationMode === "ai"
-        ? ["Patient", "AI Generation", "Review & Customize", "Confirm"]
-        : ["Patient", "Basic Info", "Phases & Exercises", "Confirm"];
-    }
-    return creationMode === "ai"
-      ? ["AI Generation", "Review & Customize", "Confirm"]
-      : ["Basic Info", "Phases & Exercises", "Confirm"];
-  }, [initialPatient, creationMode, isBulkMode]);
+    return initialPatient
+      ? ["Plan Details", "Exercises", "Review"]
+      : ["Patient & Condition", "Exercises", "Review"];
+  }, [initialPatient, isBulkMode]);
+
+  // Apply body region template
+  const applyTemplate = useCallback((region: string) => {
+    const template = BODY_REGION_TEMPLATES[region] || BODY_REGION_TEMPLATES["General"];
+    setPhases(template.phases.map((p, idx) => ({
+      ...p,
+      phaseNumber: idx + 1,
+      expanded: idx === 0,
+    })));
+    setBasicInfo(prev => ({
+      ...prev,
+      bodyRegion: region,
+      title: prev.title || `${region} Rehabilitation Program`,
+    }));
+  }, []);
 
   // Mutations
   const generateMutation = useMutation({
     mutationFn: treatmentPlansApi.generate,
     onSuccess: (data) => {
-      setGeneratedPlan(data);
-      // Convert generated plan to phases
       if (data.phases) {
         setPhases(
           data.phases.map((p: any, idx: number) => ({
@@ -207,42 +273,36 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             description: p.description,
             durationWeeks: p.durationWeeks,
             goals: p.goals || [],
-            exercises:
-              p.exercises?.map((e: any) => ({
-                id: e.id || `ex-${Math.random().toString(36).substr(2, 9)}`,
-                name: e.name,
-                description: e.description,
-                instructions: e.instructions,
-                sets: e.sets,
-                reps: e.reps,
-                holdSeconds: e.holdSeconds,
-                frequency: e.frequency,
-                category: e.category,
-                bodyRegion: e.bodyRegion,
-                difficulty: e.difficulty,
-              })) || [],
+            exercises: p.exercises?.map((e: any) => ({
+              id: e.id || `ex-${Math.random().toString(36).substr(2, 9)}`,
+              name: e.name,
+              description: e.description,
+              instructions: e.instructions,
+              sets: e.sets,
+              reps: e.reps,
+              holdSeconds: e.holdSeconds,
+              frequency: e.frequency,
+              category: e.category,
+              bodyRegion: e.bodyRegion,
+              difficulty: e.difficulty,
+            })) || [],
             sessionsPerWeek: p.sessionsPerWeek || 2,
-          })),
+            expanded: idx === 0,
+          }))
         );
       }
-      setBasicInfo((prev) => ({
+      setBasicInfo(prev => ({
         ...prev,
         title: data.title || prev.title,
         diagnosis: data.diagnosis || prev.diagnosis,
         durationWeeks: data.totalDurationWeeks || prev.durationWeeks,
       }));
       setIsGenerating(false);
-      setActiveStep((prev) => prev + 1);
+      enqueueSnackbar("AI suggestions applied! Review and customize below.", { variant: "success" });
     },
     onError: (error: any) => {
       setIsGenerating(false);
-      console.error("Treatment plan generation failed:", error);
-      const errorMessage =
-        error?.response?.data?.error ||
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to generate treatment plan. The AI service may be unavailable.";
-      enqueueSnackbar(errorMessage, { variant: "error" });
+      enqueueSnackbar(error?.message || "AI generation failed. You can still add exercises manually.", { variant: "warning" });
     },
   });
 
@@ -250,30 +310,21 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     mutationFn: treatmentPlansApi.create,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
-      enqueueSnackbar("Treatment plan created successfully!", {
-        variant: "success",
-      });
+      enqueueSnackbar("Treatment plan created successfully!", { variant: "success" });
       onSuccess?.(data.id);
       handleClose();
     },
     onError: (error: any) => {
-      enqueueSnackbar(error?.message || "Failed to create treatment plan", {
-        variant: "error",
-      });
+      enqueueSnackbar(error?.message || "Failed to create treatment plan", { variant: "error" });
     },
   });
 
-  // Bulk processing function
+  // Bulk processing
   const processBulkPlans = async () => {
     if (!isBulkMode) return;
 
     setIsBulkProcessing(true);
-    setBulkProgress({
-      current: 0,
-      total: bulkPatients.length,
-      completed: [],
-      failed: [],
-    });
+    setBulkProgress({ current: 0, total: bulkPatients.length, completed: [], failed: [] });
 
     const completed: string[] = [];
     const failed: string[] = [];
@@ -283,31 +334,23 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       if (!currentPatient) continue;
 
       const patientName = `${currentPatient.firstName} ${currentPatient.lastName}`;
-      setBulkProgress((prev) => ({ ...prev, current: i + 1 }));
+      setBulkProgress(prev => ({ ...prev, current: i + 1 }));
 
       try {
-        // Generate AI plan for this patient
         const generatedPlan = await treatmentPlansApi.generate({
           patientId: currentPatient.id,
           preferredDurationWeeks: basicInfo.durationWeeks,
           sessionsPerWeek: basicInfo.sessionsPerWeek,
-          focusAreas:
-            basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
-          contraindications:
-            basicInfo.contraindications.length > 0
-              ? basicInfo.contraindications
-              : undefined,
+          focusAreas: basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
+          contraindications: basicInfo.contraindications.length > 0 ? basicInfo.contraindications : undefined,
         });
 
-        // Create the plan
         await treatmentPlansApi.create({
           patientId: currentPatient.id,
           title: generatedPlan.title || `Treatment Plan for ${patientName}`,
-          diagnosis:
-            generatedPlan.diagnosis || currentPatient.reasonForVisit || "",
+          diagnosis: generatedPlan.diagnosis || currentPatient.reasonForVisit || "",
           startDate: new Date().toISOString(),
-          durationWeeks:
-            generatedPlan.totalDurationWeeks || basicInfo.durationWeeks,
+          durationWeeks: generatedPlan.totalDurationWeeks || basicInfo.durationWeeks,
           phases: generatedPlan.phases || [],
           aiGeneratedSummary: generatedPlan.summary,
           aiRationale: generatedPlan.rationale,
@@ -315,16 +358,10 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         });
 
         completed.push(patientName);
-        setBulkProgress((prev) => ({
-          ...prev,
-          completed: [...prev.completed, patientName],
-        }));
+        setBulkProgress(prev => ({ ...prev, completed: [...prev.completed, patientName] }));
       } catch {
         failed.push(patientName);
-        setBulkProgress((prev) => ({
-          ...prev,
-          failed: [...prev.failed, patientName],
-        }));
+        setBulkProgress(prev => ({ ...prev, failed: [...prev.failed, patientName] }));
       }
     }
 
@@ -332,33 +369,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
 
     if (completed.length > 0) {
-      enqueueSnackbar(
-        `Created ${completed.length} treatment plan${completed.length !== 1 ? "s" : ""} successfully!`,
-        {
-          variant: "success",
-        },
-      );
+      enqueueSnackbar(`Created ${completed.length} treatment plan${completed.length !== 1 ? "s" : ""} successfully!`, { variant: "success" });
     }
     if (failed.length > 0) {
-      enqueueSnackbar(
-        `Failed to create ${failed.length} plan${failed.length !== 1 ? "s" : ""}`,
-        {
-          variant: "error",
-        },
-      );
+      enqueueSnackbar(`Failed to create ${failed.length} plan${failed.length !== 1 ? "s" : ""}`, { variant: "error" });
     }
 
-    // Move to complete step
     setActiveStep(steps.length - 1);
   };
 
   const handleClose = () => {
     setActiveStep(0);
-    setCreationMode(null);
     setSelectedPatient(initialPatient || null);
     setBasicInfo({
       title: "",
       diagnosis: "",
+      bodyRegion: "",
       startDate: new Date().toISOString().split("T")[0],
       durationWeeks: 8,
       sessionsPerWeek: 2,
@@ -366,44 +392,35 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       contraindications: [],
     });
     setPhases([]);
-    setGeneratedPlan(null);
     setIsGenerating(false);
     setSelectedDevice(null);
+    setExerciseSearch("");
+    setExerciseFilterCategory("all");
+    setExerciseFilterRegion("all");
     setBulkProgress({ current: 0, total: 0, completed: [], failed: [] });
     setIsBulkProcessing(false);
     onClose();
   };
 
-  const handleModeSelect = (mode: CreationMode) => {
-    setCreationMode(mode);
-    // Always start at step 0 - which is "Patient" if no initialPatient, or first content step if patient provided
-    setActiveStep(0);
-  };
-
-  const handleGeneratePlan = async () => {
-    if (!selectedPatient) {
+  const handleAISuggest = async (_phaseIndex?: number) => {
+    if (!selectedPatient && !isBulkMode) {
       enqueueSnackbar("Please select a patient first", { variant: "warning" });
       return;
     }
     setIsGenerating(true);
     generateMutation.mutate({
-      patientId: selectedPatient.id,
-      evaluationId: evaluationId,
+      patientId: selectedPatient?.id || "",
+      evaluationId,
       preferredDurationWeeks: basicInfo.durationWeeks,
       sessionsPerWeek: basicInfo.sessionsPerWeek,
-      focusAreas:
-        basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
-      contraindications:
-        basicInfo.contraindications.length > 0
-          ? basicInfo.contraindications
-          : undefined,
+      focusAreas: basicInfo.bodyRegion ? [basicInfo.bodyRegion] : basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
+      contraindications: basicInfo.contraindications.length > 0 ? basicInfo.contraindications : undefined,
     });
   };
 
   const handleCreatePlan = async () => {
     if (!selectedPatient) return;
 
-    // Record device usage if a device was selected
     if (selectedDevice) {
       try {
         await deviceTrackingApi.recordUsage({
@@ -414,29 +431,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         });
       } catch (error) {
         console.error("Failed to record device usage:", error);
-        // Continue creating the plan even if device recording fails
       }
     }
 
     createMutation.mutate({
       patientId: selectedPatient.id,
-      title:
-        basicInfo.title ||
-        `Treatment Plan for ${selectedPatient.firstName} ${selectedPatient.lastName}`,
+      title: basicInfo.title || `Treatment Plan for ${selectedPatient.firstName} ${selectedPatient.lastName}`,
       diagnosis: basicInfo.diagnosis,
-      startDate: basicInfo.startDate
-        ? new Date(basicInfo.startDate).toISOString()
-        : new Date().toISOString(),
+      startDate: basicInfo.startDate ? new Date(basicInfo.startDate).toISOString() : new Date().toISOString(),
       durationWeeks: basicInfo.durationWeeks,
-      phases: phases,
-      aiGeneratedSummary: generatedPlan?.summary,
-      aiRationale: generatedPlan?.rationale,
-      aiConfidence: generatedPlan?.confidence,
+      phases: phases.map(({ expanded: _, ...p }) => p),
       sourceEvaluationId: evaluationId,
       linkedDeviceId: selectedDevice?.id,
     });
   };
 
+  // Phase management
   const handleAddPhase = () => {
     const newPhase: Phase = {
       phaseNumber: phases.length + 1,
@@ -446,19 +456,20 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       goals: [],
       exercises: [],
       sessionsPerWeek: basicInfo.sessionsPerWeek,
+      expanded: true,
     };
     setPhases([...phases, newPhase]);
+    setExpandedPhaseIndex(phases.length);
   };
 
   const handleRemovePhase = (index: number) => {
     const updated = phases.filter((_, i) => i !== index);
-    // Renumber phases
     updated.forEach((p, i) => (p.phaseNumber = i + 1));
     setPhases(updated);
   };
 
   const handleUpdatePhase = (index: number, updates: Partial<Phase>) => {
-    setPhases((prev) => {
+    setPhases(prev => {
       const updated = [...prev];
       if (updated[index]) {
         updated[index] = { ...updated[index], ...updates };
@@ -467,31 +478,53 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     });
   };
 
-  const handleAddExerciseToPhase = (phaseIndex: number, exercise: Exercise) => {
-    setPhases((prev) => {
+  const handleAddExerciseToPhase = (_phaseIndex: number, exercise: any) => {
+    const newExercise: Exercise = {
+      id: `ex-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: exercise.name,
+      description: exercise.description,
+      instructions: exercise.instructions,
+      sets: exercise.defaultSets || 3,
+      reps: exercise.defaultReps || 10,
+      holdSeconds: exercise.defaultHoldSeconds,
+      frequency: exercise.defaultFrequency || "Daily",
+      category: exercise.category,
+      bodyRegion: exercise.bodyRegion,
+      difficulty: exercise.difficulty,
+    };
+    setPhases(prev => {
       const updated = [...prev];
-      if (updated[phaseIndex]) {
-        updated[phaseIndex] = {
-          ...updated[phaseIndex],
-          exercises: [...updated[phaseIndex].exercises, exercise],
+      if (updated[_phaseIndex]) {
+        updated[_phaseIndex] = {
+          ...updated[_phaseIndex],
+          exercises: [...updated[_phaseIndex].exercises, newExercise],
+        };
+      }
+      return updated;
+    });
+    enqueueSnackbar(`Added "${exercise.name}" to ${phases[_phaseIndex]?.name}`, { variant: "success" });
+  };
+
+  const handleRemoveExerciseFromPhase = (_phaseIndex: number, exerciseIndex: number) => {
+    setPhases(prev => {
+      const updated = [...prev];
+      if (updated[_phaseIndex]) {
+        updated[_phaseIndex] = {
+          ...updated[_phaseIndex],
+          exercises: updated[_phaseIndex].exercises.filter((_, i) => i !== exerciseIndex),
         };
       }
       return updated;
     });
   };
 
-  const handleRemoveExerciseFromPhase = (
-    phaseIndex: number,
-    exerciseIndex: number,
-  ) => {
-    setPhases((prev) => {
+  const handleUpdateExercise = (_phaseIndex: number, exerciseIndex: number, updates: Partial<Exercise>) => {
+    setPhases(prev => {
       const updated = [...prev];
-      if (updated[phaseIndex]) {
-        updated[phaseIndex] = {
-          ...updated[phaseIndex],
-          exercises: updated[phaseIndex].exercises.filter(
-            (_, i) => i !== exerciseIndex,
-          ),
+      if (updated[_phaseIndex]?.exercises[exerciseIndex]) {
+        updated[_phaseIndex].exercises[exerciseIndex] = {
+          ...updated[_phaseIndex].exercises[exerciseIndex],
+          ...updates,
         };
       }
       return updated;
@@ -502,81 +535,53 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   const isStepValid = useMemo(() => {
     const currentStepName = steps[activeStep];
 
-    // Bulk mode validation
     if (isBulkMode) {
       switch (currentStepName) {
-        case "Review Patients":
-          return bulkPatients.length > 0;
-        case "AI Generation Settings":
-          return basicInfo.durationWeeks > 0 && basicInfo.sessionsPerWeek > 0;
-        case "Processing":
-          return !isBulkProcessing;
-        case "Complete":
-          return true;
-        default:
-          return true;
+        case "Review Patients": return bulkPatients.length > 0;
+        case "Settings": return basicInfo.durationWeeks > 0 && basicInfo.sessionsPerWeek > 0;
+        case "Processing": return !isBulkProcessing;
+        case "Complete": return true;
+        default: return true;
       }
     }
 
     switch (currentStepName) {
-      case "Patient":
-        return !!selectedPatient;
-      case "AI Generation":
-        return !isGenerating;
-      case "Basic Info":
-        return (
-          !!basicInfo.title &&
-          !!basicInfo.startDate &&
-          basicInfo.durationWeeks > 0
-        );
-      case "Phases & Exercises":
-      case "Review & Customize":
-        return phases.length > 0 && phases.every((p) => p.exercises.length > 0);
-      case "Confirm":
+      case "Patient & Condition":
+        return !!selectedPatient && !!basicInfo.bodyRegion;
+      case "Plan Details":
+        return !!basicInfo.bodyRegion && !!basicInfo.title;
+      case "Exercises":
+        return phases.length > 0 && phases.some(p => p.exercises.length > 0);
+      case "Review":
         return true;
       default:
         return true;
     }
-  }, [
-    activeStep,
-    selectedPatient,
-    basicInfo,
-    phases,
-    isGenerating,
-    steps,
-    isBulkMode,
-    bulkPatients,
-    isBulkProcessing,
-  ]);
+  }, [activeStep, selectedPatient, basicInfo, phases, steps, isBulkMode, bulkPatients, isBulkProcessing]);
 
   const handleNext = () => {
     const currentStepName = steps[activeStep];
 
-    // Bulk mode - start processing on step 2
-    if (isBulkMode && currentStepName === "AI Generation Settings") {
-      setActiveStep((prev) => prev + 1);
+    if (isBulkMode && currentStepName === "Settings") {
+      setActiveStep(prev => prev + 1);
       processBulkPlans();
       return;
     }
 
-    if (currentStepName === "AI Generation" && creationMode === "ai") {
-      handleGeneratePlan();
-      return;
+    // Apply template when moving from first step if phases are empty
+    if ((currentStepName === "Patient & Condition" || currentStepName === "Plan Details") && phases.length === 0 && basicInfo.bodyRegion) {
+      applyTemplate(basicInfo.bodyRegion);
     }
-    setActiveStep((prev) => prev + 1);
+
+    setActiveStep(prev => prev + 1);
   };
 
   const handleBack = () => {
-    // Bulk mode - can't go back during processing
     if (isBulkMode && isBulkProcessing) return;
-
-    // At step 0, go back to mode selection
-    if (activeStep === 0 && !isBulkMode) {
-      setCreationMode(null);
-      return;
-    }
-    setActiveStep((prev) => prev - 1);
+    setActiveStep(prev => prev - 1);
   };
+
+  const totalExercises = phases.reduce((acc, p) => acc + p.exercises.length, 0);
 
   // Render step content
   const renderStepContent = () => {
@@ -588,71 +593,42 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         case "Review Patients":
           return (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Creating Treatment Plans for {bulkPatients.length} Patient
-                {bulkPatients.length !== 1 ? "s" : ""}
+              <Typography variant="h6">
+                Creating Treatment Plans for {bulkPatients.length} Patient{bulkPatients.length !== 1 ? "s" : ""}
               </Typography>
               <Callout variant="info">
-                <Typography variant="body2">
-                  AI will generate personalized treatment plans for each patient
-                  based on their medical history, evaluations, and the settings
-                  you configure in the next step.
-                </Typography>
+                AI will generate personalized treatment plans for each patient based on their medical history and evaluation data.
               </Callout>
               <List dense>
                 {bulkPatients.map((patient, index) => (
-                  <ListItem
-                    key={patient.id}
-                    sx={{ bgcolor: "action.hover", borderRadius: 1, mb: 0.5 }}
-                  >
+                  <ListItem key={patient.id} sx={{ bgcolor: "action.hover", borderRadius: 1, mb: 0.5 }}>
                     <ListItemIcon>
-                      <Avatar sx={{ width: 32, height: 32 }}>
-                        {patient.firstName.charAt(0)}
-                      </Avatar>
+                      <Avatar sx={{ width: 32, height: 32 }}>{patient.firstName.charAt(0)}</Avatar>
                     </ListItemIcon>
                     <ListItemText
                       primary={`${patient.firstName} ${patient.lastName}`}
-                      secondary={
-                        patient.reasonForVisit
-                          ? `${patient.appointmentType || "Appointment"}: ${patient.reasonForVisit}`
-                          : patient.appointmentType || "Patient"
-                      }
+                      secondary={patient.reasonForVisit || patient.appointmentType || "Patient"}
                     />
-                    <Chip
-                      label={`#${index + 1}`}
-                      size="small"
-                      variant="outlined"
-                    />
+                    <Chip label={`#${index + 1}`} size="small" variant="outlined" />
                   </ListItem>
                 ))}
               </List>
             </Box>
           );
 
-        case "AI Generation Settings":
+        case "Settings":
           return (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <FormSection title="AI Generation Settings">
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
-                  Configure default settings for all plans. AI will adapt each
-                  plan to the individual patient.
+              <FormSection title="Default Settings">
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Configure default settings for all plans. AI will adapt each plan to the individual patient.
                 </Typography>
-
                 <FormRow>
                   <TextField
                     label="Duration (weeks)"
                     type="number"
                     value={basicInfo.durationWeeks}
-                    onChange={(e) =>
-                      setBasicInfo({
-                        ...basicInfo,
-                        durationWeeks: parseInt(e.target.value) || 8,
-                      })
-                    }
+                    onChange={(e) => setBasicInfo({ ...basicInfo, durationWeeks: parseInt(e.target.value) || 8 })}
                     inputProps={{ min: 1, max: 52 }}
                     fullWidth
                   />
@@ -660,56 +636,19 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     label="Sessions per week"
                     type="number"
                     value={basicInfo.sessionsPerWeek}
-                    onChange={(e) =>
-                      setBasicInfo({
-                        ...basicInfo,
-                        sessionsPerWeek: parseInt(e.target.value) || 2,
-                      })
-                    }
+                    onChange={(e) => setBasicInfo({ ...basicInfo, sessionsPerWeek: parseInt(e.target.value) || 2 })}
                     inputProps={{ min: 1, max: 7 }}
                     fullWidth
                   />
                 </FormRow>
-
                 <Autocomplete
                   multiple
                   freeSolo
-                  options={exerciseFilters?.bodyRegions || []}
+                  options={exerciseFilters?.bodyRegions || BODY_REGIONS}
                   value={basicInfo.focusAreas}
-                  onChange={(_, value) =>
-                    setBasicInfo({ ...basicInfo, focusAreas: value })
-                  }
+                  onChange={(_, value) => setBasicInfo({ ...basicInfo, focusAreas: value })}
                   renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Focus Areas (optional)"
-                      placeholder="e.g., Lower Back, Shoulder"
-                      helperText="Leave empty to let AI determine based on each patient's needs"
-                    />
-                  )}
-                  sx={{ mt: 2 }}
-                />
-
-                <Autocomplete
-                  multiple
-                  freeSolo
-                  options={[
-                    "Recent surgery",
-                    "Osteoporosis",
-                    "Heart condition",
-                    "Pregnancy",
-                    "Severe pain",
-                  ]}
-                  value={basicInfo.contraindications}
-                  onChange={(_, value) =>
-                    setBasicInfo({ ...basicInfo, contraindications: value })
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Common Contraindications (optional)"
-                      placeholder="Conditions to avoid for all patients"
-                    />
+                    <TextField {...params} label="Focus Areas (optional)" placeholder="e.g., Lower Back, Shoulder" />
                   )}
                   sx={{ mt: 2 }}
                 />
@@ -719,66 +658,35 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
         case "Processing":
           return (
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}
-            >
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}>
               <Box sx={{ textAlign: "center" }}>
                 <CircularProgress size={64} />
-                <Typography variant="h6" sx={{ mt: 2 }}>
-                  Creating Treatment Plans...
-                </Typography>
+                <Typography variant="h6" sx={{ mt: 2 }}>Creating Treatment Plans...</Typography>
                 <Typography variant="body2" color="text.secondary">
                   Processing {bulkProgress.current} of {bulkProgress.total}
                 </Typography>
               </Box>
-
-              <LinearProgress
-                variant="determinate"
-                value={(bulkProgress.current / bulkProgress.total) * 100}
-                sx={{ height: 8, borderRadius: 4 }}
-              />
-
+              <LinearProgress variant="determinate" value={(bulkProgress.current / bulkProgress.total) * 100} sx={{ height: 8, borderRadius: 4 }} />
               {bulkProgress.completed.length > 0 && (
                 <Box>
-                  <Typography
-                    variant="subtitle2"
-                    color="success.main"
-                    gutterBottom
-                  >
+                  <Typography variant="subtitle2" color="success.main" gutterBottom>
                     Completed ({bulkProgress.completed.length}):
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {bulkProgress.completed.map((name) => (
-                      <Chip
-                        key={name}
-                        label={name}
-                        size="small"
-                        color="success"
-                        variant="outlined"
-                      />
+                      <Chip key={name} label={name} size="small" color="success" variant="outlined" />
                     ))}
                   </Box>
                 </Box>
               )}
-
               {bulkProgress.failed.length > 0 && (
                 <Box>
-                  <Typography
-                    variant="subtitle2"
-                    color="error.main"
-                    gutterBottom
-                  >
+                  <Typography variant="subtitle2" color="error.main" gutterBottom>
                     Failed ({bulkProgress.failed.length}):
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {bulkProgress.failed.map((name) => (
-                      <Chip
-                        key={name}
-                        label={name}
-                        size="small"
-                        color="error"
-                        variant="outlined"
-                      />
+                      <Chip key={name} label={name} size="small" color="error" variant="outlined" />
                     ))}
                   </Box>
                 </Box>
@@ -788,57 +696,17 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
         case "Complete":
           return (
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}
-            >
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}>
               <Box sx={{ textAlign: "center" }}>
-                <Avatar
-                  sx={{
-                    width: 64,
-                    height: 64,
-                    bgcolor: "success.main",
-                    mx: "auto",
-                    mb: 2,
-                  }}
-                >
+                <Avatar sx={{ width: 64, height: 64, bgcolor: "success.main", mx: "auto", mb: 2 }}>
                   <CheckCircle sx={{ fontSize: 40 }} />
                 </Avatar>
-                <Typography variant="h5" fontWeight={600}>
-                  Bulk Creation Complete!
-                </Typography>
-                <Typography
-                  variant="body1"
-                  color="text.secondary"
-                  sx={{ mt: 1 }}
-                >
-                  {bulkProgress.completed.length} plan
-                  {bulkProgress.completed.length !== 1 ? "s" : ""} created
-                  successfully
-                  {bulkProgress.failed.length > 0 &&
-                    `, ${bulkProgress.failed.length} failed`}
+                <Typography variant="h5" fontWeight={600}>Bulk Creation Complete!</Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                  {bulkProgress.completed.length} plan{bulkProgress.completed.length !== 1 ? "s" : ""} created successfully
+                  {bulkProgress.failed.length > 0 && `, ${bulkProgress.failed.length} failed`}
                 </Typography>
               </Box>
-
-              {bulkProgress.completed.length > 0 && (
-                <Callout variant="success">
-                  <Typography variant="body2">
-                    <strong>Created plans for:</strong>{" "}
-                    {bulkProgress.completed.join(", ")}
-                  </Typography>
-                </Callout>
-              )}
-
-              {bulkProgress.failed.length > 0 && (
-                <Callout variant="error">
-                  <Typography variant="body2">
-                    <strong>Failed for:</strong>{" "}
-                    {bulkProgress.failed.join(", ")}
-                  </Typography>
-                  <Typography variant="caption">
-                    You can try creating plans for these patients individually.
-                  </Typography>
-                </Callout>
-              )}
             </Box>
           );
 
@@ -847,449 +715,462 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       }
     }
 
-    // Mode selection (shown before steps)
-    if (creationMode === null && !isBulkMode) {
-      return (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            How would you like to create this treatment plan?
-          </Typography>
-
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-              gap: 2,
-            }}
-          >
-            <Box
-              onClick={() => handleModeSelect("ai")}
-              sx={{
-                p: 3,
-                border: "2px solid",
-                borderColor: "primary.main",
-                borderRadius: auraTokens.borderRadius.lg,
-                cursor: "pointer",
-                transition: "all 0.2s",
-                "&:hover": {
-                  bgcolor: "action.hover",
-                  transform: "translateY(-2px)",
-                },
-              }}
-            >
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
-              >
-                <Avatar sx={{ bgcolor: "primary.main" }}>
-                  <AIIcon />
-                </Avatar>
-                <Typography variant="h6">AI-Assisted</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Let AI analyze the patient&apos;s evaluation, medical history,
-                and PROM scores to generate a personalized treatment plan with
-                recommended exercises and phases.
-              </Typography>
-              <Chip
-                label="Recommended"
-                color="primary"
-                size="small"
-                sx={{ mt: 2 }}
-              />
-            </Box>
-
-            <Box
-              onClick={() => handleModeSelect("manual")}
-              sx={{
-                p: 3,
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: auraTokens.borderRadius.lg,
-                cursor: "pointer",
-                transition: "all 0.2s",
-                "&:hover": {
-                  bgcolor: "action.hover",
-                  transform: "translateY(-2px)",
-                },
-              }}
-            >
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
-              >
-                <Avatar sx={{ bgcolor: "grey.600" }}>
-                  <ManualIcon />
-                </Avatar>
-                <Typography variant="h6">Manual Setup</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Create a treatment plan manually by defining phases, selecting
-                exercises from the library, and setting goals yourself.
-              </Typography>
-            </Box>
-          </Box>
-
-          {evaluationId && evaluationData && (
-            <Callout variant="info">
-              <Typography variant="body2">
-                <strong>Evaluation detected:</strong> This plan will be linked
-                to the patient&apos;s recent evaluation, allowing AI to use
-                symptoms, pain maps, and questionnaire responses for better
-                recommendations.
-              </Typography>
-            </Callout>
-          )}
-        </Box>
-      );
-    }
-
+    // Single plan mode
     switch (currentStepName) {
-      case "Patient":
-        return (
-          <FormSection title="Select Patient">
-            <Autocomplete
-              options={patients}
-              value={selectedPatient}
-              onChange={(_, value) => setSelectedPatient(value)}
-              getOptionLabel={(option) =>
-                `${option.firstName} ${option.lastName}`
-              }
-              renderInput={(params) => (
-                <TextField {...params} label="Patient" required fullWidth />
-              )}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-            />
-          </FormSection>
-        );
-
-      case "AI Generation":
+      case "Patient & Condition":
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <FormSection title="AI Generation Settings">
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Configure options for AI-generated treatment plan. The AI will
-                analyze the patient&apos;s data and create a personalized plan.
+            <FormSection title="Select Patient">
+              <Autocomplete
+                options={patients}
+                value={selectedPatient}
+                onChange={(_, value) => setSelectedPatient(value)}
+                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
+                renderInput={(params) => <TextField {...params} label="Patient" required fullWidth />}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+              />
+            </FormSection>
+
+            <FormSection title="Condition & Body Region">
+              <TextField
+                label="Diagnosis / Chief Complaint"
+                value={basicInfo.diagnosis}
+                onChange={(e) => setBasicInfo({ ...basicInfo, diagnosis: e.target.value })}
+                fullWidth
+                multiline
+                rows={2}
+                placeholder="e.g., Chronic lower back pain, Post-surgical knee rehabilitation"
+              />
+
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                Select Body Region (applies template)
               </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {BODY_REGIONS.map((region) => (
+                  <Chip
+                    key={region}
+                    label={region}
+                    onClick={() => {
+                      setBasicInfo(prev => ({ ...prev, bodyRegion: region }));
+                    }}
+                    color={basicInfo.bodyRegion === region ? "primary" : "default"}
+                    variant={basicInfo.bodyRegion === region ? "filled" : "outlined"}
+                    sx={{ cursor: "pointer" }}
+                  />
+                ))}
+              </Box>
+
+              {evaluationData && (
+                <Callout variant="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Evaluation linked:</strong> {evaluationData.evaluation?.conditionType || "Patient evaluation data will be used for AI suggestions."}
+                  </Typography>
+                </Callout>
+              )}
+            </FormSection>
+          </Box>
+        );
+
+      case "Plan Details":
+        return (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <FormSection title="Plan Details">
+              <TextField
+                label="Plan Title"
+                value={basicInfo.title}
+                onChange={(e) => setBasicInfo({ ...basicInfo, title: e.target.value })}
+                required
+                fullWidth
+                placeholder="e.g., Lower Back Rehabilitation Program"
+              />
+
+              <TextField
+                label="Diagnosis / Chief Complaint"
+                value={basicInfo.diagnosis}
+                onChange={(e) => setBasicInfo({ ...basicInfo, diagnosis: e.target.value })}
+                fullWidth
+                multiline
+                rows={2}
+                sx={{ mt: 2 }}
+              />
+
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Body Region</Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {BODY_REGIONS.map((region) => (
+                  <Chip
+                    key={region}
+                    label={region}
+                    onClick={() => setBasicInfo(prev => ({ ...prev, bodyRegion: region }))}
+                    color={basicInfo.bodyRegion === region ? "primary" : "default"}
+                    variant={basicInfo.bodyRegion === region ? "filled" : "outlined"}
+                    sx={{ cursor: "pointer" }}
+                  />
+                ))}
+              </Box>
 
               <FormRow>
+                <TextField
+                  label="Start Date"
+                  type="date"
+                  value={basicInfo.startDate}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, startDate: e.target.value })}
+                  required
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
                 <TextField
                   label="Duration (weeks)"
                   type="number"
                   value={basicInfo.durationWeeks}
-                  onChange={(e) =>
-                    setBasicInfo({
-                      ...basicInfo,
-                      durationWeeks: parseInt(e.target.value) || 8,
-                    })
-                  }
-                  inputProps={{ min: 1, max: 52 }}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, durationWeeks: parseInt(e.target.value) || 8 })}
+                  required
                   fullWidth
+                  inputProps={{ min: 1, max: 52 }}
                 />
                 <TextField
-                  label="Sessions per week"
+                  label="Sessions/week"
                   type="number"
                   value={basicInfo.sessionsPerWeek}
-                  onChange={(e) =>
-                    setBasicInfo({
-                      ...basicInfo,
-                      sessionsPerWeek: parseInt(e.target.value) || 2,
-                    })
-                  }
-                  inputProps={{ min: 1, max: 7 }}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, sessionsPerWeek: parseInt(e.target.value) || 2 })}
                   fullWidth
+                  inputProps={{ min: 1, max: 7 }}
                 />
               </FormRow>
-
-              <Autocomplete
-                multiple
-                freeSolo
-                options={exerciseFilters?.bodyRegions || []}
-                value={basicInfo.focusAreas}
-                onChange={(_, value) =>
-                  setBasicInfo({ ...basicInfo, focusAreas: value })
-                }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Focus Areas (optional)"
-                    placeholder="e.g., Lower Back, Shoulder"
-                    helperText="Leave empty to let AI determine based on evaluation"
-                  />
-                )}
-                sx={{ mt: 2 }}
-              />
-
-              <Autocomplete
-                multiple
-                freeSolo
-                options={[
-                  "Recent surgery",
-                  "Osteoporosis",
-                  "Heart condition",
-                  "Pregnancy",
-                  "Severe pain",
-                ]}
-                value={basicInfo.contraindications}
-                onChange={(_, value) =>
-                  setBasicInfo({ ...basicInfo, contraindications: value })
-                }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Contraindications (optional)"
-                    placeholder="Conditions to avoid"
-                  />
-                )}
-                sx={{ mt: 2 }}
-              />
             </FormSection>
 
-            {isGenerating && (
-              <Box sx={{ textAlign: "center", py: 4 }}>
-                <CircularProgress size={48} />
-                <Typography variant="h6" sx={{ mt: 2 }}>
-                  Generating Treatment Plan...
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Analyzing patient data and creating personalized
-                  recommendations
-                </Typography>
-              </Box>
-            )}
+            <FormSection title="Link Device (Optional)">
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Link to an implanted device to track outcomes for research partners.
+              </Typography>
+              <DeviceSelector value={selectedDevice} onChange={setSelectedDevice} showRecent={true} />
+            </FormSection>
           </Box>
         );
 
-      case "Basic Info":
-        return (
-          <FormSection title="Treatment Plan Details">
-            <TextField
-              label="Title"
-              value={basicInfo.title}
-              onChange={(e) =>
-                setBasicInfo({ ...basicInfo, title: e.target.value })
-              }
-              required
-              fullWidth
-              placeholder="e.g., Lower Back Rehabilitation Program"
-            />
-
-            <TextField
-              label="Diagnosis"
-              value={basicInfo.diagnosis}
-              onChange={(e) =>
-                setBasicInfo({ ...basicInfo, diagnosis: e.target.value })
-              }
-              fullWidth
-              multiline
-              rows={2}
-              sx={{ mt: 2 }}
-            />
-
-            <FormRow>
-              <TextField
-                label="Start Date"
-                type="date"
-                value={basicInfo.startDate}
-                onChange={(e) =>
-                  setBasicInfo({ ...basicInfo, startDate: e.target.value })
-                }
-                required
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                label="Duration (weeks)"
-                type="number"
-                value={basicInfo.durationWeeks}
-                onChange={(e) =>
-                  setBasicInfo({
-                    ...basicInfo,
-                    durationWeeks: parseInt(e.target.value) || 8,
-                  })
-                }
-                required
-                fullWidth
-                inputProps={{ min: 1, max: 52 }}
-              />
-              <TextField
-                label="Sessions/week"
-                type="number"
-                value={basicInfo.sessionsPerWeek}
-                onChange={(e) =>
-                  setBasicInfo({
-                    ...basicInfo,
-                    sessionsPerWeek: parseInt(e.target.value) || 2,
-                  })
-                }
-                fullWidth
-                inputProps={{ min: 1, max: 7 }}
-              />
-            </FormRow>
-
-            {/* Optional: Link to implanted device for outcome tracking */}
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Link to Medical Device (Optional)
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                If this treatment plan is related to an implanted device, select
-                it to track outcomes for research partners.
-              </Typography>
-              <DeviceSelector
-                value={selectedDevice}
-                onChange={setSelectedDevice}
-                showRecent={true}
-              />
-            </Box>
-          </FormSection>
-        );
-
-      case "Phases & Exercises":
-      case "Review & Customize":
+      case "Exercises":
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {generatedPlan && (
-              <Callout variant="success">
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <AIIcon />
-                  <Typography variant="body2">
-                    <strong>AI Generated:</strong> {generatedPlan.summary}
-                    {generatedPlan.confidence && (
-                      <Chip
-                        label={`${Math.round(generatedPlan.confidence * 100)}% confidence`}
-                        size="small"
-                        sx={{ ml: 1 }}
-                      />
-                    )}
-                  </Typography>
-                </Box>
+            {/* AI Suggest Button */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Typography variant="h6">Treatment Phases</Typography>
+              <Stack direction="row" spacing={1}>
+                <AuraButton
+                  variant="outlined"
+                  startIcon={isGenerating ? <CircularProgress size={16} /> : <AIIcon />}
+                  onClick={() => handleAISuggest()}
+                  disabled={isGenerating}
+                  size="small"
+                >
+                  {isGenerating ? "Generating..." : "AI Suggest Exercises"}
+                </AuraButton>
+                <AuraButton
+                  variant="outlined"
+                  startIcon={<Add />}
+                  onClick={handleAddPhase}
+                  size="small"
+                >
+                  Add Phase
+                </AuraButton>
+              </Stack>
+            </Box>
+
+            {phases.length === 0 && (
+              <Callout variant="info">
+                No phases created yet. Click "Add Phase" to create manually, or "AI Suggest Exercises" to generate a complete plan.
               </Callout>
             )}
 
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Typography variant="h6">Treatment Phases</Typography>
-              <Chip
-                icon={<Add />}
-                label="Add Phase"
-                onClick={handleAddPhase}
-                clickable
-                color="primary"
-                variant="outlined"
-              />
-            </Box>
+            {/* Phases */}
+            <Stack spacing={1}>
+              {phases.map((phase, _phaseIndex) => (
+                <Paper key={_phaseIndex} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+                  {/* Phase Header */}
+                  <Box
+                    sx={{
+                      p: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      cursor: "pointer",
+                      bgcolor: expandedPhaseIndex === _phaseIndex ? "action.selected" : "transparent",
+                      "&:hover": { bgcolor: "action.hover" },
+                    }}
+                    onClick={() => setExpandedPhaseIndex(expandedPhaseIndex === _phaseIndex ? null : _phaseIndex)}
+                  >
+                    {expandedPhaseIndex === _phaseIndex ? <ExpandLess /> : <ExpandMore />}
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ flex: 1 }}>
+                      {phase.name}
+                    </Typography>
+                    <Chip label={`${phase.durationWeeks}w`} size="small" />
+                    <Chip label={`${phase.exercises.length} exercises`} size="small" color={phase.exercises.length > 0 ? "success" : "default"} variant="outlined" />
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleRemovePhase(_phaseIndex); }} color="error">
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Box>
 
-            {phases.map((phase, phaseIndex) => (
-              <PhaseEditor
-                key={phaseIndex}
-                phase={phase}
-                phaseIndex={phaseIndex}
-                exerciseLibrary={exerciseLibrary?.data || []}
-                onUpdate={(updates) => handleUpdatePhase(phaseIndex, updates)}
-                onRemove={() => handleRemovePhase(phaseIndex)}
-                onAddExercise={(exercise) =>
-                  handleAddExerciseToPhase(phaseIndex, exercise)
-                }
-                onRemoveExercise={(exerciseIndex) =>
-                  handleRemoveExerciseFromPhase(phaseIndex, exerciseIndex)
-                }
-              />
-            ))}
+                  {/* Phase Content */}
+                  <Collapse in={expandedPhaseIndex === _phaseIndex}>
+                    <Box sx={{ p: 2, pt: 0 }}>
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                          <TextField
+                            label="Phase Name"
+                            value={phase.name}
+                            onChange={(e) => handleUpdatePhase(_phaseIndex, { name: e.target.value })}
+                            fullWidth
+                            size="small"
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 6, sm: 2 }}>
+                          <TextField
+                            label="Weeks"
+                            type="number"
+                            value={phase.durationWeeks}
+                            onChange={(e) => handleUpdatePhase(_phaseIndex, { durationWeeks: parseInt(e.target.value) || 2 })}
+                            fullWidth
+                            size="small"
+                            inputProps={{ min: 1, max: 12 }}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 6, sm: 2 }}>
+                          <TextField
+                            label="Sessions/wk"
+                            type="number"
+                            value={phase.sessionsPerWeek}
+                            onChange={(e) => handleUpdatePhase(_phaseIndex, { sessionsPerWeek: parseInt(e.target.value) || 2 })}
+                            fullWidth
+                            size="small"
+                            inputProps={{ min: 1, max: 7 }}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                          <TextField
+                            label="Description"
+                            value={phase.description || ""}
+                            onChange={(e) => handleUpdatePhase(_phaseIndex, { description: e.target.value })}
+                            fullWidth
+                            size="small"
+                          />
+                        </Grid>
+                      </Grid>
 
-            {phases.length === 0 && (
-              <Alert severity="info">
-                Click "Add Phase" to start building your treatment plan. Each
-                phase can have its own duration, goals, and exercises.
-              </Alert>
+                      <Divider sx={{ my: 2 }} />
+
+                      {/* Exercises in this phase */}
+                      <Typography variant="subtitle2" gutterBottom>
+                        Exercises ({phase.exercises.length})
+                      </Typography>
+
+                      {phase.exercises.length === 0 ? (
+                        <Alert severity="info" sx={{ py: 0.5, mb: 2 }}>
+                          No exercises yet. Browse the library below to add exercises.
+                        </Alert>
+                      ) : (
+                        <List dense sx={{ mb: 2 }}>
+                          {phase.exercises.map((exercise, exIdx) => (
+                            <ListItem
+                              key={exercise.id}
+                              sx={{
+                                bgcolor: "action.hover",
+                                borderRadius: 1,
+                                mb: 0.5,
+                                flexWrap: "wrap",
+                                gap: 1,
+                              }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 36 }}>
+                                <FitnessCenter color="primary" fontSize="small" />
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={exercise.name}
+                                secondary={`${exercise.sets} sets × ${exercise.reps} reps${exercise.holdSeconds ? ` (${exercise.holdSeconds}s hold)` : ""}`}
+                                sx={{ flex: "1 1 auto", minWidth: 150 }}
+                              />
+                              <Stack direction="row" spacing={1} alignItems="center">
+                                <TextField
+                                  label="Sets"
+                                  type="number"
+                                  value={exercise.sets}
+                                  onChange={(e) => handleUpdateExercise(_phaseIndex, exIdx, { sets: parseInt(e.target.value) || 1 })}
+                                  size="small"
+                                  sx={{ width: 70 }}
+                                  inputProps={{ min: 1, max: 10 }}
+                                />
+                                <TextField
+                                  label="Reps"
+                                  type="number"
+                                  value={exercise.reps}
+                                  onChange={(e) => handleUpdateExercise(_phaseIndex, exIdx, { reps: parseInt(e.target.value) || 1 })}
+                                  size="small"
+                                  sx={{ width: 70 }}
+                                  inputProps={{ min: 1, max: 50 }}
+                                />
+                                <IconButton size="small" onClick={() => handleRemoveExerciseFromPhase(_phaseIndex, exIdx)} color="error">
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </Stack>
+                            </ListItem>
+                          ))}
+                        </List>
+                      )}
+                    </Box>
+                  </Collapse>
+                </Paper>
+              ))}
+            </Stack>
+
+            {/* Exercise Library Browser */}
+            {phases.length > 0 && (
+              <Paper variant="outlined" sx={{ p: 2, mt: 2, borderRadius: 2 }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                  Exercise Library
+                </Typography>
+
+                {/* Filters */}
+                <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+                  <TextField
+                    placeholder="Search exercises..."
+                    value={exerciseSearch}
+                    onChange={(e) => setExerciseSearch(e.target.value)}
+                    size="small"
+                    sx={{ minWidth: 200, flex: 1 }}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+                    }}
+                  />
+                  <Autocomplete
+                    options={["all", ...(exerciseFilters?.categories || [])]}
+                    value={exerciseFilterCategory}
+                    onChange={(_, v) => setExerciseFilterCategory(v || "all")}
+                    size="small"
+                    sx={{ minWidth: 150 }}
+                    renderInput={(params) => <TextField {...params} label="Category" />}
+                  />
+                  <Autocomplete
+                    options={["all", ...(exerciseFilters?.bodyRegions || BODY_REGIONS)]}
+                    value={exerciseFilterRegion}
+                    onChange={(_, v) => setExerciseFilterRegion(v || "all")}
+                    size="small"
+                    sx={{ minWidth: 150 }}
+                    renderInput={(params) => <TextField {...params} label="Body Region" />}
+                  />
+                </Stack>
+
+                {/* Exercise List */}
+                <List dense sx={{ maxHeight: 300, overflow: "auto" }}>
+                  {filteredExercises.length === 0 ? (
+                    <ListItem>
+                      <ListItemText primary="No exercises found" secondary="Try adjusting your filters" />
+                    </ListItem>
+                  ) : (
+                    filteredExercises.slice(0, 50).map((exercise: any) => (
+                      <ListItem
+                        key={exercise.id}
+                        sx={{
+                          bgcolor: "background.paper",
+                          mb: 0.5,
+                          borderRadius: 1,
+                          border: "1px solid",
+                          borderColor: "divider",
+                        }}
+                        secondaryAction={
+                          <Autocomplete
+                            options={phases}
+                            getOptionLabel={(p) => p.name}
+                            size="small"
+                            sx={{ width: 150 }}
+                            renderInput={(params) => <TextField {...params} placeholder="Add to..." size="small" />}
+                            onChange={(_, selectedPhase) => {
+                              if (selectedPhase) {
+                                const _phaseIndex = phases.findIndex(p => p.phaseNumber === selectedPhase.phaseNumber);
+                                if (_phaseIndex !== -1) {
+                                  handleAddExerciseToPhase(_phaseIndex, exercise);
+                                }
+                              }
+                            }}
+                            value={null}
+                          />
+                        }
+                      >
+                        <ListItemIcon>
+                          <FitnessCenter fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={exercise.name}
+                          secondary={
+                            <Stack direction="row" spacing={0.5} component="span">
+                              <Chip label={exercise.category} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
+                              <Chip label={exercise.bodyRegion} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
+                              <Chip label={exercise.difficulty} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
+                            </Stack>
+                          }
+                        />
+                      </ListItem>
+                    ))
+                  )}
+                </List>
+                {filteredExercises.length > 50 && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+                    Showing 50 of {filteredExercises.length} exercises. Use filters to narrow down.
+                  </Typography>
+                )}
+              </Paper>
             )}
           </Box>
         );
 
-      case "Confirm":
+      case "Review":
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <Typography variant="h6">Review Treatment Plan</Typography>
 
-            <Box sx={{ bgcolor: "action.hover", borderRadius: 2, p: 2 }}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Patient
-              </Typography>
-              <Typography variant="body1">
-                {selectedPatient?.firstName} {selectedPatient?.lastName}
-              </Typography>
-            </Box>
+            <Paper sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">Patient</Typography>
+              <Typography variant="body1">{selectedPatient?.firstName} {selectedPatient?.lastName}</Typography>
+            </Paper>
 
-            <Box sx={{ bgcolor: "action.hover", borderRadius: 2, p: 2 }}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Plan Details
-              </Typography>
-              <Typography variant="body1">
-                {basicInfo.title || "Treatment Plan"}
-              </Typography>
+            <Paper sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">Plan Details</Typography>
+              <Typography variant="body1" fontWeight={600}>{basicInfo.title || "Treatment Plan"}</Typography>
               <Typography variant="body2" color="text.secondary">
-                {basicInfo.durationWeeks} weeks | {phases.length} phases |{" "}
-                {phases.reduce((acc, p) => acc + p.exercises.length, 0)}{" "}
-                exercises
+                {basicInfo.durationWeeks} weeks | {phases.length} phases | {totalExercises} exercises
               </Typography>
-            </Box>
+              {basicInfo.diagnosis && (
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  <strong>Diagnosis:</strong> {basicInfo.diagnosis}
+                </Typography>
+              )}
+            </Paper>
 
             {phases.map((phase) => (
-              <Box
-                key={phase.phaseNumber}
-                sx={{ bgcolor: "action.hover", borderRadius: 2, p: 2 }}
-              >
+              <Paper key={phase.phaseNumber} sx={{ p: 2, borderRadius: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Phase {phase.phaseNumber}: {phase.name}
                 </Typography>
                 <Typography variant="body2">
-                  {phase.durationWeeks} weeks | {phase.exercises.length}{" "}
-                  exercises | {phase.sessionsPerWeek} sessions/week
+                  {phase.durationWeeks} weeks | {phase.exercises.length} exercises | {phase.sessionsPerWeek} sessions/week
                 </Typography>
-                {phase.goals.length > 0 && (
-                  <Box sx={{ mt: 1 }}>
-                    {phase.goals.map((goal, i) => (
-                      <Chip
-                        key={i}
-                        label={goal}
-                        size="small"
-                        sx={{ mr: 0.5, mb: 0.5 }}
-                      />
+                {phase.exercises.length > 0 && (
+                  <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {phase.exercises.slice(0, 5).map((ex, i) => (
+                      <Chip key={i} label={ex.name} size="small" variant="outlined" />
                     ))}
+                    {phase.exercises.length > 5 && (
+                      <Chip label={`+${phase.exercises.length - 5} more`} size="small" />
+                    )}
                   </Box>
                 )}
-              </Box>
+              </Paper>
             ))}
 
             {selectedDevice && (
-              <Box
-                sx={{
-                  bgcolor: "primary.50",
-                  borderRadius: 2,
-                  p: 2,
-                  border: "1px solid",
-                  borderColor: "primary.200",
-                }}
-              >
-                <Typography variant="subtitle2" color="text.secondary">
-                  Linked Device (for outcome tracking)
-                </Typography>
+              <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "primary.light" }}>
+                <Typography variant="subtitle2" color="text.secondary">Linked Device</Typography>
                 <Typography variant="body1">{selectedDevice.name}</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {selectedDevice.partnerName} | {selectedDevice.deviceCode}
                 </Typography>
-              </Box>
-            )}
-
-            {generatedPlan?.rationale && (
-              <Callout variant="info">
-                <Typography variant="body2">
-                  <strong>AI Rationale:</strong> {generatedPlan.rationale}
-                </Typography>
-              </Callout>
+              </Paper>
             )}
           </Box>
         );
@@ -1299,334 +1180,31 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     }
   };
 
-  // Determine if we're on the final step for bulk mode
   const isBulkComplete = isBulkMode && steps[activeStep] === "Complete";
   const isBulkProcessingStep = isBulkMode && steps[activeStep] === "Processing";
-
-  // For bulk mode processing/complete steps, use special handling
-  const showAsComplete = isBulkComplete;
 
   return (
     <StepperDialog
       open={open}
       onClose={handleClose}
-      title={
-        isBulkMode
-          ? `Create ${bulkPatients.length} Treatment Plans`
-          : "Create Treatment Plan"
-      }
-      steps={
-        isBulkMode ? steps : creationMode === null ? ["Select Mode"] : steps
-      }
-      activeStep={
-        isBulkMode
-          ? showAsComplete
-            ? steps.length - 1
-            : activeStep
-          : creationMode === null
-            ? 0
-            : activeStep
-      }
-      onNext={
-        isBulkMode ? handleNext : creationMode === null ? () => {} : handleNext
-      }
-      onBack={
-        isBulkMode ? handleBack : creationMode === null ? () => {} : handleBack
-      }
+      title={isBulkMode ? `Create ${bulkPatients.length} Treatment Plans` : "Create Treatment Plan"}
+      steps={steps}
+      activeStep={activeStep}
+      onNext={handleNext}
+      onBack={handleBack}
       onComplete={isBulkMode ? handleClose : handleCreatePlan}
-      isStepValid={
-        isBulkMode
-          ? showAsComplete || isStepValid
-          : creationMode === null
-            ? false
-            : isStepValid
-      }
-      loading={createMutation.isPending || isGenerating || isBulkProcessingStep}
-      maxWidth="md"
+      isStepValid={isBulkComplete || isStepValid}
+      loading={createMutation.isPending || isBulkProcessingStep}
+      maxWidth="lg"
       completeLabel={isBulkComplete ? "Done" : "Create Plan"}
       nextLabel={
-        isBulkMode && steps[activeStep] === "AI Generation Settings"
+        isBulkMode && steps[activeStep] === "Settings"
           ? "Generate Plans"
-          : steps[activeStep] === "AI Generation"
-            ? "Generate"
-            : "Next"
+          : "Next"
       }
     >
       {renderStepContent()}
     </StepperDialog>
-  );
-};
-
-// Phase Editor Component
-interface PhaseEditorProps {
-  phase: Phase;
-  phaseIndex: number;
-  exerciseLibrary: any[];
-  onUpdate: (updates: Partial<Phase>) => void;
-  onRemove: () => void;
-  onAddExercise: (exercise: Exercise) => void;
-  onRemoveExercise: (exerciseIndex: number) => void;
-}
-
-const PhaseEditor: React.FC<PhaseEditorProps> = ({
-  phase,
-  phaseIndex,
-  exerciseLibrary,
-  onUpdate,
-  onRemove,
-  onAddExercise,
-  onRemoveExercise,
-}) => {
-  const [showExerciseSelector, setShowExerciseSelector] = useState(false);
-  const [newGoal, setNewGoal] = useState("");
-
-  const handleAddGoal = () => {
-    if (newGoal.trim()) {
-      onUpdate({ goals: [...phase.goals, newGoal.trim()] });
-      setNewGoal("");
-    }
-  };
-
-  const handleRemoveGoal = (index: number) => {
-    onUpdate({ goals: phase.goals.filter((_, i) => i !== index) });
-  };
-
-  const handleSelectExercise = (libraryExercise: any) => {
-    const exercise: Exercise = {
-      id: `ex-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: libraryExercise.name,
-      description: libraryExercise.description,
-      instructions: libraryExercise.instructions,
-      sets: libraryExercise.defaultSets || 3,
-      reps: libraryExercise.defaultReps || 10,
-      holdSeconds: libraryExercise.defaultHoldSeconds,
-      frequency: libraryExercise.defaultFrequency || "Daily",
-      category: libraryExercise.category,
-      bodyRegion: libraryExercise.bodyRegion,
-      difficulty: libraryExercise.difficulty,
-    };
-    onAddExercise(exercise);
-    setShowExerciseSelector(false);
-  };
-
-  return (
-    <Accordion defaultExpanded={phaseIndex === 0}>
-      <AccordionSummary expandIcon={<ExpandMore />}>
-        <Box
-          sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}
-        >
-          <Typography variant="subtitle1" fontWeight={600}>
-            Phase {phase.phaseNumber}: {phase.name}
-          </Typography>
-          <Chip label={`${phase.durationWeeks}w`} size="small" />
-          <Chip
-            label={`${phase.exercises.length} exercises`}
-            size="small"
-            variant="outlined"
-          />
-          <Box sx={{ flexGrow: 1 }} />
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-            color="error"
-          >
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
-      </AccordionSummary>
-      <AccordionDetails>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
-              label="Phase Name"
-              value={phase.name}
-              onChange={(e) => onUpdate({ name: e.target.value })}
-              fullWidth
-              size="small"
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <TextField
-              label="Duration (weeks)"
-              type="number"
-              value={phase.durationWeeks}
-              onChange={(e) =>
-                onUpdate({ durationWeeks: parseInt(e.target.value) || 2 })
-              }
-              fullWidth
-              size="small"
-              inputProps={{ min: 1, max: 12 }}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <TextField
-              label="Sessions/week"
-              type="number"
-              value={phase.sessionsPerWeek}
-              onChange={(e) =>
-                onUpdate({ sessionsPerWeek: parseInt(e.target.value) || 2 })
-              }
-              fullWidth
-              size="small"
-              inputProps={{ min: 1, max: 7 }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <TextField
-              label="Description"
-              value={phase.description || ""}
-              onChange={(e) => onUpdate({ description: e.target.value })}
-              fullWidth
-              size="small"
-              multiline
-              rows={2}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Goals */}
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Goals
-          </Typography>
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}>
-            {phase.goals.map((goal, i) => (
-              <Chip
-                key={i}
-                label={goal}
-                size="small"
-                onDelete={() => handleRemoveGoal(i)}
-              />
-            ))}
-          </Box>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <TextField
-              size="small"
-              placeholder="Add a goal..."
-              value={newGoal}
-              onChange={(e) => setNewGoal(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleAddGoal()}
-              sx={{ flexGrow: 1 }}
-            />
-            <IconButton onClick={handleAddGoal} disabled={!newGoal.trim()}>
-              <Add />
-            </IconButton>
-          </Box>
-        </Box>
-
-        {/* Exercises */}
-        <Box sx={{ mt: 2 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 1,
-            }}
-          >
-            <Typography variant="subtitle2">Exercises</Typography>
-            <Chip
-              icon={<Add />}
-              label="Add Exercise"
-              onClick={() => setShowExerciseSelector(true)}
-              clickable
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-          </Box>
-
-          {phase.exercises.length === 0 ? (
-            <Alert severity="info" sx={{ py: 0.5 }}>
-              No exercises added yet
-            </Alert>
-          ) : (
-            <List dense>
-              {phase.exercises.map((exercise, exIdx) => (
-                <ListItem
-                  key={exercise.id}
-                  sx={{ bgcolor: "action.hover", borderRadius: 1, mb: 0.5 }}
-                >
-                  <ListItemIcon>
-                    <FitnessCenter color="primary" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={exercise.name}
-                    secondary={`${exercise.sets} sets × ${exercise.reps} reps${exercise.holdSeconds ? ` (${exercise.holdSeconds}s hold)` : ""} | ${exercise.frequency}`}
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      size="small"
-                      onClick={() => onRemoveExercise(exIdx)}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          )}
-
-          {/* Exercise Selector */}
-          <Collapse in={showExerciseSelector}>
-            <Box
-              sx={{
-                mt: 2,
-                p: 2,
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 2,
-              }}
-            >
-              <Typography variant="subtitle2" gutterBottom>
-                Select from Exercise Library
-              </Typography>
-              <List dense sx={{ maxHeight: 300, overflow: "auto" }}>
-                {exerciseLibrary
-                  .filter(
-                    (e) => !phase.exercises.some((pe) => pe.name === e.name),
-                  )
-                  .map((exercise) => (
-                    <ListItem
-                      key={exercise.id}
-                      disablePadding
-                      sx={{
-                        bgcolor: "background.paper",
-                        mb: 0.5,
-                        borderRadius: 1,
-                      }}
-                    >
-                      <ListItemButton
-                        onClick={() => handleSelectExercise(exercise)}
-                      >
-                        <ListItemIcon>
-                          <FitnessCenter fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={exercise.name}
-                          secondary={`${exercise.category} | ${exercise.bodyRegion} | ${exercise.difficulty}`}
-                        />
-                        <Chip label="Add" size="small" color="primary" />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-              </List>
-              <Box sx={{ mt: 1, textAlign: "right" }}>
-                <Chip
-                  label="Close"
-                  onClick={() => setShowExerciseSelector(false)}
-                  size="small"
-                />
-              </Box>
-            </Box>
-          </Collapse>
-        </Box>
-      </AccordionDetails>
-    </Accordion>
   );
 };
 
