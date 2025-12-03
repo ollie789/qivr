@@ -18,7 +18,6 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { enAU } from "date-fns/locale";
-import type { ChipProps } from "@mui/material/Chip";
 import { useSnackbar } from "notistack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -73,28 +72,40 @@ interface AvailableSlot {
   providerName: string;
 }
 
-type AppointmentTypeOption = {
+interface ServiceType {
   id: string;
-  label: string;
-  duration: number;
-  color: ChipProps["color"];
-};
+  name: string;
+  description?: string;
+  specialty?: string;
+  durationMinutes: number;
+  price: number;
+  billingCode?: string;
+  isActive: boolean;
+}
 
-const appointmentTypes: AppointmentTypeOption[] = [
+// Fallback types if no service types configured
+const defaultAppointmentTypes = [
   {
     id: "initial",
-    label: "Initial Consultation",
-    duration: 60,
-    color: "primary",
+    name: "Initial Consultation",
+    durationMinutes: 60,
+    price: 0,
+    isActive: true,
   },
-  { id: "followup", label: "Follow-up", duration: 30, color: "info" },
+  {
+    id: "followup",
+    name: "Follow-up",
+    durationMinutes: 30,
+    price: 0,
+    isActive: true,
+  },
   {
     id: "treatment",
-    label: "Treatment Session",
-    duration: 45,
-    color: "success",
+    name: "Treatment Session",
+    durationMinutes: 45,
+    price: 0,
+    isActive: true,
   },
-  { id: "assessment", label: "Assessment", duration: 90, color: "warning" },
 ];
 
 export const ScheduleAppointmentDialog: React.FC<
@@ -172,6 +183,22 @@ export const ScheduleAppointmentDialog: React.FC<
     enabled: open,
   });
 
+  // Fetch service types for appointment pricing
+  const { data: serviceTypesData = [] } = useQuery({
+    queryKey: ["service-types"],
+    queryFn: async () => {
+      const response = await api.get("/api/servicetypes");
+      return response.data as ServiceType[];
+    },
+    enabled: open,
+  });
+
+  // Use service types or fallback to defaults
+  const appointmentTypes =
+    serviceTypesData.length > 0
+      ? serviceTypesData.filter((st) => st.isActive)
+      : defaultAppointmentTypes;
+
   // Fetch available slots when provider and date are selected
   const { data: availableSlots = [], isLoading: slotsLoading } = useQuery({
     queryKey: [
@@ -192,7 +219,11 @@ export const ScheduleAppointmentDialog: React.FC<
           durationMinutes: appointmentData.duration,
         },
       );
-      return response as { start: string; end: string; isAvailable: boolean }[];
+      return response as Array<{
+        start: string;
+        end: string;
+        isAvailable: boolean;
+      }>;
     },
     enabled:
       open && !!appointmentData.providerProfileId && !!appointmentData.date,
@@ -460,17 +491,17 @@ export const ScheduleAppointmentDialog: React.FC<
               {appointmentTypes.map((type) => (
                 <Chip
                   key={type.id}
-                  label={`${type.label} (${type.duration} min)`}
+                  label={`${type.name} (${type.durationMinutes} min)${type.price > 0 ? ` - $${type.price}` : ""}`}
                   color={
                     appointmentData.appointmentType === type.id
-                      ? type.color
+                      ? "primary"
                       : "default"
                   }
                   onClick={() =>
                     setAppointmentData({
                       ...appointmentData,
                       appointmentType: type.id,
-                      duration: type.duration,
+                      duration: type.durationMinutes,
                       // Reset time slot when duration changes
                       timeSlot: null,
                     })
@@ -580,7 +611,7 @@ export const ScheduleAppointmentDialog: React.FC<
             {
               appointmentTypes.find(
                 (t) => t.id === appointmentData.appointmentType,
-              )?.label
+              )?.name
             }
           </Typography>
           <Typography variant="body2">

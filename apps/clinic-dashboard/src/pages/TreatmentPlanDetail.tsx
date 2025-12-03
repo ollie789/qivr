@@ -50,17 +50,23 @@ import {
   Schedule as ClockIcon,
   PlayArrow as ActiveIcon,
 } from "@mui/icons-material";
-import {
-  AuraButton,
-  Callout,
-  auraTokens,
-} from "@qivr/design-system";
+import { AuraButton, Callout, auraTokens } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
-import { appointmentsApi, CreateAppointmentRequest } from "../services/appointmentsApi";
+import {
+  appointmentsApi,
+  CreateAppointmentRequest,
+} from "../services/appointmentsApi";
 import { promApi, PromResponse } from "../services/promApi";
 import { useSnackbar } from "notistack";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
-import { format, addDays, addWeeks, parseISO, isBefore, isAfter } from "date-fns";
+import {
+  format,
+  addDays,
+  addWeeks,
+  parseISO,
+  isBefore,
+  isAfter,
+} from "date-fns";
 import { useAuthUser } from "../stores/authStore";
 
 interface TabPanelProps {
@@ -90,12 +96,17 @@ export default function TreatmentPlanDetail() {
   // Bulk scheduling state
   const [bulkScheduleDialogOpen, setBulkScheduleDialogOpen] = useState(false);
   const [bulkScheduleStartDate, setBulkScheduleStartDate] = useState(
-    format(new Date(), "yyyy-MM-dd")
+    format(new Date(), "yyyy-MM-dd"),
   );
-  const [selectedPhasesForScheduling, setSelectedPhasesForScheduling] = useState<Set<number>>(new Set());
+  const [selectedPhasesForScheduling, setSelectedPhasesForScheduling] =
+    useState<Set<number>>(new Set());
   const [isBulkScheduling, setIsBulkScheduling] = useState(false);
 
-  const { data: plan, isLoading, error } = useQuery({
+  const {
+    data: plan,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["treatment-plan", id],
     queryFn: () => treatmentPlansApi.get(id!),
     enabled: !!id,
@@ -119,10 +130,15 @@ export default function TreatmentPlanDetail() {
       .filter((prom: PromResponse) => {
         const promDate = prom.scheduledAt ? parseISO(prom.scheduledAt) : null;
         if (!promDate) return false;
-        return isAfter(promDate, addDays(planStart, -7)) && isBefore(promDate, addDays(planEnd, 7));
+        return (
+          isAfter(promDate, addDays(planStart, -7)) &&
+          isBefore(promDate, addDays(planEnd, 7))
+        );
       })
-      .sort((a: PromResponse, b: PromResponse) =>
-        new Date(a.scheduledAt || 0).getTime() - new Date(b.scheduledAt || 0).getTime()
+      .sort(
+        (a: PromResponse, b: PromResponse) =>
+          new Date(a.scheduledAt || 0).getTime() -
+          new Date(b.scheduledAt || 0).getTime(),
       );
   }, [promResponses?.data, plan]);
 
@@ -140,7 +156,7 @@ export default function TreatmentPlanDetail() {
   });
 
   const getStatusColor = (
-    status: string
+    status: string,
   ): "default" | "success" | "info" | "warning" | "error" => {
     const colors: Record<
       string,
@@ -163,6 +179,112 @@ export default function TreatmentPlanDetail() {
         return "primary";
       default:
         return "default";
+    }
+  };
+
+  // Calculate total sessions to schedule
+  const calculateSessionsToSchedule = () => {
+    if (!plan?.phases) return 0;
+    return plan.phases
+      .filter((_: any, idx: number) => selectedPhasesForScheduling.has(idx))
+      .reduce(
+        (sum: number, phase: any) =>
+          sum + phase.durationWeeks * phase.sessionsPerWeek,
+        0,
+      );
+  };
+
+  // Bulk schedule sessions for selected phases
+  const handleBulkScheduleSessions = async () => {
+    if (!plan?.patient?.id || selectedPhasesForScheduling.size === 0) return;
+
+    setIsBulkScheduling(true);
+    let scheduledCount = 0;
+    let failedCount = 0;
+    let currentDate = parseISO(bulkScheduleStartDate);
+
+    try {
+      // Get selected phases in order
+      const selectedPhases = plan.phases
+        .map((phase: any, idx: number) => ({ ...phase, originalIndex: idx }))
+        .filter((_: any, idx: number) => selectedPhasesForScheduling.has(idx));
+
+      for (const phase of selectedPhases) {
+        const sessionsPerWeek = phase.sessionsPerWeek || 2;
+        const durationWeeks = phase.durationWeeks || 2;
+        const totalPhaseSessions = sessionsPerWeek * durationWeeks;
+
+        // Distribute sessions evenly across weeks
+        const daysPerSession = Math.floor(7 / sessionsPerWeek);
+
+        for (let session = 0; session < totalPhaseSessions; session++) {
+          const sessionDate = addDays(currentDate, session * daysPerSession);
+
+          try {
+            const appointmentData: CreateAppointmentRequest = {
+              patientId: plan.patient.id,
+              providerId: user?.id || "",
+              scheduledStart: format(sessionDate, "yyyy-MM-dd'T'09:00:00"),
+              scheduledEnd: format(sessionDate, "yyyy-MM-dd'T'10:00:00"),
+              appointmentType: "Treatment Session",
+              reasonForVisit: `${plan.title} - ${phase.name} (Session ${session + 1})`,
+              notes: `Treatment plan session: Phase ${phase.phaseNumber} - ${phase.name}`,
+            };
+
+            await appointmentsApi.createAppointment(appointmentData);
+            scheduledCount++;
+          } catch {
+            failedCount++;
+          }
+        }
+
+        // Move to next phase start date
+        currentDate = addWeeks(currentDate, durationWeeks);
+      }
+
+      if (scheduledCount > 0) {
+        enqueueSnackbar(`Scheduled ${scheduledCount} treatment sessions!`, {
+          variant: "success",
+        });
+        queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      }
+      if (failedCount > 0) {
+        enqueueSnackbar(`Failed to schedule ${failedCount} sessions`, {
+          variant: "warning",
+        });
+      }
+    } catch {
+      enqueueSnackbar("Failed to schedule sessions", { variant: "error" });
+    } finally {
+      setIsBulkScheduling(false);
+      setBulkScheduleDialogOpen(false);
+      setSelectedPhasesForScheduling(new Set());
+    }
+  };
+
+  // Toggle phase selection for bulk scheduling
+  const togglePhaseSelection = (index: number) => {
+    setSelectedPhasesForScheduling((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  // Select all phases
+  const selectAllPhases = () => {
+    if (plan?.phases) {
+      if (selectedPhasesForScheduling.size === plan.phases.length) {
+        setSelectedPhasesForScheduling(new Set());
+      } else {
+        setSelectedPhasesForScheduling(
+          new Set(plan.phases.map((_: any, i: number) => i)),
+        );
+      }
     }
   };
 
@@ -213,11 +335,28 @@ export default function TreatmentPlanDetail() {
           </Box>
           <Typography variant="body2" color="text.secondary">
             {plan.patient?.firstName} {plan.patient?.lastName} |{" "}
-            {plan.durationWeeks} weeks |{" "}
-            Started {new Date(plan.startDate).toLocaleDateString()}
+            {plan.durationWeeks} weeks | Started{" "}
+            {new Date(plan.startDate).toLocaleDateString()}
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
+          {/* Bulk Schedule Sessions Button */}
+          {plan.phases?.length > 0 && plan.status !== "Completed" && (
+            <Tooltip title="Schedule all treatment sessions at once">
+              <AuraButton
+                variant="outlined"
+                startIcon={<BulkScheduleIcon />}
+                onClick={() => {
+                  setSelectedPhasesForScheduling(
+                    new Set(plan.phases.map((_: any, i: number) => i)),
+                  );
+                  setBulkScheduleDialogOpen(true);
+                }}
+              >
+                Schedule All Sessions
+              </AuraButton>
+            </Tooltip>
+          )}
           {plan.status === "Draft" && (
             <AuraButton
               variant="contained"
@@ -247,7 +386,9 @@ export default function TreatmentPlanDetail() {
               <Typography variant="subtitle2" color="text.secondary">
                 Overall Progress
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}
+              >
                 <Box sx={{ flex: 1 }}>
                   <LinearProgress
                     variant="determinate"
@@ -310,6 +451,100 @@ export default function TreatmentPlanDetail() {
         </Callout>
       )}
 
+      {/* PROM Timeline Section (visible when there are PROMs) */}
+      {promTimeline.length > 0 && (
+        <Paper sx={{ mt: 3, p: 2, borderRadius: auraTokens.borderRadius.lg }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+            <PromIcon color="primary" />
+            <Typography variant="h6">PROM Assessments Timeline</Typography>
+            <Chip label={`${promTimeline.length} scheduled`} size="small" />
+          </Box>
+          <Stack direction="row" spacing={2} sx={{ overflowX: "auto", pb: 1 }}>
+            {promTimeline.map((prom: PromResponse) => {
+              const isPending = prom.status === "pending";
+              const isCompleted = prom.status === "completed";
+              const isDue =
+                prom.dueDate && isBefore(parseISO(prom.dueDate), new Date());
+
+              return (
+                <Paper
+                  key={prom.id}
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    minWidth: 200,
+                    borderRadius: 2,
+                    borderColor: isCompleted
+                      ? "success.main"
+                      : isDue
+                        ? "error.main"
+                        : "divider",
+                    bgcolor: isCompleted
+                      ? "success.lighter"
+                      : isDue
+                        ? "error.lighter"
+                        : "background.paper",
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={1}
+                    sx={{ mb: 1 }}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle fontSize="small" color="success" />
+                    ) : isPending ? (
+                      <ClockIcon fontSize="small" color="action" />
+                    ) : (
+                      <ActiveIcon fontSize="small" color="primary" />
+                    )}
+                    <Typography variant="subtitle2" fontWeight={600} noWrap>
+                      {prom.templateName}
+                    </Typography>
+                  </Stack>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                  >
+                    {prom.scheduledAt
+                      ? format(parseISO(prom.scheduledAt), "MMM d, yyyy")
+                      : "Not scheduled"}
+                  </Typography>
+                  {prom.dueDate && (
+                    <Typography
+                      variant="caption"
+                      color={isDue ? "error.main" : "text.secondary"}
+                      display="block"
+                    >
+                      Due: {format(parseISO(prom.dueDate), "MMM d")}
+                    </Typography>
+                  )}
+                  {isCompleted && prom.score !== undefined && (
+                    <Chip
+                      label={`Score: ${Math.round(prom.score)}%`}
+                      size="small"
+                      color="success"
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                  <Chip
+                    label={prom.status}
+                    size="small"
+                    variant="outlined"
+                    sx={{ mt: 1 }}
+                    color={
+                      isCompleted ? "success" : isDue ? "error" : "default"
+                    }
+                  />
+                </Paper>
+              );
+            })}
+          </Stack>
+        </Paper>
+      )}
+
       {/* Tabs */}
       <Paper sx={{ mt: 3, borderRadius: auraTokens.borderRadius.lg }}>
         <Tabs
@@ -319,7 +554,11 @@ export default function TreatmentPlanDetail() {
         >
           <Tab label="Overview" icon={<Assessment />} iconPosition="start" />
           <Tab label="Phases" icon={<Timeline />} iconPosition="start" />
-          <Tab label="Exercises" icon={<FitnessCenter />} iconPosition="start" />
+          <Tab
+            label="Exercises"
+            icon={<FitnessCenter />}
+            iconPosition="start"
+          />
           <Tab label="Milestones" icon={<EmojiEvents />} iconPosition="start" />
         </Tabs>
 
@@ -332,7 +571,14 @@ export default function TreatmentPlanDetail() {
                   variant="outlined"
                   sx={{ p: 2, borderRadius: auraTokens.borderRadius.md }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 2,
+                    }}
+                  >
                     <Person color="primary" />
                     <Typography variant="h6">Patient Information</Typography>
                   </Box>
@@ -352,7 +598,14 @@ export default function TreatmentPlanDetail() {
                   variant="outlined"
                   sx={{ p: 2, borderRadius: auraTokens.borderRadius.md }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 2,
+                    }}
+                  >
                     <LocalHospital color="primary" />
                     <Typography variant="h6">Diagnosis</Typography>
                   </Box>
@@ -367,7 +620,14 @@ export default function TreatmentPlanDetail() {
                   variant="outlined"
                   sx={{ p: 2, borderRadius: auraTokens.borderRadius.md }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 2,
+                    }}
+                  >
                     <Flag color="primary" />
                     <Typography variant="h6">Goals</Typography>
                   </Box>
@@ -383,7 +643,14 @@ export default function TreatmentPlanDetail() {
                     variant="outlined"
                     sx={{ p: 2, borderRadius: auraTokens.borderRadius.md }}
                   >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 2,
+                      }}
+                    >
                       <AutoAwesome color="primary" />
                       <Typography variant="h6">AI Rationale</Typography>
                     </Box>
@@ -399,7 +666,10 @@ export default function TreatmentPlanDetail() {
             {plan.phases?.length > 0 ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {plan.phases.map((phase: any, index: number) => (
-                  <Accordion key={index} defaultExpanded={phase.status === "InProgress"}>
+                  <Accordion
+                    key={index}
+                    defaultExpanded={phase.status === "InProgress"}
+                  >
                     <AccordionSummary expandIcon={<ExpandMore />}>
                       <Box
                         sx={{
@@ -428,8 +698,9 @@ export default function TreatmentPlanDetail() {
                             {phase.name}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {phase.durationWeeks} weeks | {phase.sessionsPerWeek}{" "}
-                            sessions/week | {phase.exercises?.length || 0} exercises
+                            {phase.durationWeeks} weeks |{" "}
+                            {phase.sessionsPerWeek} sessions/week |{" "}
+                            {phase.exercises?.length || 0} exercises
                           </Typography>
                         </Box>
                         <Chip
@@ -455,7 +726,9 @@ export default function TreatmentPlanDetail() {
                           <Typography variant="subtitle2" sx={{ mb: 1 }}>
                             Goals:
                           </Typography>
-                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                          <Box
+                            sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
+                          >
                             {phase.goals.map((goal: string, i: number) => (
                               <Chip key={i} label={goal} size="small" />
                             ))}
@@ -507,7 +780,10 @@ export default function TreatmentPlanDetail() {
               <Grid container spacing={2}>
                 {plan.phases.flatMap((phase: any) =>
                   phase.exercises?.map((exercise: any, i: number) => (
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={`${phase.phaseNumber}-${i}`}>
+                    <Grid
+                      size={{ xs: 12, sm: 6, md: 4 }}
+                      key={`${phase.phaseNumber}-${i}`}
+                    >
                       <Paper
                         variant="outlined"
                         sx={{
@@ -594,7 +870,7 @@ export default function TreatmentPlanDetail() {
                         />
                       </Paper>
                     </Grid>
-                  ))
+                  )),
                 )}
               </Grid>
             ) : plan.exercises?.length > 0 ? (
@@ -707,6 +983,137 @@ export default function TreatmentPlanDetail() {
         treatmentPlanId={plan.id}
         appointmentType="treatment"
       />
+
+      {/* Bulk Schedule Sessions Dialog */}
+      <Dialog
+        open={bulkScheduleDialogOpen}
+        onClose={() => setBulkScheduleDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <BulkScheduleIcon color="primary" />
+            Schedule Treatment Sessions
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Automatically create appointments for all sessions in the selected
+            phases.
+          </Typography>
+
+          <TextField
+            label="Start Date"
+            type="date"
+            value={bulkScheduleStartDate}
+            onChange={(e) => setBulkScheduleStartDate(e.target.value)}
+            fullWidth
+            sx={{ mb: 3 }}
+            InputLabelProps={{ shrink: true }}
+          />
+
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Select Phases to Schedule
+          </Typography>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={
+                  plan?.phases &&
+                  selectedPhasesForScheduling.size === plan.phases.length
+                }
+                indeterminate={
+                  selectedPhasesForScheduling.size > 0 &&
+                  plan?.phases &&
+                  selectedPhasesForScheduling.size < plan.phases.length
+                }
+                onChange={selectAllPhases}
+              />
+            }
+            label={
+              <Typography variant="body2" fontWeight={500}>
+                Select All Phases
+              </Typography>
+            }
+          />
+
+          <List dense>
+            {plan?.phases?.map((phase: any, index: number) => {
+              const totalSessions =
+                (phase.durationWeeks || 2) * (phase.sessionsPerWeek || 2);
+              return (
+                <ListItem
+                  key={index}
+                  sx={{
+                    borderRadius: 1,
+                    mb: 0.5,
+                    bgcolor: selectedPhasesForScheduling.has(index)
+                      ? "action.selected"
+                      : "transparent",
+                  }}
+                >
+                  <Checkbox
+                    checked={selectedPhasesForScheduling.has(index)}
+                    onChange={() => togglePhaseSelection(index)}
+                  />
+                  <ListItemText
+                    primary={
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Avatar
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            fontSize: "0.8rem",
+                            bgcolor: "primary.main",
+                          }}
+                        >
+                          {phase.phaseNumber}
+                        </Avatar>
+                        {phase.name}
+                      </Box>
+                    }
+                    secondary={`${phase.durationWeeks} weeks × ${phase.sessionsPerWeek} sessions/week = ${totalSessions} sessions`}
+                  />
+                </ListItem>
+              );
+            })}
+          </List>
+
+          {selectedPhasesForScheduling.size > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Callout variant="info">
+                <Typography variant="body2">
+                  This will create{" "}
+                  <strong>{calculateSessionsToSchedule()}</strong> appointments
+                  starting from{" "}
+                  {format(parseISO(bulkScheduleStartDate), "MMMM d, yyyy")}.
+                </Typography>
+              </Callout>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <AuraButton
+            variant="outlined"
+            onClick={() => setBulkScheduleDialogOpen(false)}
+          >
+            Cancel
+          </AuraButton>
+          <AuraButton
+            variant="contained"
+            onClick={handleBulkScheduleSessions}
+            loading={isBulkScheduling}
+            disabled={selectedPhasesForScheduling.size === 0}
+            startIcon={<ScheduleIcon />}
+          >
+            Schedule {calculateSessionsToSchedule()} Sessions
+          </AuraButton>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -21,7 +21,6 @@ import {
   Stack,
   Paper,
   Tooltip,
-  CardMedia,
   Dialog,
   DialogContent,
 } from "@mui/material";
@@ -35,7 +34,6 @@ import {
   ExpandMore,
   ExpandLess,
   PlayCircleOutline as VideoIcon,
-  Image as ImageIcon,
   Assessment as EvaluationIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
@@ -374,8 +372,12 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   );
 
   // Evaluation auto-link state
-  const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | undefined>(evaluationId);
-  const [patientEvaluations, setPatientEvaluations] = useState<IntakeSubmission[]>([]);
+  const [selectedEvaluationId, setSelectedEvaluationId] = useState<
+    string | undefined
+  >(evaluationId);
+  const [patientEvaluations, setPatientEvaluations] = useState<
+    IntakeSubmission[]
+  >([]);
 
   // Video/media preview state
   const [previewVideo, setPreviewVideo] = useState<string | null>(null);
@@ -398,7 +400,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   const { data: patientEvaluationsData } = useQuery({
     queryKey: ["patient-evaluations", selectedPatient?.id],
     queryFn: async () => {
-      const result = await intakeApi.getIntakes({ patientId: selectedPatient?.id } as any);
+      const result = await intakeApi.getIntakes({
+        patientId: selectedPatient?.id,
+      } as any);
       return result.data;
     },
     enabled: !!selectedPatient?.id && !evaluationId,
@@ -406,16 +410,23 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
   // Auto-select most recent evaluation when patient is selected
   useEffect(() => {
-    if (patientEvaluationsData && patientEvaluationsData.length > 0 && !evaluationId) {
+    if (
+      patientEvaluationsData &&
+      patientEvaluationsData.length > 0 &&
+      !evaluationId
+    ) {
       // Sort by submittedAt descending and take the most recent
       const sorted = [...patientEvaluationsData].sort(
-        (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+        (a, b) =>
+          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
       );
       const mostRecent = sorted[0];
       if (mostRecent && mostRecent.id) {
         setSelectedEvaluationId(mostRecent.id);
         setPatientEvaluations(sorted);
-        enqueueSnackbar(`Auto-linked to patient's most recent evaluation`, { variant: "info" });
+        enqueueSnackbar(`Auto-linked to patient's most recent evaluation`, {
+          variant: "info",
+        });
       }
     }
   }, [patientEvaluationsData, evaluationId, enqueueSnackbar]);
@@ -590,11 +601,15 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         // Fetch patient's most recent evaluation for personalized AI generation
         let patientEvaluationId: string | undefined;
         try {
-          const evalResult = await intakeApi.getIntakes({ patientId: currentPatient.id } as any);
+          const evalResult = await intakeApi.getIntakes({
+            patientId: currentPatient.id,
+          } as any);
           if (evalResult.data && evalResult.data.length > 0) {
             // Sort by date descending and get most recent
             const sorted = [...evalResult.data].sort(
-              (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+              (a, b) =>
+                new Date(b.submittedAt).getTime() -
+                new Date(a.submittedAt).getTime(),
             );
             patientEvaluationId = sorted[0]?.id;
           }
@@ -1186,15 +1201,29 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               {/* Evaluation Auto-Link Section */}
               {selectedPatient && (
                 <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      mb: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
                     <EvaluationIcon fontSize="small" color="primary" />
                     Linked Evaluation
                   </Typography>
                   {patientEvaluations.length > 1 ? (
                     <Autocomplete
                       options={patientEvaluations}
-                      value={patientEvaluations.find(e => e.id === selectedEvaluationId) || null}
-                      onChange={(_, value) => setSelectedEvaluationId(value?.id)}
+                      value={
+                        patientEvaluations.find(
+                          (e) => e.id === selectedEvaluationId,
+                        ) || null
+                      }
+                      onChange={(_, value) =>
+                        setSelectedEvaluationId(value?.id)
+                      }
                       getOptionLabel={(option) =>
                         `${option.conditionType} - ${new Date(option.submittedAt).toLocaleDateString()}`
                       }
@@ -1212,9 +1241,14 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                             <Typography variant="body2" fontWeight={500}>
                               {option.conditionType}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(option.submittedAt).toLocaleDateString()} •
-                              Pain level: {option.painLevel}/10 •
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {new Date(
+                                option.submittedAt,
+                              ).toLocaleDateString()}{" "}
+                              • Pain level: {option.painLevel}/10 •
                               {option.severity}
                             </Typography>
                           </Box>
@@ -1223,25 +1257,32 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     />
                   ) : selectedEvaluationId && evaluationData ? (
                     <Callout variant="info">
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <CheckCircle fontSize="small" color="success" />
                         <Box>
                           <Typography variant="body2" fontWeight={500}>
-                            {evaluationData.evaluation?.conditionType || "Evaluation Linked"}
+                            {evaluationData.evaluation?.conditionType ||
+                              "Evaluation Linked"}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {evaluationData.evaluation?.submittedAt
-                              ? new Date(evaluationData.evaluation.submittedAt).toLocaleDateString()
-                              : ""} •
-                            Pain: {evaluationData.evaluation?.painLevel}/10 •
-                            AI will use this data for personalized plan generation
+                              ? new Date(
+                                  evaluationData.evaluation.submittedAt,
+                                ).toLocaleDateString()
+                              : ""}{" "}
+                            • Pain: {evaluationData.evaluation?.painLevel}/10 •
+                            AI will use this data for personalized plan
+                            generation
                           </Typography>
                         </Box>
                       </Box>
                     </Callout>
                   ) : (
                     <Alert severity="info" sx={{ py: 0.5 }}>
-                      No evaluations found for this patient. AI will generate a generic plan.
+                      No evaluations found for this patient. AI will generate a
+                      generic plan.
                     </Alert>
                   )}
                 </Box>
@@ -1678,119 +1719,143 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                       />
                     </ListItem>
                   ) : (
-                    filteredExercises.slice(0, 50).map((exercise: ExerciseWithMedia) => (
-                      <ListItem
-                        key={exercise.id}
-                        sx={{
-                          bgcolor: "background.paper",
-                          mb: 0.5,
-                          borderRadius: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                          py: 1,
-                        }}
-                        secondaryAction={
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            {/* Video preview button */}
-                            {exercise.videoUrl && (
-                              <Tooltip title="Watch video">
-                                <IconButton
-                                  size="small"
-                                  color="primary"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPreviewVideo(exercise.videoUrl!);
-                                  }}
-                                >
-                                  <VideoIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            <Autocomplete
-                              options={phases}
-                              getOptionLabel={(p) => p.name}
-                              size="small"
-                              sx={{ width: 150 }}
-                              renderInput={(params) => (
-                                <TextField
-                                  {...params}
-                                  placeholder="Add to..."
-                                  size="small"
-                                />
-                              )}
-                              onChange={(_, selectedPhase) => {
-                                if (selectedPhase) {
-                                  const _phaseIndex = phases.findIndex(
-                                    (p) =>
-                                      p.phaseNumber === selectedPhase.phaseNumber,
-                                  );
-                                  if (_phaseIndex !== -1) {
-                                    handleAddExerciseToPhase(
-                                      _phaseIndex,
-                                      exercise,
-                                    );
-                                  }
-                                }
-                              }}
-                              value={null}
-                            />
-                          </Stack>
-                        }
-                      >
-                        {/* Thumbnail or icon */}
-                        <ListItemIcon sx={{ minWidth: 56 }}>
-                          {exercise.thumbnailUrl || exercise.imageUrl ? (
-                            <Avatar
-                              variant="rounded"
-                              src={exercise.thumbnailUrl || exercise.imageUrl}
-                              sx={{ width: 40, height: 40 }}
-                            >
-                              <FitnessCenter fontSize="small" />
-                            </Avatar>
-                          ) : (
-                            <Avatar variant="rounded" sx={{ width: 40, height: 40, bgcolor: "primary.light" }}>
-                              <FitnessCenter fontSize="small" />
-                            </Avatar>
-                          )}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                              <Typography variant="body2" fontWeight={500}>
-                                {exercise.name}
-                              </Typography>
-                              {exercise.videoUrl && (
-                                <VideoIcon fontSize="inherit" color="action" sx={{ opacity: 0.5 }} />
-                              )}
-                            </Box>
-                          }
-                          secondary={
+                    filteredExercises
+                      .slice(0, 50)
+                      .map((exercise: ExerciseWithMedia) => (
+                        <ListItem
+                          key={exercise.id}
+                          sx={{
+                            bgcolor: "background.paper",
+                            mb: 0.5,
+                            borderRadius: 1,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            py: 1,
+                          }}
+                          secondaryAction={
                             <Stack
                               direction="row"
-                              spacing={0.5}
-                              component="span"
-                              sx={{ mt: 0.5 }}
+                              spacing={1}
+                              alignItems="center"
                             >
-                              <Chip
-                                label={exercise.category}
+                              {/* Video preview button */}
+                              {exercise.videoUrl && (
+                                <Tooltip title="Watch video">
+                                  <IconButton
+                                    size="small"
+                                    color="primary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPreviewVideo(exercise.videoUrl!);
+                                    }}
+                                  >
+                                    <VideoIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              <Autocomplete
+                                options={phases}
+                                getOptionLabel={(p) => p.name}
                                 size="small"
-                                sx={{ height: 18, fontSize: "0.65rem" }}
-                              />
-                              <Chip
-                                label={exercise.bodyRegion}
-                                size="small"
-                                sx={{ height: 18, fontSize: "0.65rem" }}
-                              />
-                              <Chip
-                                label={exercise.difficulty}
-                                size="small"
-                                sx={{ height: 18, fontSize: "0.65rem" }}
+                                sx={{ width: 150 }}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    placeholder="Add to..."
+                                    size="small"
+                                  />
+                                )}
+                                onChange={(_, selectedPhase) => {
+                                  if (selectedPhase) {
+                                    const _phaseIndex = phases.findIndex(
+                                      (p) =>
+                                        p.phaseNumber ===
+                                        selectedPhase.phaseNumber,
+                                    );
+                                    if (_phaseIndex !== -1) {
+                                      handleAddExerciseToPhase(
+                                        _phaseIndex,
+                                        exercise,
+                                      );
+                                    }
+                                  }
+                                }}
+                                value={null}
                               />
                             </Stack>
                           }
-                        />
-                      </ListItem>
-                    ))
+                        >
+                          {/* Thumbnail or icon */}
+                          <ListItemIcon sx={{ minWidth: 56 }}>
+                            {exercise.thumbnailUrl || exercise.imageUrl ? (
+                              <Avatar
+                                variant="rounded"
+                                src={exercise.thumbnailUrl || exercise.imageUrl}
+                                sx={{ width: 40, height: 40 }}
+                              >
+                                <FitnessCenter fontSize="small" />
+                              </Avatar>
+                            ) : (
+                              <Avatar
+                                variant="rounded"
+                                sx={{
+                                  width: 40,
+                                  height: 40,
+                                  bgcolor: "primary.light",
+                                }}
+                              >
+                                <FitnessCenter fontSize="small" />
+                              </Avatar>
+                            )}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                <Typography variant="body2" fontWeight={500}>
+                                  {exercise.name}
+                                </Typography>
+                                {exercise.videoUrl && (
+                                  <VideoIcon
+                                    fontSize="inherit"
+                                    color="action"
+                                    sx={{ opacity: 0.5 }}
+                                  />
+                                )}
+                              </Box>
+                            }
+                            secondary={
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                component="span"
+                                sx={{ mt: 0.5 }}
+                              >
+                                <Chip
+                                  label={exercise.category}
+                                  size="small"
+                                  sx={{ height: 18, fontSize: "0.65rem" }}
+                                />
+                                <Chip
+                                  label={exercise.bodyRegion}
+                                  size="small"
+                                  sx={{ height: 18, fontSize: "0.65rem" }}
+                                />
+                                <Chip
+                                  label={exercise.difficulty}
+                                  size="small"
+                                  sx={{ height: 18, fontSize: "0.65rem" }}
+                                />
+                              </Stack>
+                            }
+                          />
+                        </ListItem>
+                      ))
                   )}
                 </List>
                 {filteredExercises.length > 50 && (
