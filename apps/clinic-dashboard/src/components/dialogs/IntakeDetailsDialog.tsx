@@ -1008,7 +1008,7 @@ Date: ________________________
                 <Box sx={{ p: 3 }}>
                   <Grid container spacing={3}>
                     {/* Left Column - Chief Complaint & Pain */}
-                    <Grid size={{ xs: 12, lg: 7 }}>
+                    <Grid size={{ xs: 12, lg: 6 }}>
                       {/* Chief Complaint - Prominent */}
                       <AuraCard sx={{ mb: 3 }}>
                         <Box sx={{ p: 2 }}>
@@ -1115,22 +1115,16 @@ Date: ________________________
                             title={`Symptoms (${evaluation.symptoms.length})`}
                             sx={{ mb: 2 }}
                           >
-                            <Box sx={{ maxHeight: 100, overflow: "auto" }}>
-                              <Stack
-                                direction="row"
-                                spacing={0.5}
-                                flexWrap="wrap"
-                                useFlexGap
-                              >
-                                {evaluation.symptoms.map((symptom, idx) => (
-                                  <Chip
-                                    key={idx}
-                                    label={symptom}
-                                    size="small"
-                                  />
-                                ))}
-                              </Stack>
-                            </Box>
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              flexWrap="wrap"
+                              useFlexGap
+                            >
+                              {evaluation.symptoms.map((symptom, idx) => (
+                                <Chip key={idx} label={symptom} size="small" />
+                              ))}
+                            </Stack>
                           </InfoCard>
                         )}
 
@@ -1446,7 +1440,7 @@ Date: ________________________
                     </Grid>
 
                     {/* Right Column - Medical History & Details */}
-                    <Grid size={{ xs: 12, lg: 5 }}>
+                    <Grid size={{ xs: 12, lg: 6 }}>
                       {/* Medical History */}
                       <InfoCard title="Medical History" sx={{ mb: 2 }}>
                         <Stack spacing={1.5}>

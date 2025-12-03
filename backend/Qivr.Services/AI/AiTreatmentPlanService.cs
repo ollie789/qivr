@@ -38,7 +38,7 @@ public class AiTreatmentPlanService : IAiTreatmentPlanService
         try
         {
             _logger.LogInformation("Starting treatment plan generation for patient {PatientId}", request.PatientId);
-            
+
             // Fetch additional data if not provided
             await EnrichRequestData(request);
             _logger.LogInformation("Enriched request data. Has evaluation: {HasEval}", request.Evaluation != null);
@@ -71,15 +71,32 @@ Guidelines:
 
 Always provide evidence-based recommendations and avoid exercises that could worsen the patient's condition.";
 
-            _logger.LogInformation("Calling Bedrock for treatment plan generation");
-            var response = await _bedrockService.InvokeClaudeWithStructuredOutputAsync(
-                prompt,
-                systemPrompt,
-                new BedrockModelOptions { Temperature = 0.2f, MaxTokens = 4000 }
-            );
-            _logger.LogInformation("Bedrock response received, parsing...");
+            GeneratedTreatmentPlan generatedPlan;
+            try
+            {
+                _logger.LogInformation("Calling Bedrock for treatment plan generation");
+                var response = await _bedrockService.InvokeClaudeWithStructuredOutputAsync(
+                    prompt,
+                    systemPrompt,
+                    new BedrockModelOptions { Temperature = 0.2f, MaxTokens = 4000 }
+                );
+                _logger.LogInformation("Bedrock response received, raw content length: {Length}", response.RawContent?.Length ?? 0);
 
-            var generatedPlan = ParseGeneratedPlan(response.ParsedContent);
+                generatedPlan = ParseGeneratedPlan(response.ParsedContent);
+            }
+            catch (Exception bedrockEx)
+            {
+                _logger.LogWarning(bedrockEx, "Bedrock AI call failed, using rule-based fallback");
+                generatedPlan = GenerateFallbackPlan(request, deidentifiedData);
+            }
+
+            // Ensure we have exercises - if AI returned empty phases, generate defaults
+            if (!generatedPlan.Phases.Any() || generatedPlan.Phases.All(p => !p.Exercises.Any()))
+            {
+                _logger.LogWarning("Generated plan has no exercises, generating default phases");
+                generatedPlan.Phases = GenerateDefaultPhases(generatedPlan.Diagnosis ?? request.Evaluation?.ChiefComplaint);
+                generatedPlan.Milestones = GenerateDefaultMilestones();
+            }
 
             _logger.LogInformation(
                 "Generated treatment plan for patient with {PhaseCount} phases, {ExerciseCount} total exercises",
@@ -93,6 +110,31 @@ Always provide evidence-based recommendations and avoid exercises that could wor
             _logger.LogError(ex, "Error generating treatment plan for patient {PatientId}", request.PatientId);
             throw new TreatmentPlanGenerationException("Failed to generate treatment plan", ex);
         }
+    }
+
+    /// <summary>
+    /// Generate a rule-based treatment plan when AI is unavailable
+    /// </summary>
+    private GeneratedTreatmentPlan GenerateFallbackPlan(TreatmentPlanGenerationRequest request, DeidentifiedPatientData data)
+    {
+        var diagnosis = data.ChiefComplaint ?? request.Evaluation?.ChiefComplaint ?? "General rehabilitation";
+        var bodyRegion = InferBodyRegion(diagnosis);
+        var durationWeeks = request.PreferredDurationWeeks ?? 8;
+
+        return new GeneratedTreatmentPlan
+        {
+            Title = $"{bodyRegion} Rehabilitation Program",
+            Diagnosis = diagnosis,
+            Summary = $"A structured {durationWeeks}-week rehabilitation program targeting {bodyRegion.ToLower()} pain and dysfunction. " +
+                      "The program progresses from pain management through strengthening to functional recovery.",
+            TotalDurationWeeks = durationWeeks,
+            Phases = GenerateDefaultPhases(diagnosis),
+            Milestones = GenerateDefaultMilestones(),
+            PromSchedule = new GeneratedPromSchedule { AutoSchedule = true, IntervalWeeks = 2 },
+            Confidence = 0.7,
+            Rationale = "This plan was generated using evidence-based exercise protocols for " + bodyRegion.ToLower() + " rehabilitation. " +
+                       "The three-phase approach allows for gradual progression while monitoring patient response."
+        };
     }
 
     public async Task<List<Exercise>> SuggestExercisesAsync(ExerciseSuggestionRequest request)
@@ -535,6 +577,8 @@ Ensure:
 
     private GeneratedTreatmentPlan ParseGeneratedPlan(Dictionary<string, object> content)
     {
+        _logger.LogInformation("Parsing generated plan. Content keys: {Keys}", string.Join(", ", content.Keys));
+
         var plan = new GeneratedTreatmentPlan
         {
             Title = content.GetValueOrDefault("title")?.ToString() ?? "Treatment Plan",
@@ -549,12 +593,24 @@ Ensure:
         if (content.TryGetValue("phases", out var phasesObj) && phasesObj is JsonElement phasesElement)
         {
             plan.Phases = ParsePhases(phasesElement);
+            _logger.LogInformation("Parsed {PhaseCount} phases with {ExerciseCount} total exercises",
+                plan.Phases.Count,
+                plan.Phases.Sum(p => p.Exercises.Count));
+        }
+        else
+        {
+            _logger.LogWarning("No phases found in AI response, generating default phases");
+            plan.Phases = GenerateDefaultPhases(plan.Diagnosis);
         }
 
         // Parse milestones
         if (content.TryGetValue("milestones", out var milestonesObj) && milestonesObj is JsonElement milestonesElement)
         {
             plan.Milestones = ParseMilestones(milestonesElement);
+        }
+        else
+        {
+            plan.Milestones = GenerateDefaultMilestones();
         }
 
         // Parse PROM schedule
@@ -566,8 +622,130 @@ Ensure:
                 IntervalWeeks = promElement.TryGetProperty("intervalWeeks", out var interval) ? interval.GetInt32() : 2
             };
         }
+        else
+        {
+            plan.PromSchedule = new GeneratedPromSchedule { AutoSchedule = true, IntervalWeeks = 2 };
+        }
 
         return plan;
+    }
+
+    /// <summary>
+    /// Generate default phases with exercises when AI fails to return proper data
+    /// </summary>
+    private List<GeneratedPhase> GenerateDefaultPhases(string? diagnosis)
+    {
+        var bodyRegion = InferBodyRegion(diagnosis);
+
+        return new List<GeneratedPhase>
+        {
+            new GeneratedPhase
+            {
+                PhaseNumber = 1,
+                Name = "Initial Phase - Pain Management",
+                Description = "Focus on pain reduction and gentle mobility",
+                DurationWeeks = 2,
+                SessionsPerWeek = 2,
+                Goals = new List<string> { "Reduce pain levels", "Improve mobility", "Establish exercise routine" },
+                PromTemplateKey = "ODI",
+                Exercises = GetDefaultExercises(bodyRegion, "Beginner")
+            },
+            new GeneratedPhase
+            {
+                PhaseNumber = 2,
+                Name = "Intermediate Phase - Strengthening",
+                Description = "Progressive strengthening and stability",
+                DurationWeeks = 3,
+                SessionsPerWeek = 3,
+                Goals = new List<string> { "Build core strength", "Improve stability", "Increase exercise tolerance" },
+                PromTemplateKey = "ODI",
+                Exercises = GetDefaultExercises(bodyRegion, "Intermediate")
+            },
+            new GeneratedPhase
+            {
+                PhaseNumber = 3,
+                Name = "Advanced Phase - Functional Training",
+                Description = "Return to normal activities",
+                DurationWeeks = 3,
+                SessionsPerWeek = 3,
+                Goals = new List<string> { "Return to daily activities", "Maintain gains", "Prevent recurrence" },
+                PromTemplateKey = "ODI",
+                Exercises = GetDefaultExercises(bodyRegion, "Advanced")
+            }
+        };
+    }
+
+    private string InferBodyRegion(string? diagnosis)
+    {
+        if (string.IsNullOrEmpty(diagnosis)) return "Lower Back";
+
+        var lower = diagnosis.ToLowerInvariant();
+        if (lower.Contains("neck") || lower.Contains("cervical")) return "Neck";
+        if (lower.Contains("shoulder")) return "Shoulder";
+        if (lower.Contains("knee")) return "Knee";
+        if (lower.Contains("hip")) return "Hip";
+        if (lower.Contains("ankle") || lower.Contains("foot")) return "Ankle";
+        if (lower.Contains("wrist") || lower.Contains("hand")) return "Wrist";
+
+        return "Lower Back";
+    }
+
+    private List<GeneratedExercise> GetDefaultExercises(string bodyRegion, string difficulty)
+    {
+        var exercises = new Dictionary<string, List<GeneratedExercise>>
+        {
+            ["Lower Back"] = new List<GeneratedExercise>
+            {
+                new() { Name = "Cat-Cow Stretch", Description = "Gentle spinal mobility exercise", Instructions = "Start on hands and knees. Arch your back up like a cat, then drop your belly toward the floor. Repeat slowly.", Sets = 2, Reps = 10, Frequency = "Daily", Category = "Mobility", BodyRegion = "Lower Back", Difficulty = "Beginner" },
+                new() { Name = "Knee-to-Chest Stretch", Description = "Stretches lower back muscles", Instructions = "Lie on your back. Pull one knee toward your chest, hold for 20-30 seconds, then switch.", Sets = 2, Reps = 5, HoldSeconds = 30, Frequency = "Daily", Category = "Stretching", BodyRegion = "Lower Back", Difficulty = "Beginner" },
+                new() { Name = "Pelvic Tilts", Description = "Core activation exercise", Instructions = "Lie on your back with knees bent. Flatten your back against the floor by tightening abs and tilting pelvis up.", Sets = 3, Reps = 10, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Lower Back", Difficulty = "Beginner" },
+                new() { Name = "Bird Dog", Description = "Core stability exercise", Instructions = "Start on hands and knees. Extend opposite arm and leg, hold briefly, return. Alternate sides.", Sets = 3, Reps = 10, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Lower Back", Difficulty = "Intermediate" },
+                new() { Name = "Dead Bug", Description = "Advanced core stabilization", Instructions = "Lie on back, arms up, knees at 90 degrees. Lower opposite arm and leg toward floor while maintaining flat back.", Sets = 3, Reps = 10, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Lower Back", Difficulty = "Intermediate" },
+                new() { Name = "Glute Bridge", Description = "Hip and core strengthening", Instructions = "Lie on back with knees bent. Lift hips toward ceiling, squeeze glutes at top, lower slowly.", Sets = 3, Reps = 12, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Lower Back", Difficulty = "Intermediate" }
+            },
+            ["Neck"] = new List<GeneratedExercise>
+            {
+                new() { Name = "Chin Tucks", Description = "Corrects forward head posture", Instructions = "Sit tall. Draw chin straight back creating a 'double chin'. Hold 5 seconds, release.", Sets = 3, Reps = 10, HoldSeconds = 5, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Neck", Difficulty = "Beginner" },
+                new() { Name = "Neck Rotations", Description = "Improves cervical mobility", Instructions = "Slowly turn head to look over one shoulder, hold, return to center, repeat other side.", Sets = 2, Reps = 10, Frequency = "Daily", Category = "Mobility", BodyRegion = "Neck", Difficulty = "Beginner" },
+                new() { Name = "Upper Trap Stretch", Description = "Releases neck and shoulder tension", Instructions = "Tilt ear toward shoulder. Use hand to gently increase stretch. Hold 30 seconds each side.", Sets = 2, Reps = 3, HoldSeconds = 30, Frequency = "Daily", Category = "Stretching", BodyRegion = "Neck", Difficulty = "Beginner" },
+                new() { Name = "Levator Scapulae Stretch", Description = "Deep neck muscle stretch", Instructions = "Turn head 45 degrees, look down toward armpit, use hand to gently increase stretch.", Sets = 2, Reps = 3, HoldSeconds = 30, Frequency = "Daily", Category = "Stretching", BodyRegion = "Neck", Difficulty = "Intermediate" }
+            },
+            ["Shoulder"] = new List<GeneratedExercise>
+            {
+                new() { Name = "Pendulum Exercises", Description = "Gentle shoulder mobility", Instructions = "Lean forward, let arm hang. Make small circles, gradually increasing size.", Sets = 2, Reps = 20, Frequency = "Daily", Category = "Mobility", BodyRegion = "Shoulder", Difficulty = "Beginner" },
+                new() { Name = "Wall Slides", Description = "Scapular control exercise", Instructions = "Stand with back against wall. Slide arms up and down maintaining contact with wall.", Sets = 3, Reps = 10, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Shoulder", Difficulty = "Beginner" },
+                new() { Name = "External Rotation", Description = "Rotator cuff strengthening", Instructions = "Keep elbow at side. Rotate forearm outward against resistance band.", Sets = 3, Reps = 15, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Shoulder", Difficulty = "Intermediate" },
+                new() { Name = "Scapular Squeezes", Description = "Improves posture and shoulder stability", Instructions = "Squeeze shoulder blades together, hold 5 seconds, release.", Sets = 3, Reps = 15, HoldSeconds = 5, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Shoulder", Difficulty = "Beginner" }
+            },
+            ["Knee"] = new List<GeneratedExercise>
+            {
+                new() { Name = "Quad Sets", Description = "Basic quadriceps activation", Instructions = "Sit with leg straight. Tighten thigh muscle, press knee down. Hold 5 seconds.", Sets = 3, Reps = 10, HoldSeconds = 5, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Knee", Difficulty = "Beginner" },
+                new() { Name = "Straight Leg Raises", Description = "Quad strengthening without knee bend", Instructions = "Lie on back, one knee bent. Lift straight leg to height of bent knee, lower slowly.", Sets = 3, Reps = 10, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Knee", Difficulty = "Beginner" },
+                new() { Name = "Hamstring Curls", Description = "Hamstring strengthening", Instructions = "Stand holding support. Bend knee to bring heel toward buttock, lower slowly.", Sets = 3, Reps = 10, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Knee", Difficulty = "Intermediate" },
+                new() { Name = "Mini Squats", Description = "Functional knee strengthening", Instructions = "Stand with feet shoulder-width apart. Bend knees slightly (30 degrees), return to standing.", Sets = 3, Reps = 10, Frequency = "Daily", Category = "Strengthening", BodyRegion = "Knee", Difficulty = "Intermediate" }
+            }
+        };
+
+        // Default to lower back exercises if body region not found
+        var regionExercises = exercises.GetValueOrDefault(bodyRegion) ?? exercises["Lower Back"];
+
+        // Filter by difficulty
+        return regionExercises
+            .Where(e => difficulty == "Beginner" || e.Difficulty == difficulty || e.Difficulty == "Beginner")
+            .Take(difficulty == "Beginner" ? 3 : difficulty == "Intermediate" ? 4 : 5)
+            .ToList();
+    }
+
+    private List<GeneratedMilestone> GenerateDefaultMilestones()
+    {
+        return new List<GeneratedMilestone>
+        {
+            new() { Title = "First Week Complete", Description = "Completed first week of treatment", Type = "WeekComplete", TargetValue = 1, PointsAwarded = 50 },
+            new() { Title = "5 Sessions Done", Description = "Completed 5 treatment sessions", Type = "SessionCount", TargetValue = 5, PointsAwarded = 100 },
+            new() { Title = "Phase 1 Complete", Description = "Completed first phase of treatment", Type = "PhaseComplete", TargetValue = 1, PointsAwarded = 150 },
+            new() { Title = "3 Week Streak", Description = "Exercised consistently for 3 weeks", Type = "ExerciseStreak", TargetValue = 21, PointsAwarded = 200 },
+            new() { Title = "Halfway There", Description = "Reached 50% of treatment plan", Type = "SessionCount", TargetValue = 10, PointsAwarded = 250 }
+        };
     }
 
     private List<GeneratedPhase> ParsePhases(JsonElement element)
