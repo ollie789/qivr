@@ -100,52 +100,196 @@ interface Phase {
 }
 
 // Body region templates with suggested phases
-const BODY_REGION_TEMPLATES: Record<string, { phases: Omit<Phase, "phaseNumber">[] }> = {
+const BODY_REGION_TEMPLATES: Record<
+  string,
+  { phases: Array<Omit<Phase, "phaseNumber">> }
+> = {
   "Lower Back": {
     phases: [
-      { name: "Pain Management", description: "Focus on pain reduction and gentle mobility", durationWeeks: 2, goals: ["Reduce pain levels", "Improve mobility"], exercises: [], sessionsPerWeek: 2, expanded: true },
-      { name: "Core Strengthening", description: "Progressive core strengthening", durationWeeks: 3, goals: ["Build core strength", "Improve stability"], exercises: [], sessionsPerWeek: 3 },
-      { name: "Functional Recovery", description: "Return to normal activities", durationWeeks: 3, goals: ["Return to daily activities", "Prevent recurrence"], exercises: [], sessionsPerWeek: 3 },
+      {
+        name: "Pain Management",
+        description: "Focus on pain reduction and gentle mobility",
+        durationWeeks: 2,
+        goals: ["Reduce pain levels", "Improve mobility"],
+        exercises: [],
+        sessionsPerWeek: 2,
+        expanded: true,
+      },
+      {
+        name: "Core Strengthening",
+        description: "Progressive core strengthening",
+        durationWeeks: 3,
+        goals: ["Build core strength", "Improve stability"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
+      {
+        name: "Functional Recovery",
+        description: "Return to normal activities",
+        durationWeeks: 3,
+        goals: ["Return to daily activities", "Prevent recurrence"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
     ],
   },
-  "Neck": {
+  Neck: {
     phases: [
-      { name: "Pain Relief", description: "Reduce pain and tension", durationWeeks: 2, goals: ["Reduce pain", "Decrease muscle tension"], exercises: [], sessionsPerWeek: 2, expanded: true },
-      { name: "Mobility & Strength", description: "Improve range of motion and strength", durationWeeks: 3, goals: ["Improve cervical mobility", "Strengthen neck muscles"], exercises: [], sessionsPerWeek: 3 },
-      { name: "Postural Training", description: "Long-term posture correction", durationWeeks: 3, goals: ["Correct posture", "Maintain gains"], exercises: [], sessionsPerWeek: 2 },
+      {
+        name: "Pain Relief",
+        description: "Reduce pain and tension",
+        durationWeeks: 2,
+        goals: ["Reduce pain", "Decrease muscle tension"],
+        exercises: [],
+        sessionsPerWeek: 2,
+        expanded: true,
+      },
+      {
+        name: "Mobility & Strength",
+        description: "Improve range of motion and strength",
+        durationWeeks: 3,
+        goals: ["Improve cervical mobility", "Strengthen neck muscles"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
+      {
+        name: "Postural Training",
+        description: "Long-term posture correction",
+        durationWeeks: 3,
+        goals: ["Correct posture", "Maintain gains"],
+        exercises: [],
+        sessionsPerWeek: 2,
+      },
     ],
   },
-  "Shoulder": {
+  Shoulder: {
     phases: [
-      { name: "Acute Phase", description: "Pain management and gentle mobility", durationWeeks: 2, goals: ["Reduce inflammation", "Maintain range of motion"], exercises: [], sessionsPerWeek: 2, expanded: true },
-      { name: "Strengthening", description: "Rotator cuff and scapular strengthening", durationWeeks: 4, goals: ["Strengthen rotator cuff", "Improve scapular control"], exercises: [], sessionsPerWeek: 3 },
-      { name: "Return to Activity", description: "Sport/work-specific training", durationWeeks: 2, goals: ["Return to full activity", "Prevent re-injury"], exercises: [], sessionsPerWeek: 3 },
+      {
+        name: "Acute Phase",
+        description: "Pain management and gentle mobility",
+        durationWeeks: 2,
+        goals: ["Reduce inflammation", "Maintain range of motion"],
+        exercises: [],
+        sessionsPerWeek: 2,
+        expanded: true,
+      },
+      {
+        name: "Strengthening",
+        description: "Rotator cuff and scapular strengthening",
+        durationWeeks: 4,
+        goals: ["Strengthen rotator cuff", "Improve scapular control"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
+      {
+        name: "Return to Activity",
+        description: "Sport/work-specific training",
+        durationWeeks: 2,
+        goals: ["Return to full activity", "Prevent re-injury"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
     ],
   },
-  "Knee": {
+  Knee: {
     phases: [
-      { name: "Initial Recovery", description: "Reduce swelling and pain", durationWeeks: 2, goals: ["Reduce swelling", "Restore basic mobility"], exercises: [], sessionsPerWeek: 2, expanded: true },
-      { name: "Strength Building", description: "Quadriceps and hamstring strengthening", durationWeeks: 4, goals: ["Build quad strength", "Improve balance"], exercises: [], sessionsPerWeek: 3 },
-      { name: "Functional Phase", description: "Return to normal activities", durationWeeks: 2, goals: ["Full weight bearing", "Return to activities"], exercises: [], sessionsPerWeek: 3 },
+      {
+        name: "Initial Recovery",
+        description: "Reduce swelling and pain",
+        durationWeeks: 2,
+        goals: ["Reduce swelling", "Restore basic mobility"],
+        exercises: [],
+        sessionsPerWeek: 2,
+        expanded: true,
+      },
+      {
+        name: "Strength Building",
+        description: "Quadriceps and hamstring strengthening",
+        durationWeeks: 4,
+        goals: ["Build quad strength", "Improve balance"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
+      {
+        name: "Functional Phase",
+        description: "Return to normal activities",
+        durationWeeks: 2,
+        goals: ["Full weight bearing", "Return to activities"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
     ],
   },
-  "Hip": {
+  Hip: {
     phases: [
-      { name: "Mobility Phase", description: "Restore hip range of motion", durationWeeks: 2, goals: ["Improve hip mobility", "Reduce pain"], exercises: [], sessionsPerWeek: 2, expanded: true },
-      { name: "Strengthening", description: "Hip and glute strengthening", durationWeeks: 4, goals: ["Strengthen hip muscles", "Improve stability"], exercises: [], sessionsPerWeek: 3 },
-      { name: "Functional Integration", description: "Return to full function", durationWeeks: 2, goals: ["Full functional recovery", "Prevent recurrence"], exercises: [], sessionsPerWeek: 3 },
+      {
+        name: "Mobility Phase",
+        description: "Restore hip range of motion",
+        durationWeeks: 2,
+        goals: ["Improve hip mobility", "Reduce pain"],
+        exercises: [],
+        sessionsPerWeek: 2,
+        expanded: true,
+      },
+      {
+        name: "Strengthening",
+        description: "Hip and glute strengthening",
+        durationWeeks: 4,
+        goals: ["Strengthen hip muscles", "Improve stability"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
+      {
+        name: "Functional Integration",
+        description: "Return to full function",
+        durationWeeks: 2,
+        goals: ["Full functional recovery", "Prevent recurrence"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
     ],
   },
-  "General": {
+  General: {
     phases: [
-      { name: "Phase 1", description: "Initial treatment phase", durationWeeks: 2, goals: ["Reduce symptoms", "Establish baseline"], exercises: [], sessionsPerWeek: 2, expanded: true },
-      { name: "Phase 2", description: "Progressive treatment", durationWeeks: 3, goals: ["Build strength", "Improve function"], exercises: [], sessionsPerWeek: 3 },
-      { name: "Phase 3", description: "Maintenance and discharge", durationWeeks: 3, goals: ["Maintain gains", "Independent management"], exercises: [], sessionsPerWeek: 2 },
+      {
+        name: "Phase 1",
+        description: "Initial treatment phase",
+        durationWeeks: 2,
+        goals: ["Reduce symptoms", "Establish baseline"],
+        exercises: [],
+        sessionsPerWeek: 2,
+        expanded: true,
+      },
+      {
+        name: "Phase 2",
+        description: "Progressive treatment",
+        durationWeeks: 3,
+        goals: ["Build strength", "Improve function"],
+        exercises: [],
+        sessionsPerWeek: 3,
+      },
+      {
+        name: "Phase 3",
+        description: "Maintenance and discharge",
+        durationWeeks: 3,
+        goals: ["Maintain gains", "Independent management"],
+        exercises: [],
+        sessionsPerWeek: 2,
+      },
     ],
   },
 };
 
-const BODY_REGIONS = ["Lower Back", "Neck", "Shoulder", "Knee", "Hip", "Ankle", "Wrist", "General"];
+const BODY_REGIONS = [
+  "Lower Back",
+  "Neck",
+  "Shoulder",
+  "Knee",
+  "Hip",
+  "Ankle",
+  "Wrist",
+  "General",
+];
 
 export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   open,
@@ -190,13 +334,19 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
   const [phases, setPhases] = useState<Phase[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<AvailableDevice | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<AvailableDevice | null>(
+    null,
+  );
 
   // Exercise browser state
   const [exerciseSearch, setExerciseSearch] = useState("");
-  const [exerciseFilterCategory, setExerciseFilterCategory] = useState<string>("all");
-  const [exerciseFilterRegion, setExerciseFilterRegion] = useState<string>("all");
-  const [expandedPhaseIndex, setExpandedPhaseIndex] = useState<number | null>(0);
+  const [exerciseFilterCategory, setExerciseFilterCategory] =
+    useState<string>("all");
+  const [exerciseFilterRegion, setExerciseFilterRegion] =
+    useState<string>("all");
+  const [expandedPhaseIndex, setExpandedPhaseIndex] = useState<number | null>(
+    0,
+  );
 
   // Queries
   const { data: patientsData } = useQuery({
@@ -227,14 +377,24 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   // Filter exercises based on search and filters
   const filteredExercises = useMemo(() => {
     return allExercises.filter((ex: any) => {
-      const matchesSearch = !exerciseSearch ||
+      const matchesSearch =
+        !exerciseSearch ||
         ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
         ex.description?.toLowerCase().includes(exerciseSearch.toLowerCase());
-      const matchesCategory = exerciseFilterCategory === "all" || ex.category === exerciseFilterCategory;
-      const matchesRegion = exerciseFilterRegion === "all" || ex.bodyRegion === exerciseFilterRegion;
+      const matchesCategory =
+        exerciseFilterCategory === "all" ||
+        ex.category === exerciseFilterCategory;
+      const matchesRegion =
+        exerciseFilterRegion === "all" ||
+        ex.bodyRegion === exerciseFilterRegion;
       return matchesSearch && matchesCategory && matchesRegion;
     });
-  }, [allExercises, exerciseSearch, exerciseFilterCategory, exerciseFilterRegion]);
+  }, [
+    allExercises,
+    exerciseSearch,
+    exerciseFilterCategory,
+    exerciseFilterRegion,
+  ]);
 
   // Steps
   const steps = useMemo(() => {
@@ -248,13 +408,17 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
   // Apply body region template
   const applyTemplate = useCallback((region: string) => {
-    const template = BODY_REGION_TEMPLATES[region] || BODY_REGION_TEMPLATES["General"];
-    setPhases(template.phases.map((p, idx) => ({
-      ...p,
-      phaseNumber: idx + 1,
-      expanded: idx === 0,
-    })));
-    setBasicInfo(prev => ({
+    const template =
+      BODY_REGION_TEMPLATES[region] ?? BODY_REGION_TEMPLATES["General"];
+    if (!template) return;
+    setPhases(
+      template.phases.map((p, idx) => ({
+        ...p,
+        phaseNumber: idx + 1,
+        expanded: idx === 0,
+      })),
+    );
+    setBasicInfo((prev) => ({
       ...prev,
       bodyRegion: region,
       title: prev.title || `${region} Rehabilitation Program`,
@@ -273,36 +437,43 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             description: p.description,
             durationWeeks: p.durationWeeks,
             goals: p.goals || [],
-            exercises: p.exercises?.map((e: any) => ({
-              id: e.id || `ex-${Math.random().toString(36).substr(2, 9)}`,
-              name: e.name,
-              description: e.description,
-              instructions: e.instructions,
-              sets: e.sets,
-              reps: e.reps,
-              holdSeconds: e.holdSeconds,
-              frequency: e.frequency,
-              category: e.category,
-              bodyRegion: e.bodyRegion,
-              difficulty: e.difficulty,
-            })) || [],
+            exercises:
+              p.exercises?.map((e: any) => ({
+                id: e.id || `ex-${Math.random().toString(36).substr(2, 9)}`,
+                name: e.name,
+                description: e.description,
+                instructions: e.instructions,
+                sets: e.sets,
+                reps: e.reps,
+                holdSeconds: e.holdSeconds,
+                frequency: e.frequency,
+                category: e.category,
+                bodyRegion: e.bodyRegion,
+                difficulty: e.difficulty,
+              })) || [],
             sessionsPerWeek: p.sessionsPerWeek || 2,
             expanded: idx === 0,
-          }))
+          })),
         );
       }
-      setBasicInfo(prev => ({
+      setBasicInfo((prev) => ({
         ...prev,
         title: data.title || prev.title,
         diagnosis: data.diagnosis || prev.diagnosis,
         durationWeeks: data.totalDurationWeeks || prev.durationWeeks,
       }));
       setIsGenerating(false);
-      enqueueSnackbar("AI suggestions applied! Review and customize below.", { variant: "success" });
+      enqueueSnackbar("AI suggestions applied! Review and customize below.", {
+        variant: "success",
+      });
     },
     onError: (error: any) => {
       setIsGenerating(false);
-      enqueueSnackbar(error?.message || "AI generation failed. You can still add exercises manually.", { variant: "warning" });
+      enqueueSnackbar(
+        error?.message ||
+          "AI generation failed. You can still add exercises manually.",
+        { variant: "warning" },
+      );
     },
   });
 
@@ -310,12 +481,16 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     mutationFn: treatmentPlansApi.create,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
-      enqueueSnackbar("Treatment plan created successfully!", { variant: "success" });
+      enqueueSnackbar("Treatment plan created successfully!", {
+        variant: "success",
+      });
       onSuccess?.(data.id);
       handleClose();
     },
     onError: (error: any) => {
-      enqueueSnackbar(error?.message || "Failed to create treatment plan", { variant: "error" });
+      enqueueSnackbar(error?.message || "Failed to create treatment plan", {
+        variant: "error",
+      });
     },
   });
 
@@ -324,7 +499,12 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     if (!isBulkMode) return;
 
     setIsBulkProcessing(true);
-    setBulkProgress({ current: 0, total: bulkPatients.length, completed: [], failed: [] });
+    setBulkProgress({
+      current: 0,
+      total: bulkPatients.length,
+      completed: [],
+      failed: [],
+    });
 
     const completed: string[] = [];
     const failed: string[] = [];
@@ -334,23 +514,29 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       if (!currentPatient) continue;
 
       const patientName = `${currentPatient.firstName} ${currentPatient.lastName}`;
-      setBulkProgress(prev => ({ ...prev, current: i + 1 }));
+      setBulkProgress((prev) => ({ ...prev, current: i + 1 }));
 
       try {
         const generatedPlan = await treatmentPlansApi.generate({
           patientId: currentPatient.id,
           preferredDurationWeeks: basicInfo.durationWeeks,
           sessionsPerWeek: basicInfo.sessionsPerWeek,
-          focusAreas: basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
-          contraindications: basicInfo.contraindications.length > 0 ? basicInfo.contraindications : undefined,
+          focusAreas:
+            basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
+          contraindications:
+            basicInfo.contraindications.length > 0
+              ? basicInfo.contraindications
+              : undefined,
         });
 
         await treatmentPlansApi.create({
           patientId: currentPatient.id,
           title: generatedPlan.title || `Treatment Plan for ${patientName}`,
-          diagnosis: generatedPlan.diagnosis || currentPatient.reasonForVisit || "",
+          diagnosis:
+            generatedPlan.diagnosis || currentPatient.reasonForVisit || "",
           startDate: new Date().toISOString(),
-          durationWeeks: generatedPlan.totalDurationWeeks || basicInfo.durationWeeks,
+          durationWeeks:
+            generatedPlan.totalDurationWeeks || basicInfo.durationWeeks,
           phases: generatedPlan.phases || [],
           aiGeneratedSummary: generatedPlan.summary,
           aiRationale: generatedPlan.rationale,
@@ -358,10 +544,16 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         });
 
         completed.push(patientName);
-        setBulkProgress(prev => ({ ...prev, completed: [...prev.completed, patientName] }));
+        setBulkProgress((prev) => ({
+          ...prev,
+          completed: [...prev.completed, patientName],
+        }));
       } catch {
         failed.push(patientName);
-        setBulkProgress(prev => ({ ...prev, failed: [...prev.failed, patientName] }));
+        setBulkProgress((prev) => ({
+          ...prev,
+          failed: [...prev.failed, patientName],
+        }));
       }
     }
 
@@ -369,10 +561,16 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
 
     if (completed.length > 0) {
-      enqueueSnackbar(`Created ${completed.length} treatment plan${completed.length !== 1 ? "s" : ""} successfully!`, { variant: "success" });
+      enqueueSnackbar(
+        `Created ${completed.length} treatment plan${completed.length !== 1 ? "s" : ""} successfully!`,
+        { variant: "success" },
+      );
     }
     if (failed.length > 0) {
-      enqueueSnackbar(`Failed to create ${failed.length} plan${failed.length !== 1 ? "s" : ""}`, { variant: "error" });
+      enqueueSnackbar(
+        `Failed to create ${failed.length} plan${failed.length !== 1 ? "s" : ""}`,
+        { variant: "error" },
+      );
     }
 
     setActiveStep(steps.length - 1);
@@ -413,8 +611,15 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       evaluationId,
       preferredDurationWeeks: basicInfo.durationWeeks,
       sessionsPerWeek: basicInfo.sessionsPerWeek,
-      focusAreas: basicInfo.bodyRegion ? [basicInfo.bodyRegion] : basicInfo.focusAreas.length > 0 ? basicInfo.focusAreas : undefined,
-      contraindications: basicInfo.contraindications.length > 0 ? basicInfo.contraindications : undefined,
+      focusAreas: basicInfo.bodyRegion
+        ? [basicInfo.bodyRegion]
+        : basicInfo.focusAreas.length > 0
+          ? basicInfo.focusAreas
+          : undefined,
+      contraindications:
+        basicInfo.contraindications.length > 0
+          ? basicInfo.contraindications
+          : undefined,
     });
   };
 
@@ -436,9 +641,13 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
     createMutation.mutate({
       patientId: selectedPatient.id,
-      title: basicInfo.title || `Treatment Plan for ${selectedPatient.firstName} ${selectedPatient.lastName}`,
+      title:
+        basicInfo.title ||
+        `Treatment Plan for ${selectedPatient.firstName} ${selectedPatient.lastName}`,
       diagnosis: basicInfo.diagnosis,
-      startDate: basicInfo.startDate ? new Date(basicInfo.startDate).toISOString() : new Date().toISOString(),
+      startDate: basicInfo.startDate
+        ? new Date(basicInfo.startDate).toISOString()
+        : new Date().toISOString(),
       durationWeeks: basicInfo.durationWeeks,
       phases: phases.map(({ expanded: _, ...p }) => p),
       sourceEvaluationId: evaluationId,
@@ -469,7 +678,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   };
 
   const handleUpdatePhase = (index: number, updates: Partial<Phase>) => {
-    setPhases(prev => {
+    setPhases((prev) => {
       const updated = [...prev];
       if (updated[index]) {
         updated[index] = { ...updated[index], ...updates };
@@ -492,7 +701,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       bodyRegion: exercise.bodyRegion,
       difficulty: exercise.difficulty,
     };
-    setPhases(prev => {
+    setPhases((prev) => {
       const updated = [...prev];
       if (updated[_phaseIndex]) {
         updated[_phaseIndex] = {
@@ -502,24 +711,36 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       }
       return updated;
     });
-    enqueueSnackbar(`Added "${exercise.name}" to ${phases[_phaseIndex]?.name}`, { variant: "success" });
+    enqueueSnackbar(
+      `Added "${exercise.name}" to ${phases[_phaseIndex]?.name}`,
+      { variant: "success" },
+    );
   };
 
-  const handleRemoveExerciseFromPhase = (_phaseIndex: number, exerciseIndex: number) => {
-    setPhases(prev => {
+  const handleRemoveExerciseFromPhase = (
+    _phaseIndex: number,
+    exerciseIndex: number,
+  ) => {
+    setPhases((prev) => {
       const updated = [...prev];
       if (updated[_phaseIndex]) {
         updated[_phaseIndex] = {
           ...updated[_phaseIndex],
-          exercises: updated[_phaseIndex].exercises.filter((_, i) => i !== exerciseIndex),
+          exercises: updated[_phaseIndex].exercises.filter(
+            (_, i) => i !== exerciseIndex,
+          ),
         };
       }
       return updated;
     });
   };
 
-  const handleUpdateExercise = (_phaseIndex: number, exerciseIndex: number, updates: Partial<Exercise>) => {
-    setPhases(prev => {
+  const handleUpdateExercise = (
+    _phaseIndex: number,
+    exerciseIndex: number,
+    updates: Partial<Exercise>,
+  ) => {
+    setPhases((prev) => {
       const updated = [...prev];
       if (updated[_phaseIndex]?.exercises[exerciseIndex]) {
         updated[_phaseIndex].exercises[exerciseIndex] = {
@@ -537,11 +758,16 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
     if (isBulkMode) {
       switch (currentStepName) {
-        case "Review Patients": return bulkPatients.length > 0;
-        case "Settings": return basicInfo.durationWeeks > 0 && basicInfo.sessionsPerWeek > 0;
-        case "Processing": return !isBulkProcessing;
-        case "Complete": return true;
-        default: return true;
+        case "Review Patients":
+          return bulkPatients.length > 0;
+        case "Settings":
+          return basicInfo.durationWeeks > 0 && basicInfo.sessionsPerWeek > 0;
+        case "Processing":
+          return !isBulkProcessing;
+        case "Complete":
+          return true;
+        default:
+          return true;
       }
     }
 
@@ -551,34 +777,48 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       case "Plan Details":
         return !!basicInfo.bodyRegion && !!basicInfo.title;
       case "Exercises":
-        return phases.length > 0 && phases.some(p => p.exercises.length > 0);
+        return phases.length > 0 && phases.some((p) => p.exercises.length > 0);
       case "Review":
         return true;
       default:
         return true;
     }
-  }, [activeStep, selectedPatient, basicInfo, phases, steps, isBulkMode, bulkPatients, isBulkProcessing]);
+  }, [
+    activeStep,
+    selectedPatient,
+    basicInfo,
+    phases,
+    steps,
+    isBulkMode,
+    bulkPatients,
+    isBulkProcessing,
+  ]);
 
   const handleNext = () => {
     const currentStepName = steps[activeStep];
 
     if (isBulkMode && currentStepName === "Settings") {
-      setActiveStep(prev => prev + 1);
+      setActiveStep((prev) => prev + 1);
       processBulkPlans();
       return;
     }
 
     // Apply template when moving from first step if phases are empty
-    if ((currentStepName === "Patient & Condition" || currentStepName === "Plan Details") && phases.length === 0 && basicInfo.bodyRegion) {
+    if (
+      (currentStepName === "Patient & Condition" ||
+        currentStepName === "Plan Details") &&
+      phases.length === 0 &&
+      basicInfo.bodyRegion
+    ) {
       applyTemplate(basicInfo.bodyRegion);
     }
 
-    setActiveStep(prev => prev + 1);
+    setActiveStep((prev) => prev + 1);
   };
 
   const handleBack = () => {
     if (isBulkMode && isBulkProcessing) return;
-    setActiveStep(prev => prev - 1);
+    setActiveStep((prev) => prev - 1);
   };
 
   const totalExercises = phases.reduce((acc, p) => acc + p.exercises.length, 0);
@@ -594,22 +834,37 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
           return (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <Typography variant="h6">
-                Creating Treatment Plans for {bulkPatients.length} Patient{bulkPatients.length !== 1 ? "s" : ""}
+                Creating Treatment Plans for {bulkPatients.length} Patient
+                {bulkPatients.length !== 1 ? "s" : ""}
               </Typography>
               <Callout variant="info">
-                AI will generate personalized treatment plans for each patient based on their medical history and evaluation data.
+                AI will generate personalized treatment plans for each patient
+                based on their medical history and evaluation data.
               </Callout>
               <List dense>
                 {bulkPatients.map((patient, index) => (
-                  <ListItem key={patient.id} sx={{ bgcolor: "action.hover", borderRadius: 1, mb: 0.5 }}>
+                  <ListItem
+                    key={patient.id}
+                    sx={{ bgcolor: "action.hover", borderRadius: 1, mb: 0.5 }}
+                  >
                     <ListItemIcon>
-                      <Avatar sx={{ width: 32, height: 32 }}>{patient.firstName.charAt(0)}</Avatar>
+                      <Avatar sx={{ width: 32, height: 32 }}>
+                        {patient.firstName.charAt(0)}
+                      </Avatar>
                     </ListItemIcon>
                     <ListItemText
                       primary={`${patient.firstName} ${patient.lastName}`}
-                      secondary={patient.reasonForVisit || patient.appointmentType || "Patient"}
+                      secondary={
+                        patient.reasonForVisit ||
+                        patient.appointmentType ||
+                        "Patient"
+                      }
                     />
-                    <Chip label={`#${index + 1}`} size="small" variant="outlined" />
+                    <Chip
+                      label={`#${index + 1}`}
+                      size="small"
+                      variant="outlined"
+                    />
                   </ListItem>
                 ))}
               </List>
@@ -620,15 +875,25 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
           return (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <FormSection title="Default Settings">
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Configure default settings for all plans. AI will adapt each plan to the individual patient.
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  Configure default settings for all plans. AI will adapt each
+                  plan to the individual patient.
                 </Typography>
                 <FormRow>
                   <TextField
                     label="Duration (weeks)"
                     type="number"
                     value={basicInfo.durationWeeks}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, durationWeeks: parseInt(e.target.value) || 8 })}
+                    onChange={(e) =>
+                      setBasicInfo({
+                        ...basicInfo,
+                        durationWeeks: parseInt(e.target.value) || 8,
+                      })
+                    }
                     inputProps={{ min: 1, max: 52 }}
                     fullWidth
                   />
@@ -636,7 +901,12 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     label="Sessions per week"
                     type="number"
                     value={basicInfo.sessionsPerWeek}
-                    onChange={(e) => setBasicInfo({ ...basicInfo, sessionsPerWeek: parseInt(e.target.value) || 2 })}
+                    onChange={(e) =>
+                      setBasicInfo({
+                        ...basicInfo,
+                        sessionsPerWeek: parseInt(e.target.value) || 2,
+                      })
+                    }
                     inputProps={{ min: 1, max: 7 }}
                     fullWidth
                   />
@@ -646,9 +916,15 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   freeSolo
                   options={exerciseFilters?.bodyRegions || BODY_REGIONS}
                   value={basicInfo.focusAreas}
-                  onChange={(_, value) => setBasicInfo({ ...basicInfo, focusAreas: value })}
+                  onChange={(_, value) =>
+                    setBasicInfo({ ...basicInfo, focusAreas: value })
+                  }
                   renderInput={(params) => (
-                    <TextField {...params} label="Focus Areas (optional)" placeholder="e.g., Lower Back, Shoulder" />
+                    <TextField
+                      {...params}
+                      label="Focus Areas (optional)"
+                      placeholder="e.g., Lower Back, Shoulder"
+                    />
                   )}
                   sx={{ mt: 2 }}
                 />
@@ -658,35 +934,63 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
         case "Processing":
           return (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}
+            >
               <Box sx={{ textAlign: "center" }}>
                 <CircularProgress size={64} />
-                <Typography variant="h6" sx={{ mt: 2 }}>Creating Treatment Plans...</Typography>
+                <Typography variant="h6" sx={{ mt: 2 }}>
+                  Creating Treatment Plans...
+                </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Processing {bulkProgress.current} of {bulkProgress.total}
                 </Typography>
               </Box>
-              <LinearProgress variant="determinate" value={(bulkProgress.current / bulkProgress.total) * 100} sx={{ height: 8, borderRadius: 4 }} />
+              <LinearProgress
+                variant="determinate"
+                value={(bulkProgress.current / bulkProgress.total) * 100}
+                sx={{ height: 8, borderRadius: 4 }}
+              />
               {bulkProgress.completed.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle2" color="success.main" gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    color="success.main"
+                    gutterBottom
+                  >
                     Completed ({bulkProgress.completed.length}):
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {bulkProgress.completed.map((name) => (
-                      <Chip key={name} label={name} size="small" color="success" variant="outlined" />
+                      <Chip
+                        key={name}
+                        label={name}
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                      />
                     ))}
                   </Box>
                 </Box>
               )}
               {bulkProgress.failed.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle2" color="error.main" gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    color="error.main"
+                    gutterBottom
+                  >
                     Failed ({bulkProgress.failed.length}):
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {bulkProgress.failed.map((name) => (
-                      <Chip key={name} label={name} size="small" color="error" variant="outlined" />
+                      <Chip
+                        key={name}
+                        label={name}
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                      />
                     ))}
                   </Box>
                 </Box>
@@ -696,15 +1000,34 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
         case "Complete":
           return (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 3, py: 4 }}
+            >
               <Box sx={{ textAlign: "center" }}>
-                <Avatar sx={{ width: 64, height: 64, bgcolor: "success.main", mx: "auto", mb: 2 }}>
+                <Avatar
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    bgcolor: "success.main",
+                    mx: "auto",
+                    mb: 2,
+                  }}
+                >
                   <CheckCircle sx={{ fontSize: 40 }} />
                 </Avatar>
-                <Typography variant="h5" fontWeight={600}>Bulk Creation Complete!</Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-                  {bulkProgress.completed.length} plan{bulkProgress.completed.length !== 1 ? "s" : ""} created successfully
-                  {bulkProgress.failed.length > 0 && `, ${bulkProgress.failed.length} failed`}
+                <Typography variant="h5" fontWeight={600}>
+                  Bulk Creation Complete!
+                </Typography>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  {bulkProgress.completed.length} plan
+                  {bulkProgress.completed.length !== 1 ? "s" : ""} created
+                  successfully
+                  {bulkProgress.failed.length > 0 &&
+                    `, ${bulkProgress.failed.length} failed`}
                 </Typography>
               </Box>
             </Box>
@@ -725,8 +1048,12 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 options={patients}
                 value={selectedPatient}
                 onChange={(_, value) => setSelectedPatient(value)}
-                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
-                renderInput={(params) => <TextField {...params} label="Patient" required fullWidth />}
+                getOptionLabel={(option) =>
+                  `${option.firstName} ${option.lastName}`
+                }
+                renderInput={(params) => (
+                  <TextField {...params} label="Patient" required fullWidth />
+                )}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
               />
             </FormSection>
@@ -735,7 +1062,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               <TextField
                 label="Diagnosis / Chief Complaint"
                 value={basicInfo.diagnosis}
-                onChange={(e) => setBasicInfo({ ...basicInfo, diagnosis: e.target.value })}
+                onChange={(e) =>
+                  setBasicInfo({ ...basicInfo, diagnosis: e.target.value })
+                }
                 fullWidth
                 multiline
                 rows={2}
@@ -751,21 +1080,29 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     key={region}
                     label={region}
                     onClick={() => {
-                      setBasicInfo(prev => ({ ...prev, bodyRegion: region }));
+                      setBasicInfo((prev) => ({ ...prev, bodyRegion: region }));
                     }}
-                    color={basicInfo.bodyRegion === region ? "primary" : "default"}
-                    variant={basicInfo.bodyRegion === region ? "filled" : "outlined"}
+                    color={
+                      basicInfo.bodyRegion === region ? "primary" : "default"
+                    }
+                    variant={
+                      basicInfo.bodyRegion === region ? "filled" : "outlined"
+                    }
                     sx={{ cursor: "pointer" }}
                   />
                 ))}
               </Box>
 
               {evaluationData && (
-                <Callout variant="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Evaluation linked:</strong> {evaluationData.evaluation?.conditionType || "Patient evaluation data will be used for AI suggestions."}
-                  </Typography>
-                </Callout>
+                <Box sx={{ mt: 2 }}>
+                  <Callout variant="info">
+                    <Typography variant="body2">
+                      <strong>Evaluation linked:</strong>{" "}
+                      {evaluationData.evaluation?.conditionType ||
+                        "Patient evaluation data will be used for AI suggestions."}
+                    </Typography>
+                  </Callout>
+                </Box>
               )}
             </FormSection>
           </Box>
@@ -778,7 +1115,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               <TextField
                 label="Plan Title"
                 value={basicInfo.title}
-                onChange={(e) => setBasicInfo({ ...basicInfo, title: e.target.value })}
+                onChange={(e) =>
+                  setBasicInfo({ ...basicInfo, title: e.target.value })
+                }
                 required
                 fullWidth
                 placeholder="e.g., Lower Back Rehabilitation Program"
@@ -787,22 +1126,32 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               <TextField
                 label="Diagnosis / Chief Complaint"
                 value={basicInfo.diagnosis}
-                onChange={(e) => setBasicInfo({ ...basicInfo, diagnosis: e.target.value })}
+                onChange={(e) =>
+                  setBasicInfo({ ...basicInfo, diagnosis: e.target.value })
+                }
                 fullWidth
                 multiline
                 rows={2}
                 sx={{ mt: 2 }}
               />
 
-              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Body Region</Typography>
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                Body Region
+              </Typography>
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {BODY_REGIONS.map((region) => (
                   <Chip
                     key={region}
                     label={region}
-                    onClick={() => setBasicInfo(prev => ({ ...prev, bodyRegion: region }))}
-                    color={basicInfo.bodyRegion === region ? "primary" : "default"}
-                    variant={basicInfo.bodyRegion === region ? "filled" : "outlined"}
+                    onClick={() =>
+                      setBasicInfo((prev) => ({ ...prev, bodyRegion: region }))
+                    }
+                    color={
+                      basicInfo.bodyRegion === region ? "primary" : "default"
+                    }
+                    variant={
+                      basicInfo.bodyRegion === region ? "filled" : "outlined"
+                    }
                     sx={{ cursor: "pointer" }}
                   />
                 ))}
@@ -813,7 +1162,9 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   label="Start Date"
                   type="date"
                   value={basicInfo.startDate}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, startDate: e.target.value })}
+                  onChange={(e) =>
+                    setBasicInfo({ ...basicInfo, startDate: e.target.value })
+                  }
                   required
                   fullWidth
                   InputLabelProps={{ shrink: true }}
@@ -822,7 +1173,12 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   label="Duration (weeks)"
                   type="number"
                   value={basicInfo.durationWeeks}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, durationWeeks: parseInt(e.target.value) || 8 })}
+                  onChange={(e) =>
+                    setBasicInfo({
+                      ...basicInfo,
+                      durationWeeks: parseInt(e.target.value) || 8,
+                    })
+                  }
                   required
                   fullWidth
                   inputProps={{ min: 1, max: 52 }}
@@ -831,7 +1187,12 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   label="Sessions/week"
                   type="number"
                   value={basicInfo.sessionsPerWeek}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, sessionsPerWeek: parseInt(e.target.value) || 2 })}
+                  onChange={(e) =>
+                    setBasicInfo({
+                      ...basicInfo,
+                      sessionsPerWeek: parseInt(e.target.value) || 2,
+                    })
+                  }
                   fullWidth
                   inputProps={{ min: 1, max: 7 }}
                 />
@@ -840,9 +1201,14 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
             <FormSection title="Link Device (Optional)">
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Link to an implanted device to track outcomes for research partners.
+                Link to an implanted device to track outcomes for research
+                partners.
               </Typography>
-              <DeviceSelector value={selectedDevice} onChange={setSelectedDevice} showRecent={true} />
+              <DeviceSelector
+                value={selectedDevice}
+                onChange={setSelectedDevice}
+                showRecent={true}
+              />
             </FormSection>
           </Box>
         );
@@ -851,12 +1217,20 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {/* AI Suggest Button */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <Typography variant="h6">Treatment Phases</Typography>
               <Stack direction="row" spacing={1}>
                 <AuraButton
                   variant="outlined"
-                  startIcon={isGenerating ? <CircularProgress size={16} /> : <AIIcon />}
+                  startIcon={
+                    isGenerating ? <CircularProgress size={16} /> : <AIIcon />
+                  }
                   onClick={() => handleAISuggest()}
                   disabled={isGenerating}
                   size="small"
@@ -876,14 +1250,19 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
             {phases.length === 0 && (
               <Callout variant="info">
-                No phases created yet. Click "Add Phase" to create manually, or "AI Suggest Exercises" to generate a complete plan.
+                No phases created yet. Click "Add Phase" to create manually, or
+                "AI Suggest Exercises" to generate a complete plan.
               </Callout>
             )}
 
             {/* Phases */}
             <Stack spacing={1}>
               {phases.map((phase, _phaseIndex) => (
-                <Paper key={_phaseIndex} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+                <Paper
+                  key={_phaseIndex}
+                  variant="outlined"
+                  sx={{ borderRadius: 2, overflow: "hidden" }}
+                >
                   {/* Phase Header */}
                   <Box
                     sx={{
@@ -892,18 +1271,45 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                       alignItems: "center",
                       gap: 1,
                       cursor: "pointer",
-                      bgcolor: expandedPhaseIndex === _phaseIndex ? "action.selected" : "transparent",
+                      bgcolor:
+                        expandedPhaseIndex === _phaseIndex
+                          ? "action.selected"
+                          : "transparent",
                       "&:hover": { bgcolor: "action.hover" },
                     }}
-                    onClick={() => setExpandedPhaseIndex(expandedPhaseIndex === _phaseIndex ? null : _phaseIndex)}
+                    onClick={() =>
+                      setExpandedPhaseIndex(
+                        expandedPhaseIndex === _phaseIndex ? null : _phaseIndex,
+                      )
+                    }
                   >
-                    {expandedPhaseIndex === _phaseIndex ? <ExpandLess /> : <ExpandMore />}
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ flex: 1 }}>
+                    {expandedPhaseIndex === _phaseIndex ? (
+                      <ExpandLess />
+                    ) : (
+                      <ExpandMore />
+                    )}
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={600}
+                      sx={{ flex: 1 }}
+                    >
                       {phase.name}
                     </Typography>
                     <Chip label={`${phase.durationWeeks}w`} size="small" />
-                    <Chip label={`${phase.exercises.length} exercises`} size="small" color={phase.exercises.length > 0 ? "success" : "default"} variant="outlined" />
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleRemovePhase(_phaseIndex); }} color="error">
+                    <Chip
+                      label={`${phase.exercises.length} exercises`}
+                      size="small"
+                      color={phase.exercises.length > 0 ? "success" : "default"}
+                      variant="outlined"
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemovePhase(_phaseIndex);
+                      }}
+                      color="error"
+                    >
                       <Delete fontSize="small" />
                     </IconButton>
                   </Box>
@@ -916,7 +1322,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                           <TextField
                             label="Phase Name"
                             value={phase.name}
-                            onChange={(e) => handleUpdatePhase(_phaseIndex, { name: e.target.value })}
+                            onChange={(e) =>
+                              handleUpdatePhase(_phaseIndex, {
+                                name: e.target.value,
+                              })
+                            }
                             fullWidth
                             size="small"
                           />
@@ -926,7 +1336,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                             label="Weeks"
                             type="number"
                             value={phase.durationWeeks}
-                            onChange={(e) => handleUpdatePhase(_phaseIndex, { durationWeeks: parseInt(e.target.value) || 2 })}
+                            onChange={(e) =>
+                              handleUpdatePhase(_phaseIndex, {
+                                durationWeeks: parseInt(e.target.value) || 2,
+                              })
+                            }
                             fullWidth
                             size="small"
                             inputProps={{ min: 1, max: 12 }}
@@ -937,7 +1351,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                             label="Sessions/wk"
                             type="number"
                             value={phase.sessionsPerWeek}
-                            onChange={(e) => handleUpdatePhase(_phaseIndex, { sessionsPerWeek: parseInt(e.target.value) || 2 })}
+                            onChange={(e) =>
+                              handleUpdatePhase(_phaseIndex, {
+                                sessionsPerWeek: parseInt(e.target.value) || 2,
+                              })
+                            }
                             fullWidth
                             size="small"
                             inputProps={{ min: 1, max: 7 }}
@@ -947,7 +1365,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                           <TextField
                             label="Description"
                             value={phase.description || ""}
-                            onChange={(e) => handleUpdatePhase(_phaseIndex, { description: e.target.value })}
+                            onChange={(e) =>
+                              handleUpdatePhase(_phaseIndex, {
+                                description: e.target.value,
+                              })
+                            }
                             fullWidth
                             size="small"
                           />
@@ -963,7 +1385,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
                       {phase.exercises.length === 0 ? (
                         <Alert severity="info" sx={{ py: 0.5, mb: 2 }}>
-                          No exercises yet. Browse the library below to add exercises.
+                          No exercises yet. Browse the library below to add
+                          exercises.
                         </Alert>
                       ) : (
                         <List dense sx={{ mb: 2 }}>
@@ -979,19 +1402,30 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                               }}
                             >
                               <ListItemIcon sx={{ minWidth: 36 }}>
-                                <FitnessCenter color="primary" fontSize="small" />
+                                <FitnessCenter
+                                  color="primary"
+                                  fontSize="small"
+                                />
                               </ListItemIcon>
                               <ListItemText
                                 primary={exercise.name}
                                 secondary={`${exercise.sets} sets × ${exercise.reps} reps${exercise.holdSeconds ? ` (${exercise.holdSeconds}s hold)` : ""}`}
                                 sx={{ flex: "1 1 auto", minWidth: 150 }}
                               />
-                              <Stack direction="row" spacing={1} alignItems="center">
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                              >
                                 <TextField
                                   label="Sets"
                                   type="number"
                                   value={exercise.sets}
-                                  onChange={(e) => handleUpdateExercise(_phaseIndex, exIdx, { sets: parseInt(e.target.value) || 1 })}
+                                  onChange={(e) =>
+                                    handleUpdateExercise(_phaseIndex, exIdx, {
+                                      sets: parseInt(e.target.value) || 1,
+                                    })
+                                  }
                                   size="small"
                                   sx={{ width: 70 }}
                                   inputProps={{ min: 1, max: 10 }}
@@ -1000,12 +1434,25 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                                   label="Reps"
                                   type="number"
                                   value={exercise.reps}
-                                  onChange={(e) => handleUpdateExercise(_phaseIndex, exIdx, { reps: parseInt(e.target.value) || 1 })}
+                                  onChange={(e) =>
+                                    handleUpdateExercise(_phaseIndex, exIdx, {
+                                      reps: parseInt(e.target.value) || 1,
+                                    })
+                                  }
                                   size="small"
                                   sx={{ width: 70 }}
                                   inputProps={{ min: 1, max: 50 }}
                                 />
-                                <IconButton size="small" onClick={() => handleRemoveExerciseFromPhase(_phaseIndex, exIdx)} color="error">
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    handleRemoveExerciseFromPhase(
+                                      _phaseIndex,
+                                      exIdx,
+                                    )
+                                  }
+                                  color="error"
+                                >
                                   <Delete fontSize="small" />
                                 </IconButton>
                               </Stack>
@@ -1027,7 +1474,13 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 </Typography>
 
                 {/* Filters */}
-                <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{ mb: 2 }}
+                  flexWrap="wrap"
+                  useFlexGap
+                >
                   <TextField
                     placeholder="Search exercises..."
                     value={exerciseSearch}
@@ -1035,7 +1488,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     size="small"
                     sx={{ minWidth: 200, flex: 1 }}
                     InputProps={{
-                      startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
                     }}
                   />
                   <Autocomplete
@@ -1044,15 +1501,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     onChange={(_, v) => setExerciseFilterCategory(v || "all")}
                     size="small"
                     sx={{ minWidth: 150 }}
-                    renderInput={(params) => <TextField {...params} label="Category" />}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Category" />
+                    )}
                   />
                   <Autocomplete
-                    options={["all", ...(exerciseFilters?.bodyRegions || BODY_REGIONS)]}
+                    options={[
+                      "all",
+                      ...(exerciseFilters?.bodyRegions || BODY_REGIONS),
+                    ]}
                     value={exerciseFilterRegion}
                     onChange={(_, v) => setExerciseFilterRegion(v || "all")}
                     size="small"
                     sx={{ minWidth: 150 }}
-                    renderInput={(params) => <TextField {...params} label="Body Region" />}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Body Region" />
+                    )}
                   />
                 </Stack>
 
@@ -1060,7 +1524,10 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 <List dense sx={{ maxHeight: 300, overflow: "auto" }}>
                   {filteredExercises.length === 0 ? (
                     <ListItem>
-                      <ListItemText primary="No exercises found" secondary="Try adjusting your filters" />
+                      <ListItemText
+                        primary="No exercises found"
+                        secondary="Try adjusting your filters"
+                      />
                     </ListItem>
                   ) : (
                     filteredExercises.slice(0, 50).map((exercise: any) => (
@@ -1079,12 +1546,24 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                             getOptionLabel={(p) => p.name}
                             size="small"
                             sx={{ width: 150 }}
-                            renderInput={(params) => <TextField {...params} placeholder="Add to..." size="small" />}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                placeholder="Add to..."
+                                size="small"
+                              />
+                            )}
                             onChange={(_, selectedPhase) => {
                               if (selectedPhase) {
-                                const _phaseIndex = phases.findIndex(p => p.phaseNumber === selectedPhase.phaseNumber);
+                                const _phaseIndex = phases.findIndex(
+                                  (p) =>
+                                    p.phaseNumber === selectedPhase.phaseNumber,
+                                );
                                 if (_phaseIndex !== -1) {
-                                  handleAddExerciseToPhase(_phaseIndex, exercise);
+                                  handleAddExerciseToPhase(
+                                    _phaseIndex,
+                                    exercise,
+                                  );
                                 }
                               }
                             }}
@@ -1098,10 +1577,26 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                         <ListItemText
                           primary={exercise.name}
                           secondary={
-                            <Stack direction="row" spacing={0.5} component="span">
-                              <Chip label={exercise.category} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
-                              <Chip label={exercise.bodyRegion} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
-                              <Chip label={exercise.difficulty} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              component="span"
+                            >
+                              <Chip
+                                label={exercise.category}
+                                size="small"
+                                sx={{ height: 18, fontSize: "0.65rem" }}
+                              />
+                              <Chip
+                                label={exercise.bodyRegion}
+                                size="small"
+                                sx={{ height: 18, fontSize: "0.65rem" }}
+                              />
+                              <Chip
+                                label={exercise.difficulty}
+                                size="small"
+                                sx={{ height: 18, fontSize: "0.65rem" }}
+                              />
                             </Stack>
                           }
                         />
@@ -1110,8 +1605,13 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   )}
                 </List>
                 {filteredExercises.length > 50 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                    Showing 50 of {filteredExercises.length} exercises. Use filters to narrow down.
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mt: 1, display: "block" }}
+                  >
+                    Showing 50 of {filteredExercises.length} exercises. Use
+                    filters to narrow down.
                   </Typography>
                 )}
               </Paper>
@@ -1125,15 +1625,24 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             <Typography variant="h6">Review Treatment Plan</Typography>
 
             <Paper sx={{ p: 2, borderRadius: 2 }}>
-              <Typography variant="subtitle2" color="text.secondary">Patient</Typography>
-              <Typography variant="body1">{selectedPatient?.firstName} {selectedPatient?.lastName}</Typography>
+              <Typography variant="subtitle2" color="text.secondary">
+                Patient
+              </Typography>
+              <Typography variant="body1">
+                {selectedPatient?.firstName} {selectedPatient?.lastName}
+              </Typography>
             </Paper>
 
             <Paper sx={{ p: 2, borderRadius: 2 }}>
-              <Typography variant="subtitle2" color="text.secondary">Plan Details</Typography>
-              <Typography variant="body1" fontWeight={600}>{basicInfo.title || "Treatment Plan"}</Typography>
+              <Typography variant="subtitle2" color="text.secondary">
+                Plan Details
+              </Typography>
+              <Typography variant="body1" fontWeight={600}>
+                {basicInfo.title || "Treatment Plan"}
+              </Typography>
               <Typography variant="body2" color="text.secondary">
-                {basicInfo.durationWeeks} weeks | {phases.length} phases | {totalExercises} exercises
+                {basicInfo.durationWeeks} weeks | {phases.length} phases |{" "}
+                {totalExercises} exercises
               </Typography>
               {basicInfo.diagnosis && (
                 <Typography variant="body2" sx={{ mt: 1 }}>
@@ -1148,15 +1657,26 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   Phase {phase.phaseNumber}: {phase.name}
                 </Typography>
                 <Typography variant="body2">
-                  {phase.durationWeeks} weeks | {phase.exercises.length} exercises | {phase.sessionsPerWeek} sessions/week
+                  {phase.durationWeeks} weeks | {phase.exercises.length}{" "}
+                  exercises | {phase.sessionsPerWeek} sessions/week
                 </Typography>
                 {phase.exercises.length > 0 && (
-                  <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                  <Box
+                    sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}
+                  >
                     {phase.exercises.slice(0, 5).map((ex, i) => (
-                      <Chip key={i} label={ex.name} size="small" variant="outlined" />
+                      <Chip
+                        key={i}
+                        label={ex.name}
+                        size="small"
+                        variant="outlined"
+                      />
                     ))}
                     {phase.exercises.length > 5 && (
-                      <Chip label={`+${phase.exercises.length - 5} more`} size="small" />
+                      <Chip
+                        label={`+${phase.exercises.length - 5} more`}
+                        size="small"
+                      />
                     )}
                   </Box>
                 )}
@@ -1164,8 +1684,17 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             ))}
 
             {selectedDevice && (
-              <Paper sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "primary.light" }}>
-                <Typography variant="subtitle2" color="text.secondary">Linked Device</Typography>
+              <Paper
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "primary.light",
+                }}
+              >
+                <Typography variant="subtitle2" color="text.secondary">
+                  Linked Device
+                </Typography>
                 <Typography variant="body1">{selectedDevice.name}</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {selectedDevice.partnerName} | {selectedDevice.deviceCode}
@@ -1187,7 +1716,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     <StepperDialog
       open={open}
       onClose={handleClose}
-      title={isBulkMode ? `Create ${bulkPatients.length} Treatment Plans` : "Create Treatment Plan"}
+      title={
+        isBulkMode
+          ? `Create ${bulkPatients.length} Treatment Plans`
+          : "Create Treatment Plan"
+      }
       steps={steps}
       activeStep={activeStep}
       onNext={handleNext}
