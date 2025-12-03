@@ -1111,10 +1111,7 @@ Date: ________________________
                       {/* Symptoms */}
                       {evaluation?.symptoms &&
                         evaluation.symptoms.length > 0 && (
-                          <InfoCard
-                            title={`Symptoms (${evaluation.symptoms.length})`}
-                            sx={{ mb: 2 }}
-                          >
+                          <InfoCard title="Symptoms" sx={{ mb: 2 }}>
                             <Stack
                               direction="row"
                               spacing={0.5}
@@ -1443,7 +1440,7 @@ Date: ________________________
                     <Grid size={{ xs: 12, lg: 6 }}>
                       {/* Medical History */}
                       <InfoCard title="Medical History" sx={{ mb: 2 }}>
-                        <Stack spacing={1.5}>
+                        <Stack spacing={1}>
                           {evaluation?.allergies && (
                             <Box>
                               <Typography
