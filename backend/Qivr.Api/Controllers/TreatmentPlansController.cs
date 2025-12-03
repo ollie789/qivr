@@ -324,7 +324,7 @@ public class TreatmentPlansController : BaseApiController
     #region AI Generation Endpoints
 
     /// <summary>
-    /// Generate a treatment plan using AI based on patient data
+    /// Generate a treatment plan using AI based on patient data (saves to DB as draft)
     /// </summary>
     [HttpPost("generate")]
     [Authorize(Policy = "StaffOnly")]
@@ -372,6 +372,43 @@ public class TreatmentPlansController : BaseApiController
             _logger.LogError(ex, "Treatment plan generation failed for patient {PatientId}", request.PatientId);
             var errorDetail = ex.InnerException?.Message ?? ex.Message;
             return BadRequest(new { error = $"Failed to generate treatment plan: {errorDetail}" });
+        }
+    }
+
+    /// <summary>
+    /// Preview AI-generated treatment plan without saving (for "AI Suggest" button)
+    /// </summary>
+    [HttpPost("preview")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> PreviewAiPlan([FromBody] GenerateTreatmentPlanRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        try
+        {
+            var generationRequest = new TreatmentPlanGenerationRequest
+            {
+                PatientId = request.PatientId,
+                EvaluationId = request.EvaluationId,
+                ProviderId = userId,
+                TenantId = tenantId,
+                PreferredDurationWeeks = request.PreferredDurationWeeks,
+                SessionsPerWeek = request.SessionsPerWeek,
+                FocusAreas = request.FocusAreas,
+                Contraindications = request.Contraindications
+            };
+
+            // Generate the plan using AI - but DON'T save it
+            var generatedPlan = await _aiService.GeneratePlanAsync(generationRequest);
+
+            return Ok(generatedPlan);
+        }
+        catch (TreatmentPlanGenerationException ex)
+        {
+            _logger.LogError(ex, "Treatment plan preview failed for patient {PatientId}", request.PatientId);
+            var errorDetail = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(new { error = $"Failed to generate treatment plan preview: {errorDetail}" });
         }
     }
 
@@ -1011,9 +1048,101 @@ public class TreatmentPlansController : BaseApiController
     }
 
     /// <summary>
+    /// Generate exercises using AI and optionally save to library
+    /// </summary>
+    [HttpPost("exercises/generate")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> GenerateExercisesWithAi([FromBody] GenerateExercisesRequest request)
+    {
+        var tenantId = RequireTenantId();
+
+        try
+        {
+            // Call AI to generate exercises
+            var suggestionRequest = new ExerciseSuggestionRequest
+            {
+                BodyRegion = request.BodyRegion,
+                Condition = request.Condition,
+                Difficulty = request.Difficulty,
+                MaxResults = request.Count ?? 5,
+                ExcludeExercises = request.ExcludeExercises
+            };
+
+            var generatedExercises = await _aiService.SuggestExercisesAsync(suggestionRequest);
+
+            if (!generatedExercises.Any())
+            {
+                return Ok(new { exercises = new List<object>(), savedCount = 0, message = "No exercises were generated. Try different parameters." });
+            }
+
+            // If saveToLibrary is true, save them as custom exercises
+            var savedExercises = new List<ExerciseTemplate>();
+            if (request.SaveToLibrary == true)
+            {
+                foreach (var ex in generatedExercises)
+                {
+                    var template = new ExerciseTemplate
+                    {
+                        TenantId = tenantId,
+                        Name = ex.Name,
+                        Description = ex.Description,
+                        Instructions = ex.Instructions,
+                        DefaultSets = ex.Sets,
+                        DefaultReps = ex.Reps,
+                        DefaultHoldSeconds = ex.HoldSeconds,
+                        DefaultFrequency = ex.Frequency ?? "Daily",
+                        Category = ex.Category ?? "General",
+                        BodyRegion = ex.BodyRegion ?? request.BodyRegion ?? "General",
+                        Difficulty = ex.Difficulty,
+                        TargetConditions = !string.IsNullOrEmpty(request.Condition)
+                            ? new List<string> { request.Condition }
+                            : new List<string>(),
+                        Contraindications = new List<string>(),
+                        Equipment = new List<string>(),
+                        Tags = new List<string> { "AI Generated" },
+                        IsSystemExercise = false,
+                        IsActive = true
+                    };
+                    _context.ExerciseTemplates.Add(template);
+                    savedExercises.Add(template);
+                }
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                exercises = generatedExercises.Select(e => new
+                {
+                    name = e.Name,
+                    description = e.Description,
+                    instructions = e.Instructions,
+                    sets = e.Sets,
+                    reps = e.Reps,
+                    holdSeconds = e.HoldSeconds,
+                    frequency = e.Frequency,
+                    category = e.Category,
+                    bodyRegion = e.BodyRegion,
+                    difficulty = e.Difficulty.ToString()
+                }),
+                savedCount = savedExercises.Count,
+                savedIds = savedExercises.Select(e => e.Id),
+                message = request.SaveToLibrary == true
+                    ? $"Generated and saved {savedExercises.Count} exercises to your library"
+                    : $"Generated {generatedExercises.Count} exercises (not saved)"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating exercises with AI");
+            return BadRequest(new { error = "Failed to generate exercises. Please try again." });
+        }
+    }
+
+    /// <summary>
     /// Create a custom exercise template (tenant-specific)
     /// </summary>
     [HttpPost("exercises")]
+    [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> CreateExerciseTemplate([FromBody] CreateExerciseTemplateRequest request)
     {
         var tenantId = RequireTenantId();
@@ -1047,6 +1176,67 @@ public class TreatmentPlansController : BaseApiController
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetExerciseTemplate), new { id = exercise.Id }, new { id = exercise.Id });
+    }
+
+    /// <summary>
+    /// Update a custom exercise template (tenant-specific only)
+    /// </summary>
+    [HttpPut("exercises/{id}")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> UpdateExerciseTemplate(Guid id, [FromBody] CreateExerciseTemplateRequest request)
+    {
+        var tenantId = RequireTenantId();
+
+        var exercise = await _context.ExerciseTemplates
+            .FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId && !e.IsSystemExercise);
+
+        if (exercise == null)
+            return NotFound(new { error = "Exercise not found or cannot be edited (system exercises cannot be modified)" });
+
+        exercise.Name = request.Name;
+        exercise.Description = request.Description;
+        exercise.Instructions = request.Instructions;
+        exercise.DefaultSets = request.DefaultSets ?? exercise.DefaultSets;
+        exercise.DefaultReps = request.DefaultReps ?? exercise.DefaultReps;
+        exercise.DefaultHoldSeconds = request.DefaultHoldSeconds;
+        exercise.DefaultFrequency = request.DefaultFrequency ?? exercise.DefaultFrequency;
+        exercise.VideoUrl = request.VideoUrl;
+        exercise.ThumbnailUrl = request.ThumbnailUrl;
+        exercise.ImageUrl = request.ImageUrl;
+        exercise.Category = request.Category;
+        exercise.BodyRegion = request.BodyRegion;
+        exercise.Difficulty = Enum.TryParse<DifficultyLevel>(request.Difficulty, true, out var diff)
+            ? diff : exercise.Difficulty;
+        exercise.TargetConditions = request.TargetConditions ?? exercise.TargetConditions;
+        exercise.Contraindications = request.Contraindications ?? exercise.Contraindications;
+        exercise.Equipment = request.Equipment ?? exercise.Equipment;
+        exercise.Tags = request.Tags ?? exercise.Tags;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Exercise updated successfully" });
+    }
+
+    /// <summary>
+    /// Delete a custom exercise template (tenant-specific only)
+    /// </summary>
+    [HttpDelete("exercises/{id}")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> DeleteExerciseTemplate(Guid id)
+    {
+        var tenantId = RequireTenantId();
+
+        var exercise = await _context.ExerciseTemplates
+            .FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId && !e.IsSystemExercise);
+
+        if (exercise == null)
+            return NotFound(new { error = "Exercise not found or cannot be deleted (system exercises cannot be removed)" });
+
+        // Soft delete - mark as inactive
+        exercise.IsActive = false;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Exercise deleted successfully" });
     }
 
     #endregion
@@ -1407,6 +1597,16 @@ public class CreateExerciseTemplateRequest
     public List<string>? Contraindications { get; set; }
     public List<string>? Equipment { get; set; }
     public List<string>? Tags { get; set; }
+}
+
+public class GenerateExercisesRequest
+{
+    public string? BodyRegion { get; set; }
+    public string? Condition { get; set; }
+    public string? Difficulty { get; set; }
+    public int? Count { get; set; } = 5;
+    public bool? SaveToLibrary { get; set; } = false;
+    public List<string>? ExcludeExercises { get; set; }
 }
 
 public class TreatmentPlanListDto

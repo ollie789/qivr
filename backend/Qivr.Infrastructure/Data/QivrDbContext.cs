@@ -96,6 +96,7 @@ public class QivrDbContext : DbContext
     public DbSet<StudyEnrollment> StudyEnrollments => Set<StudyEnrollment>();
     public DbSet<MedicalDevice> MedicalDevices => Set<MedicalDevice>();
     public DbSet<PatientDeviceUsage> PatientDeviceUsages => Set<PatientDeviceUsage>();
+    public DbSet<ServiceType> ServiceTypes => Set<ServiceType>();
 
     private static Dictionary<string, object> DeserializeJsonSafely(string v)
     {
@@ -1424,6 +1425,21 @@ public class QivrDbContext : DbContext
 
             entity.Property(e => e.BaselinePromType).HasMaxLength(50);
 
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // ServiceType configuration
+        modelBuilder.Entity<ServiceType>(entity =>
+        {
+            entity.ToTable("service_types");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Specialty).HasMaxLength(100);
+            entity.Property(e => e.Price).HasPrecision(10, 2);
+            entity.Property(e => e.BillingCode).HasMaxLength(50);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.Specialty, e.Name });
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
     }

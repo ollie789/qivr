@@ -425,11 +425,16 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     }));
   }, []);
 
-  // Mutations
-  const generateMutation = useMutation({
-    mutationFn: treatmentPlansApi.generate,
+  // Mutations - Use preview endpoint for AI Suggest (doesn't save to DB)
+  const previewMutation = useMutation({
+    mutationFn: treatmentPlansApi.preview,
     onSuccess: (data) => {
-      if (data.phases) {
+      // The preview endpoint returns the generated plan directly
+      if (data.phases && data.phases.length > 0) {
+        const totalExerciseCount = data.phases.reduce(
+          (sum: number, p: any) => sum + (p.exercises?.length || 0),
+          0,
+        );
         setPhases(
           data.phases.map((p: any, idx: number) => ({
             phaseNumber: idx + 1,
@@ -455,7 +460,17 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             expanded: idx === 0,
           })),
         );
+        enqueueSnackbar(
+          `AI generated ${data.phases.length} phases with ${totalExerciseCount} exercises! Review and customize below.`,
+          { variant: "success" },
+        );
+      } else {
+        enqueueSnackbar(
+          "AI generation completed but returned no exercises. Try adding manually.",
+          { variant: "warning" },
+        );
       }
+
       setBasicInfo((prev) => ({
         ...prev,
         title: data.title || prev.title,
@@ -463,9 +478,6 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         durationWeeks: data.totalDurationWeeks || prev.durationWeeks,
       }));
       setIsGenerating(false);
-      enqueueSnackbar("AI suggestions applied! Review and customize below.", {
-        variant: "success",
-      });
     },
     onError: (error: any) => {
       setIsGenerating(false);
@@ -606,7 +618,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       return;
     }
     setIsGenerating(true);
-    generateMutation.mutate({
+    // Use preview endpoint - doesn't save to DB, just generates suggestions
+    previewMutation.mutate({
       patientId: selectedPatient?.id || "",
       evaluationId,
       preferredDurationWeeks: basicInfo.durationWeeks,
@@ -1229,13 +1242,19 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 <AuraButton
                   variant="outlined"
                   startIcon={
-                    isGenerating ? <CircularProgress size={16} /> : <AIIcon />
+                    isGenerating || previewMutation.isPending ? (
+                      <CircularProgress size={16} />
+                    ) : (
+                      <AIIcon />
+                    )
                   }
                   onClick={() => handleAISuggest()}
-                  disabled={isGenerating}
+                  disabled={isGenerating || previewMutation.isPending}
                   size="small"
                 >
-                  {isGenerating ? "Generating..." : "AI Suggest Exercises"}
+                  {isGenerating || previewMutation.isPending
+                    ? "Generating..."
+                    : "AI Suggest Exercises"}
                 </AuraButton>
                 <AuraButton
                   variant="outlined"

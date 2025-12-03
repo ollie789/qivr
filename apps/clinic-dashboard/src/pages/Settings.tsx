@@ -184,6 +184,24 @@ export default function Settings() {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] =
     useState<ProviderMember | null>(null);
+  
+  // Service Types state
+  const [serviceTypeDialogOpen, setServiceTypeDialogOpen] = useState(false);
+  const [editingServiceType, setEditingServiceType] = useState<any>(null);
+  const [serviceTypeForm, setServiceTypeForm] = useState({
+    name: "",
+    description: "",
+    specialty: "",
+    durationMinutes: 30,
+    price: 0,
+    billingCode: "",
+    isActive: true,
+  });
+  const [deleteServiceTypeConfirm, setDeleteServiceTypeConfirm] = useState<{
+    open: boolean;
+    id: string;
+    name: string;
+  }>({ open: false, id: "", name: "" });
 
   const [settings, setSettings] = useState<ClinicSettings>({
     clinic: {
@@ -414,6 +432,66 @@ export default function Settings() {
       return response.data;
     },
     enabled: canMakeApiCalls,
+  });
+
+  // Service Types queries
+  const { data: serviceTypes, isLoading: serviceTypesLoading } = useQuery({
+    queryKey: ["service-types"],
+    queryFn: async () => {
+      const response = await api.get("/api/servicetypes");
+      return response.data;
+    },
+    enabled: canMakeApiCalls,
+  });
+
+  const createServiceTypeMutation = useMutation({
+    mutationFn: async (data: typeof serviceTypeForm) => {
+      const response = await api.post("/api/servicetypes", {
+        ...data,
+        specialty: data.specialty || null,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-types"] });
+      setServiceTypeDialogOpen(false);
+      enqueueSnackbar("Service type created", { variant: "success" });
+    },
+    onError: () => {
+      enqueueSnackbar("Failed to create service type", { variant: "error" });
+    },
+  });
+
+  const updateServiceTypeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof serviceTypeForm }) => {
+      const response = await api.put(`/api/servicetypes/${id}`, {
+        ...data,
+        specialty: data.specialty || null,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-types"] });
+      setServiceTypeDialogOpen(false);
+      enqueueSnackbar("Service type updated", { variant: "success" });
+    },
+    onError: () => {
+      enqueueSnackbar("Failed to update service type", { variant: "error" });
+    },
+  });
+
+  const deleteServiceTypeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/servicetypes/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-types"] });
+      setDeleteServiceTypeConfirm({ open: false, id: "", name: "" });
+      enqueueSnackbar("Service type deleted", { variant: "success" });
+    },
+    onError: () => {
+      enqueueSnackbar("Failed to delete service type", { variant: "error" });
+    },
   });
 
   React.useEffect(() => {
@@ -1140,12 +1218,139 @@ export default function Settings() {
 
         <DesignTabPanel value={tabValue} index={4}>
           <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Billing & Payment Settings
-            </Typography>
-            <Callout variant="info">
-              Configure billing rates, payment methods, and insurance providers
-            </Callout>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Service Types & Pricing
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Configure appointment types and pricing by provider specialty
+                </Typography>
+              </Box>
+              <AuraButton
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setServiceTypeForm({
+                    name: "",
+                    description: "",
+                    specialty: "",
+                    durationMinutes: 30,
+                    price: 0,
+                    billingCode: "",
+                    isActive: true,
+                  });
+                  setEditingServiceType(null);
+                  setServiceTypeDialogOpen(true);
+                }}
+              >
+                Add Service Type
+              </AuraButton>
+            </Box>
+
+            {serviceTypesLoading ? (
+              <SectionLoader />
+            ) : (
+              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Service Name</TableCell>
+                      <TableCell>Specialty</TableCell>
+                      <TableCell align="center">Duration</TableCell>
+                      <TableCell align="right">Price</TableCell>
+                      <TableCell>Billing Code</TableCell>
+                      <TableCell align="center">Status</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {serviceTypes?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7}>
+                          <AuraEmptyState
+                            title="No service types configured"
+                            description="Add service types to track appointment pricing and revenue"
+                            actionText="Add Service Type"
+                            onAction={() => {
+                              setServiceTypeForm({
+                                name: "",
+                                description: "",
+                                specialty: "",
+                                durationMinutes: 30,
+                                price: 0,
+                                billingCode: "",
+                                isActive: true,
+                              });
+                              setEditingServiceType(null);
+                              setServiceTypeDialogOpen(true);
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      serviceTypes?.map((st: { id: string; name: string; description?: string; specialty?: string; durationMinutes: number; price: number; billingCode?: string; isActive: boolean }) => (
+                        <TableRow key={st.id}>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={500}>{st.name}</Typography>
+                            {st.description && (
+                              <Typography variant="caption" color="text.secondary">{st.description}</Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {st.specialty ? (
+                              <Chip label={st.specialty} size="small" />
+                            ) : (
+                              <Typography variant="caption" color="text.secondary">All specialties</Typography>
+                            )}
+                          </TableCell>
+                          <TableCell align="center">{st.durationMinutes} min</TableCell>
+                          <TableCell align="right">
+                            <Typography fontWeight={600}>${st.price.toFixed(2)}</Typography>
+                          </TableCell>
+                          <TableCell>{st.billingCode || "—"}</TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={st.isActive ? "Active" : "Inactive"}
+                              color={st.isActive ? "success" : "default"}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setServiceTypeForm({
+                                  name: st.name,
+                                  description: st.description || "",
+                                  specialty: st.specialty || "",
+                                  durationMinutes: st.durationMinutes,
+                                  price: st.price,
+                                  billingCode: st.billingCode || "",
+                                  isActive: st.isActive,
+                                });
+                                setEditingServiceType(st);
+                                setServiceTypeDialogOpen(true);
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => {
+                                setDeleteServiceTypeConfirm({ open: true, id: st.id, name: st.name });
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Box>
         </DesignTabPanel>
 
@@ -1443,6 +1648,113 @@ export default function Settings() {
           providerName={selectedProvider.name}
         />
       )}
+
+      {/* Service Type Dialog */}
+      <FormDialog
+        open={serviceTypeDialogOpen}
+        onClose={() => setServiceTypeDialogOpen(false)}
+        title={editingServiceType ? "Edit Service Type" : "Add Service Type"}
+        onSubmit={() => {
+          if (editingServiceType) {
+            updateServiceTypeMutation.mutate({ id: editingServiceType.id, data: serviceTypeForm });
+          } else {
+            createServiceTypeMutation.mutate(serviceTypeForm);
+          }
+        }}
+        submitLabel={editingServiceType ? "Save Changes" : "Create"}
+        loading={createServiceTypeMutation.isPending || updateServiceTypeMutation.isPending}
+      >
+        <Grid container spacing={2}>
+          <Grid size={12}>
+            <TextField
+              label="Service Name"
+              fullWidth
+              required
+              value={serviceTypeForm.name}
+              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, name: e.target.value })}
+              placeholder="e.g., Initial Consultation"
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={2}
+              value={serviceTypeForm.description}
+              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, description: e.target.value })}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <SelectField
+              label="Specialty"
+              value={serviceTypeForm.specialty}
+              onChange={(val) => setServiceTypeForm({ ...serviceTypeForm, specialty: val as string })}
+              options={[
+                { value: "", label: "All Specialties" },
+                { value: "Physiotherapy", label: "Physiotherapy" },
+                { value: "Chiropractic", label: "Chiropractic" },
+                { value: "Osteopathy", label: "Osteopathy" },
+                { value: "Massage Therapy", label: "Massage Therapy" },
+                { value: "Sports Medicine", label: "Sports Medicine" },
+                { value: "Podiatry", label: "Podiatry" },
+              ]}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              label="Duration (minutes)"
+              fullWidth
+              type="number"
+              value={serviceTypeForm.durationMinutes}
+              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, durationMinutes: parseInt(e.target.value) || 30 })}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              label="Price"
+              fullWidth
+              type="number"
+              value={serviceTypeForm.price}
+              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, price: parseFloat(e.target.value) || 0 })}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              label="Billing Code"
+              fullWidth
+              value={serviceTypeForm.billingCode}
+              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, billingCode: e.target.value })}
+              placeholder="e.g., INIT-PHYSIO"
+            />
+          </Grid>
+          <Grid size={12}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={serviceTypeForm.isActive}
+                  onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, isActive: e.target.checked })}
+                />
+              }
+              label="Active"
+            />
+          </Grid>
+        </Grid>
+      </FormDialog>
+
+      {/* Delete Service Type Confirm */}
+      <ConfirmDialog
+        open={deleteServiceTypeConfirm.open}
+        onClose={() => setDeleteServiceTypeConfirm({ open: false, id: "", name: "" })}
+        onConfirm={() => deleteServiceTypeMutation.mutate(deleteServiceTypeConfirm.id)}
+        title="Delete Service Type"
+        message={`Are you sure you want to delete "${deleteServiceTypeConfirm.name}"? This cannot be undone.`}
+        severity="error"
+        confirmText="Delete"
+      />
     </Box>
   );
 }

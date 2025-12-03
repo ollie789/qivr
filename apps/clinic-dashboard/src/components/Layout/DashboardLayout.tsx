@@ -34,6 +34,7 @@ import {
   LocalHospital as MedicalIcon,
   MedicalServices as TreatmentIcon,
   Send as ReferralsIcon,
+  FitnessCenter as ExerciseIcon,
 } from "@mui/icons-material";
 import { useAuthActions, useAuthUser } from "../../stores/authStore";
 import { NotificationBell, TenantSelector } from "../shared";
@@ -126,6 +127,11 @@ const DashboardLayout: React.FC = () => {
       text: "Treatment Plans",
       icon: <TreatmentIcon />,
       path: "/treatment-plans",
+    },
+    {
+      text: "Exercise Library",
+      icon: <ExerciseIcon />,
+      path: "/exercise-library",
     },
     { text: "Referrals", icon: <ReferralsIcon />, path: "/referrals" },
     {

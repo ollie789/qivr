@@ -20,7 +20,7 @@ export const treatmentPlansApi = {
     api.put(`/api/treatment-plans/${id}`, data),
   delete: (id: string) => api.delete(`/api/treatment-plans/${id}`),
 
-  // AI Generation
+  // AI Generation (saves to DB as draft)
   generate: (data: {
     patientId: string;
     evaluationId?: string;
@@ -29,6 +29,16 @@ export const treatmentPlansApi = {
     focusAreas?: string[];
     contraindications?: string[];
   }) => api.post("/api/treatment-plans/generate", data),
+
+  // AI Preview (doesn't save, for "AI Suggest" button)
+  preview: (data: {
+    patientId: string;
+    evaluationId?: string;
+    preferredDurationWeeks?: number;
+    sessionsPerWeek?: number;
+    focusAreas?: string[];
+    contraindications?: string[];
+  }) => api.post("/api/treatment-plans/preview", data),
 
   // Approval workflow
   approve: (id: string) => api.post(`/api/treatment-plans/${id}/approve`),
@@ -62,6 +72,26 @@ export const treatmentPlansApi = {
     api.get(`/api/treatment-plans/${id}/milestones`),
 };
 
+export interface ExerciseTemplateData {
+  name: string;
+  description?: string;
+  instructions?: string;
+  defaultSets?: number;
+  defaultReps?: number;
+  defaultHoldSeconds?: number;
+  defaultFrequency?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  imageUrl?: string;
+  category: string;
+  bodyRegion: string;
+  difficulty?: string;
+  targetConditions?: string[];
+  contraindications?: string[];
+  equipment?: string[];
+  tags?: string[];
+}
+
 export const exerciseLibraryApi = {
   list: (params?: {
     category?: string;
@@ -73,22 +103,20 @@ export const exerciseLibraryApi = {
   }) => api.get("/api/treatment-plans/exercises", params),
   get: (id: string) => api.get(`/api/treatment-plans/exercises/${id}`),
   getFilters: () => api.get("/api/treatment-plans/exercises/filters"),
-  create: (data: {
-    name: string;
-    description?: string;
-    instructions?: string;
-    defaultSets?: number;
-    defaultReps?: number;
-    defaultHoldSeconds?: number;
-    defaultFrequency?: string;
-    category: string;
-    bodyRegion: string;
+  create: (data: ExerciseTemplateData) =>
+    api.post("/api/treatment-plans/exercises", data),
+  update: (id: string, data: ExerciseTemplateData) =>
+    api.put(`/api/treatment-plans/exercises/${id}`, data),
+  delete: (id: string) => api.delete(`/api/treatment-plans/exercises/${id}`),
+  // AI Generation
+  generateWithAi: (data: {
+    bodyRegion?: string;
+    condition?: string;
     difficulty?: string;
-    targetConditions?: string[];
-    contraindications?: string[];
-    equipment?: string[];
-    tags?: string[];
-  }) => api.post("/api/treatment-plans/exercises", data),
+    count?: number;
+    saveToLibrary?: boolean;
+    excludeExercises?: string[];
+  }) => api.post("/api/treatment-plans/exercises/generate", data),
 };
 
 export const aiTriageApi = {
