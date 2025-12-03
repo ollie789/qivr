@@ -179,8 +179,8 @@ describe("promsApi data flow from clinic", () => {
 
     const result = await fetchPromInstances();
 
-    expect(result[0].templateName).toBe("Pain Assessment (Clinic Assigned)");
-    expect(result[0].status).toBe("pending");
+    expect(result?.[0]?.templateName).toBe("Pain Assessment (Clinic Assigned)");
+    expect(result?.[0]?.status).toBe("pending");
   });
 
   it("submitted responses are available to clinic", async () => {

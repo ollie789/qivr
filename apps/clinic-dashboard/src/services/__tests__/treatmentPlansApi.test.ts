@@ -61,10 +61,10 @@ describe("treatmentPlansApi", () => {
       const mockResponse = { id: "tp-new", ...newPlan };
       mockApi.post.mockResolvedValueOnce(mockResponse);
 
-      await treatmentPlansApi.create(newPlan);
+      const result = await treatmentPlansApi.create(newPlan);
 
       expect(mockApi.post).toHaveBeenCalledWith("/api/treatment-plans", newPlan);
-      expect(result.id).toBe("tp-new");
+      expect(result?.id).toBe("tp-new");
     });
   });
 
@@ -73,10 +73,10 @@ describe("treatmentPlansApi", () => {
       const updates = { name: "Updated Plan" };
       mockApi.put.mockResolvedValueOnce({ id: "tp-1", ...updates });
 
-      await treatmentPlansApi.update("tp-1", updates);
+      const result = await treatmentPlansApi.update("tp-1", updates);
 
       expect(mockApi.put).toHaveBeenCalledWith("/api/treatment-plans/tp-1", updates);
-      expect(result.name).toBe("Updated Plan");
+      expect(result?.name).toBe("Updated Plan");
     });
   });
 
