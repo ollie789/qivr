@@ -1115,6 +1115,216 @@ export default function ExerciseLibrary() {
         confirmText="Delete"
         loading={deleteMutation.isPending}
       />
+
+      {/* AI Generate Dialog */}
+      <Dialog
+        open={aiDialogOpen}
+        onClose={handleCloseAiDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <AIIcon color="primary" />
+              <Typography variant="h6">AI Exercise Generator</Typography>
+            </Stack>
+            <IconButton onClick={handleCloseAiDialog} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ mb: 3 }}>
+            <Callout variant="info">
+              Generate exercise recommendations using AI based on body region,
+              condition, and difficulty level. Review the suggestions and select
+              which ones to add to your library.
+            </Callout>
+          </Box>
+
+          {/* Generation Form */}
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <SelectField
+                label="Body Region"
+                value={aiForm.bodyRegion}
+                onChange={(v) => setAiForm({ ...aiForm, bodyRegion: v })}
+                options={BODY_REGION_OPTIONS}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <SelectField
+                label="Condition"
+                value={aiForm.condition}
+                onChange={(v) => setAiForm({ ...aiForm, condition: v })}
+                options={CONDITION_OPTIONS}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <SelectField
+                label="Difficulty"
+                value={aiForm.difficulty}
+                onChange={(v) => setAiForm({ ...aiForm, difficulty: v })}
+                options={DIFFICULTY_OPTIONS}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <SelectField
+                label="Number of Exercises"
+                value={String(aiForm.count)}
+                onChange={(v) => setAiForm({ ...aiForm, count: parseInt(v) })}
+                options={[
+                  { value: "3", label: "3 exercises" },
+                  { value: "5", label: "5 exercises" },
+                  { value: "8", label: "8 exercises" },
+                  { value: "10", label: "10 exercises" },
+                ]}
+              />
+            </Grid>
+            <Grid size={12}>
+              <AuraButton
+                variant="contained"
+                startIcon={<AIIcon />}
+                onClick={handleGenerateAi}
+                loading={generateMutation.isPending}
+                fullWidth
+              >
+                {generateMutation.isPending
+                  ? "Generating..."
+                  : "Generate Exercises"}
+              </AuraButton>
+            </Grid>
+          </Grid>
+
+          {/* Generated Exercises */}
+          {generatedExercises.length > 0 && (
+            <>
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                Generated Exercises ({selectedGenerated.size} of{" "}
+                {generatedExercises.length} selected)
+              </Typography>
+              <Stack spacing={2}>
+                {generatedExercises.map((exercise, index) => (
+                  <Paper
+                    key={index}
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      cursor: "pointer",
+                      border: selectedGenerated.has(index)
+                        ? "2px solid"
+                        : "1px solid",
+                      borderColor: selectedGenerated.has(index)
+                        ? "primary.main"
+                        : "divider",
+                      bgcolor: selectedGenerated.has(index)
+                        ? "action.selected"
+                        : "background.paper",
+                      "&:hover": {
+                        bgcolor: "action.hover",
+                      },
+                    }}
+                    onClick={() => handleToggleGenerated(index)}
+                  >
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="flex-start"
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={1}
+                          sx={{ mb: 1 }}
+                        >
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {exercise.name}
+                          </Typography>
+                          <Chip
+                            label={exercise.difficulty}
+                            size="small"
+                            color={
+                              getDifficultyColor(exercise.difficulty) as any
+                            }
+                          />
+                          {exercise.category && (
+                            <Chip
+                              label={exercise.category}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                        </Stack>
+                        {exercise.description && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 1 }}
+                          >
+                            {exercise.description}
+                          </Typography>
+                        )}
+                        <Stack direction="row" spacing={2}>
+                          <Typography variant="caption" color="text.secondary">
+                            {exercise.sets} sets x {exercise.reps} reps
+                            {exercise.holdSeconds &&
+                              ` (${exercise.holdSeconds}s hold)`}
+                          </Typography>
+                          {exercise.frequency && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {exercise.frequency}
+                            </Typography>
+                          )}
+                        </Stack>
+                      </Box>
+                      <IconButton
+                        color={
+                          selectedGenerated.has(index) ? "primary" : "default"
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleGenerated(index);
+                        }}
+                      >
+                        {selectedGenerated.has(index) ? (
+                          <CheckIcon />
+                        ) : (
+                          <AddIcon />
+                        )}
+                      </IconButton>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <AuraButton variant="outlined" onClick={handleCloseAiDialog}>
+            Cancel
+          </AuraButton>
+          {generatedExercises.length > 0 && (
+            <AuraButton
+              variant="contained"
+              onClick={handleSaveSelected}
+              loading={saveGeneratedMutation.isPending}
+              disabled={selectedGenerated.size === 0}
+            >
+              Save {selectedGenerated.size} Exercise
+              {selectedGenerated.size !== 1 ? "s" : ""} to Library
+            </AuraButton>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

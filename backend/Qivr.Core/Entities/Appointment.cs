@@ -12,6 +12,7 @@ public class Appointment : TenantEntity
     public Guid? TreatmentPlanId { get; set; }
     public string? ExternalCalendarId { get; set; }
     public string AppointmentType { get; set; } = string.Empty;
+    public Guid? ServiceTypeId { get; set; } // Links to service_types for pricing
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Requested;
     public DateTime ScheduledStart { get; set; }
     public DateTime ScheduledEnd { get; set; }
@@ -41,6 +42,7 @@ public class Appointment : TenantEntity
     public virtual Evaluation? Evaluation { get; set; }
     public virtual TreatmentPlan? TreatmentPlan { get; set; }
     public virtual User? CancelledByUser { get; set; }
+    public virtual ServiceType? ServiceType { get; set; }
     
     public TimeSpan Duration => ScheduledEnd - ScheduledStart;
     public bool IsUpcoming => ScheduledStart > DateTime.UtcNow && Status == AppointmentStatus.Scheduled;

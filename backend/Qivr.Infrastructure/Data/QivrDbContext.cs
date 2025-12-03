@@ -391,6 +391,11 @@ public class QivrDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.CancelledBy)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ServiceType)
+                .WithMany()
+                .HasForeignKey(e => e.ServiceTypeId)
+                .OnDelete(DeleteBehavior.SetNull);
                 
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });

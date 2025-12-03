@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -23,6 +23,14 @@ import {
   AccordionSummary,
   AccordionDetails,
   Grid,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -37,6 +45,10 @@ import {
   Assessment,
   Person,
   LocalHospital,
+  EventRepeat as BulkScheduleIcon,
+  Assignment as PromIcon,
+  Schedule as ClockIcon,
+  PlayArrow as ActiveIcon,
 } from "@mui/icons-material";
 import {
   AuraButton,
@@ -44,8 +56,12 @@ import {
   auraTokens,
 } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
+import { appointmentsApi, CreateAppointmentRequest } from "../services/appointmentsApi";
+import { promApi, PromResponse } from "../services/promApi";
 import { useSnackbar } from "notistack";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
+import { format, addDays, addWeeks, parseISO, isBefore, isAfter } from "date-fns";
+import { useAuthUser } from "../stores/authStore";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -67,14 +83,48 @@ export default function TreatmentPlanDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
+  const user = useAuthUser();
   const [tabValue, setTabValue] = useState(0);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+
+  // Bulk scheduling state
+  const [bulkScheduleDialogOpen, setBulkScheduleDialogOpen] = useState(false);
+  const [bulkScheduleStartDate, setBulkScheduleStartDate] = useState(
+    format(new Date(), "yyyy-MM-dd")
+  );
+  const [selectedPhasesForScheduling, setSelectedPhasesForScheduling] = useState<Set<number>>(new Set());
+  const [isBulkScheduling, setIsBulkScheduling] = useState(false);
 
   const { data: plan, isLoading, error } = useQuery({
     queryKey: ["treatment-plan", id],
     queryFn: () => treatmentPlansApi.get(id!),
     enabled: !!id,
   });
+
+  // Fetch patient's PROM responses for timeline
+  const { data: promResponses } = useQuery({
+    queryKey: ["patient-proms", plan?.patientId],
+    queryFn: () => promApi.getResponses({ patientId: plan?.patientId }),
+    enabled: !!plan?.patientId,
+  });
+
+  // Calculate PROM timeline data
+  const promTimeline = useMemo(() => {
+    if (!promResponses?.data || !plan) return [];
+
+    const planStart = plan.startDate ? parseISO(plan.startDate) : new Date();
+    const planEnd = addWeeks(planStart, plan.durationWeeks || 8);
+
+    return promResponses.data
+      .filter((prom: PromResponse) => {
+        const promDate = prom.scheduledAt ? parseISO(prom.scheduledAt) : null;
+        if (!promDate) return false;
+        return isAfter(promDate, addDays(planStart, -7)) && isBefore(promDate, addDays(planEnd, 7));
+      })
+      .sort((a: PromResponse, b: PromResponse) =>
+        new Date(a.scheduledAt || 0).getTime() - new Date(b.scheduledAt || 0).getTime()
+      );
+  }, [promResponses?.data, plan]);
 
   const approveMutation = useMutation({
     mutationFn: () => treatmentPlansApi.approve(id!),
