@@ -1,7 +1,7 @@
-import { Paper, SxProps, Theme } from '@mui/material';
-import { ReactNode } from 'react';
-import { CardHeader } from './CardHeader';
-import { glassTokens } from '../../theme/auraTokens';
+import { Paper, SxProps, Theme } from "@mui/material";
+import { ReactNode } from "react";
+import { CardHeader } from "./CardHeader";
+import { glassTokens } from "../../theme/auraTokens";
 
 export interface InfoCardProps {
   title: string;
@@ -10,7 +10,7 @@ export interface InfoCardProps {
   children: ReactNode;
   sx?: SxProps<Theme>;
   /** Card variant - 'default' uses solid bg, 'glass' uses glassmorphism */
-  variant?: 'default' | 'glass';
+  variant?: "default" | "glass";
 }
 
 export const InfoCard = ({
@@ -19,25 +19,24 @@ export const InfoCard = ({
   action,
   children,
   sx,
-  variant = 'default',
+  variant = "default",
 }: InfoCardProps) => {
   return (
     <Paper
       elevation={0}
       sx={{
         p: { xs: 2, sm: 3 },
-        height: 1,
-        bgcolor: 'background.paper',
-        border: '1px solid',
-        borderColor: 'divider',
+        bgcolor: "background.paper",
+        border: "1px solid",
+        borderColor: "divider",
         borderRadius: 3,
         boxShadow: glassTokens.shadow.subtle,
-        transition: 'all 0.2s ease-in-out',
-        ...(variant === 'glass' && {
+        transition: "all 0.2s ease-in-out",
+        ...(variant === "glass" && {
           backdropFilter: `blur(${glassTokens.blur.standard})`,
           WebkitBackdropFilter: `blur(${glassTokens.blur.standard})`,
         }),
-        '&:hover': {
+        "&:hover": {
           boxShadow: glassTokens.shadow.standard,
         },
         ...sx,
