@@ -128,11 +128,7 @@ const DashboardLayout: React.FC = () => {
       icon: <TreatmentIcon />,
       path: "/treatment-plans",
     },
-    {
-      text: "Exercise Library",
-      icon: <ExerciseIcon />,
-      path: "/exercise-library",
-    },
+
     { text: "Referrals", icon: <ReferralsIcon />, path: "/referrals" },
     {
       text: "Action Center",
