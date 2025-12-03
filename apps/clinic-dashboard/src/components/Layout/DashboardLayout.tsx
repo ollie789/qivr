@@ -22,7 +22,6 @@ import {
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  Dashboard as DashboardIcon,
   Queue as QueueIcon,
   CalendarMonth as CalendarIcon,
   Assignment as AssignmentIcon,
@@ -110,7 +109,7 @@ const DashboardLayout: React.FC = () => {
   });
 
   const menuItems: MenuItemType[] = [
-    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
+    { text: "Analytics", icon: <AnalyticsIcon />, path: "/analytics" },
     {
       text: "Intake Management",
       icon: <QueueIcon />,
@@ -136,7 +135,6 @@ const DashboardLayout: React.FC = () => {
       badge: unreadCount,
     },
     { text: "PROM", icon: <AssignmentIcon />, path: "/prom" },
-    { text: "Analytics", icon: <AnalyticsIcon />, path: "/analytics" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
 
@@ -302,7 +300,7 @@ const DashboardLayout: React.FC = () => {
 
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {menuItems.find((item) => item.path === location.pathname)?.text ||
-              "Dashboard"}
+              "Analytics"}
           </Typography>
 
           <Box sx={{ mr: 2 }}>

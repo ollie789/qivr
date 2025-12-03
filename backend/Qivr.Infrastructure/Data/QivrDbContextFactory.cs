@@ -11,7 +11,9 @@ public class QivrDbContextFactory : IDesignTimeDbContextFactory<QivrDbContext>
         
         // Use a dummy connection string for migrations
         // The actual connection string is configured at runtime
-        optionsBuilder.UseNpgsql("Host=localhost;Database=qivr_design;Username=postgres;Password=postgres");
+        var connectionString = Environment.GetEnvironmentVariable("DEFAULT_CONNECTION") 
+            ?? "Host=localhost;Port=5432;Database=qivr;Username=qivr_user;Password=dev_password;SslMode=Disable";
+        optionsBuilder.UseNpgsql(connectionString);
         
         return new QivrDbContext(optionsBuilder.Options);
     }

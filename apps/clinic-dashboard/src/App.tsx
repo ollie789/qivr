@@ -26,7 +26,7 @@ import DashboardLayout from "./components/Layout/DashboardLayout";
 import PrivateRoute from "./components/Auth/PrivateRoute";
 
 // Lazy load pages for code splitting
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+// Dashboard merged into Analytics - redirect handled in routes
 const IntakeManagement = lazy(() => import("./pages/IntakeManagement"));
 const Appointments = lazy(() => import("./pages/Appointments"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
@@ -111,8 +111,7 @@ function InnerApp() {
                     </PrivateRoute>
                   }
                 >
-                  <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route index element={<Navigate to="/analytics" replace />} />
                   <Route path="intake" element={<IntakeManagement />} />
                   <Route path="appointments" element={<Appointments />} />
                   <Route
@@ -152,10 +151,10 @@ function InnerApp() {
                   />
                 </Route>
 
-                {/* Catch all - redirect to dashboard */}
+                {/* Catch all - redirect to analytics */}
                 <Route
                   path="*"
-                  element={<Navigate to="/dashboard" replace />}
+                  element={<Navigate to="/analytics" replace />}
                 />
               </Routes>
             </Suspense>
