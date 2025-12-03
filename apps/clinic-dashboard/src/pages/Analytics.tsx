@@ -9,7 +9,6 @@ import {
   Paper,
   Stack,
   CircularProgress,
-  Button,
 } from "@mui/material";
 import {
   People as PeopleIcon,
@@ -559,37 +558,58 @@ const Analytics: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      py: 1.5,
+                      py: auraTokens.spacing.sm,
                     }}
                   >
                     <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: auraTokens.spacing.sm,
+                      }}
                     >
                       <Box
-                        sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "error.50" }}
+                        sx={{
+                          p: auraTokens.spacing.xs,
+                          borderRadius: auraTokens.borderRadius.sm,
+                          bgcolor: auraColors.red.lighter,
+                        }}
                       >
                         <WarningIcon
-                          sx={{ color: "error.main", fontSize: 20 }}
+                          sx={{
+                            color: auraColors.red.main,
+                            fontSize: auraTokens.iconSize.md,
+                          }}
                         />
                       </Box>
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={auraTokens.fontWeights.medium}
+                      >
                         High pain intensity patients
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: auraTokens.spacing.md,
+                      }}
+                    >
                       <Typography
                         variant="h6"
-                        fontWeight={600}
+                        fontWeight={auraTokens.fontWeights.semibold}
                         color="error.main"
                       >
                         {painAnalytics?.totalPainMaps || 0}
                       </Typography>
-                      <Button
+                      <AuraButton
                         size="small"
+                        variant="text"
                         onClick={() => navigate("/patients")}
                       >
                         View
-                      </Button>
+                      </AuraButton>
                     </Box>
                   </Box>
 
@@ -599,38 +619,58 @@ const Analytics: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      py: 1.5,
+                      py: auraTokens.spacing.sm,
                     }}
                   >
                     <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: auraTokens.spacing.sm,
+                      }}
                     >
                       <Box
                         sx={{
-                          p: 0.75,
-                          borderRadius: 1.5,
-                          bgcolor: "warning.50",
+                          p: auraTokens.spacing.xs,
+                          borderRadius: auraTokens.borderRadius.sm,
+                          bgcolor: auraColors.amber.lighter,
                         }}
                       >
                         <AssignmentIcon
-                          sx={{ color: "warning.main", fontSize: 20 }}
+                          sx={{
+                            color: auraColors.amber.main,
+                            fontSize: auraTokens.iconSize.md,
+                          }}
                         />
                       </Box>
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={auraTokens.fontWeights.medium}
+                      >
                         Intakes pending triage
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: auraTokens.spacing.md,
+                      }}
+                    >
                       <Typography
                         variant="h6"
-                        fontWeight={600}
+                        fontWeight={auraTokens.fontWeights.semibold}
                         color="warning.main"
                       >
                         {dashboardMetrics?.pendingIntakes || 0}
                       </Typography>
-                      <Button size="small" onClick={() => navigate("/intake")}>
+                      <AuraButton
+                        size="small"
+                        variant="text"
+                        onClick={() => navigate("/intake")}
+                      >
                         View
-                      </Button>
+                      </AuraButton>
                     </Box>
                   </Box>
 
@@ -640,32 +680,58 @@ const Analytics: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      py: 1.5,
+                      py: auraTokens.spacing.sm,
                     }}
                   >
                     <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: auraTokens.spacing.sm,
+                      }}
                     >
                       <Box
-                        sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "grey.100" }}
+                        sx={{
+                          p: auraTokens.spacing.xs,
+                          borderRadius: auraTokens.borderRadius.sm,
+                          bgcolor: "grey.100",
+                        }}
                       >
-                        <CancelIcon sx={{ color: "grey.600", fontSize: 20 }} />
+                        <CancelIcon
+                          sx={{
+                            color: "grey.600",
+                            fontSize: auraTokens.iconSize.md,
+                          }}
+                        />
                       </Box>
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={auraTokens.fontWeights.medium}
+                      >
                         Cancellations / No-shows
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                      <Typography variant="h6" fontWeight={600}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: auraTokens.spacing.md,
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        fontWeight={auraTokens.fontWeights.semibold}
+                      >
                         {(dashboardMetrics?.cancelledToday || 0) +
                           (dashboardMetrics?.noShowToday || 0)}
                       </Typography>
-                      <Button
+                      <AuraButton
                         size="small"
+                        variant="text"
                         onClick={() => navigate("/appointments")}
                       >
                         View
-                      </Button>
+                      </AuraButton>
                     </Box>
                   </Box>
 
@@ -675,37 +741,58 @@ const Analytics: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      py: 1.5,
+                      py: auraTokens.spacing.sm,
                     }}
                   >
                     <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: auraTokens.spacing.sm,
+                      }}
                     >
                       <Box
-                        sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "info.50" }}
+                        sx={{
+                          p: auraTokens.spacing.xs,
+                          borderRadius: auraTokens.borderRadius.sm,
+                          bgcolor: auraColors.cyan.lighter,
+                        }}
                       >
                         <AssessmentIcon
-                          sx={{ color: "info.main", fontSize: 20 }}
+                          sx={{
+                            color: auraColors.cyan.main,
+                            fontSize: auraTokens.iconSize.md,
+                          }}
                         />
                       </Box>
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={auraTokens.fontWeights.medium}
+                      >
                         Total evaluations
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: auraTokens.spacing.md,
+                      }}
+                    >
                       <Typography
                         variant="h6"
-                        fontWeight={600}
+                        fontWeight={auraTokens.fontWeights.semibold}
                         color="info.main"
                       >
                         {clinicalAnalytics?.totalEvaluations || 0}
                       </Typography>
-                      <Button
+                      <AuraButton
                         size="small"
+                        variant="text"
                         onClick={() => navigate("/patients")}
                       >
                         View
-                      </Button>
+                      </AuraButton>
                     </Box>
                   </Box>
                 </Stack>

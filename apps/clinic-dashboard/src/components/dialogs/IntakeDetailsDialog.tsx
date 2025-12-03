@@ -78,7 +78,6 @@ import {
   AuraButton,
   ConfirmDialog,
   AuraCard,
-  Callout,
   TabPanel,
   InfoCard,
   PainMap3DViewer,
@@ -1129,44 +1128,20 @@ Date: ________________________
                       {/* 3D Pain Body Map */}
                       {fullDetails?.painMap?.bodyParts &&
                         fullDetails.painMap.bodyParts.length > 0 && (
-                          <AuraCard
-                            sx={{
-                              mb: auraTokens.spacing.lg,
-                              boxShadow: auraTokens.shadows.sm,
-                            }}
-                          >
-                            <Box sx={{ p: auraTokens.spacing.md }}>
+                          <AuraCard sx={{ mb: 2 }}>
+                            <Box sx={{ p: 2 }}>
                               <Stack
                                 direction="row"
-                                spacing={auraTokens.spacing.sm}
                                 alignItems="center"
                                 justifyContent="space-between"
-                                sx={{ mb: auraTokens.spacing.md }}
+                                sx={{ mb: 1.5 }}
                               >
-                                <Stack
-                                  direction="row"
-                                  spacing={auraTokens.spacing.sm}
-                                  alignItems="center"
+                                <Typography
+                                  variant="subtitle2"
+                                  fontWeight={600}
                                 >
-                                  <Avatar
-                                    sx={{
-                                      bgcolor: auraColors.blue.main,
-                                      width: auraTokens.iconSize.xl,
-                                      height: auraTokens.iconSize.xl,
-                                    }}
-                                  >
-                                    <HospitalIcon
-                                      sx={{ fontSize: auraTokens.iconSize.sm }}
-                                    />
-                                  </Avatar>
-                                  <Typography
-                                    variant="subtitle1"
-                                    fontWeight={auraTokens.fontWeights.semibold}
-                                  >
-                                    Pain Assessment - 3D Body Map
-                                  </Typography>
-                                </Stack>
-                                {/* View Toggle */}
+                                  Pain Assessment
+                                </Typography>
                                 <ToggleButtonGroup
                                   value={bodyMapView}
                                   exclusive
@@ -1175,49 +1150,25 @@ Date: ________________________
                                   }
                                   size="small"
                                 >
-                                  <ToggleButton value="front">
-                                    <Tooltip title="Front View">
-                                      <FlipToFrontIcon
-                                        sx={{
-                                          fontSize: auraTokens.iconSize.sm,
-                                        }}
-                                      />
-                                    </Tooltip>
+                                  <ToggleButton value="front" sx={{ px: 1 }}>
+                                    <FlipToFrontIcon sx={{ fontSize: 18 }} />
                                   </ToggleButton>
-                                  <ToggleButton value="back">
-                                    <Tooltip title="Back View">
-                                      <FlipToBackIcon
-                                        sx={{
-                                          fontSize: auraTokens.iconSize.sm,
-                                        }}
-                                      />
-                                    </Tooltip>
+                                  <ToggleButton value="back" sx={{ px: 1 }}>
+                                    <FlipToBackIcon sx={{ fontSize: 18 }} />
                                   </ToggleButton>
-                                  <ToggleButton value="left">
-                                    <Tooltip title="Left Side">
-                                      <RotateLeftIcon
-                                        sx={{
-                                          fontSize: auraTokens.iconSize.sm,
-                                        }}
-                                      />
-                                    </Tooltip>
+                                  <ToggleButton value="left" sx={{ px: 1 }}>
+                                    <RotateLeftIcon sx={{ fontSize: 18 }} />
                                   </ToggleButton>
-                                  <ToggleButton value="right">
-                                    <Tooltip title="Right Side">
-                                      <RotateRightIcon
-                                        sx={{
-                                          fontSize: auraTokens.iconSize.sm,
-                                        }}
-                                      />
-                                    </Tooltip>
+                                  <ToggleButton value="right" sx={{ px: 1 }}>
+                                    <RotateRightIcon sx={{ fontSize: 18 }} />
                                   </ToggleButton>
                                 </ToggleButtonGroup>
                               </Stack>
                               <Box
                                 sx={{
                                   display: "flex",
-                                  gap: auraTokens.spacing.md,
-                                  flexDirection: { xs: "column", md: "row" },
+                                  gap: 2,
+                                  flexDirection: { xs: "column", sm: "row" },
                                 }}
                               >
                                 <Box sx={{ flex: "0 0 auto" }}>
@@ -1233,54 +1184,61 @@ Date: ________________________
                                       }),
                                     )}
                                     cameraView={bodyMapView}
-                                    width={280}
-                                    height={350}
+                                    width={220}
+                                    height={280}
                                   />
                                 </Box>
-                                <Box sx={{ flex: 1 }}>
+                                <Box
+                                  sx={{
+                                    flex: 1,
+                                    maxHeight: 260,
+                                    overflow: "auto",
+                                  }}
+                                >
                                   <Typography
                                     variant="subtitle2"
                                     color="text.secondary"
                                     fontWeight={auraTokens.fontWeights.medium}
                                     gutterBottom
                                   >
-                                    Pain Regions Summary
+                                    Pain Regions (
+                                    {fullDetails.painMap.bodyParts.length})
                                   </Typography>
-                                  <List dense>
+                                  <List dense disablePadding>
                                     {fullDetails.painMap.bodyParts.map(
                                       (point, idx) => (
                                         <ListItem
                                           key={idx}
                                           sx={{
-                                            px: auraTokens.spacing.sm,
-                                            py: auraTokens.spacing.xs,
-                                            borderRadius:
-                                              auraTokens.borderRadius.sm,
-                                            mb: auraTokens.spacing.xs,
+                                            px: 1,
+                                            py: 0.5,
+                                            borderRadius: 1,
+                                            mb: 0.5,
                                             bgcolor:
                                               point.intensity >= 7
                                                 ? `${auraColors.red.main}10`
                                                 : point.intensity >= 4
                                                   ? `${auraColors.orange.main}10`
                                                   : `${auraColors.green.main}10`,
-                                            transition:
-                                              auraTokens.transitions.fast,
                                           }}
                                         >
                                           <ListItemText
                                             primary={point.region}
                                             secondary={`${point.type} pain`}
                                             primaryTypographyProps={{
-                                              fontWeight:
-                                                auraTokens.fontWeights.medium,
+                                              variant: "body2",
+                                              fontWeight: 500,
+                                            }}
+                                            secondaryTypographyProps={{
+                                              variant: "caption",
                                             }}
                                           />
                                           <Chip
                                             label={`${point.intensity}/10`}
                                             size="small"
                                             sx={{
-                                              fontWeight:
-                                                auraTokens.fontWeights.semibold,
+                                              fontWeight: 600,
+                                              minWidth: 50,
                                               bgcolor:
                                                 point.intensity >= 7
                                                   ? auraColors.red.main
@@ -1302,46 +1260,16 @@ Date: ________________________
 
                       {/* Pain Progression Over Time */}
                       {painHistory.length > 0 && (
-                        <AuraCard
-                          sx={{
-                            mb: auraTokens.spacing.lg,
-                            boxShadow: auraTokens.shadows.sm,
-                          }}
-                        >
-                          <Box sx={{ p: auraTokens.spacing.md }}>
-                            <Stack
-                              direction="row"
-                              spacing={auraTokens.spacing.sm}
-                              alignItems="center"
-                              sx={{ mb: auraTokens.spacing.md }}
+                        <AuraCard sx={{ mb: 2 }}>
+                          <Box sx={{ p: 2 }}>
+                            <Typography
+                              variant="subtitle2"
+                              fontWeight={600}
+                              gutterBottom
                             >
-                              <Avatar
-                                sx={{
-                                  bgcolor: auraColors.purple.main,
-                                  width: auraTokens.iconSize.xl,
-                                  height: auraTokens.iconSize.xl,
-                                }}
-                              >
-                                <HistoryIcon
-                                  sx={{ fontSize: auraTokens.iconSize.sm }}
-                                />
-                              </Avatar>
-                              <Box>
-                                <Typography
-                                  variant="subtitle1"
-                                  fontWeight={auraTokens.fontWeights.semibold}
-                                >
-                                  Pain Progression
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  Tracking changes over time
-                                </Typography>
-                              </Box>
-                            </Stack>
-                            <Box sx={{ height: 150 }}>
+                              Pain Progression
+                            </Typography>
+                            <Box sx={{ height: 120 }}>
                               <ResponsiveContainer width="100%" height="100%">
                                 <LineChart
                                   data={painHistory}
@@ -1451,64 +1379,6 @@ Date: ________________________
                                 </LineChart>
                               </ResponsiveContainer>
                             </Box>
-                            <Stack
-                              direction="row"
-                              spacing={2}
-                              justifyContent="center"
-                              sx={{ mt: 1 }}
-                            >
-                              <Stack
-                                direction="row"
-                                spacing={0.5}
-                                alignItems="center"
-                              >
-                                <Box
-                                  sx={{
-                                    width: 12,
-                                    height: 12,
-                                    borderRadius: "50%",
-                                    bgcolor: auraColors.green.main,
-                                  }}
-                                />
-                                <Typography variant="caption">
-                                  Mild (0-4)
-                                </Typography>
-                              </Stack>
-                              <Stack
-                                direction="row"
-                                spacing={0.5}
-                                alignItems="center"
-                              >
-                                <Box
-                                  sx={{
-                                    width: 12,
-                                    height: 12,
-                                    borderRadius: "50%",
-                                    bgcolor: auraColors.orange.main,
-                                  }}
-                                />
-                                <Typography variant="caption">
-                                  Moderate (5-7)
-                                </Typography>
-                              </Stack>
-                              <Stack
-                                direction="row"
-                                spacing={0.5}
-                                alignItems="center"
-                              >
-                                <Box
-                                  sx={{
-                                    width: 12,
-                                    height: 12,
-                                    borderRadius: "50%",
-                                    bgcolor: auraColors.red.main,
-                                  }}
-                                />
-                                <Typography variant="caption">
-                                  Severe (8-10)
-                                </Typography>
-                              </Stack>
-                            </Stack>
                           </Box>
                         </AuraCard>
                       )}
@@ -1566,280 +1436,96 @@ Date: ________________________
                       </Grid>
                     </Grid>
 
-                    {/* Right Column - AI Analysis & Medical History */}
+                    {/* Right Column - Medical History & Details */}
                     <Grid size={{ xs: 12, lg: 5 }}>
-                      {/* AI Analysis */}
-                      {fullDetails?.aiSummary ? (
-                        <AuraCard
-                          sx={{
-                            mb: auraTokens.spacing.lg,
-                            background: auraTokens.gradients.subtle,
-                            border: "1px solid",
-                            borderColor: auraColors.blue.light,
-                            boxShadow: auraTokens.shadows.sm,
-                          }}
-                        >
-                          <Box sx={{ p: auraTokens.spacing.md }}>
-                            {/* Header with AI icon and status */}
-                            <Stack
-                              direction="row"
-                              justifyContent="space-between"
-                              alignItems="center"
-                              sx={{ mb: auraTokens.spacing.md }}
-                            >
-                              <Stack
-                                direction="row"
-                                spacing={auraTokens.spacing.sm}
-                                alignItems="center"
-                              >
-                                <Avatar
-                                  sx={{
-                                    bgcolor: auraColors.blue.main,
-                                    width: auraTokens.iconSize.xl,
-                                    height: auraTokens.iconSize.xl,
-                                  }}
-                                >
-                                  <PsychologyIcon
-                                    sx={{ fontSize: auraTokens.iconSize.sm }}
-                                  />
-                                </Avatar>
-                                <Box>
-                                  <Typography
-                                    variant="subtitle1"
-                                    fontWeight={auraTokens.fontWeights.semibold}
-                                  >
-                                    AI Triage Analysis
-                                  </Typography>
-                                  <Stack
-                                    direction="row"
-                                    spacing={auraTokens.spacing.xs}
-                                    alignItems="center"
-                                  >
-                                    <AutoAwesomeIcon
-                                      sx={{
-                                        fontSize: auraTokens.iconSize.xxs,
-                                        color: auraColors.blue.main,
-                                      }}
-                                    />
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                    >
-                                      Powered by Qivr AI
-                                    </Typography>
-                                  </Stack>
-                                </Box>
-                              </Stack>
-                              {fullDetails.aiSummary.approved && (
-                                <Chip
-                                  icon={<VerifiedIcon />}
-                                  label="Verified"
-                                  size="small"
-                                  color="success"
-                                  variant="outlined"
-                                />
-                              )}
-                            </Stack>
-
-                            {/* AI Summary Content */}
-                            <Box
-                              sx={{
-                                p: auraTokens.spacing.md,
-                                bgcolor: "background.paper",
-                                borderRadius: auraTokens.borderRadius.md,
-                                mb: auraTokens.spacing.md,
-                                border: "1px solid",
-                                borderColor: "divider",
-                              }}
-                            >
+                      {/* Medical History */}
+                      <InfoCard title="Medical History" sx={{ mb: 2 }}>
+                        <Stack spacing={1.5}>
+                          {evaluation?.allergies && (
+                            <Box>
                               <Typography
-                                variant="body2"
-                                sx={{ whiteSpace: "pre-wrap" }}
+                                variant="caption"
+                                color="error.main"
+                                fontWeight={600}
                               >
-                                {fullDetails.aiSummary.content}
+                                Allergies
+                              </Typography>
+                              <Typography variant="body2">
+                                {evaluation.allergies}
                               </Typography>
                             </Box>
-
-                            {/* Risk Flags */}
-                            {fullDetails.aiSummary.riskFactors.length > 0 && (
-                              <Box sx={{ mb: auraTokens.spacing.md }}>
-                                <Stack
-                                  direction="row"
-                                  spacing={auraTokens.spacing.sm}
-                                  alignItems="center"
-                                  sx={{ mb: auraTokens.spacing.sm }}
-                                >
-                                  <WarningIcon
-                                    sx={{
-                                      fontSize: auraTokens.iconSize.sm,
-                                      color: auraColors.red.main,
-                                    }}
-                                  />
-                                  <Typography
-                                    variant="subtitle2"
-                                    sx={{ color: auraColors.red.main }}
-                                  >
-                                    Risk Flags (
-                                    {fullDetails.aiSummary.riskFactors.length})
-                                  </Typography>
-                                </Stack>
-                                <Stack spacing={auraTokens.spacing.sm}>
-                                  {fullDetails.aiSummary.riskFactors.map(
-                                    (flag, idx) => (
-                                      <Callout
-                                        key={idx}
-                                        variant="error"
-                                        icon={<WarningIcon />}
-                                      >
-                                        {flag}
-                                      </Callout>
-                                    ),
-                                  )}
-                                </Stack>
-                              </Box>
-                            )}
-
-                            {/* Recommendations */}
-                            {fullDetails.aiSummary.recommendations.length >
-                              0 && (
-                              <Box>
-                                <Stack
-                                  direction="row"
-                                  spacing={auraTokens.spacing.sm}
-                                  alignItems="center"
-                                  sx={{ mb: auraTokens.spacing.sm }}
-                                >
-                                  <CheckCircleIcon
-                                    sx={{
-                                      fontSize: auraTokens.iconSize.sm,
-                                      color: auraColors.green.main,
-                                    }}
-                                  />
-                                  <Typography
-                                    variant="subtitle2"
-                                    sx={{ color: auraColors.green.main }}
-                                  >
-                                    Recommendations
-                                  </Typography>
-                                </Stack>
-                                <List dense disablePadding>
-                                  {fullDetails.aiSummary.recommendations.map(
-                                    (rec, idx) => (
-                                      <ListItem
-                                        key={idx}
-                                        sx={{
-                                          px: 0,
-                                          py: auraTokens.spacing.xs,
-                                        }}
-                                      >
-                                        <CheckCircleIcon
-                                          sx={{
-                                            mr: auraTokens.spacing.sm,
-                                            fontSize: auraTokens.iconSize.xs,
-                                            color: auraColors.green.main,
-                                          }}
-                                        />
-                                        <ListItemText
-                                          primary={rec}
-                                          primaryTypographyProps={{
-                                            variant: "body2",
-                                          }}
-                                        />
-                                      </ListItem>
-                                    ),
-                                  )}
-                                </List>
-                              </Box>
-                            )}
-
-                            {/* Approval timestamp */}
-                            {fullDetails.aiSummary.approvedAt && (
+                          )}
+                          {evaluation?.currentMedications && (
+                            <Box>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
-                                sx={{
-                                  mt: auraTokens.spacing.md,
-                                  display: "block",
-                                }}
+                                fontWeight={600}
                               >
-                                Analysis generated{" "}
-                                {formatDistanceToNow(
-                                  new Date(fullDetails.aiSummary.approvedAt),
-                                  { addSuffix: true },
-                                )}
+                                Medications
+                              </Typography>
+                              <Typography variant="body2">
+                                {evaluation.currentMedications}
+                              </Typography>
+                            </Box>
+                          )}
+                          {evaluation?.medicalConditions && (
+                            <Box>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={600}
+                              >
+                                Conditions
+                              </Typography>
+                              <Typography variant="body2">
+                                {evaluation.medicalConditions}
+                              </Typography>
+                            </Box>
+                          )}
+                          {evaluation?.surgeries && (
+                            <Box>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={600}
+                              >
+                                Surgeries
+                              </Typography>
+                              <Typography variant="body2">
+                                {evaluation.surgeries}
+                              </Typography>
+                            </Box>
+                          )}
+                          {evaluation?.previousTreatments && (
+                            <Box>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={600}
+                              >
+                                Previous Treatments
+                              </Typography>
+                              <Typography variant="body2">
+                                {Array.isArray(evaluation.previousTreatments)
+                                  ? evaluation.previousTreatments.join(", ")
+                                  : evaluation.previousTreatments}
+                              </Typography>
+                            </Box>
+                          )}
+                          {!evaluation?.allergies &&
+                            !evaluation?.currentMedications &&
+                            !evaluation?.medicalConditions &&
+                            !evaluation?.surgeries &&
+                            !evaluation?.previousTreatments && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                No medical history reported
                               </Typography>
                             )}
-                          </Box>
-                        </AuraCard>
-                      ) : null}
-
-                      {/* Medical History */}
-                      <InfoCard title="Medical History" sx={{ mb: 3 }}>
-                        {evaluation?.currentMedications && (
-                          <Box sx={{ mb: 2 }}>
-                            <Typography
-                              variant="subtitle2"
-                              color="text.secondary"
-                            >
-                              Current Medications
-                            </Typography>
-                            <Typography variant="body2">
-                              {evaluation.currentMedications || "None reported"}
-                            </Typography>
-                          </Box>
-                        )}
-                        {evaluation?.allergies && (
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="error">
-                              Allergies
-                            </Typography>
-                            <Typography variant="body2">
-                              {evaluation.allergies || "None reported"}
-                            </Typography>
-                          </Box>
-                        )}
-                        {evaluation?.medicalConditions && (
-                          <Box sx={{ mb: 2 }}>
-                            <Typography
-                              variant="subtitle2"
-                              color="text.secondary"
-                            >
-                              Medical Conditions
-                            </Typography>
-                            <Typography variant="body2">
-                              {evaluation.medicalConditions || "None reported"}
-                            </Typography>
-                          </Box>
-                        )}
-                        {evaluation?.surgeries && (
-                          <Box sx={{ mb: 2 }}>
-                            <Typography
-                              variant="subtitle2"
-                              color="text.secondary"
-                            >
-                              Previous Surgeries
-                            </Typography>
-                            <Typography variant="body2">
-                              {evaluation.surgeries || "None reported"}
-                            </Typography>
-                          </Box>
-                        )}
-                        {evaluation?.previousTreatments && (
-                          <Box>
-                            <Typography
-                              variant="subtitle2"
-                              color="text.secondary"
-                            >
-                              Previous Treatments
-                            </Typography>
-                            <Typography variant="body2">
-                              {Array.isArray(evaluation.previousTreatments)
-                                ? evaluation.previousTreatments.join(", ")
-                                : evaluation.previousTreatments ||
-                                  "None reported"}
-                            </Typography>
-                          </Box>
-                        )}
+                        </Stack>
                       </InfoCard>
 
                       {/* Treatment Goals */}
