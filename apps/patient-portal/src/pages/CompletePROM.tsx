@@ -35,6 +35,13 @@ import {
   fetchPromInstance as fetchPromInstanceById,
   fetchPromTemplate,
   submitPromAnswers,
+  fetchTreatmentContext,
+  submitTreatmentProgress,
+} from "../services/promsApi";
+import type {
+  TreatmentProgressContext,
+  SubmitTreatmentProgressRequest,
+  TreatmentExercise,
 } from "../services/promsApi";
 import type {
   PromAnswerValue,
@@ -72,6 +79,10 @@ export const CompletePROM = () => {
   >({});
   const [currentPainMap, setCurrentPainMap] = useState<SelectedRegion[]>([]);
 
+  // Treatment progress state
+  const [treatmentContext, setTreatmentContext] = useState<TreatmentProgressContext | null>(null);
+  const [treatmentProgress, setTreatmentProgress] = useState<SubmitTreatmentProgressRequest>({});
+
   // Fetch baseline pain map
   const { data: baselinePainMap } = useQuery({
     queryKey: ["baseline-pain-map"],
@@ -105,6 +116,10 @@ export const CompletePROM = () => {
         instanceResponse.templateId,
       );
       setTemplate(templateResponse);
+
+      // Fetch treatment context if this PROM is linked to a treatment plan
+      const treatmentContextResponse = await fetchTreatmentContext(id);
+      setTreatmentContext(treatmentContextResponse);
     } catch (err) {
       console.error("Error fetching PROM:", err);
       setError("Failed to load assessment. Please try again.");
@@ -174,7 +189,8 @@ export const CompletePROM = () => {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(activeStep)) return;
+    // Skip validation for treatment progress step (optional questions)
+    if (!isTreatmentProgressStep() && !validateStep(activeStep)) return;
     if (!id) {
       setError("Missing assessment identifier.");
       return;
@@ -193,6 +209,11 @@ export const CompletePROM = () => {
         painMapData: JSON.stringify(currentPainMap),
         painLevel: avgPainLevel,
       });
+
+      // Submit treatment progress if we have context and any data
+      if (treatmentContext && Object.keys(treatmentProgress).length > 0) {
+        await submitTreatmentProgress(id, treatmentProgress);
+      }
 
       queryClient.invalidateQueries({ queryKey: ["prom"] });
 
@@ -376,14 +397,22 @@ export const CompletePROM = () => {
   const getTotalSteps = () => {
     if (!template) return 1;
     // Show 3 questions per step, or all questions if less than 3
-    return Math.ceil(template.questions.length / 3);
+    const questionSteps = Math.ceil(template.questions.length / 3);
+    // Add one extra step for treatment progress if context exists
+    return treatmentContext ? questionSteps + 1 : questionSteps;
+  };
+
+  const isTreatmentProgressStep = () => {
+    if (!treatmentContext || !template) return false;
+    const questionSteps = Math.ceil(template.questions.length / 3);
+    return activeStep === questionSteps;
   };
 
   const getStepQuestions = () => {
-    if (!template) return [];
-    const questionsPerStep = Math.ceil(
-      template.questions.length / getTotalSteps(),
-    );
+    if (!template || isTreatmentProgressStep()) return [];
+    // Calculate steps for questions only (excluding treatment step)
+    const questionSteps = Math.ceil(template.questions.length / 3);
+    const questionsPerStep = Math.ceil(template.questions.length / questionSteps);
     const startIdx = activeStep * questionsPerStep;
     const endIdx = Math.min(
       startIdx + questionsPerStep,
@@ -396,6 +425,291 @@ export const CompletePROM = () => {
     if (!template) return 0;
     const answered = Object.keys(responses).length;
     return (answered / template.questions.length) * 100;
+  };
+
+  const EXERCISE_COMPLIANCE_OPTIONS = [
+    { value: "Never", label: "Never" },
+    { value: "Rarely", label: "Rarely (less than 25%)" },
+    { value: "Sometimes", label: "Sometimes (25-50%)" },
+    { value: "Often", label: "Often (50-75%)" },
+    { value: "Always", label: "Always (75-100%)" },
+  ];
+
+  const BARRIER_OPTIONS = [
+    "Lack of time",
+    "Pain during exercises",
+    "Forgot to do them",
+    "Too difficult",
+    "Equipment not available",
+    "Not motivated",
+    "Other",
+  ];
+
+  const renderTreatmentProgressQuestions = () => {
+    if (!treatmentContext) return null;
+
+    return (
+      <Box>
+        <Box sx={{ mb: 3 }}>
+          <Callout variant="info">
+            You are currently on week {treatmentContext.weeksInTreatment} of your treatment plan: <strong>{treatmentContext.treatmentPlanName}</strong>
+            {" "}(Phase {treatmentContext.currentPhase} of {treatmentContext.totalPhases})
+          </Callout>
+        </Box>
+
+        {/* Overall Effectiveness Rating */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <FormLabel sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight={500}>
+                How would you rate the overall effectiveness of your treatment plan so far?
+              </Typography>
+            </FormLabel>
+            <Box px={2}>
+              <Slider
+                value={treatmentProgress.overallEffectivenessRating ?? 5}
+                onChange={(_, value) => setTreatmentProgress(prev => ({ ...prev, overallEffectivenessRating: value as number }))}
+                min={1}
+                max={10}
+                step={1}
+                marks={[
+                  { value: 1, label: "1" },
+                  { value: 5, label: "5" },
+                  { value: 10, label: "10" },
+                ]}
+                valueLabelDisplay="on"
+              />
+              <Box display="flex" justifyContent="space-between" mt={1}>
+                <Typography variant="caption">Not effective</Typography>
+                <Typography variant="caption">Very effective</Typography>
+              </Box>
+            </Box>
+          </FormControl>
+        </Box>
+
+        {/* Pain Compared to Start */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <FormLabel sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight={500}>
+                Compared to when you started treatment, how is your pain?
+              </Typography>
+            </FormLabel>
+            <RadioGroup
+              value={treatmentProgress.painComparedToStart?.toString() ?? ""}
+              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, painComparedToStart: parseInt(e.target.value, 10) }))}
+            >
+              <FormControlLabel value="-3" control={<Radio />} label="Much worse" />
+              <FormControlLabel value="-2" control={<Radio />} label="Worse" />
+              <FormControlLabel value="-1" control={<Radio />} label="Slightly worse" />
+              <FormControlLabel value="0" control={<Radio />} label="About the same" />
+              <FormControlLabel value="1" control={<Radio />} label="Slightly better" />
+              <FormControlLabel value="2" control={<Radio />} label="Better" />
+              <FormControlLabel value="3" control={<Radio />} label="Much better" />
+            </RadioGroup>
+          </FormControl>
+        </Box>
+
+        {/* Exercise Compliance */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <FormLabel sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight={500}>
+                How often are you completing your prescribed exercises?
+              </Typography>
+            </FormLabel>
+            <RadioGroup
+              value={treatmentProgress.exerciseCompliance ?? ""}
+              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, exerciseCompliance: e.target.value }))}
+            >
+              {EXERCISE_COMPLIANCE_OPTIONS.map(opt => (
+                <FormControlLabel key={opt.value} value={opt.value} control={<Radio />} label={opt.label} />
+              ))}
+            </RadioGroup>
+          </FormControl>
+        </Box>
+
+        {/* Sessions Completed This Week */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <FormLabel sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight={500}>
+                How many exercise sessions have you completed this week?
+              </Typography>
+            </FormLabel>
+            <TextField
+              type="number"
+              value={treatmentProgress.sessionsCompletedThisWeek ?? ""}
+              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, sessionsCompletedThisWeek: parseInt(e.target.value, 10) || 0 }))}
+              inputProps={{ min: 0, max: 14 }}
+              sx={{ maxWidth: 120 }}
+            />
+          </FormControl>
+        </Box>
+
+        {/* Helpful Exercises */}
+        {treatmentContext.exercises.length > 0 && (
+          <Box mb={4}>
+            <FormControl fullWidth>
+              <FormLabel sx={{ mb: 2 }}>
+                <Typography variant="body1" fontWeight={500}>
+                  Which exercises have been most helpful?
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Select all that apply
+                </Typography>
+              </FormLabel>
+              <FormGroup>
+                {treatmentContext.exercises.map((exercise: TreatmentExercise) => (
+                  <FormControlLabel
+                    key={exercise.id}
+                    control={
+                      <Checkbox
+                        checked={treatmentProgress.helpfulExerciseIds?.includes(exercise.id) ?? false}
+                        onChange={(e) => {
+                          const current = treatmentProgress.helpfulExerciseIds ?? [];
+                          const updated = e.target.checked
+                            ? [...current, exercise.id]
+                            : current.filter(id => id !== exercise.id);
+                          setTreatmentProgress(prev => ({ ...prev, helpfulExerciseIds: updated }));
+                        }}
+                      />
+                    }
+                    label={exercise.name}
+                  />
+                ))}
+              </FormGroup>
+            </FormControl>
+          </Box>
+        )}
+
+        {/* Problematic Exercises */}
+        {treatmentContext.exercises.length > 0 && (
+          <Box mb={4}>
+            <FormControl fullWidth>
+              <FormLabel sx={{ mb: 2 }}>
+                <Typography variant="body1" fontWeight={500}>
+                  Are any exercises causing you discomfort or difficulty?
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Select all that apply
+                </Typography>
+              </FormLabel>
+              <FormGroup>
+                {treatmentContext.exercises.map((exercise: TreatmentExercise) => (
+                  <FormControlLabel
+                    key={exercise.id}
+                    control={
+                      <Checkbox
+                        checked={treatmentProgress.problematicExerciseIds?.includes(exercise.id) ?? false}
+                        onChange={(e) => {
+                          const current = treatmentProgress.problematicExerciseIds ?? [];
+                          const updated = e.target.checked
+                            ? [...current, exercise.id]
+                            : current.filter(id => id !== exercise.id);
+                          setTreatmentProgress(prev => ({ ...prev, problematicExerciseIds: updated }));
+                        }}
+                      />
+                    }
+                    label={exercise.name}
+                  />
+                ))}
+              </FormGroup>
+            </FormControl>
+          </Box>
+        )}
+
+        {/* Exercise Comments */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <FormLabel sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight={500}>
+                Any comments about your exercises?
+              </Typography>
+            </FormLabel>
+            <TextField
+              multiline
+              rows={3}
+              value={treatmentProgress.exerciseComments ?? ""}
+              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, exerciseComments: e.target.value }))}
+              placeholder="Optional: Share any feedback about your exercises..."
+              fullWidth
+            />
+          </FormControl>
+        </Box>
+
+        {/* Barriers */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <FormLabel sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight={500}>
+                What barriers have you faced in completing your treatment?
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Select all that apply
+              </Typography>
+            </FormLabel>
+            <FormGroup>
+              {BARRIER_OPTIONS.map(barrier => (
+                <FormControlLabel
+                  key={barrier}
+                  control={
+                    <Checkbox
+                      checked={treatmentProgress.barriers?.includes(barrier) ?? false}
+                      onChange={(e) => {
+                        const current = treatmentProgress.barriers ?? [];
+                        const updated = e.target.checked
+                          ? [...current, barrier]
+                          : current.filter(b => b !== barrier);
+                        setTreatmentProgress(prev => ({ ...prev, barriers: updated }));
+                      }}
+                    />
+                  }
+                  label={barrier}
+                />
+              ))}
+            </FormGroup>
+          </FormControl>
+        </Box>
+
+        {/* Suggestions */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <FormLabel sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight={500}>
+                Do you have any suggestions for improving your treatment plan?
+              </Typography>
+            </FormLabel>
+            <TextField
+              multiline
+              rows={3}
+              value={treatmentProgress.suggestions ?? ""}
+              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, suggestions: e.target.value }))}
+              placeholder="Optional: Share your suggestions..."
+              fullWidth
+            />
+          </FormControl>
+        </Box>
+
+        {/* Wants Clinician Discussion */}
+        <Box mb={4}>
+          <FormControl fullWidth>
+            <FormLabel sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight={500}>
+                Would you like to discuss your treatment with your clinician?
+              </Typography>
+            </FormLabel>
+            <RadioGroup
+              value={treatmentProgress.wantsClinicianDiscussion === undefined ? "" : treatmentProgress.wantsClinicianDiscussion ? "yes" : "no"}
+              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, wantsClinicianDiscussion: e.target.value === "yes" }))}
+            >
+              <FormControlLabel value="yes" control={<Radio />} label="Yes, I'd like to discuss my progress" />
+              <FormControlLabel value="no" control={<Radio />} label="No, I'm satisfied with my current plan" />
+            </RadioGroup>
+          </FormControl>
+        </Box>
+      </Box>
+    );
   };
 
   const calculateImprovement = (baseline: any, current: SelectedRegion[]) => {
@@ -517,11 +831,14 @@ export const CompletePROM = () => {
       {/* Stepper for multi-step form */}
       {totalSteps > 1 && (
         <Stepper activeStep={activeStep} sx={auraStepper}>
-          {Array.from({ length: totalSteps }, (_, index) => (
-            <Step key={index}>
-              <StepLabel>Section {index + 1}</StepLabel>
-            </Step>
-          ))}
+          {Array.from({ length: totalSteps }, (_, index) => {
+            const isLastStepWithTreatment = treatmentContext && index === totalSteps - 1;
+            return (
+              <Step key={index}>
+                <StepLabel>{isLastStepWithTreatment ? "Treatment Feedback" : `Section ${index + 1}`}</StepLabel>
+              </Step>
+            );
+          })}
         </Stepper>
       )}
 
@@ -576,9 +893,21 @@ export const CompletePROM = () => {
         </Paper>
       )}
 
-      {/* Questions */}
+      {/* Questions or Treatment Progress */}
       <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
-        {stepQuestions.map(renderQuestion)}
+        {isTreatmentProgressStep() ? (
+          <>
+            <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+              Treatment Progress Feedback
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Help us understand how your treatment is going. Your feedback helps us improve your care.
+            </Typography>
+            {renderTreatmentProgressQuestions()}
+          </>
+        ) : (
+          stepQuestions.map(renderQuestion)
+        )}
 
         {/* Navigation buttons */}
         <Box display="flex" justifyContent="space-between" mt={4}>

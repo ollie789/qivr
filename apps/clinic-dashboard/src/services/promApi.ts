@@ -420,6 +420,71 @@ class PromApi {
       params,
     );
   }
+
+  async getTreatmentProgressAggregate(
+    treatmentPlanId: string,
+  ): Promise<TreatmentProgressAggregate | null> {
+    try {
+      return await apiClient.get<TreatmentProgressAggregate>(
+        `/api/proms/treatment-progress/${treatmentPlanId}`,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  async getPatientTreatmentProgress(
+    patientId: string,
+    treatmentPlanId?: string,
+  ): Promise<TreatmentProgressFeedback[]> {
+    const params = treatmentPlanId ? { treatmentPlanId } : undefined;
+    return await apiClient.get<TreatmentProgressFeedback[]>(
+      `/api/proms/treatment-progress/patient/${patientId}`,
+      params,
+    );
+  }
+}
+
+// Treatment Progress Feedback Types
+export interface ExerciseFeedbackSummary {
+  exerciseId: string;
+  exerciseName: string;
+  helpfulCount: number;
+  problematicCount: number;
+  helpfulPercentage: number;
+  problematicPercentage: number;
+}
+
+export interface TreatmentProgressAggregate {
+  treatmentPlanId: string;
+  totalFeedbacks: number;
+  averageEffectivenessRating: number | null;
+  averagePainChange: number | null;
+  exerciseComplianceBreakdown: Record<string, number>;
+  averageSessionsPerWeek: number | null;
+  exerciseFeedback: ExerciseFeedbackSummary[];
+  commonBarriers: Record<string, number>;
+  patientsWantingDiscussion: number;
+  latestFeedbackDate: string | null;
+}
+
+export interface TreatmentProgressFeedback {
+  id: string;
+  promInstanceId: string;
+  treatmentPlanId: string;
+  patientId: string;
+  overallEffectivenessRating?: number;
+  painComparedToStart?: number;
+  exerciseCompliance?: string;
+  sessionsCompletedThisWeek?: number;
+  helpfulExerciseIds?: string[];
+  problematicExerciseIds?: string[];
+  exerciseComments?: string;
+  barriers?: string[];
+  suggestions?: string;
+  wantsClinicianDiscussion?: boolean;
+  currentPhaseNumber?: number;
+  submittedAt: string;
 }
 
 export const promApi = new PromApi();

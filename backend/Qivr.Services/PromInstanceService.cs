@@ -40,6 +40,12 @@ public interface IPromInstanceService
         int page = 1,
         int pageSize = 25,
         CancellationToken ct = default);
+
+    // === Treatment Progress Feedback Methods ===
+    Task<TreatmentProgressContextDto?> GetTreatmentProgressContextAsync(Guid tenantId, Guid treatmentPlanId, CancellationToken ct = default);
+    Task<TreatmentProgressFeedbackDto?> SubmitTreatmentProgressAsync(Guid tenantId, Guid instanceId, Guid userId, SubmitTreatmentProgressRequest request, CancellationToken ct = default);
+    Task<TreatmentProgressAggregateDto?> GetTreatmentProgressAggregateAsync(Guid tenantId, Guid treatmentPlanId, CancellationToken ct = default);
+    Task<List<TreatmentProgressFeedbackDto>> GetPatientTreatmentProgressAsync(Guid tenantId, Guid patientId, Guid? treatmentPlanId, CancellationToken ct = default);
 }
 
 public class PromInstanceService : IPromInstanceService
@@ -1260,6 +1266,241 @@ public class PromInstanceService : IPromInstanceService
 
         return new[] { value.ToString() ?? string.Empty };
     }
+
+    // === Treatment Progress Feedback Implementation ===
+
+    public async Task<TreatmentProgressContextDto?> GetTreatmentProgressContextAsync(
+        Guid tenantId, Guid treatmentPlanId, CancellationToken ct = default)
+    {
+        var plan = await _db.TreatmentPlans
+            .Where(p => p.Id == treatmentPlanId && (tenantId == Guid.Empty || p.TenantId == tenantId) && p.DeletedAt == null)
+            .Select(p => new
+            {
+                p.Id,
+                p.Title,
+                p.Diagnosis,
+                p.StartDate,
+                p.DurationWeeks,
+                p.Status,
+                Phases = p.Phases != null ? p.Phases : new List<TreatmentPhase>()
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (plan == null) return null;
+
+        var weeksIntoTreatment = plan.StartDate.HasValue
+            ? (int)Math.Floor((DateTime.UtcNow - plan.StartDate.Value).TotalDays / 7)
+            : 0;
+
+        // Find current phase based on weeks into treatment
+        var currentPhase = plan.Phases
+            .OrderBy(p => p.PhaseNumber)
+            .FirstOrDefault(p => p.Status == "InProgress")
+            ?? plan.Phases.OrderBy(p => p.PhaseNumber).FirstOrDefault();
+
+        // Get all exercises from all phases
+        var exercises = plan.Phases
+            .SelectMany(phase => (phase.Exercises ?? new List<TreatmentExercise>())
+                .Select(ex => new TreatmentExerciseDto
+                {
+                    Id = ex.ExerciseTemplateId ?? Guid.NewGuid(),
+                    Name = ex.Name,
+                    Description = ex.Instructions,
+                    PhaseNumber = phase.PhaseNumber
+                }))
+            .ToList();
+
+        return new TreatmentProgressContextDto
+        {
+            TreatmentPlanId = plan.Id,
+            TreatmentPlanTitle = plan.Title ?? "Treatment Plan",
+            Diagnosis = plan.Diagnosis,
+            CurrentPhaseNumber = currentPhase?.PhaseNumber ?? 1,
+            CurrentPhaseName = currentPhase?.Name,
+            WeeksIntoTreatment = weeksIntoTreatment,
+            TotalWeeks = plan.DurationWeeks ?? 8,
+            Exercises = exercises,
+            HasTreatmentPlan = true
+        };
+    }
+
+    public async Task<TreatmentProgressFeedbackDto?> SubmitTreatmentProgressAsync(
+        Guid tenantId, Guid instanceId, Guid userId, SubmitTreatmentProgressRequest request, CancellationToken ct = default)
+    {
+        var instance = await _db.PromInstances
+            .Where(i => i.Id == instanceId && (tenantId == Guid.Empty || i.TenantId == tenantId))
+            .FirstOrDefaultAsync(ct);
+
+        if (instance == null || !instance.TreatmentPlanId.HasValue)
+            return null;
+
+        // Get current phase info
+        var plan = await _db.TreatmentPlans
+            .Where(p => p.Id == instance.TreatmentPlanId && p.DeletedAt == null)
+            .Select(p => new { p.Phases })
+            .FirstOrDefaultAsync(ct);
+
+        var currentPhase = plan?.Phases?
+            .OrderBy(p => p.PhaseNumber)
+            .FirstOrDefault(p => p.Status == "InProgress");
+
+        ExerciseComplianceLevel? compliance = null;
+        if (!string.IsNullOrEmpty(request.ExerciseCompliance) &&
+            Enum.TryParse<ExerciseComplianceLevel>(request.ExerciseCompliance, true, out var parsed))
+        {
+            compliance = parsed;
+        }
+
+        var feedback = new TreatmentProgressFeedback
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId != Guid.Empty ? tenantId : instance.TenantId,
+            PromInstanceId = instanceId,
+            TreatmentPlanId = instance.TreatmentPlanId.Value,
+            PatientId = instance.PatientId,
+            OverallEffectivenessRating = request.OverallEffectivenessRating,
+            PainComparedToStart = request.PainComparedToStart,
+            ExerciseCompliance = compliance,
+            SessionsCompletedThisWeek = request.SessionsCompletedThisWeek,
+            HelpfulExerciseIds = request.HelpfulExerciseIds,
+            ProblematicExerciseIds = request.ProblematicExerciseIds,
+            ExerciseComments = request.ExerciseComments,
+            Barriers = request.Barriers,
+            Suggestions = request.Suggestions,
+            WantsClinicianDiscussion = request.WantsClinicianDiscussion,
+            CurrentPhaseNumber = currentPhase?.PhaseNumber,
+            SubmittedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.TreatmentProgressFeedbacks.Add(feedback);
+        await _db.SaveChangesAsync(ct);
+
+        return MapToFeedbackDto(feedback);
+    }
+
+    public async Task<TreatmentProgressAggregateDto?> GetTreatmentProgressAggregateAsync(
+        Guid tenantId, Guid treatmentPlanId, CancellationToken ct = default)
+    {
+        var plan = await _db.TreatmentPlans
+            .Where(p => p.Id == treatmentPlanId && p.TenantId == tenantId && p.DeletedAt == null)
+            .Select(p => new { p.Id, p.Title, p.Phases })
+            .FirstOrDefaultAsync(ct);
+
+        if (plan == null) return null;
+
+        var feedbacks = await _db.TreatmentProgressFeedbacks
+            .Where(f => f.TreatmentPlanId == treatmentPlanId && f.TenantId == tenantId)
+            .OrderByDescending(f => f.SubmittedAt)
+            .ToListAsync(ct);
+
+        if (feedbacks.Count == 0)
+        {
+            return new TreatmentProgressAggregateDto
+            {
+                TreatmentPlanId = treatmentPlanId,
+                TreatmentPlanTitle = plan.Title ?? "Treatment Plan",
+                TotalFeedbackCount = 0
+            };
+        }
+
+        // Calculate aggregates
+        var avgEffectiveness = feedbacks
+            .Where(f => f.OverallEffectivenessRating.HasValue)
+            .Select(f => f.OverallEffectivenessRating!.Value)
+            .DefaultIfEmpty(0)
+            .Average();
+
+        var avgPainImprovement = feedbacks
+            .Where(f => f.PainComparedToStart.HasValue)
+            .Select(f => f.PainComparedToStart!.Value)
+            .DefaultIfEmpty(0)
+            .Average();
+
+        // Compliance distribution
+        var complianceDistribution = feedbacks
+            .Where(f => f.ExerciseCompliance.HasValue)
+            .GroupBy(f => f.ExerciseCompliance!.Value.ToString())
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Exercise feedback aggregation
+        var allExercises = plan.Phases?
+            .SelectMany(p => p.Exercises ?? new List<TreatmentExercise>())
+            .ToList() ?? new List<TreatmentExercise>();
+
+        var exerciseFeedback = allExercises.Select(ex => new ExerciseFeedbackSummary
+        {
+            ExerciseId = ex.ExerciseTemplateId ?? Guid.Empty,
+            ExerciseName = ex.Name,
+            HelpfulCount = feedbacks.Count(f => f.HelpfulExerciseIds?.Contains(ex.ExerciseTemplateId ?? Guid.Empty) == true),
+            ProblematicCount = feedbacks.Count(f => f.ProblematicExerciseIds?.Contains(ex.ExerciseTemplateId ?? Guid.Empty) == true)
+        }).ToList();
+
+        // Common barriers
+        var commonBarriers = feedbacks
+            .Where(f => f.Barriers != null)
+            .SelectMany(f => f.Barriers!)
+            .GroupBy(b => b)
+            .OrderByDescending(g => g.Count())
+            .Take(5)
+            .Select(g => g.Key)
+            .ToList();
+
+        return new TreatmentProgressAggregateDto
+        {
+            TreatmentPlanId = treatmentPlanId,
+            TreatmentPlanTitle = plan.Title ?? "Treatment Plan",
+            TotalFeedbackCount = feedbacks.Count,
+            AverageEffectivenessRating = avgEffectiveness,
+            AveragePainImprovement = avgPainImprovement,
+            ComplianceDistribution = complianceDistribution,
+            ExerciseFeedback = exerciseFeedback,
+            CommonBarriers = commonBarriers,
+            PatientsWantingDiscussion = feedbacks.Count(f => f.WantsClinicianDiscussion == true),
+            RecentFeedback = feedbacks.Take(5).Select(MapToFeedbackDto).ToList()
+        };
+    }
+
+    public async Task<List<TreatmentProgressFeedbackDto>> GetPatientTreatmentProgressAsync(
+        Guid tenantId, Guid patientId, Guid? treatmentPlanId, CancellationToken ct = default)
+    {
+        var query = _db.TreatmentProgressFeedbacks
+            .Where(f => f.PatientId == patientId && (tenantId == Guid.Empty || f.TenantId == tenantId));
+
+        if (treatmentPlanId.HasValue)
+        {
+            query = query.Where(f => f.TreatmentPlanId == treatmentPlanId.Value);
+        }
+
+        var feedbacks = await query
+            .OrderByDescending(f => f.SubmittedAt)
+            .ToListAsync(ct);
+
+        return feedbacks.Select(MapToFeedbackDto).ToList();
+    }
+
+    private static TreatmentProgressFeedbackDto MapToFeedbackDto(TreatmentProgressFeedback f)
+    {
+        return new TreatmentProgressFeedbackDto
+        {
+            Id = f.Id,
+            PromInstanceId = f.PromInstanceId,
+            TreatmentPlanId = f.TreatmentPlanId,
+            PatientId = f.PatientId,
+            OverallEffectivenessRating = f.OverallEffectivenessRating,
+            PainComparedToStart = f.PainComparedToStart,
+            ExerciseCompliance = f.ExerciseCompliance?.ToString(),
+            SessionsCompletedThisWeek = f.SessionsCompletedThisWeek,
+            HelpfulExerciseIds = f.HelpfulExerciseIds,
+            ProblematicExerciseIds = f.ProblematicExerciseIds,
+            ExerciseComments = f.ExerciseComments,
+            Barriers = f.Barriers,
+            Suggestions = f.Suggestions,
+            WantsClinicianDiscussion = f.WantsClinicianDiscussion,
+            CurrentPhaseNumber = f.CurrentPhaseNumber,
+            SubmittedAt = f.SubmittedAt
+        };
+    }
 }
 
 // DTOs and models
@@ -1440,4 +1681,83 @@ public enum NotificationMethod
     Email = 1,
     Sms = 2,
     InApp = 4
+}
+
+// === Treatment Progress Feedback DTOs ===
+
+public class TreatmentProgressContextDto
+{
+    public Guid TreatmentPlanId { get; set; }
+    public string TreatmentPlanTitle { get; set; } = string.Empty;
+    public string? Diagnosis { get; set; }
+    public int CurrentPhaseNumber { get; set; }
+    public string? CurrentPhaseName { get; set; }
+    public int WeeksIntoTreatment { get; set; }
+    public int TotalWeeks { get; set; }
+    public List<TreatmentExerciseDto> Exercises { get; set; } = new();
+    public bool HasTreatmentPlan { get; set; } = true;
+}
+
+public class TreatmentExerciseDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public int PhaseNumber { get; set; }
+}
+
+public class TreatmentProgressFeedbackDto
+{
+    public Guid Id { get; set; }
+    public Guid PromInstanceId { get; set; }
+    public Guid TreatmentPlanId { get; set; }
+    public Guid PatientId { get; set; }
+    public int? OverallEffectivenessRating { get; set; }
+    public int? PainComparedToStart { get; set; }
+    public string? ExerciseCompliance { get; set; }
+    public int? SessionsCompletedThisWeek { get; set; }
+    public List<Guid>? HelpfulExerciseIds { get; set; }
+    public List<Guid>? ProblematicExerciseIds { get; set; }
+    public string? ExerciseComments { get; set; }
+    public List<string>? Barriers { get; set; }
+    public string? Suggestions { get; set; }
+    public bool? WantsClinicianDiscussion { get; set; }
+    public int? CurrentPhaseNumber { get; set; }
+    public DateTime SubmittedAt { get; set; }
+}
+
+public class SubmitTreatmentProgressRequest
+{
+    public int? OverallEffectivenessRating { get; set; }
+    public int? PainComparedToStart { get; set; }
+    public string? ExerciseCompliance { get; set; }
+    public int? SessionsCompletedThisWeek { get; set; }
+    public List<Guid>? HelpfulExerciseIds { get; set; }
+    public List<Guid>? ProblematicExerciseIds { get; set; }
+    public string? ExerciseComments { get; set; }
+    public List<string>? Barriers { get; set; }
+    public string? Suggestions { get; set; }
+    public bool? WantsClinicianDiscussion { get; set; }
+}
+
+public class TreatmentProgressAggregateDto
+{
+    public Guid TreatmentPlanId { get; set; }
+    public string TreatmentPlanTitle { get; set; } = string.Empty;
+    public int TotalFeedbackCount { get; set; }
+    public double AverageEffectivenessRating { get; set; }
+    public double AveragePainImprovement { get; set; }
+    public Dictionary<string, int> ComplianceDistribution { get; set; } = new();
+    public List<ExerciseFeedbackSummary> ExerciseFeedback { get; set; } = new();
+    public List<string> CommonBarriers { get; set; } = new();
+    public int PatientsWantingDiscussion { get; set; }
+    public List<TreatmentProgressFeedbackDto> RecentFeedback { get; set; } = new();
+}
+
+public class ExerciseFeedbackSummary
+{
+    public Guid ExerciseId { get; set; }
+    public string ExerciseName { get; set; } = string.Empty;
+    public int HelpfulCount { get; set; }
+    public int ProblematicCount { get; set; }
 }

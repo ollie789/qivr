@@ -12,5 +12,9 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     chunkSizeWarningLimit: 600,
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
   }
 });

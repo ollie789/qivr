@@ -588,6 +588,89 @@ public class PromsController : BaseApiController
 	}
 
 private sealed record SubmissionPayload(List<PromAnswer> Answers, bool RequestBooking, BookingRequest? BookingRequest, int? CompletionSeconds, string? Notes);
+
+	// === Treatment Progress Feedback Endpoints ===
+
+	/// <summary>
+	/// Get treatment context for a PROM instance (if linked to treatment plan).
+	/// Called by patient portal to show treatment-specific questions.
+	/// </summary>
+	[HttpGet("instances/{instanceId}/treatment-context")]
+	[Authorize]
+	public async Task<ActionResult<TreatmentProgressContextDto>> GetTreatmentContext(Guid instanceId, CancellationToken ct)
+	{
+		var tenantId = GetTenantIdOrDefault();
+		var instance = await _promInstanceService.GetPromInstanceAsync(tenantId, instanceId, ct);
+		if (instance == null) return NotFound();
+
+		if (!instance.TreatmentPlanId.HasValue)
+		{
+			return Ok(new { hasTreatmentPlan = false });
+		}
+
+		// Fetch treatment plan details
+		var context = await _promInstanceService.GetTreatmentProgressContextAsync(tenantId, instance.TreatmentPlanId.Value, ct);
+		if (context == null)
+		{
+			return Ok(new { hasTreatmentPlan = false });
+		}
+
+		return Ok(context);
+	}
+
+	/// <summary>
+	/// Submit treatment progress feedback alongside PROM completion.
+	/// </summary>
+	[HttpPost("instances/{instanceId}/treatment-progress")]
+	[Authorize]
+	public async Task<ActionResult<TreatmentProgressFeedbackDto>> SubmitTreatmentProgress(
+		Guid instanceId,
+		[FromBody] SubmitTreatmentProgressRequest request,
+		CancellationToken ct)
+	{
+		var tenantId = GetTenantIdOrDefault();
+		var userId = GetUserId();
+
+		var result = await _promInstanceService.SubmitTreatmentProgressAsync(
+			tenantId, instanceId, userId, request, ct);
+
+		if (result == null)
+		{
+			return BadRequest(new { error = "PROM instance not found or not linked to a treatment plan" });
+		}
+
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// Get aggregated treatment progress feedback for a treatment plan (clinician view).
+	/// </summary>
+	[HttpGet("treatment-progress/{treatmentPlanId}")]
+	[Authorize(Roles = "Admin,Clinician")]
+	public async Task<ActionResult<TreatmentProgressAggregateDto>> GetTreatmentProgressAggregate(
+		Guid treatmentPlanId,
+		CancellationToken ct)
+	{
+		var tenantId = RequireTenantId();
+		var result = await _promInstanceService.GetTreatmentProgressAggregateAsync(tenantId, treatmentPlanId, ct);
+		if (result == null) return NotFound();
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// Get all treatment progress feedback entries for a patient.
+	/// </summary>
+	[HttpGet("treatment-progress/patient/{patientId}")]
+	[Authorize]
+	public async Task<ActionResult<List<TreatmentProgressFeedbackDto>>> GetPatientTreatmentProgress(
+		Guid patientId,
+		[FromQuery] Guid? treatmentPlanId,
+		CancellationToken ct)
+	{
+		var tenantId = GetTenantIdOrDefault();
+		var result = await _promInstanceService.GetPatientTreatmentProgressAsync(tenantId, patientId, treatmentPlanId, ct);
+		return Ok(result);
+	}
 }
 
 public class PromResponseListDto
@@ -617,4 +700,82 @@ public class SavePromDraftRequest
 	public Dictionary<string, JsonElement>? Responses { get; set; }
 	public int? LastQuestionIndex { get; set; }
 	public int? CompletionSeconds { get; set; }
+}
+
+// === Treatment Progress Feedback DTOs ===
+
+public class TreatmentProgressFeedbackDto
+{
+	public Guid Id { get; set; }
+	public Guid PromInstanceId { get; set; }
+	public Guid TreatmentPlanId { get; set; }
+	public Guid PatientId { get; set; }
+	public int? OverallEffectivenessRating { get; set; }
+	public int? PainComparedToStart { get; set; }
+	public string? ExerciseCompliance { get; set; }
+	public int? SessionsCompletedThisWeek { get; set; }
+	public List<Guid>? HelpfulExerciseIds { get; set; }
+	public List<Guid>? ProblematicExerciseIds { get; set; }
+	public string? ExerciseComments { get; set; }
+	public List<string>? Barriers { get; set; }
+	public string? Suggestions { get; set; }
+	public bool? WantsClinicianDiscussion { get; set; }
+	public int? CurrentPhaseNumber { get; set; }
+	public DateTime SubmittedAt { get; set; }
+}
+
+public class SubmitTreatmentProgressRequest
+{
+	public int? OverallEffectivenessRating { get; set; }
+	public int? PainComparedToStart { get; set; }
+	public string? ExerciseCompliance { get; set; }
+	public int? SessionsCompletedThisWeek { get; set; }
+	public List<Guid>? HelpfulExerciseIds { get; set; }
+	public List<Guid>? ProblematicExerciseIds { get; set; }
+	public string? ExerciseComments { get; set; }
+	public List<string>? Barriers { get; set; }
+	public string? Suggestions { get; set; }
+	public bool? WantsClinicianDiscussion { get; set; }
+}
+
+public class TreatmentProgressContextDto
+{
+	public Guid TreatmentPlanId { get; set; }
+	public string TreatmentPlanTitle { get; set; } = string.Empty;
+	public string? Diagnosis { get; set; }
+	public int CurrentPhaseNumber { get; set; }
+	public string? CurrentPhaseName { get; set; }
+	public int WeeksIntoTreatment { get; set; }
+	public int TotalWeeks { get; set; }
+	public List<TreatmentExerciseDto> Exercises { get; set; } = new();
+}
+
+public class TreatmentExerciseDto
+{
+	public Guid Id { get; set; }
+	public string Name { get; set; } = string.Empty;
+	public string? Description { get; set; }
+	public int PhaseNumber { get; set; }
+}
+
+public class TreatmentProgressAggregateDto
+{
+	public Guid TreatmentPlanId { get; set; }
+	public string TreatmentPlanTitle { get; set; } = string.Empty;
+	public int TotalFeedbackCount { get; set; }
+	public double AverageEffectivenessRating { get; set; }
+	public double AveragePainImprovement { get; set; }
+	public Dictionary<string, int> ComplianceDistribution { get; set; } = new();
+	public List<ExerciseFeedbackSummary> ExerciseFeedback { get; set; } = new();
+	public List<string> CommonBarriers { get; set; } = new();
+	public int PatientsWantingDiscussion { get; set; }
+	public List<TreatmentProgressFeedbackDto> RecentFeedback { get; set; } = new();
+}
+
+public class ExerciseFeedbackSummary
+{
+	public Guid ExerciseId { get; set; }
+	public string ExerciseName { get; set; } = string.Empty;
+	public int HelpfulCount { get; set; }
+	public int ProblematicCount { get; set; }
 }

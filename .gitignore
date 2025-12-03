@@ -193,3 +193,9 @@ DEPLOYMENT_STATUS.md
 
 *storybook.log
 storybook-static
+
+# E2E tests (contain credentials)
+e2e/
+playwright.config.ts
+playwright-report/
+test-results/

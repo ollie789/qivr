@@ -16,7 +16,7 @@ export interface SelectOption {
 }
 
 interface SelectFieldProps {
-  label: string;
+  label?: string;
   value: string;
   options: SelectOption[];
   onChange: (value: string) => void;
@@ -27,6 +27,8 @@ interface SelectFieldProps {
   disabled?: boolean;
   sx?: SxProps<Theme>;
   size?: 'small' | 'medium';
+  /** Placeholder text shown when no value is selected (only used when label is empty) */
+  placeholder?: string;
 }
 
 export const SelectField: React.FC<SelectFieldProps> = ({
@@ -41,10 +43,13 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   disabled = false,
   sx,
   size = 'medium',
+  placeholder,
 }) => {
   const handleChange = (event: SelectChangeEvent<string>) => {
     onChange(event.target.value as string);
   };
+
+  const hasLabel = label && label.trim() !== '';
 
   return (
     <FormControl
@@ -54,12 +59,21 @@ export const SelectField: React.FC<SelectFieldProps> = ({
       sx={sx}
       size={size}
     >
-      <InputLabel>{label}</InputLabel>
+      {hasLabel && (
+        <InputLabel shrink={!!value}>{label}</InputLabel>
+      )}
       <Select
-        label={label}
+        label={hasLabel ? label : undefined}
         value={value}
         onChange={handleChange}
         name={name}
+        displayEmpty={!hasLabel}
+        notched={hasLabel ? !!value : false}
+        renderValue={
+          !hasLabel && !value && placeholder
+            ? () => <span style={{ color: '#9e9e9e' }}>{placeholder}</span>
+            : undefined
+        }
       >
         {options.map((option) => (
           <MenuItem

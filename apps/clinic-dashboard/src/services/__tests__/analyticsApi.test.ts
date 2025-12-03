@@ -258,4 +258,86 @@ describe('analyticsApi', () => {
       expect(result.staffUtilization).toBe(0);
     });
   });
+
+  describe('getUnifiedAnalytics', () => {
+    it('fetches unified analytics with default days', async () => {
+      const unifiedData = {
+        healthMetrics: [
+          { id: 'm1', category: 'appointments', name: 'Completion Rate', value: 85, unit: '%', trend: 'up', percentageChange: 5, status: 'good' },
+        ],
+        promAnalytics: [
+          { templateName: 'Pain Scale', totalCount: 100, completedCount: 85, completionRate: 85, averageScore: 72 },
+        ],
+        healthGoals: [
+          { id: 'g1', title: 'Reduce No-Shows', category: 'operations', target: 5, current: 8, unit: '%', progress: 60, status: 'behind' },
+        ],
+        correlations: [
+          { metric1: 'PROM Score', metric2: 'Patient Retention', correlation: 0.75, significance: 'high' },
+        ],
+        loading: false,
+      };
+      mockClient.get.mockResolvedValueOnce(unifiedData);
+
+      const result = await analyticsApi.getUnifiedAnalytics();
+
+      expect(mockClient.get).toHaveBeenCalledWith('/api/clinic-analytics/unified', { days: '30' });
+      expect(result.healthMetrics).toHaveLength(1);
+      expect(result.promAnalytics).toHaveLength(1);
+      expect(result.healthGoals).toHaveLength(1);
+      expect(result.correlations).toHaveLength(1);
+    });
+
+    it('fetches unified analytics with custom days', async () => {
+      mockClient.get.mockResolvedValueOnce({
+        healthMetrics: [],
+        promAnalytics: [],
+        healthGoals: [],
+        correlations: [],
+        loading: false,
+      });
+
+      await analyticsApi.getUnifiedAnalytics(90);
+
+      expect(mockClient.get).toHaveBeenCalledWith('/api/clinic-analytics/unified', { days: '90' });
+    });
+
+    it('handles health metrics with different statuses', async () => {
+      mockClient.get.mockResolvedValueOnce({
+        healthMetrics: [
+          { id: 'm1', name: 'Good Metric', status: 'good', trend: 'up' },
+          { id: 'm2', name: 'Warning Metric', status: 'warning', trend: 'stable' },
+          { id: 'm3', name: 'Critical Metric', status: 'critical', trend: 'down' },
+        ],
+        promAnalytics: [],
+        healthGoals: [],
+        correlations: [],
+        loading: false,
+      });
+
+      const result = await analyticsApi.getUnifiedAnalytics();
+
+      expect(result.healthMetrics[0].status).toBe('good');
+      expect(result.healthMetrics[1].status).toBe('warning');
+      expect(result.healthMetrics[2].status).toBe('critical');
+    });
+
+    it('handles goal statuses', async () => {
+      mockClient.get.mockResolvedValueOnce({
+        healthMetrics: [],
+        promAnalytics: [],
+        healthGoals: [
+          { id: 'g1', title: 'On Track Goal', status: 'on-track', progress: 80 },
+          { id: 'g2', title: 'Behind Goal', status: 'behind', progress: 40 },
+          { id: 'g3', title: 'Achieved Goal', status: 'achieved', progress: 100 },
+        ],
+        correlations: [],
+        loading: false,
+      });
+
+      const result = await analyticsApi.getUnifiedAnalytics();
+
+      expect(result.healthGoals[0].status).toBe('on-track');
+      expect(result.healthGoals[2].progress).toBe(100);
+    });
+  });
 });

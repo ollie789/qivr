@@ -49,8 +49,19 @@ import {
   Assignment as PromIcon,
   Schedule as ClockIcon,
   PlayArrow as ActiveIcon,
+  Feedback as FeedbackIcon,
+  TrendingUp,
+  TrendingDown,
+  Remove as NeutralIcon,
+  Warning as WarningIcon,
+  ThumbUp,
+  ThumbDown,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  PlayCircleOutline as VideoIcon,
 } from "@mui/icons-material";
-import { AuraButton, Callout, auraTokens } from "@qivr/design-system";
+import { AuraButton, AuraIconButton, Callout, auraTokens } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
 import {
   appointmentsApi,
@@ -59,6 +70,7 @@ import {
 import { promApi, PromResponse } from "../services/promApi";
 import { useSnackbar } from "notistack";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
+import { ExerciseLibraryDrawer, ExerciseToAdd } from "../components/exercises/ExerciseLibraryDrawer";
 import {
   format,
   addDays,
@@ -102,6 +114,15 @@ export default function TreatmentPlanDetail() {
     useState<Set<number>>(new Set());
   const [isBulkScheduling, setIsBulkScheduling] = useState(false);
 
+  // Exercise management state
+  const [exerciseDrawerOpen, setExerciseDrawerOpen] = useState(false);
+  const [selectedPhaseForExercise, setSelectedPhaseForExercise] = useState(0);
+  const [editingExercise, setEditingExercise] = useState<{
+    phaseIndex: number;
+    exerciseIndex: number;
+    exercise: any;
+  } | null>(null);
+
   const {
     data: plan,
     isLoading,
@@ -117,6 +138,13 @@ export default function TreatmentPlanDetail() {
     queryKey: ["patient-proms", plan?.patientId],
     queryFn: () => promApi.getResponses({ patientId: plan?.patientId }),
     enabled: !!plan?.patientId,
+  });
+
+  // Fetch treatment progress aggregate
+  const { data: treatmentProgressAggregate } = useQuery({
+    queryKey: ["treatment-progress-aggregate", id],
+    queryFn: () => promApi.getTreatmentProgressAggregate(id!),
+    enabled: !!id && plan?.status === "Active",
   });
 
   // Calculate PROM timeline data
@@ -154,6 +182,80 @@ export default function TreatmentPlanDetail() {
       enqueueSnackbar("Failed to approve treatment plan", { variant: "error" });
     },
   });
+
+  // Update treatment plan mutation (for exercise changes)
+  const updatePlanMutation = useMutation({
+    mutationFn: (updatedPlan: any) => treatmentPlansApi.update(id!, updatedPlan),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["treatment-plan", id] });
+      enqueueSnackbar("Treatment plan updated", { variant: "success" });
+    },
+    onError: () => {
+      enqueueSnackbar("Failed to update treatment plan", { variant: "error" });
+    },
+  });
+
+  // Handle adding exercise to phase
+  const handleAddExerciseToPhase = (exercise: ExerciseToAdd, phaseIndex: number) => {
+    if (!plan?.phases) return;
+
+    const updatedPhases = [...plan.phases];
+    if (!updatedPhases[phaseIndex].exercises) {
+      updatedPhases[phaseIndex].exercises = [];
+    }
+    updatedPhases[phaseIndex].exercises.push({
+      id: exercise.id,
+      name: exercise.name,
+      description: exercise.description,
+      instructions: exercise.instructions,
+      sets: exercise.sets,
+      reps: exercise.reps,
+      holdSeconds: exercise.holdSeconds,
+      frequency: exercise.frequency,
+      category: exercise.category,
+      bodyRegion: exercise.bodyRegion,
+      difficulty: exercise.difficulty,
+      videoUrl: exercise.videoUrl,
+      thumbnailUrl: exercise.thumbnailUrl,
+    });
+
+    updatePlanMutation.mutate({ phases: updatedPhases });
+    enqueueSnackbar(`Added "${exercise.name}" to Phase ${phaseIndex + 1}`, {
+      variant: "info",
+    });
+  };
+
+  // Handle removing exercise from phase
+  const handleRemoveExercise = (phaseIndex: number, exerciseIndex: number) => {
+    if (!plan?.phases) return;
+
+    const updatedPhases = [...plan.phases];
+    const exerciseName = updatedPhases[phaseIndex].exercises[exerciseIndex]?.name;
+    updatedPhases[phaseIndex].exercises.splice(exerciseIndex, 1);
+
+    updatePlanMutation.mutate({ phases: updatedPhases });
+    enqueueSnackbar(`Removed "${exerciseName}" from Phase ${phaseIndex + 1}`, {
+      variant: "info",
+    });
+  };
+
+  // Handle updating exercise parameters
+  const handleUpdateExercise = (
+    phaseIndex: number,
+    exerciseIndex: number,
+    updates: Partial<ExerciseToAdd>
+  ) => {
+    if (!plan?.phases) return;
+
+    const updatedPhases = [...plan.phases];
+    updatedPhases[phaseIndex].exercises[exerciseIndex] = {
+      ...updatedPhases[phaseIndex].exercises[exerciseIndex],
+      ...updates,
+    };
+
+    updatePlanMutation.mutate({ phases: updatedPhases });
+    setEditingExercise(null);
+  };
 
   const getStatusColor = (
     status: string,
@@ -545,6 +647,196 @@ export default function TreatmentPlanDetail() {
         </Paper>
       )}
 
+      {/* Treatment Progress Feedback Section */}
+      {treatmentProgressAggregate && treatmentProgressAggregate.totalFeedbacks > 0 && (
+        <Paper sx={{ mt: 3, p: 3, borderRadius: auraTokens.borderRadius.lg }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
+            <FeedbackIcon color="primary" />
+            <Typography variant="h6">Patient Feedback Summary</Typography>
+            <Chip label={`${treatmentProgressAggregate.totalFeedbacks} responses`} size="small" />
+            {treatmentProgressAggregate.patientsWantingDiscussion > 0 && (
+              <Chip
+                icon={<WarningIcon />}
+                label={`${treatmentProgressAggregate.patientsWantingDiscussion} want to discuss`}
+                color="warning"
+                size="small"
+              />
+            )}
+          </Box>
+
+          <Grid container spacing={3}>
+            {/* Effectiveness Rating */}
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Paper variant="outlined" sx={{ p: 2, textAlign: "center", borderRadius: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Avg. Effectiveness Rating
+                </Typography>
+                <Typography variant="h3" fontWeight={700} color={
+                  treatmentProgressAggregate.averageEffectivenessRating != null
+                    ? treatmentProgressAggregate.averageEffectivenessRating >= 7 ? "success.main"
+                    : treatmentProgressAggregate.averageEffectivenessRating >= 4 ? "warning.main"
+                    : "error.main"
+                    : "text.secondary"
+                }>
+                  {treatmentProgressAggregate.averageEffectivenessRating != null
+                    ? treatmentProgressAggregate.averageEffectivenessRating.toFixed(1)
+                    : "—"}
+                  <Typography component="span" variant="h6" color="text.secondary">/10</Typography>
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* Pain Change */}
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Paper variant="outlined" sx={{ p: 2, textAlign: "center", borderRadius: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Avg. Pain Change
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                  {treatmentProgressAggregate.averagePainChange != null ? (
+                    treatmentProgressAggregate.averagePainChange > 0 ? (
+                      <TrendingUp fontSize="large" color="success" />
+                    ) : treatmentProgressAggregate.averagePainChange < 0 ? (
+                      <TrendingDown fontSize="large" color="error" />
+                    ) : (
+                      <NeutralIcon fontSize="large" color="action" />
+                    )
+                  ) : (
+                    <NeutralIcon fontSize="large" color="action" />
+                  )}
+                  <Typography variant="h4" fontWeight={700} color={
+                    treatmentProgressAggregate.averagePainChange != null
+                      ? treatmentProgressAggregate.averagePainChange > 0 ? "success.main"
+                      : treatmentProgressAggregate.averagePainChange < 0 ? "error.main"
+                      : "text.secondary"
+                      : "text.secondary"
+                  }>
+                    {treatmentProgressAggregate.averagePainChange != null
+                      ? treatmentProgressAggregate.averagePainChange > 0
+                        ? `+${treatmentProgressAggregate.averagePainChange.toFixed(1)}`
+                        : treatmentProgressAggregate.averagePainChange.toFixed(1)
+                      : "—"}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  {treatmentProgressAggregate.averagePainChange != null && treatmentProgressAggregate.averagePainChange > 0
+                    ? "Improving"
+                    : treatmentProgressAggregate.averagePainChange != null && treatmentProgressAggregate.averagePainChange < 0
+                    ? "Worsening"
+                    : "No change"}
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* Sessions Per Week */}
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Paper variant="outlined" sx={{ p: 2, textAlign: "center", borderRadius: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Avg. Sessions/Week
+                </Typography>
+                <Typography variant="h3" fontWeight={700} color="primary.main">
+                  {treatmentProgressAggregate.averageSessionsPerWeek != null
+                    ? treatmentProgressAggregate.averageSessionsPerWeek.toFixed(1)
+                    : "—"}
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* Exercise Compliance */}
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Exercise Compliance
+                </Typography>
+                {Object.entries(treatmentProgressAggregate.exerciseComplianceBreakdown).length > 0 ? (
+                  <Stack spacing={0.5}>
+                    {Object.entries(treatmentProgressAggregate.exerciseComplianceBreakdown)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 3)
+                      .map(([level, count]) => (
+                        <Box key={level} sx={{ display: "flex", justifyContent: "space-between" }}>
+                          <Typography variant="body2">{level}</Typography>
+                          <Typography variant="body2" fontWeight={600}>{count}</Typography>
+                        </Box>
+                      ))}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">No data</Typography>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Exercise Feedback */}
+            {treatmentProgressAggregate.exerciseFeedback.length > 0 && (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Exercise Feedback
+                  </Typography>
+                  <Stack spacing={1}>
+                    {treatmentProgressAggregate.exerciseFeedback.slice(0, 5).map((exercise) => (
+                      <Box key={exercise.exerciseId} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="body2" sx={{ flex: 1 }} noWrap>
+                          {exercise.exerciseName}
+                        </Typography>
+                        <Tooltip title={`${exercise.helpfulCount} found helpful`}>
+                          <Chip
+                            icon={<ThumbUp fontSize="small" />}
+                            label={exercise.helpfulCount}
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                          />
+                        </Tooltip>
+                        <Tooltip title={`${exercise.problematicCount} had issues`}>
+                          <Chip
+                            icon={<ThumbDown fontSize="small" />}
+                            label={exercise.problematicCount}
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                          />
+                        </Tooltip>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Paper>
+              </Grid>
+            )}
+
+            {/* Common Barriers */}
+            {Object.keys(treatmentProgressAggregate.commonBarriers).length > 0 && (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Common Barriers
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {Object.entries(treatmentProgressAggregate.commonBarriers)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([barrier, count]) => (
+                        <Chip
+                          key={barrier}
+                          label={`${barrier} (${count})`}
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                        />
+                      ))}
+                  </Stack>
+                </Paper>
+              </Grid>
+            )}
+          </Grid>
+
+          {treatmentProgressAggregate.latestFeedbackDate && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: "block" }}>
+              Last feedback: {format(parseISO(treatmentProgressAggregate.latestFeedbackDate), "MMM d, yyyy 'at' h:mm a")}
+            </Typography>
+          )}
+        </Paper>
+      )}
+
       {/* Tabs */}
       <Paper sx={{ mt: 3, borderRadius: auraTokens.borderRadius.lg }}>
         <Tabs
@@ -776,142 +1068,238 @@ export default function TreatmentPlanDetail() {
 
           {/* Exercises Tab */}
           <TabPanel value={tabValue} index={2}>
+            {/* Add Exercise Button */}
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3 }}>
+              <AuraButton
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setExerciseDrawerOpen(true)}
+                disabled={!plan.phases?.length || plan.status === "Completed"}
+              >
+                Add Exercise from Library
+              </AuraButton>
+            </Box>
+
             {plan.phases?.length > 0 ? (
-              <Grid container spacing={2}>
-                {plan.phases.flatMap((phase: any) =>
-                  phase.exercises?.map((exercise: any, i: number) => (
-                    <Grid
-                      size={{ xs: 12, sm: 6, md: 4 }}
-                      key={`${phase.phaseNumber}-${i}`}
-                    >
-                      <Paper
-                        variant="outlined"
-                        sx={{
-                          p: 2,
-                          borderRadius: auraTokens.borderRadius.md,
-                          height: "100%",
-                        }}
-                      >
-                        <Box
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                {plan.phases.map((phase: any, phaseIndex: number) => (
+                  <Paper
+                    key={phaseIndex}
+                    variant="outlined"
+                    sx={{ p: 2, borderRadius: auraTokens.borderRadius.md }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Avatar
                           sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            mb: 1,
+                            width: 28,
+                            height: 28,
+                            bgcolor: "primary.main",
+                            fontSize: "0.875rem",
                           }}
                         >
-                          <FitnessCenter color="primary" />
-                          <Typography variant="subtitle1" fontWeight={600}>
-                            {exercise.name}
-                          </Typography>
-                        </Box>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ mb: 2 }}
-                        >
-                          {exercise.description || "No description"}
+                          {phase.phaseNumber}
+                        </Avatar>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                          {phase.name}
                         </Typography>
-                        <Divider sx={{ my: 1 }} />
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            mb: 1,
-                          }}
-                        >
-                          <Typography variant="caption">Sets</Typography>
-                          <Typography variant="caption" fontWeight={600}>
-                            {exercise.sets}
-                          </Typography>
-                        </Box>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            mb: 1,
-                          }}
-                        >
-                          <Typography variant="caption">Reps</Typography>
-                          <Typography variant="caption" fontWeight={600}>
-                            {exercise.reps}
-                          </Typography>
-                        </Box>
-                        {exercise.holdSeconds && (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              mb: 1,
-                            }}
-                          >
-                            <Typography variant="caption">Hold</Typography>
-                            <Typography variant="caption" fontWeight={600}>
-                              {exercise.holdSeconds}s
-                            </Typography>
-                          </Box>
-                        )}
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                          }}
-                        >
-                          <Typography variant="caption">Frequency</Typography>
-                          <Typography variant="caption" fontWeight={600}>
-                            {exercise.frequency || "Daily"}
-                          </Typography>
-                        </Box>
                         <Chip
-                          label={`Phase ${phase.phaseNumber}`}
+                          label={`${phase.exercises?.length || 0} exercises`}
                           size="small"
                           variant="outlined"
-                          sx={{ mt: 2 }}
                         />
-                      </Paper>
-                    </Grid>
-                  )),
-                )}
-              </Grid>
-            ) : plan.exercises?.length > 0 ? (
-              <Grid container spacing={2}>
-                {plan.exercises.map((exercise: any, i: number) => (
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 2,
-                        borderRadius: auraTokens.borderRadius.md,
-                        height: "100%",
-                      }}
-                    >
+                      </Box>
+                      <AuraButton
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={() => {
+                          setSelectedPhaseForExercise(phaseIndex);
+                          setExerciseDrawerOpen(true);
+                        }}
+                        disabled={plan.status === "Completed"}
+                      >
+                        Add
+                      </AuraButton>
+                    </Box>
+
+                    {phase.exercises?.length > 0 ? (
+                      <Grid container spacing={2}>
+                        {phase.exercises.map((exercise: any, exerciseIndex: number) => (
+                          <Grid
+                            size={{ xs: 12, sm: 6, md: 4 }}
+                            key={exerciseIndex}
+                          >
+                            <Paper
+                              variant="outlined"
+                              sx={{
+                                p: 2,
+                                borderRadius: auraTokens.borderRadius.md,
+                                height: "100%",
+                                position: "relative",
+                                "&:hover .exercise-actions": {
+                                  opacity: 1,
+                                },
+                              }}
+                            >
+                              {/* Action Buttons */}
+                              {plan.status !== "Completed" && (
+                                <Box
+                                  className="exercise-actions"
+                                  sx={{
+                                    position: "absolute",
+                                    top: 8,
+                                    right: 8,
+                                    display: "flex",
+                                    gap: 0.5,
+                                    opacity: 0,
+                                    transition: "opacity 0.2s",
+                                  }}
+                                >
+                                  <AuraIconButton
+                                    tooltip="Edit parameters"
+                                    size="small"
+                                    onClick={() =>
+                                      setEditingExercise({
+                                        phaseIndex,
+                                        exerciseIndex,
+                                        exercise,
+                                      })
+                                    }
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </AuraIconButton>
+                                  <AuraIconButton
+                                    tooltip="Remove exercise"
+                                    size="small"
+                                    color="error"
+                                    onClick={() =>
+                                      handleRemoveExercise(phaseIndex, exerciseIndex)
+                                    }
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </AuraIconButton>
+                                </Box>
+                              )}
+
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                  mb: 1,
+                                }}
+                              >
+                                {exercise.thumbnailUrl ? (
+                                  <Avatar
+                                    src={exercise.thumbnailUrl}
+                                    variant="rounded"
+                                    sx={{ width: 40, height: 40 }}
+                                  />
+                                ) : (
+                                  <Avatar
+                                    variant="rounded"
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      bgcolor: "primary.lighter",
+                                    }}
+                                  >
+                                    <FitnessCenter color="primary" fontSize="small" />
+                                  </Avatar>
+                                )}
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                    <Typography variant="subtitle2" fontWeight={600} noWrap>
+                                      {exercise.name}
+                                    </Typography>
+                                    {exercise.videoUrl && (
+                                      <VideoIcon fontSize="small" color="action" />
+                                    )}
+                                  </Box>
+                                  {exercise.difficulty && (
+                                    <Chip
+                                      label={exercise.difficulty}
+                                      size="small"
+                                      color={
+                                        exercise.difficulty === "Beginner"
+                                          ? "success"
+                                          : exercise.difficulty === "Intermediate"
+                                          ? "warning"
+                                          : "error"
+                                      }
+                                      sx={{ height: 18, fontSize: "0.7rem" }}
+                                    />
+                                  )}
+                                </Box>
+                              </Box>
+
+                              <Divider sx={{ my: 1 }} />
+
+                              <Stack spacing={0.5}>
+                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Sets × Reps
+                                  </Typography>
+                                  <Typography variant="caption" fontWeight={600}>
+                                    {exercise.sets} × {exercise.reps}
+                                  </Typography>
+                                </Box>
+                                {exercise.holdSeconds && (
+                                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Hold
+                                    </Typography>
+                                    <Typography variant="caption" fontWeight={600}>
+                                      {exercise.holdSeconds}s
+                                    </Typography>
+                                  </Box>
+                                )}
+                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Frequency
+                                  </Typography>
+                                  <Typography variant="caption" fontWeight={600}>
+                                    {exercise.frequency || "Daily"}
+                                  </Typography>
+                                </Box>
+                              </Stack>
+                            </Paper>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    ) : (
                       <Box
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          mb: 1,
+                          py: 4,
+                          textAlign: "center",
+                          bgcolor: "action.hover",
+                          borderRadius: 2,
                         }}
                       >
-                        <FitnessCenter color="primary" />
-                        <Typography variant="subtitle1" fontWeight={600}>
-                          {exercise.name}
+                        <FitnessCenter sx={{ fontSize: 32, color: "text.disabled", mb: 1 }} />
+                        <Typography color="text.secondary" variant="body2">
+                          No exercises in this phase yet
                         </Typography>
+                        <AuraButton
+                          size="small"
+                          startIcon={<AddIcon />}
+                          onClick={() => {
+                            setSelectedPhaseForExercise(phaseIndex);
+                            setExerciseDrawerOpen(true);
+                          }}
+                          sx={{ mt: 1 }}
+                          disabled={plan.status === "Completed"}
+                        >
+                          Add Exercise
+                        </AuraButton>
                       </Box>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mb: 2 }}
-                      >
-                        {exercise.description || "No description"}
-                      </Typography>
-                    </Paper>
-                  </Grid>
+                    )}
+                  </Paper>
                 ))}
-              </Grid>
+              </Box>
             ) : (
               <Alert severity="info">
-                No exercises defined for this treatment plan.
+                No phases defined for this treatment plan. Add phases first before adding exercises.
               </Alert>
             )}
           </TabPanel>
@@ -1111,6 +1499,134 @@ export default function TreatmentPlanDetail() {
             startIcon={<ScheduleIcon />}
           >
             Schedule {calculateSessionsToSchedule()} Sessions
+          </AuraButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* Exercise Library Drawer */}
+      <ExerciseLibraryDrawer
+        open={exerciseDrawerOpen}
+        onClose={() => setExerciseDrawerOpen(false)}
+        onAddExercise={handleAddExerciseToPhase}
+        phases={
+          plan?.phases?.map((p: any, i: number) => ({
+            phaseNumber: p.phaseNumber || i + 1,
+            name: p.name,
+          })) || []
+        }
+        selectedPhaseIndex={selectedPhaseForExercise}
+        bodyRegionFilter={plan?.bodyRegion}
+      />
+
+      {/* Edit Exercise Dialog */}
+      <Dialog
+        open={!!editingExercise}
+        onClose={() => setEditingExercise(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Edit Exercise Parameters</DialogTitle>
+        <DialogContent>
+          {editingExercise && (
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <Typography variant="subtitle2" fontWeight={600}>
+                {editingExercise.exercise.name}
+              </Typography>
+              <TextField
+                label="Sets"
+                type="number"
+                value={editingExercise.exercise.sets || 3}
+                onChange={(e) =>
+                  setEditingExercise({
+                    ...editingExercise,
+                    exercise: {
+                      ...editingExercise.exercise,
+                      sets: parseInt(e.target.value, 10) || 3,
+                    },
+                  })
+                }
+                inputProps={{ min: 1, max: 20 }}
+                fullWidth
+              />
+              <TextField
+                label="Reps"
+                type="number"
+                value={editingExercise.exercise.reps || 10}
+                onChange={(e) =>
+                  setEditingExercise({
+                    ...editingExercise,
+                    exercise: {
+                      ...editingExercise.exercise,
+                      reps: parseInt(e.target.value, 10) || 10,
+                    },
+                  })
+                }
+                inputProps={{ min: 1, max: 100 }}
+                fullWidth
+              />
+              <TextField
+                label="Hold (seconds)"
+                type="number"
+                value={editingExercise.exercise.holdSeconds || 0}
+                onChange={(e) =>
+                  setEditingExercise({
+                    ...editingExercise,
+                    exercise: {
+                      ...editingExercise.exercise,
+                      holdSeconds: parseInt(e.target.value, 10) || undefined,
+                    },
+                  })
+                }
+                inputProps={{ min: 0, max: 300 }}
+                fullWidth
+              />
+              <TextField
+                label="Frequency"
+                value={editingExercise.exercise.frequency || "Daily"}
+                onChange={(e) =>
+                  setEditingExercise({
+                    ...editingExercise,
+                    exercise: {
+                      ...editingExercise.exercise,
+                      frequency: e.target.value,
+                    },
+                  })
+                }
+                select
+                fullWidth
+                SelectProps={{ native: true }}
+              >
+                <option value="Daily">Daily</option>
+                <option value="2x per day">2x per day</option>
+                <option value="3x per week">3x per week</option>
+                <option value="2x per week">2x per week</option>
+                <option value="As needed">As needed</option>
+              </TextField>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <AuraButton variant="outlined" onClick={() => setEditingExercise(null)}>
+            Cancel
+          </AuraButton>
+          <AuraButton
+            variant="contained"
+            onClick={() => {
+              if (editingExercise) {
+                handleUpdateExercise(
+                  editingExercise.phaseIndex,
+                  editingExercise.exerciseIndex,
+                  {
+                    sets: editingExercise.exercise.sets,
+                    reps: editingExercise.exercise.reps,
+                    holdSeconds: editingExercise.exercise.holdSeconds,
+                    frequency: editingExercise.exercise.frequency,
+                  }
+                );
+              }
+            }}
+          >
+            Save Changes
           </AuraButton>
         </DialogActions>
       </Dialog>

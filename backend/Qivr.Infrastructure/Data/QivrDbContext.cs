@@ -64,6 +64,7 @@ public class QivrDbContext : DbContext
     public DbSet<PromInstance> PromInstances => Set<PromInstance>();
     public DbSet<PromTemplate> PromTemplates => Set<PromTemplate>();
     public DbSet<PromBookingRequest> PromBookingRequests => Set<PromBookingRequest>();
+    public DbSet<TreatmentProgressFeedback> TreatmentProgressFeedbacks => Set<TreatmentProgressFeedback>();
     public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<MedicalCondition> MedicalConditions => Set<MedicalCondition>();

@@ -135,3 +135,93 @@ public class PromBookingRequest : TenantEntity
 
     public virtual PromInstance? PromInstance { get; set; }
 }
+
+/// <summary>
+/// Treatment progress feedback captured during PROM completion.
+/// These questions are automatically appended when a PROM is linked to an active treatment plan.
+/// </summary>
+public class TreatmentProgressFeedback : TenantEntity
+{
+    public Guid PromInstanceId { get; set; }
+    public Guid TreatmentPlanId { get; set; }
+    public Guid PatientId { get; set; }
+
+    // === Overall Treatment Rating ===
+    /// <summary>
+    /// Overall effectiveness of treatment plan (1-10)
+    /// </summary>
+    public int? OverallEffectivenessRating { get; set; }
+
+    /// <summary>
+    /// Pain level compared to start of treatment (-3 to +3)
+    /// -3=Much worse, 0=Same, +3=Much better
+    /// </summary>
+    public int? PainComparedToStart { get; set; }
+
+    /// <summary>
+    /// Are you completing your prescribed exercises?
+    /// </summary>
+    public ExerciseComplianceLevel? ExerciseCompliance { get; set; }
+
+    /// <summary>
+    /// How many sessions have you completed this week?
+    /// </summary>
+    public int? SessionsCompletedThisWeek { get; set; }
+
+    // === Exercise-Specific Feedback ===
+    /// <summary>
+    /// Exercise IDs the patient found most helpful (JSON array)
+    /// </summary>
+    public List<Guid>? HelpfulExerciseIds { get; set; }
+
+    /// <summary>
+    /// Exercise IDs causing discomfort (JSON array)
+    /// </summary>
+    public List<Guid>? ProblematicExerciseIds { get; set; }
+
+    /// <summary>
+    /// Free-text comments about exercises
+    /// </summary>
+    public string? ExerciseComments { get; set; }
+
+    // === Barriers & Suggestions ===
+    /// <summary>
+    /// Barriers to completing treatment (multi-select)
+    /// </summary>
+    public List<string>? Barriers { get; set; }
+
+    /// <summary>
+    /// Patient suggestions for improvement
+    /// </summary>
+    public string? Suggestions { get; set; }
+
+    /// <summary>
+    /// Would you like to discuss your treatment with your clinician?
+    /// </summary>
+    public bool? WantsClinicianDiscussion { get; set; }
+
+    /// <summary>
+    /// Current treatment phase when feedback was given
+    /// </summary>
+    public int? CurrentPhaseNumber { get; set; }
+
+    public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation
+    public virtual PromInstance? PromInstance { get; set; }
+    public virtual TreatmentPlan? TreatmentPlan { get; set; }
+    public virtual User? Patient { get; set; }
+}
+
+/// <summary>
+/// Exercise compliance levels for treatment progress tracking
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ExerciseComplianceLevel
+{
+    Never,
+    Rarely,      // Less than 25%
+    Sometimes,   // 25-50%
+    Often,       // 50-75%
+    Always       // 75-100%
+}

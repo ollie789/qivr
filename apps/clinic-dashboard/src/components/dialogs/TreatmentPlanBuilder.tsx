@@ -53,6 +53,7 @@ import {
 } from "../../lib/api";
 import { patientApi } from "../../services/patientApi";
 import { intakeApi, IntakeSubmission } from "../../services/intakeApi";
+import { appointmentsApi } from "../../services/appointmentsApi";
 import { DeviceSelector } from "../devices/DeviceSelector";
 
 // Interface for exercise with media
@@ -408,6 +409,21 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     enabled: !!selectedPatient?.id && !evaluationId,
   });
 
+  // Fetch recent appointments for session notes
+  const { data: recentAppointmentsData } = useQuery({
+    queryKey: ["patient-recent-appointments", selectedPatient?.id],
+    queryFn: async () => {
+      const result = await appointmentsApi.getAppointments({
+        patientId: selectedPatient?.id,
+        status: "completed",
+        limit: 5,
+        sortDescending: true,
+      });
+      return result.items;
+    },
+    enabled: !!selectedPatient?.id,
+  });
+
   // Auto-select most recent evaluation when patient is selected
   useEffect(() => {
     if (
@@ -465,14 +481,14 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     exerciseFilterRegion,
   ]);
 
-  // Steps
+  // Steps - Simplified: no separate exercise step, exercises managed in detail view
   const steps = useMemo(() => {
     if (isBulkMode) {
       return ["Review Patients", "Settings", "Processing", "Complete"];
     }
     return initialPatient
-      ? ["Plan Details", "Exercises", "Review"]
-      : ["Patient & Condition", "Exercises", "Review"];
+      ? ["Plan Details", "Review & Create"]
+      : ["Patient & Condition", "Review & Create"];
   }, [initialPatient, isBulkMode]);
 
   // Apply body region template
@@ -493,6 +509,165 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       title: prev.title || `${region} Rehabilitation Program`,
     }));
   }, []);
+
+  // Auto-populate form fields from evaluation data and session notes
+  useEffect(() => {
+    if (!evaluationData && (!recentAppointmentsData || recentAppointmentsData.length === 0)) return;
+
+    const eval_ = evaluationData?.evaluation;
+    const painMap = evaluationData?.painMap;
+    const aiSummary = evaluationData?.aiSummary;
+
+    // Determine body region from condition type or pain map
+    let detectedBodyRegion = "";
+    if (eval_?.conditionType) {
+      // Map condition types to body regions
+      const conditionToRegion: Record<string, string> = {
+        "lower-back": "Lower Back",
+        "lower back": "Lower Back",
+        "back pain": "Lower Back",
+        "neck": "Neck",
+        "neck pain": "Neck",
+        "shoulder": "Shoulder",
+        "shoulder pain": "Shoulder",
+        "knee": "Knee",
+        "knee pain": "Knee",
+        "hip": "Hip",
+        "hip pain": "Hip",
+        "ankle": "Ankle",
+        "wrist": "Wrist",
+      };
+      const conditionLower = eval_.conditionType.toLowerCase();
+      detectedBodyRegion = conditionToRegion[conditionLower] || "";
+
+      // If no match, try to find partial match
+      if (!detectedBodyRegion) {
+        for (const [key, region] of Object.entries(conditionToRegion)) {
+          if (conditionLower.includes(key)) {
+            detectedBodyRegion = region;
+            break;
+          }
+        }
+      }
+    }
+
+    // Also check pain map for body region hints
+    if (!detectedBodyRegion && painMap?.bodyParts && painMap.bodyParts.length > 0) {
+      const primaryPainArea = [...painMap.bodyParts].sort((a, b) => b.intensity - a.intensity)[0];
+      if (primaryPainArea?.region) {
+        const regionLower = primaryPainArea.region.toLowerCase();
+        if (regionLower.includes("back") || regionLower.includes("lumbar")) {
+          detectedBodyRegion = "Lower Back";
+        } else if (regionLower.includes("neck") || regionLower.includes("cervical")) {
+          detectedBodyRegion = "Neck";
+        } else if (regionLower.includes("shoulder")) {
+          detectedBodyRegion = "Shoulder";
+        } else if (regionLower.includes("knee")) {
+          detectedBodyRegion = "Knee";
+        } else if (regionLower.includes("hip")) {
+          detectedBodyRegion = "Hip";
+        }
+      }
+    }
+
+    // Also check recent appointment reason for visit for body region hints
+    if (!detectedBodyRegion && recentAppointmentsData && recentAppointmentsData.length > 0) {
+      const recentAppointment = recentAppointmentsData[0];
+      if (recentAppointment) {
+        const reasonLower = (recentAppointment.reasonForVisit || "").toLowerCase();
+        if (reasonLower.includes("back") || reasonLower.includes("lumbar")) {
+          detectedBodyRegion = "Lower Back";
+        } else if (reasonLower.includes("neck") || reasonLower.includes("cervical")) {
+          detectedBodyRegion = "Neck";
+        } else if (reasonLower.includes("shoulder")) {
+          detectedBodyRegion = "Shoulder";
+        } else if (reasonLower.includes("knee")) {
+          detectedBodyRegion = "Knee";
+        } else if (reasonLower.includes("hip")) {
+          detectedBodyRegion = "Hip";
+        }
+      }
+    }
+
+    // Build diagnosis from evaluation data
+    const diagnosisParts: string[] = [];
+    if (eval_?.conditionType) diagnosisParts.push(eval_.conditionType);
+    if (eval_?.description) diagnosisParts.push(eval_.description);
+    if (eval_?.symptoms && eval_.symptoms.length > 0) {
+      diagnosisParts.push(`Symptoms: ${eval_.symptoms.join(", ")}`);
+    }
+    if (eval_?.painLevel) {
+      diagnosisParts.push(`Pain level: ${eval_.painLevel}/10`);
+    }
+    if (eval_?.duration) {
+      diagnosisParts.push(`Duration: ${eval_.duration}`);
+    }
+
+    // Add session notes from recent appointments to diagnosis
+    if (recentAppointmentsData && recentAppointmentsData.length > 0) {
+      const appointmentsWithNotes = recentAppointmentsData.filter(a => a.notes);
+      if (appointmentsWithNotes.length > 0) {
+        const recentNotes = appointmentsWithNotes
+          .slice(0, 2)
+          .map(a => `Session notes (${new Date(a.scheduledStart).toLocaleDateString()}): ${a.notes}`)
+          .join(". ");
+        if (recentNotes) {
+          diagnosisParts.push(recentNotes);
+        }
+      }
+      // Add reason for visit if available
+      const latestWithReason = recentAppointmentsData.find(a => a.reasonForVisit);
+      if (latestWithReason?.reasonForVisit && !diagnosisParts.some(p => p.includes(latestWithReason.reasonForVisit!))) {
+        diagnosisParts.unshift(`Reason for visit: ${latestWithReason.reasonForVisit}`);
+      }
+    }
+
+    // Get contraindications from previous treatments and medical conditions
+    const contraindications: string[] = [];
+    if (eval_?.previousTreatments && eval_.previousTreatments.length > 0) {
+      contraindications.push(...eval_.previousTreatments.map(t => `Previous: ${t}`));
+    }
+    if (eval_?.medicalConditions) {
+      contraindications.push(eval_.medicalConditions);
+    }
+
+    // Get goals from treatment goals or AI recommendations
+    const focusAreas: string[] = [];
+    if (eval_?.treatmentGoals) {
+      focusAreas.push(eval_.treatmentGoals);
+    }
+    if (aiSummary?.recommendations && aiSummary.recommendations.length > 0) {
+      focusAreas.push(...aiSummary.recommendations.slice(0, 3));
+    }
+
+    // Update form with detected values (only if not already set)
+    setBasicInfo((prev) => ({
+      ...prev,
+      bodyRegion: prev.bodyRegion || detectedBodyRegion,
+      diagnosis: prev.diagnosis || diagnosisParts.join(". "),
+      title: prev.title || (detectedBodyRegion ? `${detectedBodyRegion} Rehabilitation Program` : prev.title),
+      contraindications: prev.contraindications.length > 0 ? prev.contraindications : contraindications,
+      focusAreas: prev.focusAreas.length > 0 ? prev.focusAreas : focusAreas,
+    }));
+
+    // Apply template if body region was detected and phases are empty
+    if (detectedBodyRegion && phases.length === 0) {
+      applyTemplate(detectedBodyRegion);
+    }
+
+    // Show what was auto-filled
+    const autoFilledItems: string[] = [];
+    if (detectedBodyRegion) autoFilledItems.push(`Body region: ${detectedBodyRegion}`);
+    if (diagnosisParts.length > 0) autoFilledItems.push("Diagnosis info");
+    if (recentAppointmentsData?.some(a => a.notes)) autoFilledItems.push("Session notes");
+
+    if (autoFilledItems.length > 0) {
+      enqueueSnackbar(
+        `Auto-filled: ${autoFilledItems.join(" • ")}`,
+        { variant: "info" }
+      );
+    }
+  }, [evaluationData, recentAppointmentsData, applyTemplate, enqueueSnackbar, phases.length]);
 
   // Mutations - Use preview endpoint for AI Suggest (doesn't save to DB)
   const previewMutation = useMutation({
@@ -881,8 +1056,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         return !!selectedPatient && !!basicInfo.bodyRegion;
       case "Plan Details":
         return !!basicInfo.bodyRegion && !!basicInfo.title;
-      case "Exercises":
-        return phases.length > 0 && phases.some((p) => p.exercises.length > 0);
+      case "Review & Create":
+        return phases.length > 0; // Don't require exercises - can add them after creation
       case "Review":
         return true;
       default:
@@ -1868,6 +2043,121 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     filters to narrow down.
                   </Typography>
                 )}
+              </Paper>
+            )}
+          </Box>
+        );
+
+      case "Review & Create":
+        return (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Typography variant="h6">Review & Create Treatment Plan</Typography>
+              <AuraButton
+                variant="outlined"
+                startIcon={
+                  isGenerating || previewMutation.isPending ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <AIIcon />
+                  )
+                }
+                onClick={() => handleAISuggest()}
+                disabled={isGenerating || previewMutation.isPending}
+                size="small"
+              >
+                {isGenerating || previewMutation.isPending
+                  ? "Generating..."
+                  : "AI Suggest Plan"}
+              </AuraButton>
+            </Box>
+
+            <Callout variant="info">
+              Create your treatment plan now. You can add and manage exercises from the plan detail page after creation.
+            </Callout>
+
+            <Paper sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Patient
+              </Typography>
+              <Typography variant="body1">
+                {selectedPatient?.firstName} {selectedPatient?.lastName}
+              </Typography>
+            </Paper>
+
+            <Paper sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Plan Details
+              </Typography>
+              <Typography variant="body1" fontWeight={600}>
+                {basicInfo.title || "Treatment Plan"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {basicInfo.durationWeeks} weeks | {phases.length} phases |{" "}
+                {totalExercises} exercises
+              </Typography>
+              {basicInfo.diagnosis && (
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  <strong>Diagnosis:</strong> {basicInfo.diagnosis}
+                </Typography>
+              )}
+            </Paper>
+
+            {phases.map((phase) => (
+              <Paper key={phase.phaseNumber} sx={{ p: 2, borderRadius: 2 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Phase {phase.phaseNumber}: {phase.name}
+                  </Typography>
+                  <Chip
+                    label={phase.exercises.length > 0 ? `${phase.exercises.length} exercises` : "No exercises yet"}
+                    size="small"
+                    color={phase.exercises.length > 0 ? "success" : "default"}
+                    variant="outlined"
+                  />
+                </Box>
+                <Typography variant="body2">
+                  {phase.durationWeeks} weeks | {phase.sessionsPerWeek} sessions/week
+                </Typography>
+                {phase.exercises.length > 0 && (
+                  <Box
+                    sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}
+                  >
+                    {phase.exercises.slice(0, 5).map((ex, i) => (
+                      <Chip
+                        key={i}
+                        label={ex.name}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                    {phase.exercises.length > 5 && (
+                      <Chip
+                        label={`+${phase.exercises.length - 5} more`}
+                        size="small"
+                      />
+                    )}
+                  </Box>
+                )}
+              </Paper>
+            ))}
+
+            {selectedDevice && (
+              <Paper
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "primary.light",
+                }}
+              >
+                <Typography variant="subtitle2" color="text.secondary">
+                  Linked Device
+                </Typography>
+                <Typography variant="body1">{selectedDevice.name}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {selectedDevice.partnerName} | {selectedDevice.deviceCode}
+                </Typography>
               </Paper>
             )}
           </Box>

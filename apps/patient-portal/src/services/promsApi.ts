@@ -268,4 +268,58 @@ export async function submitPromAnswers(
   return response;
 }
 
+// Treatment Progress Feedback Types
+export interface TreatmentExercise {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface TreatmentProgressContext {
+  treatmentPlanId: string;
+  treatmentPlanName: string;
+  currentPhase: number;
+  totalPhases: number;
+  exercises: TreatmentExercise[];
+  startedAt: string;
+  weeksInTreatment: number;
+}
+
+export interface SubmitTreatmentProgressRequest {
+  overallEffectivenessRating?: number;
+  painComparedToStart?: number;
+  exerciseCompliance?: string;
+  sessionsCompletedThisWeek?: number;
+  helpfulExerciseIds?: string[];
+  problematicExerciseIds?: string[];
+  exerciseComments?: string;
+  barriers?: string[];
+  suggestions?: string;
+  wantsClinicianDiscussion?: boolean;
+}
+
+export async function fetchTreatmentContext(
+  instanceId: string,
+): Promise<TreatmentProgressContext | null> {
+  try {
+    const response = await apiClient.get<TreatmentProgressContext>(
+      `${PROM_API_BASE}/instances/${instanceId}/treatment-context`,
+    );
+    return response;
+  } catch {
+    // No treatment context available
+    return null;
+  }
+}
+
+export async function submitTreatmentProgress(
+  instanceId: string,
+  request: SubmitTreatmentProgressRequest,
+): Promise<void> {
+  await apiClient.post(
+    `${PROM_API_BASE}/instances/${instanceId}/treatment-progress`,
+    request,
+  );
+}
+
 export type { PromScoringMethod };
