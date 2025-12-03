@@ -545,29 +545,38 @@ const Analytics: React.FC = () => {
             {/* Action Center - Today */}
             <Grid size={{ xs: 12, md: 6 }}>
               <InfoCard title="Action Center – Today">
-                <Stack spacing={1}>
-                  {/* High-risk patients - using low PROM scores as proxy */}
+                <Stack
+                  spacing={0}
+                  divider={
+                    <Box
+                      sx={{ borderBottom: "1px solid", borderColor: "divider" }}
+                    />
+                  }
+                >
+                  {/* High-risk patients */}
                   <Box
                     sx={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: "error.50",
-                      border: "1px solid",
-                      borderColor: "error.200",
+                      py: 1.5,
                     }}
                   >
                     <Box
                       sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
                     >
-                      <WarningIcon sx={{ color: "error.main" }} />
+                      <Box
+                        sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "error.50" }}
+                      >
+                        <WarningIcon
+                          sx={{ color: "error.main", fontSize: 20 }}
+                        />
+                      </Box>
                       <Typography variant="body2" fontWeight={500}>
                         High pain intensity patients
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Typography
                         variant="h6"
                         fontWeight={600}
@@ -590,22 +599,28 @@ const Analytics: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: "warning.50",
-                      border: "1px solid",
-                      borderColor: "warning.200",
+                      py: 1.5,
                     }}
                   >
                     <Box
                       sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
                     >
-                      <AssignmentIcon sx={{ color: "warning.main" }} />
+                      <Box
+                        sx={{
+                          p: 0.75,
+                          borderRadius: 1.5,
+                          bgcolor: "warning.50",
+                        }}
+                      >
+                        <AssignmentIcon
+                          sx={{ color: "warning.main", fontSize: 20 }}
+                        />
+                      </Box>
                       <Typography variant="body2" fontWeight={500}>
                         Intakes pending triage
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Typography
                         variant="h6"
                         fontWeight={600}
@@ -625,22 +640,22 @@ const Analytics: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: "grey.50",
-                      border: "1px solid",
-                      borderColor: "grey.200",
+                      py: 1.5,
                     }}
                   >
                     <Box
                       sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
                     >
-                      <CancelIcon sx={{ color: "grey.600" }} />
+                      <Box
+                        sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "grey.100" }}
+                      >
+                        <CancelIcon sx={{ color: "grey.600", fontSize: 20 }} />
+                      </Box>
                       <Typography variant="body2" fontWeight={500}>
                         Cancellations / No-shows
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Typography variant="h6" fontWeight={600}>
                         {(dashboardMetrics?.cancelledToday || 0) +
                           (dashboardMetrics?.noShowToday || 0)}
@@ -660,22 +675,24 @@ const Analytics: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: "info.50",
-                      border: "1px solid",
-                      borderColor: "info.200",
+                      py: 1.5,
                     }}
                   >
                     <Box
                       sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
                     >
-                      <AssessmentIcon sx={{ color: "info.main" }} />
+                      <Box
+                        sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "info.50" }}
+                      >
+                        <AssessmentIcon
+                          sx={{ color: "info.main", fontSize: 20 }}
+                        />
+                      </Box>
                       <Typography variant="body2" fontWeight={500}>
                         Total evaluations
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Typography
                         variant="h6"
                         fontWeight={600}

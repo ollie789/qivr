@@ -785,11 +785,190 @@ Date: ________________________
           </Stack>
         </Box>
 
+        {/* AI Triage Banner - Prominent when available */}
+        {fullDetails?.aiSummary && (
+          <Box
+            sx={{
+              mx: 3,
+              mt: 2,
+              p: 2,
+              borderRadius: 2,
+              background: `linear-gradient(135deg, ${auraColors.blue.main}15 0%, ${auraColors.purple.main}10 100%)`,
+              border: "1px solid",
+              borderColor: auraColors.blue.light,
+            }}
+          >
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <Avatar
+                sx={{
+                  bgcolor: auraColors.blue.main,
+                  width: 40,
+                  height: 40,
+                }}
+              >
+                <PsychologyIcon />
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  sx={{ mb: 0.5 }}
+                >
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    AI Triage Complete
+                  </Typography>
+                  <Chip
+                    icon={<VerifiedIcon />}
+                    label={
+                      fullDetails.aiSummary.approved
+                        ? "Verified"
+                        : "Pending Review"
+                    }
+                    size="small"
+                    color={
+                      fullDetails.aiSummary.approved ? "success" : "warning"
+                    }
+                    variant="outlined"
+                  />
+                  {fullDetails.aiSummary.riskFactors.length > 0 && (
+                    <Chip
+                      icon={<WarningIcon />}
+                      label={`${fullDetails.aiSummary.riskFactors.length} Risk Flag${fullDetails.aiSummary.riskFactors.length > 1 ? "s" : ""}`}
+                      size="small"
+                      color="error"
+                      variant="filled"
+                    />
+                  )}
+                </Stack>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                  }}
+                >
+                  {fullDetails.aiSummary.content}
+                </Typography>
+                {fullDetails.aiSummary.recommendations.length > 0 && (
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ mt: 1 }}
+                    flexWrap="wrap"
+                    useFlexGap
+                  >
+                    {fullDetails.aiSummary.recommendations
+                      .slice(0, 3)
+                      .map((rec, idx) => (
+                        <Chip
+                          key={idx}
+                          icon={<CheckCircleIcon />}
+                          label={rec}
+                          size="small"
+                          color="success"
+                          variant="outlined"
+                          sx={{
+                            maxWidth: 200,
+                            "& .MuiChip-label": {
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            },
+                          }}
+                        />
+                      ))}
+                    {fullDetails.aiSummary.recommendations.length > 3 && (
+                      <Chip
+                        label={`+${fullDetails.aiSummary.recommendations.length - 3} more`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </Stack>
+                )}
+              </Box>
+              <AuraButton
+                variant="outlined"
+                size="small"
+                onClick={() => setTabValue(0)}
+                sx={{ flexShrink: 0 }}
+              >
+                View Details
+              </AuraButton>
+            </Stack>
+          </Box>
+        )}
+
+        {/* Generate AI Triage CTA - When not available */}
+        {!fullDetails?.aiSummary && !isLoading && (
+          <Box
+            sx={{
+              mx: 3,
+              mt: 2,
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "action.hover",
+              border: "1px dashed",
+              borderColor: "divider",
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Avatar
+                  sx={{
+                    bgcolor: auraColors.blue.light,
+                    width: 40,
+                    height: 40,
+                  }}
+                >
+                  <AutoAwesomeIcon sx={{ color: auraColors.blue.main }} />
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    AI Triage Not Generated
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Generate an AI analysis to help prioritize this intake and
+                    identify risk factors.
+                  </Typography>
+                </Box>
+              </Stack>
+              <AuraButton
+                variant="contained"
+                size="small"
+                startIcon={
+                  generateTriageMutation.isPending ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <AutoAwesomeIcon />
+                  )
+                }
+                onClick={() => generateTriageMutation.mutate()}
+                disabled={generateTriageMutation.isPending}
+                sx={{ flexShrink: 0 }}
+              >
+                {generateTriageMutation.isPending
+                  ? "Analyzing..."
+                  : "Generate AI Triage"}
+              </AuraButton>
+            </Stack>
+          </Box>
+        )}
+
         {/* Tabs */}
         <Tabs
           value={tabValue}
           onChange={(_, v) => setTabValue(v)}
-          sx={{ px: 3, borderBottom: 1, borderColor: "divider" }}
+          sx={{ px: 3, mt: 2, borderBottom: 1, borderColor: "divider" }}
         >
           <Tab
             icon={<HospitalIcon />}
@@ -1592,62 +1771,7 @@ Date: ________________________
                             )}
                           </Box>
                         </AuraCard>
-                      ) : (
-                        <AuraCard sx={{ mb: 2 }}>
-                          <Box
-                            sx={{
-                              p: 2,
-                              textAlign: "center",
-                            }}
-                          >
-                            <Avatar
-                              sx={{
-                                bgcolor: auraColors.blue.light,
-                                width: 48,
-                                height: 48,
-                                mx: "auto",
-                                mb: 1.5,
-                              }}
-                            >
-                              <AutoAwesomeIcon
-                                sx={{ color: auraColors.blue.main }}
-                              />
-                            </Avatar>
-                            <Typography
-                              variant="subtitle2"
-                              fontWeight={600}
-                              gutterBottom
-                            >
-                              Generate AI Triage
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{ mb: 1.5 }}
-                            >
-                              Analyze intake data to generate triage
-                              recommendations.
-                            </Typography>
-                            <AuraButton
-                              variant="contained"
-                              size="small"
-                              startIcon={
-                                generateTriageMutation.isPending ? (
-                                  <CircularProgress size={16} color="inherit" />
-                                ) : (
-                                  <AutoAwesomeIcon />
-                                )
-                              }
-                              onClick={() => generateTriageMutation.mutate()}
-                              disabled={generateTriageMutation.isPending}
-                            >
-                              {generateTriageMutation.isPending
-                                ? "Analyzing..."
-                                : "Generate Triage"}
-                            </AuraButton>
-                          </Box>
-                        </AuraCard>
-                      )}
+                      ) : null}
 
                       {/* Medical History */}
                       <InfoCard title="Medical History" sx={{ mb: 3 }}>

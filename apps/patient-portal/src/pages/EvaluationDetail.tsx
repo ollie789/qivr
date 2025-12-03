@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  Box,
-  Typography,
-  Grid,
-  Chip,
-  IconButton,
-  Paper,
-} from "@mui/material";
+import { Box, Typography, Grid, Chip, IconButton, Paper } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Download as DownloadIcon,
@@ -16,11 +9,20 @@ import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   Remove as RemoveIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  CheckCircle as CheckCircleIcon,
+  Info as InfoIcon,
+  CalendarMonth as CalendarIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import type { ChipProps } from "@mui/material/Chip";
 import apiClient from "../lib/api-client";
-import { PageLoader, InfoCard, Breadcrumbs, AuraButton } from "@qivr/design-system";
+import {
+  PageLoader,
+  InfoCard,
+  Breadcrumbs,
+  AuraButton,
+} from "@qivr/design-system";
 
 interface Evaluation {
   id: string;
@@ -28,7 +30,13 @@ interface Evaluation {
   date: string;
   chiefComplaint: string;
   symptoms: string[];
-  status: "completed" | "in-progress" | "pending" | "cancelled";
+  status:
+    | "completed"
+    | "in-progress"
+    | "pending"
+    | "cancelled"
+    | "triaged"
+    | "reviewed";
   urgency: "low" | "medium" | "high" | "critical";
   provider?: string;
   followUpDate?: string;
@@ -45,6 +53,11 @@ interface Evaluation {
     temperature?: number;
     weight?: number;
   };
+  // AI Triage results
+  aiSummary?: string;
+  aiRiskFlags?: string[];
+  aiRecommendations?: string[];
+  aiProcessedAt?: string;
 }
 
 export const EvaluationDetail = () => {
@@ -171,13 +184,13 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Home', onClick: () => navigate('/') },
-          { label: 'Evaluations', onClick: () => navigate('/evaluations') },
+          { label: "Home", onClick: () => navigate("/") },
+          { label: "Evaluations", onClick: () => navigate("/evaluations") },
           { label: evaluation.evaluationNumber },
         ]}
         sx={{ mb: 2 }}
       />
-      
+
       {/* Header */}
       <Box
         sx={{
@@ -370,6 +383,131 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
 
         {/* Sidebar */}
         <Grid size={{ xs: 12, md: 4 }}>
+          {/* AI Triage Review - Show when intake has been reviewed */}
+          {evaluation.aiSummary && (
+            <InfoCard
+              title="Your Intake Has Been Reviewed"
+              action={<AutoAwesomeIcon sx={{ color: "primary.main" }} />}
+              sx={{
+                mb: 3,
+                background:
+                  "linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(156, 39, 176, 0.05) 100%)",
+                border: "1px solid",
+                borderColor: "primary.light",
+              }}
+            >
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+              >
+                <CheckCircleIcon sx={{ color: "success.main", fontSize: 20 }} />
+                <Typography
+                  variant="body2"
+                  color="success.main"
+                  fontWeight={600}
+                >
+                  Reviewed by our clinical team
+                </Typography>
+              </Box>
+
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                {evaluation.aiSummary}
+              </Typography>
+
+              {/* Recommendations for patient */}
+              {evaluation.aiRecommendations &&
+                evaluation.aiRecommendations.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      gutterBottom
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
+                      <InfoIcon fontSize="small" color="primary" />
+                      What's Next
+                    </Typography>
+                    <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                      {evaluation.aiRecommendations
+                        .filter(
+                          (rec) =>
+                            !rec.toLowerCase().includes("priority scheduling"),
+                        )
+                        .slice(0, 3)
+                        .map((rec, idx) => (
+                          <Typography
+                            component="li"
+                            variant="body2"
+                            key={idx}
+                            sx={{ mb: 0.5 }}
+                          >
+                            {rec}
+                          </Typography>
+                        ))}
+                    </Box>
+                  </Box>
+                )}
+
+              {evaluation.aiProcessedAt && (
+                <Typography variant="caption" color="text.secondary">
+                  Reviewed on{" "}
+                  {format(
+                    new Date(evaluation.aiProcessedAt),
+                    "MMM dd, yyyy 'at' h:mm a",
+                  )}
+                </Typography>
+              )}
+
+              {/* Call to action - book appointment */}
+              {!evaluation.followUpDate && (
+                <AuraButton
+                  fullWidth
+                  variant="contained"
+                  startIcon={<CalendarIcon />}
+                  onClick={() => navigate("/book-appointment")}
+                  sx={{ mt: 2 }}
+                >
+                  Book Your Appointment
+                </AuraButton>
+              )}
+            </InfoCard>
+          )}
+
+          {/* Pending Review - Show when intake hasn't been reviewed yet */}
+          {!evaluation.aiSummary && evaluation.status === "pending" && (
+            <InfoCard
+              title="Review In Progress"
+              sx={{
+                mb: 3,
+                bgcolor: "grey.50",
+              }}
+            >
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    bgcolor: "warning.main",
+                    animation: "pulse 2s infinite",
+                    "@keyframes pulse": {
+                      "0%": { opacity: 1 },
+                      "50%": { opacity: 0.4 },
+                      "100%": { opacity: 1 },
+                    },
+                  }}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  Your intake is being reviewed by our team
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                We'll update you once the review is complete. This typically
+                takes 1-2 business days.
+              </Typography>
+            </InfoCard>
+          )}
+
           {/* Score & Trend */}
           {evaluation.score && (
             <InfoCard title="Assessment Score">
