@@ -50,15 +50,14 @@ phases:
     commands:
       - echo Build started on `date`
 
-      # Start Docker build in background if backend changed
+      # Build Docker image synchronously if backend changed (must complete before post_build)
       - |
         if [ "$BUILD_BACKEND" = "true" ]; then
-          echo "Building Docker image..."
-          docker buildx build --platform linux/amd64 -t $REPOSITORY_URI:$IMAGE_TAG -t $REPOSITORY_URI:latest --push ./backend &
-          DOCKER_PID=$!
+          echo "Building and pushing Docker image..."
+          docker buildx build --platform linux/amd64 -t $REPOSITORY_URI:$IMAGE_TAG -t $REPOSITORY_URI:latest --push ./backend
+          echo "Docker build and push completed"
         else
           echo "Skipping backend build - no changes"
-          DOCKER_PID=""
         fi
 
       # Only install deps if any frontend needs building
@@ -95,13 +94,6 @@ phases:
           PIDS="$PIDS $!"
         fi
         for pid in $PIDS; do wait $pid; done
-
-      # Wait for Docker build if it was started
-      - |
-        if [ -n "$DOCKER_PID" ]; then
-          echo "Waiting for Docker build..."
-          wait $DOCKER_PID || echo "Docker build completed with warnings"
-        fi
 
       # Migrations are managed manually via SQL - not run in CI/CD
 
