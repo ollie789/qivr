@@ -1,7 +1,7 @@
-import { Theme } from '@mui/material';
-import { Components } from '@mui/material/styles';
+import { Theme } from "@mui/material";
+import { Components } from "@mui/material/styles";
 
-declare module '@mui/material' {
+declare module "@mui/material" {
   interface TextFieldPropsSizeOverrides {
     large: true;
   }
@@ -10,19 +10,23 @@ declare module '@mui/material' {
   }
 }
 
-const TextField: Components<Omit<Theme, 'components'>>['MuiTextField'] = {
+const TextField: Components<Omit<Theme, "components">>["MuiTextField"] = {
   defaultProps: {
-    variant: 'filled',
+    variant: "filled",
+    InputLabelProps: {
+      shrink: true,
+    },
   },
   styleOverrides: {
     root: {
-      '& input::-webkit-contacts-auto-fill-button, & input::-webkit-credentials-auto-fill-button': {
-        visibility: 'hidden',
-        display: 'none !important',
-        pointerEvents: 'none',
-        position: 'absolute',
-        right: 0,
-      },
+      "& input::-webkit-contacts-auto-fill-button, & input::-webkit-credentials-auto-fill-button":
+        {
+          visibility: "hidden",
+          display: "none !important",
+          pointerEvents: "none",
+          position: "absolute",
+          right: 0,
+        },
     },
   },
 };
