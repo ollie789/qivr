@@ -28,6 +28,10 @@ public class PromSchedulingBackgroundService : BackgroundService
                 
                 _logger.LogInformation("PROM scheduling check completed at {Time}", DateTime.UtcNow);
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("ConnectionString"))
+            {
+                _logger.LogWarning("PROM scheduling skipped - database not configured");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in PROM scheduling background service");

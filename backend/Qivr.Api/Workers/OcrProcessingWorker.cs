@@ -56,6 +56,11 @@ public class OcrProcessingWorker : BackgroundService
                 // Graceful shutdown
                 break;
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("ConnectionString"))
+            {
+                _logger.LogWarning("OCR Processing Worker skipped - database not configured");
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in OCR Processing Worker");
@@ -93,12 +98,17 @@ public class OcrProcessingWorker : BackgroundService
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        // Log pending jobs on startup
-        using var scope = _serviceProvider.CreateScope();
-        var ocrService = scope.ServiceProvider.GetRequiredService<IResilientOcrService>();
-        var pendingCount = await ocrService.GetPendingJobCountAsync(cancellationToken);
-
-        _logger.LogInformation("OCR Processing Worker found {Count} pending jobs on startup", pendingCount);
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var ocrService = scope.ServiceProvider.GetRequiredService<IResilientOcrService>();
+            var pendingCount = await ocrService.GetPendingJobCountAsync(cancellationToken);
+            _logger.LogInformation("OCR Processing Worker found {Count} pending jobs on startup", pendingCount);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("ConnectionString"))
+        {
+            _logger.LogWarning("OCR Processing Worker skipping startup check - database not configured");
+        }
 
         await base.StartAsync(cancellationToken);
     }

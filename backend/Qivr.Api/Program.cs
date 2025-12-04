@@ -512,14 +512,15 @@ else
 // Tags:
 //   - "live": Used by liveness probe (/health/live) - basic process health
 //   - "ready": Used by readiness probe (/health/ready) - dependency health
-builder.Services.AddHealthChecks()
-    // Liveness: Simple self-check - if this fails, the process is unhealthy
+var healthChecks = builder.Services.AddHealthChecks()
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(),
-        tags: ["live"])
-    // Readiness: Database connectivity - don't accept traffic if DB is down
-    .AddNpgSql(defaultConnection!, name: "database", tags: ["ready"])
-    // Readiness: Redis connectivity (if enabled)
-    .AddRedis(redisConnection, name: "redis", tags: ["ready"]);
+        tags: ["live"]);
+
+if (!string.IsNullOrWhiteSpace(defaultConnection))
+    healthChecks.AddNpgSql(defaultConnection, name: "database", tags: ["ready"]);
+
+if (!string.IsNullOrWhiteSpace(redisConnection))
+    healthChecks.AddRedis(redisConnection, name: "redis", tags: ["ready"]);
 
 // Register application services
 builder.Services.AddQivrServices(builder.Configuration);
