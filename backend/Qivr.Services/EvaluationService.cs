@@ -177,7 +177,8 @@ public class EvaluationService : IEvaluationService
 
     public async Task UpdateEvaluationStatusAsync(Guid id, string status, CancellationToken cancellationToken = default)
     {
-        var evaluation = await _context.Evaluations.FindAsync(new object[] { id }, cancellationToken);
+        var evaluation = await _context.Evaluations
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
         if (evaluation == null)
         {
             throw new KeyNotFoundException($"Evaluation {id} not found");

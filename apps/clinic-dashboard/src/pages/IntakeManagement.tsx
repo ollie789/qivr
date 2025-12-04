@@ -135,7 +135,7 @@ const IntakeManagement: React.FC = () => {
         return {
           ...old,
           data: old.data.map((intake: IntakeSubmission) =>
-            intake.id === id ? { ...intake, status } : intake
+            intake.id === id ? { ...intake, status } : intake,
           ),
         };
       });
@@ -151,10 +151,10 @@ const IntakeManagement: React.FC = () => {
     },
     onSuccess: () => {
       enqueueSnackbar("Status updated", { variant: "success" });
-    },
-    onSettled: () => {
-      // Always refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
+      // Refetch after a short delay to ensure DB write is complete
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
+      }, 500);
     },
   });
 
