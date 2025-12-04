@@ -426,7 +426,7 @@ export default function Appointments() {
 
   const handleStartSession = async (apt: Appointment) => {
     try {
-      await appointmentsApi.updateAppointment(apt.id, { status: "in-progress" });
+      await appointmentsApi.updateAppointment(apt.id, { status: "InProgress" });
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       enqueueSnackbar("Session started", { variant: "info" });
       handleOpenNotes(apt);
