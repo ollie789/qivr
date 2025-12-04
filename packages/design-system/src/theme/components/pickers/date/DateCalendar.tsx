@@ -27,14 +27,35 @@ declare module '@mui/material/styles' {
   }
 }
 
+// Helper to format month - works with both dayjs and date-fns Date objects
+const formatMonth = (date: unknown): string => {
+  if (date && typeof date === 'object' && 'format' in date && typeof (date as { format: unknown }).format === 'function') {
+    // dayjs object
+    return (date as { format: (f: string) => string }).format('MMMM YYYY');
+  }
+  // Native Date or date-fns
+  const d = date instanceof Date ? date : new Date(date as string);
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+};
+
+// Helper to add/subtract months - works with both dayjs and date-fns
+const addMonths = (date: unknown, months: number): unknown => {
+  if (date && typeof date === 'object' && 'add' in date && typeof (date as { add: unknown }).add === 'function') {
+    return (date as { add: (n: number, u: string) => unknown }).add(months, 'month');
+  }
+  const d = date instanceof Date ? new Date(date) : new Date(date as string);
+  d.setMonth(d.getMonth() + months);
+  return d;
+};
+
 const DateCalendar: Components<Omit<Theme, 'components'>>['MuiDateCalendar'] = {
   defaultProps: {
     slots: {
       calendarHeader: (props) => {
         const { currentMonth, onMonthChange, onViewChange, view } = props;
 
-        const selectNextMonth = () => onMonthChange(currentMonth.add(1, 'month'));
-        const selectPreviousMonth = () => onMonthChange(currentMonth.subtract(1, 'month'));
+        const selectNextMonth = () => onMonthChange(addMonths(currentMonth, 1) as typeof currentMonth);
+        const selectPreviousMonth = () => onMonthChange(addMonths(currentMonth, -1) as typeof currentMonth);
         const toggleYearView = () => {
           if (onViewChange) {
             const nextView: DateView = view === 'day' ? 'year' : 'day';
@@ -58,7 +79,7 @@ const DateCalendar: Components<Omit<Theme, 'components'>>['MuiDateCalendar'] = {
               onClick={toggleYearView}
               sx={{ fontWeight: 600 }}
             >
-              {currentMonth.format('MMMM YYYY')}
+              {formatMonth(currentMonth)}
             </Button>
 
             <Button shape="square" color="neutral" onClick={selectNextMonth}>

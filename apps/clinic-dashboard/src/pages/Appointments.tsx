@@ -21,8 +21,6 @@ import {
   ListItemIcon,
   ListItemText,
   alpha,
-  IconButton,
-  Tooltip,
   useTheme,
   LinearProgress,
   CircularProgress,
@@ -52,6 +50,8 @@ import { useNavigate } from "react-router-dom";
 import {
   auraTokens,
   AuraButton,
+  AuraCard,
+  AuraIconButton,
   FormDialog,
   ConfirmDialog,
   SelectField,
@@ -88,6 +88,7 @@ export default function Appointments() {
   const navigate = useNavigate();
   const calendarRef = useRef<FullCalendar>(null);
   const [miniCalendarMonth, setMiniCalendarMonth] = useState<Date>(new Date());
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLElement; apt: Appointment } | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
@@ -214,7 +215,11 @@ export default function Appointments() {
 
   // Sync mini calendar when main calendar view changes
   const handleDatesSet = (arg: DatesSetArg) => {
-    setMiniCalendarMonth(arg.start);
+    setCurrentWeekStart(arg.start);
+    // Keep mini calendar in sync with the week being viewed
+    if (!isSameMonth(arg.start, miniCalendarMonth)) {
+      setMiniCalendarMonth(arg.start);
+    }
   };
 
   // Generate mini calendar days
@@ -459,7 +464,8 @@ export default function Appointments() {
             Today
           </AuraButton>
           <Box sx={{ display: "flex", alignItems: "center" }}>
-            <IconButton
+            <AuraIconButton
+              tooltip="Previous week"
               size="small"
               onClick={() => {
                 if (calendarRef.current) {
@@ -468,8 +474,9 @@ export default function Appointments() {
               }}
             >
               <ChevronLeftIcon />
-            </IconButton>
-            <IconButton
+            </AuraIconButton>
+            <AuraIconButton
+              tooltip="Next week"
               size="small"
               onClick={() => {
                 if (calendarRef.current) {
@@ -478,10 +485,10 @@ export default function Appointments() {
               }}
             >
               <ChevronRightIcon />
-            </IconButton>
+            </AuraIconButton>
           </Box>
           <Typography variant="h5" fontWeight={600}>
-            {format(miniCalendarMonth, "MMMM yyyy")}
+            {format(currentWeekStart, "MMMM yyyy")}
           </Typography>
         </Box>
         <AuraButton variant="contained" startIcon={<AddIcon />} onClick={() => setScheduleDialogOpen(true)}>
@@ -489,13 +496,14 @@ export default function Appointments() {
         </AuraButton>
       </Box>
 
-      <Box sx={{ display: "flex", gap: 2, flex: 1, minHeight: 0 }}>
+      <Box sx={{ display: "flex", gap: auraTokens.spacing.md, flex: 1, minHeight: 0 }}>
         {/* Left Sidebar - Mini Calendar */}
-        <Paper
+        <AuraCard
+          hover={false}
+          variant="flat"
           sx={{
             width: 240,
-            p: 2,
-            borderRadius: auraTokens.borderRadius.lg,
+            p: auraTokens.spacing.md,
             display: "flex",
             flexDirection: "column",
             flexShrink: 0,
@@ -503,15 +511,15 @@ export default function Appointments() {
         >
           {/* Mini Calendar Header */}
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
-            <IconButton size="small" onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, -1))}>
+            <AuraIconButton tooltip="Previous month" size="small" onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, -1))}>
               <ChevronLeftIcon fontSize="small" />
-            </IconButton>
-            <Typography variant="subtitle2" fontWeight={600}>
+            </AuraIconButton>
+            <Typography variant="subtitle2" fontWeight={auraTokens.fontWeights.semibold}>
               {format(miniCalendarMonth, "MMMM yyyy")}
             </Typography>
-            <IconButton size="small" onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, 1))}>
+            <AuraIconButton tooltip="Next month" size="small" onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, 1))}>
               <ChevronRightIcon fontSize="small" />
-            </IconButton>
+            </AuraIconButton>
           </Box>
 
           {/* Mini Calendar Grid */}
@@ -604,13 +612,15 @@ export default function Appointments() {
             }}
             sx={{ mb: 2 }}
           />
-        </Paper>
+        </AuraCard>
 
         {/* Main Calendar - Week View */}
-        <Paper
+        <AuraCard
+          hover={false}
+          variant="flat"
           sx={{
             flex: 1,
-            borderRadius: auraTokens.borderRadius.lg,
+            p: 0,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -621,43 +631,74 @@ export default function Appointments() {
             sx={{
               flex: 1,
               "& .fc-toolbar": { display: "none" },
+              "& .fc-view-harness": { bgcolor: "background.paper" },
               "& .fc-event": {
                 cursor: "pointer",
-                borderRadius: "4px",
+                borderRadius: auraTokens.borderRadius.sm,
                 fontSize: "0.75rem",
                 border: "none",
-                px: 0.5,
+                boxShadow: auraTokens.shadows.sm,
               },
-              "& .fc-day-today": {
-                bgcolor: "transparent !important",
-              },
-              "& .fc-col-header-cell": {
-                py: 1,
-                fontWeight: 500,
-                fontSize: "0.75rem",
-                color: "text.secondary",
+              // Day headers - Google Calendar style
+              "& .fc-col-header": {
                 borderBottom: "1px solid",
                 borderColor: "divider",
+              },
+              "& .fc-col-header-cell": {
+                py: 1.5,
+                borderBottom: "none",
+                verticalAlign: "top",
               },
               "& .fc-col-header-cell-cushion": {
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                py: 1,
+                gap: 0.5,
+                py: 0.5,
+                textDecoration: "none !important",
               },
+              // Today's column header
+              "& .fc-day-today .fc-col-header-cell-cushion": {
+                "& .fc-day-text": {
+                  color: "primary.main",
+                },
+                "& .fc-day-number": {
+                  bgcolor: "primary.main",
+                  color: "white",
+                  borderRadius: "50%",
+                  width: 40,
+                  height: 40,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                },
+              },
+              "& .fc-day-today": {
+                bgcolor: "transparent !important",
+              },
+              // Time grid styling
               "& .fc-timegrid-slot": {
                 height: "48px",
-                borderColor: alpha(theme.palette.divider, 0.5),
+                borderColor: alpha(theme.palette.divider, 0.3),
               },
               "& .fc-timegrid-slot-label": {
                 fontSize: "0.7rem",
                 color: "text.secondary",
                 fontWeight: 400,
+                verticalAlign: "top",
+                paddingTop: "4px",
+              },
+              "& .fc-timegrid-slot-label-cushion": {
+                paddingRight: "12px",
               },
               "& .fc-timegrid-event": {
-                borderRadius: "4px",
+                borderRadius: auraTokens.borderRadius.sm,
                 fontSize: "0.75rem",
               },
+              "& .fc-timegrid-col": {
+                borderColor: alpha(theme.palette.divider, 0.3),
+              },
+              // Now indicator
               "& .fc-timegrid-now-indicator-line": {
                 borderColor: theme.palette.error.main,
                 borderWidth: "2px",
@@ -666,14 +707,19 @@ export default function Appointments() {
                 borderTopColor: theme.palette.error.main,
                 borderWidth: "5px",
               },
+              // Axis and grid
               "& .fc-timegrid-axis": {
-                width: "60px",
+                width: "56px",
+                borderColor: alpha(theme.palette.divider, 0.3),
               },
               "& .fc-scrollgrid": {
-                borderColor: "divider",
+                border: "none",
               },
               "& .fc-scrollgrid-section > td": {
-                borderColor: "divider",
+                borderColor: alpha(theme.palette.divider, 0.3),
+              },
+              "& .fc-scrollgrid-section-header > td": {
+                border: "none",
               },
             }}
           >
@@ -691,22 +737,62 @@ export default function Appointments() {
               weekends
               height="100%"
               nowIndicator
-              slotMinTime="06:00:00"
-              slotMaxTime="20:00:00"
+              slotMinTime="08:00:00"
+              slotMaxTime="19:00:00"
               slotDuration="00:30:00"
+              scrollTime="09:00:00"
               allDaySlot={false}
               eventTimeFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
-              dayHeaderFormat={{ weekday: "short", day: "numeric" }}
-              slotLabelFormat={{ hour: "numeric", minute: "2-digit", hour12: true }}
+              dayHeaderContent={(arg) => (
+                <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
+                  <Typography
+                    className="fc-day-text"
+                    variant="caption"
+                    sx={{
+                      color: isToday(arg.date) ? "primary.main" : "text.secondary",
+                      fontWeight: 500,
+                      textTransform: "uppercase",
+                      fontSize: "0.7rem",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    {format(arg.date, "EEE")}
+                  </Typography>
+                  <Box
+                    className="fc-day-number"
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor: isToday(arg.date) ? "primary.main" : "transparent",
+                      color: isToday(arg.date) ? "white" : "text.primary",
+                      fontWeight: 500,
+                      fontSize: "1.1rem",
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        bgcolor: isToday(arg.date) ? "primary.dark" : "action.hover",
+                      },
+                    }}
+                  >
+                    {format(arg.date, "d")}
+                  </Box>
+                </Box>
+              )}
+              slotLabelFormat={{ hour: "numeric", meridiem: "short" }}
             />
           </Box>
-        </Paper>
+        </AuraCard>
 
         {/* Today's Agenda Sidebar */}
-        <Paper
+        <AuraCard
+          hover={false}
+          variant="flat"
           sx={{
             width: 340,
-            borderRadius: auraTokens.borderRadius.lg,
+            p: 0,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -715,15 +801,15 @@ export default function Appointments() {
           {/* Agenda Header */}
           <Box
             sx={{
-              p: 2,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              p: auraTokens.spacing.md,
+              background: auraTokens.gradients.primary,
               color: "white",
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
-              <IconButton size="small" onClick={() => navigateAgenda("prev")} sx={{ color: "white" }}>
+              <AuraIconButton tooltip="Previous day" size="small" onClick={() => navigateAgenda("prev")} sx={{ color: "white" }}>
                 <PrevIcon />
-              </IconButton>
+              </AuraIconButton>
               <Box sx={{ textAlign: "center" }}>
                 <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>
                   {isToday(agendaDate) ? "Today's Agenda" : format(agendaDate, "EEEE")}
@@ -732,9 +818,9 @@ export default function Appointments() {
                   {format(agendaDate, "MMM d, yyyy")}
                 </Typography>
               </Box>
-              <IconButton size="small" onClick={() => navigateAgenda("next")} sx={{ color: "white" }}>
+              <AuraIconButton tooltip="Next day" size="small" onClick={() => navigateAgenda("next")} sx={{ color: "white" }}>
                 <NextIcon />
-              </IconButton>
+              </AuraIconButton>
             </Box>
             {!isToday(agendaDate) && (
               <Box sx={{ textAlign: "center", mt: 1 }}>
@@ -864,61 +950,56 @@ export default function Appointments() {
                           {/* Actions */}
                           <Box sx={{ display: "flex", gap: 0.5, mt: 1 }}>
                             {!isComplete && !isCancelled && !isActive && (
-                              <Tooltip title="Start Session">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleStartSession(apt)}
-                                  sx={{
-                                    bgcolor: alpha(theme.palette.warning.main, 0.1),
-                                    "&:hover": { bgcolor: alpha(theme.palette.warning.main, 0.2) },
-                                  }}
-                                >
-                                  <StartIcon fontSize="small" color="warning" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            <Tooltip title="Session Notes">
-                              <IconButton
+                              <AuraIconButton
+                                tooltip="Start Session"
                                 size="small"
-                                onClick={() => handleOpenNotes(apt)}
+                                onClick={() => handleStartSession(apt)}
                                 sx={{
-                                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                  "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                                  bgcolor: alpha(theme.palette.warning.main, 0.1),
+                                  "&:hover": { bgcolor: alpha(theme.palette.warning.main, 0.2) },
                                 }}
                               >
-                                <NotesIcon fontSize="small" color="primary" />
-                              </IconButton>
-                            </Tooltip>
-                            {isActive && (
-                              <Tooltip title="Complete Session">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleCompleteAppointment(apt.id)}
-                                  sx={{
-                                    bgcolor: alpha(theme.palette.success.main, 0.1),
-                                    "&:hover": { bgcolor: alpha(theme.palette.success.main, 0.2) },
-                                  }}
-                                >
-                                  <CompleteIcon fontSize="small" color="success" />
-                                </IconButton>
-                              </Tooltip>
+                                <StartIcon fontSize="small" color="warning" />
+                              </AuraIconButton>
                             )}
-                            <Tooltip title="View Patient">
-                              <IconButton
+                            <AuraIconButton
+                              tooltip="Session Notes"
+                              size="small"
+                              onClick={() => handleOpenNotes(apt)}
+                              sx={{
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                              }}
+                            >
+                              <NotesIcon fontSize="small" color="primary" />
+                            </AuraIconButton>
+                            {isActive && (
+                              <AuraIconButton
+                                tooltip="Complete Session"
                                 size="small"
-                                onClick={() => navigate(`/medical-records?patientId=${apt.patientId}`)}
+                                onClick={() => handleCompleteAppointment(apt.id)}
+                                sx={{
+                                  bgcolor: alpha(theme.palette.success.main, 0.1),
+                                  "&:hover": { bgcolor: alpha(theme.palette.success.main, 0.2) },
+                                }}
                               >
-                                <PersonIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="More Options">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => setMenuAnchor({ el: e.currentTarget, apt })}
-                              >
-                                <MoreIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
+                                <CompleteIcon fontSize="small" color="success" />
+                              </AuraIconButton>
+                            )}
+                            <AuraIconButton
+                              tooltip="View Patient"
+                              size="small"
+                              onClick={() => navigate(`/medical-records?patientId=${apt.patientId}`)}
+                            >
+                              <PersonIcon fontSize="small" />
+                            </AuraIconButton>
+                            <AuraIconButton
+                              tooltip="More Options"
+                              size="small"
+                              onClick={(e) => setMenuAnchor({ el: e.currentTarget, apt })}
+                            >
+                              <MoreIcon fontSize="small" />
+                            </AuraIconButton>
                           </Box>
                         </Box>
                       </Box>
@@ -928,7 +1009,7 @@ export default function Appointments() {
               </Stack>
             )}
           </Box>
-        </Paper>
+        </AuraCard>
       </Box>
 
       {/* Action Menu */}
