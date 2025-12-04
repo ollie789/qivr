@@ -178,17 +178,23 @@ public class TreatmentPlansController : BaseApiController
             var tenantId = RequireTenantId();
             var userId = CurrentUserId;
 
+            // Validate: PatientId is required unless creating a template
+            if (!request.IsTemplate && !request.PatientId.HasValue)
+            {
+                return BadRequest(new { error = "PatientId is required when creating a patient treatment plan" });
+            }
+
             var plan = new TreatmentPlan
             {
                 TenantId = tenantId,
-                PatientId = request.PatientId,
+                PatientId = request.IsTemplate ? null : request.PatientId,
                 ProviderId = userId,
                 Title = request.Title ?? "Treatment Plan",
                 Diagnosis = request.Diagnosis,
                 Goals = request.Goals ?? string.Join(", ", request.GoalsList ?? new List<string>()),
                 StartDate = request.StartDate != default ? request.StartDate : DateTime.UtcNow,
                 DurationWeeks = request.DurationWeeks > 0 ? request.DurationWeeks : ParseDurationWeeks(request.Duration),
-                Status = TreatmentPlanStatus.Active,
+                Status = request.IsTemplate ? TreatmentPlanStatus.Active : TreatmentPlanStatus.Active,
                 Sessions = request.Sessions ?? new(),
                 Exercises = request.Exercises ?? new(),
                 Phases = request.Phases ?? new(),
@@ -199,18 +205,24 @@ public class TreatmentPlansController : BaseApiController
                 AiRationale = request.AiRationale,
                 AiConfidence = request.AiConfidence,
                 AiGeneratedAt = request.AiGeneratedSummary != null ? DateTime.UtcNow : null,
-                SourceEvaluationId = request.SourceEvaluationId
+                SourceEvaluationId = request.SourceEvaluationId,
+                // Template fields
+                IsTemplate = request.IsTemplate,
+                BodyRegion = request.BodyRegion,
+                ConditionType = request.ConditionType,
+                TemplateSource = request.TemplateSource,
+                SourceTemplateId = request.SourceTemplateId
             };
 
             _context.TreatmentPlans.Add(plan);
             await _context.SaveChangesAsync();
 
-            // If a device was linked, find/create the device usage record and link it
-            if (request.LinkedDeviceId.HasValue)
+            // If a device was linked, find/create the device usage record and link it (only for patient plans)
+            if (request.LinkedDeviceId.HasValue && request.PatientId.HasValue && !request.IsTemplate)
             {
                 // Find the most recent device usage for this patient with this device
                 var deviceUsage = await _context.PatientDeviceUsages
-                    .Where(u => u.PatientId == request.PatientId
+                    .Where(u => u.PatientId == request.PatientId.Value
                         && u.DeviceId == request.LinkedDeviceId.Value
                         && u.TenantId == tenantId)
                     .OrderByDescending(u => u.CreatedAt)
@@ -1362,7 +1374,7 @@ public class TreatmentPlansController : BaseApiController
 
 public class CreateTreatmentPlanRequest
 {
-    public Guid PatientId { get; set; }
+    public Guid? PatientId { get; set; }
     public string? Title { get; set; }
     public string? Diagnosis { get; set; }
     public string? Goals { get; set; }
@@ -1390,6 +1402,13 @@ public class CreateTreatmentPlanRequest
 
     // Research partner device tracking
     public Guid? LinkedDeviceId { get; set; }
+
+    // Template fields
+    public bool IsTemplate { get; set; }
+    public string? BodyRegion { get; set; }
+    public string? ConditionType { get; set; }
+    public string? TemplateSource { get; set; }
+    public Guid? SourceTemplateId { get; set; }
 }
 
 public class UpdateTreatmentPlanRequest

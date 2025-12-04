@@ -49,7 +49,20 @@ import {
   ViewDay as DayViewIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
-import { format, parseISO, isToday, isSameDay, addDays } from "date-fns";
+import {
+  format,
+  parseISO,
+  isToday,
+  isSameDay,
+  addDays,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  addMonths,
+} from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
@@ -106,6 +119,7 @@ export default function Appointments() {
   const calendarRef = useRef<FullCalendar>(null);
   const [viewMode, setViewMode] = useState<"week" | "day">("week");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [miniCalendarMonth, setMiniCalendarMonth] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
   const [expandedAppointment, setExpandedAppointment] =
@@ -194,6 +208,30 @@ export default function Appointments() {
     return { total, completed, upcoming, inProgress };
   }, [dayAppointments]);
 
+  // Generate mini calendar days
+  const miniCalendarDays = useMemo(() => {
+    const monthStart = startOfMonth(miniCalendarMonth);
+    const monthEnd = endOfMonth(miniCalendarMonth);
+    const calendarStart = startOfWeek(monthStart);
+    const calendarEnd = endOfWeek(monthEnd);
+    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  }, [miniCalendarMonth]);
+
+  // Check if a date has appointments
+  const getAppointmentCountForDate = (date: Date) => {
+    return appointments.filter((apt) =>
+      isSameDay(parseISO(apt.scheduledStart), date),
+    ).length;
+  };
+
+  // Handle date click from mini calendar
+  const handleMiniCalendarDateClick = (date: Date) => {
+    setCurrentDate(date);
+    if (calendarRef.current) {
+      calendarRef.current.getApi().gotoDate(date);
+    }
+  };
+
   // Convert appointments to FullCalendar events
   const calendarEvents = appointments.map((apt) => ({
     id: apt.id,
@@ -265,6 +303,10 @@ export default function Appointments() {
   // Sync current date when calendar view changes
   const handleDatesSet = (arg: DatesSetArg) => {
     setCurrentDate(arg.start);
+    // Keep mini calendar in sync
+    if (!isSameMonth(arg.start, miniCalendarMonth)) {
+      setMiniCalendarMonth(arg.start);
+    }
   };
 
   // Handle view mode change
@@ -300,9 +342,19 @@ export default function Appointments() {
     }
   };
 
-  // Open inline session notes for day view
-  const handleExpandAppointment = async (apt: Appointment) => {
-    setExpandedAppointment(apt);
+  const openConfirmDialog = useCallback(
+    (config: Omit<typeof confirmDialog, "open">) => {
+      setConfirmDialog({ ...config, open: true });
+    },
+    [],
+  );
+
+  const closeConfirmDialog = useCallback(() => {
+    setConfirmDialog((prev) => ({ ...prev, open: false }));
+  }, []);
+
+  // Shared logic for loading appointment session state
+  const loadAppointmentSession = async (apt: Appointment) => {
     setSessionNotes(apt.notes || "");
     setModalities({
       manualTherapy: false,
@@ -369,84 +421,16 @@ export default function Appointments() {
     }
   };
 
-  const openConfirmDialog = useCallback(
-    (config: Omit<typeof confirmDialog, "open">) => {
-      setConfirmDialog({ ...config, open: true });
-    },
-    [],
-  );
-
-  const closeConfirmDialog = useCallback(() => {
-    setConfirmDialog((prev) => ({ ...prev, open: false }));
-  }, []);
+  // Open inline session notes for day view
+  const handleExpandAppointment = async (apt: Appointment) => {
+    setExpandedAppointment(apt);
+    await loadAppointmentSession(apt);
+  };
 
   const handleOpenNotes = async (appointment: Appointment) => {
     setSelectedAppointment(appointment);
-    setSessionNotes(appointment.notes || "");
-    setModalities({
-      manualTherapy: false,
-      exerciseTherapy: false,
-      modalities: false,
-      education: false,
-    });
-    setPainLevel(5);
-    setUpdateTreatmentPlan(false);
-    setSendPlanReminder(false);
-    setPatientTreatmentPlan(null);
     setNotesDialogOpen(true);
-
-    // Auto-select PROM based on appointment type
-    const appointmentTypeKey =
-      appointment.appointmentType?.toLowerCase().replace(/[^a-z]/g, "") || "";
-    const autoPromConfig =
-      AUTO_PROM_CONFIG[appointmentTypeKey] || AUTO_PROM_CONFIG["followup"];
-    if (autoPromConfig?.templateKey) {
-      setAssignPROM(true);
-      setSelectedPromTemplate(autoPromConfig.templateKey);
-    } else {
-      setAssignPROM(false);
-      setSelectedPromTemplate("");
-    }
-
-    // Fetch patient's active treatment plan
-    if (appointment.patientId) {
-      setLoadingPlan(true);
-      try {
-        const plans = await treatmentPlansApi.list(appointment.patientId);
-        const activePlan = (plans as any[]).find(
-          (p: any) =>
-            p.status === "Active" ||
-            p.status === "active" ||
-            p.status === "InProgress",
-        );
-        if (activePlan) {
-          const completedSessions =
-            activePlan.sessions?.filter((s: any) => s.completed)?.length ?? 0;
-          const totalSessions =
-            activePlan.totalSessions ?? activePlan.sessions?.length ?? 0;
-          setPatientTreatmentPlan({
-            id: activePlan.id,
-            title: activePlan.title,
-            status: activePlan.status,
-            currentPhase:
-              activePlan.currentPhase ?? activePlan.phases?.[0]?.name,
-            completedSessions,
-            totalSessions,
-            nextSessionNumber: completedSessions + 1,
-            progressPercent:
-              totalSessions > 0
-                ? Math.round((completedSessions / totalSessions) * 100)
-                : 0,
-            sessionsPerWeek: activePlan.sessionsPerWeek ?? 2,
-          });
-          setUpdateTreatmentPlan(true); // Default to updating treatment plan
-        }
-      } catch (error) {
-        console.error("Failed to fetch treatment plan:", error);
-      } finally {
-        setLoadingPlan(false);
-      }
-    }
+    await loadAppointmentSession(appointment);
   };
 
   const handleSaveNotes = async () => {
@@ -799,42 +783,6 @@ export default function Appointments() {
           )}
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {viewMode === "day" && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mr: 2 }}>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h5" fontWeight={700} color="primary.main">
-                  {dayStats.total}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Total
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h5" fontWeight={700} color="success.main">
-                  {dayStats.completed}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Done
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h5" fontWeight={700} color="warning.main">
-                  {dayStats.inProgress}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Active
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h5" fontWeight={700}>
-                  {dayStats.upcoming}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Upcoming
-                </Typography>
-              </Box>
-            </Box>
-          )}
           <AuraButton
             variant="contained"
             startIcon={<AddIcon />}
@@ -854,6 +802,182 @@ export default function Appointments() {
           minHeight: 0,
         }}
       >
+        {/* Left Sidebar - Mini Calendar */}
+        <AuraCard
+          hover={false}
+          variant="flat"
+          sx={{
+            width: 240,
+            p: auraTokens.spacing.md,
+            display: "flex",
+            flexDirection: "column",
+            flexShrink: 0,
+          }}
+        >
+          {/* Mini Calendar Header */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 2,
+            }}
+          >
+            <AuraIconButton
+              tooltip="Previous month"
+              size="small"
+              onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, -1))}
+            >
+              <ChevronLeftIcon fontSize="small" />
+            </AuraIconButton>
+            <Typography
+              variant="subtitle2"
+              fontWeight={auraTokens.fontWeights.semibold}
+            >
+              {format(miniCalendarMonth, "MMMM yyyy")}
+            </Typography>
+            <AuraIconButton
+              tooltip="Next month"
+              size="small"
+              onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, 1))}
+            >
+              <ChevronRightIcon fontSize="small" />
+            </AuraIconButton>
+          </Box>
+
+          {/* Mini Calendar Grid */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
+              gap: 0.25,
+              textAlign: "center",
+            }}
+          >
+            {/* Day headers */}
+            {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+              <Typography
+                key={i}
+                variant="caption"
+                color="text.secondary"
+                sx={{ py: 0.5, fontWeight: 500 }}
+              >
+                {day}
+              </Typography>
+            ))}
+
+            {/* Days */}
+            {miniCalendarDays.map((day, i) => {
+              const isCurrentMonth = isSameMonth(day, miniCalendarMonth);
+              const isSelected = isSameDay(day, currentDate);
+              const isTodayDate = isToday(day);
+              const appointmentCount = getAppointmentCountForDate(day);
+
+              return (
+                <Box
+                  key={i}
+                  onClick={() => handleMiniCalendarDateClick(day)}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "50%",
+                    cursor: "pointer",
+                    position: "relative",
+                    mx: "auto",
+                    fontSize: "0.75rem",
+                    fontWeight: isSelected || isTodayDate ? 600 : 400,
+                    color: !isCurrentMonth
+                      ? "text.disabled"
+                      : isSelected
+                        ? "white"
+                        : isTodayDate
+                          ? "primary.main"
+                          : "text.primary",
+                    bgcolor: isSelected
+                      ? "primary.main"
+                      : isTodayDate
+                        ? alpha(theme.palette.primary.main, 0.1)
+                        : "transparent",
+                    border:
+                      isTodayDate && !isSelected
+                        ? `1px solid ${theme.palette.primary.main}`
+                        : "none",
+                    "&:hover": {
+                      bgcolor: isSelected ? "primary.dark" : "action.hover",
+                    },
+                  }}
+                >
+                  {format(day, "d")}
+                  {/* Appointment indicator dot */}
+                  {appointmentCount > 0 && !isSelected && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: 2,
+                        width: 4,
+                        height: 4,
+                        borderRadius: "50%",
+                        bgcolor: isTodayDate ? "primary.main" : "text.secondary",
+                      }}
+                    />
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          {/* Day Stats */}
+          <Box sx={{ mb: 2 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={500}
+              sx={{ mb: 1, display: "block" }}
+            >
+              {format(currentDate, "MMM d")} Stats
+            </Typography>
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+              <Box sx={{ textAlign: "center", p: 1, bgcolor: "action.hover", borderRadius: 1 }}>
+                <Typography variant="h6" fontWeight={700} color="primary.main">
+                  {dayStats.total}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Total
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "center", p: 1, bgcolor: "action.hover", borderRadius: 1 }}>
+                <Typography variant="h6" fontWeight={700} color="success.main">
+                  {dayStats.completed}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Done
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "center", p: 1, bgcolor: "action.hover", borderRadius: 1 }}>
+                <Typography variant="h6" fontWeight={700} color="warning.main">
+                  {dayStats.inProgress}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Active
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "center", p: 1, bgcolor: "action.hover", borderRadius: 1 }}>
+                <Typography variant="h6" fontWeight={700}>
+                  {dayStats.upcoming}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Upcoming
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </AuraCard>
+
         {/* Calendar Section */}
         <AuraCard
           hover={false}
@@ -898,9 +1022,13 @@ export default function Appointments() {
                 textDecoration: "none !important",
               },
               "& .fc-day-today": { bgcolor: "transparent !important" },
+              // Time grid styling with visible grid lines
               "& .fc-timegrid-slot": {
                 height: "48px",
-                borderColor: alpha(theme.palette.divider, 0.3),
+                borderColor: theme.palette.divider,
+              },
+              "& .fc-timegrid-slot-lane": {
+                borderColor: theme.palette.divider,
               },
               "& .fc-timegrid-slot-label": {
                 fontSize: "0.7rem",
@@ -914,9 +1042,18 @@ export default function Appointments() {
                 borderRadius: auraTokens.borderRadius.sm,
                 fontSize: "0.75rem",
               },
+              // Column borders (vertical lines between days)
               "& .fc-timegrid-col": {
-                borderColor: alpha(theme.palette.divider, 0.3),
+                borderColor: theme.palette.divider,
               },
+              "& .fc-timegrid-cols > table": {
+                borderColor: theme.palette.divider,
+              },
+              "& .fc-timegrid-col-frame": {
+                borderRight: `1px solid ${theme.palette.divider}`,
+                "&:last-child": { borderRight: "none" },
+              },
+              // Now indicator
               "& .fc-timegrid-now-indicator-line": {
                 borderColor: theme.palette.error.main,
                 borderWidth: "2px",
@@ -925,13 +1062,19 @@ export default function Appointments() {
                 borderTopColor: theme.palette.error.main,
                 borderWidth: "5px",
               },
+              // Axis and overall grid
               "& .fc-timegrid-axis": {
                 width: "56px",
-                borderColor: alpha(theme.palette.divider, 0.3),
+                borderColor: theme.palette.divider,
               },
-              "& .fc-scrollgrid": { border: "none" },
+              "& .fc-scrollgrid": {
+                borderColor: theme.palette.divider,
+              },
+              "& .fc-scrollgrid td, & .fc-scrollgrid th": {
+                borderColor: theme.palette.divider,
+              },
               "& .fc-scrollgrid-section > td": {
-                borderColor: alpha(theme.palette.divider, 0.3),
+                borderColor: theme.palette.divider,
               },
               "& .fc-scrollgrid-section-header > td": { border: "none" },
             }}

@@ -1435,6 +1435,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 multiline
                 rows={2}
                 placeholder="e.g., Chronic lower back pain, Post-surgical knee rehabilitation"
+                InputLabelProps={{ shrink: true }}
               />
 
               <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
@@ -1594,6 +1595,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 required
                 fullWidth
                 placeholder="e.g., Lower Back Rehabilitation Program"
+                InputLabelProps={{ shrink: true }}
               />
 
               <TextField
@@ -1606,6 +1608,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 multiline
                 rows={2}
                 sx={{ mt: 2 }}
+                InputLabelProps={{ shrink: true }}
               />
 
               <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
@@ -1655,6 +1658,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   required
                   fullWidth
                   inputProps={{ min: 1, max: 52 }}
+                  InputLabelProps={{ shrink: true }}
                 />
                 <TextField
                   label="Sessions/week"
@@ -1668,6 +1672,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   }
                   fullWidth
                   inputProps={{ min: 1, max: 7 }}
+                  InputLabelProps={{ shrink: true }}
                 />
               </FormRow>
             </FormSection>
@@ -1704,6 +1709,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 required
                 fullWidth
                 placeholder="e.g., ACL Reconstruction Protocol"
+                InputLabelProps={{ shrink: true }}
               />
 
               <TextField
@@ -1714,6 +1720,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 }
                 fullWidth
                 multiline
+                InputLabelProps={{ shrink: true }}
                 rows={2}
                 sx={{ mt: 2 }}
                 placeholder="e.g., Post-surgical ACL reconstruction rehabilitation"
@@ -1755,6 +1762,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   required
                   fullWidth
                   inputProps={{ min: 1, max: 52 }}
+                  InputLabelProps={{ shrink: true }}
                 />
                 <TextField
                   label="Sessions/week"
@@ -1768,6 +1776,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   }
                   fullWidth
                   inputProps={{ min: 1, max: 7 }}
+                  InputLabelProps={{ shrink: true }}
                 />
               </FormRow>
             </FormSection>
@@ -2284,33 +2293,42 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             </Box>
 
             <Callout variant="info">
-              Create your treatment plan now. You can add and manage exercises
-              from the plan detail page after creation.
+              {isTemplate
+                ? "Create your template now. You can add exercises from the template detail page after creation."
+                : "Create your treatment plan now. You can add and manage exercises from the plan detail page after creation."}
             </Callout>
 
-            <Paper sx={{ p: 2, borderRadius: 2 }}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Patient
-              </Typography>
-              <Typography variant="body1">
-                {selectedPatient?.firstName} {selectedPatient?.lastName}
-              </Typography>
-            </Paper>
+            {/* Patient section - only show for patient plans, not templates */}
+            {!isTemplate && selectedPatient && (
+              <Paper sx={{ p: 2, borderRadius: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Patient
+                </Typography>
+                <Typography variant="body1">
+                  {selectedPatient.firstName} {selectedPatient.lastName}
+                </Typography>
+              </Paper>
+            )}
 
             <Paper sx={{ p: 2, borderRadius: 2 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                Plan Details
+                {isTemplate ? "Template Details" : "Plan Details"}
               </Typography>
               <Typography variant="body1" fontWeight={600}>
-                {basicInfo.title || "Treatment Plan"}
+                {basicInfo.title || (isTemplate ? "New Template" : "Treatment Plan")}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {basicInfo.durationWeeks} weeks | {phases.length} phases |{" "}
                 {totalExercises} exercises
               </Typography>
+              {basicInfo.bodyRegion && (
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  <strong>Body Region:</strong> {basicInfo.bodyRegion}
+                </Typography>
+              )}
               {basicInfo.diagnosis && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  <strong>Diagnosis:</strong> {basicInfo.diagnosis}
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  <strong>{isTemplate ? "Condition:" : "Diagnosis:"}</strong> {basicInfo.diagnosis}
                 </Typography>
               )}
             </Paper>
