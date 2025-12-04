@@ -101,7 +101,7 @@ export function ExerciseLibraryDrawer({
   }, [bodyRegionFilter]);
 
   // Fetch exercises
-  const { data: exercises = [], isLoading } = useQuery({
+  const { data: exercisesResponse, isLoading } = useQuery({
     queryKey: ["exercise-library", categoryFilter, regionFilter, difficultyFilter],
     queryFn: () =>
       exerciseLibraryApi.list({
@@ -112,6 +112,8 @@ export function ExerciseLibraryDrawer({
       }),
     enabled: open,
   });
+
+  const exercises = exercisesResponse?.data || [];
 
   // Fetch filter options
   const { data: filterOptions } = useQuery({

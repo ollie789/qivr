@@ -4,7 +4,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
-import type { EventClickArg, DateSelectArg } from "@fullcalendar/core";
+import type { EventClickArg, DateSelectArg, DatesSetArg } from "@fullcalendar/core";
 import {
   Box,
   Typography,
@@ -20,8 +20,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  ToggleButtonGroup,
-  ToggleButton,
   alpha,
   IconButton,
   Tooltip,
@@ -36,10 +34,6 @@ import {
   CheckCircle as CompleteIcon,
   Cancel as CancelIcon,
   Person as PersonIcon,
-  ViewDay as DayIcon,
-  ViewWeek as WeekIcon,
-  CalendarMonth as MonthIcon,
-  ViewList as ListIcon,
   PlayArrow as StartIcon,
   MoreVert as MoreIcon,
   Today as TodayIcon,
@@ -48,14 +42,15 @@ import {
   FitnessCenter as ExerciseIcon,
   EventRepeat as ScheduleNextIcon,
   AutoAwesome as AutoIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
-import { format, parseISO, isToday, isSameDay, addDays } from "date-fns";
+import { format, parseISO, isToday, isSameDay, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, addMonths } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
 import {
   auraTokens,
-  PageHeader,
   AuraButton,
   FormDialog,
   ConfirmDialog,
@@ -92,7 +87,7 @@ export default function Appointments() {
   const theme = useTheme();
   const navigate = useNavigate();
   const calendarRef = useRef<FullCalendar>(null);
-  const [currentView, setCurrentView] = useState<string>("dayGridMonth");
+  const [miniCalendarMonth, setMiniCalendarMonth] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLElement; apt: Appointment } | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
@@ -209,11 +204,31 @@ export default function Appointments() {
     setScheduleDialogOpen(true);
   };
 
-  const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string | null) => {
-    if (newView && calendarRef.current) {
-      calendarRef.current.getApi().changeView(newView);
-      setCurrentView(newView);
+  // Handle date click from mini calendar
+  const handleMiniCalendarDateClick = (date: Date) => {
+    setAgendaDate(date);
+    if (calendarRef.current) {
+      calendarRef.current.getApi().gotoDate(date);
     }
+  };
+
+  // Sync mini calendar when main calendar view changes
+  const handleDatesSet = (arg: DatesSetArg) => {
+    setMiniCalendarMonth(arg.start);
+  };
+
+  // Generate mini calendar days
+  const miniCalendarDays = useMemo(() => {
+    const monthStart = startOfMonth(miniCalendarMonth);
+    const monthEnd = endOfMonth(miniCalendarMonth);
+    const calendarStart = startOfWeek(monthStart);
+    const calendarEnd = endOfWeek(monthEnd);
+    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  }, [miniCalendarMonth]);
+
+  // Check if a date has appointments
+  const getAppointmentCountForDate = (date: Date) => {
+    return appointments.filter((apt) => isSameDay(parseISO(apt.scheduledStart), date)).length;
   };
 
   const openConfirmDialog = useCallback((config: Omit<typeof confirmDialog, "open">) => {
@@ -426,99 +441,263 @@ export default function Appointments() {
   };
 
   return (
-    <Box className="page-enter">
-      <PageHeader
-        title="Appointments"
-        description="Manage your clinic appointments"
-        actions={
-          <Stack direction="row" spacing={2} alignItems="center">
-            <ToggleButtonGroup value={currentView} exclusive onChange={handleViewChange} size="small">
-              <ToggleButton value="dayGridMonth"><MonthIcon fontSize="small" /></ToggleButton>
-              <ToggleButton value="timeGridWeek"><WeekIcon fontSize="small" /></ToggleButton>
-              <ToggleButton value="timeGridDay"><DayIcon fontSize="small" /></ToggleButton>
-              <ToggleButton value="listWeek"><ListIcon fontSize="small" /></ToggleButton>
-            </ToggleButtonGroup>
-            <AuraButton variant="contained" startIcon={<AddIcon />} onClick={() => setScheduleDialogOpen(true)}>
-              New Appointment
-            </AuraButton>
-          </Stack>
-        }
-      />
+    <Box className="page-enter" sx={{ height: "calc(100vh - 100px)", display: "flex", flexDirection: "column" }}>
+      {/* Header */}
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, px: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <AuraButton
+            variant="outlined"
+            onClick={() => {
+              if (calendarRef.current) {
+                calendarRef.current.getApi().today();
+                setAgendaDate(new Date());
+                setMiniCalendarMonth(new Date());
+              }
+            }}
+            sx={{ minWidth: 80 }}
+          >
+            Today
+          </AuraButton>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (calendarRef.current) {
+                  calendarRef.current.getApi().prev();
+                }
+              }}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (calendarRef.current) {
+                  calendarRef.current.getApi().next();
+                }
+              }}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+          <Typography variant="h5" fontWeight={600}>
+            {format(miniCalendarMonth, "MMMM yyyy")}
+          </Typography>
+        </Box>
+        <AuraButton variant="contained" startIcon={<AddIcon />} onClick={() => setScheduleDialogOpen(true)}>
+          New Appointment
+        </AuraButton>
+      </Box>
 
-      <Box sx={{ display: "flex", gap: 3 }}>
-        {/* Main Calendar */}
-        <Paper sx={{ flex: 1, p: 2, borderRadius: auraTokens.borderRadius.lg, "& .fc": { fontFamily: "inherit" } }}>
+      <Box sx={{ display: "flex", gap: 2, flex: 1, minHeight: 0 }}>
+        {/* Left Sidebar - Mini Calendar */}
+        <Paper
+          sx={{
+            width: 240,
+            p: 2,
+            borderRadius: auraTokens.borderRadius.lg,
+            display: "flex",
+            flexDirection: "column",
+            flexShrink: 0,
+          }}
+        >
+          {/* Mini Calendar Header */}
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+            <IconButton size="small" onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, -1))}>
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            <Typography variant="subtitle2" fontWeight={600}>
+              {format(miniCalendarMonth, "MMMM yyyy")}
+            </Typography>
+            <IconButton size="small" onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, 1))}>
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          {/* Mini Calendar Grid */}
           <Box
             sx={{
-              "& .fc-toolbar-title": { fontSize: "1.25rem", fontWeight: 600 },
-              "& .fc-button": {
-                bgcolor: "transparent",
-                border: "1px solid",
-                borderColor: "divider",
-                color: "text.primary",
-                textTransform: "capitalize",
-                "&:hover": { bgcolor: "action.hover" },
-                "&.fc-button-active": { bgcolor: "primary.main", color: "white", borderColor: "primary.main" },
-              },
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
+              gap: 0.25,
+              textAlign: "center",
+            }}
+          >
+            {/* Day headers */}
+            {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+              <Typography key={i} variant="caption" color="text.secondary" sx={{ py: 0.5, fontWeight: 500 }}>
+                {day}
+              </Typography>
+            ))}
+
+            {/* Days */}
+            {miniCalendarDays.map((day, i) => {
+              const isCurrentMonth = isSameMonth(day, miniCalendarMonth);
+              const isSelected = isSameDay(day, agendaDate);
+              const isTodayDate = isToday(day);
+              const appointmentCount = getAppointmentCountForDate(day);
+
+              return (
+                <Box
+                  key={i}
+                  onClick={() => handleMiniCalendarDateClick(day)}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "50%",
+                    cursor: "pointer",
+                    position: "relative",
+                    mx: "auto",
+                    fontSize: "0.75rem",
+                    fontWeight: isSelected || isTodayDate ? 600 : 400,
+                    color: !isCurrentMonth
+                      ? "text.disabled"
+                      : isSelected
+                      ? "white"
+                      : isTodayDate
+                      ? "primary.main"
+                      : "text.primary",
+                    bgcolor: isSelected
+                      ? "primary.main"
+                      : isTodayDate
+                      ? alpha(theme.palette.primary.main, 0.1)
+                      : "transparent",
+                    border: isTodayDate && !isSelected ? `1px solid ${theme.palette.primary.main}` : "none",
+                    "&:hover": {
+                      bgcolor: isSelected ? "primary.dark" : "action.hover",
+                    },
+                  }}
+                >
+                  {format(day, "d")}
+                  {/* Appointment indicator dot */}
+                  {appointmentCount > 0 && !isSelected && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: 2,
+                        width: 4,
+                        height: 4,
+                        borderRadius: "50%",
+                        bgcolor: isTodayDate ? "primary.main" : "text.secondary",
+                      }}
+                    />
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          {/* Search for people placeholder */}
+          <TextField
+            size="small"
+            placeholder="Search for people"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <PersonIcon fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
+              ),
+            }}
+            sx={{ mb: 2 }}
+          />
+        </Paper>
+
+        {/* Main Calendar - Week View */}
+        <Paper
+          sx={{
+            flex: 1,
+            borderRadius: auraTokens.borderRadius.lg,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            "& .fc": { fontFamily: "inherit", height: "100%" },
+          }}
+        >
+          <Box
+            sx={{
+              flex: 1,
+              "& .fc-toolbar": { display: "none" },
               "& .fc-event": {
                 cursor: "pointer",
-                borderRadius: "6px",
+                borderRadius: "4px",
                 fontSize: "0.75rem",
+                border: "none",
                 px: 0.5,
               },
-              "& .fc-daygrid-day": {
-                "&:hover": { bgcolor: "action.hover" },
-              },
               "& .fc-day-today": {
-                bgcolor: alpha(theme.palette.primary.main, 0.08) + " !important",
+                bgcolor: "transparent !important",
               },
               "& .fc-col-header-cell": {
-                py: 1.5,
-                fontWeight: 600,
+                py: 1,
+                fontWeight: 500,
+                fontSize: "0.75rem",
+                color: "text.secondary",
+                borderBottom: "1px solid",
+                borderColor: "divider",
+              },
+              "& .fc-col-header-cell-cushion": {
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                py: 1,
               },
               "& .fc-timegrid-slot": {
                 height: "48px",
+                borderColor: alpha(theme.palette.divider, 0.5),
+              },
+              "& .fc-timegrid-slot-label": {
+                fontSize: "0.7rem",
+                color: "text.secondary",
+                fontWeight: 400,
               },
               "& .fc-timegrid-event": {
-                borderRadius: "6px",
+                borderRadius: "4px",
                 fontSize: "0.75rem",
-              },
-              "& .fc-list-event": {
-                cursor: "pointer",
               },
               "& .fc-timegrid-now-indicator-line": {
                 borderColor: theme.palette.error.main,
                 borderWidth: "2px",
               },
               "& .fc-timegrid-now-indicator-arrow": {
-                borderColor: theme.palette.error.main,
+                borderTopColor: theme.palette.error.main,
+                borderWidth: "5px",
+              },
+              "& .fc-timegrid-axis": {
+                width: "60px",
+              },
+              "& .fc-scrollgrid": {
+                borderColor: "divider",
+              },
+              "& .fc-scrollgrid-section > td": {
+                borderColor: "divider",
               },
             }}
           >
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-              initialView="dayGridMonth"
-              headerToolbar={{
-                left: "prev,next today",
-                center: "title",
-                right: "",
-              }}
+              initialView="timeGridWeek"
+              headerToolbar={false}
               events={calendarEvents}
               eventClick={handleEventClick}
               select={handleDateSelect}
+              datesSet={handleDatesSet}
               selectable
               selectMirror
-              dayMaxEvents={3}
               weekends
-              height="auto"
-              contentHeight={600}
+              height="100%"
               nowIndicator
-              slotMinTime="07:00:00"
+              slotMinTime="06:00:00"
               slotMaxTime="20:00:00"
               slotDuration="00:30:00"
               allDaySlot={false}
               eventTimeFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
+              dayHeaderFormat={{ weekday: "short", day: "numeric" }}
+              slotLabelFormat={{ hour: "numeric", minute: "2-digit", hour12: true }}
             />
           </Box>
         </Paper>
