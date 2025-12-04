@@ -866,18 +866,6 @@ export default function Appointments() {
               <Box sx={{ p: 4, textAlign: "center" }}>
                 <TodayIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
                 <Typography color="text.secondary">No appointments scheduled</Typography>
-                <AuraButton
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    setSelectedDate(agendaDate);
-                    setScheduleDialogOpen(true);
-                  }}
-                  sx={{ mt: 2 }}
-                >
-                  Schedule Appointment
-                </AuraButton>
               </Box>
             ) : (
               <Stack spacing={1}>

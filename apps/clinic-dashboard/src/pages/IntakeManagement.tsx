@@ -43,7 +43,7 @@ import {
   TrendingUp as TrendingUpIcon,
   ErrorOutline as BottleneckIcon,
 } from "@mui/icons-material";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { format } from "date-fns";
 import { useSnackbar } from "notistack";
@@ -75,6 +75,7 @@ const IntakeManagement: React.FC = () => {
   const { canMakeApiCalls } = useAuthGuard();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
+  const queryClient = useQueryClient();
 
   // State Management
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
@@ -115,6 +116,47 @@ const IntakeManagement: React.FC = () => {
   });
 
   const intakes = data?.data || [];
+
+  // Mutation for status change with optimistic update
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return intakeApi.updateIntakeStatus(id, status);
+    },
+    onMutate: async ({ id, status }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["intakeManagement"] });
+
+      // Snapshot current data
+      const previousData = queryClient.getQueryData(["intakeManagement"]);
+
+      // Optimistically update the cache
+      queryClient.setQueryData(["intakeManagement"], (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((intake: IntakeSubmission) =>
+            intake.id === id ? { ...intake, status } : intake
+          ),
+        };
+      });
+
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(["intakeManagement"], context.previousData);
+      }
+      enqueueSnackbar("Failed to update status", { variant: "error" });
+    },
+    onSuccess: () => {
+      enqueueSnackbar("Status updated", { variant: "success" });
+    },
+    onSettled: () => {
+      // Always refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
+    },
+  });
 
   // Statistics (use unfiltered data)
   const pending = intakes.filter((i) => i.status === "pending");
@@ -674,16 +716,8 @@ const IntakeManagement: React.FC = () => {
               intakes={filteredIntakes}
               onViewDetails={handleViewDetails}
               onSchedule={handleSchedule}
-              onStatusChange={async (id, status) => {
-                try {
-                  await intakeApi.updateIntakeStatus(id, status);
-                  refetch();
-                  enqueueSnackbar("Status updated", { variant: "success" });
-                } catch (err) {
-                  enqueueSnackbar("Failed to update status", {
-                    variant: "error",
-                  });
-                }
+              onStatusChange={(id, status) => {
+                statusMutation.mutate({ id, status });
               }}
             />
           )}
