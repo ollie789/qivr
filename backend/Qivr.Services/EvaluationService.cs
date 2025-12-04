@@ -178,6 +178,7 @@ public class EvaluationService : IEvaluationService
     public async Task UpdateEvaluationStatusAsync(Guid id, string status, CancellationToken cancellationToken = default)
     {
         var evaluation = await _context.Evaluations
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
         if (evaluation == null)
         {
