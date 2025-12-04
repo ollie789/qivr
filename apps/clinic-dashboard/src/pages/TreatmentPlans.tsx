@@ -12,6 +12,9 @@ import {
   DialogActions,
   TextField,
   InputAdornment,
+  Autocomplete,
+  CircularProgress,
+  Avatar,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
@@ -39,9 +42,17 @@ import {
   auraColors,
 } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
+import { patientApi } from "../services/patientApi";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
 import { TreatmentPlanBuilder } from "../components/dialogs";
+
+interface Patient {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+}
 
 // Body region options
 const BODY_REGIONS = [
@@ -89,6 +100,7 @@ export default function TreatmentPlans() {
   const [showAIGenerateDialog, setShowAIGenerateDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<TreatmentTemplate | null>(null);
   const [useTemplateDialogOpen, setUseTemplateDialogOpen] = useState(false);
+  const [selectedPatientForTemplate, setSelectedPatientForTemplate] = useState<Patient | null>(null);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -102,6 +114,35 @@ export default function TreatmentPlans() {
         bodyRegion: bodyRegionFilter || undefined,
         templateSource: sourceFilter || undefined,
       }),
+  });
+
+  // Fetch patients for template assignment
+  const { data: patientsData, isLoading: patientsLoading } = useQuery({
+    queryKey: ["patients-list"],
+    queryFn: () => patientApi.getPatients({ limit: 100 }),
+    enabled: useTemplateDialogOpen,
+  });
+  const patients: Patient[] = patientsData?.data || [];
+
+  // Create plan from template mutation
+  const createFromTemplateMutation = useMutation({
+    mutationFn: ({ templateId, patientId }: { templateId: string; patientId: string }) =>
+      treatmentPlansApi.createFromTemplate(templateId, {
+        patientId,
+        startDate: new Date().toISOString(),
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["treatment-templates"] });
+      enqueueSnackbar("Treatment plan created from template!", { variant: "success" });
+      setUseTemplateDialogOpen(false);
+      setSelectedPatientForTemplate(null);
+      setSelectedTemplate(null);
+      navigate(`/treatment-plans/${data.id}`);
+    },
+    onError: () => {
+      enqueueSnackbar("Failed to create treatment plan", { variant: "error" });
+    },
   });
 
   // Stats
@@ -501,7 +542,10 @@ export default function TreatmentPlans() {
       {/* Use Template Dialog - Select Patient */}
       <Dialog
         open={useTemplateDialogOpen}
-        onClose={() => setUseTemplateDialogOpen(false)}
+        onClose={() => {
+          setUseTemplateDialogOpen(false);
+          setSelectedPatientForTemplate(null);
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -509,20 +553,120 @@ export default function TreatmentPlans() {
           Use Template: {selectedTemplate?.title}
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Select a patient to create a treatment plan from this template.
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, mt: 1 }}>
+            Select a patient to create a personalized treatment plan from this template.
           </Typography>
-          {/* Patient selector would go here */}
-          <Typography variant="body2" color="text.secondary">
-            Patient search coming soon...
-          </Typography>
+
+          {/* Template Summary */}
+          {selectedTemplate && (
+            <Box
+              sx={{
+                p: 2,
+                mb: 3,
+                bgcolor: "action.hover",
+                borderRadius: 2,
+                border: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 2,
+                    bgcolor: alpha(getSourceColor(selectedTemplate.templateSource), 0.15),
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: getSourceColor(selectedTemplate.templateSource),
+                  }}
+                >
+                  {getSourceIcon(selectedTemplate.templateSource)}
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    {selectedTemplate.title}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {selectedTemplate.durationWeeks} weeks • {selectedTemplate.phases?.length || 0} phases •{" "}
+                    {selectedTemplate.phases?.reduce((acc: number, p: any) => acc + (p.exercises?.length || 0), 0) || 0} exercises
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+          )}
+
+          {/* Patient Selector */}
+          <Autocomplete
+            options={patients}
+            value={selectedPatientForTemplate}
+            onChange={(_, value) => setSelectedPatientForTemplate(value)}
+            getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
+            loading={patientsLoading}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Patient"
+                placeholder="Search for a patient..."
+                required
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {patientsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.main" }}>
+                    {option.firstName.charAt(0)}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2" fontWeight={500}>
+                      {option.firstName} {option.lastName}
+                    </Typography>
+                    {option.email && (
+                      <Typography variant="caption" color="text.secondary">
+                        {option.email}
+                      </Typography>
+                    )}
+                  </Box>
+                </Stack>
+              </li>
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+          />
         </DialogContent>
-        <DialogActions>
-          <AuraButton variant="text" onClick={() => setUseTemplateDialogOpen(false)}>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <AuraButton
+            variant="text"
+            onClick={() => {
+              setUseTemplateDialogOpen(false);
+              setSelectedPatientForTemplate(null);
+            }}
+          >
             Cancel
           </AuraButton>
-          <AuraButton variant="contained" disabled>
-            Create Plan
+          <AuraButton
+            variant="contained"
+            disabled={!selectedPatientForTemplate || createFromTemplateMutation.isPending}
+            onClick={() => {
+              if (selectedTemplate && selectedPatientForTemplate) {
+                createFromTemplateMutation.mutate({
+                  templateId: selectedTemplate.id,
+                  patientId: selectedPatientForTemplate.id,
+                });
+              }
+            }}
+            startIcon={createFromTemplateMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <UseTemplateIcon />}
+          >
+            {createFromTemplateMutation.isPending ? "Creating..." : "Create Plan"}
           </AuraButton>
         </DialogActions>
       </Dialog>

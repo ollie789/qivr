@@ -34,7 +34,6 @@ import {
   ExpandMore,
   ExpandLess,
   PlayCircleOutline as VideoIcon,
-  Assessment as EvaluationIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -54,7 +53,6 @@ import {
 import { patientApi } from "../../services/patientApi";
 import { intakeApi, IntakeSubmission } from "../../services/intakeApi";
 import { appointmentsApi } from "../../services/appointmentsApi";
-import { DeviceSelector } from "../devices/DeviceSelector";
 
 // Interface for exercise with media
 interface ExerciseWithMedia {
@@ -1138,7 +1136,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       case "Patient & Condition":
         return !!selectedPatient && !!basicInfo.bodyRegion;
       case "Plan Details":
-        return !!basicInfo.bodyRegion && !!basicInfo.title;
+        return !!basicInfo.bodyRegion; // Title is optional, will be auto-generated
       case "Template Details":
         return !!basicInfo.bodyRegion && !!basicInfo.title;
       case "Review & Create":
@@ -1409,154 +1407,123 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       case "Patient & Condition":
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <FormSection title="Select Patient">
+            {/* Patient Selection */}
+            <Autocomplete
+              options={patients}
+              value={selectedPatient}
+              onChange={(_, value) => setSelectedPatient(value)}
+              getOptionLabel={(option) =>
+                `${option.firstName} ${option.lastName}`
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="Select Patient" required fullWidth />
+              )}
+              renderOption={(props, option) => (
+                <li {...props}>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.main" }}>
+                      {option.firstName.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="body2" fontWeight={500}>
+                        {option.firstName} {option.lastName}
+                      </Typography>
+                      {option.email && (
+                        <Typography variant="caption" color="text.secondary">
+                          {option.email}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Stack>
+                </li>
+              )}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+            />
+
+            {/* Body Region - Large clickable cards */}
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                What area are we treating?
+              </Typography>
+              <Grid container spacing={1}>
+                {BODY_REGIONS.map((region) => (
+                  <Grid size={{ xs: 6, sm: 4 }} key={region}>
+                    <Paper
+                      elevation={0}
+                      onClick={() => {
+                        setBasicInfo((prev) => ({ ...prev, bodyRegion: region }));
+                      }}
+                      sx={{
+                        p: 1.5,
+                        textAlign: "center",
+                        cursor: "pointer",
+                        border: "2px solid",
+                        borderColor: basicInfo.bodyRegion === region ? "primary.main" : "divider",
+                        bgcolor: basicInfo.bodyRegion === region ? "primary.50" : "background.paper",
+                        borderRadius: 2,
+                        transition: "all 0.15s",
+                        "&:hover": {
+                          borderColor: "primary.main",
+                          bgcolor: "primary.50",
+                        },
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        fontWeight={basicInfo.bodyRegion === region ? 600 : 400}
+                        color={basicInfo.bodyRegion === region ? "primary.main" : "text.primary"}
+                      >
+                        {region}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+
+            {/* Auto-linked Evaluation - Collapsed by default */}
+            {selectedPatient && selectedEvaluationId && evaluationData && (
+              <Callout variant="info">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <CheckCircle fontSize="small" color="success" />
+                  <Box>
+                    <Typography variant="body2" fontWeight={500}>
+                      Linked: {evaluationData.evaluation?.conditionType || "Patient Evaluation"}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Pain: {evaluationData.evaluation?.painLevel}/10 • AI will personalize the plan
+                    </Typography>
+                  </Box>
+                </Box>
+              </Callout>
+            )}
+
+            {/* Optional: Show evaluation selector if multiple exist */}
+            {selectedPatient && patientEvaluations.length > 1 && (
               <Autocomplete
-                options={patients}
-                value={selectedPatient}
-                onChange={(_, value) => setSelectedPatient(value)}
+                size="small"
+                options={patientEvaluations}
+                value={patientEvaluations.find((e) => e.id === selectedEvaluationId) || null}
+                onChange={(_, value) => setSelectedEvaluationId(value?.id)}
                 getOptionLabel={(option) =>
-                  `${option.firstName} ${option.lastName}`
+                  `${option.conditionType} - ${new Date(option.submittedAt).toLocaleDateString()}`
                 }
                 renderInput={(params) => (
-                  <TextField {...params} label="Patient" required fullWidth />
-                )}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-              />
-            </FormSection>
-
-            <FormSection title="Condition & Body Region">
-              <TextField
-                label="Diagnosis / Chief Complaint"
-                value={basicInfo.diagnosis}
-                onChange={(e) =>
-                  setBasicInfo({ ...basicInfo, diagnosis: e.target.value })
-                }
-                fullWidth
-                multiline
-                rows={2}
-                placeholder="e.g., Chronic lower back pain, Post-surgical knee rehabilitation"
-                InputLabelProps={{ shrink: true }}
-              />
-
-              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-                Select Body Region (applies template)
-              </Typography>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                {BODY_REGIONS.map((region) => (
-                  <Chip
-                    key={region}
-                    label={region}
-                    onClick={() => {
-                      setBasicInfo((prev) => ({ ...prev, bodyRegion: region }));
-                    }}
-                    color={
-                      basicInfo.bodyRegion === region ? "primary" : "default"
-                    }
-                    variant={
-                      basicInfo.bodyRegion === region ? "filled" : "outlined"
-                    }
-                    sx={{ cursor: "pointer" }}
+                  <TextField
+                    {...params}
+                    label="Link to Evaluation (optional)"
+                    size="small"
                   />
-                ))}
-              </Box>
-
-              {/* Evaluation Auto-Link Section */}
-              {selectedPatient && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{
-                      mb: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                    }}
-                  >
-                    <EvaluationIcon fontSize="small" color="primary" />
-                    Linked Evaluation
-                  </Typography>
-                  {patientEvaluations.length > 1 ? (
-                    <Autocomplete
-                      options={patientEvaluations}
-                      value={
-                        patientEvaluations.find(
-                          (e) => e.id === selectedEvaluationId,
-                        ) || null
-                      }
-                      onChange={(_, value) =>
-                        setSelectedEvaluationId(value?.id)
-                      }
-                      getOptionLabel={(option) =>
-                        `${option.conditionType} - ${new Date(option.submittedAt).toLocaleDateString()}`
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Select Evaluation"
-                          size="small"
-                          placeholder="Choose an evaluation for AI context"
-                        />
-                      )}
-                      renderOption={(props, option) => (
-                        <li {...props}>
-                          <Box>
-                            <Typography variant="body2" fontWeight={500}>
-                              {option.conditionType}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {new Date(
-                                option.submittedAt,
-                              ).toLocaleDateString()}{" "}
-                              • Pain level: {option.painLevel}/10 •
-                              {option.severity}
-                            </Typography>
-                          </Box>
-                        </li>
-                      )}
-                    />
-                  ) : selectedEvaluationId && evaluationData ? (
-                    <Callout variant="info">
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <CheckCircle fontSize="small" color="success" />
-                        <Box>
-                          <Typography variant="body2" fontWeight={500}>
-                            {evaluationData.evaluation?.conditionType ||
-                              "Evaluation Linked"}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {evaluationData.evaluation?.submittedAt
-                              ? new Date(
-                                  evaluationData.evaluation.submittedAt,
-                                ).toLocaleDateString()
-                              : ""}{" "}
-                            • Pain: {evaluationData.evaluation?.painLevel}/10 •
-                            AI will use this data for personalized plan
-                            generation
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Callout>
-                  ) : (
-                    <Alert severity="info" sx={{ py: 0.5 }}>
-                      No evaluations found for this patient. AI will generate a
-                      generic plan.
-                    </Alert>
-                  )}
-                </Box>
-              )}
-            </FormSection>
+                )}
+              />
+            )}
           </Box>
         );
 
       case "Plan Details":
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {/* Show patient info when pre-selected */}
+            {/* Patient Header */}
             {initialPatient && (
               <Paper
                 elevation={0}
@@ -1574,7 +1541,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 <Avatar sx={{ bgcolor: "primary.main" }}>
                   {initialPatient.firstName.charAt(0)}
                 </Avatar>
-                <Box>
+                <Box sx={{ flex: 1 }}>
                   <Typography variant="subtitle1" fontWeight={600}>
                     {initialPatient.firstName} {initialPatient.lastName}
                   </Typography>
@@ -1582,112 +1549,108 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     Creating personalized treatment plan
                   </Typography>
                 </Box>
+                {selectedEvaluationId && evaluationData && (
+                  <Chip
+                    icon={<CheckCircle fontSize="small" />}
+                    label="Evaluation Linked"
+                    size="small"
+                    color="success"
+                    variant="outlined"
+                  />
+                )}
               </Paper>
             )}
 
-            <FormSection title="Plan Details">
-              <TextField
-                label="Plan Title"
-                value={basicInfo.title}
-                onChange={(e) =>
-                  setBasicInfo({ ...basicInfo, title: e.target.value })
-                }
-                required
-                fullWidth
-                placeholder="e.g., Lower Back Rehabilitation Program"
-                InputLabelProps={{ shrink: true }}
-              />
-
-              <TextField
-                label="Diagnosis / Chief Complaint"
-                value={basicInfo.diagnosis}
-                onChange={(e) =>
-                  setBasicInfo({ ...basicInfo, diagnosis: e.target.value })
-                }
-                fullWidth
-                multiline
-                rows={2}
-                sx={{ mt: 2 }}
-                InputLabelProps={{ shrink: true }}
-              />
-
-              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-                Body Region
+            {/* Body Region Selection */}
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                What area are we treating?
               </Typography>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+              <Grid container spacing={1}>
                 {BODY_REGIONS.map((region) => (
-                  <Chip
-                    key={region}
-                    label={region}
-                    onClick={() =>
-                      setBasicInfo((prev) => ({ ...prev, bodyRegion: region }))
-                    }
-                    color={
-                      basicInfo.bodyRegion === region ? "primary" : "default"
-                    }
-                    variant={
-                      basicInfo.bodyRegion === region ? "filled" : "outlined"
-                    }
-                    sx={{ cursor: "pointer" }}
-                  />
+                  <Grid size={{ xs: 6, sm: 4 }} key={region}>
+                    <Paper
+                      elevation={0}
+                      onClick={() => {
+                        setBasicInfo((prev) => ({ ...prev, bodyRegion: region }));
+                      }}
+                      sx={{
+                        p: 1.5,
+                        textAlign: "center",
+                        cursor: "pointer",
+                        border: "2px solid",
+                        borderColor: basicInfo.bodyRegion === region ? "primary.main" : "divider",
+                        bgcolor: basicInfo.bodyRegion === region ? "primary.50" : "background.paper",
+                        borderRadius: 2,
+                        transition: "all 0.15s",
+                        "&:hover": {
+                          borderColor: "primary.main",
+                          bgcolor: "primary.50",
+                        },
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        fontWeight={basicInfo.bodyRegion === region ? 600 : 400}
+                        color={basicInfo.bodyRegion === region ? "primary.main" : "text.primary"}
+                      >
+                        {region}
+                      </Typography>
+                    </Paper>
+                  </Grid>
                 ))}
-              </Box>
+              </Grid>
+            </Box>
 
-              <FormRow>
+            {/* Optional Details (collapsed) */}
+            <Collapse in={!!basicInfo.bodyRegion}>
+              <Stack spacing={2}>
                 <TextField
-                  label="Start Date"
-                  type="date"
-                  value={basicInfo.startDate}
+                  label="Plan Title (optional)"
+                  value={basicInfo.title}
                   onChange={(e) =>
-                    setBasicInfo({ ...basicInfo, startDate: e.target.value })
-                  }
-                  required
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                />
-                <TextField
-                  label="Duration (weeks)"
-                  type="number"
-                  value={basicInfo.durationWeeks}
-                  onChange={(e) =>
-                    setBasicInfo({
-                      ...basicInfo,
-                      durationWeeks: parseInt(e.target.value) || 8,
-                    })
-                  }
-                  required
-                  fullWidth
-                  inputProps={{ min: 1, max: 52 }}
-                  InputLabelProps={{ shrink: true }}
-                />
-                <TextField
-                  label="Sessions/week"
-                  type="number"
-                  value={basicInfo.sessionsPerWeek}
-                  onChange={(e) =>
-                    setBasicInfo({
-                      ...basicInfo,
-                      sessionsPerWeek: parseInt(e.target.value) || 2,
-                    })
+                    setBasicInfo({ ...basicInfo, title: e.target.value })
                   }
                   fullWidth
-                  inputProps={{ min: 1, max: 7 }}
+                  size="small"
+                  placeholder={basicInfo.bodyRegion ? `${basicInfo.bodyRegion} Rehabilitation Program` : "e.g., Lower Back Rehabilitation Program"}
                   InputLabelProps={{ shrink: true }}
                 />
-              </FormRow>
-            </FormSection>
 
-            <FormSection title="Link Device (Optional)">
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Link to an implanted device to track outcomes for research
-                partners.
-              </Typography>
-              <DeviceSelector
-                value={selectedDevice}
-                onChange={setSelectedDevice}
-                showRecent={true}
-              />
-            </FormSection>
+                <Stack direction="row" spacing={2}>
+                  <TextField
+                    label="Duration (weeks)"
+                    type="number"
+                    value={basicInfo.durationWeeks}
+                    onChange={(e) =>
+                      setBasicInfo({
+                        ...basicInfo,
+                        durationWeeks: parseInt(e.target.value) || 8,
+                      })
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{ min: 1, max: 52 }}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    label="Sessions/week"
+                    type="number"
+                    value={basicInfo.sessionsPerWeek}
+                    onChange={(e) =>
+                      setBasicInfo({
+                        ...basicInfo,
+                        sessionsPerWeek: parseInt(e.target.value) || 2,
+                      })
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{ min: 1, max: 7 }}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Stack>
+              </Stack>
+            </Collapse>
           </Box>
         );
 
