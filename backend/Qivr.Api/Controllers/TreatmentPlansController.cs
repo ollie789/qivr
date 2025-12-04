@@ -184,6 +184,18 @@ public class TreatmentPlansController : BaseApiController
                 return BadRequest(new { error = "PatientId is required when creating a patient treatment plan" });
             }
 
+            var planStartDate = request.StartDate != default ? request.StartDate : DateTime.UtcNow;
+            
+            // Calculate phase start dates based on plan start and cumulative duration
+            var phases = request.Phases ?? new();
+            var cumulativeWeeks = 0;
+            foreach (var phase in phases)
+            {
+                phase.StartDate = planStartDate.AddDays(cumulativeWeeks * 7);
+                phase.EndDate = phase.StartDate.AddDays(phase.DurationWeeks * 7);
+                cumulativeWeeks += phase.DurationWeeks;
+            }
+
             var plan = new TreatmentPlan
             {
                 TenantId = tenantId,
@@ -192,12 +204,12 @@ public class TreatmentPlansController : BaseApiController
                 Title = request.Title ?? "Treatment Plan",
                 Diagnosis = request.Diagnosis,
                 Goals = request.Goals ?? string.Join(", ", request.GoalsList ?? new List<string>()),
-                StartDate = request.StartDate != default ? request.StartDate : DateTime.UtcNow,
+                StartDate = planStartDate,
                 DurationWeeks = request.DurationWeeks > 0 ? request.DurationWeeks : ParseDurationWeeks(request.Duration),
                 Status = request.IsTemplate ? TreatmentPlanStatus.Active : TreatmentPlanStatus.Active,
                 Sessions = request.Sessions ?? new(),
                 Exercises = request.Exercises ?? new(),
-                Phases = request.Phases ?? new(),
+                Phases = phases,
                 Milestones = new(),
                 Notes = BuildNotes(request),
                 // AI generation metadata
