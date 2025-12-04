@@ -597,14 +597,16 @@ ${evaluation.medications?.length ? `MEDICATIONS\n${evaluation.medications.join("
           )}
 
           {/* Last Updated */}
-          <InfoCard title="Last Updated" sx={{ mt: 3 }}>
-            <Typography variant="body2">
-              {format(
-                new Date(evaluation.lastUpdated),
-                "MMM dd, yyyy 'at' h:mm a",
-              )}
-            </Typography>
-          </InfoCard>
+          {evaluation.lastUpdated && (
+            <InfoCard title="Last Updated" sx={{ mt: 3 }}>
+              <Typography variant="body2">
+                {format(
+                  new Date(evaluation.lastUpdated),
+                  "MMM dd, yyyy 'at' h:mm a",
+                )}
+              </Typography>
+            </InfoCard>
+          )}
         </Grid>
       </Grid>
     </Box>
