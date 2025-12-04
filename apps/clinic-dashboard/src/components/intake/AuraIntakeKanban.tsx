@@ -9,7 +9,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
+  pointerWithin,
   useDroppable,
 } from "@dnd-kit/core";
 import {
@@ -302,9 +302,16 @@ const KanbanColumn: React.FC<{
 
   return (
     <Box
+      ref={setNodeRef}
       sx={{
         minWidth: auraTokens.layout.kanbanColumn,
         maxWidth: auraTokens.layout.kanbanColumn,
+        bgcolor: isOver ? "action.hover" : "transparent",
+        borderRadius: auraTokens.borderRadius.lg,
+        border: isOver ? "2px dashed" : "2px dashed transparent",
+        borderColor: isOver ? "primary.main" : "transparent",
+        transition: "all 0.2s ease",
+        p: 1,
       }}
     >
       <Box
@@ -346,15 +353,8 @@ const KanbanColumn: React.FC<{
       </Box>
 
       <Box
-        ref={setNodeRef}
         sx={{
           minHeight: 400,
-          p: 1,
-          borderRadius: auraTokens.borderRadius.lg,
-          bgcolor: isOver ? "action.hover" : "transparent",
-          border: isOver ? "2px dashed" : "2px dashed transparent",
-          borderColor: isOver ? "primary.main" : "transparent",
-          transition: "all 0.2s ease",
         }}
       >
         <SortableContext
@@ -454,7 +454,7 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >

@@ -47,7 +47,6 @@ import {
   ChevronRight as ChevronRightIcon,
   ViewWeek as WeekViewIcon,
   ViewDay as DayViewIcon,
-  Close as CloseIcon,
 } from "@mui/icons-material";
 import {
   format,
@@ -77,6 +76,7 @@ import {
 } from "@qivr/design-system";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
 import { TreatmentPlanBuilder } from "../components/dialogs";
+import { SessionView } from "../components/session";
 import {
   promApi,
   NotificationMethod,
@@ -122,8 +122,6 @@ export default function Appointments() {
   const [miniCalendarMonth, setMiniCalendarMonth] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
-  const [expandedAppointment, setExpandedAppointment] =
-    useState<Appointment | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{
     el: HTMLElement;
     apt: Appointment;
@@ -163,6 +161,8 @@ export default function Appointments() {
   const [suggestedNextDate, setSuggestedNextDate] = useState<Date | null>(null);
   const [treatmentPlanBuilderOpen, setTreatmentPlanBuilderOpen] =
     useState(false);
+  const [sessionViewAppointment, setSessionViewAppointment] =
+    useState<Appointment | null>(null);
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -292,7 +292,12 @@ export default function Appointments() {
 
   const handleEventClick = (info: EventClickArg) => {
     const apt = info.event.extendedProps.appointment as Appointment;
-    setMenuAnchor({ el: info.el as HTMLElement, apt });
+    // If appointment is in-progress, open SessionView directly
+    if (apt.status === "in-progress") {
+      setSessionViewAppointment(apt);
+    } else {
+      setMenuAnchor({ el: info.el as HTMLElement, apt });
+    }
   };
 
   const handleDateSelect = (info: DateSelectArg) => {
@@ -419,12 +424,6 @@ export default function Appointments() {
         setLoadingPlan(false);
       }
     }
-  };
-
-  // Open inline session notes for day view
-  const handleExpandAppointment = async (apt: Appointment) => {
-    setExpandedAppointment(apt);
-    await loadAppointmentSession(apt);
   };
 
   const handleOpenNotes = async (appointment: Appointment) => {
@@ -592,109 +591,11 @@ export default function Appointments() {
       });
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       enqueueSnackbar("Session started", { variant: "info" });
-      if (viewMode === "day") {
-        handleExpandAppointment(apt);
-      } else {
-        handleOpenNotes(apt);
-      }
+      // Open the full Session View
+      setSessionViewAppointment(apt);
+      setMenuAnchor(null);
     } catch {
       enqueueSnackbar("Failed to start session", { variant: "error" });
-    }
-  };
-
-  // Save inline session notes (for day view)
-  const handleSaveInlineNotes = async () => {
-    if (!expandedAppointment) return;
-    try {
-      const modalitiesUsed = Object.entries(modalities)
-        .filter(([_, used]) => used)
-        .map(([name]) => name.replace(/([A-Z])/g, " $1").trim())
-        .join(", ");
-
-      const treatmentPlanNote =
-        updateTreatmentPlan && patientTreatmentPlan
-          ? `\n[Treatment Plan Session ${patientTreatmentPlan.nextSessionNumber} completed]`
-          : "";
-      const enhancedNotes = `${sessionNotes}\n\nModalities: ${modalitiesUsed || "None"}\nPain Level: ${painLevel}/10${assignPROM ? "\n[PROM Assigned]" : ""}${treatmentPlanNote}`;
-
-      await appointmentsApi.updateAppointment(expandedAppointment.id, {
-        notes: enhancedNotes,
-      });
-
-      // Update treatment plan session if enabled
-      if (updateTreatmentPlan && patientTreatmentPlan) {
-        try {
-          await treatmentPlansApi.completeSession(
-            patientTreatmentPlan.id,
-            patientTreatmentPlan.nextSessionNumber,
-            {
-              painLevelAfter: painLevel,
-              notes: sessionNotes,
-              appointmentId: expandedAppointment.id,
-            },
-          );
-          enqueueSnackbar(
-            `Treatment plan session ${patientTreatmentPlan.nextSessionNumber} marked complete`,
-            { variant: "success" },
-          );
-          queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
-        } catch (err) {
-          console.error("Failed to update treatment plan:", err);
-          enqueueSnackbar("Failed to update treatment plan session", {
-            variant: "warning",
-          });
-        }
-      }
-
-      // Send PROM if enabled
-      if (assignPROM && selectedPromTemplate) {
-        await promApi.sendProm({
-          templateKey: selectedPromTemplate,
-          patientId: expandedAppointment.patientId,
-          scheduledFor: new Date().toISOString(),
-          notificationMethod:
-            NotificationMethod.Email | NotificationMethod.InApp,
-          notes: `Assigned after session on ${format(new Date(), "MMM d, yyyy")}`,
-        });
-        enqueueSnackbar("PROM assigned to patient", { variant: "success" });
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      enqueueSnackbar("Notes saved", { variant: "success" });
-      setExpandedAppointment(null);
-    } catch {
-      enqueueSnackbar("Failed to save notes", { variant: "error" });
-    }
-  };
-
-  // Complete session inline (for day view)
-  const handleCompleteInlineSession = async () => {
-    if (!expandedAppointment) return;
-    await handleSaveInlineNotes();
-    try {
-      await appointmentsApi.completeAppointment(expandedAppointment.id, {
-        notes: sessionNotes,
-      });
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      enqueueSnackbar("Session completed", { variant: "success" });
-
-      // If patient has treatment plan with remaining sessions, suggest scheduling next
-      if (
-        patientTreatmentPlan &&
-        patientTreatmentPlan.nextSessionNumber <
-          patientTreatmentPlan.totalSessions
-      ) {
-        const daysUntilNext = Math.round(
-          7 / (patientTreatmentPlan.sessionsPerWeek || 2),
-        );
-        const suggested = addDays(new Date(), daysUntilNext);
-        setSuggestedNextDate(suggested);
-        setSelectedAppointment(expandedAppointment);
-        setScheduleNextSessionOpen(true);
-      }
-      setExpandedAppointment(null);
-    } catch {
-      enqueueSnackbar("Failed to complete session", { variant: "error" });
     }
   };
 
@@ -983,7 +884,7 @@ export default function Appointments() {
           hover={false}
           variant="flat"
           sx={{
-            flex: viewMode === "day" && expandedAppointment ? 1 : 1,
+            flex: 1,
             p: 0,
             overflow: "hidden",
             display: "flex",
@@ -1022,13 +923,15 @@ export default function Appointments() {
                 textDecoration: "none !important",
               },
               "& .fc-day-today": { bgcolor: "transparent !important" },
-              // Time grid styling with visible grid lines
+              // Time grid styling with BOLD visible grid lines
               "& .fc-timegrid-slot": {
                 height: "48px",
-                borderColor: theme.palette.divider,
+                borderColor: alpha(theme.palette.text.primary, 0.2),
+                borderWidth: "1px",
               },
               "& .fc-timegrid-slot-lane": {
-                borderColor: theme.palette.divider,
+                borderColor: alpha(theme.palette.text.primary, 0.15),
+                borderTopWidth: "1px",
               },
               "& .fc-timegrid-slot-label": {
                 fontSize: "0.7rem",
@@ -1042,15 +945,15 @@ export default function Appointments() {
                 borderRadius: auraTokens.borderRadius.sm,
                 fontSize: "0.75rem",
               },
-              // Column borders (vertical lines between days)
+              // Column borders (vertical lines between days) - BOLD
               "& .fc-timegrid-col": {
-                borderColor: theme.palette.divider,
+                borderColor: alpha(theme.palette.text.primary, 0.2),
               },
               "& .fc-timegrid-cols > table": {
-                borderColor: theme.palette.divider,
+                borderColor: alpha(theme.palette.text.primary, 0.2),
               },
               "& .fc-timegrid-col-frame": {
-                borderRight: `1px solid ${theme.palette.divider}`,
+                borderRight: `2px solid ${alpha(theme.palette.text.primary, 0.15)}`,
                 "&:last-child": { borderRight: "none" },
               },
               // Now indicator
@@ -1062,21 +965,28 @@ export default function Appointments() {
                 borderTopColor: theme.palette.error.main,
                 borderWidth: "5px",
               },
-              // Axis and overall grid
+              // Axis and overall grid - BOLD borders
               "& .fc-timegrid-axis": {
                 width: "56px",
-                borderColor: theme.palette.divider,
+                borderColor: alpha(theme.palette.text.primary, 0.2),
               },
               "& .fc-scrollgrid": {
-                borderColor: theme.palette.divider,
+                borderColor: alpha(theme.palette.text.primary, 0.2),
+                borderWidth: "2px",
               },
               "& .fc-scrollgrid td, & .fc-scrollgrid th": {
-                borderColor: theme.palette.divider,
+                borderColor: alpha(theme.palette.text.primary, 0.15),
+                borderWidth: "1px",
               },
               "& .fc-scrollgrid-section > td": {
-                borderColor: theme.palette.divider,
+                borderColor: alpha(theme.palette.text.primary, 0.2),
               },
               "& .fc-scrollgrid-section-header > td": { border: "none" },
+              // Hour dividers - make them more prominent
+              "& .fc-timegrid-slot-minor": {
+                borderTopStyle: "dotted",
+                borderColor: alpha(theme.palette.text.primary, 0.1),
+              },
             }}
           >
             <FullCalendar
@@ -1157,18 +1067,17 @@ export default function Appointments() {
           </Box>
         </AuraCard>
 
-        {/* Day View - Appointment List & Session Notes Panel */}
+        {/* Day View - Appointment List Panel */}
         {viewMode === "day" && (
           <AuraCard
             hover={false}
             variant="flat"
             sx={{
-              width: expandedAppointment ? 500 : 380,
+              width: 360,
               p: 0,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-              transition: "all 0.3s ease",
             }}
           >
             {/* Day Header */}
@@ -1209,7 +1118,6 @@ export default function Appointments() {
                     const isActive = apt.status === "in-progress";
                     const isComplete = apt.status === "completed";
                     const isCancelled = apt.status === "cancelled";
-                    const isExpanded = expandedAppointment?.id === apt.id;
 
                     return (
                       <Paper
@@ -1218,37 +1126,36 @@ export default function Appointments() {
                         sx={{
                           borderRadius: 2,
                           border: "1px solid",
-                          borderColor: isExpanded
-                            ? "primary.main"
-                            : isActive
-                              ? "warning.main"
-                              : "divider",
-                          bgcolor: isExpanded
-                            ? alpha(theme.palette.primary.main, 0.05)
-                            : isActive
-                              ? alpha(theme.palette.warning.main, 0.08)
-                              : isComplete
-                                ? alpha(theme.palette.success.main, 0.05)
-                                : isCancelled
-                                  ? alpha(theme.palette.error.main, 0.05)
-                                  : "background.paper",
+                          borderColor: isActive
+                            ? "warning.main"
+                            : "divider",
+                          bgcolor: isActive
+                            ? alpha(theme.palette.warning.main, 0.08)
+                            : isComplete
+                              ? alpha(theme.palette.success.main, 0.05)
+                              : isCancelled
+                                ? alpha(theme.palette.error.main, 0.05)
+                                : "background.paper",
                           opacity: isCancelled ? 0.6 : 1,
                           transition: "all 0.2s",
                           overflow: "hidden",
                         }}
                       >
-                        {/* Appointment Header - Always Visible */}
+                        {/* Appointment Card */}
                         <Box
                           sx={{
                             p: 1.5,
-                            cursor: "pointer",
+                            cursor: isActive ? "pointer" : "default",
                             "&:hover": {
                               bgcolor: alpha(theme.palette.primary.main, 0.03),
                             },
                           }}
-                          onClick={() =>
-                            !isCancelled && handleExpandAppointment(apt)
-                          }
+                          onClick={() => {
+                            // Open SessionView directly for in-progress appointments
+                            if (isActive) {
+                              setSessionViewAppointment(apt);
+                            }
+                          }}
                         >
                           <Box sx={{ display: "flex", gap: 1.5 }}>
                             <Box sx={{ textAlign: "center", minWidth: 50 }}>
@@ -1315,8 +1222,7 @@ export default function Appointments() {
                                   sx={{ height: 20, fontSize: "0.65rem" }}
                                 />
                               </Box>
-                              {!isExpanded && (
-                                <Box sx={{ display: "flex", gap: 0.5, mt: 1 }}>
+                              <Box sx={{ display: "flex", gap: 0.5, mt: 1 }}>
                                   {!isComplete && !isCancelled && !isActive && (
                                     <AuraIconButton
                                       tooltip="Start Session"
@@ -1344,31 +1250,33 @@ export default function Appointments() {
                                       />
                                     </AuraIconButton>
                                   )}
-                                  <AuraIconButton
-                                    tooltip="Session Notes"
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleExpandAppointment(apt);
-                                    }}
-                                    sx={{
-                                      bgcolor: alpha(
-                                        theme.palette.primary.main,
-                                        0.1,
-                                      ),
-                                      "&:hover": {
+                                  {isActive && (
+                                    <AuraIconButton
+                                      tooltip="Open Session"
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSessionViewAppointment(apt);
+                                      }}
+                                      sx={{
                                         bgcolor: alpha(
-                                          theme.palette.primary.main,
-                                          0.2,
+                                          theme.palette.warning.main,
+                                          0.1,
                                         ),
-                                      },
-                                    }}
-                                  >
-                                    <NotesIcon
-                                      fontSize="small"
-                                      color="primary"
-                                    />
-                                  </AuraIconButton>
+                                        "&:hover": {
+                                          bgcolor: alpha(
+                                            theme.palette.warning.main,
+                                            0.2,
+                                          ),
+                                        },
+                                      }}
+                                    >
+                                      <NotesIcon
+                                        fontSize="small"
+                                        color="warning"
+                                      />
+                                    </AuraIconButton>
+                                  )}
                                   <AuraIconButton
                                     tooltip="View Patient"
                                     size="small"
@@ -1395,326 +1303,10 @@ export default function Appointments() {
                                     <MoreIcon fontSize="small" />
                                   </AuraIconButton>
                                 </Box>
-                              )}
                             </Box>
                           </Box>
                         </Box>
 
-                        {/* Expanded Session Notes Panel */}
-                        {isExpanded && (
-                          <Box
-                            sx={{
-                              borderTop: "1px solid",
-                              borderColor: "divider",
-                              p: 2,
-                              bgcolor: "background.default",
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                mb: 2,
-                              }}
-                            >
-                              <Typography variant="subtitle2" fontWeight={600}>
-                                Session Notes
-                              </Typography>
-                              <AuraIconButton
-                                tooltip="Close"
-                                size="small"
-                                onClick={() => setExpandedAppointment(null)}
-                              >
-                                <CloseIcon fontSize="small" />
-                              </AuraIconButton>
-                            </Box>
-
-                            {/* Pain Level */}
-                            <Box sx={{ mb: 2 }}>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  mb: 0.5,
-                                }}
-                              >
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  Pain Level
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  fontWeight={600}
-                                  color="primary.main"
-                                >
-                                  {painLevel}/10
-                                </Typography>
-                              </Box>
-                              <Slider
-                                value={painLevel}
-                                onChange={(_, v) => setPainLevel(v as number)}
-                                min={0}
-                                max={10}
-                                marks
-                                size="small"
-                              />
-                            </Box>
-
-                            {/* Modalities */}
-                            <Box sx={{ mb: 2 }}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                gutterBottom
-                                display="block"
-                              >
-                                Treatment
-                              </Typography>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 0.5,
-                                }}
-                              >
-                                {[
-                                  { key: "manualTherapy", label: "Manual" },
-                                  { key: "exerciseTherapy", label: "Exercise" },
-                                  { key: "modalities", label: "Modalities" },
-                                  { key: "education", label: "Education" },
-                                ].map(({ key, label }) => (
-                                  <Chip
-                                    key={key}
-                                    label={label}
-                                    size="small"
-                                    variant={
-                                      modalities[key as keyof typeof modalities]
-                                        ? "filled"
-                                        : "outlined"
-                                    }
-                                    color={
-                                      modalities[key as keyof typeof modalities]
-                                        ? "primary"
-                                        : "default"
-                                    }
-                                    onClick={() =>
-                                      setModalities({
-                                        ...modalities,
-                                        [key]:
-                                          !modalities[
-                                            key as keyof typeof modalities
-                                          ],
-                                      })
-                                    }
-                                    sx={{ cursor: "pointer" }}
-                                  />
-                                ))}
-                              </Box>
-                            </Box>
-
-                            {/* Notes */}
-                            <TextField
-                              multiline
-                              rows={4}
-                              value={sessionNotes}
-                              onChange={(e) => setSessionNotes(e.target.value)}
-                              placeholder="Document session notes..."
-                              fullWidth
-                              size="small"
-                              sx={{
-                                mb: 2,
-                                "& .MuiInputBase-input": {
-                                  fontSize: "0.875rem",
-                                },
-                              }}
-                            />
-
-                            {/* Treatment Plan Quick Info */}
-                            {loadingPlan ? (
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                  mb: 2,
-                                }}
-                              >
-                                <CircularProgress size={16} />
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  Loading plan...
-                                </Typography>
-                              </Box>
-                            ) : (
-                              patientTreatmentPlan && (
-                                <Box
-                                  sx={{
-                                    p: 1.5,
-                                    bgcolor: alpha(
-                                      theme.palette.success.main,
-                                      0.08,
-                                    ),
-                                    borderRadius: 1,
-                                    mb: 2,
-                                  }}
-                                >
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                      mb: 1,
-                                    }}
-                                  >
-                                    <ExerciseIcon
-                                      color="success"
-                                      fontSize="small"
-                                    />
-                                    <Typography
-                                      variant="caption"
-                                      fontWeight={600}
-                                    >
-                                      {patientTreatmentPlan.title}
-                                    </Typography>
-                                  </Box>
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      justifyContent: "space-between",
-                                      mb: 0.5,
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                    >
-                                      Session{" "}
-                                      {patientTreatmentPlan.nextSessionNumber}/
-                                      {patientTreatmentPlan.totalSessions}
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      fontWeight={600}
-                                      color="success.main"
-                                    >
-                                      {patientTreatmentPlan.progressPercent}%
-                                    </Typography>
-                                  </Box>
-                                  <LinearProgress
-                                    variant="determinate"
-                                    value={patientTreatmentPlan.progressPercent}
-                                    sx={{
-                                      height: 4,
-                                      borderRadius: 2,
-                                      bgcolor: alpha(
-                                        theme.palette.success.main,
-                                        0.15,
-                                      ),
-                                      "& .MuiLinearProgress-bar": {
-                                        bgcolor: "success.main",
-                                      },
-                                    }}
-                                  />
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox
-                                        checked={updateTreatmentPlan}
-                                        onChange={(e) =>
-                                          setUpdateTreatmentPlan(
-                                            e.target.checked,
-                                          )
-                                        }
-                                        size="small"
-                                        color="success"
-                                      />
-                                    }
-                                    label={
-                                      <Typography variant="caption">
-                                        Mark session complete
-                                      </Typography>
-                                    }
-                                    sx={{ mt: 1, mb: 0 }}
-                                  />
-                                </Box>
-                              )
-                            )}
-
-                            {/* PROM Assignment */}
-                            <Box
-                              sx={{
-                                p: 1.5,
-                                bgcolor: "action.hover",
-                                borderRadius: 1,
-                                mb: 2,
-                              }}
-                            >
-                              <FormControlLabel
-                                control={
-                                  <Checkbox
-                                    checked={assignPROM}
-                                    onChange={(e) =>
-                                      setAssignPROM(e.target.checked)
-                                    }
-                                    size="small"
-                                  />
-                                }
-                                label={
-                                  <Typography variant="caption">
-                                    Send PROM questionnaire
-                                  </Typography>
-                                }
-                                sx={{ mb: assignPROM ? 1 : 0 }}
-                              />
-                              {assignPROM && (
-                                <SelectField
-                                  label="Questionnaire"
-                                  value={selectedPromTemplate}
-                                  onChange={setSelectedPromTemplate}
-                                  options={[
-                                    { value: "", label: "Select..." },
-                                    ...promTemplates.map((t) => ({
-                                      value: t.key,
-                                      label: t.name,
-                                    })),
-                                  ]}
-                                  size="small"
-                                />
-                              )}
-                            </Box>
-
-                            {/* Actions */}
-                            <Box sx={{ display: "flex", gap: 1 }}>
-                              <AuraButton
-                                size="small"
-                                onClick={() => setExpandedAppointment(null)}
-                              >
-                                Cancel
-                              </AuraButton>
-                              <AuraButton
-                                size="small"
-                                variant="outlined"
-                                onClick={handleSaveInlineNotes}
-                              >
-                                Save Notes
-                              </AuraButton>
-                              {apt.status !== "completed" && (
-                                <AuraButton
-                                  size="small"
-                                  variant="contained"
-                                  color="success"
-                                  onClick={handleCompleteInlineSession}
-                                >
-                                  Complete
-                                </AuraButton>
-                              )}
-                            </Box>
-                          </Box>
-                        )}
                       </Paper>
                     );
                   })}
@@ -1797,16 +1389,29 @@ export default function Appointments() {
             </MenuItem>
           )}
         {menuAnchor?.apt.status === "in-progress" && (
-          <MenuItem
-            onClick={() => {
-              if (menuAnchor?.apt) handleCompleteAppointment(menuAnchor.apt.id);
-            }}
-          >
-            <ListItemIcon>
-              <CompleteIcon fontSize="small" color="success" />
-            </ListItemIcon>
-            <ListItemText>Complete Session</ListItemText>
-          </MenuItem>
+          <>
+            <MenuItem
+              onClick={() => {
+                if (menuAnchor?.apt) setSessionViewAppointment(menuAnchor.apt);
+                setMenuAnchor(null);
+              }}
+            >
+              <ListItemIcon>
+                <StartIcon fontSize="small" color="warning" />
+              </ListItemIcon>
+              <ListItemText>Resume Session</ListItemText>
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                if (menuAnchor?.apt) handleCompleteAppointment(menuAnchor.apt.id);
+              }}
+            >
+              <ListItemIcon>
+                <CompleteIcon fontSize="small" color="success" />
+              </ListItemIcon>
+              <ListItemText>Complete Session</ListItemText>
+            </MenuItem>
+          </>
         )}
         {menuAnchor?.apt.status !== "cancelled" &&
           menuAnchor?.apt.status !== "completed" && (
@@ -2393,6 +1998,18 @@ export default function Appointments() {
           }
         }}
       />
+
+      {/* Session View - Full screen clinical mode */}
+      {sessionViewAppointment && (
+        <SessionView
+          appointment={sessionViewAppointment}
+          onClose={() => setSessionViewAppointment(null)}
+          onComplete={() => {
+            setSessionViewAppointment(null);
+            queryClient.invalidateQueries({ queryKey: ["appointments"] });
+          }}
+        />
+      )}
     </Box>
   );
 }
