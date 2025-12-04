@@ -34,7 +34,6 @@ import {
   LocalHospital as MedicalIcon,
   MedicalServices as TreatmentIcon,
   Send as ReferralsIcon,
-  FitnessCenter as ExerciseIcon,
 } from "@mui/icons-material";
 import { useAuthActions, useAuthUser } from "../../stores/authStore";
 import { NotificationBell, TenantSelector } from "../shared";
