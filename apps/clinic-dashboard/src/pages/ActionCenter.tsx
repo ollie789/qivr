@@ -860,8 +860,8 @@ export default function ActionCenter() {
   }, []);
 
   const handleViewPatient = useCallback(
-    (patientId: string) => {
-      navigate(`/medical-records?patientId=${patientId}`);
+    (patientId: string, tab: string = "timeline") => {
+      navigate(`/medical-records?patientId=${patientId}&tab=${tab}`);
     },
     [navigate],
   );

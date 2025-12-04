@@ -1283,7 +1283,7 @@ export default function Appointments() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigate(
-                                        `/medical-records?patientId=${apt.patientId}`,
+                                        `/medical-records?patientId=${apt.patientId}&tab=timeline`,
                                       );
                                     }}
                                   >
@@ -1353,7 +1353,7 @@ export default function Appointments() {
         )}
         <MenuItem
           onClick={() => {
-            navigate(`/medical-records?patientId=${menuAnchor?.apt.patientId}`);
+            navigate(`/medical-records?patientId=${menuAnchor?.apt.patientId}&tab=timeline`);
             setMenuAnchor(null);
           }}
         >

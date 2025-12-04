@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Box,
   Paper,
@@ -105,10 +106,24 @@ function TabPanel(props: TabPanelProps) {
 
 const PROM: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [currentTab, setCurrentTab] = useState(0);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [sendTemplateId, setSendTemplateId] = useState<string | null>(null);
+  const [initialPatientId, setInitialPatientId] = useState<string | null>(null);
+
+  // Handle action=send&patientId query params
+  useEffect(() => {
+    const action = searchParams.get("action");
+    const patientId = searchParams.get("patientId");
+    if (action === "send" && patientId) {
+      setInitialPatientId(patientId);
+      setSendDialogOpen(true);
+      // Clear the params from URL
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
   const [selectedResponse, setSelectedResponse] = useState<PromResponse | null>(
     null,
   );
@@ -964,9 +979,11 @@ const PROM: React.FC = () => {
         >
           <PROMSender
             preSelectedTemplateId={sendTemplateId || undefined}
+            preSelectedPatientId={initialPatientId || undefined}
             onComplete={() => {
               setSendDialogOpen(false);
               setSendTemplateId(null);
+              setInitialPatientId(null);
               refetchResponses();
               enqueueSnackbar("PROM sent successfully", {
                 variant: "success",

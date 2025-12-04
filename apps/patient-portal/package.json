@@ -22,6 +22,7 @@
     "@mui/x-date-pickers": "^8.14.0",
     "@mui/x-date-pickers-pro": "^8.14.0",
     "@qivr/design-system": "file:../../packages/design-system",
+    "@qivr/eval": "file:../../packages/eval",
     "@qivr/http": "file:../../packages/http",
     "@tanstack/react-query": "^5.17.0",
     "@tanstack/react-query-devtools": "^5.85.5",

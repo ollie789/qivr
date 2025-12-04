@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -27,8 +28,6 @@ import {
 } from "@mui/material";
 import {
   Send as SendIcon,
-  LocalHospital as HospitalIcon,
-  Science as ScienceIcon,
   Schedule as ScheduleIcon,
   CheckCircle as CheckIcon,
   Warning as WarningIcon,
@@ -71,35 +70,12 @@ import {
   COMMON_SPECIALTIES,
 } from "../services/referralApi";
 import { patientApi } from "../services/patientApi";
-
-const getTypeIcon = (type: string) => {
-  switch (type) {
-    case "Imaging":
-    case "Laboratory":
-      return <ScienceIcon />;
-    case "Specialist":
-    case "Hospital":
-      return <HospitalIcon />;
-    default:
-      return <SendIcon />;
-  }
-};
-
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "Scheduled":
-      return <ScheduleIcon fontSize="small" />;
-    case "Completed":
-    case "ResultsReceived":
-    case "Closed":
-      return <CheckIcon fontSize="small" />;
-    case "Cancelled":
-    case "Expired":
-      return <WarningIcon fontSize="small" />;
-    default:
-      return null;
-  }
-};
+import {
+  getTypeIcon,
+  getStatusIcon,
+  getStatusColor,
+  getPriorityColor,
+} from "../utils/referralHelpers";
 
 interface Patient {
   id: string;
@@ -111,9 +87,11 @@ interface Patient {
 export default function Referrals() {
   const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
+  const [initialPatientId, setInitialPatientId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ReferralStatus | "all">(
     "all",
   );
@@ -158,6 +136,35 @@ export default function Referrals() {
 
   const patients = patientsData?.data ?? [];
 
+  // Handle action=new&patientId query params
+  useEffect(() => {
+    const action = searchParams.get("action");
+    const patientId = searchParams.get("patientId");
+    if (action === "new") {
+      if (patientId) {
+        setInitialPatientId(patientId);
+        // Find and select the patient when patients are loaded
+        const patient = patients.find((p: Patient) => p.id === patientId);
+        if (patient) {
+          setSelectedPatient(patient);
+        }
+      }
+      setCreateDialogOpen(true);
+      // Clear the params from URL
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, patients]);
+
+  // Set selected patient when patients load and we have an initialPatientId
+  useEffect(() => {
+    if (initialPatientId && patients.length > 0 && !selectedPatient) {
+      const patient = patients.find((p: Patient) => p.id === initialPatientId);
+      if (patient) {
+        setSelectedPatient(patient);
+      }
+    }
+  }, [initialPatientId, patients, selectedPatient]);
+
   // Mutations
   const createMutation = useMutation({
     mutationFn: (request: CreateReferralRequest) => referralApi.create(request),
@@ -168,6 +175,7 @@ export default function Referrals() {
       setCreateDialogOpen(false);
       setNewReferral({ type: "Specialist", priority: "Routine" });
       setSelectedPatient(null);
+      setInitialPatientId(null);
     },
     onError: () => {
       enqueueSnackbar("Failed to create referral", { variant: "error" });
@@ -290,30 +298,6 @@ export default function Referrals() {
       relevantTestResults: newReferral.relevantTestResults,
       specificQuestions: newReferral.specificQuestions,
     });
-  };
-
-  const getStatusColor = (status: ReferralStatus) => {
-    const statusObj = REFERRAL_STATUSES.find((s) => s.value === status);
-    return (statusObj?.color || "default") as
-      | "default"
-      | "primary"
-      | "secondary"
-      | "error"
-      | "info"
-      | "success"
-      | "warning";
-  };
-
-  const getPriorityColor = (priority: ReferralPriority) => {
-    const priorityObj = REFERRAL_PRIORITIES.find((p) => p.value === priority);
-    return (priorityObj?.color || "default") as
-      | "default"
-      | "primary"
-      | "secondary"
-      | "error"
-      | "info"
-      | "success"
-      | "warning";
   };
 
   return (

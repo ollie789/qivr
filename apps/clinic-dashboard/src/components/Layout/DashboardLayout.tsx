@@ -111,14 +111,14 @@ const DashboardLayout: React.FC = () => {
   const menuItems: MenuItemType[] = [
     { text: "Analytics", icon: <AnalyticsIcon />, path: "/analytics" },
     {
-      text: "Intake Management",
+      text: "Intake",
       icon: <QueueIcon />,
       path: "/intake",
       badge: 5,
     },
     { text: "Appointments", icon: <CalendarIcon />, path: "/appointments" },
     {
-      text: "Medical Records",
+      text: "Patients",
       icon: <MedicalIcon />,
       path: "/medical-records",
     },
@@ -127,7 +127,6 @@ const DashboardLayout: React.FC = () => {
       icon: <TreatmentIcon />,
       path: "/treatment-plans",
     },
-
     { text: "Referrals", icon: <ReferralsIcon />, path: "/referrals" },
     {
       text: "Action Center",
@@ -135,7 +134,7 @@ const DashboardLayout: React.FC = () => {
       path: "/inbox",
       badge: unreadCount,
     },
-    { text: "PROM", icon: <AssignmentIcon />, path: "/prom" },
+    { text: "Outcomes", icon: <AssignmentIcon />, path: "/prom" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
 

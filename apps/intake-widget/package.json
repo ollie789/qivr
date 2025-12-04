@@ -8,6 +8,7 @@
     "@mui/icons-material": "^7.0.0",
     "@mui/material": "^7.3.0",
     "@qivr/design-system": "file:../../packages/design-system",
+    "@qivr/eval": "file:../../packages/eval",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

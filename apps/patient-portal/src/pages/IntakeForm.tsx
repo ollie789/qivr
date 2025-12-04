@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Alert,
   Box,
   TextField,
   Typography,
@@ -13,7 +14,6 @@ import {
   FormControlLabel,
   Checkbox,
   FormGroup,
-  Slider,
   Select,
   MenuItem,
   InputLabel,
@@ -27,16 +27,31 @@ import {
   auraStepper,
   AuraButton,
   auraTokens,
+  type PainRegion,
+  PainIntensitySlider,
+  QuestionSection,
+  IntakeReviewSection,
 } from "@qivr/design-system";
 import { fetchProfile } from "../services/profileApi";
-
-const steps = [
-  "Pain Location & Characteristics",
-  "Pain Timing & Pattern",
-  "Aggravating & Relieving Factors",
-  "Medical History",
-  "Review & Submit",
-];
+import {
+  // Types
+  type IntakeFormData,
+  // Questions
+  painDurationOptions,
+  painQualityOptions,
+  painStartOptions,
+  medicalHistorySection,
+  goalsSection,
+  // Step config
+  PORTAL_INTAKE_STEPS,
+  getStepTitles,
+  // Utilities
+  getInitialFormState,
+  createUpdateHandler,
+  createToggleHandler,
+  validatePainMappingStep,
+  validateGoalsStep,
+} from "@qivr/eval";
 
 export const IntakeForm: React.FC = () => {
   const navigate = useNavigate();
@@ -48,59 +63,12 @@ export const IntakeForm: React.FC = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState({
-    // Pain Location (Step 1)
-    painMapData: { regions: [], cameraView: "front" } as any,
-    chiefComplaint: "",
+  // Separate state for pain map regions (compatible with PainMap3D component)
+  const [painRegions, setPainRegions] = useState<PainRegion[]>([]);
 
-    // Pain Characteristics (Step 2)
-    painIntensity: 5,
-    painQualities: [] as string[],
-    painStart: "",
+  const [form, setForm] = useState<IntakeFormData>(getInitialFormState(false)); // false = no personal info (authenticated user)
 
-    // Pain Timing & Pattern (Step 3)
-    onset: "",
-    durationValue: "",
-    durationUnit: "weeks",
-    pattern: "",
-    frequency: "",
-    timeOfDay: [] as string[],
-
-    // Aggravating & Relieving Factors (Step 4)
-    aggravators: {
-      sitting: false,
-      standing: false,
-      walking: false,
-      bending: false,
-      lifting: false,
-      twisting: false,
-      coughing: false,
-      morningWorse: false,
-      eveningWorse: false,
-      weather: false,
-      stress: false,
-      other: "",
-    },
-    relievers: {
-      rest: false,
-      ice: false,
-      heat: false,
-      medication: false,
-      stretching: false,
-      massage: false,
-      position: false,
-      other: "",
-    },
-
-    // Medical History (Step 5)
-    previousTreatments: "",
-    currentMedications: "",
-    allergies: "",
-    medicalConditions: "",
-    surgeries: "",
-    treatmentGoals: "",
-    additionalNotes: "",
-  });
+  const steps = getStepTitles(PORTAL_INTAKE_STEPS);
 
   useEffect(() => {
     const initUser = async () => {
@@ -119,28 +87,31 @@ export const IntakeForm: React.FC = () => {
     }
   }, [user, enqueueSnackbar]);
 
-  const validateStep = (step: number): boolean => {
-    const newErrors: Record<string, string> = {};
+  // Use shared utilities for form handling
+  const update = createUpdateHandler(setForm, setErrors);
+  const toggleCheckbox = createToggleHandler(form, update);
 
-    if (step === 0) {
-      if (!formData.painMapData?.regions?.length) {
-        newErrors.painMap = "Please mark at least one pain area";
-      }
-      if (!formData.chiefComplaint.trim()) {
-        newErrors.chiefComplaint = "Please describe your main concern";
-      }
-      if (formData.painQualities.length === 0) {
-        newErrors.painQualities = "Please select at least one pain quality";
-      }
+  const validateStep = (step: number): boolean => {
+    let newErrors: Record<string, string> = {};
+    const currentStep = PORTAL_INTAKE_STEPS[step];
+
+    if (!currentStep) {
+      return true;
     }
 
-    if (step === 1) {
-      if (!formData.onset) {
-        newErrors.onset = "Please select when the pain started";
-      }
-      if (!formData.durationValue) {
-        newErrors.duration = "Please specify how long you've had this pain";
-      }
+    // Use shared validation utilities with portal-specific options
+    if (currentStep.hasPainMap) {
+      newErrors = {
+        ...newErrors,
+        ...validatePainMappingStep(painRegions.length, form, {
+          requireChiefComplaint: true,
+          requirePainQualities: true,
+        }),
+      };
+    }
+
+    if (currentStep.sectionIds.includes("goals")) {
+      newErrors = { ...newErrors, ...validateGoalsStep(form) };
     }
 
     setErrors(newErrors);
@@ -164,81 +135,45 @@ export const IntakeForm: React.FC = () => {
     }
 
     try {
-      // Build aggravating factors list
-      const aggravatingFactors = [];
-      if (formData.aggravators.sitting) aggravatingFactors.push("Sitting");
-      if (formData.aggravators.standing) aggravatingFactors.push("Standing");
-      if (formData.aggravators.walking) aggravatingFactors.push("Walking");
-      if (formData.aggravators.bending) aggravatingFactors.push("Bending");
-      if (formData.aggravators.lifting) aggravatingFactors.push("Lifting");
-      if (formData.aggravators.twisting) aggravatingFactors.push("Twisting");
-      if (formData.aggravators.coughing)
-        aggravatingFactors.push("Coughing/Sneezing");
-      if (formData.aggravators.morningWorse)
-        aggravatingFactors.push("Mornings");
-      if (formData.aggravators.eveningWorse)
-        aggravatingFactors.push("Evenings");
-      if (formData.aggravators.weather)
-        aggravatingFactors.push("Weather changes");
-      if (formData.aggravators.stress) aggravatingFactors.push("Stress");
-      if (formData.aggravators.other)
-        aggravatingFactors.push(formData.aggravators.other);
-
-      // Build relieving factors list
-      const relievingFactors = [];
-      if (formData.relievers.rest) relievingFactors.push("Rest");
-      if (formData.relievers.ice) relievingFactors.push("Ice");
-      if (formData.relievers.heat) relievingFactors.push("Heat");
-      if (formData.relievers.medication) relievingFactors.push("Medication");
-      if (formData.relievers.stretching) relievingFactors.push("Stretching");
-      if (formData.relievers.massage) relievingFactors.push("Massage");
-      if (formData.relievers.position)
-        relievingFactors.push("Position changes");
-      if (formData.relievers.other)
-        relievingFactors.push(formData.relievers.other);
-
       await apiClient.post("/api/evaluations", {
         patientId: userId,
-        chiefComplaint: formData.chiefComplaint,
-        symptoms: formData.painQualities,
+        chiefComplaint: form.chiefComplaint,
+        symptoms: form.painQualities,
         questionnaireResponses: {
-          description: formData.chiefComplaint,
-          details: formData.additionalNotes,
-          painIntensity: formData.painIntensity,
-          painQualities: formData.painQualities,
-          painStart: formData.painStart,
-          onset: formData.onset,
-          duration: `${formData.durationValue} ${formData.durationUnit}`,
-          pattern: formData.pattern,
-          frequency: formData.frequency,
-          timeOfDay: formData.timeOfDay,
-          aggravatingFactors,
-          relievingFactors,
-          previousTreatments: formData.previousTreatments,
-          currentMedications: formData.currentMedications,
-          allergies: formData.allergies,
-          medicalConditions: formData.medicalConditions,
-          surgeries: formData.surgeries,
-          treatmentGoals: formData.treatmentGoals,
-          notes: formData.additionalNotes,
+          description: form.chiefComplaint,
+          details: form.additionalNotes,
+          painIntensity: form.painIntensity,
+          painQualities: form.painQualities,
+          painDuration: form.painDuration,
+          painStart: form.painStart,
+          // Medical history (structured)
+          prevOrtho: form.prevOrtho,
+          currentTreatments: form.currentTreatments,
+          medications: form.medications,
+          mobilityAids: form.mobilityAids,
+          dailyImpact: form.dailyImpact,
+          additionalHistory: form.additionalHistory,
+          redFlags: form.redFlags,
+          // Goals
+          goals: form.goals,
+          timeline: form.timeline,
+          milestones: form.milestones,
+          concerns: form.concerns,
+          notes: form.additionalNotes,
         },
-        painMaps: formData.painMapData?.regions?.length
-          ? formData.painMapData.regions.map((region: any, index: number) => ({
-              bodyRegion:
-                region.anatomicalName ||
-                region.meshName ||
-                `Region ${index + 1}`,
+        painMaps: painRegions.length
+          ? painRegions.map((region, index) => ({
+              bodyRegion: region.meshName || `Region ${index + 1}`,
               coordinates: { x: 0, y: 0, z: 0 },
               intensity: region.intensity || 5,
               type: region.quality || "aching",
               qualities: [region.quality].filter(Boolean),
               avatarType: "male",
               bodySubdivision: "simple",
-              viewOrientation: formData.painMapData.cameraView || "front",
+              viewOrientation: "front",
               depthIndicator: "superficial",
               submissionSource: "portal",
-              drawingDataJson:
-                index === 0 ? JSON.stringify(formData.painMapData) : null,
+              drawingDataJson: index === 0 ? JSON.stringify({ regions: painRegions }) : null,
             }))
           : [],
       });
@@ -269,6 +204,16 @@ export const IntakeForm: React.FC = () => {
     );
   }
 
+  const currentStep = PORTAL_INTAKE_STEPS[activeStep];
+
+  if (!currentStep) {
+    return (
+      <Box sx={{ p: 4, textAlign: "center" }}>
+        <Typography color="error">Invalid step</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -291,7 +236,7 @@ export const IntakeForm: React.FC = () => {
 
       <Paper elevation={2} sx={{ p: 4 }}>
         {/* Step 1: Pain Location & Characteristics */}
-        {activeStep === 0 && (
+        {currentStep.hasPainMap && (
           <Box>
             <Typography variant="h6" gutterBottom>
               Where is your pain and what does it feel like?
@@ -299,36 +244,24 @@ export const IntakeForm: React.FC = () => {
 
             {/* 3D Pain Map */}
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Click on the 3D body model to mark all areas where you experience
-              pain
+              Click on the 3D body model to mark all areas where you experience pain
             </Typography>
-            <PainMap3D
-              value={formData.painMapData?.regions || []}
-              onChange={(regions: any) =>
-                setFormData({
-                  ...formData,
-                  painMapData: {
-                    regions,
-                    cameraView: formData.painMapData.cameraView,
-                  },
-                })
-              }
-            />
             {errors.painMap && (
-              <Typography color="error" variant="caption">
+              <Alert severity="error" sx={{ mb: 2 }}>
                 {errors.painMap}
-              </Typography>
+              </Alert>
             )}
+            <PainMap3D
+              value={painRegions}
+              onChange={(regions) => setPainRegions(regions)}
+            />
 
             {/* Chief Complaint */}
             <TextField
               fullWidth
               label="What is your main concern or chief complaint?"
-              value={formData.chiefComplaint}
-              onChange={(e) => {
-                setFormData({ ...formData, chiefComplaint: e.target.value });
-                setErrors({ ...errors, chiefComplaint: "" });
-              }}
+              value={form.chiefComplaint || ""}
+              onChange={(e) => update("chiefComplaint", e.target.value)}
               multiline
               rows={3}
               sx={{ mt: 3, mb: 3 }}
@@ -336,20 +269,33 @@ export const IntakeForm: React.FC = () => {
               helperText={errors.chiefComplaint}
             />
 
+            {/* Pain Duration */}
+            <FormControl fullWidth sx={{ mb: 3 }} error={!!errors.painDuration}>
+              <InputLabel>How long have you had this pain?</InputLabel>
+              <Select
+                value={form.painDuration || ""}
+                label="How long have you had this pain?"
+                onChange={(e) => update("painDuration", e.target.value)}
+              >
+                {painDurationOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.painDuration && (
+                <Typography color="error" variant="caption">
+                  {errors.painDuration}
+                </Typography>
+              )}
+            </FormControl>
+
             {/* Pain Intensity */}
             <Box sx={{ mb: 3 }}>
-              <Typography gutterBottom>
-                Current pain intensity: {formData.painIntensity}/10
-              </Typography>
-              <Slider
-                value={formData.painIntensity}
-                onChange={(_, value) =>
-                  setFormData({ ...formData, painIntensity: value as number })
-                }
-                min={0}
-                max={10}
-                marks
-                valueLabelDisplay="auto"
+              <PainIntensitySlider
+                value={form.painIntensity || 5}
+                onChange={(value) => update("painIntensity", value)}
+                label="Current pain intensity"
               />
             </Box>
 
@@ -363,38 +309,16 @@ export const IntakeForm: React.FC = () => {
                 What does your pain feel like? (Select all that apply)
               </FormLabel>
               <FormGroup row>
-                {[
-                  "Aching",
-                  "Sharp",
-                  "Burning",
-                  "Stabbing",
-                  "Throbbing",
-                  "Shooting",
-                  "Tingling",
-                  "Numbness",
-                  "Dull",
-                  "Cramping",
-                ].map((quality) => (
+                {painQualityOptions.map((quality) => (
                   <FormControlLabel
-                    key={quality}
+                    key={quality.value}
                     control={
                       <Checkbox
-                        checked={formData.painQualities.includes(quality)}
-                        onChange={(e) => {
-                          const newQualities = e.target.checked
-                            ? [...formData.painQualities, quality]
-                            : formData.painQualities.filter(
-                                (q) => q !== quality,
-                              );
-                          setFormData({
-                            ...formData,
-                            painQualities: newQualities,
-                          });
-                          setErrors({ ...errors, painQualities: "" });
-                        }}
+                        checked={form.painQualities?.includes(quality.value) || false}
+                        onChange={() => toggleCheckbox("painQualities", quality.value)}
                       />
                     }
-                    label={quality}
+                    label={quality.label}
                   />
                 ))}
               </FormGroup>
@@ -406,382 +330,75 @@ export const IntakeForm: React.FC = () => {
             </FormControl>
 
             {/* How Pain Started */}
-            <TextField
-              fullWidth
-              label="How did this pain start?"
-              value={formData.painStart}
-              onChange={(e) =>
-                setFormData({ ...formData, painStart: e.target.value })
-              }
-              multiline
-              rows={2}
-              placeholder="e.g., After lifting, Gradual onset, After injury"
-            />
-          </Box>
-        )}
-
-        {/* Step 2: Pain Timing & Pattern */}
-        {activeStep === 1 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              When and how often does it hurt?
-            </Typography>
-
-            <FormControl fullWidth sx={{ mb: 3 }} error={!!errors.onset}>
-              <InputLabel>When did the pain start?</InputLabel>
+            <FormControl fullWidth>
+              <InputLabel>How did this pain start?</InputLabel>
               <Select
-                value={formData.onset}
-                label="When did the pain start?"
-                onChange={(e) => {
-                  setFormData({ ...formData, onset: e.target.value });
-                  setErrors({ ...errors, onset: "" });
-                }}
+                value={form.painStart || ""}
+                label="How did this pain start?"
+                onChange={(e) => update("painStart", e.target.value)}
               >
-                <MenuItem value="sudden">Sudden onset</MenuItem>
-                <MenuItem value="gradual">Gradual onset</MenuItem>
-                <MenuItem value="after_injury">After an injury</MenuItem>
-                <MenuItem value="after_activity">
-                  After specific activity
-                </MenuItem>
-                <MenuItem value="unknown">Don't remember</MenuItem>
-              </Select>
-              {errors.onset && (
-                <Typography color="error" variant="caption">
-                  {errors.onset}
-                </Typography>
-              )}
-            </FormControl>
-
-            <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-              <TextField
-                label="How long have you had this pain?"
-                value={formData.durationValue}
-                onChange={(e) => {
-                  setFormData({ ...formData, durationValue: e.target.value });
-                  setErrors({ ...errors, duration: "" });
-                }}
-                type="number"
-                error={!!errors.duration}
-                helperText={errors.duration}
-                sx={{ flex: 1 }}
-              />
-              <FormControl sx={{ flex: 1 }}>
-                <InputLabel>Unit</InputLabel>
-                <Select
-                  value={formData.durationUnit}
-                  label="Unit"
-                  onChange={(e) =>
-                    setFormData({ ...formData, durationUnit: e.target.value })
-                  }
-                >
-                  <MenuItem value="days">Days</MenuItem>
-                  <MenuItem value="weeks">Weeks</MenuItem>
-                  <MenuItem value="months">Months</MenuItem>
-                  <MenuItem value="years">Years</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Pain pattern</InputLabel>
-              <Select
-                value={formData.pattern}
-                label="Pain pattern"
-                onChange={(e) =>
-                  setFormData({ ...formData, pattern: e.target.value })
-                }
-              >
-                <MenuItem value="constant">Constant</MenuItem>
-                <MenuItem value="intermittent">Comes and goes</MenuItem>
-                <MenuItem value="baseline_with_flares">
-                  Baseline with flare-ups
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>How often do you experience pain?</InputLabel>
-              <Select
-                value={formData.frequency}
-                label="How often do you experience pain?"
-                onChange={(e) =>
-                  setFormData({ ...formData, frequency: e.target.value })
-                }
-              >
-                <MenuItem value="always">All the time</MenuItem>
-                <MenuItem value="daily">Daily</MenuItem>
-                <MenuItem value="several_times_week">
-                  Several times a week
-                </MenuItem>
-                <MenuItem value="weekly">Weekly</MenuItem>
-                <MenuItem value="occasionally">Occasionally</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl component="fieldset">
-              <FormLabel>
-                When is the pain worse? (Select all that apply)
-              </FormLabel>
-              <FormGroup>
-                {[
-                  "Morning",
-                  "Afternoon",
-                  "Evening",
-                  "Night",
-                  "No specific time",
-                ].map((time) => (
-                  <FormControlLabel
-                    key={time}
-                    control={
-                      <Checkbox
-                        checked={formData.timeOfDay.includes(time)}
-                        onChange={(e) => {
-                          const newTimes = e.target.checked
-                            ? [...formData.timeOfDay, time]
-                            : formData.timeOfDay.filter((t) => t !== time);
-                          setFormData({ ...formData, timeOfDay: newTimes });
-                        }}
-                      />
-                    }
-                    label={time}
-                  />
+                {painStartOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
                 ))}
-              </FormGroup>
+              </Select>
             </FormControl>
           </Box>
         )}
 
-        {/* Step 3: Aggravating & Relieving Factors */}
-        {activeStep === 2 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              What makes it better or worse?
-            </Typography>
+        {/* Step 2: Medical History */}
+        {currentStep.id === "medical-history" && (
+          <QuestionSection
+            title="Medical History"
+            description={medicalHistorySection.description}
+            questions={medicalHistorySection.questions.filter((q) => q.name !== "painStart")}
+            formValues={form as Record<string, unknown>}
+            onFieldChange={(field, value) => update(field as keyof IntakeFormData, value)}
+            onCheckboxToggle={(field, value) => toggleCheckbox(field as keyof IntakeFormData, value)}
+            errors={errors}
+          />
+        )}
 
-            <Typography variant="subtitle1" sx={{ mt: 3, mb: 2 }}>
-              What makes your pain worse?
-            </Typography>
-            <FormGroup>
-              {Object.keys(formData.aggravators).map((key) => (
-                <FormControlLabel
-                  key={key}
-                  control={
-                    <Checkbox
-                      checked={
-                        formData.aggravators[
-                          key as keyof typeof formData.aggravators
-                        ] as boolean
-                      }
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          aggravators: {
-                            ...formData.aggravators,
-                            [key]: e.target.checked,
-                          },
-                        })
-                      }
-                    />
-                  }
-                  label={key
-                    .replace(/([A-Z])/g, " $1")
-                    .replace(/^./, (str) => str.toUpperCase())}
-                />
-              ))}
-            </FormGroup>
-            <TextField
-              fullWidth
-              label="Other aggravating factors"
-              value={formData.aggravators.other}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  aggravators: {
-                    ...formData.aggravators,
-                    other: e.target.value,
-                  },
-                })
-              }
-              sx={{ mt: 2 }}
+        {/* Step 3: Goals */}
+        {currentStep.id === "goals" && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <QuestionSection
+              title="Treatment Goals & Expectations"
+              description={goalsSection.description}
+              questions={goalsSection.questions}
+              formValues={form as Record<string, unknown>}
+              onFieldChange={(field, value) => update(field as keyof IntakeFormData, value)}
+              onCheckboxToggle={(field, value) => toggleCheckbox(field as keyof IntakeFormData, value)}
+              errors={errors}
             />
 
-            <Typography variant="subtitle1" sx={{ mt: 4, mb: 2 }}>
-              What makes your pain better?
-            </Typography>
-            <FormGroup>
-              {Object.keys(formData.relievers).map((key) => (
-                <FormControlLabel
-                  key={key}
-                  control={
-                    <Checkbox
-                      checked={
-                        formData.relievers[
-                          key as keyof typeof formData.relievers
-                        ] as boolean
-                      }
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          relievers: {
-                            ...formData.relievers,
-                            [key]: e.target.checked,
-                          },
-                        })
-                      }
-                    />
-                  }
-                  label={key
-                    .replace(/([A-Z])/g, " $1")
-                    .replace(/^./, (str) => str.toUpperCase())}
-                />
-              ))}
-            </FormGroup>
+            {/* Additional Notes */}
             <TextField
               fullWidth
-              label="Other relieving factors"
-              value={formData.relievers.other}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  relievers: { ...formData.relievers, other: e.target.value },
-                })
-              }
-              sx={{ mt: 2 }}
+              label="Additional notes or information"
+              value={form.additionalNotes || ""}
+              onChange={(e) => update("additionalNotes", e.target.value)}
+              multiline
+              rows={3}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: auraTokens.borderRadius.sm,
+                },
+              }}
             />
           </Box>
         )}
 
-        {/* Step 4: Medical History */}
-        {activeStep === 3 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Medical History
-            </Typography>
-
-            <TextField
-              fullWidth
-              label="Previous treatments for this condition"
-              value={formData.previousTreatments}
-              onChange={(e) =>
-                setFormData({ ...formData, previousTreatments: e.target.value })
-              }
-              multiline
-              rows={2}
-              sx={{ mb: 3 }}
-              placeholder="e.g., Physical therapy, Chiropractic, Medications"
-            />
-
-            <TextField
-              fullWidth
-              label="Current medications"
-              value={formData.currentMedications}
-              onChange={(e) =>
-                setFormData({ ...formData, currentMedications: e.target.value })
-              }
-              multiline
-              rows={2}
-              sx={{ mb: 3 }}
-            />
-
-            <TextField
-              fullWidth
-              label="Allergies"
-              value={formData.allergies}
-              onChange={(e) =>
-                setFormData({ ...formData, allergies: e.target.value })
-              }
-              sx={{ mb: 3 }}
-            />
-
-            <TextField
-              fullWidth
-              label="Other medical conditions"
-              value={formData.medicalConditions}
-              onChange={(e) =>
-                setFormData({ ...formData, medicalConditions: e.target.value })
-              }
-              multiline
-              rows={2}
-              sx={{ mb: 3 }}
-            />
-
-            <TextField
-              fullWidth
-              label="Previous surgeries"
-              value={formData.surgeries}
-              onChange={(e) =>
-                setFormData({ ...formData, surgeries: e.target.value })
-              }
-              multiline
-              rows={2}
-              sx={{ mb: 3 }}
-            />
-
-            <TextField
-              fullWidth
-              label="What are your treatment goals?"
-              value={formData.treatmentGoals}
-              onChange={(e) =>
-                setFormData({ ...formData, treatmentGoals: e.target.value })
-              }
-              multiline
-              rows={3}
-              sx={{ mb: 3 }}
-              placeholder="What would you like to achieve with treatment?"
-            />
-
-            <TextField
-              fullWidth
-              label="Additional notes"
-              value={formData.additionalNotes}
-              onChange={(e) =>
-                setFormData({ ...formData, additionalNotes: e.target.value })
-              }
-              multiline
-              rows={3}
-            />
-          </Box>
-        )}
-
-        {/* Step 5: Review */}
-        {activeStep === 4 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Review Your Information
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Please review your responses before submitting
-            </Typography>
-
-            <Box sx={{ "& > *": { mb: 2 } }}>
-              <Typography>
-                <strong>Chief Complaint:</strong> {formData.chiefComplaint}
-              </Typography>
-              <Typography>
-                <strong>Pain Areas:</strong>{" "}
-                {formData.painMapData?.regions?.length || 0} regions marked
-              </Typography>
-              <Typography>
-                <strong>Pain Intensity:</strong> {formData.painIntensity}/10
-              </Typography>
-              <Typography>
-                <strong>Pain Qualities:</strong>{" "}
-                {formData.painQualities.join(", ") || "None selected"}
-              </Typography>
-              <Typography>
-                <strong>Duration:</strong> {formData.durationValue}{" "}
-                {formData.durationUnit}
-              </Typography>
-              <Typography>
-                <strong>Pattern:</strong> {formData.pattern || "Not specified"}
-              </Typography>
-              {formData.treatmentGoals && (
-                <Typography>
-                  <strong>Treatment Goals:</strong> {formData.treatmentGoals}
-                </Typography>
-              )}
-            </Box>
-          </Box>
+        {/* Step 4: Review */}
+        {currentStep.isReview && (
+          <IntakeReviewSection
+            painRegions={painRegions}
+            formData={form}
+            onConsentChange={() => {}} // No consent needed for authenticated users
+            errors={errors}
+            isWidget={false}
+          />
         )}
 
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
@@ -792,7 +409,7 @@ export const IntakeForm: React.FC = () => {
             <AuraButton
               variant="contained"
               onClick={handleSubmit}
-              disabled={!formData.chiefComplaint}
+              disabled={!form.chiefComplaint}
             >
               Submit Assessment
             </AuraButton>

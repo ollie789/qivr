@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  Typography,
 } from "@mui/material";
 import {
   Person as PersonIcon,
@@ -20,12 +21,13 @@ import {
   Description as DocumentIcon,
   Send as ReferralIcon,
   Save as SaveIcon,
+  FitnessCenter as TreatmentIcon,
 } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { format, parseISO } from "date-fns";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -34,6 +36,10 @@ import {
   FormDialog,
   AuraButton,
   SelectField,
+  AuraCard,
+  ProgressBar,
+  AuraStatusBadge,
+  auraTokens,
 } from "@qivr/design-system";
 
 import {
@@ -74,13 +80,119 @@ import {
 import { patientApi, type UpdatePatientDto } from "../../services/patientApi";
 import { medicalRecordsApi } from "../../services/medicalRecordsApi";
 import { documentApi } from "../../services/documentApi";
+import { treatmentPlansApi } from "../../lib/api";
 import { MessageComposer } from "../../components/messaging";
 import type { Patient, MedicalHistory, PatientQuickStats } from "./types";
+
+// Treatment Tab Content Component
+interface TreatmentPlan {
+  id: string;
+  title: string;
+  status: string;
+  durationWeeks: number;
+  completedSessions: number;
+  totalSessions: number;
+  createdAt: string;
+  bodyRegion?: string;
+}
+
+const TreatmentTabContent: React.FC<{ patientId: string | null }> = ({ patientId }) => {
+  const navigate = useNavigate();
+  const { data: plans = [], isLoading } = useQuery({
+    queryKey: ["patient-treatment-plans", patientId],
+    queryFn: () => treatmentPlansApi.list(patientId || undefined),
+    enabled: !!patientId,
+  });
+
+  if (!patientId) {
+    return (
+      <Box sx={{ p: auraTokens.spacing.xl, textAlign: "center" }}>
+        <Typography color="text.secondary">Select a patient to view treatment plans</Typography>
+      </Box>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ p: auraTokens.spacing.xl }}>
+        <Typography color="text.secondary">Loading treatment plans...</Typography>
+      </Box>
+    );
+  }
+
+  if (plans.length === 0) {
+    return (
+      <Box sx={{ p: auraTokens.spacing.xl, textAlign: "center" }}>
+        <TreatmentIcon sx={{ fontSize: 48, color: "text.disabled", mb: 2 }} />
+        <Typography variant="h6" gutterBottom>No Treatment Plans</Typography>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
+          Create a treatment plan to track rehabilitation progress
+        </Typography>
+        <AuraButton
+          variant="contained"
+          onClick={() => navigate(`/treatment-plans?patientId=${patientId}`)}
+        >
+          Create Treatment Plan
+        </AuraButton>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: auraTokens.spacing.lg }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: auraTokens.spacing.lg }}>
+        <Typography variant="h6" fontWeight={600}>Treatment Plans</Typography>
+        <AuraButton
+          size="small"
+          variant="outlined"
+          onClick={() => navigate(`/treatment-plans?patientId=${patientId}`)}
+        >
+          New Plan
+        </AuraButton>
+      </Box>
+      <Grid container spacing={2}>
+        {plans.map((plan: TreatmentPlan) => {
+          const progress = plan.totalSessions > 0
+            ? Math.round((plan.completedSessions / plan.totalSessions) * 100)
+            : 0;
+          return (
+            <Grid size={{ xs: 12, md: 6 }} key={plan.id}>
+              <AuraCard
+                clickable
+                hover
+                variant="flat"
+                onClick={() => navigate(`/treatment-plans/${plan.id}`)}
+                sx={{ p: auraTokens.spacing.md }}
+              >
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                  <Typography variant="subtitle1" fontWeight={600}>{plan.title}</Typography>
+                  <AuraStatusBadge status={plan.status} />
+                </Box>
+                {plan.bodyRegion && (
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
+                    {plan.bodyRegion}
+                  </Typography>
+                )}
+                <ProgressBar
+                  value={progress}
+                  label={`${plan.completedSessions} / ${plan.totalSessions} sessions`}
+                  size="small"
+                  color={plan.status === "active" ? "primary" : "info"}
+                />
+              </AuraCard>
+            </Grid>
+          );
+        })}
+      </Grid>
+    </Box>
+  );
+};
 
 const TAB_NAMES = [
   "demographics",
   "pain",
   "history",
+  "treatment",
   "timeline",
   "documents",
   "referrals",
@@ -563,6 +675,21 @@ const MedicalRecordsPage: React.FC = () => {
               onEdit={() => setEditMode(!editMode)}
               onMessage={() => setMessageDialogOpen(true)}
               onSchedule={handleScheduleAppointment}
+              onNewTreatmentPlan={() => {
+                if (selectedPatientId) {
+                  navigate(`/treatment-plans?patientId=${selectedPatientId}`);
+                }
+              }}
+              onSendProm={() => {
+                if (selectedPatientId) {
+                  navigate(`/prom?action=send&patientId=${selectedPatientId}`);
+                }
+              }}
+              onNewReferral={() => {
+                if (selectedPatientId) {
+                  navigate(`/referrals?action=new&patientId=${selectedPatientId}`);
+                }
+              }}
             />
 
             {/* Tabs */}
@@ -589,6 +716,11 @@ const MedicalRecordsPage: React.FC = () => {
                     icon={<MedicalIcon />}
                     iconPosition="start"
                     label="Medical History"
+                  />
+                  <Tab
+                    icon={<TreatmentIcon />}
+                    iconPosition="start"
+                    label="Treatment"
                   />
                   <Tab
                     icon={<TimelineIcon />}
@@ -664,6 +796,10 @@ const MedicalRecordsPage: React.FC = () => {
               </TabPanel>
 
               <TabPanel value={activeTab} index={3}>
+                <TreatmentTabContent patientId={selectedPatientId} />
+              </TabPanel>
+
+              <TabPanel value={activeTab} index={4}>
                 {isTabLoading ? (
                   <TimelineSkeleton />
                 ) : (
@@ -671,7 +807,7 @@ const MedicalRecordsPage: React.FC = () => {
                 )}
               </TabPanel>
 
-              <TabPanel value={activeTab} index={4}>
+              <TabPanel value={activeTab} index={5}>
                 {isTabLoading ? (
                   <DocumentsSkeleton />
                 ) : (
@@ -684,7 +820,7 @@ const MedicalRecordsPage: React.FC = () => {
                 )}
               </TabPanel>
 
-              <TabPanel value={activeTab} index={5}>
+              <TabPanel value={activeTab} index={6}>
                 {isTabLoading ? (
                   <ReferralsSkeleton />
                 ) : (

@@ -1,0 +1,30 @@
+{
+  "name": "@qivr/eval",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./intake": {
+      "types": "./dist/intake/index.d.ts",
+      "default": "./dist/intake/index.js"
+    },
+    "./recovery": {
+      "types": "./dist/recovery/index.d.ts",
+      "default": "./dist/recovery/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

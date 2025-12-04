@@ -9,11 +9,7 @@ import {
   alpha,
 } from "@mui/material";
 import {
-  Send as SendIcon,
-  LocalHospital as HospitalIcon,
-  Science as ScienceIcon,
   Schedule as ScheduleIcon,
-  CheckCircle as CheckIcon,
   Warning as WarningIcon,
   Add as AddIcon,
   Phone as PhoneIcon,
@@ -28,6 +24,12 @@ import {
   glassTokens,
   auraTokens,
 } from "@qivr/design-system";
+import {
+  getTypeIcon,
+  getStatusIcon,
+  getStatusColor,
+  getPriorityColor,
+} from "../../../utils/referralHelpers";
 
 export interface PatientReferral {
   id: string;
@@ -55,68 +57,6 @@ interface ReferralsTabProps {
   patientId: string | null;
   isLoading?: boolean;
 }
-
-const getTypeIcon = (type: string) => {
-  switch (type) {
-    case "Imaging":
-    case "Laboratory":
-      return <ScienceIcon />;
-    case "Specialist":
-    case "Hospital":
-      return <HospitalIcon />;
-    default:
-      return <SendIcon />;
-  }
-};
-
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "Scheduled":
-      return <ScheduleIcon fontSize="small" />;
-    case "Completed":
-    case "ResultsReceived":
-    case "Closed":
-      return <CheckIcon fontSize="small" />;
-    case "Cancelled":
-    case "Expired":
-      return <WarningIcon fontSize="small" />;
-    default:
-      return null;
-  }
-};
-
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case "Emergency":
-      return "error";
-    case "Urgent":
-      return "warning";
-    case "SemiUrgent":
-      return "info";
-    default:
-      return "default";
-  }
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "Completed":
-    case "ResultsReceived":
-      return "success";
-    case "Scheduled":
-      return "primary";
-    case "Sent":
-    case "Acknowledged":
-      return "info";
-    case "Cancelled":
-    case "Expired":
-      return "error";
-    case "PendingApproval":
-      return "warning";
-    default:
-      return "default";
-  }
-};
 
 const ReferralCard: React.FC<{ referral: PatientReferral }> = ({
   referral,

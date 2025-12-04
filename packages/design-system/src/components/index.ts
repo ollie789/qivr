@@ -82,3 +82,6 @@ export * from './icons';
 
 // Pagination
 export * from './pagination';
+
+// Intake
+export * from './intake';

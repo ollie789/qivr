@@ -16,6 +16,9 @@ import {
   Medication as MedicationIcon,
   Bloodtype as BloodtypeIcon,
   Schedule as ScheduleIcon,
+  FitnessCenter as TreatmentIcon,
+  Assignment as PromIcon,
+  Send as ReferralIcon,
 } from '@mui/icons-material';
 import { format, parseISO, differenceInYears } from 'date-fns';
 import { AuraButton, auraTokens } from '@qivr/design-system';
@@ -28,6 +31,9 @@ interface PatientHeaderProps {
   onEdit?: () => void;
   onMessage?: () => void;
   onSchedule?: () => void;
+  onNewTreatmentPlan?: () => void;
+  onSendProm?: () => void;
+  onNewReferral?: () => void;
 }
 
 export const PatientHeader: React.FC<PatientHeaderProps> = ({
@@ -37,6 +43,9 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
   onEdit,
   onMessage,
   onSchedule,
+  onNewTreatmentPlan,
+  onSendProm,
+  onNewReferral,
 }) => {
   const getInitials = () => {
     if (!patient) return '??';
@@ -58,12 +67,12 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
     return (
       <Box
         sx={{
-          p: 3,
+          p: auraTokens.spacing.lg,
           bgcolor: 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
           display: 'flex',
-          gap: 3,
+          gap: auraTokens.spacing.lg,
           alignItems: 'center',
         }}
       >
@@ -72,7 +81,7 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
           <Skeleton variant="text" width={200} height={32} />
           <Skeleton variant="text" width={300} height={20} />
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: auraTokens.spacing.sm }}>
           <Skeleton variant="rounded" width={100} height={36} />
           <Skeleton variant="rounded" width={100} height={36} />
         </Box>
@@ -84,7 +93,7 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
     return (
       <Box
         sx={{
-          p: 4,
+          p: auraTokens.spacing.xl,
           bgcolor: 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
@@ -101,7 +110,7 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
   return (
     <Box
       sx={{
-        p: 3,
+        p: auraTokens.spacing.lg,
         bgcolor: 'background.paper',
         borderBottom: '1px solid',
         borderColor: 'divider',
@@ -110,7 +119,7 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
         zIndex: 10,
       }}
     >
-      <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+      <Box sx={{ display: 'flex', gap: auraTokens.spacing.lg, alignItems: 'flex-start' }}>
         {/* Avatar */}
         <Avatar
           sx={{
@@ -161,7 +170,7 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
         </Box>
 
         {/* Quick Stats */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: auraTokens.spacing.md }}>
           {[
             { icon: <BloodtypeIcon />, label: 'Blood Type', value: stats?.bloodType || 'N/A' },
             { icon: <MedicationIcon />, label: 'Medications', value: stats?.activeMedicationsCount ?? 0 },
@@ -170,10 +179,10 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
             <Box
               key={i}
               sx={{
-                px: 2,
-                py: 1.5,
+                px: auraTokens.spacing.md,
+                py: auraTokens.spacing.sm,
                 bgcolor: 'action.hover',
-                borderRadius: 2,
+                borderRadius: auraTokens.borderRadius.md,
                 minWidth: auraTokens.formControl.sm,
                 textAlign: 'center',
               }}
@@ -191,24 +200,42 @@ export const PatientHeader: React.FC<PatientHeaderProps> = ({
           ))}
         </Box>
 
-        {/* Actions */}
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+        {/* Quick Actions */}
+        <Box sx={{ display: 'flex', gap: auraTokens.spacing.sm, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <AuraButton
-            variant="outlined"
-            size="small"
-            startIcon={<MessageIcon />}
-            onClick={onMessage}
-          >
-            Message
-          </AuraButton>
-          <AuraButton
-            variant="outlined"
+            variant="contained"
             size="small"
             startIcon={<CalendarIcon />}
             onClick={onSchedule}
           >
-            Schedule
+            Book
           </AuraButton>
+          <AuraButton
+            variant="outlined"
+            size="small"
+            startIcon={<TreatmentIcon />}
+            onClick={onNewTreatmentPlan}
+          >
+            Treatment Plan
+          </AuraButton>
+          <AuraButton
+            variant="outlined"
+            size="small"
+            startIcon={<PromIcon />}
+            onClick={onSendProm}
+          >
+            Send PROM
+          </AuraButton>
+          <Tooltip title="Message Patient">
+            <IconButton size="small" onClick={onMessage}>
+              <MessageIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="New Referral">
+            <IconButton size="small" onClick={onNewReferral}>
+              <ReferralIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Edit patient">
             <IconButton size="small" onClick={onEdit}>
               <EditIcon fontSize="small" />

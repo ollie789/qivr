@@ -143,18 +143,35 @@ public static class AuthenticationExtensions
                             
                             if (!string.IsNullOrEmpty(email))
                             {
-                                var dbContext = context.HttpContext.RequestServices.GetService<Qivr.Infrastructure.Data.AdminReadOnlyDbContext>();
-                                if (dbContext != null)
+                                try
                                 {
-                                    var partner = await dbContext.ResearchPartners
-                                        .FirstOrDefaultAsync(p => p.ContactEmail == email && p.IsActive);
-                                    
-                                    if (partner != null)
+                                    var dbContext = context.HttpContext.RequestServices.GetService<Qivr.Infrastructure.Data.AdminReadOnlyDbContext>();
+                                    if (dbContext != null)
                                     {
-                                        claimsIdentity.AddClaim(new System.Security.Claims.Claim("partner_id", partner.Id.ToString()));
-                                        claimsIdentity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Partner"));
-                                        logger.LogInformation("Partner {PartnerId} authenticated: {Email}", partner.Id, email);
+                                        var partner = await dbContext.ResearchPartners
+                                            .FirstOrDefaultAsync(p => p.ContactEmail == email && p.IsActive);
+                                        
+                                        if (partner != null)
+                                        {
+                                            claimsIdentity.AddClaim(new System.Security.Claims.Claim("partner_id", partner.Id.ToString()));
+                                            claimsIdentity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Partner"));
+                                            logger.LogInformation("Partner {PartnerId} authenticated: {Email}", partner.Id, email);
+                                        }
+                                        else
+                                        {
+                                            logger.LogWarning("Partner not found or inactive for email: {Email}", email);
+                                        }
                                     }
+                                    else
+                                    {
+                                        logger.LogWarning("AdminReadOnlyDbContext not available while validating partner token");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Never fail the entire request on DB issues during token validation
+                                    // This will result in missing partner_id claim and subsequently a 403 (policy) instead of 500
+                                    logger.LogError(ex, "Error looking up partner during token validation for email: {Email}", email);
                                 }
                             }
                             return; // Skip regular user lookup for partners

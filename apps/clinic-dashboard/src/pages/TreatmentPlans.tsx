@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
@@ -93,6 +94,7 @@ interface TreatmentTemplate {
 }
 
 export default function TreatmentPlans() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [bodyRegionFilter, setBodyRegionFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
@@ -101,10 +103,22 @@ export default function TreatmentPlans() {
   const [selectedTemplate, setSelectedTemplate] = useState<TreatmentTemplate | null>(null);
   const [useTemplateDialogOpen, setUseTemplateDialogOpen] = useState(false);
   const [selectedPatientForTemplate, setSelectedPatientForTemplate] = useState<Patient | null>(null);
+  const [initialPatientId, setInitialPatientId] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
+
+  // Handle patientId query param - auto-open AI generate dialog
+  useEffect(() => {
+    const patientId = searchParams.get("patientId");
+    if (patientId) {
+      setInitialPatientId(patientId);
+      setShowAIGenerateDialog(true);
+      // Clear the param from URL
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Fetch templates
   const { data: templates = [], isLoading } = useQuery({
@@ -120,9 +134,14 @@ export default function TreatmentPlans() {
   const { data: patientsData, isLoading: patientsLoading } = useQuery({
     queryKey: ["patients-list"],
     queryFn: () => patientApi.getPatients({ limit: 100 }),
-    enabled: useTemplateDialogOpen,
+    enabled: useTemplateDialogOpen || !!initialPatientId,
   });
   const patients: Patient[] = patientsData?.data || [];
+
+  // Find the initial patient from the list
+  const initialPatient = initialPatientId
+    ? patients.find((p) => p.id === initialPatientId) || null
+    : null;
 
   // Create plan from template mutation
   const createFromTemplateMutation = useMutation({
@@ -531,10 +550,15 @@ export default function TreatmentPlans() {
       {/* AI Generate for Patient Dialog */}
       <TreatmentPlanBuilder
         open={showAIGenerateDialog}
-        onClose={() => setShowAIGenerateDialog(false)}
+        onClose={() => {
+          setShowAIGenerateDialog(false);
+          setInitialPatientId(null);
+        }}
+        patient={initialPatient || undefined}
         onSuccess={(planId) => {
           queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
           setShowAIGenerateDialog(false);
+          setInitialPatientId(null);
           navigate(`/treatment-plans/${planId}`);
         }}
       />

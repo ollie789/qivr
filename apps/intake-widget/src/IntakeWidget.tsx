@@ -12,7 +12,6 @@ import {
   FormControlLabel,
   Checkbox,
   FormGroup,
-  Slider,
   Paper,
   Alert,
   CircularProgress,
@@ -20,31 +19,38 @@ import {
   MenuItem,
   InputLabel,
 } from "@mui/material";
-import { PainMap3D } from "@qivr/design-system";
+import {
+  PainMap3D,
+  type PainRegion,
+  PainIntensitySlider,
+  QuestionSection,
+  IntakeReviewSection,
+} from "@qivr/design-system";
+import {
+  // Types
+  type IntakeFormData,
+  type SelectOption,
+  // Questions
+  personalInfoSection,
+  painDurationOptions,
+  painQualityOptions,
+  medicalHistorySection,
+  goalsSection,
+  // Step config
+  WIDGET_INTAKE_STEPS,
+  getStepTitles,
+  // Utilities
+  getInitialFormState,
+  createUpdateHandler,
+  createToggleHandler,
+  validatePainMappingStep,
+  validateReviewStep,
+} from "@qivr/eval";
 
 interface Props {
   clinicId: string;
   apiUrl: string;
 }
-
-const steps = [
-  "Your Details",
-  "Pain Location",
-  "Pain Details",
-  "Medical History",
-  "Review",
-];
-
-const painQualities = [
-  "Aching",
-  "Sharp",
-  "Burning",
-  "Throbbing",
-  "Stabbing",
-  "Tingling",
-  "Numbness",
-  "Stiffness",
-];
 
 export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
   const [step, setStep] = useState(0);
@@ -53,65 +59,40 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    dob: "",
-    gender: "",
-    address: "",
-    city: "",
-    state: "",
-    postcode: "",
-    painRegions: [] as Array<{
-      meshName: string;
-      quality: string;
-      intensity: number;
-    }>,
-    chiefComplaint: "",
-    painLevel: 5,
-    duration: "",
-    painQualities: [] as string[],
-    conditions: "",
-    medications: "",
-    allergies: "",
-    previousTreatments: "",
+  // Separate state for pain map regions (compatible with PainMap3D component)
+  const [painRegions, setPainRegions] = useState<PainRegion[]>([]);
+
+  const [form, setForm] = useState<IntakeFormData>({
+    ...getInitialFormState(true), // true = include personal info fields
     consentTreatment: false,
     consentPrivacy: false,
   });
 
-  const update = (field: string, value: any) => {
-    setForm((f) => ({ ...f, [field]: value }));
-    setErrors((e) => ({ ...e, [field]: "" }));
-  };
+  const steps = getStepTitles(WIDGET_INTAKE_STEPS);
+
+  // Use shared utilities for form handling
+  const update = createUpdateHandler(setForm, setErrors);
+  const toggleCheckbox = createToggleHandler(form, update);
 
   const validateStep = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    let newErrors: Record<string, string> = {};
+    const currentStep = WIDGET_INTAKE_STEPS[step];
 
-    if (step === 0) {
-      if (!form.firstName.trim()) newErrors.firstName = "Required";
-      if (!form.lastName.trim()) newErrors.lastName = "Required";
-      if (!form.email.trim()) newErrors.email = "Required";
+    // Personal info validation (widget-specific)
+    if (currentStep.id === "personal-info") {
+      if (!form.fullName?.trim()) newErrors.fullName = "Required";
+      if (!form.email?.trim()) newErrors.email = "Required";
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
         newErrors.email = "Invalid email";
-      if (!form.phone.trim()) newErrors.phone = "Required";
     }
 
-    if (step === 1) {
-      if (!form.painRegions.length)
-        newErrors.painMap = "Please mark at least one pain area";
+    // Use shared validation utilities
+    if (currentStep.hasPainMap) {
+      newErrors = { ...newErrors, ...validatePainMappingStep(painRegions.length, form) };
     }
 
-    if (step === 2) {
-      if (!form.chiefComplaint.trim())
-        newErrors.chiefComplaint = "Please describe your main concern";
-      if (!form.duration.trim()) newErrors.duration = "Please specify duration";
-    }
-
-    if (step === 4) {
-      if (!form.consentTreatment) newErrors.consentTreatment = "Required";
-      if (!form.consentPrivacy) newErrors.consentPrivacy = "Required";
+    if (currentStep.isReview) {
+      newErrors = { ...newErrors, ...validateReviewStep(form, true) };
     }
 
     setErrors(newErrors);
@@ -135,45 +116,48 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
         },
         body: JSON.stringify({
           personalInfo: {
-            firstName: form.firstName,
-            lastName: form.lastName,
-            dateOfBirth: form.dob,
-            gender: form.gender,
+            fullName: form.fullName,
+            ageRange: form.ageRange,
           },
           contactInfo: {
             email: form.email,
             phone: form.phone,
-            address: form.address,
-            city: form.city,
-            state: form.state,
-            postcode: form.postcode,
           },
           chiefComplaint: form.chiefComplaint,
-          symptoms: form.painQualities,
-          painLevel: form.painLevel,
-          duration: form.duration,
+          painIntensity: form.painIntensity,
+          painDuration: form.painDuration,
+          painQualities: form.painQualities,
           painMapData: {
-            regions: form.painRegions,
-            cameraView: "front",
+            regions: painRegions,
             timestamp: new Date().toISOString(),
           },
           medicalHistory: {
-            conditions: form.conditions,
+            painStart: form.painStart,
+            prevOrtho: form.prevOrtho,
+            currentTreatments: form.currentTreatments,
             medications: form.medications,
-            allergies: form.allergies,
-            previousTreatments: form.previousTreatments,
+            mobilityAids: form.mobilityAids,
+            dailyImpact: form.dailyImpact,
+            additionalHistory: form.additionalHistory,
+            redFlags: form.redFlags,
+          },
+          treatmentGoals: {
+            goals: form.goals,
+            timeline: form.timeline,
+            milestones: form.milestones,
+            concerns: form.concerns,
           },
           consent: {
             consentToTreatment: form.consentTreatment,
             consentToPrivacy: form.consentPrivacy,
-            consentToMarketing: false,
+            consentToMarketing: form.consentMarketing || false,
           },
         }),
       });
 
       if (!res.ok) throw new Error("Submission failed");
       setSubmitted(true);
-    } catch (e) {
+    } catch {
       setError("Failed to submit. Please try again.");
     } finally {
       setSubmitting(false);
@@ -192,6 +176,8 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
       </Paper>
     );
   }
+
+  const currentStep = WIDGET_INTAKE_STEPS[step];
 
   return (
     <Paper sx={{ p: 3, maxWidth: 700, mx: "auto" }}>
@@ -213,33 +199,25 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
         </Alert>
       )}
 
-      {/* Step 0: Personal Details */}
-      {step === 0 && (
+      {/* Step 1: Personal Info */}
+      {currentStep.id === "personal-info" && (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              label="First Name"
-              value={form.firstName}
-              onChange={(e) => update("firstName", e.target.value)}
-              error={!!errors.firstName}
-              helperText={errors.firstName}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Last Name"
-              value={form.lastName}
-              onChange={(e) => update("lastName", e.target.value)}
-              error={!!errors.lastName}
-              helperText={errors.lastName}
-              fullWidth
-              required
-            />
-          </Box>
+          <Typography variant="h6" gutterBottom>
+            {currentStep.title}
+          </Typography>
+          <TextField
+            label="Full Name"
+            value={form.fullName || ""}
+            onChange={(e) => update("fullName", e.target.value)}
+            error={!!errors.fullName}
+            helperText={errors.fullName}
+            fullWidth
+            required
+          />
           <TextField
             label="Email"
             type="email"
-            value={form.email}
+            value={form.email || ""}
             onChange={(e) => update("email", e.target.value)}
             error={!!errors.email}
             helperText={errors.email}
@@ -248,68 +226,33 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
           />
           <TextField
             label="Phone"
-            value={form.phone}
+            value={form.phone || ""}
             onChange={(e) => update("phone", e.target.value)}
-            error={!!errors.phone}
-            helperText={errors.phone}
-            fullWidth
-            required
-          />
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              label="Date of Birth"
-              type="date"
-              value={form.dob}
-              onChange={(e) => update("dob", e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-            />
-            <FormControl fullWidth>
-              <InputLabel>Gender</InputLabel>
-              <Select
-                value={form.gender}
-                label="Gender"
-                onChange={(e) => update("gender", e.target.value)}
-              >
-                <MenuItem value="male">Male</MenuItem>
-                <MenuItem value="female">Female</MenuItem>
-                <MenuItem value="other">Other</MenuItem>
-                <MenuItem value="prefer-not">Prefer not to say</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          <TextField
-            label="Address"
-            value={form.address}
-            onChange={(e) => update("address", e.target.value)}
             fullWidth
           />
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              label="City"
-              value={form.city}
-              onChange={(e) => update("city", e.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="State"
-              value={form.state}
-              onChange={(e) => update("state", e.target.value)}
-              sx={{ width: 120 }}
-            />
-            <TextField
-              label="Postcode"
-              value={form.postcode}
-              onChange={(e) => update("postcode", e.target.value)}
-              sx={{ width: 120 }}
-            />
-          </Box>
+          <FormControl fullWidth>
+            <InputLabel>Age Range</InputLabel>
+            <Select
+              value={form.ageRange || ""}
+              label="Age Range"
+              onChange={(e) => update("ageRange", e.target.value)}
+            >
+              {(personalInfoSection.questions.find(q => q.name === "ageRange")?.options as SelectOption[])?.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
       )}
 
-      {/* Step 1: Pain Location */}
-      {step === 1 && (
+      {/* Step 2: Pain Mapping */}
+      {currentStep.hasPainMap && (
         <Box>
+          <Typography variant="h6" gutterBottom>
+            {currentStep.title}
+          </Typography>
           <Typography variant="body2" color="text.secondary" mb={2}>
             Click on the body model to mark where you feel pain
           </Typography>
@@ -320,70 +263,63 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
           )}
           <Box sx={{ height: 400 }}>
             <PainMap3D
-              value={form.painRegions}
-              onChange={(regions) => update("painRegions", regions)}
+              value={painRegions}
+              onChange={(regions) => setPainRegions(regions)}
             />
           </Box>
-        </Box>
-      )}
 
-      {/* Step 2: Pain Details */}
-      {step === 2 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {/* Pain Duration */}
+          <FormControl fullWidth sx={{ mt: 3 }} error={!!errors.painDuration}>
+            <InputLabel>How long have you had this pain?</InputLabel>
+            <Select
+              value={form.painDuration || ""}
+              label="How long have you had this pain?"
+              onChange={(e) => update("painDuration", e.target.value)}
+            >
+              {painDurationOptions.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+            {errors.painDuration && (
+              <Typography color="error" variant="caption">
+                {errors.painDuration}
+              </Typography>
+            )}
+          </FormControl>
+
+          {/* Pain Intensity */}
+          <Box sx={{ mt: 3 }}>
+            <PainIntensitySlider
+              value={form.painIntensity || 5}
+              onChange={(v) => update("painIntensity", v)}
+            />
+          </Box>
+
+          {/* Chief Complaint */}
           <TextField
             label="What is your main concern?"
-            value={form.chiefComplaint}
+            value={form.chiefComplaint || ""}
             onChange={(e) => update("chiefComplaint", e.target.value)}
-            error={!!errors.chiefComplaint}
-            helperText={errors.chiefComplaint}
             multiline
-            rows={3}
+            rows={2}
             fullWidth
-            required
+            sx={{ mt: 3 }}
           />
-          <Box>
-            <Typography gutterBottom>
-              Pain Level: {form.painLevel}/10
-            </Typography>
-            <Slider
-              value={form.painLevel}
-              onChange={(_, v) => update("painLevel", v)}
-              min={0}
-              max={10}
-              marks
-              valueLabelDisplay="auto"
-            />
-          </Box>
-          <TextField
-            label="How long have you had this pain?"
-            value={form.duration}
-            onChange={(e) => update("duration", e.target.value)}
-            error={!!errors.duration}
-            helperText={errors.duration}
-            placeholder="e.g., 2 weeks, 3 months"
-            fullWidth
-            required
-          />
-          <FormControl component="fieldset">
-            <FormLabel>
-              What does the pain feel like? (select all that apply)
-            </FormLabel>
+
+          {/* Pain Qualities */}
+          <FormControl component="fieldset" sx={{ mt: 3 }}>
+            <FormLabel>What does your pain feel like? (select all that apply)</FormLabel>
             <FormGroup row>
-              {painQualities.map((q) => (
+              {painQualityOptions.map((q) => (
                 <FormControlLabel
-                  key={q}
-                  label={q}
+                  key={q.value}
+                  label={q.label}
                   control={
                     <Checkbox
-                      checked={form.painQualities.includes(q)}
-                      onChange={(e) =>
-                        update(
-                          "painQualities",
-                          e.target.checked
-                            ? [...form.painQualities, q]
-                            : form.painQualities.filter((x) => x !== q),
-                        )
-                      }
+                      checked={form.painQualities?.includes(q.value) || false}
+                      onChange={() => toggleCheckbox("painQualities", q.value)}
                     />
                   }
                 />
@@ -394,107 +330,40 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
       )}
 
       {/* Step 3: Medical History */}
-      {step === 3 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <TextField
-            label="Medical Conditions"
-            value={form.conditions}
-            onChange={(e) => update("conditions", e.target.value)}
-            placeholder="List any medical conditions"
-            multiline
-            rows={2}
-            fullWidth
-          />
-          <TextField
-            label="Current Medications"
-            value={form.medications}
-            onChange={(e) => update("medications", e.target.value)}
-            placeholder="List any medications you take"
-            multiline
-            rows={2}
-            fullWidth
-          />
-          <TextField
-            label="Allergies"
-            value={form.allergies}
-            onChange={(e) => update("allergies", e.target.value)}
-            placeholder="List any allergies"
-            fullWidth
-          />
-          <TextField
-            label="Previous Treatments"
-            value={form.previousTreatments}
-            onChange={(e) => update("previousTreatments", e.target.value)}
-            placeholder="Any previous treatments for this condition?"
-            multiline
-            rows={2}
-            fullWidth
-          />
-        </Box>
+      {currentStep.id === "medical-history" && (
+        <QuestionSection
+          title={currentStep.title}
+          description={medicalHistorySection.description}
+          questions={medicalHistorySection.questions}
+          formValues={form as Record<string, unknown>}
+          onFieldChange={(field, value) => update(field as keyof IntakeFormData, value)}
+          onCheckboxToggle={(field, value) => toggleCheckbox(field as keyof IntakeFormData, value)}
+          errors={errors}
+        />
       )}
 
-      {/* Step 4: Review & Consent */}
-      {step === 4 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            Review Your Information
-          </Typography>
-          <Box sx={{ bgcolor: "grey.50", p: 2, borderRadius: 1, mb: 3 }}>
-            <Typography>
-              <strong>Name:</strong> {form.firstName} {form.lastName}
-            </Typography>
-            <Typography>
-              <strong>Email:</strong> {form.email}
-            </Typography>
-            <Typography>
-              <strong>Phone:</strong> {form.phone}
-            </Typography>
-            <Typography>
-              <strong>Main Concern:</strong> {form.chiefComplaint}
-            </Typography>
-            <Typography>
-              <strong>Pain Level:</strong> {form.painLevel}/10
-            </Typography>
-            <Typography>
-              <strong>Duration:</strong> {form.duration}
-            </Typography>
-            <Typography>
-              <strong>Pain Areas:</strong> {form.painRegions.length} marked
-            </Typography>
-          </Box>
+      {/* Step 4: Goals */}
+      {currentStep.id === "goals" && (
+        <QuestionSection
+          title={currentStep.title}
+          description={goalsSection.description}
+          questions={goalsSection.questions}
+          formValues={form as Record<string, unknown>}
+          onFieldChange={(field, value) => update(field as keyof IntakeFormData, value)}
+          onCheckboxToggle={(field, value) => toggleCheckbox(field as keyof IntakeFormData, value)}
+          errors={errors}
+        />
+      )}
 
-          <FormGroup>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={form.consentTreatment}
-                  onChange={(e) => update("consentTreatment", e.target.checked)}
-                />
-              }
-              label="I consent to evaluation and treatment *"
-            />
-            {errors.consentTreatment && (
-              <Typography color="error" variant="caption">
-                {errors.consentTreatment}
-              </Typography>
-            )}
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={form.consentPrivacy}
-                  onChange={(e) => update("consentPrivacy", e.target.checked)}
-                />
-              }
-              label="I have read and agree to the privacy policy *"
-            />
-            {errors.consentPrivacy && (
-              <Typography color="error" variant="caption">
-                {errors.consentPrivacy}
-              </Typography>
-            )}
-          </FormGroup>
-        </Box>
+      {/* Step 5: Review & Consent */}
+      {currentStep.isReview && (
+        <IntakeReviewSection
+          painRegions={painRegions}
+          formData={form}
+          onConsentChange={(field, checked) => update(field as keyof IntakeFormData, checked)}
+          errors={errors}
+          isWidget={true}
+        />
       )}
 
       {/* Navigation */}
