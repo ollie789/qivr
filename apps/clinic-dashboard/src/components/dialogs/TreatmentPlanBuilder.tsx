@@ -326,6 +326,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   evaluationId,
   onSuccess,
   bulkPatients = [],
+  isTemplate = false,
+  sourceTemplateId,
 }) => {
   const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
@@ -485,15 +487,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     exerciseFilterRegion,
   ]);
 
-  // Steps - Simplified: no separate exercise step, exercises managed in detail view
+  // Steps - Different flows for different modes:
+  // - Template mode: no patient selection needed
+  // - Patient provided: skip patient selection, go straight to plan details
+  // - No patient: need to select patient first
   const steps = useMemo(() => {
     if (isBulkMode) {
       return ["Review Patients", "Settings", "Processing", "Complete"];
     }
+    if (isTemplate) {
+      return ["Template Details", "Review & Create"];
+    }
+    // If patient is provided, skip patient selection
     return initialPatient
       ? ["Plan Details", "Review & Create"]
       : ["Patient & Condition", "Review & Create"];
-  }, [initialPatient, isBulkMode]);
+  }, [initialPatient, isBulkMode, isTemplate]);
 
   // Apply body region template
   const applyTemplate = useCallback((region: string) => {
@@ -516,7 +525,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
   // Auto-populate form fields from evaluation data and session notes
   useEffect(() => {
-    if (!evaluationData && (!recentAppointmentsData || recentAppointmentsData.length === 0)) return;
+    if (
+      !evaluationData &&
+      (!recentAppointmentsData || recentAppointmentsData.length === 0)
+    )
+      return;
 
     const eval_ = evaluationData?.evaluation;
     const painMap = evaluationData?.painMap;
@@ -530,16 +543,16 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         "lower-back": "Lower Back",
         "lower back": "Lower Back",
         "back pain": "Lower Back",
-        "neck": "Neck",
+        neck: "Neck",
         "neck pain": "Neck",
-        "shoulder": "Shoulder",
+        shoulder: "Shoulder",
         "shoulder pain": "Shoulder",
-        "knee": "Knee",
+        knee: "Knee",
         "knee pain": "Knee",
-        "hip": "Hip",
+        hip: "Hip",
         "hip pain": "Hip",
-        "ankle": "Ankle",
-        "wrist": "Wrist",
+        ankle: "Ankle",
+        wrist: "Wrist",
       };
       const conditionLower = eval_.conditionType.toLowerCase();
       detectedBodyRegion = conditionToRegion[conditionLower] || "";
@@ -556,13 +569,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     }
 
     // Also check pain map for body region hints
-    if (!detectedBodyRegion && painMap?.bodyParts && painMap.bodyParts.length > 0) {
-      const primaryPainArea = [...painMap.bodyParts].sort((a, b) => b.intensity - a.intensity)[0];
+    if (
+      !detectedBodyRegion &&
+      painMap?.bodyParts &&
+      painMap.bodyParts.length > 0
+    ) {
+      const primaryPainArea = [...painMap.bodyParts].sort(
+        (a, b) => b.intensity - a.intensity,
+      )[0];
       if (primaryPainArea?.region) {
         const regionLower = primaryPainArea.region.toLowerCase();
         if (regionLower.includes("back") || regionLower.includes("lumbar")) {
           detectedBodyRegion = "Lower Back";
-        } else if (regionLower.includes("neck") || regionLower.includes("cervical")) {
+        } else if (
+          regionLower.includes("neck") ||
+          regionLower.includes("cervical")
+        ) {
           detectedBodyRegion = "Neck";
         } else if (regionLower.includes("shoulder")) {
           detectedBodyRegion = "Shoulder";
@@ -575,13 +597,22 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     }
 
     // Also check recent appointment reason for visit for body region hints
-    if (!detectedBodyRegion && recentAppointmentsData && recentAppointmentsData.length > 0) {
+    if (
+      !detectedBodyRegion &&
+      recentAppointmentsData &&
+      recentAppointmentsData.length > 0
+    ) {
       const recentAppointment = recentAppointmentsData[0];
       if (recentAppointment) {
-        const reasonLower = (recentAppointment.reasonForVisit || "").toLowerCase();
+        const reasonLower = (
+          recentAppointment.reasonForVisit || ""
+        ).toLowerCase();
         if (reasonLower.includes("back") || reasonLower.includes("lumbar")) {
           detectedBodyRegion = "Lower Back";
-        } else if (reasonLower.includes("neck") || reasonLower.includes("cervical")) {
+        } else if (
+          reasonLower.includes("neck") ||
+          reasonLower.includes("cervical")
+        ) {
           detectedBodyRegion = "Neck";
         } else if (reasonLower.includes("shoulder")) {
           detectedBodyRegion = "Shoulder";
@@ -609,27 +640,43 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
     // Add session notes from recent appointments to diagnosis
     if (recentAppointmentsData && recentAppointmentsData.length > 0) {
-      const appointmentsWithNotes = recentAppointmentsData.filter(a => a.notes);
+      const appointmentsWithNotes = recentAppointmentsData.filter(
+        (a) => a.notes,
+      );
       if (appointmentsWithNotes.length > 0) {
         const recentNotes = appointmentsWithNotes
           .slice(0, 2)
-          .map(a => `Session notes (${new Date(a.scheduledStart).toLocaleDateString()}): ${a.notes}`)
+          .map(
+            (a) =>
+              `Session notes (${new Date(a.scheduledStart).toLocaleDateString()}): ${a.notes}`,
+          )
           .join(". ");
         if (recentNotes) {
           diagnosisParts.push(recentNotes);
         }
       }
       // Add reason for visit if available
-      const latestWithReason = recentAppointmentsData.find(a => a.reasonForVisit);
-      if (latestWithReason?.reasonForVisit && !diagnosisParts.some(p => p.includes(latestWithReason.reasonForVisit!))) {
-        diagnosisParts.unshift(`Reason for visit: ${latestWithReason.reasonForVisit}`);
+      const latestWithReason = recentAppointmentsData.find(
+        (a) => a.reasonForVisit,
+      );
+      if (
+        latestWithReason?.reasonForVisit &&
+        !diagnosisParts.some((p) =>
+          p.includes(latestWithReason.reasonForVisit!),
+        )
+      ) {
+        diagnosisParts.unshift(
+          `Reason for visit: ${latestWithReason.reasonForVisit}`,
+        );
       }
     }
 
     // Get contraindications from previous treatments and medical conditions
     const contraindications: string[] = [];
     if (eval_?.previousTreatments && eval_.previousTreatments.length > 0) {
-      contraindications.push(...eval_.previousTreatments.map(t => `Previous: ${t}`));
+      contraindications.push(
+        ...eval_.previousTreatments.map((t) => `Previous: ${t}`),
+      );
     }
     if (eval_?.medicalConditions) {
       contraindications.push(eval_.medicalConditions);
@@ -649,8 +696,15 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       ...prev,
       bodyRegion: prev.bodyRegion || detectedBodyRegion,
       diagnosis: prev.diagnosis || diagnosisParts.join(". "),
-      title: prev.title || (detectedBodyRegion ? `${detectedBodyRegion} Rehabilitation Program` : prev.title),
-      contraindications: prev.contraindications.length > 0 ? prev.contraindications : contraindications,
+      title:
+        prev.title ||
+        (detectedBodyRegion
+          ? `${detectedBodyRegion} Rehabilitation Program`
+          : prev.title),
+      contraindications:
+        prev.contraindications.length > 0
+          ? prev.contraindications
+          : contraindications,
       focusAreas: prev.focusAreas.length > 0 ? prev.focusAreas : focusAreas,
     }));
 
@@ -661,17 +715,24 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
     // Show what was auto-filled
     const autoFilledItems: string[] = [];
-    if (detectedBodyRegion) autoFilledItems.push(`Body region: ${detectedBodyRegion}`);
+    if (detectedBodyRegion)
+      autoFilledItems.push(`Body region: ${detectedBodyRegion}`);
     if (diagnosisParts.length > 0) autoFilledItems.push("Diagnosis info");
-    if (recentAppointmentsData?.some(a => a.notes)) autoFilledItems.push("Session notes");
+    if (recentAppointmentsData?.some((a) => a.notes))
+      autoFilledItems.push("Session notes");
 
     if (autoFilledItems.length > 0) {
-      enqueueSnackbar(
-        `Auto-filled: ${autoFilledItems.join(" • ")}`,
-        { variant: "info" }
-      );
+      enqueueSnackbar(`Auto-filled: ${autoFilledItems.join(" • ")}`, {
+        variant: "info",
+      });
     }
-  }, [evaluationData, recentAppointmentsData, applyTemplate, enqueueSnackbar, phases.length]);
+  }, [
+    evaluationData,
+    recentAppointmentsData,
+    applyTemplate,
+    enqueueSnackbar,
+    phases.length,
+  ]);
 
   // Mutations - Use preview endpoint for AI Suggest (doesn't save to DB)
   const previewMutation = useMutation({
@@ -908,6 +969,23 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   };
 
   const handleCreatePlan = async () => {
+    // Template mode - no patient required
+    if (isTemplate) {
+      createMutation.mutate({
+        isTemplate: true,
+        title: basicInfo.title || "New Template",
+        diagnosis: basicInfo.diagnosis,
+        bodyRegion: basicInfo.bodyRegion,
+        conditionType: basicInfo.diagnosis,
+        templateSource: "clinic_created",
+        durationWeeks: basicInfo.durationWeeks,
+        phases: phases.map(({ expanded: _, ...p }) => p),
+        startDate: new Date().toISOString(), // Required by API but not used for templates
+      });
+      return;
+    }
+
+    // Patient plan mode
     if (!selectedPatient) return;
 
     if (selectedDevice) {
@@ -936,6 +1014,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       phases: phases.map(({ expanded: _, ...p }) => p),
       sourceEvaluationId: selectedEvaluationId,
       linkedDeviceId: selectedDevice?.id,
+      sourceTemplateId: sourceTemplateId, // If created from template
     });
   };
 
@@ -1060,6 +1139,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         return !!selectedPatient && !!basicInfo.bodyRegion;
       case "Plan Details":
         return !!basicInfo.bodyRegion && !!basicInfo.title;
+      case "Template Details":
+        return !!basicInfo.bodyRegion && !!basicInfo.title;
       case "Review & Create":
         return phases.length > 0; // Don't require exercises - can add them after creation
       case "Review":
@@ -1090,7 +1171,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     // Apply template when moving from first step if phases are empty
     if (
       (currentStepName === "Patient & Condition" ||
-        currentStepName === "Plan Details") &&
+        currentStepName === "Plan Details" ||
+        currentStepName === "Template Details") &&
       phases.length === 0 &&
       basicInfo.bodyRegion
     ) {
@@ -1473,6 +1555,35 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       case "Plan Details":
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* Show patient info when pre-selected */}
+            {initialPatient && (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  bgcolor: "primary.50",
+                  borderRadius: 2,
+                  borderLeft: "4px solid",
+                  borderColor: "primary.main",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <Avatar sx={{ bgcolor: "primary.main" }}>
+                  {initialPatient.firstName.charAt(0)}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {initialPatient.firstName} {initialPatient.lastName}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Creating personalized treatment plan
+                  </Typography>
+                </Box>
+              </Paper>
+            )}
+
             <FormSection title="Plan Details">
               <TextField
                 label="Plan Title"
@@ -1571,6 +1682,94 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 onChange={setSelectedDevice}
                 showRecent={true}
               />
+            </FormSection>
+          </Box>
+        );
+
+      case "Template Details":
+        return (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Callout variant="info">
+              Creating a reusable template. Templates can be applied to any
+              patient later.
+            </Callout>
+
+            <FormSection title="Template Information">
+              <TextField
+                label="Template Name"
+                value={basicInfo.title}
+                onChange={(e) =>
+                  setBasicInfo({ ...basicInfo, title: e.target.value })
+                }
+                required
+                fullWidth
+                placeholder="e.g., ACL Reconstruction Protocol"
+              />
+
+              <TextField
+                label="Condition / Use Case"
+                value={basicInfo.diagnosis}
+                onChange={(e) =>
+                  setBasicInfo({ ...basicInfo, diagnosis: e.target.value })
+                }
+                fullWidth
+                multiline
+                rows={2}
+                sx={{ mt: 2 }}
+                placeholder="e.g., Post-surgical ACL reconstruction rehabilitation"
+              />
+
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                Body Region
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {BODY_REGIONS.map((region) => (
+                  <Chip
+                    key={region}
+                    label={region}
+                    onClick={() =>
+                      setBasicInfo((prev) => ({ ...prev, bodyRegion: region }))
+                    }
+                    color={
+                      basicInfo.bodyRegion === region ? "primary" : "default"
+                    }
+                    variant={
+                      basicInfo.bodyRegion === region ? "filled" : "outlined"
+                    }
+                    sx={{ cursor: "pointer" }}
+                  />
+                ))}
+              </Box>
+
+              <FormRow>
+                <TextField
+                  label="Default Duration (weeks)"
+                  type="number"
+                  value={basicInfo.durationWeeks}
+                  onChange={(e) =>
+                    setBasicInfo({
+                      ...basicInfo,
+                      durationWeeks: parseInt(e.target.value) || 8,
+                    })
+                  }
+                  required
+                  fullWidth
+                  inputProps={{ min: 1, max: 52 }}
+                />
+                <TextField
+                  label="Sessions/week"
+                  type="number"
+                  value={basicInfo.sessionsPerWeek}
+                  onChange={(e) =>
+                    setBasicInfo({
+                      ...basicInfo,
+                      sessionsPerWeek: parseInt(e.target.value) || 2,
+                    })
+                  }
+                  fullWidth
+                  inputProps={{ min: 1, max: 7 }}
+                />
+              </FormRow>
             </FormSection>
           </Box>
         );
@@ -2055,8 +2254,16 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       case "Review & Create":
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <Typography variant="h6">Review & Create Treatment Plan</Typography>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="h6">
+                Review & Create Treatment Plan
+              </Typography>
               <AuraButton
                 variant="outlined"
                 startIcon={
@@ -2077,7 +2284,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
             </Box>
 
             <Callout variant="info">
-              Create your treatment plan now. You can add and manage exercises from the plan detail page after creation.
+              Create your treatment plan now. You can add and manage exercises
+              from the plan detail page after creation.
             </Callout>
 
             <Paper sx={{ p: 2, borderRadius: 2 }}>
@@ -2109,19 +2317,30 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
             {phases.map((phase) => (
               <Paper key={phase.phaseNumber} sx={{ p: 2, borderRadius: 2 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Typography variant="subtitle2" color="text.secondary">
                     Phase {phase.phaseNumber}: {phase.name}
                   </Typography>
                   <Chip
-                    label={phase.exercises.length > 0 ? `${phase.exercises.length} exercises` : "No exercises yet"}
+                    label={
+                      phase.exercises.length > 0
+                        ? `${phase.exercises.length} exercises`
+                        : "No exercises yet"
+                    }
                     size="small"
                     color={phase.exercises.length > 0 ? "success" : "default"}
                     variant="outlined"
                   />
                 </Box>
                 <Typography variant="body2">
-                  {phase.durationWeeks} weeks | {phase.sessionsPerWeek} sessions/week
+                  {phase.durationWeeks} weeks | {phase.sessionsPerWeek}{" "}
+                  sessions/week
                 </Typography>
                 {phase.exercises.length > 0 && (
                   <Box
@@ -2268,7 +2487,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         title={
           isBulkMode
             ? `Create ${bulkPatients.length} Treatment Plans`
-            : "Create Treatment Plan"
+            : isTemplate
+              ? "Create Treatment Template"
+              : initialPatient
+                ? `Treatment Plan for ${initialPatient.firstName} ${initialPatient.lastName}`
+                : "Create Treatment Plan"
         }
         steps={steps}
         activeStep={activeStep}
@@ -2278,7 +2501,13 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
         isStepValid={isBulkComplete || isStepValid}
         loading={createMutation.isPending || isBulkProcessingStep}
         maxWidth="lg"
-        completeLabel={isBulkComplete ? "Done" : "Create Plan"}
+        completeLabel={
+          isBulkComplete
+            ? "Done"
+            : isTemplate
+              ? "Create Template"
+              : "Create Plan"
+        }
         nextLabel={
           isBulkMode && steps[activeStep] === "Settings"
             ? "Generate Plans"

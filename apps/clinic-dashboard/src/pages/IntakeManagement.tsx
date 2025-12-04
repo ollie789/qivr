@@ -120,9 +120,11 @@ const IntakeManagement: React.FC = () => {
   // Mutation for status change with optimistic update
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      console.log("API call: updateIntakeStatus", id, status);
       return intakeApi.updateIntakeStatus(id, status);
     },
     onMutate: async ({ id, status }) => {
+      console.log("onMutate: optimistic update", id, status);
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["intakeManagement"] });
 
@@ -142,7 +144,8 @@ const IntakeManagement: React.FC = () => {
 
       return { previousData };
     },
-    onError: (_err, _variables, context) => {
+    onError: (err, _variables, context) => {
+      console.error("onError: mutation failed", err);
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(["intakeManagement"], context.previousData);
@@ -150,6 +153,7 @@ const IntakeManagement: React.FC = () => {
       enqueueSnackbar("Failed to update status", { variant: "error" });
     },
     onSuccess: () => {
+      console.log("onSuccess: status updated");
       enqueueSnackbar("Status updated", { variant: "success" });
       // Refetch after a short delay to ensure DB write is complete
       setTimeout(() => {
