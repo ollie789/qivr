@@ -60,8 +60,9 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   PlayCircleOutline as VideoIcon,
+  BookmarkAdd as SaveTemplateIcon,
 } from "@mui/icons-material";
-import { AuraButton, AuraIconButton, Callout, auraTokens } from "@qivr/design-system";
+import { AuraButton, AuraIconButton, Callout, auraTokens, SelectField } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
 import {
   appointmentsApi,
@@ -122,6 +123,12 @@ export default function TreatmentPlanDetail() {
     exerciseIndex: number;
     exercise: any;
   } | null>(null);
+
+  // Save as Template state
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [templateTitle, setTemplateTitle] = useState("");
+  const [templateBodyRegion, setTemplateBodyRegion] = useState("");
+  const [templateConditionType, setTemplateConditionType] = useState("");
 
   const {
     data: plan,
@@ -192,6 +199,23 @@ export default function TreatmentPlanDetail() {
     },
     onError: () => {
       enqueueSnackbar("Failed to update treatment plan", { variant: "error" });
+    },
+  });
+
+  // Save as template mutation
+  const saveAsTemplateMutation = useMutation({
+    mutationFn: (data: { title: string; bodyRegion?: string; conditionType?: string }) =>
+      treatmentPlansApi.saveAsTemplate(id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["treatment-templates"] });
+      setSaveTemplateDialogOpen(false);
+      setTemplateTitle("");
+      setTemplateBodyRegion("");
+      setTemplateConditionType("");
+      enqueueSnackbar("Plan saved as template", { variant: "success" });
+    },
+    onError: () => {
+      enqueueSnackbar("Failed to save as template", { variant: "error" });
     },
   });
 
@@ -469,6 +493,23 @@ export default function TreatmentPlanDetail() {
             >
               Approve & Activate
             </AuraButton>
+          )}
+          {/* Save as Template - only for patient plans, not templates */}
+          {!plan.isTemplate && (
+            <Tooltip title="Save this treatment plan as a reusable template">
+              <AuraButton
+                variant="outlined"
+                startIcon={<SaveTemplateIcon />}
+                onClick={() => {
+                  setTemplateTitle(plan.title + " Template");
+                  setTemplateBodyRegion(plan.phases?.[0]?.exercises?.[0]?.bodyRegion || "");
+                  setTemplateConditionType(plan.diagnosis || "");
+                  setSaveTemplateDialogOpen(true);
+                }}
+              >
+                Save as Template
+              </AuraButton>
+            </Tooltip>
           )}
           <AuraButton
             variant="outlined"
@@ -1627,6 +1668,82 @@ export default function TreatmentPlanDetail() {
             }}
           >
             Save Changes
+          </AuraButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* Save as Template Dialog */}
+      <Dialog
+        open={saveTemplateDialogOpen}
+        onClose={() => setSaveTemplateDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Save as Template</DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Create a reusable template from this treatment plan. The template will include all phases and exercises but no patient-specific data.
+            </Typography>
+            <TextField
+              label="Template Name"
+              value={templateTitle}
+              onChange={(e) => setTemplateTitle(e.target.value)}
+              fullWidth
+              required
+              helperText="A descriptive name for the template"
+            />
+            <SelectField
+              label="Body Region"
+              value={templateBodyRegion}
+              onChange={setTemplateBodyRegion}
+              options={[
+                { value: "", label: "Select body region..." },
+                { value: "Lower Back", label: "Lower Back" },
+                { value: "Neck", label: "Neck" },
+                { value: "Shoulder", label: "Shoulder" },
+                { value: "Knee", label: "Knee" },
+                { value: "Hip", label: "Hip" },
+                { value: "Ankle", label: "Ankle" },
+                { value: "Wrist", label: "Wrist" },
+                { value: "Elbow", label: "Elbow" },
+                { value: "Full Body", label: "Full Body" },
+              ]}
+            />
+            <TextField
+              label="Condition Type"
+              value={templateConditionType}
+              onChange={(e) => setTemplateConditionType(e.target.value)}
+              fullWidth
+              placeholder="e.g., ACL Reconstruction, Rotator Cuff Repair"
+              helperText="The condition this template is designed for"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <AuraButton
+            variant="text"
+            onClick={() => setSaveTemplateDialogOpen(false)}
+          >
+            Cancel
+          </AuraButton>
+          <AuraButton
+            variant="contained"
+            startIcon={<SaveTemplateIcon />}
+            onClick={() => {
+              if (!templateTitle.trim()) {
+                enqueueSnackbar("Please enter a template name", { variant: "warning" });
+                return;
+              }
+              saveAsTemplateMutation.mutate({
+                title: templateTitle.trim(),
+                bodyRegion: templateBodyRegion || undefined,
+                conditionType: templateConditionType || undefined,
+              });
+            }}
+            loading={saveAsTemplateMutation.isPending}
+          >
+            Save Template
           </AuraButton>
         </DialogActions>
       </Dialog>

@@ -236,7 +236,8 @@ function mapPriority(priority: string): ActionPriority {
 function extractId(prefixedId: string): string {
   const parts = prefixedId.split("-");
   // If it starts with a known prefix, remove it
-  if (["prom", "intake", "message", "referral", "appointment"].includes(parts[0])) {
+  const firstPart = parts[0];
+  if (firstPart && ["prom", "intake", "message", "referral", "appointment"].includes(firstPart)) {
     return parts.slice(1).join("-");
   }
   return prefixedId;

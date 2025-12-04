@@ -50,8 +50,42 @@ public enum DifficultyLevel
 
 public class TreatmentPlan : DeletableEntity
 {
-    [Required]
-    public Guid PatientId { get; set; }
+    // === Template Support ===
+    /// <summary>
+    /// If true, this is a reusable template (not assigned to a patient)
+    /// </summary>
+    public bool IsTemplate { get; set; } = false;
+
+    /// <summary>
+    /// If this plan was created from a template, reference to the source template
+    /// </summary>
+    public Guid? SourceTemplateId { get; set; }
+
+    /// <summary>
+    /// Template metadata: body region this template is designed for
+    /// </summary>
+    [MaxLength(100)]
+    public string? BodyRegion { get; set; }
+
+    /// <summary>
+    /// Template metadata: condition type (e.g., "ACL Reconstruction", "Rotator Cuff")
+    /// </summary>
+    [MaxLength(200)]
+    public string? ConditionType { get; set; }
+
+    /// <summary>
+    /// Template source: "evidence_based", "ai_generated", "clinic_created", "cloned"
+    /// </summary>
+    [MaxLength(50)]
+    public string? TemplateSource { get; set; }
+
+    /// <summary>
+    /// How many times this template has been used to create patient plans
+    /// </summary>
+    public int TimesUsed { get; set; } = 0;
+
+    // PatientId is nullable for templates
+    public Guid? PatientId { get; set; }
     public virtual User? Patient { get; set; }
 
     [Required]

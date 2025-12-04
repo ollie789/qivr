@@ -57,6 +57,7 @@ import {
   SelectField,
 } from "@qivr/design-system";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
+import { TreatmentPlanBuilder } from "../components/dialogs";
 import { promApi, NotificationMethod, type PromTemplateSummary } from "../services/promApi";
 import { treatmentPlansApi } from "../lib/api";
 import type { Appointment } from "../features/appointments/types";
@@ -118,6 +119,7 @@ export default function Appointments() {
   const [agendaDate, setAgendaDate] = useState<Date>(new Date());
   const [scheduleNextSessionOpen, setScheduleNextSessionOpen] = useState(false);
   const [suggestedNextDate, setSuggestedNextDate] = useState<Date | null>(null);
+  const [treatmentPlanBuilderOpen, setTreatmentPlanBuilderOpen] = useState(false);
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -426,7 +428,7 @@ export default function Appointments() {
 
   const handleStartSession = async (apt: Appointment) => {
     try {
-      await appointmentsApi.updateAppointment(apt.id, { status: "InProgress" });
+      await appointmentsApi.updateAppointment(apt.id, { status: "in-progress" });
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       enqueueSnackbar("Session started", { variant: "info" });
       handleOpenNotes(apt);
@@ -1207,15 +1209,27 @@ export default function Appointments() {
               </Stack>
             ) : (
               <Box sx={{ p: 1.5, bgcolor: alpha(theme.palette.info.main, 0.08), borderRadius: 1, borderLeft: "3px solid", borderColor: "info.main" }}>
-                <Typography variant="body2" color="text.secondary">No active treatment plan for this patient.</Typography>
-                <AuraButton
-                  variant="text"
-                  size="small"
-                  onClick={() => navigate(`/treatment-plans?create=true&patientId=${selectedAppointment?.patientId}`)}
-                  sx={{ mt: 0.5, p: 0, minWidth: 0 }}
-                >
-                  Create Treatment Plan
-                </AuraButton>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  No active treatment plan for this patient.
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <AuraButton
+                    variant="outlined"
+                    size="small"
+                    startIcon={<ExerciseIcon />}
+                    onClick={() => navigate("/treatment-plans")}
+                  >
+                    Browse Templates
+                  </AuraButton>
+                  <AuraButton
+                    variant="contained"
+                    size="small"
+                    startIcon={<AutoIcon />}
+                    onClick={() => setTreatmentPlanBuilderOpen(true)}
+                  >
+                    AI Generate
+                  </AuraButton>
+                </Stack>
               </Box>
             )}
           </Box>
@@ -1353,6 +1367,41 @@ export default function Appointments() {
           )}
         </Stack>
       </FormDialog>
+
+      {/* Treatment Plan Builder Dialog */}
+      <TreatmentPlanBuilder
+        open={treatmentPlanBuilderOpen}
+        onClose={() => setTreatmentPlanBuilderOpen(false)}
+        patient={selectedAppointment?.patientId ? {
+          id: selectedAppointment.patientId,
+          firstName: selectedAppointment.patientName?.split(" ")[0] || "",
+          lastName: selectedAppointment.patientName?.split(" ").slice(1).join(" ") || "",
+        } : undefined}
+        onSuccess={() => {
+          setTreatmentPlanBuilderOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["treatment-plan", selectedAppointment?.patientId] });
+          enqueueSnackbar("Treatment plan created", { variant: "success" });
+          // Reload the treatment plan for this patient
+          if (selectedAppointment?.patientId) {
+            treatmentPlansApi.list(selectedAppointment.patientId).then((plans: any[]) => {
+              const activePlan = plans.find((p: any) => p.status === "Active" || p.status === "Draft");
+              if (activePlan) {
+                setPatientTreatmentPlan({
+                  id: activePlan.id,
+                  title: activePlan.title,
+                  status: activePlan.status,
+                  currentPhase: activePlan.phases?.[0]?.name,
+                  completedSessions: activePlan.completedSessions || 0,
+                  totalSessions: activePlan.totalSessions || 0,
+                  nextSessionNumber: (activePlan.completedSessions || 0) + 1,
+                  progressPercent: activePlan.progressPercentage || 0,
+                  sessionsPerWeek: activePlan.phases?.[0]?.sessionsPerWeek,
+                });
+              }
+            });
+          }
+        }}
+      />
     </Box>
   );
 }

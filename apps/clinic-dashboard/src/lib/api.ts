@@ -12,13 +12,36 @@ export const apiKeysApi = {
 };
 
 export const treatmentPlansApi = {
+  // List patient treatment plans (excludes templates)
   list: (patientId?: string) =>
-    api.get("/api/treatment-plans", patientId ? { patientId } : undefined),
+    api.get("/api/treatment-plans", { patientId, isTemplate: false }),
   get: (id: string) => api.get(`/api/treatment-plans/${id}`),
   create: (data: any) => api.post("/api/treatment-plans", data),
   update: (id: string, data: any) =>
     api.put(`/api/treatment-plans/${id}`, data),
   delete: (id: string) => api.delete(`/api/treatment-plans/${id}`),
+
+  // === Template Operations ===
+  // List templates only
+  listTemplates: (filters?: {
+    bodyRegion?: string;
+    conditionType?: string;
+    templateSource?: string;
+  }) => api.get("/api/treatment-plans", { isTemplate: true, ...filters }),
+
+  // Save an existing plan as a template
+  saveAsTemplate: (planId: string, data: {
+    title: string;
+    bodyRegion?: string;
+    conditionType?: string;
+  }) => api.post(`/api/treatment-plans/${planId}/save-as-template`, data),
+
+  // Create a patient plan from a template
+  createFromTemplate: (templateId: string, data: {
+    patientId: string;
+    startDate?: string;
+    customizations?: any;
+  }) => api.post(`/api/treatment-plans/from-template/${templateId}`, data),
 
   // AI Generation (saves to DB as draft)
   generate: (data: {

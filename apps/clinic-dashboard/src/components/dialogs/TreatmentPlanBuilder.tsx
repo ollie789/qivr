@@ -96,6 +96,10 @@ export interface TreatmentPlanBuilderProps {
   evaluationId?: string;
   onSuccess?: (planId: string) => void;
   bulkPatients?: BulkPatient[];
+  /** If true, creates a template instead of a patient plan */
+  isTemplate?: boolean;
+  /** If provided, creates a plan from this template */
+  sourceTemplateId?: string;
 }
 
 interface Exercise {

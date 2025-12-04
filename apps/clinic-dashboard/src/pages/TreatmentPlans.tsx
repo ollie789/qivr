@@ -5,764 +5,527 @@ import {
   Typography,
   Chip,
   Stack,
-  Paper,
-  LinearProgress,
-  IconButton,
-  Tabs,
-  Tab,
-  Avatar,
-  Badge,
-  Checkbox,
   alpha,
-  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import {
   Add,
-  Description,
-  CalendarMonth as ScheduleIcon,
   AutoAwesome,
-  CheckCircle,
   FitnessCenter,
-  Event as AppointmentIcon,
-  Person as PatientIcon,
-  CheckBox as CheckBoxIcon,
-  CheckBoxOutlineBlank as CheckBoxBlankIcon,
+  Search as SearchIcon,
+  ContentCopy as CloneIcon,
+  LocalHospital as ClinicIcon,
+  Science as EvidenceIcon,
+  TrendingUp as TrendingUpIcon,
+  Accessibility as BodyIcon,
+  Schedule as DurationIcon,
+  PlayArrow as UseTemplateIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import {
   AuraButton,
+  AuraCard,
+  AuraIconButton,
   PageHeader,
   AuraEmptyState,
-  SearchBar,
-  AuraGlassStatCard,
-  Callout,
+  SelectField,
+  auraTokens,
   auraColors,
 } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
-import { appointmentsApi, type Appointment } from "../services/appointmentsApi";
 import { useSnackbar } from "notistack";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  format,
-  parseISO,
-  isToday,
-  isTomorrow,
-  isPast,
-  addDays,
-} from "date-fns";
-import {
-  ScheduleAppointmentDialog,
-  TreatmentPlanBuilder,
-} from "../components/dialogs";
+import { useNavigate } from "react-router-dom";
+import { TreatmentPlanBuilder } from "../components/dialogs";
 
-type ViewTab = "plans" | "post-appointment" | "templates";
+// Body region options
+const BODY_REGIONS = [
+  { value: "", label: "All Body Regions" },
+  { value: "Lower Back", label: "Lower Back" },
+  { value: "Neck", label: "Neck" },
+  { value: "Shoulder", label: "Shoulder" },
+  { value: "Knee", label: "Knee" },
+  { value: "Hip", label: "Hip" },
+  { value: "Ankle", label: "Ankle" },
+  { value: "Wrist", label: "Wrist" },
+  { value: "Elbow", label: "Elbow" },
+  { value: "Full Body", label: "Full Body" },
+];
+
+// Template source options
+const TEMPLATE_SOURCES = [
+  { value: "", label: "All Sources" },
+  { value: "evidence_based", label: "Evidence Based" },
+  { value: "ai_generated", label: "AI Generated" },
+  { value: "clinic_created", label: "Clinic Created" },
+  { value: "cloned", label: "Cloned from Patient" },
+];
+
+interface TreatmentTemplate {
+  id: string;
+  title: string;
+  bodyRegion?: string;
+  conditionType?: string;
+  templateSource?: string;
+  durationWeeks: number;
+  phases?: any[];
+  timesUsed: number;
+  aiGeneratedAt?: string;
+  createdAt: string;
+  diagnosis?: string;
+  goals?: string;
+}
 
 export default function TreatmentPlans() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get("tab") as ViewTab) || "plans";
-
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showBulkCreateDialog, setShowBulkCreateDialog] = useState(false);
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<any>(null);
-  const [selectedAppointments, setSelectedAppointments] = useState<Set<string>>(
-    new Set(),
-  );
   const [searchQuery, setSearchQuery] = useState("");
+  const [bodyRegionFilter, setBodyRegionFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showAIGenerateDialog, setShowAIGenerateDialog] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<TreatmentTemplate | null>(null);
+  const [useTemplateDialogOpen, setUseTemplateDialogOpen] = useState(false);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
 
-  const handleScheduleSession = (plan: any) => {
-    setSelectedPlan(plan);
-    setScheduleDialogOpen(true);
-  };
-
-  const setTab = (tab: ViewTab) => {
-    setSearchParams((prev) => {
-      prev.set("tab", tab);
-      return prev;
-    });
-  };
-
-  // Fetch treatment plans
-  const { data: plans = [], isLoading } = useQuery({
-    queryKey: ["treatment-plans"],
-    queryFn: () => treatmentPlansApi.list(),
+  // Fetch templates
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ["treatment-templates", bodyRegionFilter, sourceFilter],
+    queryFn: () =>
+      treatmentPlansApi.listTemplates({
+        bodyRegion: bodyRegionFilter || undefined,
+        templateSource: sourceFilter || undefined,
+      }),
   });
-
-  // Fetch recent/today&apos;s completed appointments for post-appointment workflow
-  const { data: recentAppointmentsData, isLoading: appointmentsLoading } =
-    useQuery({
-      queryKey: ["completed-appointments-for-plans"],
-      queryFn: async () => {
-        const today = new Date();
-        const result = await appointmentsApi.getAppointments({
-          startDate: addDays(today, -7).toISOString(),
-          endDate: addDays(today, 1).toISOString(),
-          status: "completed",
-          limit: 50,
-        });
-        return result.items;
-      },
-    });
-  const recentAppointments = recentAppointmentsData || [];
-
-  // Filter appointments that don&apos;t already have treatment plans
-  const appointmentsNeedingPlans = useMemo(() => {
-    const patientIdsWithPlans = new Set(
-      plans
-        .filter((p: any) => p.status === "Active" || p.status === "Draft")
-        .map((p: any) => p.patientId),
-    );
-    return recentAppointments.filter(
-      (apt) => !patientIdsWithPlans.has(apt.patientId),
-    );
-  }, [recentAppointments, plans]);
 
   // Stats
   const stats = useMemo(() => {
-    const active = plans.filter((p: any) => p.status === "Active").length;
-    const draft = plans.filter((p: any) => p.status === "Draft").length;
-    const completed = plans.filter((p: any) => p.status === "Completed").length;
-    const needsPlans = appointmentsNeedingPlans.length;
-    return { active, draft, completed, needsPlans, total: plans.length };
-  }, [plans, appointmentsNeedingPlans]);
+    const total = templates.length;
+    const evidenceBased = templates.filter((t: TreatmentTemplate) => t.templateSource === "evidence_based").length;
+    const aiGenerated = templates.filter((t: TreatmentTemplate) => t.templateSource === "ai_generated").length;
+    const clinicCreated = templates.filter((t: TreatmentTemplate) => t.templateSource === "clinic_created").length;
+    const mostUsed = templates.reduce((max: TreatmentTemplate | null, t: TreatmentTemplate) =>
+      (!max || t.timesUsed > max.timesUsed) ? t : max, null);
+    return { total, evidenceBased, aiGenerated, clinicCreated, mostUsed };
+  }, [templates]);
 
-  // Filtered plans for search
-  const filteredPlans = useMemo(() => {
-    if (!searchQuery) return plans;
+  // Filtered templates
+  const filteredTemplates = useMemo(() => {
+    if (!searchQuery) return templates;
     const query = searchQuery.toLowerCase();
-    return plans.filter(
-      (plan: any) =>
-        plan.title?.toLowerCase().includes(query) ||
-        plan.patient?.firstName?.toLowerCase().includes(query) ||
-        plan.patient?.lastName?.toLowerCase().includes(query) ||
-        plan.diagnosis?.toLowerCase().includes(query),
+    return templates.filter(
+      (t: TreatmentTemplate) =>
+        t.title?.toLowerCase().includes(query) ||
+        t.conditionType?.toLowerCase().includes(query) ||
+        t.bodyRegion?.toLowerCase().includes(query)
     );
-  }, [plans, searchQuery]);
+  }, [templates, searchQuery]);
 
-  const approveMutation = useMutation({
-    mutationFn: (planId: string) => treatmentPlansApi.approve(planId),
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => treatmentPlansApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
-      enqueueSnackbar("Treatment plan approved and activated", {
-        variant: "success",
-      });
+      queryClient.invalidateQueries({ queryKey: ["treatment-templates"] });
+      enqueueSnackbar("Template deleted", { variant: "success" });
     },
     onError: () => {
-      enqueueSnackbar("Failed to approve treatment plan", { variant: "error" });
+      enqueueSnackbar("Failed to delete template", { variant: "error" });
     },
   });
 
-  const getStatusColor = (
-    status: string,
-  ): "default" | "success" | "info" | "warning" | "error" => {
-    const colors: Record<
-      string,
-      "default" | "success" | "info" | "warning" | "error"
-    > = {
-      Draft: "default",
-      Active: "success",
-      Completed: "info",
-      Cancelled: "error",
-      OnHold: "warning",
-    };
-    return colors[status] || "default";
-  };
-
-  const handlePlanCreated = (_planId: string) => {
-    queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
-    setSelectedAppointments(new Set());
-    // Optionally navigate to the plan detail page
-    // navigate(`/treatment-plans/${_planId}`);
-  };
-
-  const handleToggleAppointmentSelect = (id: string) => {
-    setSelectedAppointments((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const handleSelectAllAppointments = () => {
-    if (selectedAppointments.size === appointmentsNeedingPlans.length) {
-      setSelectedAppointments(new Set());
-    } else {
-      setSelectedAppointments(
-        new Set(appointmentsNeedingPlans.map((a) => a.id)),
-      );
+  const getSourceIcon = (source?: string) => {
+    switch (source) {
+      case "evidence_based":
+        return <EvidenceIcon fontSize="small" />;
+      case "ai_generated":
+        return <AutoAwesome fontSize="small" />;
+      case "clinic_created":
+        return <ClinicIcon fontSize="small" />;
+      default:
+        return <CloneIcon fontSize="small" />;
     }
   };
 
-  const handleBulkCreatePlans = () => {
-    // Get selected appointments and open bulk dialog
-    const selected = appointmentsNeedingPlans.filter((a) =>
-      selectedAppointments.has(a.id),
-    );
-    if (selected.length === 0) {
-      enqueueSnackbar(
-        "Please select at least one appointment to generate a treatment plan",
-        {
-          variant: "warning",
-        },
-      );
-      return;
+  const getSourceColor = (source?: string) => {
+    switch (source) {
+      case "evidence_based":
+        return auraColors.green.main;
+      case "ai_generated":
+        return auraColors.purple.main;
+      case "clinic_created":
+        return auraColors.blue.main;
+      default:
+        return auraColors.grey[500];
     }
-    setShowBulkCreateDialog(true);
   };
 
-  const getAppointmentDateLabel = (apt: Appointment) => {
-    const date = parseISO(apt.scheduledStart);
-    if (isToday(date)) return "Today";
-    if (isTomorrow(date)) return "Tomorrow";
-    if (isPast(date)) return format(date, "MMM d");
-    return format(date, "MMM d");
+  const getSourceLabel = (source?: string) => {
+    switch (source) {
+      case "evidence_based":
+        return "Evidence Based";
+      case "ai_generated":
+        return "AI Generated";
+      case "clinic_created":
+        return "Clinic Created";
+      case "cloned":
+        return "Cloned";
+      default:
+        return "Custom";
+    }
+  };
+
+  const handleUseTemplate = (template: TreatmentTemplate) => {
+    setSelectedTemplate(template);
+    setUseTemplateDialogOpen(true);
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3 }} className="page-enter">
       <PageHeader
-        title="Treatment Plans"
-        description="Manage patient treatment plans"
+        title="Treatment Plan Library"
+        description="Browse templates or generate AI-powered plans for patients"
         actions={
-          <AuraButton
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setShowCreateDialog(true)}
-          >
-            New Plan
-          </AuraButton>
+          <Stack direction="row" spacing={2}>
+            <AuraButton
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => setShowCreateDialog(true)}
+            >
+              Create Template
+            </AuraButton>
+            <AuraButton
+              variant="contained"
+              startIcon={<AutoAwesome />}
+              onClick={() => setShowAIGenerateDialog(true)}
+            >
+              AI Generate for Patient
+            </AuraButton>
+          </Stack>
         }
       />
 
       {/* Stats Row */}
-      <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
-        <Box sx={{ flex: "1 1 150px", minWidth: 150 }}>
-          <AuraGlassStatCard
-            title="Active Plans"
-            value={stats.active}
-            icon={<FitnessCenter />}
-          />
-        </Box>
-        <Box sx={{ flex: "1 1 150px", minWidth: 150 }}>
-          <AuraGlassStatCard
-            title="Draft"
-            value={stats.draft}
-            icon={<Description />}
-          />
-        </Box>
-        <Box sx={{ flex: "1 1 150px", minWidth: 150 }}>
-          <AuraGlassStatCard
-            title="Completed"
-            value={stats.completed}
-            icon={<CheckCircle />}
-          />
-        </Box>
-        <Box
-          onClick={() => setTab("post-appointment")}
-          sx={{ flex: "1 1 150px", minWidth: 150, cursor: "pointer" }}
-        >
-          <AuraGlassStatCard
-            title="Need Plans"
-            value={stats.needsPlans}
-            icon={<AppointmentIcon />}
-          />
-        </Box>
-      </Box>
-
-      {/* Post-appointment callout */}
-      {stats.needsPlans > 0 && activeTab === "plans" && (
-        <Box sx={{ mb: 3 }}>
-          <Callout variant="info">
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <AppointmentIcon />
-              <span>
-                <strong>{stats.needsPlans}</strong> recent appointments
-                don&apos;t have treatment plans yet.
-              </span>
-              <AuraButton
-                size="small"
-                variant="text"
-                onClick={() => setTab("post-appointment")}
-                sx={{ ml: "auto" }}
-              >
-                Review Appointments
-              </AuraButton>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <AuraCard variant="flat" hover={false} sx={{ p: 2, textAlign: "center" }}>
+            <Typography variant="h4" fontWeight={700} color="primary.main">
+              {stats.total}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Total Templates
+            </Typography>
+          </AuraCard>
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <AuraCard variant="flat" hover={false} sx={{ p: 2, textAlign: "center" }}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+              <EvidenceIcon sx={{ color: auraColors.green.main }} />
+              <Typography variant="h4" fontWeight={700}>
+                {stats.evidenceBased}
+              </Typography>
             </Box>
-          </Callout>
-        </Box>
-      )}
+            <Typography variant="body2" color="text.secondary">
+              Evidence Based
+            </Typography>
+          </AuraCard>
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <AuraCard variant="flat" hover={false} sx={{ p: 2, textAlign: "center" }}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+              <AutoAwesome sx={{ color: auraColors.purple.main }} />
+              <Typography variant="h4" fontWeight={700}>
+                {stats.aiGenerated}
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              AI Generated
+            </Typography>
+          </AuraCard>
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <AuraCard variant="flat" hover={false} sx={{ p: 2, textAlign: "center" }}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+              <TrendingUpIcon sx={{ color: auraColors.orange.main }} />
+              <Typography variant="h4" fontWeight={700}>
+                {stats.mostUsed?.timesUsed || 0}
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" noWrap>
+              Most Used
+            </Typography>
+          </AuraCard>
+        </Grid>
+      </Grid>
 
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onChange={(_, v) => setTab(v)}
-        sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
-      >
-        <Tab
-          value="plans"
-          label={
-            <Badge badgeContent={stats.total} color="primary" max={99}>
-              <Box sx={{ pr: 2 }}>All Plans</Box>
-            </Badge>
-          }
-        />
-        <Tab
-          value="post-appointment"
-          label={
-            <Badge badgeContent={stats.needsPlans} color="warning" max={99}>
-              <Box sx={{ pr: 2 }}>Post-Appointment</Box>
-            </Badge>
-          }
-        />
-      </Tabs>
-
-      {/* Search (for plans tab) */}
-      {activeTab === "plans" && (
-        <Box sx={{ mb: 2, maxWidth: 400 }}>
-          <SearchBar
+      {/* Search and Filters */}
+      <AuraCard variant="flat" hover={false} sx={{ p: 2, mb: 3 }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+          <TextField
+            placeholder="Search templates..."
             value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search plans by patient, title, diagnosis..."
+            onChange={(e) => setSearchQuery(e.target.value)}
+            size="small"
+            sx={{ flex: 1, minWidth: 200 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+            }}
           />
-        </Box>
-      )}
+          <SelectField
+            value={bodyRegionFilter}
+            onChange={(v) => setBodyRegionFilter(v)}
+            options={BODY_REGIONS}
+            size="small"
+            sx={{ minWidth: 180 }}
+          />
+          <SelectField
+            value={sourceFilter}
+            onChange={(v) => setSourceFilter(v)}
+            options={TEMPLATE_SOURCES}
+            size="small"
+            sx={{ minWidth: 180 }}
+          />
+        </Stack>
+      </AuraCard>
 
-      {/* Plans Tab Content */}
-      {activeTab === "plans" && (
-        <>
-          {isLoading ? (
-            <Typography color="text.secondary">Loading...</Typography>
-          ) : filteredPlans.length === 0 ? (
-            <AuraEmptyState
-              icon={<Description />}
-              title={
-                searchQuery ? "No matching plans" : "No treatment plans yet"
-              }
-              description={
-                searchQuery
-                  ? "Try a different search term"
-                  : "Create your first treatment plan using AI assistance or manual setup"
-              }
-              actionText={searchQuery ? undefined : "Create Plan"}
-              onAction={
-                searchQuery ? undefined : () => setShowCreateDialog(true)
-              }
-            />
-          ) : (
-            <Stack spacing={2}>
-              {filteredPlans.map((plan: any) => (
-                <Paper
-                  key={plan.id}
+      {/* Templates Grid */}
+      {isLoading ? (
+        <Typography color="text.secondary">Loading templates...</Typography>
+      ) : filteredTemplates.length === 0 ? (
+        <AuraEmptyState
+          icon={<FitnessCenter />}
+          title={searchQuery || bodyRegionFilter || sourceFilter ? "No matching templates" : "No templates yet"}
+          description={
+            searchQuery || bodyRegionFilter || sourceFilter
+              ? "Try adjusting your filters"
+              : "Create your first template or generate one with AI"
+          }
+          actionText="Create Template"
+          onAction={() => setShowCreateDialog(true)}
+        />
+      ) : (
+        <Grid container spacing={2}>
+          {filteredTemplates.map((template: TreatmentTemplate) => (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={template.id}>
+              <AuraCard
+                variant="flat"
+                sx={{
+                  p: 0,
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  cursor: "pointer",
+                  "&:hover": {
+                    borderColor: "primary.main",
+                    boxShadow: auraTokens.shadows.md,
+                  },
+                }}
+                onClick={() => navigate(`/treatment-plans/${template.id}`)}
+              >
+                {/* Header with source badge */}
+                <Box
                   sx={{
-                    p: 3,
-                    borderRadius: 3,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    "&:hover": {
-                      boxShadow: 4,
-                      transform: "translateY(-2px)",
-                    },
+                    p: 2,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
                   }}
-                  onClick={() => navigate(`/treatment-plans/${plan.id}`)}
                 >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "start",
-                      mb: 2,
-                    }}
-                  >
-                    <Box sx={{ flex: 1 }}>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Typography variant="h6" fontWeight={600}>
-                          {plan.title}
-                        </Typography>
-                        {plan.aiGeneratedAt && (
-                          <Tooltip title="AI Generated">
-                            <AutoAwesome fontSize="small" color="primary" />
-                          </Tooltip>
-                        )}
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        {plan.patient?.firstName} {plan.patient?.lastName}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle1" fontWeight={600} noWrap>
+                      {template.title}
+                    </Typography>
+                    {template.conditionType && (
+                      <Typography variant="caption" color="text.secondary">
+                        {template.conditionType}
                       </Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Chip
-                        label={plan.status}
-                        size="small"
-                        color={getStatusColor(plan.status)}
-                      />
-                      {plan.status === "Draft" && (
-                        <Tooltip title="Approve & Activate">
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              approveMutation.mutate(plan.id);
-                            }}
-                            disabled={approveMutation.isPending}
-                          >
-                            <CheckCircle />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Box>
+                    )}
                   </Box>
+                  <Chip
+                    icon={getSourceIcon(template.templateSource)}
+                    label={getSourceLabel(template.templateSource)}
+                    size="small"
+                    sx={{
+                      bgcolor: alpha(getSourceColor(template.templateSource), 0.1),
+                      color: getSourceColor(template.templateSource),
+                      fontWeight: 500,
+                      "& .MuiChip-icon": { color: "inherit" },
+                    }}
+                  />
+                </Box>
 
-                  {/* Progress bar for active plans */}
-                  {plan.status === "Active" && plan.progressPercentage > 0 && (
-                    <Box sx={{ mb: 2 }}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          mb: 0.5,
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          Progress
-                        </Typography>
-                        <Typography variant="caption" color="primary">
-                          {Math.round(plan.progressPercentage)}%
+                {/* Body */}
+                <Box sx={{ p: 2, flex: 1 }}>
+                  <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                    {template.bodyRegion && (
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        <BodyIcon fontSize="small" color="action" />
+                        <Typography variant="body2" color="text.secondary">
+                          {template.bodyRegion}
                         </Typography>
                       </Box>
-                      <LinearProgress
-                        variant="determinate"
-                        value={plan.progressPercentage}
-                        sx={{ borderRadius: 1, height: 6 }}
-                      />
-                    </Box>
-                  )}
-
-                  {plan.diagnosis && (
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="body2" fontWeight="medium">
-                        Diagnosis:
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                        }}
-                      >
-                        {plan.diagnosis}
+                    )}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <DurationIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {template.durationWeeks} weeks
                       </Typography>
                     </Box>
-                  )}
+                  </Stack>
 
-                  {/* Phase summary */}
-                  {plan.phases?.length > 0 && (
+                  {/* Phases preview */}
+                  {template.phases && template.phases.length > 0 && (
                     <Box sx={{ mb: 2 }}>
-                      <Typography
-                        variant="body2"
-                        fontWeight="medium"
-                        sx={{ mb: 1 }}
-                      >
-                        Phases:
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
+                        {template.phases.length} phases
                       </Typography>
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                        {plan.phases
-                          .slice(0, 4)
-                          .map((phase: any, idx: number) => (
-                            <Chip
-                              key={idx}
-                              label={`${phase.name} (${phase.durationWeeks}w)`}
-                              size="small"
-                              variant={
-                                phase.status === "InProgress"
-                                  ? "filled"
-                                  : "outlined"
-                              }
-                              color={
-                                phase.status === "Completed"
-                                  ? "success"
-                                  : phase.status === "InProgress"
-                                    ? "primary"
-                                    : "default"
-                              }
-                            />
-                          ))}
-                        {plan.phases.length > 4 && (
+                      <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+                        {template.phases.slice(0, 3).map((phase: any, idx: number) => (
                           <Chip
-                            label={`+${plan.phases.length - 4} more`}
+                            key={idx}
+                            label={phase.name}
                             size="small"
                             variant="outlined"
+                            sx={{ height: 22, fontSize: "0.7rem" }}
+                          />
+                        ))}
+                        {template.phases.length > 3 && (
+                          <Chip
+                            label={`+${template.phases.length - 3}`}
+                            size="small"
+                            sx={{ height: 22, fontSize: "0.7rem" }}
                           />
                         )}
-                      </Box>
+                      </Stack>
                     </Box>
                   )}
 
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 2,
-                      mt: 2,
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
+                  {/* Exercise count */}
+                  {template.phases && (
                     <Typography variant="caption" color="text.secondary">
-                      {plan.durationWeeks} weeks
+                      <FitnessCenter fontSize="inherit" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+                      {template.phases.reduce((acc: number, p: any) => acc + (p.exercises?.length || 0), 0)} exercises
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Started: {new Date(plan.startDate).toLocaleDateString()}
-                    </Typography>
-                    {plan.phases?.length > 0 && (
-                      <Typography variant="caption" color="text.secondary">
-                        <FitnessCenter
-                          fontSize="inherit"
-                          sx={{ verticalAlign: "middle", mr: 0.5 }}
-                        />
-                        {plan.phases.reduce(
-                          (acc: number, p: any) =>
-                            acc + (p.exercises?.length || 0),
-                          0,
-                        )}{" "}
-                        exercises
-                      </Typography>
-                    )}
-                    {plan.completedSessions > 0 && (
-                      <Typography variant="caption" color="text.secondary">
-                        {plan.completedSessions}/{plan.totalSessions} sessions
-                      </Typography>
-                    )}
-                    <Box sx={{ flexGrow: 1 }} />
-                    <AuraButton
+                  )}
+                </Box>
+
+                {/* Footer with actions */}
+                <Box
+                  sx={{
+                    p: 2,
+                    borderTop: "1px solid",
+                    borderColor: "divider",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    bgcolor: "action.hover",
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    Used {template.timesUsed} times
+                  </Typography>
+                  <Stack direction="row" spacing={0.5}>
+                    <AuraIconButton
+                      tooltip="Delete template"
                       size="small"
-                      variant="outlined"
-                      startIcon={<ScheduleIcon />}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleScheduleSession(plan);
+                        if (window.confirm("Delete this template?")) {
+                          deleteMutation.mutate(template.id);
+                        }
                       }}
                     >
-                      Schedule Session
+                      <DeleteIcon fontSize="small" />
+                    </AuraIconButton>
+                    <AuraIconButton
+                      tooltip="Clone template"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Clone logic
+                      }}
+                    >
+                      <CloneIcon fontSize="small" />
+                    </AuraIconButton>
+                    <AuraButton
+                      size="small"
+                      variant="contained"
+                      startIcon={<UseTemplateIcon />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUseTemplate(template);
+                      }}
+                    >
+                      Use
                     </AuraButton>
-                  </Box>
-                </Paper>
-              ))}
-            </Stack>
-          )}
-        </>
+                  </Stack>
+                </Box>
+              </AuraCard>
+            </Grid>
+          ))}
+        </Grid>
       )}
 
-      {/* Post-Appointment Tab Content */}
-      {activeTab === "post-appointment" && (
-        <>
-          {appointmentsLoading ? (
-            <Typography color="text.secondary">
-              Loading appointments...
-            </Typography>
-          ) : appointmentsNeedingPlans.length === 0 ? (
-            <AuraEmptyState
-              icon={<CheckCircle />}
-              title="All caught up!"
-              description="All recent appointments have treatment plans assigned"
-              variant="compact"
-            />
-          ) : (
-            <>
-              {/* Select All / Actions Bar */}
-              <Paper
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <Checkbox
-                  checked={
-                    selectedAppointments.size ===
-                      appointmentsNeedingPlans.length &&
-                    appointmentsNeedingPlans.length > 0
-                  }
-                  indeterminate={
-                    selectedAppointments.size > 0 &&
-                    selectedAppointments.size < appointmentsNeedingPlans.length
-                  }
-                  onChange={handleSelectAllAppointments}
-                  icon={<CheckBoxBlankIcon />}
-                  checkedIcon={<CheckBoxIcon />}
-                />
-                <Typography variant="body2" color="text.secondary">
-                  {selectedAppointments.size > 0
-                    ? `${selectedAppointments.size} of ${appointmentsNeedingPlans.length} selected`
-                    : `${appointmentsNeedingPlans.length} appointments need treatment plans`}
-                </Typography>
-                <Box sx={{ flexGrow: 1 }} />
-                {selectedAppointments.size > 0 && (
-                  <AuraButton
-                    variant="contained"
-                    startIcon={<AutoAwesome />}
-                    onClick={handleBulkCreatePlans}
-                  >
-                    Create {selectedAppointments.size} Plan
-                    {selectedAppointments.size !== 1 ? "s" : ""}
-                  </AuraButton>
-                )}
-              </Paper>
-
-              <Stack spacing={1}>
-                {appointmentsNeedingPlans.map((apt) => (
-                  <Paper
-                    key={apt.id}
-                    sx={{
-                      p: 2,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 2,
-                      borderRadius: 2,
-                      bgcolor: selectedAppointments.has(apt.id)
-                        ? alpha(auraColors.blue.main, 0.08)
-                        : "background.paper",
-                      border: selectedAppointments.has(apt.id)
-                        ? `2px solid ${auraColors.blue.main}`
-                        : "1px solid transparent",
-                      transition: "all 0.15s",
-                      cursor: "pointer",
-                      "&:hover": {
-                        bgcolor: alpha(auraColors.blue.main, 0.04),
-                      },
-                    }}
-                    onClick={() => handleToggleAppointmentSelect(apt.id)}
-                  >
-                    <Checkbox
-                      checked={selectedAppointments.has(apt.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={() => handleToggleAppointmentSelect(apt.id)}
-                      icon={<CheckBoxBlankIcon />}
-                      checkedIcon={<CheckBoxIcon />}
-                    />
-
-                    <Avatar sx={{ bgcolor: auraColors.blue.main }}>
-                      <PatientIcon />
-                    </Avatar>
-
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {apt.patientName}
-                      </Typography>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Chip
-                          size="small"
-                          label={getAppointmentDateLabel(apt)}
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: "0.7rem" }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {format(parseISO(apt.scheduledStart), "h:mm a")}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          •
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {apt.appointmentType}
-                        </Typography>
-                        {apt.providerName && (
-                          <>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              •
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {apt.providerName}
-                            </Typography>
-                          </>
-                        )}
-                      </Stack>
-                      {apt.reasonForVisit && (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          noWrap
-                        >
-                          {apt.reasonForVisit}
-                        </Typography>
-                      )}
-                    </Box>
-                  </Paper>
-                ))}
-              </Stack>
-            </>
-          )}
-        </>
-      )}
-
-      {/* Single Plan Builder Dialog */}
+      {/* Create Template Dialog */}
       <TreatmentPlanBuilder
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
-        patient={undefined}
-        onSuccess={handlePlanCreated}
+        isTemplate={true}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["treatment-templates"] });
+          setShowCreateDialog(false);
+        }}
       />
 
-      {/* Bulk Plan Builder Dialog */}
+      {/* AI Generate for Patient Dialog */}
       <TreatmentPlanBuilder
-        open={showBulkCreateDialog}
-        onClose={() => {
-          setShowBulkCreateDialog(false);
-          setSelectedAppointments(new Set());
+        open={showAIGenerateDialog}
+        onClose={() => setShowAIGenerateDialog(false)}
+        onSuccess={(planId) => {
+          queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
+          setShowAIGenerateDialog(false);
+          navigate(`/treatment-plans/${planId}`);
         }}
-        onSuccess={handlePlanCreated}
-        bulkPatients={Array.from(selectedAppointments)
-          .map((id) => appointmentsNeedingPlans.find((a) => a.id === id))
-          .filter(Boolean)
-          .map((apt) => ({
-            id: apt!.patientId,
-            firstName: apt!.patientName.split(" ")[0] || "",
-            lastName: apt!.patientName.split(" ").slice(1).join(" ") || "",
-            appointmentId: apt!.id,
-            appointmentType: apt!.appointmentType,
-            reasonForVisit: apt!.reasonForVisit,
-          }))}
       />
 
-      <ScheduleAppointmentDialog
-        open={scheduleDialogOpen}
-        onClose={() => {
-          setScheduleDialogOpen(false);
-          setSelectedPlan(null);
-        }}
-        patient={
-          selectedPlan?.patient
-            ? {
-                id: selectedPlan.patient.id,
-                firstName: selectedPlan.patient.firstName,
-                lastName: selectedPlan.patient.lastName,
-                email: selectedPlan.patient.email || "",
-                phone: selectedPlan.patient.phone || "",
-              }
-            : undefined
-        }
-        patientId={selectedPlan?.patientId}
-        treatmentPlanId={selectedPlan?.id}
-        appointmentType="treatment"
-      />
+      {/* Use Template Dialog - Select Patient */}
+      <Dialog
+        open={useTemplateDialogOpen}
+        onClose={() => setUseTemplateDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Use Template: {selectedTemplate?.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select a patient to create a treatment plan from this template.
+          </Typography>
+          {/* Patient selector would go here */}
+          <Typography variant="body2" color="text.secondary">
+            Patient search coming soon...
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <AuraButton variant="text" onClick={() => setUseTemplateDialogOpen(false)}>
+            Cancel
+          </AuraButton>
+          <AuraButton variant="contained" disabled>
+            Create Plan
+          </AuraButton>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

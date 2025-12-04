@@ -55,7 +55,7 @@ public class PromSchedulingService : IPromSchedulingService
                 var promInstance = new PromInstance
                 {
                     TenantId = plan.TenantId,
-                    PatientId = plan.PatientId,
+                    PatientId = plan.PatientId ?? Guid.Empty,
                     TemplateId = template.Id,
                     DueDate = dueDate,
                     Status = PromStatus.Pending,

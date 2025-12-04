@@ -181,7 +181,7 @@ public class TreatmentPlanSchedulingService : ITreatmentPlanSchedulingService
                     {
                         Id = Guid.NewGuid(),
                         TenantId = plan.TenantId,
-                        PatientId = plan.PatientId,
+                        PatientId = plan.PatientId ?? Guid.Empty,
                         ProviderId = plan.ProviderId,
                         ProviderProfileId = providerProfile.Id,
                         TreatmentPlanId = plan.Id,
@@ -331,7 +331,7 @@ public class TreatmentPlanSchedulingService : ITreatmentPlanSchedulingService
             var request = new SendPromRequest
             {
                 TemplateId = template.Id,
-                PatientId = plan.PatientId,
+                PatientId = plan.PatientId ?? Guid.Empty,
                 ScheduledAt = scheduledFor,
                 DueDate = scheduledFor.AddDays(7),
                 NotificationMethod = NotificationMethod.Email | NotificationMethod.InApp,
