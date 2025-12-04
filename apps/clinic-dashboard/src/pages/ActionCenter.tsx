@@ -232,6 +232,16 @@ function mapPriority(priority: string): ActionPriority {
   }
 }
 
+// Helper to extract the actual ID from prefixed IDs like "prom-{guid}"
+function extractId(prefixedId: string): string {
+  const parts = prefixedId.split("-");
+  // If it starts with a known prefix, remove it
+  if (["prom", "intake", "message", "referral", "appointment"].includes(parts[0])) {
+    return parts.slice(1).join("-");
+  }
+  return prefixedId;
+}
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -780,7 +790,7 @@ export default function ActionCenter() {
   const handleArchive = useCallback(
     async (id: string) => {
       try {
-        await inboxApi.archive(id);
+        await inboxApi.archive(extractId(id));
         queryClient.invalidateQueries({ queryKey: ["action-center-inbox"] });
         enqueueSnackbar("Archived", { variant: "success" });
         setSelectedItem(null);
@@ -808,19 +818,19 @@ export default function ActionCenter() {
       try {
         switch (action) {
           case "archive":
-            await Promise.all(ids.map((id) => inboxApi.archive(id)));
+            await Promise.all(ids.map((id) => inboxApi.archive(extractId(id))));
             enqueueSnackbar(`Archived ${ids.length} items`, {
               variant: "success",
             });
             break;
           case "star":
-            await Promise.all(ids.map((id) => inboxApi.star(id)));
+            await Promise.all(ids.map((id) => inboxApi.star(extractId(id))));
             enqueueSnackbar(`Starred ${ids.length} items`, {
               variant: "success",
             });
             break;
           case "markRead":
-            await inboxApi.markMultipleAsRead(ids);
+            await inboxApi.markMultipleAsRead(ids.map(extractId));
             enqueueSnackbar(`Marked ${ids.length} items as read`, {
               variant: "success",
             });

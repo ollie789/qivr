@@ -39,23 +39,26 @@ public class MessagingService : IMessagingService
 
     public async Task<IEnumerable<ConversationSummary>> GetConversationsAsync(Guid tenantId, Guid userId)
     {
-        // Optimized: Single query with projection to avoid N+1
-        // Uses a subquery to get conversation summaries with participant info in one round-trip
-        var conversationSummaries = await _context.Messages
+        // Fetch all messages for this user first, then group in memory
+        // This avoids complex GroupBy translation issues in EF Core
+        var messages = await _context.Messages
             .Where(m => m.TenantId == tenantId && (m.SenderId == userId || m.DirectRecipientId == userId))
+            .OrderByDescending(m => m.CreatedAt)
+            .ToListAsync();
+
+        // Group in memory
+        var conversationSummaries = messages
             .GroupBy(m => m.SenderId == userId ? m.DirectRecipientId : m.SenderId)
             .Select(g => new
             {
                 ParticipantId = g.Key,
-                LastMessageContent = g.OrderByDescending(m => m.CreatedAt).Select(m => m.Content).FirstOrDefault(),
-                LastMessageTime = g.Max(m => m.CreatedAt),
-                LastMessageSenderId = g.OrderByDescending(m => m.CreatedAt).Select(m => m.SenderId).FirstOrDefault(),
+                LastMessage = g.First(),
                 UnreadCount = g.Count(m => m.DirectRecipientId == userId && !m.IsRead),
                 TotalMessages = g.Count(),
                 HasAttachments = g.Any(m => m.HasAttachments),
                 IsUrgent = g.Any(m => m.Priority == "High" || m.Priority == "Urgent")
             })
-            .ToListAsync();
+            .ToList();
 
         // Get all participant IDs and fetch users in a single query
         var participantIds = conversationSummaries.Select(c => c.ParticipantId).Distinct().ToList();
@@ -74,11 +77,11 @@ public class MessagingService : IMessagingService
             {
                 ParticipantId = conversation.ParticipantId,
                 ParticipantName = $"{participant.FirstName} {participant.LastName}".Trim(),
-                ParticipantAvatar = null, // Avatar stored in user metadata if needed
+                ParticipantAvatar = null,
                 ParticipantRole = participant.UserType.ToString(),
-                LastMessage = conversation.LastMessageContent ?? "",
-                LastMessageTime = conversation.LastMessageTime,
-                LastMessageSender = conversation.LastMessageSenderId == userId ? "You" : participant.FirstName,
+                LastMessage = conversation.LastMessage.Content ?? "",
+                LastMessageTime = conversation.LastMessage.CreatedAt,
+                LastMessageSender = conversation.LastMessage.SenderId == userId ? "You" : participant.FirstName,
                 UnreadCount = conversation.UnreadCount,
                 TotalMessages = conversation.TotalMessages,
                 HasAttachments = conversation.HasAttachments,
