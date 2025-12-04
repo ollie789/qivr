@@ -108,13 +108,14 @@ function mapEvaluationToIntake(e: any): IntakeSubmission {
   };
   const statusMap: Record<string, IntakeSubmission["status"]> = {
     pending: "pending",
+    reviewing: "reviewing",
     reviewed: "reviewing",
+    approved: "approved",
+    rejected: "rejected",
+    scheduling: "approved",
+    scheduled: "scheduled",
     triaged: "approved",
     archived: "rejected",
-    Pending: "pending",
-    Reviewed: "reviewing",
-    Triaged: "approved",
-    Archived: "rejected",
   };
   return {
     id: e.id,
