@@ -95,7 +95,8 @@
     "three": "^0.181.2",
     "wavesurfer.js": "^7.11.0",
     "yet-another-react-lightbox": "^3.25.0",
-    "yup": "^1.7.0"
+    "yup": "^1.7.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",
