@@ -15,12 +15,10 @@ import {
   ListItemText,
   Grid,
   LinearProgress,
-  InputAdornment,
   Divider,
   Collapse,
   Stack,
   Paper,
-  Tooltip,
   Dialog,
   DialogContent,
 } from "@mui/material";
@@ -30,10 +28,8 @@ import {
   Add,
   Delete,
   CheckCircle,
-  Search as SearchIcon,
   ExpandMore,
   ExpandLess,
-  PlayCircleOutline as VideoIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -53,24 +49,7 @@ import {
 import { patientApi } from "../../services/patientApi";
 import { intakeApi, IntakeSubmission } from "../../services/intakeApi";
 import { appointmentsApi } from "../../services/appointmentsApi";
-
-// Interface for exercise with media
-interface ExerciseWithMedia {
-  id: string;
-  name: string;
-  description?: string;
-  instructions?: string;
-  defaultSets?: number;
-  defaultReps?: number;
-  defaultHoldSeconds?: number;
-  defaultFrequency?: string;
-  category?: string;
-  bodyRegion?: string;
-  difficulty?: string;
-  videoUrl?: string;
-  thumbnailUrl?: string;
-  imageUrl?: string;
-}
+import { ExerciseLibraryBrowser } from "../treatment-plan";
 
 export interface BulkPatient {
   id: string;
@@ -366,12 +345,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     null,
   );
 
-  // Exercise browser state
-  const [exerciseSearch, setExerciseSearch] = useState("");
-  const [exerciseFilterCategory, setExerciseFilterCategory] =
-    useState<string>("all");
-  const [exerciseFilterRegion, setExerciseFilterRegion] =
-    useState<string>("all");
+  // Phase editor state
   const [expandedPhaseIndex, setExpandedPhaseIndex] = useState<number | null>(
     0,
   );
@@ -455,35 +429,6 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     queryKey: ["exercise-filters"],
     queryFn: () => exerciseLibraryApi.getFilters(),
   });
-
-  const { data: exerciseLibrary } = useQuery({
-    queryKey: ["exercise-library"],
-    queryFn: () => exerciseLibraryApi.list({ pageSize: 200 }),
-  });
-
-  const allExercises = exerciseLibrary?.data || [];
-
-  // Filter exercises based on search and filters
-  const filteredExercises = useMemo(() => {
-    return allExercises.filter((ex: any) => {
-      const matchesSearch =
-        !exerciseSearch ||
-        ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
-        ex.description?.toLowerCase().includes(exerciseSearch.toLowerCase());
-      const matchesCategory =
-        exerciseFilterCategory === "all" ||
-        ex.category === exerciseFilterCategory;
-      const matchesRegion =
-        exerciseFilterRegion === "all" ||
-        ex.bodyRegion === exerciseFilterRegion;
-      return matchesSearch && matchesCategory && matchesRegion;
-    });
-  }, [
-    allExercises,
-    exerciseSearch,
-    exerciseFilterCategory,
-    exerciseFilterRegion,
-  ]);
 
   // Steps - Different flows for different modes:
   // - Template mode: no patient selection needed
@@ -943,9 +888,6 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
     setPhases([]);
     setIsGenerating(false);
     setSelectedDevice(null);
-    setExerciseSearch("");
-    setExerciseFilterCategory("all");
-    setExerciseFilterRegion("all");
     setBulkProgress({ current: 0, total: 0, completed: [], failed: [] });
     setIsBulkProcessing(false);
     onClose();
@@ -2060,218 +2002,18 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
 
             {/* Exercise Library Browser */}
             {phases.length > 0 && (
-              <Paper variant="outlined" sx={{ p: 2, mt: 2, borderRadius: 2 }}>
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                  Exercise Library
-                </Typography>
-
-                {/* Filters */}
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  sx={{ mb: 2 }}
-                  flexWrap="wrap"
-                  useFlexGap
-                >
-                  <TextField
-                    placeholder="Search exercises..."
-                    value={exerciseSearch}
-                    onChange={(e) => setExerciseSearch(e.target.value)}
-                    size="small"
-                    sx={{ minWidth: 200, flex: 1 }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Autocomplete
-                    options={["all", ...(exerciseFilters?.categories || [])]}
-                    value={exerciseFilterCategory}
-                    onChange={(_, v) => setExerciseFilterCategory(v || "all")}
-                    size="small"
-                    sx={{ minWidth: 150 }}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Category" />
-                    )}
-                  />
-                  <Autocomplete
-                    options={[
-                      "all",
-                      ...(exerciseFilters?.bodyRegions || BODY_REGIONS),
-                    ]}
-                    value={exerciseFilterRegion}
-                    onChange={(_, v) => setExerciseFilterRegion(v || "all")}
-                    size="small"
-                    sx={{ minWidth: 150 }}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Body Region" />
-                    )}
-                  />
-                </Stack>
-
-                {/* Exercise List with Media Preview */}
-                <List dense sx={{ maxHeight: 400, overflow: "auto" }}>
-                  {filteredExercises.length === 0 ? (
-                    <ListItem>
-                      <ListItemText
-                        primary="No exercises found"
-                        secondary="Try adjusting your filters"
-                      />
-                    </ListItem>
-                  ) : (
-                    filteredExercises
-                      .slice(0, 50)
-                      .map((exercise: ExerciseWithMedia) => (
-                        <ListItem
-                          key={exercise.id}
-                          sx={{
-                            bgcolor: "background.paper",
-                            mb: 0.5,
-                            borderRadius: 1,
-                            border: "1px solid",
-                            borderColor: "divider",
-                            py: 1,
-                          }}
-                          secondaryAction={
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                            >
-                              {/* Video preview button */}
-                              {exercise.videoUrl && (
-                                <Tooltip title="Watch video">
-                                  <IconButton
-                                    size="small"
-                                    color="primary"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPreviewVideo(exercise.videoUrl!);
-                                    }}
-                                  >
-                                    <VideoIcon />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              <Autocomplete
-                                options={phases}
-                                getOptionLabel={(p) => p.name}
-                                size="small"
-                                sx={{ width: 150 }}
-                                renderInput={(params) => (
-                                  <TextField
-                                    {...params}
-                                    placeholder="Add to..."
-                                    size="small"
-                                  />
-                                )}
-                                onChange={(_, selectedPhase) => {
-                                  if (selectedPhase) {
-                                    const _phaseIndex = phases.findIndex(
-                                      (p) =>
-                                        p.phaseNumber ===
-                                        selectedPhase.phaseNumber,
-                                    );
-                                    if (_phaseIndex !== -1) {
-                                      handleAddExerciseToPhase(
-                                        _phaseIndex,
-                                        exercise,
-                                      );
-                                    }
-                                  }
-                                }}
-                                value={null}
-                              />
-                            </Stack>
-                          }
-                        >
-                          {/* Thumbnail or icon */}
-                          <ListItemIcon sx={{ minWidth: 56 }}>
-                            {exercise.thumbnailUrl || exercise.imageUrl ? (
-                              <Avatar
-                                variant="rounded"
-                                src={exercise.thumbnailUrl || exercise.imageUrl}
-                                sx={{ width: 40, height: 40 }}
-                              >
-                                <FitnessCenter fontSize="small" />
-                              </Avatar>
-                            ) : (
-                              <Avatar
-                                variant="rounded"
-                                sx={{
-                                  width: 40,
-                                  height: 40,
-                                  bgcolor: "primary.light",
-                                }}
-                              >
-                                <FitnessCenter fontSize="small" />
-                              </Avatar>
-                            )}
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 0.5,
-                                }}
-                              >
-                                <Typography variant="body2" fontWeight={500}>
-                                  {exercise.name}
-                                </Typography>
-                                {exercise.videoUrl && (
-                                  <VideoIcon
-                                    fontSize="inherit"
-                                    color="action"
-                                    sx={{ opacity: 0.5 }}
-                                  />
-                                )}
-                              </Box>
-                            }
-                            secondary={
-                              <Stack
-                                direction="row"
-                                spacing={0.5}
-                                component="span"
-                                sx={{ mt: 0.5 }}
-                              >
-                                <Chip
-                                  label={exercise.category}
-                                  size="small"
-                                  sx={{ height: 18, fontSize: "0.65rem" }}
-                                />
-                                <Chip
-                                  label={exercise.bodyRegion}
-                                  size="small"
-                                  sx={{ height: 18, fontSize: "0.65rem" }}
-                                />
-                                <Chip
-                                  label={exercise.difficulty}
-                                  size="small"
-                                  sx={{ height: 18, fontSize: "0.65rem" }}
-                                />
-                              </Stack>
-                            }
-                          />
-                        </ListItem>
-                      ))
-                  )}
-                </List>
-                {filteredExercises.length > 50 && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 1, display: "block" }}
-                  >
-                    Showing 50 of {filteredExercises.length} exercises. Use
-                    filters to narrow down.
-                  </Typography>
-                )}
-              </Paper>
+              <Box sx={{ mt: 2 }}>
+                <ExerciseLibraryBrowser
+                  phases={phases.map((p) => ({
+                    phaseNumber: p.phaseNumber,
+                    name: p.name,
+                  }))}
+                  onAddExercise={(exercise, phaseIndex) =>
+                    handleAddExerciseToPhase(phaseIndex, exercise)
+                  }
+                  bodyRegionHint={basicInfo.bodyRegion}
+                />
+              </Box>
             )}
           </Box>
         );
@@ -2279,6 +2021,26 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
       case "Review & Create":
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* AI Generation Loading State */}
+            {(isGenerating || previewMutation.isPending) && (
+              <Paper
+                sx={{
+                  p: 3,
+                  borderRadius: 2,
+                  textAlign: "center",
+                  bgcolor: "primary.50",
+                }}
+              >
+                <CircularProgress size={40} sx={{ mb: 2 }} />
+                <Typography variant="subtitle1" fontWeight={600}>
+                  AI is generating your treatment plan...
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Analyzing patient data and creating personalized exercises
+                </Typography>
+              </Paper>
+            )}
+
             <Box
               sx={{
                 display: "flex",
@@ -2304,9 +2066,23 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               >
                 {isGenerating || previewMutation.isPending
                   ? "Generating..."
-                  : "AI Suggest Plan"}
+                  : totalExercises === 0
+                    ? "AI Generate Exercises"
+                    : "AI Regenerate"}
               </AuraButton>
             </Box>
+
+            {/* Warning if no exercises */}
+            {totalExercises === 0 &&
+              phases.length > 0 &&
+              !isGenerating &&
+              !previewMutation.isPending && (
+                <Callout variant="warning">
+                  Your phases don't have any exercises yet. Click "AI Generate
+                  Exercises" above, or add exercises manually after creating the
+                  plan.
+                </Callout>
+              )}
 
             <Callout variant="info">
               {isTemplate
@@ -2370,7 +2146,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                         : "No exercises yet"
                     }
                     size="small"
-                    color={phase.exercises.length > 0 ? "success" : "default"}
+                    color={phase.exercises.length > 0 ? "success" : "warning"}
                     variant="outlined"
                   />
                 </Box>
