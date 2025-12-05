@@ -476,10 +476,8 @@ public class AppointmentsController : BaseApiController
             Status = appointment.Status.ToString(),
             appointment.Notes,
             appointment.Location,
-            appointment.ReasonForVisit,
-            appointment.InsuranceVerified,
-            appointment.CopayAmount,
-            appointment.FollowUpRequired,
+            appointment.LocationType,
+            appointment.LocationDetails,
             appointment.CreatedAt,
             appointment.UpdatedAt
         });
