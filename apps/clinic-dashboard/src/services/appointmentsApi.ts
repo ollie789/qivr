@@ -43,8 +43,10 @@ export interface Appointment {
   scheduledEnd: string;
   appointmentType: string;
   status:
+    | "requested"
     | "scheduled"
     | "confirmed"
+    | "checked-in"
     | "in-progress"
     | "completed"
     | "cancelled"
@@ -87,6 +89,36 @@ export interface AppointmentSlot {
   providerId: string;
 }
 
+// Map backend PascalCase status to frontend kebab-case
+const mapStatus = (status: string): Appointment["status"] => {
+  const statusMap: Record<string, Appointment["status"]> = {
+    requested: "requested",
+    scheduled: "scheduled",
+    confirmed: "confirmed",
+    checkedin: "checked-in",
+    inprogress: "in-progress",
+    completed: "completed",
+    cancelled: "cancelled",
+    noshow: "no-show",
+  };
+  return statusMap[(status || "").toLowerCase()] || "scheduled";
+};
+
+// Map frontend kebab-case status to backend PascalCase
+const mapStatusToBackend = (status: string): string => {
+  const statusMap: Record<string, string> = {
+    requested: "Requested",
+    scheduled: "Scheduled",
+    confirmed: "Confirmed",
+    "checked-in": "CheckedIn",
+    "in-progress": "InProgress",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    "no-show": "NoShow",
+  };
+  return statusMap[status] || status;
+};
+
 const mapAppointment = (dto: AppointmentDto): Appointment => ({
   id: dto.id,
   patientId: dto.patientId,
@@ -98,7 +130,7 @@ const mapAppointment = (dto: AppointmentDto): Appointment => ({
   scheduledStart: dto.scheduledStart,
   scheduledEnd: dto.scheduledEnd,
   appointmentType: dto.appointmentType,
-  status: (dto.status || "").toLowerCase() as Appointment["status"],
+  status: mapStatus(dto.status),
   notes: dto.notes ?? undefined,
   location: dto.location ?? undefined,
   reasonForVisit: dto.reasonForVisit ?? undefined,
@@ -164,9 +196,13 @@ class AppointmentsApi {
     id: string,
     data: UpdateAppointmentRequest,
   ): Promise<Appointment> {
+    // Map status to backend format if provided
+    const payload = data.status
+      ? { ...data, status: mapStatusToBackend(data.status) }
+      : data;
     const response = await apiClient.put<AppointmentDto>(
       `/api/appointments/${id}`,
-      data,
+      payload,
     );
     return mapAppointment(response);
   }
@@ -177,6 +213,10 @@ class AppointmentsApi {
 
   async confirmAppointment(id: string) {
     return apiClient.post(`/api/appointments/${id}/confirm`);
+  }
+
+  async startAppointment(id: string): Promise<Appointment> {
+    return this.updateAppointment(id, { status: "in-progress" });
   }
 
   async rescheduleAppointment(

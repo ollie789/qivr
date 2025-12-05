@@ -61,7 +61,7 @@ export interface Patient {
   email: string;
   phone?: string;
   dateOfBirth: string;
-  gender?: 'male' | 'female' | 'other';
+  gender?: "male" | "female" | "other";
   address?: {
     street: string;
     city: string;
@@ -85,7 +85,15 @@ export interface Appointment {
   scheduledStart: string;
   scheduledEnd: string;
   appointmentType: string;
-  status: 'scheduled' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'no-show';
+  status:
+    | "requested"
+    | "scheduled"
+    | "confirmed"
+    | "checked-in"
+    | "in-progress"
+    | "completed"
+    | "cancelled"
+    | "no-show";
   notes?: string;
   videoLink?: string;
   location?: string;
@@ -111,7 +119,13 @@ export interface PromTemplate {
 export interface PromQuestion {
   id: string;
   text: string;
-  type: 'text' | 'number' | 'single-choice' | 'multiple-choice' | 'scale' | 'boolean';
+  type:
+    | "text"
+    | "number"
+    | "single-choice"
+    | "multiple-choice"
+    | "scale"
+    | "boolean";
   required: boolean;
   options?: string[];
   validation?: {
@@ -127,27 +141,13 @@ export interface PromResponse {
   templateName: string;
   patientId: string;
   patientName: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'expired';
+  status: "pending" | "in-progress" | "completed" | "expired";
   answers: Record<string, unknown>;
   score?: number;
   submittedAt?: string;
   completedAt?: string;
   dueDate: string;
   createdAt: string;
-}
-
-// Intake types
-export interface Intake {
-  id: string;
-  patientId: string;
-  patientName: string;
-  formType: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  submittedAt: string;
-  processedAt?: string;
-  extractedData?: Record<string, unknown>;
-  confidence?: number;
-  errors?: string[];
 }
 
 // Medical record types
@@ -174,12 +174,18 @@ export interface VitalSign {
 export interface MedicalHistory {
   id: string;
   patientId: string;
-  category: 'condition' | 'surgery' | 'allergy' | 'medication' | 'immunization' | 'family';
+  category:
+    | "condition"
+    | "surgery"
+    | "allergy"
+    | "medication"
+    | "immunization"
+    | "family";
   title: string;
   description: string;
   date?: string;
-  status: 'active' | 'resolved' | 'ongoing';
-  severity?: 'mild' | 'moderate' | 'severe' | 'critical';
+  status: "active" | "resolved" | "ongoing";
+  severity?: "mild" | "moderate" | "severe" | "critical";
   notes?: string;
 }
 
@@ -237,7 +243,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: "info" | "success" | "warning" | "error";
   isRead: boolean;
   createdAt: string;
   readAt?: string;
@@ -332,11 +338,11 @@ export interface PromInstanceResponse {
 // Message API types
 export interface MessageResponse {
   id: string;
-  type: 'sms' | 'email';
-  direction: 'sent' | 'received';
+  type: "sms" | "email";
+  direction: "sent" | "received";
   recipientId?: string;
   recipientName?: string;
-  recipientType?: 'patient' | 'staff';
+  recipientType?: "patient" | "staff";
   subject?: string;
   content: string;
   status: string;
@@ -346,14 +352,14 @@ export interface MessageResponse {
   metadata?: Record<string, unknown>;
 }
 
-// Notification API types  
+// Notification API types
 export interface NotificationResponse {
   id: string;
   recipientId: string;
   type: string;
   title: string;
   message: string;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  priority?: "low" | "medium" | "high" | "urgent";
   isRead: boolean;
   readAt?: string;
   createdAt: string;
