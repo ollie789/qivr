@@ -247,7 +247,7 @@ class AppointmentsApi {
       followUpDate?: string;
     },
   ) {
-    return apiClient.post(`/api/appointments/${id}/complete`, data);
+    return apiClient.post(`/api/appointments/${id}/complete`, data ?? {});
   }
 
   async getAvailableSlots(params: {

@@ -210,68 +210,91 @@ html {
 
 /* =========================================
    FullCalendar Grid Lines - Global Override
+   VERY AGGRESSIVE - uses high specificity selectors
    ========================================= */
 
-/* Set the CSS variable for border color */
-.fc {
-  --fc-border-color: rgba(0, 0, 0, 0.12);
+/* ROOT: Override FullCalendar CSS custom properties */
+:root {
+  --fc-border-color: rgba(0, 0, 0, 0.15) !important;
+  --fc-neutral-bg-color: transparent !important;
 }
 
-/* Dark mode override */
-[data-mui-color-scheme="dark"] .fc,
-.dark .fc {
-  --fc-border-color: rgba(255, 255, 255, 0.2);
+/* Dark mode - MUI and general dark mode selectors */
+[data-mui-color-scheme="dark"],
+.dark,
+[data-theme="dark"] {
+  --fc-border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* Force all FullCalendar table borders to be visible */
+/* NUCLEAR OPTION: Target ALL table elements inside FullCalendar */
+.fc table,
+.fc tr,
+.fc td,
+.fc th,
 .fc-scrollgrid,
+.fc-scrollgrid-section,
+.fc-scrollgrid-section > *,
 .fc-scrollgrid table,
+.fc-scrollgrid tbody,
+.fc-scrollgrid thead,
 .fc-scrollgrid td,
 .fc-scrollgrid th {
   border-color: var(--fc-border-color) !important;
   border-style: solid !important;
+  border-width: 1px !important;
 }
 
-/* Vertical lines between days in time grid */
-.fc-timegrid-col {
+/* Ensure border-collapse doesn't hide borders */
+.fc table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+/* TIME GRID: Vertical column separators */
+.fc-timegrid-cols td,
+.fc-timegrid-col,
+.fc-timegrid-col-frame {
   border-right: 1px solid var(--fc-border-color) !important;
 }
 
-.fc-timegrid-col:last-child {
+.fc-timegrid-cols td:last-child,
+.fc-timegrid-col:last-child,
+.fc-timegrid-col-frame:last-child {
   border-right: none !important;
 }
 
-/* Time slots horizontal lines */
-.fc-timegrid-slot {
-  border-bottom: 1px solid var(--fc-border-color) !important;
-}
-
+/* TIME GRID: Horizontal time slot lines */
+.fc-timegrid-slot,
 .fc-timegrid-slot-lane {
   border-top: 1px solid var(--fc-border-color) !important;
+  border-bottom: 1px solid var(--fc-border-color) !important;
 }
 
-/* Half-hour slots - dashed line */
+/* Half-hour markers - dashed */
 .fc-timegrid-slot-minor {
-  border-top-style: dashed !important;
+  border-top: 1px dashed var(--fc-border-color) !important;
 }
 
-/* Column headers separation */
+/* TIME GRID: Time axis (left column with hours) */
+.fc-timegrid-axis,
+.fc-timegrid-axis-frame {
+  border-right: 1px solid var(--fc-border-color) !important;
+}
+
+/* HEADER: Day column headers */
+.fc-col-header,
 .fc-col-header-cell {
   border-right: 1px solid var(--fc-border-color) !important;
-  border-bottom: 1px solid var(--fc-border-color) !important;
+  border-bottom: 2px solid var(--fc-border-color) !important;
 }
 
 .fc-col-header-cell:last-child {
   border-right: none !important;
 }
 
-/* Time axis column border */
-.fc-timegrid-axis {
-  border-right: 1px solid var(--fc-border-color) !important;
-}
-
-/* Day grid cells (month view) */
-.fc-daygrid-day {
+/* DAY GRID (month view): Cell borders */
+.fc-daygrid-day,
+.fc-daygrid-day-frame {
   border-right: 1px solid var(--fc-border-color) !important;
   border-bottom: 1px solid var(--fc-border-color) !important;
 }
@@ -280,16 +303,25 @@ html {
   border-right: none !important;
 }
 
-/* Outer border of the calendar */
+/* OUTER: Main calendar container border */
 .fc-scrollgrid {
   border: 1px solid var(--fc-border-color) !important;
 }
 
-/* Table structure */
-.fc-scrollgrid-section > td {
+/* Section separators */
+.fc-scrollgrid-section > td,
+.fc-scrollgrid-section > th {
   border-bottom: 1px solid var(--fc-border-color) !important;
 }
 
 .fc-scrollgrid-section-header > td {
   border-bottom: 2px solid var(--fc-border-color) !important;
+}
+
+/* Remove any transparent/none borders that might be overriding */
+.fc *[style*="border: none"],
+.fc *[style*="border:none"],
+.fc *[style*="border-color: transparent"] {
+  border-color: var(--fc-border-color) !important;
+  border-style: solid !important;
 }
