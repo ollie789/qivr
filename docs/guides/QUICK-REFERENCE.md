@@ -1,134 +1,164 @@
-# QIVR Quick Reference
+# Qivr Quick Reference
 
-## 🔗 URLs
+## URLs
 
-### HTTPS (Production - Use These)
+### Production
 
-- **Clinic:** https://dwmqwnt4dy1td.cloudfront.net
-- **Patient:** https://d1jw6e1qiegavd.cloudfront.net
-- **API:** https://qivr-alb-1257648623.ap-southeast-2.elb.amazonaws.com (Note: HTTPS not yet configured)
+| Service          | URL                      |
+| ---------------- | ------------------------ |
+| Clinic Dashboard | https://clinic.qivr.pro  |
+| Patient Portal   | https://patient.qivr.pro |
+| API              | https://api.qivr.pro     |
+| Admin Portal     | https://admin.qivr.pro   |
 
-### AWS Console
+### Local Development
 
-- **CloudWatch:** https://console.aws.amazon.com/cloudwatch/home?region=ap-southeast-2#alarmsV2:
-- **CloudFront:** https://console.aws.amazon.com/cloudfront/v3/home
-- **ECS:** https://console.aws.amazon.com/ecs/v2/clusters/qivr_cluster/services
+| Service          | URL                           |
+| ---------------- | ----------------------------- |
+| Clinic Dashboard | http://localhost:3010         |
+| Patient Portal   | http://localhost:3005         |
+| API              | http://localhost:5050         |
+| API Swagger      | http://localhost:5050/swagger |
 
-## 🛠️ Common Commands
+## Common Commands
 
-### Check System Status
+### Development
 
 ```bash
-./infrastructure/verify-alignment.sh
+# Start all services
+npm run dev
+
+# Individual services
+npm run clinic:dev      # Port 3010
+npm run patient:dev     # Port 3005
+npm run backend:dev     # Port 5050
+
+# Database
+npm run db:migrate
+npm run db:seed
 ```
 
-### Deploy Backend
+### Build & Test
 
 ```bash
-./infrastructure/deploy.sh
+npm run build           # Build all
+npm run type-check      # TypeScript check
+npm run lint            # Lint all
+npm run test            # Run tests
 ```
 
-### Deploy Frontends
+### Deployment
 
 ```bash
-# Clinic
+npm run deploy              # Full deployment
+npm run deploy:backend      # Backend only
+npm run deploy:frontend     # Frontend only
+
+# Manual frontend deploy
 cd apps/clinic-dashboard && npm run build
-aws s3 sync dist/ s3://qivr-clinic-dashboard-staging --delete
+aws s3 sync dist/ s3://qivr-clinic-dashboard-production --delete
 aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
-
-# Patient
-cd apps/patient-portal && npm run build
-aws s3 sync dist/ s3://qivr-patient-portal-staging --delete
-aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*"
 ```
 
-### View Logs
+### Logs
 
 ```bash
+# ECS logs
 aws logs tail /ecs/qivr_cluster/qivr-api --follow --region ap-southeast-2
+
+# Recent errors
+aws logs filter-log-events --log-group-name /ecs/qivr_cluster/qivr-api \
+  --filter-pattern "ERROR" --region ap-southeast-2
 ```
 
-### Seed Sample Data
+## AWS Resources
+
+| Resource           | Identifier                       |
+| ------------------ | -------------------------------- |
+| ECS Cluster        | qivr_cluster                     |
+| ECS Service        | qivr-api                         |
+| RDS Instance       | qivr-production-db               |
+| Clinic S3          | qivr-clinic-dashboard-production |
+| Patient S3         | qivr-patient-portal-production   |
+| Clinic CloudFront  | E1S9SAZB57T3C3                   |
+| Patient CloudFront | E39OVJDZIZ22QL                   |
+
+## Cognito Pools
+
+| Pool    | Region         | Pool ID                  |
+| ------- | -------------- | ------------------------ |
+| Clinic  | ap-southeast-2 | ap-southeast-2_jbutB4tj1 |
+| Patient | ap-southeast-2 | ap-southeast-2_ZMcriKNGJ |
+
+## Database
 
 ```bash
-# Get JWT from browser dev tools after login
-AUTH_TOKEN="Bearer <token>" node infrastructure/seed-sample-data.mjs
+# Connect to RDS (via SSM or bastion)
+psql -h qivr-production-db.xxxxx.ap-southeast-2.rds.amazonaws.com \
+     -U qivr_admin -d qivr
+
+# Local postgres
+psql -h localhost -U qivr_user -d qivr
 ```
 
-## 📊 Key Resources
+## CI/CD
 
-| Resource           | Identifier                    |
-| ------------------ | ----------------------------- |
-| ECS Cluster        | qivr_cluster                  |
-| ECS Service        | qivr-api                      |
-| RDS Instance       | qivr-dev-db                   |
-| ALB                | qivr-alb                      |
-| Clinic S3          | qivr-clinic-dashboard-staging |
-| Patient S3         | qivr-patient-portal-staging   |
-| Clinic CloudFront  | E1S9SAZB57T3C3                |
-| Patient CloudFront | E39OVJDZIZ22QL                |
-| SNS Topic          | qivr-staging-alerts           |
+- **Build System:** AWS CodeBuild
+- **Build Project:** qivr-build
+- **Last Build SSM:** /qivr/last-successful-build
 
-## 🔐 Cognito
+```bash
+# Check last successful build
+aws ssm get-parameter --name /qivr/last-successful-build --query 'Parameter.Value' --output text
 
-| Pool    | ID                       | Client ID                  |
-| ------- | ------------------------ | -------------------------- |
-| Clinic  | ap-southeast-2_jbutB4tj1 | 4l510mm689hhpgr12prbuch2og |
-| Patient | ap-southeast-2_ZMcriKNGJ | 4kugfmvk56o3otd0grc4gddi8r |
+# Trigger build
+aws codebuild start-build --project-name qivr-build
+```
 
-## 📈 Monitoring
+## Monitoring
 
-**7 CloudWatch Alarms:**
+### CloudWatch Alarms
 
 - API 5xx errors > 10
 - API response time > 2s
 - DB connections > 80
 - DB CPU > 80%
-- DB storage < 5GB
 - ECS CPU > 80%
 - ECS Memory > 85%
 
-**Alerts:** oliver@qivr.io
+### Health Check
 
-## 🚨 Troubleshooting
+```bash
+curl https://api.qivr.pro/health
+```
 
-### 401 Errors
+## Troubleshooting
 
-- Auto-user creation should handle this
-- Check logs for "Found user" or "Creating user"
-- Verify Cognito token is valid
+### 401 Unauthorized
 
-### Frontend Not Loading
+- Check Cognito token validity
+- Verify X-Tenant-Id header
+- Check user exists in database
 
-- Check CloudFront status
-- Verify S3 bucket has files
-- Check browser console for errors
+### 500 Errors
 
-### API Not Responding
+- Check ECS logs for stack trace
+- Verify database connectivity
+- Check RDS CPU/connections
 
-- Check ECS service: 2/2 tasks running
-- Check ALB target health
-- View logs for errors
+### Frontend Not Updating
+
+- Clear CloudFront cache
+- Check S3 sync completed
+- Verify build succeeded
 
 ### Database Issues
 
-- Verify RDS status: available
-- Check connection string in appsettings
-- Review CloudWatch DB metrics
+```bash
+# Check connections
+SELECT count(*) FROM pg_stat_activity;
 
-## 📚 Documentation
-
-- **System Audit:** SYSTEM-AUDIT-2025-11-06.md
-- **Alignment Report:** SYSTEM-ALIGNMENT.md
-- **CloudFront Details:** CLOUDFRONT-DEPLOYED.md
-- **Implementation Summary:** IMPLEMENTATION-SUMMARY.md
-- **Next Steps:** NEXT-STEPS.md
-- **Infrastructure Guide:** infrastructure/README.md
-
-## 💡 Tips
-
-- Always invalidate CloudFront after frontend deploys
-- Check CloudWatch alarms daily
-- Keep JWT tokens fresh (they expire)
-- Use HTTPS URLs for production
-- Run verify-alignment.sh before major changes
+# Kill idle connections
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+WHERE state = 'idle' AND query_start < now() - interval '1 hour';
+```

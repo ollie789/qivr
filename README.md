@@ -22,39 +22,37 @@ npm run backend:dev     # .NET API on :5050
 ```
 qivr/
 ├── apps/                     # Frontend applications
-│   ├── clinic-dashboard/     # Staff portal (React + Vite)
-│   ├── patient-portal/       # Patient portal (React + Vite)
+│   ├── clinic-dashboard/     # Staff portal (18 pages)
+│   ├── patient-portal/       # Patient portal (20 pages)
 │   ├── intake-widget/        # Embeddable intake form
 │   └── admin-portal/         # Platform admin
 │
 ├── backend/                  # .NET 8 API
-│   ├── Qivr.Api/            # API controllers & endpoints
+│   ├── Qivr.Api/            # API controllers (40+)
 │   ├── Qivr.Services/       # Business logic layer
 │   ├── Qivr.Core/           # Domain models & interfaces
 │   └── Qivr.Infrastructure/ # Data access & external services
 │
 ├── packages/                 # Shared packages
 │   ├── design-system/       # Aura UI component library
-│   └── http/                # HTTP client utilities
+│   ├── http/                # HTTP client utilities
+│   └── eval/                # Evaluation utilities
 │
 ├── database/                 # PostgreSQL migrations & seeds
-├── analytics/                # AWS analytics (Athena, Glue)
-├── aws/                      # AWS configurations
-├── infrastructure/           # Docker, Terraform
-├── scripts/                  # Utility & deployment scripts
-├── stories/                  # Storybook stories
-└── docs/                     # Documentation
+├── docs/                     # Documentation
+└── scripts/                  # Utility & deployment scripts
 ```
 
 ## Development
 
 ### Frontend Apps
 
-| App | Port | Command |
-|-----|------|---------|
-| Clinic Dashboard | 3010 | `npm run clinic:dev` |
-| Patient Portal | 3005 | `npm run patient:dev` |
-| Intake Widget | 3002 | `npm run widget:dev` |
+| App              | Port | Command               |
+| ---------------- | ---- | --------------------- |
+| Clinic Dashboard | 3010 | `npm run clinic:dev`  |
+| Patient Portal   | 3005 | `npm run patient:dev` |
+| Intake Widget    | 3002 | `npm run widget:dev`  |
+| Admin Portal     | 3020 | `npm run admin:dev`   |
 
 ### Backend
 
@@ -73,53 +71,70 @@ npm run db:seed       # Seed test data
 ## Testing
 
 ```bash
-# Type checking
-npm run type-check
-
-# Linting
-npm run lint
-
-# Run tests
-npm run test
-
-# Storybook
-npm run storybook
+npm run type-check    # Type checking
+npm run lint          # Linting
+npm run test          # Run tests
+npm run storybook     # Component stories
 ```
 
 ## Key Features
 
-- **Multi-tenant architecture** with per-tenant Cognito pools
-- **Patient portal** with appointments, messaging, health progress
-- **Clinic dashboard** with intake management, analytics, treatment plans
-- **Document management** with OCR extraction
-- **PROM questionnaires** with scoring and tracking
-- **Real-time messaging** between patients and providers
-- **Analytics dashboard** with clinic metrics
+- **Multi-tenant architecture** - Per-tenant Cognito pools, row-level data isolation
+- **Intake management** - Kanban board, AI triage, questionnaire builder
+- **Treatment plans** - Phase-based plans, exercise library, AI generation
+- **PROM system** - Configurable questionnaires, automated scheduling, scoring
+- **Patient portal** - Appointments, messaging, health progress, treatment tracking
+- **Document management** - Upload, OCR extraction, categorization
+- **Analytics dashboard** - Clinic metrics, patient outcomes, revenue tracking
+- **Real-time messaging** - Threaded conversations, notifications
+- **Referral management** - Track incoming/outgoing referrals
+- **Device tracking** - Medical device assignment and monitoring
 
 ## Tech Stack
 
 **Frontend:**
-- React 18 + TypeScript
-- Vite build tool
-- Material UI + custom Aura design system
-- React Query for data fetching
-- Zustand for state management
+
+- React 19 + TypeScript
+- Vite 7 (build tool)
+- MUI v7 + Aura Design System
+- React Query (data fetching)
+- Zustand (state management)
+- React Router v7
 
 **Backend:**
+
 - .NET 8 Web API
 - Entity Framework Core
 - PostgreSQL database
 - Serilog logging
 
+**AI/ML:**
+
+- AWS Bedrock (Nova Lite, Claude)
+- AI-powered intake triage
+- Treatment plan generation
+- Exercise suggestions
+
 **Infrastructure:**
+
 - AWS ECS Fargate (API)
 - AWS S3 + CloudFront (frontend)
 - AWS RDS PostgreSQL
 - AWS Cognito (auth)
+- AWS Lambda (OCR processing)
+- AWS Textract (document OCR)
+- AWS SES (email)
+
+## Production URLs
+
+| Service          | URL                      |
+| ---------------- | ------------------------ |
+| Clinic Dashboard | https://clinic.qivr.pro  |
+| Patient Portal   | https://patient.qivr.pro |
+| API              | https://api.qivr.pro     |
+| Admin Portal     | https://admin.qivr.pro   |
 
 ## Deployment
-
-**Production:** https://clinic.qivr.pro
 
 ```bash
 npm run deploy              # Full deployment
@@ -129,12 +144,12 @@ npm run deploy:frontend     # Frontend only
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) - System design overview
+See [docs/README.md](docs/README.md) for full documentation:
+
+- [Architecture](docs/ARCHITECTURE.md) - System design
 - [API Routes](docs/API-ROUTES.md) - Backend endpoints
 - [Database Schema](docs/DATABASE-SCHEMA.md) - Data model
-- [Implementation Guide](docs/IMPLEMENTATION-GUIDE.md) - Feature development
-
-See [docs/README.md](docs/README.md) for full documentation index.
+- [Guides](docs/guides/) - Development guides
 
 ## License
 
