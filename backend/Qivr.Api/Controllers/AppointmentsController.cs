@@ -457,7 +457,32 @@ public class AppointmentsController : BaseApiController
 
         _logger.LogInformation("Appointment updated: {AppointmentId}", appointment.Id);
 
-        return NoContent();
+        // Reload with patient/provider names for response
+        await _context.Entry(appointment).Reference(a => a.Patient).LoadAsync();
+        await _context.Entry(appointment).Reference(a => a.Provider).LoadAsync();
+
+        return Ok(new
+        {
+            appointment.Id,
+            appointment.PatientId,
+            PatientName = appointment.Patient != null ? $"{appointment.Patient.FirstName} {appointment.Patient.LastName}" : null,
+            PatientEmail = appointment.Patient?.Email,
+            PatientPhone = appointment.Patient?.Phone,
+            appointment.ProviderId,
+            ProviderName = appointment.Provider != null ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" : null,
+            appointment.ScheduledStart,
+            appointment.ScheduledEnd,
+            appointment.AppointmentType,
+            Status = appointment.Status.ToString(),
+            appointment.Notes,
+            appointment.Location,
+            appointment.ReasonForVisit,
+            appointment.InsuranceVerified,
+            appointment.CopayAmount,
+            appointment.FollowUpRequired,
+            appointment.CreatedAt,
+            appointment.UpdatedAt
+        });
     }
 
     [HttpPost("{id}/cancel")]
