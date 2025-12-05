@@ -1,7 +1,7 @@
 // Aligned with clinic dashboard auth system
 // Uses httpOnly cookies + X-Tenant-Id header pattern
 
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG } from "../config/api";
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
@@ -12,25 +12,28 @@ class ApiClient {
     this.tenantId = tenantId;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<T> {
     // Normalize endpoint to always include /api prefix
     const normalizedEndpoint = API_CONFIG.url(endpoint);
     const url = `${API_BASE_URL}${normalizedEndpoint}`;
-    
+
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...options.headers as Record<string, string>,
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
     };
 
     // Add tenant ID header if available (for patient operations)
     if (this.tenantId) {
-      headers['X-Tenant-Id'] = this.tenantId;
+      headers["X-Tenant-Id"] = this.tenantId;
     }
 
     const config: RequestInit = {
       ...options,
       headers,
-      credentials: 'include', // Include httpOnly cookies
+      credentials: "include", // Include httpOnly cookies
     };
 
     const response = await fetch(url, config);
@@ -41,11 +44,11 @@ class ApiClient {
     }
 
     // Handle empty responses
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
       return response.json();
     }
-    
+
     return response.text() as T;
   }
 
@@ -61,40 +64,43 @@ class ApiClient {
       });
       const queryString = searchParams.toString();
       if (queryString) {
-        url += (endpoint.includes('?') ? '&' : '?') + queryString;
+        url += (endpoint.includes("?") ? "&" : "?") + queryString;
       }
     }
-    return this.request<T>(url, { method: 'GET' });
+    return this.request<T>(url, { method: "GET" });
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PUT',
+      method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
   async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PATCH',
+      method: "PATCH",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
   async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' });
+    return this.request<T>(endpoint, { method: "DELETE" });
   }
 }
 
 // Error handling utilities
-export const handleApiError = (error: unknown, defaultMessage: string): string => {
+export const handleApiError = (
+  error: unknown,
+  defaultMessage: string,
+): string => {
   if (error instanceof Error) {
     return error.message;
   }
@@ -248,9 +254,26 @@ export interface TreatmentProgressResponse {
 export const treatmentPlansApi = {
   /**
    * Get the patient's active treatment plan with today's tasks
+   * Returns null if no plan exists (404)
    */
-  getMyPlan: () =>
-    apiClient.get<MyTreatmentPlan>("/api/treatment-plans/my-plan"),
+  getMyPlan: async (): Promise<MyTreatmentPlan | null> => {
+    try {
+      return await apiClient.get<MyTreatmentPlan>(
+        "/api/treatment-plans/my-plan",
+      );
+    } catch (error: unknown) {
+      // Return null for 404 (no plan) instead of throwing
+      if (
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        error.status === 404
+      ) {
+        return null;
+      }
+      throw error;
+    }
+  },
 
   /**
    * Get treatment progress data for the Health Progress page
@@ -261,11 +284,17 @@ export const treatmentPlansApi = {
   /**
    * Complete an exercise
    */
-  completeExercise: (planId: string, exerciseId: string, data: ExerciseCompletion) =>
-    apiClient.post<{ message: string; pointsEarned: number; totalPoints: number; exerciseStreak: number }>(
-      `/api/treatment-plans/${planId}/exercises/${exerciseId}/complete`,
-      data
-    ),
+  completeExercise: (
+    planId: string,
+    exerciseId: string,
+    data: ExerciseCompletion,
+  ) =>
+    apiClient.post<{
+      message: string;
+      pointsEarned: number;
+      totalPoints: number;
+      exerciseStreak: number;
+    }>(`/api/treatment-plans/${planId}/exercises/${exerciseId}/complete`, data),
 
   /**
    * Submit a daily check-in
@@ -273,7 +302,7 @@ export const treatmentPlansApi = {
   submitCheckIn: (planId: string, data: DailyCheckInData) =>
     apiClient.post<{ message: string; streak: number; points: number }>(
       `/api/treatment-plans/${planId}/check-in`,
-      data
+      data,
     ),
 
   /**

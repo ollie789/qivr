@@ -71,10 +71,10 @@ export default function TreatmentPlan() {
     isLoading,
     error,
     refetch,
-  } = useQuery<MyTreatmentPlan>({
+  } = useQuery<MyTreatmentPlan | null>({
     queryKey: ["my-treatment-plan"],
     queryFn: () => treatmentPlansApi.getMyPlan(),
-    retry: 2,
+    retry: 1,
   });
 
   const completeExerciseMutation = useMutation({
