@@ -100,9 +100,11 @@ export default function TreatmentPlans() {
   const [sourceFilter, setSourceFilter] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAIGenerateDialog, setShowAIGenerateDialog] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<TreatmentTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<TreatmentTemplate | null>(null);
   const [useTemplateDialogOpen, setUseTemplateDialogOpen] = useState(false);
-  const [selectedPatientForTemplate, setSelectedPatientForTemplate] = useState<Patient | null>(null);
+  const [selectedPatientForTemplate, setSelectedPatientForTemplate] =
+    useState<Patient | null>(null);
   const [initialPatientId, setInitialPatientId] = useState<string | null>(null);
 
   const navigate = useNavigate();
@@ -145,7 +147,13 @@ export default function TreatmentPlans() {
 
   // Create plan from template mutation
   const createFromTemplateMutation = useMutation({
-    mutationFn: ({ templateId, patientId }: { templateId: string; patientId: string }) =>
+    mutationFn: ({
+      templateId,
+      patientId,
+    }: {
+      templateId: string;
+      patientId: string;
+    }) =>
       treatmentPlansApi.createFromTemplate(templateId, {
         patientId,
         startDate: new Date().toISOString(),
@@ -153,7 +161,9 @@ export default function TreatmentPlans() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
       queryClient.invalidateQueries({ queryKey: ["treatment-templates"] });
-      enqueueSnackbar("Treatment plan created from template!", { variant: "success" });
+      enqueueSnackbar("Treatment plan created from template!", {
+        variant: "success",
+      });
       setUseTemplateDialogOpen(false);
       setSelectedPatientForTemplate(null);
       setSelectedTemplate(null);
@@ -167,11 +177,20 @@ export default function TreatmentPlans() {
   // Stats
   const stats = useMemo(() => {
     const total = templates.length;
-    const evidenceBased = templates.filter((t: TreatmentTemplate) => t.templateSource === "evidence_based").length;
-    const aiGenerated = templates.filter((t: TreatmentTemplate) => t.templateSource === "ai_generated").length;
-    const clinicCreated = templates.filter((t: TreatmentTemplate) => t.templateSource === "clinic_created").length;
-    const mostUsed = templates.reduce((max: TreatmentTemplate | null, t: TreatmentTemplate) =>
-      (!max || t.timesUsed > max.timesUsed) ? t : max, null);
+    const evidenceBased = templates.filter(
+      (t: TreatmentTemplate) => t.templateSource === "evidence_based",
+    ).length;
+    const aiGenerated = templates.filter(
+      (t: TreatmentTemplate) => t.templateSource === "ai_generated",
+    ).length;
+    const clinicCreated = templates.filter(
+      (t: TreatmentTemplate) => t.templateSource === "clinic_created",
+    ).length;
+    const mostUsed = templates.reduce(
+      (max: TreatmentTemplate | null, t: TreatmentTemplate) =>
+        !max || t.timesUsed > max.timesUsed ? t : max,
+      null,
+    );
     return { total, evidenceBased, aiGenerated, clinicCreated, mostUsed };
   }, [templates]);
 
@@ -183,7 +202,7 @@ export default function TreatmentPlans() {
       (t: TreatmentTemplate) =>
         t.title?.toLowerCase().includes(query) ||
         t.conditionType?.toLowerCase().includes(query) ||
-        t.bodyRegion?.toLowerCase().includes(query)
+        t.bodyRegion?.toLowerCase().includes(query),
     );
   }, [templates, searchQuery]);
 
@@ -272,7 +291,11 @@ export default function TreatmentPlans() {
       {/* Stats Row */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 6, sm: 3 }}>
-          <AuraCard variant="flat" hover={false} sx={{ p: 2, textAlign: "center" }}>
+          <AuraCard
+            variant="flat"
+            hover={false}
+            sx={{ p: 2, textAlign: "center" }}
+          >
             <Typography variant="h4" fontWeight={700} color="primary.main">
               {stats.total}
             </Typography>
@@ -282,8 +305,19 @@ export default function TreatmentPlans() {
           </AuraCard>
         </Grid>
         <Grid size={{ xs: 6, sm: 3 }}>
-          <AuraCard variant="flat" hover={false} sx={{ p: 2, textAlign: "center" }}>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+          <AuraCard
+            variant="flat"
+            hover={false}
+            sx={{ p: 2, textAlign: "center" }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+              }}
+            >
               <EvidenceIcon sx={{ color: auraColors.green.main }} />
               <Typography variant="h4" fontWeight={700}>
                 {stats.evidenceBased}
@@ -295,8 +329,19 @@ export default function TreatmentPlans() {
           </AuraCard>
         </Grid>
         <Grid size={{ xs: 6, sm: 3 }}>
-          <AuraCard variant="flat" hover={false} sx={{ p: 2, textAlign: "center" }}>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+          <AuraCard
+            variant="flat"
+            hover={false}
+            sx={{ p: 2, textAlign: "center" }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+              }}
+            >
               <AutoAwesome sx={{ color: auraColors.purple.main }} />
               <Typography variant="h4" fontWeight={700}>
                 {stats.aiGenerated}
@@ -308,8 +353,19 @@ export default function TreatmentPlans() {
           </AuraCard>
         </Grid>
         <Grid size={{ xs: 6, sm: 3 }}>
-          <AuraCard variant="flat" hover={false} sx={{ p: 2, textAlign: "center" }}>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+          <AuraCard
+            variant="flat"
+            hover={false}
+            sx={{ p: 2, textAlign: "center" }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+              }}
+            >
               <TrendingUpIcon sx={{ color: auraColors.orange.main }} />
               <Typography variant="h4" fontWeight={700}>
                 {stats.mostUsed?.timesUsed || 0}
@@ -324,7 +380,11 @@ export default function TreatmentPlans() {
 
       {/* Search and Filters */}
       <AuraCard variant="flat" hover={false} sx={{ p: 2, mb: 3 }}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems="center"
+        >
           <TextField
             placeholder="Search templates..."
             value={searchQuery}
@@ -362,7 +422,11 @@ export default function TreatmentPlans() {
       ) : filteredTemplates.length === 0 ? (
         <AuraEmptyState
           icon={<FitnessCenter />}
-          title={searchQuery || bodyRegionFilter || sourceFilter ? "No matching templates" : "No templates yet"}
+          title={
+            searchQuery || bodyRegionFilter || sourceFilter
+              ? "No matching templates"
+              : "No templates yet"
+          }
           description={
             searchQuery || bodyRegionFilter || sourceFilter
               ? "Try adjusting your filters"
@@ -388,7 +452,10 @@ export default function TreatmentPlans() {
                     boxShadow: auraTokens.shadows.md,
                   },
                 }}
-                onClick={() => navigate(`/treatment-plans/${template.id}`)}
+                onClick={() => {
+                  setSelectedTemplate(template);
+                  setUseTemplateDialogOpen(true);
+                }}
               >
                 {/* Header with source badge */}
                 <Box
@@ -416,7 +483,10 @@ export default function TreatmentPlans() {
                     label={getSourceLabel(template.templateSource)}
                     size="small"
                     sx={{
-                      bgcolor: alpha(getSourceColor(template.templateSource), 0.1),
+                      bgcolor: alpha(
+                        getSourceColor(template.templateSource),
+                        0.1,
+                      ),
                       color: getSourceColor(template.templateSource),
                       fontWeight: 500,
                       "& .MuiChip-icon": { color: "inherit" },
@@ -428,14 +498,18 @@ export default function TreatmentPlans() {
                 <Box sx={{ p: 2, flex: 1 }}>
                   <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
                     {template.bodyRegion && (
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                      >
                         <BodyIcon fontSize="small" color="action" />
                         <Typography variant="body2" color="text.secondary">
                           {template.bodyRegion}
                         </Typography>
                       </Box>
                     )}
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
                       <DurationIcon fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
                         {template.durationWeeks} weeks
@@ -446,19 +520,30 @@ export default function TreatmentPlans() {
                   {/* Phases preview */}
                   {template.phases && template.phases.length > 0 && (
                     <Box sx={{ mb: 2 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ mb: 0.5, display: "block" }}
+                      >
                         {template.phases.length} phases
                       </Typography>
-                      <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
-                        {template.phases.slice(0, 3).map((phase: any, idx: number) => (
-                          <Chip
-                            key={idx}
-                            label={phase.name}
-                            size="small"
-                            variant="outlined"
-                            sx={{ height: 22, fontSize: "0.7rem" }}
-                          />
-                        ))}
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        flexWrap="wrap"
+                        gap={0.5}
+                      >
+                        {template.phases
+                          .slice(0, 3)
+                          .map((phase: any, idx: number) => (
+                            <Chip
+                              key={idx}
+                              label={phase.name}
+                              size="small"
+                              variant="outlined"
+                              sx={{ height: 22, fontSize: "0.7rem" }}
+                            />
+                          ))}
                         {template.phases.length > 3 && (
                           <Chip
                             label={`+${template.phases.length - 3}`}
@@ -473,8 +558,16 @@ export default function TreatmentPlans() {
                   {/* Exercise count */}
                   {template.phases && (
                     <Typography variant="caption" color="text.secondary">
-                      <FitnessCenter fontSize="inherit" sx={{ verticalAlign: "middle", mr: 0.5 }} />
-                      {template.phases.reduce((acc: number, p: any) => acc + (p.exercises?.length || 0), 0)} exercises
+                      <FitnessCenter
+                        fontSize="inherit"
+                        sx={{ verticalAlign: "middle", mr: 0.5 }}
+                      />
+                      {template.phases.reduce(
+                        (acc: number, p: any) =>
+                          acc + (p.exercises?.length || 0),
+                        0,
+                      )}{" "}
+                      exercises
                     </Typography>
                   )}
                 </Box>
@@ -573,12 +666,15 @@ export default function TreatmentPlans() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          Use Template: {selectedTemplate?.title}
-        </DialogTitle>
+        <DialogTitle>Use Template: {selectedTemplate?.title}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, mt: 1 }}>
-            Select a patient to create a personalized treatment plan from this template.
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mb: 3, mt: 1 }}
+          >
+            Select a patient to create a personalized treatment plan from this
+            template.
           </Typography>
 
           {/* Template Summary */}
@@ -599,7 +695,10 @@ export default function TreatmentPlans() {
                     width: 48,
                     height: 48,
                     borderRadius: 2,
-                    bgcolor: alpha(getSourceColor(selectedTemplate.templateSource), 0.15),
+                    bgcolor: alpha(
+                      getSourceColor(selectedTemplate.templateSource),
+                      0.15,
+                    ),
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -613,8 +712,13 @@ export default function TreatmentPlans() {
                     {selectedTemplate.title}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {selectedTemplate.durationWeeks} weeks • {selectedTemplate.phases?.length || 0} phases •{" "}
-                    {selectedTemplate.phases?.reduce((acc: number, p: any) => acc + (p.exercises?.length || 0), 0) || 0} exercises
+                    {selectedTemplate.durationWeeks} weeks •{" "}
+                    {selectedTemplate.phases?.length || 0} phases •{" "}
+                    {selectedTemplate.phases?.reduce(
+                      (acc: number, p: any) => acc + (p.exercises?.length || 0),
+                      0,
+                    ) || 0}{" "}
+                    exercises
                   </Typography>
                 </Box>
               </Stack>
@@ -626,7 +730,9 @@ export default function TreatmentPlans() {
             options={patients}
             value={selectedPatientForTemplate}
             onChange={(_, value) => setSelectedPatientForTemplate(value)}
-            getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
+            getOptionLabel={(option) =>
+              `${option.firstName} ${option.lastName}`
+            }
             loading={patientsLoading}
             renderInput={(params) => (
               <TextField
@@ -638,7 +744,9 @@ export default function TreatmentPlans() {
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {patientsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                      {patientsLoading ? (
+                        <CircularProgress color="inherit" size={20} />
+                      ) : null}
                       {params.InputProps.endAdornment}
                     </>
                   ),
@@ -648,7 +756,9 @@ export default function TreatmentPlans() {
             renderOption={(props, option) => (
               <li {...props}>
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.main" }}>
+                  <Avatar
+                    sx={{ width: 32, height: 32, bgcolor: "primary.main" }}
+                  >
                     {option.firstName.charAt(0)}
                   </Avatar>
                   <Box>
@@ -679,7 +789,10 @@ export default function TreatmentPlans() {
           </AuraButton>
           <AuraButton
             variant="contained"
-            disabled={!selectedPatientForTemplate || createFromTemplateMutation.isPending}
+            disabled={
+              !selectedPatientForTemplate ||
+              createFromTemplateMutation.isPending
+            }
             onClick={() => {
               if (selectedTemplate && selectedPatientForTemplate) {
                 createFromTemplateMutation.mutate({
@@ -688,9 +801,17 @@ export default function TreatmentPlans() {
                 });
               }
             }}
-            startIcon={createFromTemplateMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <UseTemplateIcon />}
+            startIcon={
+              createFromTemplateMutation.isPending ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <UseTemplateIcon />
+              )
+            }
           >
-            {createFromTemplateMutation.isPending ? "Creating..." : "Create Plan"}
+            {createFromTemplateMutation.isPending
+              ? "Creating..."
+              : "Create Plan"}
           </AuraButton>
         </DialogActions>
       </Dialog>

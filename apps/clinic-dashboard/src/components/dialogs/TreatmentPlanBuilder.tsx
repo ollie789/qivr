@@ -736,12 +736,21 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   const previewMutation = useMutation({
     mutationFn: treatmentPlansApi.preview,
     onSuccess: (data) => {
+      console.log("AI Preview response:", data);
       // The preview endpoint returns the generated plan directly
       if (data.phases && data.phases.length > 0) {
         const totalExerciseCount = data.phases.reduce(
           (sum: number, p: any) => sum + (p.exercises?.length || 0),
           0,
         );
+        console.log(
+          `Phases: ${data.phases.length}, Total exercises: ${totalExerciseCount}`,
+        );
+        data.phases.forEach((p: any, idx: number) => {
+          console.log(
+            `Phase ${idx + 1}: ${p.name}, exercises: ${p.exercises?.length || 0}`,
+          );
+        });
         setPhases(
           data.phases.map((p: any, idx: number) => ({
             phaseNumber: idx + 1,
@@ -1416,12 +1425,19 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 `${option.firstName} ${option.lastName}`
               }
               renderInput={(params) => (
-                <TextField {...params} label="Select Patient" required fullWidth />
+                <TextField
+                  {...params}
+                  label="Select Patient"
+                  required
+                  fullWidth
+                />
               )}
               renderOption={(props, option) => (
                 <li {...props}>
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.main" }}>
+                    <Avatar
+                      sx={{ width: 32, height: 32, bgcolor: "primary.main" }}
+                    >
                       {option.firstName.charAt(0)}
                     </Avatar>
                     <Box>
@@ -1451,15 +1467,24 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     <Paper
                       elevation={0}
                       onClick={() => {
-                        setBasicInfo((prev) => ({ ...prev, bodyRegion: region }));
+                        setBasicInfo((prev) => ({
+                          ...prev,
+                          bodyRegion: region,
+                        }));
                       }}
                       sx={{
                         p: 1.5,
                         textAlign: "center",
                         cursor: "pointer",
                         border: "2px solid",
-                        borderColor: basicInfo.bodyRegion === region ? "primary.main" : "divider",
-                        bgcolor: basicInfo.bodyRegion === region ? "primary.50" : "background.paper",
+                        borderColor:
+                          basicInfo.bodyRegion === region
+                            ? "primary.main"
+                            : "divider",
+                        bgcolor:
+                          basicInfo.bodyRegion === region
+                            ? "primary.50"
+                            : "background.paper",
                         borderRadius: 2,
                         transition: "all 0.15s",
                         "&:hover": {
@@ -1471,7 +1496,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                       <Typography
                         variant="body2"
                         fontWeight={basicInfo.bodyRegion === region ? 600 : 400}
-                        color={basicInfo.bodyRegion === region ? "primary.main" : "text.primary"}
+                        color={
+                          basicInfo.bodyRegion === region
+                            ? "primary.main"
+                            : "text.primary"
+                        }
                       >
                         {region}
                       </Typography>
@@ -1488,10 +1517,13 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   <CheckCircle fontSize="small" color="success" />
                   <Box>
                     <Typography variant="body2" fontWeight={500}>
-                      Linked: {evaluationData.evaluation?.conditionType || "Patient Evaluation"}
+                      Linked:{" "}
+                      {evaluationData.evaluation?.conditionType ||
+                        "Patient Evaluation"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Pain: {evaluationData.evaluation?.painLevel}/10 • AI will personalize the plan
+                      Pain: {evaluationData.evaluation?.painLevel}/10 • AI will
+                      personalize the plan
                     </Typography>
                   </Box>
                 </Box>
@@ -1503,7 +1535,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               <Autocomplete
                 size="small"
                 options={patientEvaluations}
-                value={patientEvaluations.find((e) => e.id === selectedEvaluationId) || null}
+                value={
+                  patientEvaluations.find(
+                    (e) => e.id === selectedEvaluationId,
+                  ) || null
+                }
                 onChange={(_, value) => setSelectedEvaluationId(value?.id)}
                 getOptionLabel={(option) =>
                   `${option.conditionType} - ${new Date(option.submittedAt).toLocaleDateString()}`
@@ -1572,15 +1608,24 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                     <Paper
                       elevation={0}
                       onClick={() => {
-                        setBasicInfo((prev) => ({ ...prev, bodyRegion: region }));
+                        setBasicInfo((prev) => ({
+                          ...prev,
+                          bodyRegion: region,
+                        }));
                       }}
                       sx={{
                         p: 1.5,
                         textAlign: "center",
                         cursor: "pointer",
                         border: "2px solid",
-                        borderColor: basicInfo.bodyRegion === region ? "primary.main" : "divider",
-                        bgcolor: basicInfo.bodyRegion === region ? "primary.50" : "background.paper",
+                        borderColor:
+                          basicInfo.bodyRegion === region
+                            ? "primary.main"
+                            : "divider",
+                        bgcolor:
+                          basicInfo.bodyRegion === region
+                            ? "primary.50"
+                            : "background.paper",
                         borderRadius: 2,
                         transition: "all 0.15s",
                         "&:hover": {
@@ -1592,7 +1637,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                       <Typography
                         variant="body2"
                         fontWeight={basicInfo.bodyRegion === region ? 600 : 400}
-                        color={basicInfo.bodyRegion === region ? "primary.main" : "text.primary"}
+                        color={
+                          basicInfo.bodyRegion === region
+                            ? "primary.main"
+                            : "text.primary"
+                        }
                       >
                         {region}
                       </Typography>
@@ -1613,7 +1662,11 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                   }
                   fullWidth
                   size="small"
-                  placeholder={basicInfo.bodyRegion ? `${basicInfo.bodyRegion} Rehabilitation Program` : "e.g., Lower Back Rehabilitation Program"}
+                  placeholder={
+                    basicInfo.bodyRegion
+                      ? `${basicInfo.bodyRegion} Rehabilitation Program`
+                      : "e.g., Lower Back Rehabilitation Program"
+                  }
                   InputLabelProps={{ shrink: true }}
                 />
 
@@ -2278,7 +2331,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
                 {isTemplate ? "Template Details" : "Plan Details"}
               </Typography>
               <Typography variant="body1" fontWeight={600}>
-                {basicInfo.title || (isTemplate ? "New Template" : "Treatment Plan")}
+                {basicInfo.title ||
+                  (isTemplate ? "New Template" : "Treatment Plan")}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {basicInfo.durationWeeks} weeks | {phases.length} phases |{" "}
@@ -2291,7 +2345,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
               )}
               {basicInfo.diagnosis && (
                 <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  <strong>{isTemplate ? "Condition:" : "Diagnosis:"}</strong> {basicInfo.diagnosis}
+                  <strong>{isTemplate ? "Condition:" : "Diagnosis:"}</strong>{" "}
+                  {basicInfo.diagnosis}
                 </Typography>
               )}
             </Paper>

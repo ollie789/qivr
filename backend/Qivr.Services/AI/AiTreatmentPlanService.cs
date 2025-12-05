@@ -90,12 +90,26 @@ Always provide evidence-based recommendations and avoid exercises that could wor
                 generatedPlan = GenerateFallbackPlan(request, deidentifiedData);
             }
 
-            // Ensure we have exercises - if AI returned empty phases, generate defaults
-            if (!generatedPlan.Phases.Any() || generatedPlan.Phases.All(p => !p.Exercises.Any()))
+            // Ensure we have exercises - if AI returned empty phases or phases without exercises, fill them
+            if (!generatedPlan.Phases.Any())
             {
-                _logger.LogWarning("Generated plan has no exercises, generating default phases");
+                _logger.LogWarning("Generated plan has no phases, generating defaults");
                 generatedPlan.Phases = GenerateDefaultPhases(generatedPlan.Diagnosis ?? request.Evaluation?.ChiefComplaint);
                 generatedPlan.Milestones = GenerateDefaultMilestones();
+            }
+            else
+            {
+                // Ensure each phase has exercises
+                var bodyRegion = InferBodyRegion(generatedPlan.Diagnosis ?? request.Evaluation?.ChiefComplaint);
+                foreach (var phase in generatedPlan.Phases)
+                {
+                    if (!phase.Exercises.Any())
+                    {
+                        var difficulty = phase.PhaseNumber == 1 ? "Beginner" : phase.PhaseNumber == 2 ? "Intermediate" : "Advanced";
+                        phase.Exercises = GetDefaultExercises(bodyRegion, difficulty);
+                        _logger.LogWarning("Phase {PhaseNumber} had no exercises, added {Count} defaults", phase.PhaseNumber, phase.Exercises.Count);
+                    }
+                }
             }
 
             _logger.LogInformation(

@@ -62,7 +62,13 @@ import {
   PlayCircleOutline as VideoIcon,
   BookmarkAdd as SaveTemplateIcon,
 } from "@mui/icons-material";
-import { AuraButton, AuraIconButton, Callout, auraTokens, SelectField } from "@qivr/design-system";
+import {
+  AuraButton,
+  AuraIconButton,
+  Callout,
+  auraTokens,
+  SelectField,
+} from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
 import {
   appointmentsApi,
@@ -71,7 +77,10 @@ import {
 import { promApi, PromResponse } from "../services/promApi";
 import { useSnackbar } from "notistack";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
-import { ExerciseLibraryDrawer, ExerciseToAdd } from "../components/exercises/ExerciseLibraryDrawer";
+import {
+  ExerciseLibraryDrawer,
+  ExerciseToAdd,
+} from "../components/exercises/ExerciseLibraryDrawer";
 import {
   format,
   addDays,
@@ -192,7 +201,8 @@ export default function TreatmentPlanDetail() {
 
   // Update treatment plan mutation (for exercise changes)
   const updatePlanMutation = useMutation({
-    mutationFn: (updatedPlan: any) => treatmentPlansApi.update(id!, updatedPlan),
+    mutationFn: (updatedPlan: any) =>
+      treatmentPlansApi.update(id!, updatedPlan),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treatment-plan", id] });
       enqueueSnackbar("Treatment plan updated", { variant: "success" });
@@ -204,8 +214,11 @@ export default function TreatmentPlanDetail() {
 
   // Save as template mutation
   const saveAsTemplateMutation = useMutation({
-    mutationFn: (data: { title: string; bodyRegion?: string; conditionType?: string }) =>
-      treatmentPlansApi.saveAsTemplate(id!, data),
+    mutationFn: (data: {
+      title: string;
+      bodyRegion?: string;
+      conditionType?: string;
+    }) => treatmentPlansApi.saveAsTemplate(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treatment-templates"] });
       setSaveTemplateDialogOpen(false);
@@ -220,7 +233,10 @@ export default function TreatmentPlanDetail() {
   });
 
   // Handle adding exercise to phase
-  const handleAddExerciseToPhase = (exercise: ExerciseToAdd, phaseIndex: number) => {
+  const handleAddExerciseToPhase = (
+    exercise: ExerciseToAdd,
+    phaseIndex: number,
+  ) => {
     if (!plan?.phases) return;
 
     const updatedPhases = [...plan.phases];
@@ -254,7 +270,8 @@ export default function TreatmentPlanDetail() {
     if (!plan?.phases) return;
 
     const updatedPhases = [...plan.phases];
-    const exerciseName = updatedPhases[phaseIndex].exercises[exerciseIndex]?.name;
+    const exerciseName =
+      updatedPhases[phaseIndex].exercises[exerciseIndex]?.name;
     updatedPhases[phaseIndex].exercises.splice(exerciseIndex, 1);
 
     updatePlanMutation.mutate({ phases: updatedPhases });
@@ -267,7 +284,7 @@ export default function TreatmentPlanDetail() {
   const handleUpdateExercise = (
     phaseIndex: number,
     exerciseIndex: number,
-    updates: Partial<ExerciseToAdd>
+    updates: Partial<ExerciseToAdd>,
   ) => {
     if (!plan?.phases) return;
 
@@ -414,6 +431,12 @@ export default function TreatmentPlanDetail() {
     }
   };
 
+  // Redirect if ID is invalid
+  if (!id || id === "undefined") {
+    navigate("/treatment-plans", { replace: true });
+    return null;
+  }
+
   if (isLoading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -502,7 +525,9 @@ export default function TreatmentPlanDetail() {
                 startIcon={<SaveTemplateIcon />}
                 onClick={() => {
                   setTemplateTitle(plan.title + " Template");
-                  setTemplateBodyRegion(plan.phases?.[0]?.exercises?.[0]?.bodyRegion || "");
+                  setTemplateBodyRegion(
+                    plan.phases?.[0]?.exercises?.[0]?.bodyRegion || "",
+                  );
                   setTemplateConditionType(plan.diagnosis || "");
                   setSaveTemplateDialogOpen(true);
                 }}
@@ -689,194 +714,313 @@ export default function TreatmentPlanDetail() {
       )}
 
       {/* Treatment Progress Feedback Section */}
-      {treatmentProgressAggregate && treatmentProgressAggregate.totalFeedbacks > 0 && (
-        <Paper sx={{ mt: 3, p: 3, borderRadius: auraTokens.borderRadius.lg }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
-            <FeedbackIcon color="primary" />
-            <Typography variant="h6">Patient Feedback Summary</Typography>
-            <Chip label={`${treatmentProgressAggregate.totalFeedbacks} responses`} size="small" />
-            {treatmentProgressAggregate.patientsWantingDiscussion > 0 && (
+      {treatmentProgressAggregate &&
+        treatmentProgressAggregate.totalFeedbacks > 0 && (
+          <Paper sx={{ mt: 3, p: 3, borderRadius: auraTokens.borderRadius.lg }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
+              <FeedbackIcon color="primary" />
+              <Typography variant="h6">Patient Feedback Summary</Typography>
               <Chip
-                icon={<WarningIcon />}
-                label={`${treatmentProgressAggregate.patientsWantingDiscussion} want to discuss`}
-                color="warning"
+                label={`${treatmentProgressAggregate.totalFeedbacks} responses`}
                 size="small"
               />
-            )}
-          </Box>
+              {treatmentProgressAggregate.patientsWantingDiscussion > 0 && (
+                <Chip
+                  icon={<WarningIcon />}
+                  label={`${treatmentProgressAggregate.patientsWantingDiscussion} want to discuss`}
+                  color="warning"
+                  size="small"
+                />
+              )}
+            </Box>
 
-          <Grid container spacing={3}>
-            {/* Effectiveness Rating */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Paper variant="outlined" sx={{ p: 2, textAlign: "center", borderRadius: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Avg. Effectiveness Rating
-                </Typography>
-                <Typography variant="h3" fontWeight={700} color={
-                  treatmentProgressAggregate.averageEffectivenessRating != null
-                    ? treatmentProgressAggregate.averageEffectivenessRating >= 7 ? "success.main"
-                    : treatmentProgressAggregate.averageEffectivenessRating >= 4 ? "warning.main"
-                    : "error.main"
-                    : "text.secondary"
-                }>
-                  {treatmentProgressAggregate.averageEffectivenessRating != null
-                    ? treatmentProgressAggregate.averageEffectivenessRating.toFixed(1)
-                    : "—"}
-                  <Typography component="span" variant="h6" color="text.secondary">/10</Typography>
-                </Typography>
-              </Paper>
-            </Grid>
+            <Grid container spacing={3}>
+              {/* Effectiveness Rating */}
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 2, textAlign: "center", borderRadius: 2 }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Avg. Effectiveness Rating
+                  </Typography>
+                  <Typography
+                    variant="h3"
+                    fontWeight={700}
+                    color={
+                      treatmentProgressAggregate.averageEffectivenessRating !=
+                      null
+                        ? treatmentProgressAggregate.averageEffectivenessRating >=
+                          7
+                          ? "success.main"
+                          : treatmentProgressAggregate.averageEffectivenessRating >=
+                              4
+                            ? "warning.main"
+                            : "error.main"
+                        : "text.secondary"
+                    }
+                  >
+                    {treatmentProgressAggregate.averageEffectivenessRating !=
+                    null
+                      ? treatmentProgressAggregate.averageEffectivenessRating.toFixed(
+                          1,
+                        )
+                      : "—"}
+                    <Typography
+                      component="span"
+                      variant="h6"
+                      color="text.secondary"
+                    >
+                      /10
+                    </Typography>
+                  </Typography>
+                </Paper>
+              </Grid>
 
-            {/* Pain Change */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Paper variant="outlined" sx={{ p: 2, textAlign: "center", borderRadius: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Avg. Pain Change
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                  {treatmentProgressAggregate.averagePainChange != null ? (
-                    treatmentProgressAggregate.averagePainChange > 0 ? (
-                      <TrendingUp fontSize="large" color="success" />
-                    ) : treatmentProgressAggregate.averagePainChange < 0 ? (
-                      <TrendingDown fontSize="large" color="error" />
+              {/* Pain Change */}
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 2, textAlign: "center", borderRadius: 2 }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Avg. Pain Change
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 1,
+                    }}
+                  >
+                    {treatmentProgressAggregate.averagePainChange != null ? (
+                      treatmentProgressAggregate.averagePainChange > 0 ? (
+                        <TrendingUp fontSize="large" color="success" />
+                      ) : treatmentProgressAggregate.averagePainChange < 0 ? (
+                        <TrendingDown fontSize="large" color="error" />
+                      ) : (
+                        <NeutralIcon fontSize="large" color="action" />
+                      )
                     ) : (
                       <NeutralIcon fontSize="large" color="action" />
-                    )
-                  ) : (
-                    <NeutralIcon fontSize="large" color="action" />
-                  )}
-                  <Typography variant="h4" fontWeight={700} color={
-                    treatmentProgressAggregate.averagePainChange != null
-                      ? treatmentProgressAggregate.averagePainChange > 0 ? "success.main"
-                      : treatmentProgressAggregate.averagePainChange < 0 ? "error.main"
-                      : "text.secondary"
-                      : "text.secondary"
-                  }>
-                    {treatmentProgressAggregate.averagePainChange != null
-                      ? treatmentProgressAggregate.averagePainChange > 0
-                        ? `+${treatmentProgressAggregate.averagePainChange.toFixed(1)}`
-                        : treatmentProgressAggregate.averagePainChange.toFixed(1)
+                    )}
+                    <Typography
+                      variant="h4"
+                      fontWeight={700}
+                      color={
+                        treatmentProgressAggregate.averagePainChange != null
+                          ? treatmentProgressAggregate.averagePainChange > 0
+                            ? "success.main"
+                            : treatmentProgressAggregate.averagePainChange < 0
+                              ? "error.main"
+                              : "text.secondary"
+                          : "text.secondary"
+                      }
+                    >
+                      {treatmentProgressAggregate.averagePainChange != null
+                        ? treatmentProgressAggregate.averagePainChange > 0
+                          ? `+${treatmentProgressAggregate.averagePainChange.toFixed(1)}`
+                          : treatmentProgressAggregate.averagePainChange.toFixed(
+                              1,
+                            )
+                        : "—"}
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    {treatmentProgressAggregate.averagePainChange != null &&
+                    treatmentProgressAggregate.averagePainChange > 0
+                      ? "Improving"
+                      : treatmentProgressAggregate.averagePainChange != null &&
+                          treatmentProgressAggregate.averagePainChange < 0
+                        ? "Worsening"
+                        : "No change"}
+                  </Typography>
+                </Paper>
+              </Grid>
+
+              {/* Sessions Per Week */}
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 2, textAlign: "center", borderRadius: 2 }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Avg. Sessions/Week
+                  </Typography>
+                  <Typography
+                    variant="h3"
+                    fontWeight={700}
+                    color="primary.main"
+                  >
+                    {treatmentProgressAggregate.averageSessionsPerWeek != null
+                      ? treatmentProgressAggregate.averageSessionsPerWeek.toFixed(
+                          1,
+                        )
                       : "—"}
                   </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                  {treatmentProgressAggregate.averagePainChange != null && treatmentProgressAggregate.averagePainChange > 0
-                    ? "Improving"
-                    : treatmentProgressAggregate.averagePainChange != null && treatmentProgressAggregate.averagePainChange < 0
-                    ? "Worsening"
-                    : "No change"}
-                </Typography>
-              </Paper>
+                </Paper>
+              </Grid>
+
+              {/* Exercise Compliance */}
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Exercise Compliance
+                  </Typography>
+                  {Object.entries(
+                    treatmentProgressAggregate.exerciseComplianceBreakdown,
+                  ).length > 0 ? (
+                    <Stack spacing={0.5}>
+                      {Object.entries(
+                        treatmentProgressAggregate.exerciseComplianceBreakdown,
+                      )
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 3)
+                        .map(([level, count]) => (
+                          <Box
+                            key={level}
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Typography variant="body2">{level}</Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {count}
+                            </Typography>
+                          </Box>
+                        ))}
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No data
+                    </Typography>
+                  )}
+                </Paper>
+              </Grid>
+
+              {/* Exercise Feedback */}
+              {treatmentProgressAggregate.exerciseFeedback.length > 0 && (
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
+                      Exercise Feedback
+                    </Typography>
+                    <Stack spacing={1}>
+                      {treatmentProgressAggregate.exerciseFeedback
+                        .slice(0, 5)
+                        .map((exercise) => (
+                          <Box
+                            key={exercise.exerciseId}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Typography variant="body2" sx={{ flex: 1 }} noWrap>
+                              {exercise.exerciseName}
+                            </Typography>
+                            <Tooltip
+                              title={`${exercise.helpfulCount} found helpful`}
+                            >
+                              <Chip
+                                icon={<ThumbUp fontSize="small" />}
+                                label={exercise.helpfulCount}
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                              />
+                            </Tooltip>
+                            <Tooltip
+                              title={`${exercise.problematicCount} had issues`}
+                            >
+                              <Chip
+                                icon={<ThumbDown fontSize="small" />}
+                                label={exercise.problematicCount}
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                              />
+                            </Tooltip>
+                          </Box>
+                        ))}
+                    </Stack>
+                  </Paper>
+                </Grid>
+              )}
+
+              {/* Common Barriers */}
+              {Object.keys(treatmentProgressAggregate.commonBarriers).length >
+                0 && (
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
+                      Common Barriers
+                    </Typography>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      flexWrap="wrap"
+                      useFlexGap
+                    >
+                      {Object.entries(treatmentProgressAggregate.commonBarriers)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([barrier, count]) => (
+                          <Chip
+                            key={barrier}
+                            label={`${barrier} (${count})`}
+                            size="small"
+                            variant="outlined"
+                            color="warning"
+                          />
+                        ))}
+                    </Stack>
+                  </Paper>
+                </Grid>
+              )}
             </Grid>
 
-            {/* Sessions Per Week */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Paper variant="outlined" sx={{ p: 2, textAlign: "center", borderRadius: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Avg. Sessions/Week
-                </Typography>
-                <Typography variant="h3" fontWeight={700} color="primary.main">
-                  {treatmentProgressAggregate.averageSessionsPerWeek != null
-                    ? treatmentProgressAggregate.averageSessionsPerWeek.toFixed(1)
-                    : "—"}
-                </Typography>
-              </Paper>
-            </Grid>
-
-            {/* Exercise Compliance */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Exercise Compliance
-                </Typography>
-                {Object.entries(treatmentProgressAggregate.exerciseComplianceBreakdown).length > 0 ? (
-                  <Stack spacing={0.5}>
-                    {Object.entries(treatmentProgressAggregate.exerciseComplianceBreakdown)
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 3)
-                      .map(([level, count]) => (
-                        <Box key={level} sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Typography variant="body2">{level}</Typography>
-                          <Typography variant="body2" fontWeight={600}>{count}</Typography>
-                        </Box>
-                      ))}
-                  </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">No data</Typography>
+            {treatmentProgressAggregate.latestFeedbackDate && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mt: 2, display: "block" }}
+              >
+                Last feedback:{" "}
+                {format(
+                  parseISO(treatmentProgressAggregate.latestFeedbackDate),
+                  "MMM d, yyyy 'at' h:mm a",
                 )}
-              </Paper>
-            </Grid>
-
-            {/* Exercise Feedback */}
-            {treatmentProgressAggregate.exerciseFeedback.length > 0 && (
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Exercise Feedback
-                  </Typography>
-                  <Stack spacing={1}>
-                    {treatmentProgressAggregate.exerciseFeedback.slice(0, 5).map((exercise) => (
-                      <Box key={exercise.exerciseId} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <Typography variant="body2" sx={{ flex: 1 }} noWrap>
-                          {exercise.exerciseName}
-                        </Typography>
-                        <Tooltip title={`${exercise.helpfulCount} found helpful`}>
-                          <Chip
-                            icon={<ThumbUp fontSize="small" />}
-                            label={exercise.helpfulCount}
-                            size="small"
-                            color="success"
-                            variant="outlined"
-                          />
-                        </Tooltip>
-                        <Tooltip title={`${exercise.problematicCount} had issues`}>
-                          <Chip
-                            icon={<ThumbDown fontSize="small" />}
-                            label={exercise.problematicCount}
-                            size="small"
-                            color="error"
-                            variant="outlined"
-                          />
-                        </Tooltip>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Paper>
-              </Grid>
+              </Typography>
             )}
-
-            {/* Common Barriers */}
-            {Object.keys(treatmentProgressAggregate.commonBarriers).length > 0 && (
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Common Barriers
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    {Object.entries(treatmentProgressAggregate.commonBarriers)
-                      .sort(([, a], [, b]) => b - a)
-                      .map(([barrier, count]) => (
-                        <Chip
-                          key={barrier}
-                          label={`${barrier} (${count})`}
-                          size="small"
-                          variant="outlined"
-                          color="warning"
-                        />
-                      ))}
-                  </Stack>
-                </Paper>
-              </Grid>
-            )}
-          </Grid>
-
-          {treatmentProgressAggregate.latestFeedbackDate && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: "block" }}>
-              Last feedback: {format(parseISO(treatmentProgressAggregate.latestFeedbackDate), "MMM d, yyyy 'at' h:mm a")}
-            </Typography>
-          )}
-        </Paper>
-      )}
+          </Paper>
+        )}
 
       {/* Tabs */}
       <Paper sx={{ mt: 3, borderRadius: auraTokens.borderRadius.lg }}>
@@ -1129,8 +1273,17 @@ export default function TreatmentPlanDetail() {
                     variant="outlined"
                     sx={{ p: 2, borderRadius: auraTokens.borderRadius.md }}
                   >
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        mb: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <Avatar
                           sx={{
                             width: 28,
@@ -1165,148 +1318,203 @@ export default function TreatmentPlanDetail() {
 
                     {phase.exercises?.length > 0 ? (
                       <Grid container spacing={2}>
-                        {phase.exercises.map((exercise: any, exerciseIndex: number) => (
-                          <Grid
-                            size={{ xs: 12, sm: 6, md: 4 }}
-                            key={exerciseIndex}
-                          >
-                            <Paper
-                              variant="outlined"
-                              sx={{
-                                p: 2,
-                                borderRadius: auraTokens.borderRadius.md,
-                                height: "100%",
-                                position: "relative",
-                                "&:hover .exercise-actions": {
-                                  opacity: 1,
-                                },
-                              }}
+                        {phase.exercises.map(
+                          (exercise: any, exerciseIndex: number) => (
+                            <Grid
+                              size={{ xs: 12, sm: 6, md: 4 }}
+                              key={exerciseIndex}
                             >
-                              {/* Action Buttons */}
-                              {plan.status !== "Completed" && (
-                                <Box
-                                  className="exercise-actions"
-                                  sx={{
-                                    position: "absolute",
-                                    top: 8,
-                                    right: 8,
-                                    display: "flex",
-                                    gap: 0.5,
-                                    opacity: 0,
-                                    transition: "opacity 0.2s",
-                                  }}
-                                >
-                                  <AuraIconButton
-                                    tooltip="Edit parameters"
-                                    size="small"
-                                    onClick={() =>
-                                      setEditingExercise({
-                                        phaseIndex,
-                                        exerciseIndex,
-                                        exercise,
-                                      })
-                                    }
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </AuraIconButton>
-                                  <AuraIconButton
-                                    tooltip="Remove exercise"
-                                    size="small"
-                                    color="error"
-                                    onClick={() =>
-                                      handleRemoveExercise(phaseIndex, exerciseIndex)
-                                    }
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </AuraIconButton>
-                                </Box>
-                              )}
-
-                              <Box
+                              <Paper
+                                variant="outlined"
                                 sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                  mb: 1,
+                                  p: 2,
+                                  borderRadius: auraTokens.borderRadius.md,
+                                  height: "100%",
+                                  position: "relative",
+                                  "&:hover .exercise-actions": {
+                                    opacity: 1,
+                                  },
                                 }}
                               >
-                                {exercise.thumbnailUrl ? (
-                                  <Avatar
-                                    src={exercise.thumbnailUrl}
-                                    variant="rounded"
-                                    sx={{ width: 40, height: 40 }}
-                                  />
-                                ) : (
-                                  <Avatar
-                                    variant="rounded"
+                                {/* Action Buttons */}
+                                {plan.status !== "Completed" && (
+                                  <Box
+                                    className="exercise-actions"
                                     sx={{
-                                      width: 40,
-                                      height: 40,
-                                      bgcolor: "primary.lighter",
+                                      position: "absolute",
+                                      top: 8,
+                                      right: 8,
+                                      display: "flex",
+                                      gap: 0.5,
+                                      opacity: 0,
+                                      transition: "opacity 0.2s",
                                     }}
                                   >
-                                    <FitnessCenter color="primary" fontSize="small" />
-                                  </Avatar>
+                                    <AuraIconButton
+                                      tooltip="Edit parameters"
+                                      size="small"
+                                      onClick={() =>
+                                        setEditingExercise({
+                                          phaseIndex,
+                                          exerciseIndex,
+                                          exercise,
+                                        })
+                                      }
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </AuraIconButton>
+                                    <AuraIconButton
+                                      tooltip="Remove exercise"
+                                      size="small"
+                                      color="error"
+                                      onClick={() =>
+                                        handleRemoveExercise(
+                                          phaseIndex,
+                                          exerciseIndex,
+                                        )
+                                      }
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </AuraIconButton>
+                                  </Box>
                                 )}
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                    <Typography variant="subtitle2" fontWeight={600} noWrap>
-                                      {exercise.name}
-                                    </Typography>
-                                    {exercise.videoUrl && (
-                                      <VideoIcon fontSize="small" color="action" />
+
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                    mb: 1,
+                                  }}
+                                >
+                                  {exercise.thumbnailUrl ? (
+                                    <Avatar
+                                      src={exercise.thumbnailUrl}
+                                      variant="rounded"
+                                      sx={{ width: 40, height: 40 }}
+                                    />
+                                  ) : (
+                                    <Avatar
+                                      variant="rounded"
+                                      sx={{
+                                        width: 40,
+                                        height: 40,
+                                        bgcolor: "primary.lighter",
+                                      }}
+                                    >
+                                      <FitnessCenter
+                                        color="primary"
+                                        fontSize="small"
+                                      />
+                                    </Avatar>
+                                  )}
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="subtitle2"
+                                        fontWeight={600}
+                                        noWrap
+                                      >
+                                        {exercise.name}
+                                      </Typography>
+                                      {exercise.videoUrl && (
+                                        <VideoIcon
+                                          fontSize="small"
+                                          color="action"
+                                        />
+                                      )}
+                                    </Box>
+                                    {exercise.difficulty && (
+                                      <Chip
+                                        label={exercise.difficulty}
+                                        size="small"
+                                        color={
+                                          exercise.difficulty === "Beginner"
+                                            ? "success"
+                                            : exercise.difficulty ===
+                                                "Intermediate"
+                                              ? "warning"
+                                              : "error"
+                                        }
+                                        sx={{ height: 18, fontSize: "0.7rem" }}
+                                      />
                                     )}
                                   </Box>
-                                  {exercise.difficulty && (
-                                    <Chip
-                                      label={exercise.difficulty}
-                                      size="small"
-                                      color={
-                                        exercise.difficulty === "Beginner"
-                                          ? "success"
-                                          : exercise.difficulty === "Intermediate"
-                                          ? "warning"
-                                          : "error"
-                                      }
-                                      sx={{ height: 18, fontSize: "0.7rem" }}
-                                    />
-                                  )}
                                 </Box>
-                              </Box>
 
-                              <Divider sx={{ my: 1 }} />
+                                <Divider sx={{ my: 1 }} />
 
-                              <Stack spacing={0.5}>
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Sets × Reps
-                                  </Typography>
-                                  <Typography variant="caption" fontWeight={600}>
-                                    {exercise.sets} × {exercise.reps}
-                                  </Typography>
-                                </Box>
-                                {exercise.holdSeconds && (
-                                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                      Hold
+                                <Stack spacing={0.5}>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      Sets × Reps
                                     </Typography>
-                                    <Typography variant="caption" fontWeight={600}>
-                                      {exercise.holdSeconds}s
+                                    <Typography
+                                      variant="caption"
+                                      fontWeight={600}
+                                    >
+                                      {exercise.sets} × {exercise.reps}
                                     </Typography>
                                   </Box>
-                                )}
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Frequency
-                                  </Typography>
-                                  <Typography variant="caption" fontWeight={600}>
-                                    {exercise.frequency || "Daily"}
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            </Paper>
-                          </Grid>
-                        ))}
+                                  {exercise.holdSeconds && (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        Hold
+                                      </Typography>
+                                      <Typography
+                                        variant="caption"
+                                        fontWeight={600}
+                                      >
+                                        {exercise.holdSeconds}s
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      Frequency
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      fontWeight={600}
+                                    >
+                                      {exercise.frequency || "Daily"}
+                                    </Typography>
+                                  </Box>
+                                </Stack>
+                              </Paper>
+                            </Grid>
+                          ),
+                        )}
                       </Grid>
                     ) : (
                       <Box
@@ -1317,7 +1525,9 @@ export default function TreatmentPlanDetail() {
                           borderRadius: 2,
                         }}
                       >
-                        <FitnessCenter sx={{ fontSize: 32, color: "text.disabled", mb: 1 }} />
+                        <FitnessCenter
+                          sx={{ fontSize: 32, color: "text.disabled", mb: 1 }}
+                        />
                         <Typography color="text.secondary" variant="body2">
                           No exercises in this phase yet
                         </Typography>
@@ -1340,7 +1550,8 @@ export default function TreatmentPlanDetail() {
               </Box>
             ) : (
               <Alert severity="info">
-                No phases defined for this treatment plan. Add phases first before adding exercises.
+                No phases defined for this treatment plan. Add phases first
+                before adding exercises.
               </Alert>
             )}
           </TabPanel>
@@ -1647,7 +1858,10 @@ export default function TreatmentPlanDetail() {
           )}
         </DialogContent>
         <DialogActions>
-          <AuraButton variant="outlined" onClick={() => setEditingExercise(null)}>
+          <AuraButton
+            variant="outlined"
+            onClick={() => setEditingExercise(null)}
+          >
             Cancel
           </AuraButton>
           <AuraButton
@@ -1662,7 +1876,7 @@ export default function TreatmentPlanDetail() {
                     reps: editingExercise.exercise.reps,
                     holdSeconds: editingExercise.exercise.holdSeconds,
                     frequency: editingExercise.exercise.frequency,
-                  }
+                  },
                 );
               }
             }}
@@ -1683,7 +1897,9 @@ export default function TreatmentPlanDetail() {
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Create a reusable template from this treatment plan. The template will include all phases and exercises but no patient-specific data.
+              Create a reusable template from this treatment plan. The template
+              will include all phases and exercises but no patient-specific
+              data.
             </Typography>
             <TextField
               label="Template Name"
@@ -1732,7 +1948,9 @@ export default function TreatmentPlanDetail() {
             startIcon={<SaveTemplateIcon />}
             onClick={() => {
               if (!templateTitle.trim()) {
-                enqueueSnackbar("Please enter a template name", { variant: "warning" });
+                enqueueSnackbar("Please enter a template name", {
+                  variant: "warning",
+                });
                 return;
               }
               saveAsTemplateMutation.mutate({

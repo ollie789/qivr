@@ -30,7 +30,15 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { PainMap3D, PainMap3DViewer, RebookingDialog, LoadingSpinner, auraStepper, AuraButton, Callout } from "@qivr/design-system";
+import {
+  PainMap3D,
+  PainMap3DViewer,
+  RebookingDialog,
+  LoadingSpinner,
+  auraStepper,
+  AuraButton,
+  Callout,
+} from "@qivr/design-system";
 import {
   fetchPromInstance as fetchPromInstanceById,
   fetchPromTemplate,
@@ -80,8 +88,10 @@ export const CompletePROM = () => {
   const [currentPainMap, setCurrentPainMap] = useState<SelectedRegion[]>([]);
 
   // Treatment progress state
-  const [treatmentContext, setTreatmentContext] = useState<TreatmentProgressContext | null>(null);
-  const [treatmentProgress, setTreatmentProgress] = useState<SubmitTreatmentProgressRequest>({});
+  const [treatmentContext, setTreatmentContext] =
+    useState<TreatmentProgressContext | null>(null);
+  const [treatmentProgress, setTreatmentProgress] =
+    useState<SubmitTreatmentProgressRequest>({});
 
   // Fetch baseline pain map
   const { data: baselinePainMap } = useQuery({
@@ -200,9 +210,11 @@ export const CompletePROM = () => {
       setSubmitting(true);
 
       // Calculate average pain level from current pain map
-      const avgPainLevel = currentPainMap.length > 0
-        ? currentPainMap.reduce((sum, r) => sum + r.intensity, 0) / currentPainMap.length
-        : null;
+      const avgPainLevel =
+        currentPainMap.length > 0
+          ? currentPainMap.reduce((sum, r) => sum + r.intensity, 0) /
+            currentPainMap.length
+          : null;
 
       const result = await submitPromAnswers(id, {
         ...responses,
@@ -248,7 +260,12 @@ export const CompletePROM = () => {
           <FormLabel sx={{ mb: 2 }}>
             <Typography variant="body1" fontWeight={500}>
               {question.text}
-              {question.required && <Box component="span" sx={{ color: "error.main" }}> *</Box>}
+              {question.required && (
+                <Box component="span" sx={{ color: "error.main" }}>
+                  {" "}
+                  *
+                </Box>
+              )}
             </Typography>
             {question.helpText && (
               <Typography
@@ -412,7 +429,9 @@ export const CompletePROM = () => {
     if (!template || isTreatmentProgressStep()) return [];
     // Calculate steps for questions only (excluding treatment step)
     const questionSteps = Math.ceil(template.questions.length / 3);
-    const questionsPerStep = Math.ceil(template.questions.length / questionSteps);
+    const questionsPerStep = Math.ceil(
+      template.questions.length / questionSteps,
+    );
     const startIdx = activeStep * questionsPerStep;
     const endIdx = Math.min(
       startIdx + questionsPerStep,
@@ -452,8 +471,10 @@ export const CompletePROM = () => {
       <Box>
         <Box sx={{ mb: 3 }}>
           <Callout variant="info">
-            You are currently on week {treatmentContext.weeksInTreatment} of your treatment plan: <strong>{treatmentContext.treatmentPlanName}</strong>
-            {" "}(Phase {treatmentContext.currentPhase} of {treatmentContext.totalPhases})
+            You are currently on week {treatmentContext.weeksInTreatment} of
+            your treatment plan:{" "}
+            <strong>{treatmentContext.treatmentPlanName}</strong> (Phase{" "}
+            {treatmentContext.currentPhase} of {treatmentContext.totalPhases})
           </Callout>
         </Box>
 
@@ -462,13 +483,19 @@ export const CompletePROM = () => {
           <FormControl fullWidth>
             <FormLabel sx={{ mb: 2 }}>
               <Typography variant="body1" fontWeight={500}>
-                How would you rate the overall effectiveness of your treatment plan so far?
+                How would you rate the overall effectiveness of your treatment
+                plan so far?
               </Typography>
             </FormLabel>
             <Box px={2}>
               <Slider
                 value={treatmentProgress.overallEffectivenessRating ?? 5}
-                onChange={(_, value) => setTreatmentProgress(prev => ({ ...prev, overallEffectivenessRating: value as number }))}
+                onChange={(_, value) =>
+                  setTreatmentProgress((prev) => ({
+                    ...prev,
+                    overallEffectivenessRating: value as number,
+                  }))
+                }
                 min={1}
                 max={10}
                 step={1}
@@ -497,15 +524,40 @@ export const CompletePROM = () => {
             </FormLabel>
             <RadioGroup
               value={treatmentProgress.painComparedToStart?.toString() ?? ""}
-              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, painComparedToStart: parseInt(e.target.value, 10) }))}
+              onChange={(e) =>
+                setTreatmentProgress((prev) => ({
+                  ...prev,
+                  painComparedToStart: parseInt(e.target.value, 10),
+                }))
+              }
             >
-              <FormControlLabel value="-3" control={<Radio />} label="Much worse" />
+              <FormControlLabel
+                value="-3"
+                control={<Radio />}
+                label="Much worse"
+              />
               <FormControlLabel value="-2" control={<Radio />} label="Worse" />
-              <FormControlLabel value="-1" control={<Radio />} label="Slightly worse" />
-              <FormControlLabel value="0" control={<Radio />} label="About the same" />
-              <FormControlLabel value="1" control={<Radio />} label="Slightly better" />
+              <FormControlLabel
+                value="-1"
+                control={<Radio />}
+                label="Slightly worse"
+              />
+              <FormControlLabel
+                value="0"
+                control={<Radio />}
+                label="About the same"
+              />
+              <FormControlLabel
+                value="1"
+                control={<Radio />}
+                label="Slightly better"
+              />
               <FormControlLabel value="2" control={<Radio />} label="Better" />
-              <FormControlLabel value="3" control={<Radio />} label="Much better" />
+              <FormControlLabel
+                value="3"
+                control={<Radio />}
+                label="Much better"
+              />
             </RadioGroup>
           </FormControl>
         </Box>
@@ -520,10 +572,20 @@ export const CompletePROM = () => {
             </FormLabel>
             <RadioGroup
               value={treatmentProgress.exerciseCompliance ?? ""}
-              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, exerciseCompliance: e.target.value }))}
+              onChange={(e) =>
+                setTreatmentProgress((prev) => ({
+                  ...prev,
+                  exerciseCompliance: e.target.value,
+                }))
+              }
             >
-              {EXERCISE_COMPLIANCE_OPTIONS.map(opt => (
-                <FormControlLabel key={opt.value} value={opt.value} control={<Radio />} label={opt.label} />
+              {EXERCISE_COMPLIANCE_OPTIONS.map((opt) => (
+                <FormControlLabel
+                  key={opt.value}
+                  value={opt.value}
+                  control={<Radio />}
+                  label={opt.label}
+                />
               ))}
             </RadioGroup>
           </FormControl>
@@ -540,7 +602,12 @@ export const CompletePROM = () => {
             <TextField
               type="number"
               value={treatmentProgress.sessionsCompletedThisWeek ?? ""}
-              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, sessionsCompletedThisWeek: parseInt(e.target.value, 10) || 0 }))}
+              onChange={(e) =>
+                setTreatmentProgress((prev) => ({
+                  ...prev,
+                  sessionsCompletedThisWeek: parseInt(e.target.value, 10) || 0,
+                }))
+              }
               inputProps={{ min: 0, max: 14 }}
               sx={{ maxWidth: 120 }}
             />
@@ -548,7 +615,7 @@ export const CompletePROM = () => {
         </Box>
 
         {/* Helpful Exercises */}
-        {treatmentContext.exercises.length > 0 && (
+        {treatmentContext.exercises?.length > 0 && (
           <Box mb={4}>
             <FormControl fullWidth>
               <FormLabel sx={{ mb: 2 }}>
@@ -560,31 +627,41 @@ export const CompletePROM = () => {
                 </Typography>
               </FormLabel>
               <FormGroup>
-                {treatmentContext.exercises.map((exercise: TreatmentExercise) => (
-                  <FormControlLabel
-                    key={exercise.id}
-                    control={
-                      <Checkbox
-                        checked={treatmentProgress.helpfulExerciseIds?.includes(exercise.id) ?? false}
-                        onChange={(e) => {
-                          const current = treatmentProgress.helpfulExerciseIds ?? [];
-                          const updated = e.target.checked
-                            ? [...current, exercise.id]
-                            : current.filter(id => id !== exercise.id);
-                          setTreatmentProgress(prev => ({ ...prev, helpfulExerciseIds: updated }));
-                        }}
-                      />
-                    }
-                    label={exercise.name}
-                  />
-                ))}
+                {treatmentContext.exercises.map(
+                  (exercise: TreatmentExercise) => (
+                    <FormControlLabel
+                      key={exercise.id}
+                      control={
+                        <Checkbox
+                          checked={
+                            treatmentProgress.helpfulExerciseIds?.includes(
+                              exercise.id,
+                            ) ?? false
+                          }
+                          onChange={(e) => {
+                            const current =
+                              treatmentProgress.helpfulExerciseIds ?? [];
+                            const updated = e.target.checked
+                              ? [...current, exercise.id]
+                              : current.filter((id) => id !== exercise.id);
+                            setTreatmentProgress((prev) => ({
+                              ...prev,
+                              helpfulExerciseIds: updated,
+                            }));
+                          }}
+                        />
+                      }
+                      label={exercise.name}
+                    />
+                  ),
+                )}
               </FormGroup>
             </FormControl>
           </Box>
         )}
 
         {/* Problematic Exercises */}
-        {treatmentContext.exercises.length > 0 && (
+        {treatmentContext.exercises?.length > 0 && (
           <Box mb={4}>
             <FormControl fullWidth>
               <FormLabel sx={{ mb: 2 }}>
@@ -596,24 +673,34 @@ export const CompletePROM = () => {
                 </Typography>
               </FormLabel>
               <FormGroup>
-                {treatmentContext.exercises.map((exercise: TreatmentExercise) => (
-                  <FormControlLabel
-                    key={exercise.id}
-                    control={
-                      <Checkbox
-                        checked={treatmentProgress.problematicExerciseIds?.includes(exercise.id) ?? false}
-                        onChange={(e) => {
-                          const current = treatmentProgress.problematicExerciseIds ?? [];
-                          const updated = e.target.checked
-                            ? [...current, exercise.id]
-                            : current.filter(id => id !== exercise.id);
-                          setTreatmentProgress(prev => ({ ...prev, problematicExerciseIds: updated }));
-                        }}
-                      />
-                    }
-                    label={exercise.name}
-                  />
-                ))}
+                {treatmentContext.exercises.map(
+                  (exercise: TreatmentExercise) => (
+                    <FormControlLabel
+                      key={exercise.id}
+                      control={
+                        <Checkbox
+                          checked={
+                            treatmentProgress.problematicExerciseIds?.includes(
+                              exercise.id,
+                            ) ?? false
+                          }
+                          onChange={(e) => {
+                            const current =
+                              treatmentProgress.problematicExerciseIds ?? [];
+                            const updated = e.target.checked
+                              ? [...current, exercise.id]
+                              : current.filter((id) => id !== exercise.id);
+                            setTreatmentProgress((prev) => ({
+                              ...prev,
+                              problematicExerciseIds: updated,
+                            }));
+                          }}
+                        />
+                      }
+                      label={exercise.name}
+                    />
+                  ),
+                )}
               </FormGroup>
             </FormControl>
           </Box>
@@ -631,7 +718,12 @@ export const CompletePROM = () => {
               multiline
               rows={3}
               value={treatmentProgress.exerciseComments ?? ""}
-              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, exerciseComments: e.target.value }))}
+              onChange={(e) =>
+                setTreatmentProgress((prev) => ({
+                  ...prev,
+                  exerciseComments: e.target.value,
+                }))
+              }
               placeholder="Optional: Share any feedback about your exercises..."
               fullWidth
             />
@@ -650,18 +742,23 @@ export const CompletePROM = () => {
               </Typography>
             </FormLabel>
             <FormGroup>
-              {BARRIER_OPTIONS.map(barrier => (
+              {BARRIER_OPTIONS.map((barrier) => (
                 <FormControlLabel
                   key={barrier}
                   control={
                     <Checkbox
-                      checked={treatmentProgress.barriers?.includes(barrier) ?? false}
+                      checked={
+                        treatmentProgress.barriers?.includes(barrier) ?? false
+                      }
                       onChange={(e) => {
                         const current = treatmentProgress.barriers ?? [];
                         const updated = e.target.checked
                           ? [...current, barrier]
-                          : current.filter(b => b !== barrier);
-                        setTreatmentProgress(prev => ({ ...prev, barriers: updated }));
+                          : current.filter((b) => b !== barrier);
+                        setTreatmentProgress((prev) => ({
+                          ...prev,
+                          barriers: updated,
+                        }));
                       }}
                     />
                   }
@@ -684,7 +781,12 @@ export const CompletePROM = () => {
               multiline
               rows={3}
               value={treatmentProgress.suggestions ?? ""}
-              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, suggestions: e.target.value }))}
+              onChange={(e) =>
+                setTreatmentProgress((prev) => ({
+                  ...prev,
+                  suggestions: e.target.value,
+                }))
+              }
               placeholder="Optional: Share your suggestions..."
               fullWidth
             />
@@ -700,11 +802,30 @@ export const CompletePROM = () => {
               </Typography>
             </FormLabel>
             <RadioGroup
-              value={treatmentProgress.wantsClinicianDiscussion === undefined ? "" : treatmentProgress.wantsClinicianDiscussion ? "yes" : "no"}
-              onChange={(e) => setTreatmentProgress(prev => ({ ...prev, wantsClinicianDiscussion: e.target.value === "yes" }))}
+              value={
+                treatmentProgress.wantsClinicianDiscussion === undefined
+                  ? ""
+                  : treatmentProgress.wantsClinicianDiscussion
+                    ? "yes"
+                    : "no"
+              }
+              onChange={(e) =>
+                setTreatmentProgress((prev) => ({
+                  ...prev,
+                  wantsClinicianDiscussion: e.target.value === "yes",
+                }))
+              }
             >
-              <FormControlLabel value="yes" control={<Radio />} label="Yes, I'd like to discuss my progress" />
-              <FormControlLabel value="no" control={<Radio />} label="No, I'm satisfied with my current plan" />
+              <FormControlLabel
+                value="yes"
+                control={<Radio />}
+                label="Yes, I'd like to discuss my progress"
+              />
+              <FormControlLabel
+                value="no"
+                control={<Radio />}
+                label="No, I'm satisfied with my current plan"
+              />
             </RadioGroup>
           </FormControl>
         </Box>
@@ -714,9 +835,10 @@ export const CompletePROM = () => {
 
   const calculateImprovement = (baseline: any, current: SelectedRegion[]) => {
     if (!baseline?.intensity || current.length === 0) return 0;
-    
+
     // Calculate average intensity from current pain map
-    const avgCurrentIntensity = current.reduce((sum, r) => sum + r.intensity, 0) / current.length;
+    const avgCurrentIntensity =
+      current.reduce((sum, r) => sum + r.intensity, 0) / current.length;
     const reduction = baseline.intensity - avgCurrentIntensity;
     const improvement = (reduction / baseline.intensity) * 100;
     return Math.max(0, Math.round(improvement));
@@ -740,7 +862,12 @@ export const CompletePROM = () => {
       <Box p={3}>
         <Callout variant="error">
           {error}
-          <AuraButton color="inherit" size="small" onClick={fetchPromInstance} sx={{ ml: 2 }}>
+          <AuraButton
+            color="inherit"
+            size="small"
+            onClick={fetchPromInstance}
+            sx={{ ml: 2 }}
+          >
             Retry
           </AuraButton>
         </Callout>
@@ -832,10 +959,15 @@ export const CompletePROM = () => {
       {totalSteps > 1 && (
         <Stepper activeStep={activeStep} sx={auraStepper}>
           {Array.from({ length: totalSteps }, (_, index) => {
-            const isLastStepWithTreatment = treatmentContext && index === totalSteps - 1;
+            const isLastStepWithTreatment =
+              treatmentContext && index === totalSteps - 1;
             return (
               <Step key={index}>
-                <StepLabel>{isLastStepWithTreatment ? "Treatment Feedback" : `Section ${index + 1}`}</StepLabel>
+                <StepLabel>
+                  {isLastStepWithTreatment
+                    ? "Treatment Feedback"
+                    : `Section ${index + 1}`}
+                </StepLabel>
               </Step>
             );
           })}
@@ -851,15 +983,15 @@ export const CompletePROM = () => {
           <Typography variant="body2" color="text.secondary" paragraph>
             Compare your current pain to your initial assessment
           </Typography>
-          
+
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 6 }}>
               <Box sx={{ textAlign: "center" }}>
                 <Typography variant="subtitle2" gutterBottom>
                   Initial Pain (Baseline)
                 </Typography>
-                <PainMap3DViewer 
-                  regions={baselinePainMap.regions} 
+                <PainMap3DViewer
+                  regions={baselinePainMap.regions}
                   width={300}
                   height={400}
                 />
@@ -874,17 +1006,15 @@ export const CompletePROM = () => {
                   Current Pain
                 </Typography>
                 <Box sx={{ height: 400 }}>
-                  <PainMap3D 
-                    value={currentPainMap} 
+                  <PainMap3D
+                    value={currentPainMap}
                     onChange={setCurrentPainMap}
                   />
                 </Box>
                 {currentPainMap.length > 0 && baselinePainMap && (
-                  <Callout
-                    variant="success"
-                    icon={<TrendingDownIcon />}
-                  >
-                    {calculateImprovement(baselinePainMap, currentPainMap)}% improvement
+                  <Callout variant="success" icon={<TrendingDownIcon />}>
+                    {calculateImprovement(baselinePainMap, currentPainMap)}%
+                    improvement
                   </Callout>
                 )}
               </Box>
@@ -901,7 +1031,8 @@ export const CompletePROM = () => {
               Treatment Progress Feedback
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Help us understand how your treatment is going. Your feedback helps us improve your care.
+              Help us understand how your treatment is going. Your feedback
+              helps us improve your care.
             </Typography>
             {renderTreatmentProgressQuestions()}
           </>
@@ -952,7 +1083,8 @@ export const CompletePROM = () => {
         score={completedScore || 0}
         painLevel={
           currentPainMap.length > 0
-            ? currentPainMap.reduce((sum, r) => sum + r.intensity, 0) / currentPainMap.length
+            ? currentPainMap.reduce((sum, r) => sum + r.intensity, 0) /
+              currentPainMap.length
             : undefined
         }
       />
