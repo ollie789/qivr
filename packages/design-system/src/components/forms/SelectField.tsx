@@ -1,19 +1,17 @@
-import React from 'react';
+import React from "react";
 import {
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   FormHelperText,
-} from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
-import type { SxProps, Theme } from '@mui/material/styles';
+} from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
+import type { SxProps, Theme } from "@mui/material/styles";
+import type { SelectOption } from "@qivr/eval";
 
-export interface SelectOption {
-  value: string;
-  label: string;
-  disabled?: boolean;
-}
+// Re-export for backwards compatibility
+export type { SelectOption } from "@qivr/eval";
 
 interface SelectFieldProps {
   label?: string;
@@ -26,7 +24,7 @@ interface SelectFieldProps {
   name?: string;
   disabled?: boolean;
   sx?: SxProps<Theme>;
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
   /** Placeholder text shown when no value is selected (only used when label is empty) */
   placeholder?: string;
 }
@@ -42,14 +40,14 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   name,
   disabled = false,
   sx,
-  size = 'medium',
+  size = "medium",
   placeholder,
 }) => {
   const handleChange = (event: SelectChangeEvent<string>) => {
     onChange(event.target.value as string);
   };
 
-  const hasLabel = label && label.trim() !== '';
+  const hasLabel = label && label.trim() !== "";
 
   return (
     <FormControl
@@ -59,9 +57,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
       sx={sx}
       size={size}
     >
-      {hasLabel && (
-        <InputLabel shrink={!!value}>{label}</InputLabel>
-      )}
+      {hasLabel && <InputLabel shrink={!!value}>{label}</InputLabel>}
       <Select
         label={hasLabel ? label : undefined}
         value={value}
@@ -71,7 +67,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
         notched={hasLabel ? !!value : false}
         renderValue={
           !hasLabel && !value && placeholder
-            ? () => <span style={{ color: '#9e9e9e' }}>{placeholder}</span>
+            ? () => <span style={{ color: "#9e9e9e" }}>{placeholder}</span>
             : undefined
         }
       >

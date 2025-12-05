@@ -73,12 +73,17 @@ public class EvaluationsController : BaseApiController
             request.QuestionnaireResponses,
             request.PainMaps.Select(p => new PainMapDto(
                 p.BodyRegion,
-                p.Coordinates.X,
-                p.Coordinates.Y,
-                p.Coordinates.Z,
+                p.Coordinates?.X ?? 0,
+                p.Coordinates?.Y ?? 0,
+                p.Coordinates?.Z ?? 0,
                 p.Intensity,
                 p.Type,
-                p.Qualities
+                p.Qualities,
+                p.AnatomicalCode,
+                p.AvatarType,
+                p.ViewOrientation,
+                p.SubmissionSource,
+                p.DrawingDataJson
             )).ToList()
         );
         
@@ -710,10 +715,15 @@ public class CreateEvaluationRequest
 public class PainMapRequest
 {
     public string BodyRegion { get; set; } = string.Empty;
-    public CoordinatesRequest Coordinates { get; set; } = new();
+    public CoordinatesRequest? Coordinates { get; set; }
     public int Intensity { get; set; }
     public string? Type { get; set; }
     public List<string> Qualities { get; set; } = new();
+    public string? AnatomicalCode { get; set; }
+    public string? AvatarType { get; set; }
+    public string? ViewOrientation { get; set; }
+    public string? SubmissionSource { get; set; }
+    public string? DrawingDataJson { get; set; }
 }
 
 public class CoordinatesRequest

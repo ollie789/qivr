@@ -3,7 +3,7 @@
  * Renders intake form questions with consistent Aura styling
  */
 
-import React from 'react';
+import React from "react";
 import {
   Box,
   FormControl,
@@ -16,30 +16,16 @@ import {
   InputLabel,
   TextField,
   Typography,
-} from '@mui/material';
-import { auraTokens } from '../../theme/auraTokens';
+} from "@mui/material";
+import { auraTokens } from "../../theme/auraTokens";
+import type { Question, SelectOption, CheckboxOption } from "@qivr/eval";
 
-export interface IntakeSelectOption {
-  value: string;
-  label: string;
-}
+// Re-export types for backwards compatibility
+export type { Question, SelectOption, CheckboxOption } from "@qivr/eval";
 
-export interface IntakeCheckboxOption {
-  value: string;
-  label: string;
-}
-
-export interface Question {
-  name: string;
-  label: string;
-  type: 'text' | 'email' | 'tel' | 'select' | 'checkbox-group' | 'number' | 'slider' | 'textarea';
-  required?: boolean;
-  options?: IntakeSelectOption[] | IntakeCheckboxOption[];
-  placeholder?: string;
-  min?: number;
-  max?: number;
-  rows?: number;
-}
+// Legacy type aliases for backwards compatibility
+export type IntakeSelectOption = SelectOption;
+export type IntakeCheckboxOption = CheckboxOption;
 
 export interface QuestionRendererProps {
   /** The question definition to render */
@@ -55,7 +41,7 @@ export interface QuestionRendererProps {
   /** Whether the field is disabled */
   disabled?: boolean;
   /** Size variant */
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
 }
 
 /**
@@ -68,18 +54,18 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   onToggle,
   error,
   disabled = false,
-  size = 'medium',
+  size = "medium",
 }) => {
-  const { name, label, type, options, placeholder, rows = 4 } = question;
+  const { name: _name, label, type, options, placeholder, rows = 4 } = question;
 
   // Text input types
-  if (type === 'text' || type === 'email' || type === 'tel') {
+  if (type === "text" || type === "email" || type === "tel") {
     return (
       <TextField
         fullWidth
         type={type}
         label={label}
-        value={(value as string) || ''}
+        value={(value as string) || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         error={!!error}
@@ -87,7 +73,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
         disabled={disabled}
         size={size}
         sx={{
-          '& .MuiOutlinedInput-root': {
+          "& .MuiOutlinedInput-root": {
             borderRadius: auraTokens.borderRadius.sm,
           },
         }}
@@ -96,14 +82,14 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   }
 
   // Textarea
-  if (type === 'textarea') {
+  if (type === "textarea") {
     return (
       <TextField
         fullWidth
         multiline
         rows={rows}
         label={label}
-        value={(value as string) || ''}
+        value={(value as string) || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         error={!!error}
@@ -111,7 +97,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
         disabled={disabled}
         size={size}
         sx={{
-          '& .MuiOutlinedInput-root': {
+          "& .MuiOutlinedInput-root": {
             borderRadius: auraTokens.borderRadius.sm,
           },
         }}
@@ -120,12 +106,12 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   }
 
   // Select dropdown
-  if (type === 'select') {
+  if (type === "select") {
     return (
       <FormControl fullWidth error={!!error} disabled={disabled} size={size}>
         <InputLabel>{label}</InputLabel>
         <Select
-          value={(value as string) || ''}
+          value={(value as string) || ""}
           label={label}
           onChange={(e) => onChange(e.target.value)}
           sx={{
@@ -148,7 +134,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   }
 
   // Checkbox group
-  if (type === 'checkbox-group') {
+  if (type === "checkbox-group") {
     const values = (value as string[]) || [];
     return (
       <FormControl component="fieldset" error={!!error} disabled={disabled}>
@@ -156,10 +142,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
           component="legend"
           sx={{
             fontWeight: auraTokens.fontWeights.medium,
-            color: 'text.primary',
+            color: "text.primary",
             mb: 1,
-            '&.Mui-focused': {
-              color: 'text.primary',
+            "&.Mui-focused": {
+              color: "text.primary",
             },
           }}
         >
@@ -167,8 +153,8 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
         </FormLabel>
         <FormGroup
           sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
             gap: 0.5,
           }}
         >
@@ -182,8 +168,8 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                   onChange={() => onToggle?.(opt.value)}
                   size={size}
                   sx={{
-                    '&.Mui-checked': {
-                      color: 'primary.main',
+                    "&.Mui-checked": {
+                      color: "primary.main",
                     },
                   }}
                 />
@@ -191,8 +177,8 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
               sx={{
                 m: 0,
                 py: 0.5,
-                '& .MuiFormControlLabel-label': {
-                  fontSize: size === 'small' ? '0.875rem' : '1rem',
+                "& .MuiFormControlLabel-label": {
+                  fontSize: size === "small" ? "0.875rem" : "1rem",
                 },
               }}
             />
@@ -228,7 +214,7 @@ export interface QuestionSectionProps {
   /** Whether fields are disabled */
   disabled?: boolean;
   /** Size variant */
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
   /** Spacing between questions */
   spacing?: number;
 }
@@ -245,11 +231,11 @@ export const QuestionSection: React.FC<QuestionSectionProps> = ({
   onCheckboxToggle,
   errors = {},
   disabled = false,
-  size = 'medium',
+  size = "medium",
   spacing = 3,
 }) => {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: spacing }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: spacing }}>
       {(title || description) && (
         <Box sx={{ mb: 1 }}>
           {title && (
@@ -257,7 +243,7 @@ export const QuestionSection: React.FC<QuestionSectionProps> = ({
               variant="h6"
               sx={{
                 fontWeight: auraTokens.fontWeights.semibold,
-                color: 'text.primary',
+                color: "text.primary",
                 mb: description ? 0.5 : 0,
               }}
             >

@@ -51,6 +51,7 @@ public class EvaluationService : IEvaluationService
                 TenantId = evaluation.TenantId,
                 EvaluationId = evaluation.Id,
                 BodyRegion = painMapDto.BodyRegion,
+                AnatomicalCode = painMapDto.AnatomicalCode,
                 Coordinates = new PainCoordinates
                 {
                     X = painMapDto.X,
@@ -59,7 +60,10 @@ public class EvaluationService : IEvaluationService
                 },
                 PainIntensity = painMapDto.Intensity,
                 PainType = painMapDto.Type,
-                PainQuality = painMapDto.Qualities
+                PainQuality = painMapDto.Qualities,
+                AvatarType = painMapDto.AvatarType ?? "male",
+                ViewOrientation = painMapDto.ViewOrientation ?? "front",
+                DrawingDataJson = painMapDto.DrawingDataJson
             };
 
             await _context.PainMaps.AddAsync(painMap, cancellationToken);

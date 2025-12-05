@@ -88,7 +88,10 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
 
     // Use shared validation utilities
     if (currentStep.hasPainMap) {
-      newErrors = { ...newErrors, ...validatePainMappingStep(painRegions.length, form) };
+      newErrors = {
+        ...newErrors,
+        ...validatePainMappingStep(painRegions.length, form),
+      };
     }
 
     if (currentStep.isReview) {
@@ -108,6 +111,11 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
     setError("");
 
     try {
+      // Split fullName into firstName/lastName for backend
+      const nameParts = (form.fullName || "").trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
       const res = await fetch(`${apiUrl}/api/intake/submit`, {
         method: "POST",
         headers: {
@@ -116,22 +124,32 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
         },
         body: JSON.stringify({
           personalInfo: {
-            fullName: form.fullName,
-            ageRange: form.ageRange,
+            firstName,
+            lastName,
+            dateOfBirth: null,
+            gender: null,
           },
           contactInfo: {
             email: form.email,
             phone: form.phone,
           },
           chiefComplaint: form.chiefComplaint,
-          painIntensity: form.painIntensity,
-          painDuration: form.painDuration,
-          painQualities: form.painQualities,
+          symptoms: form.painQualities || [], // Backend expects 'symptoms' at root
+          painLevel: form.painIntensity || 5, // Backend expects 'painLevel'
+          duration: form.painDuration || "", // Backend expects 'duration'
           painMapData: {
-            regions: painRegions,
+            regions: painRegions.map((r) => ({
+              meshName: r.meshName,
+              anatomicalName: r.anatomicalName,
+              quality: r.quality,
+              intensity: r.intensity,
+              snomedCode: r.snomedCode,
+            })),
+            cameraView: "front",
             timestamp: new Date().toISOString(),
           },
-          medicalHistory: {
+          questionnaireResponses: {
+            // Store the full structured data for display
             painStart: form.painStart,
             prevOrtho: form.prevOrtho,
             currentTreatments: form.currentTreatments,
@@ -140,12 +158,17 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
             dailyImpact: form.dailyImpact,
             additionalHistory: form.additionalHistory,
             redFlags: form.redFlags,
-          },
-          treatmentGoals: {
             goals: form.goals,
             timeline: form.timeline,
             milestones: form.milestones,
             concerns: form.concerns,
+            ageRange: form.ageRange,
+          },
+          medicalHistory: {
+            conditions: form.additionalHistory || "",
+            medications: form.medications?.join(", ") || "",
+            allergies: "",
+            previousTreatments: form.currentTreatments?.join(", ") || "",
           },
           consent: {
             consentToTreatment: form.consentTreatment,
@@ -237,7 +260,10 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
               label="Age Range"
               onChange={(e) => update("ageRange", e.target.value)}
             >
-              {(personalInfoSection.questions.find(q => q.name === "ageRange")?.options as SelectOption[])?.map((opt) => (
+              {(
+                personalInfoSection.questions.find((q) => q.name === "ageRange")
+                  ?.options as SelectOption[]
+              )?.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </MenuItem>
@@ -310,7 +336,9 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
 
           {/* Pain Qualities */}
           <FormControl component="fieldset" sx={{ mt: 3 }}>
-            <FormLabel>What does your pain feel like? (select all that apply)</FormLabel>
+            <FormLabel>
+              What does your pain feel like? (select all that apply)
+            </FormLabel>
             <FormGroup row>
               {painQualityOptions.map((q) => (
                 <FormControlLabel
@@ -336,8 +364,12 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
           description={medicalHistorySection.description}
           questions={medicalHistorySection.questions}
           formValues={form as Record<string, unknown>}
-          onFieldChange={(field, value) => update(field as keyof IntakeFormData, value)}
-          onCheckboxToggle={(field, value) => toggleCheckbox(field as keyof IntakeFormData, value)}
+          onFieldChange={(field, value) =>
+            update(field as keyof IntakeFormData, value)
+          }
+          onCheckboxToggle={(field, value) =>
+            toggleCheckbox(field as keyof IntakeFormData, value)
+          }
           errors={errors}
         />
       )}
@@ -349,8 +381,12 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
           description={goalsSection.description}
           questions={goalsSection.questions}
           formValues={form as Record<string, unknown>}
-          onFieldChange={(field, value) => update(field as keyof IntakeFormData, value)}
-          onCheckboxToggle={(field, value) => toggleCheckbox(field as keyof IntakeFormData, value)}
+          onFieldChange={(field, value) =>
+            update(field as keyof IntakeFormData, value)
+          }
+          onCheckboxToggle={(field, value) =>
+            toggleCheckbox(field as keyof IntakeFormData, value)
+          }
           errors={errors}
         />
       )}
@@ -360,7 +396,9 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
         <IntakeReviewSection
           painRegions={painRegions}
           formData={form}
-          onConsentChange={(field, checked) => update(field as keyof IntakeFormData, checked)}
+          onConsentChange={(field, checked) =>
+            update(field as keyof IntakeFormData, checked)
+          }
           errors={errors}
           isWidget={true}
         />

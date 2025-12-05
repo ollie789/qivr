@@ -207,3 +207,89 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =========================================
+   FullCalendar Grid Lines - Global Override
+   ========================================= */
+
+/* Set the CSS variable for border color */
+.fc {
+  --fc-border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Dark mode override */
+[data-mui-color-scheme="dark"] .fc,
+.dark .fc {
+  --fc-border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Force all FullCalendar table borders to be visible */
+.fc-scrollgrid,
+.fc-scrollgrid table,
+.fc-scrollgrid td,
+.fc-scrollgrid th {
+  border-color: var(--fc-border-color) !important;
+  border-style: solid !important;
+}
+
+/* Vertical lines between days in time grid */
+.fc-timegrid-col {
+  border-right: 1px solid var(--fc-border-color) !important;
+}
+
+.fc-timegrid-col:last-child {
+  border-right: none !important;
+}
+
+/* Time slots horizontal lines */
+.fc-timegrid-slot {
+  border-bottom: 1px solid var(--fc-border-color) !important;
+}
+
+.fc-timegrid-slot-lane {
+  border-top: 1px solid var(--fc-border-color) !important;
+}
+
+/* Half-hour slots - dashed line */
+.fc-timegrid-slot-minor {
+  border-top-style: dashed !important;
+}
+
+/* Column headers separation */
+.fc-col-header-cell {
+  border-right: 1px solid var(--fc-border-color) !important;
+  border-bottom: 1px solid var(--fc-border-color) !important;
+}
+
+.fc-col-header-cell:last-child {
+  border-right: none !important;
+}
+
+/* Time axis column border */
+.fc-timegrid-axis {
+  border-right: 1px solid var(--fc-border-color) !important;
+}
+
+/* Day grid cells (month view) */
+.fc-daygrid-day {
+  border-right: 1px solid var(--fc-border-color) !important;
+  border-bottom: 1px solid var(--fc-border-color) !important;
+}
+
+.fc-daygrid-day:last-child {
+  border-right: none !important;
+}
+
+/* Outer border of the calendar */
+.fc-scrollgrid {
+  border: 1px solid var(--fc-border-color) !important;
+}
+
+/* Table structure */
+.fc-scrollgrid-section > td {
+  border-bottom: 1px solid var(--fc-border-color) !important;
+}
+
+.fc-scrollgrid-section-header > td {
+  border-bottom: 2px solid var(--fc-border-color) !important;
+}

@@ -47,21 +47,9 @@ import {
   ChevronRight as ChevronRightIcon,
   ViewWeek as WeekViewIcon,
   ViewDay as DayViewIcon,
+  FilterList as FilterIcon,
 } from "@mui/icons-material";
-import {
-  format,
-  parseISO,
-  isToday,
-  isSameDay,
-  addDays,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameMonth,
-  addMonths,
-} from "date-fns";
+import { format, parseISO, isToday, addDays } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
@@ -83,8 +71,10 @@ import {
   type PromTemplateSummary,
 } from "../services/promApi";
 import { treatmentPlansApi } from "../lib/api";
+import { providerApi } from "../services/providerApi";
 import type { Appointment } from "../features/appointments/types";
 import { appointmentsApi } from "../services/appointmentsApi";
+import { useAuthUser } from "../stores/authStore";
 
 interface TreatmentPlanSummary {
   id: string;
@@ -116,10 +106,14 @@ const AUTO_PROM_CONFIG: Record<
 export default function Appointments() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const user = useAuthUser();
   const calendarRef = useRef<FullCalendar>(null);
   const [viewMode, setViewMode] = useState<"week" | "day">("week");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [miniCalendarMonth, setMiniCalendarMonth] = useState<Date>(new Date());
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(
+    // Practitioners auto-filter to their own appointments
+    user?.role === "practitioner" ? (user?.id ?? "all") : "all",
+  );
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{
@@ -177,60 +171,50 @@ export default function Appointments() {
     queryFn: () => promApi.getTemplates({ isActive: true }),
   });
 
-  const appointments: Appointment[] = appointmentsData?.items ?? [];
+  // Fetch providers for the filter dropdown
+  const { data: providers = [] } = useQuery({
+    queryKey: ["providers"],
+    queryFn: () =>
+      providerApi.getClinicProviders(undefined, { activeOnly: true }),
+  });
 
-  // Filter appointments for current day (day view)
-  const dayAppointments = useMemo(() => {
+  // Filter appointments based on selected provider
+  const allAppointments: Appointment[] = appointmentsData?.items ?? [];
+  const appointments = useMemo(() => {
+    if (selectedProviderId === "all") return allAppointments;
+    return allAppointments.filter(
+      (apt) => apt.providerId === selectedProviderId,
+    );
+  }, [allAppointments, selectedProviderId]);
+
+  // Today's agenda - always show today's appointments in right panel
+  const todayAppointments = useMemo(() => {
     return appointments
       .filter((apt) => {
         const aptDate = parseISO(apt.scheduledStart);
-        return isSameDay(aptDate, currentDate);
+        return isToday(aptDate);
       })
       .sort(
         (a, b) =>
           new Date(a.scheduledStart).getTime() -
           new Date(b.scheduledStart).getTime(),
       );
-  }, [appointments, currentDate]);
+  }, [appointments]);
 
-  // Stats for the day
-  const dayStats = useMemo(() => {
-    const total = dayAppointments.length;
-    const completed = dayAppointments.filter(
+  // Stats for today (for agenda panel)
+  const todayStats = useMemo(() => {
+    const total = todayAppointments.length;
+    const completed = todayAppointments.filter(
       (a) => a.status === "completed",
     ).length;
-    const upcoming = dayAppointments.filter(
+    const upcoming = todayAppointments.filter(
       (a) => a.status === "scheduled" || a.status === "confirmed",
     ).length;
-    const inProgress = dayAppointments.filter(
+    const inProgress = todayAppointments.filter(
       (a) => a.status === "in-progress",
     ).length;
     return { total, completed, upcoming, inProgress };
-  }, [dayAppointments]);
-
-  // Generate mini calendar days
-  const miniCalendarDays = useMemo(() => {
-    const monthStart = startOfMonth(miniCalendarMonth);
-    const monthEnd = endOfMonth(miniCalendarMonth);
-    const calendarStart = startOfWeek(monthStart);
-    const calendarEnd = endOfWeek(monthEnd);
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  }, [miniCalendarMonth]);
-
-  // Check if a date has appointments
-  const getAppointmentCountForDate = (date: Date) => {
-    return appointments.filter((apt) =>
-      isSameDay(parseISO(apt.scheduledStart), date),
-    ).length;
-  };
-
-  // Handle date click from mini calendar
-  const handleMiniCalendarDateClick = (date: Date) => {
-    setCurrentDate(date);
-    if (calendarRef.current) {
-      calendarRef.current.getApi().gotoDate(date);
-    }
-  };
+  }, [todayAppointments]);
 
   // Convert appointments to FullCalendar events
   const calendarEvents = appointments.map((apt) => ({
@@ -308,10 +292,6 @@ export default function Appointments() {
   // Sync current date when calendar view changes
   const handleDatesSet = (arg: DatesSetArg) => {
     setCurrentDate(arg.start);
-    // Keep mini calendar in sync
-    if (!isSameMonth(arg.start, miniCalendarMonth)) {
-      setMiniCalendarMonth(arg.start);
-    }
   };
 
   // Handle view mode change
@@ -683,7 +663,27 @@ export default function Appointments() {
             <Chip label="Today" color="primary" size="small" />
           )}
         </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {/* Provider Filter - hide for practitioners who see only their own */}
+          {user?.role !== "practitioner" && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <FilterIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+              <Box sx={{ minWidth: 180 }}>
+                <SelectField
+                  label=""
+                  value={selectedProviderId}
+                  onChange={setSelectedProviderId}
+                  options={[
+                    { value: "all", label: "All Providers" },
+                    ...providers.map((p) => ({
+                      value: p.id,
+                      label: p.fullName || `${p.firstName} ${p.lastName}`,
+                    })),
+                  ]}
+                />
+              </Box>
+            </Box>
+          )}
           <AuraButton
             variant="contained"
             startIcon={<AddIcon />}
@@ -703,182 +703,6 @@ export default function Appointments() {
           minHeight: 0,
         }}
       >
-        {/* Left Sidebar - Mini Calendar */}
-        <AuraCard
-          hover={false}
-          variant="flat"
-          sx={{
-            width: 240,
-            p: auraTokens.spacing.md,
-            display: "flex",
-            flexDirection: "column",
-            flexShrink: 0,
-          }}
-        >
-          {/* Mini Calendar Header */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              mb: 2,
-            }}
-          >
-            <AuraIconButton
-              tooltip="Previous month"
-              size="small"
-              onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, -1))}
-            >
-              <ChevronLeftIcon fontSize="small" />
-            </AuraIconButton>
-            <Typography
-              variant="subtitle2"
-              fontWeight={auraTokens.fontWeights.semibold}
-            >
-              {format(miniCalendarMonth, "MMMM yyyy")}
-            </Typography>
-            <AuraIconButton
-              tooltip="Next month"
-              size="small"
-              onClick={() => setMiniCalendarMonth(addMonths(miniCalendarMonth, 1))}
-            >
-              <ChevronRightIcon fontSize="small" />
-            </AuraIconButton>
-          </Box>
-
-          {/* Mini Calendar Grid */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, 1fr)",
-              gap: 0.25,
-              textAlign: "center",
-            }}
-          >
-            {/* Day headers */}
-            {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
-              <Typography
-                key={i}
-                variant="caption"
-                color="text.secondary"
-                sx={{ py: 0.5, fontWeight: 500 }}
-              >
-                {day}
-              </Typography>
-            ))}
-
-            {/* Days */}
-            {miniCalendarDays.map((day, i) => {
-              const isCurrentMonth = isSameMonth(day, miniCalendarMonth);
-              const isSelected = isSameDay(day, currentDate);
-              const isTodayDate = isToday(day);
-              const appointmentCount = getAppointmentCountForDate(day);
-
-              return (
-                <Box
-                  key={i}
-                  onClick={() => handleMiniCalendarDateClick(day)}
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    position: "relative",
-                    mx: "auto",
-                    fontSize: "0.75rem",
-                    fontWeight: isSelected || isTodayDate ? 600 : 400,
-                    color: !isCurrentMonth
-                      ? "text.disabled"
-                      : isSelected
-                        ? "white"
-                        : isTodayDate
-                          ? "primary.main"
-                          : "text.primary",
-                    bgcolor: isSelected
-                      ? "primary.main"
-                      : isTodayDate
-                        ? alpha(theme.palette.primary.main, 0.1)
-                        : "transparent",
-                    border:
-                      isTodayDate && !isSelected
-                        ? `1px solid ${theme.palette.primary.main}`
-                        : "none",
-                    "&:hover": {
-                      bgcolor: isSelected ? "primary.dark" : "action.hover",
-                    },
-                  }}
-                >
-                  {format(day, "d")}
-                  {/* Appointment indicator dot */}
-                  {appointmentCount > 0 && !isSelected && (
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        bottom: 2,
-                        width: 4,
-                        height: 4,
-                        borderRadius: "50%",
-                        bgcolor: isTodayDate ? "primary.main" : "text.secondary",
-                      }}
-                    />
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          {/* Day Stats */}
-          <Box sx={{ mb: 2 }}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              fontWeight={500}
-              sx={{ mb: 1, display: "block" }}
-            >
-              {format(currentDate, "MMM d")} Stats
-            </Typography>
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
-              <Box sx={{ textAlign: "center", p: 1, bgcolor: "action.hover", borderRadius: 1 }}>
-                <Typography variant="h6" fontWeight={700} color="primary.main">
-                  {dayStats.total}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Total
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center", p: 1, bgcolor: "action.hover", borderRadius: 1 }}>
-                <Typography variant="h6" fontWeight={700} color="success.main">
-                  {dayStats.completed}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Done
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center", p: 1, bgcolor: "action.hover", borderRadius: 1 }}>
-                <Typography variant="h6" fontWeight={700} color="warning.main">
-                  {dayStats.inProgress}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Active
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center", p: 1, bgcolor: "action.hover", borderRadius: 1 }}>
-                <Typography variant="h6" fontWeight={700}>
-                  {dayStats.upcoming}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Upcoming
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-        </AuraCard>
-
         {/* Calendar Section */}
         <AuraCard
           hover={false}
@@ -896,6 +720,13 @@ export default function Appointments() {
           <Box
             sx={{
               flex: 1,
+              // FullCalendar grid line overrides - using !important for maximum specificity
+              "& .fc": {
+                "--fc-border-color":
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.25)"
+                    : "rgba(0, 0, 0, 0.2)",
+              },
               "& .fc-toolbar": { display: "none" },
               "& .fc-view-harness": { bgcolor: "background.paper" },
               "& .fc-event": {
@@ -905,14 +736,15 @@ export default function Appointments() {
                 border: "none",
                 boxShadow: auraTokens.shadows.sm,
               },
+              // Column headers
               "& .fc-col-header": {
-                borderBottom: "1px solid",
-                borderColor: "divider",
+                borderBottom: `2px solid ${theme.palette.divider} !important`,
               },
               "& .fc-col-header-cell": {
                 py: 1.5,
-                borderBottom: "none",
                 verticalAlign: "top",
+                borderRight: `1px solid ${theme.palette.divider} !important`,
+                "&:last-child": { borderRight: "none !important" },
               },
               "& .fc-col-header-cell-cushion": {
                 display: "flex",
@@ -923,69 +755,83 @@ export default function Appointments() {
                 textDecoration: "none !important",
               },
               "& .fc-day-today": { bgcolor: "transparent !important" },
-              // Time grid styling with BOLD visible grid lines
+
+              // === GRID LINES - AGGRESSIVE OVERRIDES ===
+              // All table cells get visible borders
+              "& .fc-scrollgrid, & .fc-scrollgrid table, & .fc-scrollgrid td, & .fc-scrollgrid th":
+                {
+                  borderColor: `${theme.palette.divider} !important`,
+                },
+              // Time slots - horizontal lines between time slots
               "& .fc-timegrid-slot": {
                 height: "48px",
-                borderColor: alpha(theme.palette.text.primary, 0.2),
-                borderWidth: "1px",
+                borderBottom: `1px solid ${theme.palette.divider} !important`,
               },
               "& .fc-timegrid-slot-lane": {
-                borderColor: alpha(theme.palette.text.primary, 0.15),
-                borderTopWidth: "1px",
+                borderTop: `1px solid ${theme.palette.divider} !important`,
               },
+              // Hour vs half-hour distinction
+              "& .fc-timegrid-slot-minor": {
+                borderTopStyle: "dashed !important",
+                borderTopColor: `${alpha(theme.palette.divider, 0.5)} !important`,
+              },
+              // Time labels
               "& .fc-timegrid-slot-label": {
                 fontSize: "0.7rem",
                 color: "text.secondary",
                 fontWeight: 400,
                 verticalAlign: "top",
                 paddingTop: "4px",
+                borderRight: `1px solid ${theme.palette.divider} !important`,
               },
               "& .fc-timegrid-slot-label-cushion": { paddingRight: "12px" },
               "& .fc-timegrid-event": {
                 borderRadius: auraTokens.borderRadius.sm,
                 fontSize: "0.75rem",
               },
-              // Column borders (vertical lines between days) - BOLD
+              // VERTICAL LINES between days - this is the key one
               "& .fc-timegrid-col": {
-                borderColor: alpha(theme.palette.text.primary, 0.2),
+                borderRight: `1px solid ${theme.palette.divider} !important`,
+                "&:last-child": { borderRight: "none !important" },
               },
-              "& .fc-timegrid-cols > table": {
-                borderColor: alpha(theme.palette.text.primary, 0.2),
+              "& .fc-timegrid-cols": {
+                "& > table": {
+                  borderCollapse: "collapse !important",
+                },
+                "& td": {
+                  borderRight: `1px solid ${theme.palette.divider} !important`,
+                  "&:last-child": { borderRight: "none !important" },
+                },
               },
-              "& .fc-timegrid-col-frame": {
-                borderRight: `2px solid ${alpha(theme.palette.text.primary, 0.15)}`,
-                "&:last-child": { borderRight: "none" },
+              // Day columns in the body
+              "& .fc-daygrid-day, & .fc-timegrid-col-frame": {
+                borderRight: `1px solid ${theme.palette.divider} !important`,
+                "&:last-child": { borderRight: "none !important" },
               },
               // Now indicator
               "& .fc-timegrid-now-indicator-line": {
-                borderColor: theme.palette.error.main,
-                borderWidth: "2px",
+                borderColor: `${theme.palette.error.main} !important`,
+                borderWidth: "2px !important",
               },
               "& .fc-timegrid-now-indicator-arrow": {
-                borderTopColor: theme.palette.error.main,
-                borderWidth: "5px",
+                borderTopColor: `${theme.palette.error.main} !important`,
+                borderWidth: "5px !important",
               },
-              // Axis and overall grid - BOLD borders
+              // Time axis column
               "& .fc-timegrid-axis": {
                 width: "56px",
-                borderColor: alpha(theme.palette.text.primary, 0.2),
+                borderRight: `1px solid ${theme.palette.divider} !important`,
               },
+              // Outer border of the whole grid
               "& .fc-scrollgrid": {
-                borderColor: alpha(theme.palette.text.primary, 0.2),
-                borderWidth: "2px",
+                border: `1px solid ${theme.palette.divider} !important`,
               },
-              "& .fc-scrollgrid td, & .fc-scrollgrid th": {
-                borderColor: alpha(theme.palette.text.primary, 0.15),
-                borderWidth: "1px",
-              },
+              // Section dividers
               "& .fc-scrollgrid-section > td": {
-                borderColor: alpha(theme.palette.text.primary, 0.2),
+                borderBottom: `1px solid ${theme.palette.divider} !important`,
               },
-              "& .fc-scrollgrid-section-header > td": { border: "none" },
-              // Hour dividers - make them more prominent
-              "& .fc-timegrid-slot-minor": {
-                borderTopStyle: "dotted",
-                borderColor: alpha(theme.palette.text.primary, 0.1),
+              "& .fc-scrollgrid-section-header > td": {
+                borderBottom: `2px solid ${theme.palette.divider} !important`,
               },
             }}
           >
@@ -1067,254 +913,290 @@ export default function Appointments() {
           </Box>
         </AuraCard>
 
-        {/* Day View - Appointment List Panel */}
-        {viewMode === "day" && (
-          <AuraCard
-            hover={false}
-            variant="flat"
+        {/* Today's Agenda - Always visible right panel */}
+        <AuraCard
+          hover={false}
+          variant="flat"
+          sx={{
+            width: 340,
+            p: 0,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            flexShrink: 0,
+          }}
+        >
+          {/* Today Header with Stats */}
+          <Box
             sx={{
-              width: 360,
-              p: 0,
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
+              p: 2,
+              background: auraTokens.gradients.primary,
+              color: "white",
             }}
           >
-            {/* Day Header */}
-            <Box
-              sx={{
-                p: 2,
-                background: auraTokens.gradients.primary,
-                color: "white",
-              }}
-            >
-              <Typography variant="h6" fontWeight={600}>
-                {isToday(currentDate)
-                  ? "Today's Schedule"
-                  : format(currentDate, "EEEE")}
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                {dayAppointments.length} appointment
-                {dayAppointments.length !== 1 ? "s" : ""}
-              </Typography>
+            <Typography variant="h6" fontWeight={600}>
+              Today's Agenda
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              {format(new Date(), "EEEE, MMMM d")}
+            </Typography>
+            {/* Compact Stats Row */}
+            <Box sx={{ display: "flex", gap: 2, mt: 1.5 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h5" fontWeight={700}>
+                  {todayStats.total}
+                </Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  Total
+                </Typography>
+              </Box>
+              <Divider
+                orientation="vertical"
+                flexItem
+                sx={{ borderColor: "rgba(255,255,255,0.3)" }}
+              />
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h5" fontWeight={700} color="warning.light">
+                  {todayStats.inProgress}
+                </Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  Active
+                </Typography>
+              </Box>
+              <Divider
+                orientation="vertical"
+                flexItem
+                sx={{ borderColor: "rgba(255,255,255,0.3)" }}
+              />
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h5" fontWeight={700} color="success.light">
+                  {todayStats.completed}
+                </Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  Done
+                </Typography>
+              </Box>
+              <Divider
+                orientation="vertical"
+                flexItem
+                sx={{ borderColor: "rgba(255,255,255,0.3)" }}
+              />
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h5" fontWeight={700}>
+                  {todayStats.upcoming}
+                </Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  Next
+                </Typography>
+              </Box>
             </Box>
+          </Box>
 
-            {/* Scrollable Content */}
-            <Box sx={{ flex: 1, overflow: "auto", p: 1.5 }}>
-              {dayAppointments.length === 0 ? (
-                <Box sx={{ p: 4, textAlign: "center" }}>
-                  <TodayIcon
-                    sx={{ fontSize: 48, color: "text.disabled", mb: 1 }}
-                  />
-                  <Typography color="text.secondary">
-                    No appointments scheduled
-                  </Typography>
-                </Box>
-              ) : (
-                <Stack spacing={1.5}>
-                  {dayAppointments.map((apt) => {
-                    const startTime = parseISO(apt.scheduledStart);
-                    const endTime = parseISO(apt.scheduledEnd);
-                    const isActive = apt.status === "in-progress";
-                    const isComplete = apt.status === "completed";
-                    const isCancelled = apt.status === "cancelled";
+          {/* Scrollable Appointments List */}
+          <Box sx={{ flex: 1, overflow: "auto", p: 1.5 }}>
+            {todayAppointments.length === 0 ? (
+              <Box sx={{ p: 4, textAlign: "center" }}>
+                <TodayIcon
+                  sx={{ fontSize: 48, color: "text.disabled", mb: 1 }}
+                />
+                <Typography color="text.secondary">
+                  No appointments today
+                </Typography>
+                <AuraButton
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    setSelectedDate(new Date());
+                    setScheduleDialogOpen(true);
+                  }}
+                  sx={{ mt: 2 }}
+                >
+                  Schedule Now
+                </AuraButton>
+              </Box>
+            ) : (
+              <Stack spacing={1.5}>
+                {todayAppointments.map((apt) => {
+                  const startTime = parseISO(apt.scheduledStart);
+                  const endTime = parseISO(apt.scheduledEnd);
+                  const isActive = apt.status === "in-progress";
+                  const isComplete = apt.status === "completed";
+                  const isCancelled = apt.status === "cancelled";
 
-                    return (
-                      <Paper
-                        key={apt.id}
-                        elevation={0}
+                  return (
+                    <Paper
+                      key={apt.id}
+                      elevation={0}
+                      sx={{
+                        borderRadius: 2,
+                        border: "1px solid",
+                        borderColor: isActive ? "warning.main" : "divider",
+                        bgcolor: isActive
+                          ? alpha(theme.palette.warning.main, 0.08)
+                          : isComplete
+                            ? alpha(theme.palette.success.main, 0.05)
+                            : isCancelled
+                              ? alpha(theme.palette.error.main, 0.05)
+                              : "background.paper",
+                        opacity: isCancelled ? 0.6 : 1,
+                        transition: "all 0.2s",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {/* Appointment Card */}
+                      <Box
                         sx={{
-                          borderRadius: 2,
-                          border: "1px solid",
-                          borderColor: isActive
-                            ? "warning.main"
-                            : "divider",
-                          bgcolor: isActive
-                            ? alpha(theme.palette.warning.main, 0.08)
-                            : isComplete
-                              ? alpha(theme.palette.success.main, 0.05)
-                              : isCancelled
-                                ? alpha(theme.palette.error.main, 0.05)
-                                : "background.paper",
-                          opacity: isCancelled ? 0.6 : 1,
-                          transition: "all 0.2s",
-                          overflow: "hidden",
+                          p: 1.5,
+                          cursor: isActive ? "pointer" : "default",
+                          "&:hover": {
+                            bgcolor: alpha(theme.palette.primary.main, 0.03),
+                          },
+                        }}
+                        onClick={() => {
+                          if (isActive) {
+                            setSessionViewAppointment(apt);
+                          }
                         }}
                       >
-                        {/* Appointment Card */}
-                        <Box
-                          sx={{
-                            p: 1.5,
-                            cursor: isActive ? "pointer" : "default",
-                            "&:hover": {
-                              bgcolor: alpha(theme.palette.primary.main, 0.03),
-                            },
-                          }}
-                          onClick={() => {
-                            // Open SessionView directly for in-progress appointments
-                            if (isActive) {
-                              setSessionViewAppointment(apt);
-                            }
-                          }}
-                        >
-                          <Box sx={{ display: "flex", gap: 1.5 }}>
-                            <Box sx={{ textAlign: "center", minWidth: 50 }}>
-                              <Typography
-                                variant="subtitle2"
-                                fontWeight={700}
-                                color={
-                                  isActive ? "warning.main" : "text.primary"
-                                }
-                              >
-                                {format(startTime, "h:mm")}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {format(startTime, "a")}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                display="block"
-                                color="text.disabled"
-                                sx={{ fontSize: "0.65rem" }}
-                              >
-                                {format(endTime, "h:mm a")}
-                              </Typography>
-                            </Box>
-                            <Divider
-                              orientation="vertical"
-                              flexItem
+                        <Box sx={{ display: "flex", gap: 1.5 }}>
+                          <Box sx={{ textAlign: "center", minWidth: 50 }}>
+                            <Typography
+                              variant="subtitle2"
+                              fontWeight={700}
+                              color={isActive ? "warning.main" : "text.primary"}
+                            >
+                              {format(startTime, "h:mm")}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {format(startTime, "a")}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              display="block"
+                              color="text.disabled"
+                              sx={{ fontSize: "0.65rem" }}
+                            >
+                              {format(endTime, "h:mm a")}
+                            </Typography>
+                          </Box>
+                          <Divider
+                            orientation="vertical"
+                            flexItem
+                            sx={{
+                              borderColor: getStatusColor(apt.status),
+                              borderWidth: 2,
+                            }}
+                          />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Box
                               sx={{
-                                borderColor: getStatusColor(apt.status),
-                                borderWidth: 2,
+                                display: "flex",
+                                alignItems: "flex-start",
+                                justifyContent: "space-between",
                               }}
-                            />
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  justifyContent: "space-between",
+                            >
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography
+                                  variant="subtitle2"
+                                  fontWeight={600}
+                                  noWrap
+                                >
+                                  {apt.patientName}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  noWrap
+                                >
+                                  {apt.appointmentType}
+                                </Typography>
+                              </Box>
+                              <Chip
+                                label={getStatusLabel(apt.status)}
+                                size="small"
+                                color={getStatusChipColor(apt.status) as any}
+                                sx={{ height: 20, fontSize: "0.65rem" }}
+                              />
+                            </Box>
+                            <Box sx={{ display: "flex", gap: 0.5, mt: 1 }}>
+                              {!isComplete && !isCancelled && !isActive && (
+                                <AuraButton
+                                  variant="contained"
+                                  size="small"
+                                  color="warning"
+                                  startIcon={<StartIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartSession(apt);
+                                  }}
+                                  sx={{
+                                    fontSize: "0.7rem",
+                                    py: 0.25,
+                                    px: 1,
+                                  }}
+                                >
+                                  Start
+                                </AuraButton>
+                              )}
+                              {isActive && (
+                                <AuraButton
+                                  variant="contained"
+                                  size="small"
+                                  color="warning"
+                                  startIcon={<NotesIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSessionViewAppointment(apt);
+                                  }}
+                                  sx={{
+                                    fontSize: "0.7rem",
+                                    py: 0.25,
+                                    px: 1,
+                                  }}
+                                >
+                                  Resume
+                                </AuraButton>
+                              )}
+                              <AuraIconButton
+                                tooltip="View Patient"
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(
+                                    `/medical-records?patientId=${apt.patientId}&tab=timeline`,
+                                  );
                                 }}
                               >
-                                <Box sx={{ minWidth: 0, flex: 1 }}>
-                                  <Typography
-                                    variant="subtitle2"
-                                    fontWeight={600}
-                                    noWrap
-                                  >
-                                    {apt.patientName}
-                                  </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    noWrap
-                                  >
-                                    {apt.appointmentType}
-                                  </Typography>
-                                </Box>
-                                <Chip
-                                  label={getStatusLabel(apt.status)}
-                                  size="small"
-                                  color={getStatusChipColor(apt.status) as any}
-                                  sx={{ height: 20, fontSize: "0.65rem" }}
-                                />
-                              </Box>
-                              <Box sx={{ display: "flex", gap: 0.5, mt: 1 }}>
-                                  {!isComplete && !isCancelled && !isActive && (
-                                    <AuraIconButton
-                                      tooltip="Start Session"
-                                      size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleStartSession(apt);
-                                      }}
-                                      sx={{
-                                        bgcolor: alpha(
-                                          theme.palette.warning.main,
-                                          0.1,
-                                        ),
-                                        "&:hover": {
-                                          bgcolor: alpha(
-                                            theme.palette.warning.main,
-                                            0.2,
-                                          ),
-                                        },
-                                      }}
-                                    >
-                                      <StartIcon
-                                        fontSize="small"
-                                        color="warning"
-                                      />
-                                    </AuraIconButton>
-                                  )}
-                                  {isActive && (
-                                    <AuraIconButton
-                                      tooltip="Open Session"
-                                      size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSessionViewAppointment(apt);
-                                      }}
-                                      sx={{
-                                        bgcolor: alpha(
-                                          theme.palette.warning.main,
-                                          0.1,
-                                        ),
-                                        "&:hover": {
-                                          bgcolor: alpha(
-                                            theme.palette.warning.main,
-                                            0.2,
-                                          ),
-                                        },
-                                      }}
-                                    >
-                                      <NotesIcon
-                                        fontSize="small"
-                                        color="warning"
-                                      />
-                                    </AuraIconButton>
-                                  )}
-                                  <AuraIconButton
-                                    tooltip="View Patient"
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(
-                                        `/medical-records?patientId=${apt.patientId}&tab=timeline`,
-                                      );
-                                    }}
-                                  >
-                                    <PersonIcon fontSize="small" />
-                                  </AuraIconButton>
-                                  <AuraIconButton
-                                    tooltip="More Options"
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setMenuAnchor({
-                                        el: e.currentTarget,
-                                        apt,
-                                      });
-                                    }}
-                                  >
-                                    <MoreIcon fontSize="small" />
-                                  </AuraIconButton>
-                                </Box>
+                                <PersonIcon fontSize="small" />
+                              </AuraIconButton>
+                              <AuraIconButton
+                                tooltip="More Options"
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMenuAnchor({
+                                    el: e.currentTarget,
+                                    apt,
+                                  });
+                                }}
+                              >
+                                <MoreIcon fontSize="small" />
+                              </AuraIconButton>
                             </Box>
                           </Box>
                         </Box>
-
-                      </Paper>
-                    );
-                  })}
-                </Stack>
-              )}
-            </Box>
-          </AuraCard>
-        )}
+                      </Box>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            )}
+          </Box>
+        </AuraCard>
       </Box>
 
       {/* Action Menu */}
@@ -1353,7 +1235,9 @@ export default function Appointments() {
         )}
         <MenuItem
           onClick={() => {
-            navigate(`/medical-records?patientId=${menuAnchor?.apt.patientId}&tab=timeline`);
+            navigate(
+              `/medical-records?patientId=${menuAnchor?.apt.patientId}&tab=timeline`,
+            );
             setMenuAnchor(null);
           }}
         >
@@ -1403,7 +1287,8 @@ export default function Appointments() {
             </MenuItem>
             <MenuItem
               onClick={() => {
-                if (menuAnchor?.apt) handleCompleteAppointment(menuAnchor.apt.id);
+                if (menuAnchor?.apt)
+                  handleCompleteAppointment(menuAnchor.apt.id);
               }}
             >
               <ListItemIcon>

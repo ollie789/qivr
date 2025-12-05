@@ -135,13 +135,37 @@ export const IntakeForm: React.FC = () => {
     }
 
     try {
+      // Build structured pain map data for proper storage
+      const painMapPayload = painRegions.length
+        ? painRegions.map((region, index) => ({
+            bodyRegion:
+              region.anatomicalName || region.meshName || `Region ${index + 1}`,
+            anatomicalCode: region.snomedCode,
+            intensity: region.intensity || 5,
+            type: region.quality || "aching",
+            qualities: [region.quality].filter(Boolean),
+            avatarType: "male",
+            viewOrientation: "front",
+            submissionSource: "portal",
+            // Store full 3D pain map data in first region's drawingDataJson
+            drawingDataJson:
+              index === 0
+                ? JSON.stringify({
+                    regions: painRegions,
+                    cameraView: "front",
+                    timestamp: new Date().toISOString(),
+                  })
+                : null,
+          }))
+        : [];
+
       await apiClient.post("/api/evaluations", {
         patientId: userId,
         chiefComplaint: form.chiefComplaint,
-        symptoms: form.painQualities,
+        symptoms: form.painQualities || [],
         questionnaireResponses: {
+          // Pain assessment
           description: form.chiefComplaint,
-          details: form.additionalNotes,
           painIntensity: form.painIntensity,
           painQualities: form.painQualities,
           painDuration: form.painDuration,
@@ -161,21 +185,7 @@ export const IntakeForm: React.FC = () => {
           concerns: form.concerns,
           notes: form.additionalNotes,
         },
-        painMaps: painRegions.length
-          ? painRegions.map((region, index) => ({
-              bodyRegion: region.meshName || `Region ${index + 1}`,
-              coordinates: { x: 0, y: 0, z: 0 },
-              intensity: region.intensity || 5,
-              type: region.quality || "aching",
-              qualities: [region.quality].filter(Boolean),
-              avatarType: "male",
-              bodySubdivision: "simple",
-              viewOrientation: "front",
-              depthIndicator: "superficial",
-              submissionSource: "portal",
-              drawingDataJson: index === 0 ? JSON.stringify({ regions: painRegions }) : null,
-            }))
-          : [],
+        painMaps: painMapPayload,
       });
 
       queryClient.invalidateQueries({ queryKey: ["evaluations"] });
@@ -244,7 +254,8 @@ export const IntakeForm: React.FC = () => {
 
             {/* 3D Pain Map */}
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Click on the 3D body model to mark all areas where you experience pain
+              Click on the 3D body model to mark all areas where you experience
+              pain
             </Typography>
             {errors.painMap && (
               <Alert severity="error" sx={{ mb: 2 }}>
@@ -314,8 +325,12 @@ export const IntakeForm: React.FC = () => {
                     key={quality.value}
                     control={
                       <Checkbox
-                        checked={form.painQualities?.includes(quality.value) || false}
-                        onChange={() => toggleCheckbox("painQualities", quality.value)}
+                        checked={
+                          form.painQualities?.includes(quality.value) || false
+                        }
+                        onChange={() =>
+                          toggleCheckbox("painQualities", quality.value)
+                        }
                       />
                     }
                     label={quality.label}
@@ -352,10 +367,16 @@ export const IntakeForm: React.FC = () => {
           <QuestionSection
             title="Medical History"
             description={medicalHistorySection.description}
-            questions={medicalHistorySection.questions.filter((q) => q.name !== "painStart")}
+            questions={medicalHistorySection.questions.filter(
+              (q) => q.name !== "painStart",
+            )}
             formValues={form as Record<string, unknown>}
-            onFieldChange={(field, value) => update(field as keyof IntakeFormData, value)}
-            onCheckboxToggle={(field, value) => toggleCheckbox(field as keyof IntakeFormData, value)}
+            onFieldChange={(field, value) =>
+              update(field as keyof IntakeFormData, value)
+            }
+            onCheckboxToggle={(field, value) =>
+              toggleCheckbox(field as keyof IntakeFormData, value)
+            }
             errors={errors}
           />
         )}
@@ -368,8 +389,12 @@ export const IntakeForm: React.FC = () => {
               description={goalsSection.description}
               questions={goalsSection.questions}
               formValues={form as Record<string, unknown>}
-              onFieldChange={(field, value) => update(field as keyof IntakeFormData, value)}
-              onCheckboxToggle={(field, value) => toggleCheckbox(field as keyof IntakeFormData, value)}
+              onFieldChange={(field, value) =>
+                update(field as keyof IntakeFormData, value)
+              }
+              onCheckboxToggle={(field, value) =>
+                toggleCheckbox(field as keyof IntakeFormData, value)
+              }
               errors={errors}
             />
 

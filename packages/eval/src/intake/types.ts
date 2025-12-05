@@ -5,7 +5,7 @@
 
 export interface PainPoint {
   key: string;
-  view: 'front' | 'back';
+  view: "front" | "back";
   region: string;
   originalName?: string;
   displayName: string;
@@ -15,26 +15,26 @@ export interface PainPoint {
   intensityLevel: IntensityLevel;
 }
 
-export type IntensityLevel = 'low' | 'medium' | 'high';
+export type IntensityLevel = "low" | "medium" | "high";
 
 export function getIntensityLevel(value: number): IntensityLevel {
-  if (value <= 3) return 'low';
-  if (value <= 7) return 'medium';
-  return 'high';
+  if (value <= 3) return "low";
+  if (value <= 7) return "medium";
+  return "high";
 }
 
 export const painDescriptions: Record<number, string> = {
-  0: 'No Pain',
-  1: 'Very Mild',
-  2: 'Mild Pain',
-  3: 'Mild-Moderate',
-  4: 'Moderate Pain',
-  5: 'Moderate',
-  6: 'Moderate-Severe',
-  7: 'Severe Pain',
-  8: 'Very Severe',
-  9: 'Nearly Unbearable',
-  10: 'Worst Pain Possible',
+  0: "No Pain",
+  1: "Very Mild",
+  2: "Mild Pain",
+  3: "Mild-Moderate",
+  4: "Moderate Pain",
+  5: "Moderate",
+  6: "Moderate-Severe",
+  7: "Severe Pain",
+  8: "Very Severe",
+  9: "Nearly Unbearable",
+  10: "Worst Pain Possible",
 };
 
 /**
@@ -85,16 +85,26 @@ export interface IntakeFormData {
 /**
  * Question types supported by the intake form
  */
-export type QuestionType = 'text' | 'email' | 'tel' | 'select' | 'checkbox-group' | 'number' | 'slider' | 'textarea';
+export type QuestionType =
+  | "text"
+  | "email"
+  | "tel"
+  | "select"
+  | "checkbox-group"
+  | "number"
+  | "slider"
+  | "textarea";
 
 export interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 export interface CheckboxOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 export interface Question {

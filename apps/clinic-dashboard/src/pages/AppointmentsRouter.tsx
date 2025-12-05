@@ -1,6 +1,8 @@
 /**
- * AppointmentsRouter - Routes to appropriate appointments view based on user role
- * Currently all users see the same calendar-focused view
+ * AppointmentsRouter - Single unified appointments view
+ * All roles use the same Appointments page with:
+ * - Practitioners auto-filtered to their own appointments
+ * - Admins/managers see all with provider filter dropdown
  */
 
 import Appointments from "./Appointments";

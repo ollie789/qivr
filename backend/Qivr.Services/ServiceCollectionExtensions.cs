@@ -191,7 +191,12 @@ public record PainMapDto(
     float Z,
     int Intensity,
     string? Type,
-    List<string> Qualities
+    List<string> Qualities,
+    string? AnatomicalCode = null,
+    string? AvatarType = null,
+    string? ViewOrientation = null,
+    string? SubmissionSource = null,
+    string? DrawingDataJson = null
 );
 
 public record CreateAppointmentDto(

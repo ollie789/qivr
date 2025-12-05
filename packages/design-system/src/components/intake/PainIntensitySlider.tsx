@@ -3,24 +3,13 @@
  * Pain intensity slider with descriptive labels and Aura styling
  */
 
-import React from 'react';
-import { Box, Slider, Typography } from '@mui/material';
-import { auraTokens } from '../../theme/auraTokens';
+import React from "react";
+import { Box, Slider, Typography } from "@mui/material";
+import { auraTokens } from "../../theme/auraTokens";
+import { painDescriptions } from "@qivr/eval";
 
-/** Pain intensity descriptions from 0-10 */
-export const painDescriptions: Record<number, string> = {
-  0: 'No Pain',
-  1: 'Very Mild',
-  2: 'Mild Pain',
-  3: 'Mild-Moderate',
-  4: 'Moderate Pain',
-  5: 'Moderate',
-  6: 'Moderate-Severe',
-  7: 'Severe Pain',
-  8: 'Very Severe',
-  9: 'Nearly Unbearable',
-  10: 'Worst Pain Possible',
-};
+// Re-export for backwards compatibility
+export { painDescriptions } from "@qivr/eval";
 
 /** Color scale for pain intensity */
 const getIntensityColor = (value: number): string => {
@@ -47,7 +36,7 @@ export interface PainIntensitySliderProps {
   /** Whether to show marks on the slider */
   showMarks?: boolean;
   /** Size variant */
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
 }
 
 /**
@@ -57,30 +46,30 @@ export const PainIntensitySlider: React.FC<PainIntensitySliderProps> = ({
   value,
   onChange,
   disabled = false,
-  label = 'Pain Level',
+  label = "Pain Level",
   showDescription = true,
   showValue = true,
   showMarks = true,
-  size = 'medium',
+  size = "medium",
 }) => {
   const intensityColor = getIntensityColor(value);
-  const description = painDescriptions[value] || '';
+  const description = painDescriptions[value] || "";
 
   return (
-    <Box sx={{ width: '100%' }}>
+    <Box sx={{ width: "100%" }}>
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
           mb: 1,
         }}
       >
         <Typography
-          variant={size === 'small' ? 'body2' : 'body1'}
+          variant={size === "small" ? "body2" : "body1"}
           sx={{
             fontWeight: auraTokens.fontWeights.medium,
-            color: 'text.primary',
+            color: "text.primary",
           }}
         >
           {label}
@@ -100,7 +89,7 @@ export const PainIntensitySlider: React.FC<PainIntensitySliderProps> = ({
 
         {showDescription && (
           <Typography
-            variant={size === 'small' ? 'caption' : 'body2'}
+            variant={size === "small" ? "caption" : "body2"}
             sx={{
               fontWeight: auraTokens.fontWeights.medium,
               color: intensityColor,
@@ -124,29 +113,29 @@ export const PainIntensitySlider: React.FC<PainIntensitySliderProps> = ({
         sx={{
           color: intensityColor,
           transition: auraTokens.transitions.default,
-          '& .MuiSlider-thumb': {
-            width: size === 'small' ? 16 : 20,
-            height: size === 'small' ? 16 : 20,
+          "& .MuiSlider-thumb": {
+            width: size === "small" ? 16 : 20,
+            height: size === "small" ? 16 : 20,
             transition: auraTokens.transitions.fast,
-            '&:hover, &.Mui-focusVisible': {
+            "&:hover, &.Mui-focusVisible": {
               boxShadow: `0 0 0 8px ${intensityColor}33`,
             },
           },
-          '& .MuiSlider-track': {
-            height: size === 'small' ? 4 : 6,
+          "& .MuiSlider-track": {
+            height: size === "small" ? 4 : 6,
             borderRadius: 3,
           },
-          '& .MuiSlider-rail': {
-            height: size === 'small' ? 4 : 6,
+          "& .MuiSlider-rail": {
+            height: size === "small" ? 4 : 6,
             borderRadius: 3,
             opacity: 0.3,
           },
-          '& .MuiSlider-mark': {
+          "& .MuiSlider-mark": {
             width: 2,
             height: 8,
             borderRadius: 1,
           },
-          '& .MuiSlider-valueLabel': {
+          "& .MuiSlider-valueLabel": {
             background: intensityColor,
             borderRadius: auraTokens.borderRadius.sm,
           },
@@ -156,8 +145,8 @@ export const PainIntensitySlider: React.FC<PainIntensitySliderProps> = ({
       {/* Scale labels */}
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
+          display: "flex",
+          justifyContent: "space-between",
           mt: 0.5,
         }}
       >

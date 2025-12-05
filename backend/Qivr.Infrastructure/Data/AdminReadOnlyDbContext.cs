@@ -139,6 +139,7 @@ public class AdminReadOnlyDbContext : DbContext
         {
             entity.ToTable("documents");
             entity.HasKey(e => e.Id);
+            entity.Ignore(e => e.ExtractedIdentifiers);
         });
 
         modelBuilder.Entity<AdminAuditLog>(entity =>
