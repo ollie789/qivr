@@ -39,10 +39,16 @@ class ApiClient {
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      // Handle 401 - redirect to login
+      // Handle 401 - redirect to login (but not if already on login/auth pages)
       if (response.status === 401) {
-        console.warn("Session expired - redirecting to login");
-        window.location.href = "/login";
+        const isAuthPage =
+          window.location.pathname.startsWith("/login") ||
+          window.location.pathname.startsWith("/register") ||
+          window.location.pathname.startsWith("/callback");
+        if (!isAuthPage) {
+          console.warn("Session expired - redirecting to login");
+          window.location.href = "/login";
+        }
         throw new Error("Session expired");
       }
       const errorText = await response.text();
