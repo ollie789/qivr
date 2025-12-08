@@ -46,7 +46,10 @@ import { treatmentPlansApi } from "../lib/api";
 import { patientApi } from "../services/patientApi";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
-import { TreatmentPlanBuilder } from "../components/dialogs";
+import {
+  TemplateBuilder,
+  AssignTreatmentPlanDialog,
+} from "../components/dialogs";
 
 interface Patient {
   id: string;
@@ -630,31 +633,32 @@ export default function TreatmentPlans() {
       )}
 
       {/* Create Template Dialog */}
-      <TreatmentPlanBuilder
+      <TemplateBuilder
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
-        isTemplate={true}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["treatment-templates"] });
           setShowCreateDialog(false);
         }}
       />
 
-      {/* AI Generate for Patient Dialog */}
-      <TreatmentPlanBuilder
-        open={showAIGenerateDialog}
-        onClose={() => {
-          setShowAIGenerateDialog(false);
-          setInitialPatientId(null);
-        }}
-        patient={initialPatient || undefined}
-        onSuccess={(planId) => {
-          queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
-          setShowAIGenerateDialog(false);
-          setInitialPatientId(null);
-          navigate(`/treatment-plans/${planId}`);
-        }}
-      />
+      {/* Assign Plan to Patient Dialog - triggered from "AI Generate for Patient" */}
+      {initialPatient && (
+        <AssignTreatmentPlanDialog
+          open={showAIGenerateDialog}
+          onClose={() => {
+            setShowAIGenerateDialog(false);
+            setInitialPatientId(null);
+          }}
+          patient={initialPatient}
+          onSuccess={(planId) => {
+            queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
+            setShowAIGenerateDialog(false);
+            setInitialPatientId(null);
+            navigate(`/treatment-plans/${planId}`);
+          }}
+        />
+      )}
 
       {/* Use Template Dialog - Select Patient */}
       <Dialog

@@ -82,6 +82,7 @@ import { medicalRecordsApi } from "../../services/medicalRecordsApi";
 import { documentApi } from "../../services/documentApi";
 import { treatmentPlansApi } from "../../lib/api";
 import { MessageComposer } from "../../components/messaging";
+import { AssignTreatmentPlanDialog } from "../../components/dialogs";
 import type { Patient, MedicalHistory, PatientQuickStats } from "./types";
 
 // Treatment Tab Content Component
@@ -96,18 +97,31 @@ interface TreatmentPlan {
   bodyRegion?: string;
 }
 
-const TreatmentTabContent: React.FC<{ patientId: string | null }> = ({ patientId }) => {
+interface TreatmentTabContentProps {
+  patientId: string | null;
+  patient?: Patient | null;
+}
+
+const TreatmentTabContent: React.FC<TreatmentTabContentProps> = ({
+  patientId,
+  patient,
+}) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ["patient-treatment-plans", patientId],
     queryFn: () => treatmentPlansApi.list(patientId || undefined),
     enabled: !!patientId,
   });
 
-  if (!patientId) {
+  if (!patientId || !patient) {
     return (
       <Box sx={{ p: auraTokens.spacing.xl, textAlign: "center" }}>
-        <Typography color="text.secondary">Select a patient to view treatment plans</Typography>
+        <Typography color="text.secondary">
+          Select a patient to view treatment plans
+        </Typography>
       </Box>
     );
   }
@@ -115,7 +129,9 @@ const TreatmentTabContent: React.FC<{ patientId: string | null }> = ({ patientId
   if (isLoading) {
     return (
       <Box sx={{ p: auraTokens.spacing.xl }}>
-        <Typography color="text.secondary">Loading treatment plans...</Typography>
+        <Typography color="text.secondary">
+          Loading treatment plans...
+        </Typography>
       </Box>
     );
   }
@@ -124,37 +140,66 @@ const TreatmentTabContent: React.FC<{ patientId: string | null }> = ({ patientId
     return (
       <Box sx={{ p: auraTokens.spacing.xl, textAlign: "center" }}>
         <TreatmentIcon sx={{ fontSize: 48, color: "text.disabled", mb: 2 }} />
-        <Typography variant="h6" gutterBottom>No Treatment Plans</Typography>
+        <Typography variant="h6" gutterBottom>
+          No Treatment Plans
+        </Typography>
         <Typography color="text.secondary" sx={{ mb: 2 }}>
           Create a treatment plan to track rehabilitation progress
         </Typography>
         <AuraButton
           variant="contained"
-          onClick={() => navigate(`/treatment-plans?patientId=${patientId}`)}
+          onClick={() => setAssignDialogOpen(true)}
         >
-          Create Treatment Plan
+          Assign Treatment Plan
         </AuraButton>
+
+        <AssignTreatmentPlanDialog
+          open={assignDialogOpen}
+          onClose={() => setAssignDialogOpen(false)}
+          patient={{
+            id: patient.id,
+            firstName: patient.firstName,
+            lastName: patient.lastName,
+            email: patient.email,
+          }}
+          onSuccess={(planId) => {
+            queryClient.invalidateQueries({
+              queryKey: ["patient-treatment-plans", patientId],
+            });
+            navigate(`/treatment-plans/${planId}`);
+          }}
+        />
       </Box>
     );
   }
 
   return (
     <Box sx={{ p: auraTokens.spacing.lg }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: auraTokens.spacing.lg }}>
-        <Typography variant="h6" fontWeight={600}>Treatment Plans</Typography>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: auraTokens.spacing.lg,
+        }}
+      >
+        <Typography variant="h6" fontWeight={600}>
+          Treatment Plans
+        </Typography>
         <AuraButton
           size="small"
           variant="outlined"
-          onClick={() => navigate(`/treatment-plans?patientId=${patientId}`)}
+          onClick={() => setAssignDialogOpen(true)}
         >
-          New Plan
+          Assign New Plan
         </AuraButton>
       </Box>
       <Grid container spacing={2}>
         {plans.map((plan: TreatmentPlan) => {
-          const progress = plan.totalSessions > 0
-            ? Math.round((plan.completedSessions / plan.totalSessions) * 100)
-            : 0;
+          const progress =
+            plan.totalSessions > 0
+              ? Math.round((plan.completedSessions / plan.totalSessions) * 100)
+              : 0;
           return (
             <Grid size={{ xs: 12, md: 6 }} key={plan.id}>
               <AuraCard
@@ -164,12 +209,26 @@ const TreatmentTabContent: React.FC<{ patientId: string | null }> = ({ patientId
                 onClick={() => navigate(`/treatment-plans/${plan.id}`)}
                 sx={{ p: auraTokens.spacing.md }}
               >
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                  <Typography variant="subtitle1" fontWeight={600}>{plan.title}</Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: 1,
+                  }}
+                >
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {plan.title}
+                  </Typography>
                   <AuraStatusBadge status={plan.status} />
                 </Box>
                 {plan.bodyRegion && (
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    sx={{ mb: 1.5 }}
+                  >
                     {plan.bodyRegion}
                   </Typography>
                 )}
@@ -184,6 +243,23 @@ const TreatmentTabContent: React.FC<{ patientId: string | null }> = ({ patientId
           );
         })}
       </Grid>
+
+      <AssignTreatmentPlanDialog
+        open={assignDialogOpen}
+        onClose={() => setAssignDialogOpen(false)}
+        patient={{
+          id: patient.id,
+          firstName: patient.firstName,
+          lastName: patient.lastName,
+          email: patient.email,
+        }}
+        onSuccess={(planId) => {
+          queryClient.invalidateQueries({
+            queryKey: ["patient-treatment-plans", patientId],
+          });
+          navigate(`/treatment-plans/${planId}`);
+        }}
+      />
     </Box>
   );
 };
@@ -687,7 +763,9 @@ const MedicalRecordsPage: React.FC = () => {
               }}
               onNewReferral={() => {
                 if (selectedPatientId) {
-                  navigate(`/referrals?action=new&patientId=${selectedPatientId}`);
+                  navigate(
+                    `/referrals?action=new&patientId=${selectedPatientId}`,
+                  );
                 }
               }}
             />
@@ -796,7 +874,10 @@ const MedicalRecordsPage: React.FC = () => {
               </TabPanel>
 
               <TabPanel value={activeTab} index={3}>
-                <TreatmentTabContent patientId={selectedPatientId} />
+                <TreatmentTabContent
+                  patientId={selectedPatientId}
+                  patient={patient}
+                />
               </TabPanel>
 
               <TabPanel value={activeTab} index={4}>

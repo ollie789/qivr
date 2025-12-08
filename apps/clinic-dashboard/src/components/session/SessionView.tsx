@@ -34,8 +34,14 @@ import {
   TrendingUp as TrendingUpIcon,
   CalendarMonth as CalendarIcon,
   EventRepeat as ScheduleNextIcon,
+  MedicalServices as DeviceIcon,
 } from "@mui/icons-material";
-import { format, parseISO, differenceInMinutes, differenceInYears } from "date-fns";
+import {
+  format,
+  parseISO,
+  differenceInMinutes,
+  differenceInYears,
+} from "date-fns";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import {
@@ -48,9 +54,19 @@ import {
 import { appointmentsApi } from "../../services/appointmentsApi";
 import type { Appointment } from "../../features/appointments/types";
 import { patientApi } from "../../services/patientApi";
-import { treatmentPlansApi } from "../../lib/api";
-import { promApi, NotificationMethod, type PromTemplateSummary } from "../../services/promApi";
+import {
+  treatmentPlansApi,
+  deviceTrackingApi,
+  type AvailableDevice,
+} from "../../lib/api";
+import {
+  promApi,
+  NotificationMethod,
+  type PromTemplateSummary,
+} from "../../services/promApi";
+import { DeviceSelector } from "../devices";
 import { ScheduleAppointmentDialog } from "../dialogs/ScheduleAppointmentDialog";
+import { AssignTreatmentPlanDialog } from "../dialogs/AssignTreatmentPlanDialog";
 
 interface SessionViewProps {
   appointment: Appointment;
@@ -88,10 +104,17 @@ function useSessionTimer(startTime: Date | null) {
   const hours = Math.floor(elapsed / 60);
   const minutes = elapsed % 60;
 
-  return { elapsed, formatted: hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m` };
+  return {
+    elapsed,
+    formatted: hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`,
+  };
 }
 
-export function SessionView({ appointment, onClose, onComplete }: SessionViewProps) {
+export function SessionView({
+  appointment,
+  onClose,
+  onComplete,
+}: SessionViewProps) {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
@@ -125,7 +148,8 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
   const [painAfter, setPainAfter] = useState(5);
 
   // Treatment plan
-  const [treatmentPlan, setTreatmentPlan] = useState<TreatmentPlanSummary | null>(null);
+  const [treatmentPlan, setTreatmentPlan] =
+    useState<TreatmentPlanSummary | null>(null);
   const [updateTreatmentPlan, setUpdateTreatmentPlan] = useState(true);
   const [loadingPlan, setLoadingPlan] = useState(false);
 
@@ -136,6 +160,14 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
   // Follow-up scheduling
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [suggestedNextDate, setSuggestedNextDate] = useState<Date | null>(null);
+
+  // Assign treatment plan
+  const [assignPlanDialogOpen, setAssignPlanDialogOpen] = useState(false);
+
+  // Medical device tracking
+  const [selectedDevice, setSelectedDevice] = useState<AvailableDevice | null>(
+    null,
+  );
 
   // Fetch patient details
   const { data: patient, isLoading: loadingPatient } = useQuery({
@@ -160,7 +192,9 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
   // Filter to completed previous appointments (excluding current)
   const completedPreviousAppointments = useMemo(() => {
     return previousAppointments
-      .filter((apt: any) => apt.id !== appointment.id && apt.status === "completed")
+      .filter(
+        (apt: any) => apt.id !== appointment.id && apt.status === "completed",
+      )
       .slice(0, 5);
   }, [previousAppointments, appointment.id]);
 
@@ -172,20 +206,29 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
       try {
         const plans = await treatmentPlansApi.list(appointment.patientId);
         const activePlan = (plans as any[]).find(
-          (p: any) => p.status === "Active" || p.status === "active" || p.status === "InProgress"
+          (p: any) =>
+            p.status === "Active" ||
+            p.status === "active" ||
+            p.status === "InProgress",
         );
         if (activePlan) {
-          const completedSessions = activePlan.sessions?.filter((s: any) => s.completed)?.length ?? 0;
-          const totalSessions = activePlan.totalSessions ?? activePlan.sessions?.length ?? 0;
+          const completedSessions =
+            activePlan.sessions?.filter((s: any) => s.completed)?.length ?? 0;
+          const totalSessions =
+            activePlan.totalSessions ?? activePlan.sessions?.length ?? 0;
           setTreatmentPlan({
             id: activePlan.id,
             title: activePlan.title,
             status: activePlan.status,
-            currentPhase: activePlan.currentPhase ?? activePlan.phases?.[0]?.name,
+            currentPhase:
+              activePlan.currentPhase ?? activePlan.phases?.[0]?.name,
             completedSessions,
             totalSessions,
             nextSessionNumber: completedSessions + 1,
-            progressPercent: totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0,
+            progressPercent:
+              totalSessions > 0
+                ? Math.round((completedSessions / totalSessions) * 100)
+                : 0,
             sessionsPerWeek: activePlan.sessionsPerWeek ?? 2,
             phases: activePlan.phases,
           });
@@ -214,21 +257,44 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
         plan && `P: ${plan}`,
         modalitiesUsed && `\nModalities: ${modalitiesUsed}`,
         `Pain: ${painBefore}/10 → ${painAfter}/10`,
-        updateTreatmentPlan && treatmentPlan && `[Session ${treatmentPlan.nextSessionNumber} completed]`,
+        selectedDevice &&
+          `Device: ${selectedDevice.name} (${selectedDevice.deviceCode})`,
+        updateTreatmentPlan &&
+          treatmentPlan &&
+          `[Session ${treatmentPlan.nextSessionNumber} completed]`,
         assignPROM && "[PROM Assigned]",
       ]
         .filter(Boolean)
         .join("\n");
 
-      await appointmentsApi.updateAppointment(appointment.id, { notes: fullNotes });
+      await appointmentsApi.updateAppointment(appointment.id, {
+        notes: fullNotes,
+      });
 
       // Update treatment plan if enabled
       if (updateTreatmentPlan && treatmentPlan) {
-        await treatmentPlansApi.completeSession(treatmentPlan.id, treatmentPlan.nextSessionNumber, {
-          painLevelAfter: painAfter,
-          notes: fullNotes,
-          appointmentId: appointment.id,
-        });
+        await treatmentPlansApi.completeSession(
+          treatmentPlan.id,
+          treatmentPlan.nextSessionNumber,
+          {
+            painLevelAfter: painAfter,
+            notes: fullNotes,
+            appointmentId: appointment.id,
+          },
+        );
+      }
+
+      // Record device usage if selected
+      if (selectedDevice) {
+        try {
+          await deviceTrackingApi.recordUsage({
+            deviceId: selectedDevice.id,
+            patientId: appointment.patientId,
+            appointmentId: appointment.id,
+          });
+        } catch (error) {
+          console.error("Failed to record device usage:", error);
+        }
       }
 
       // Send PROM if enabled
@@ -237,7 +303,8 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
           templateKey: selectedPromTemplate,
           patientId: appointment.patientId,
           scheduledFor: new Date().toISOString(),
-          notificationMethod: NotificationMethod.Email | NotificationMethod.InApp,
+          notificationMethod:
+            NotificationMethod.Email | NotificationMethod.InApp,
           notes: `Assigned after session on ${format(new Date(), "MMM d, yyyy")}`,
         });
       }
@@ -263,8 +330,13 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
       enqueueSnackbar("Session completed", { variant: "success" });
 
       // Suggest next appointment if treatment plan has remaining sessions
-      if (treatmentPlan && treatmentPlan.nextSessionNumber < treatmentPlan.totalSessions) {
-        const daysUntilNext = Math.round(7 / (treatmentPlan.sessionsPerWeek || 2));
+      if (
+        treatmentPlan &&
+        treatmentPlan.nextSessionNumber < treatmentPlan.totalSessions
+      ) {
+        const daysUntilNext = Math.round(
+          7 / (treatmentPlan.sessionsPerWeek || 2),
+        );
         const suggested = new Date();
         suggested.setDate(suggested.getDate() + daysUntilNext);
         setSuggestedNextDate(suggested);
@@ -336,7 +408,10 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                 Session in Progress
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {format(parseISO(appointment.scheduledStart), "EEEE, MMMM d 'at' h:mm a")}
+                {format(
+                  parseISO(appointment.scheduledStart),
+                  "EEEE, MMMM d 'at' h:mm a",
+                )}
               </Typography>
             </Box>
           </Box>
@@ -405,7 +480,9 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
               </Box>
             ) : (
               <>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
+                >
                   <Avatar
                     sx={{
                       width: 56,
@@ -454,7 +531,11 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                     variant="outlined"
                   />
                   {appointment.reasonForVisit && (
-                    <Chip label={appointment.reasonForVisit} size="small" variant="outlined" />
+                    <Chip
+                      label={appointment.reasonForVisit}
+                      size="small"
+                      variant="outlined"
+                    />
                   )}
                 </Box>
               </>
@@ -463,7 +544,9 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
 
           {/* Treatment Plan Progress */}
           <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}
+            >
               <ExerciseIcon color="success" fontSize="small" />
               <Typography variant="subtitle2" fontWeight={600}>
                 Treatment Plan
@@ -483,15 +566,31 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                   {treatmentPlan.title}
                 </Typography>
                 {treatmentPlan.currentPhase && (
-                  <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    gutterBottom
+                  >
                     Phase: {treatmentPlan.currentPhase}
                   </Typography>
                 )}
-                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 0.5,
+                  }}
+                >
                   <Typography variant="caption" color="text.secondary">
-                    Session {treatmentPlan.nextSessionNumber} of {treatmentPlan.totalSessions}
+                    Session {treatmentPlan.nextSessionNumber} of{" "}
+                    {treatmentPlan.totalSessions}
                   </Typography>
-                  <Typography variant="caption" fontWeight={600} color="success.main">
+                  <Typography
+                    variant="caption"
+                    fontWeight={600}
+                    color="success.main"
+                  >
                     {treatmentPlan.progressPercent}%
                   </Typography>
                 </Box>
@@ -502,7 +601,10 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                     height: 6,
                     borderRadius: 3,
                     bgcolor: alpha(theme.palette.success.main, 0.15),
-                    "& .MuiLinearProgress-bar": { bgcolor: "success.main", borderRadius: 3 },
+                    "& .MuiLinearProgress-bar": {
+                      bgcolor: "success.main",
+                      borderRadius: 3,
+                    },
                   }}
                 />
                 <FormControlLabel
@@ -523,9 +625,22 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                 />
               </Box>
             ) : (
-              <Typography variant="body2" color="text.secondary">
-                No active treatment plan
-              </Typography>
+              <Box>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 1 }}
+                >
+                  No active treatment plan
+                </Typography>
+                <AuraButton
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setAssignPlanDialogOpen(true)}
+                >
+                  Assign Plan
+                </AuraButton>
+              </Box>
             )}
           </Box>
 
@@ -563,7 +678,11 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                       borderRadius: 1,
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary" display="block">
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
                       {format(parseISO(apt.scheduledStart), "MMM d, yyyy")}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 0.5 }}>
@@ -572,7 +691,11 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                   </Paper>
                 ))}
                 {completedPreviousAppointments.length === 0 && (
-                  <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ px: 1 }}
+                  >
                     No previous sessions
                   </Typography>
                 )}
@@ -582,13 +705,38 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
         </Box>
 
         {/* Main Content Area */}
-        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
           {/* Tabs */}
-          <Box sx={{ borderBottom: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
+          <Box
+            sx={{
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.paper",
+            }}
+          >
             <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
-              <Tab icon={<AssignmentIcon />} iconPosition="start" label="SOAP Notes" />
-              <Tab icon={<TrendingUpIcon />} iconPosition="start" label="Assessment" />
-              <Tab icon={<CalendarIcon />} iconPosition="start" label="Follow-up" />
+              <Tab
+                icon={<AssignmentIcon />}
+                iconPosition="start"
+                label="SOAP Notes"
+              />
+              <Tab
+                icon={<TrendingUpIcon />}
+                iconPosition="start"
+                label="Assessment"
+              />
+              <Tab
+                icon={<CalendarIcon />}
+                iconPosition="start"
+                label="Follow-up"
+              />
             </Tabs>
           </Box>
 
@@ -597,7 +745,13 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
             {activeTab === 0 && (
               <Stack spacing={3}>
                 {/* SOAP Notes */}
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 3,
+                  }}
+                >
                   <TextField
                     label="Subjective"
                     placeholder="Patient's reported symptoms, concerns, and history..."
@@ -659,8 +813,16 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                       <Chip
                         key={key}
                         label={label}
-                        variant={modalities[key as keyof typeof modalities] ? "filled" : "outlined"}
-                        color={modalities[key as keyof typeof modalities] ? "primary" : "default"}
+                        variant={
+                          modalities[key as keyof typeof modalities]
+                            ? "filled"
+                            : "outlined"
+                        }
+                        color={
+                          modalities[key as keyof typeof modalities]
+                            ? "primary"
+                            : "default"
+                        }
                         onClick={() =>
                           setModalities({
                             ...modalities,
@@ -682,13 +844,29 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                   <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                     Pain Level Assessment
                   </Typography>
-                  <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 4,
+                    }}
+                  >
                     <Box>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 1,
+                        }}
+                      >
                         <Typography variant="body2" color="text.secondary">
                           Pain Before Session
                         </Typography>
-                        <Typography variant="h6" fontWeight={700} color="error.main">
+                        <Typography
+                          variant="h6"
+                          fontWeight={700}
+                          color="error.main"
+                        >
                           {painBefore}/10
                         </Typography>
                       </Box>
@@ -703,11 +881,21 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                       />
                     </Box>
                     <Box>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 1,
+                        }}
+                      >
                         <Typography variant="body2" color="text.secondary">
                           Pain After Session
                         </Typography>
-                        <Typography variant="h6" fontWeight={700} color="success.main">
+                        <Typography
+                          variant="h6"
+                          fontWeight={700}
+                          color="success.main"
+                        >
                           {painAfter}/10
                         </Typography>
                       </Box>
@@ -735,8 +923,13 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                       }}
                     >
                       <TrendingUpIcon color="success" />
-                      <Typography variant="body2" color="success.main" fontWeight={500}>
-                        Pain reduced by {painBefore - painAfter} points this session
+                      <Typography
+                        variant="body2"
+                        color="success.main"
+                        fontWeight={500}
+                      >
+                        Pain reduced by {painBefore - painAfter} points this
+                        session
                       </Typography>
                     </Box>
                   )}
@@ -764,11 +957,43 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                         onChange={setSelectedPromTemplate}
                         options={[
                           { value: "", label: "Choose questionnaire..." },
-                          ...promTemplates.map((t) => ({ value: t.key, label: t.name })),
+                          ...promTemplates.map((t) => ({
+                            value: t.key,
+                            label: t.name,
+                          })),
                         ]}
                       />
                     </Box>
                   )}
+                </AuraCard>
+
+                {/* Medical Device Tracking */}
+                <AuraCard variant="flat" sx={{ p: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 2,
+                    }}
+                  >
+                    <DeviceIcon color="primary" />
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Medical Device / Resource
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 2 }}
+                  >
+                    Link a medical device or resource used during this session
+                  </Typography>
+                  <DeviceSelector
+                    value={selectedDevice}
+                    onChange={setSelectedDevice}
+                    showRecent
+                  />
                 </AuraCard>
               </Stack>
             )}
@@ -780,14 +1005,26 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                   <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                     Schedule Follow-up
                   </Typography>
-                  {treatmentPlan && treatmentPlan.nextSessionNumber < treatmentPlan.totalSessions ? (
+                  {treatmentPlan &&
+                  treatmentPlan.nextSessionNumber <
+                    treatmentPlan.totalSessions ? (
                     <Box>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        {treatmentPlan.totalSessions - treatmentPlan.nextSessionNumber} sessions
-                        remaining in treatment plan
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        gutterBottom
+                      >
+                        {treatmentPlan.totalSessions -
+                          treatmentPlan.nextSessionNumber}{" "}
+                        sessions remaining in treatment plan
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Recommended frequency: {treatmentPlan.sessionsPerWeek}x per week
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        gutterBottom
+                      >
+                        Recommended frequency: {treatmentPlan.sessionsPerWeek}x
+                        per week
                       </Typography>
                       <AuraButton
                         variant="contained"
@@ -800,7 +1037,11 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
                     </Box>
                   ) : (
                     <Box>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        gutterBottom
+                      >
                         Schedule a follow-up appointment if needed
                       </Typography>
                       <AuraButton
@@ -834,6 +1075,56 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
         treatmentPlanId={treatmentPlan?.id}
         appointmentType="treatment"
       />
+
+      {/* Assign Treatment Plan Dialog */}
+      {patient && (
+        <AssignTreatmentPlanDialog
+          open={assignPlanDialogOpen}
+          onClose={() => setAssignPlanDialogOpen(false)}
+          patient={{
+            id: patient.id,
+            firstName: patient.firstName,
+            lastName: patient.lastName,
+            email: patient.email,
+          }}
+          sessionId={appointment.id}
+          onSuccess={async (planId) => {
+            // Reload the treatment plan
+            try {
+              const plans = await treatmentPlansApi.list(appointment.patientId);
+              const activePlan = (plans as any[]).find(
+                (p: any) => p.id === planId,
+              );
+              if (activePlan) {
+                const completedSessions =
+                  activePlan.sessions?.filter((s: any) => s.completed)
+                    ?.length ?? 0;
+                const totalSessions =
+                  activePlan.totalSessions ?? activePlan.sessions?.length ?? 0;
+                setTreatmentPlan({
+                  id: activePlan.id,
+                  title: activePlan.title,
+                  status: activePlan.status,
+                  currentPhase:
+                    activePlan.currentPhase ?? activePlan.phases?.[0]?.name,
+                  completedSessions,
+                  totalSessions,
+                  nextSessionNumber: completedSessions + 1,
+                  progressPercent:
+                    totalSessions > 0
+                      ? Math.round((completedSessions / totalSessions) * 100)
+                      : 0,
+                  sessionsPerWeek: activePlan.sessionsPerWeek ?? 2,
+                  phases: activePlan.phases,
+                });
+              }
+            } catch (error) {
+              console.error("Failed to load treatment plan:", error);
+            }
+            setAssignPlanDialogOpen(false);
+          }}
+        />
+      )}
     </Box>
   );
 }
