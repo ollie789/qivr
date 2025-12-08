@@ -49,6 +49,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   Science as ScienceIcon,
+  FitnessCenter as FitnessCenterIcon,
 } from "@mui/icons-material";
 import { CopyButton, Callout, AuraCard } from "@qivr/design-system";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -184,7 +185,7 @@ export default function Settings() {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] =
     useState<ProviderMember | null>(null);
-  
+
   // Service Types state
   const [serviceTypeDialogOpen, setServiceTypeDialogOpen] = useState(false);
   const [editingServiceType, setEditingServiceType] = useState<any>(null);
@@ -463,7 +464,13 @@ export default function Settings() {
   });
 
   const updateServiceTypeMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: typeof serviceTypeForm }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: typeof serviceTypeForm;
+    }) => {
       const response = await api.put(`/api/servicetypes/${id}`, {
         ...data,
         specialty: data.specialty || null,
@@ -540,6 +547,7 @@ export default function Settings() {
           <Tab icon={<BusinessIcon />} label="Clinic Info" />
           <Tab icon={<ScheduleIcon />} label="Operations" />
           <Tab icon={<PeopleIcon />} label="Providers" />
+          <Tab icon={<FitnessCenterIcon />} label="Exercise Library" />
           <Tab icon={<NotificationsIcon />} label="Notifications" />
           <Tab icon={<PaymentIcon />} label="Billing" />
           <Tab icon={<ApiIcon />} label="Integrations" />
@@ -1154,7 +1162,25 @@ export default function Settings() {
           </Box>
         </DesignTabPanel>
 
+        {/* Exercise Library Tab */}
         <DesignTabPanel value={tabValue} index={3}>
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Exercise Library
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Manage your clinic's exercise library for treatment plans.
+            </Typography>
+            <AuraButton
+              variant="contained"
+              onClick={() => (window.location.href = "/exercise-library")}
+            >
+              Open Exercise Library
+            </AuraButton>
+          </Box>
+        </DesignTabPanel>
+
+        <DesignTabPanel value={tabValue} index={4}>
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Notification Settings
@@ -1216,9 +1242,16 @@ export default function Settings() {
           </Box>
         </DesignTabPanel>
 
-        <DesignTabPanel value={tabValue} index={4}>
+        <DesignTabPanel value={tabValue} index={5}>
           <Box sx={{ p: 3 }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 3,
+              }}
+            >
               <Box>
                 <Typography variant="h6" gutterBottom>
                   Service Types & Pricing
@@ -1250,7 +1283,11 @@ export default function Settings() {
             {serviceTypesLoading ? (
               <SectionLoader />
             ) : (
-              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                component={Paper}
+                elevation={0}
+                sx={{ border: "1px solid", borderColor: "divider" }}
+              >
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -1288,64 +1325,95 @@ export default function Settings() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      serviceTypes?.map((st: { id: string; name: string; description?: string; specialty?: string; durationMinutes: number; price: number; billingCode?: string; isActive: boolean }) => (
-                        <TableRow key={st.id}>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={500}>{st.name}</Typography>
-                            {st.description && (
-                              <Typography variant="caption" color="text.secondary">{st.description}</Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {st.specialty ? (
-                              <Chip label={st.specialty} size="small" />
-                            ) : (
-                              <Typography variant="caption" color="text.secondary">All specialties</Typography>
-                            )}
-                          </TableCell>
-                          <TableCell align="center">{st.durationMinutes} min</TableCell>
-                          <TableCell align="right">
-                            <Typography fontWeight={600}>${st.price.toFixed(2)}</Typography>
-                          </TableCell>
-                          <TableCell>{st.billingCode || "—"}</TableCell>
-                          <TableCell align="center">
-                            <Chip
-                              label={st.isActive ? "Active" : "Inactive"}
-                              color={st.isActive ? "success" : "default"}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell align="right">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setServiceTypeForm({
-                                  name: st.name,
-                                  description: st.description || "",
-                                  specialty: st.specialty || "",
-                                  durationMinutes: st.durationMinutes,
-                                  price: st.price,
-                                  billingCode: st.billingCode || "",
-                                  isActive: st.isActive,
-                                });
-                                setEditingServiceType(st);
-                                setServiceTypeDialogOpen(true);
-                              }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                setDeleteServiceTypeConfirm({ open: true, id: st.id, name: st.name });
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      serviceTypes?.map(
+                        (st: {
+                          id: string;
+                          name: string;
+                          description?: string;
+                          specialty?: string;
+                          durationMinutes: number;
+                          price: number;
+                          billingCode?: string;
+                          isActive: boolean;
+                        }) => (
+                          <TableRow key={st.id}>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={500}>
+                                {st.name}
+                              </Typography>
+                              {st.description && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {st.description}
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {st.specialty ? (
+                                <Chip label={st.specialty} size="small" />
+                              ) : (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  All specialties
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell align="center">
+                              {st.durationMinutes} min
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography fontWeight={600}>
+                                ${st.price.toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>{st.billingCode || "—"}</TableCell>
+                            <TableCell align="center">
+                              <Chip
+                                label={st.isActive ? "Active" : "Inactive"}
+                                color={st.isActive ? "success" : "default"}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell align="right">
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setServiceTypeForm({
+                                    name: st.name,
+                                    description: st.description || "",
+                                    specialty: st.specialty || "",
+                                    durationMinutes: st.durationMinutes,
+                                    price: st.price,
+                                    billingCode: st.billingCode || "",
+                                    isActive: st.isActive,
+                                  });
+                                  setEditingServiceType(st);
+                                  setServiceTypeDialogOpen(true);
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => {
+                                  setDeleteServiceTypeConfirm({
+                                    open: true,
+                                    id: st.id,
+                                    name: st.name,
+                                  });
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ),
+                      )
                     )}
                   </TableBody>
                 </Table>
@@ -1354,7 +1422,7 @@ export default function Settings() {
           </Box>
         </DesignTabPanel>
 
-        <DesignTabPanel value={tabValue} index={5}>
+        <DesignTabPanel value={tabValue} index={6}>
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Integrations
@@ -1444,7 +1512,7 @@ export default function Settings() {
           </Box>
         </DesignTabPanel>
 
-        <DesignTabPanel value={tabValue} index={6}>
+        <DesignTabPanel value={tabValue} index={7}>
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Security Settings
@@ -1500,7 +1568,7 @@ export default function Settings() {
         </DesignTabPanel>
 
         {/* Research Partners Tab */}
-        <DesignTabPanel value={tabValue} index={7}>
+        <DesignTabPanel value={tabValue} index={8}>
           <ResearchPartnersTab />
         </DesignTabPanel>
       </Paper>
@@ -1656,13 +1724,19 @@ export default function Settings() {
         title={editingServiceType ? "Edit Service Type" : "Add Service Type"}
         onSubmit={() => {
           if (editingServiceType) {
-            updateServiceTypeMutation.mutate({ id: editingServiceType.id, data: serviceTypeForm });
+            updateServiceTypeMutation.mutate({
+              id: editingServiceType.id,
+              data: serviceTypeForm,
+            });
           } else {
             createServiceTypeMutation.mutate(serviceTypeForm);
           }
         }}
         submitLabel={editingServiceType ? "Save Changes" : "Create"}
-        loading={createServiceTypeMutation.isPending || updateServiceTypeMutation.isPending}
+        loading={
+          createServiceTypeMutation.isPending ||
+          updateServiceTypeMutation.isPending
+        }
       >
         <Grid container spacing={2}>
           <Grid size={12}>
@@ -1671,7 +1745,9 @@ export default function Settings() {
               fullWidth
               required
               value={serviceTypeForm.name}
-              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, name: e.target.value })}
+              onChange={(e) =>
+                setServiceTypeForm({ ...serviceTypeForm, name: e.target.value })
+              }
               placeholder="e.g., Initial Consultation"
             />
           </Grid>
@@ -1682,14 +1758,24 @@ export default function Settings() {
               multiline
               rows={2}
               value={serviceTypeForm.description}
-              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, description: e.target.value })}
+              onChange={(e) =>
+                setServiceTypeForm({
+                  ...serviceTypeForm,
+                  description: e.target.value,
+                })
+              }
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <SelectField
               label="Specialty"
               value={serviceTypeForm.specialty}
-              onChange={(val) => setServiceTypeForm({ ...serviceTypeForm, specialty: val as string })}
+              onChange={(val) =>
+                setServiceTypeForm({
+                  ...serviceTypeForm,
+                  specialty: val as string,
+                })
+              }
               options={[
                 { value: "", label: "All Specialties" },
                 { value: "Physiotherapy", label: "Physiotherapy" },
@@ -1707,7 +1793,12 @@ export default function Settings() {
               fullWidth
               type="number"
               value={serviceTypeForm.durationMinutes}
-              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, durationMinutes: parseInt(e.target.value) || 30 })}
+              onChange={(e) =>
+                setServiceTypeForm({
+                  ...serviceTypeForm,
+                  durationMinutes: parseInt(e.target.value) || 30,
+                })
+              }
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -1716,9 +1807,16 @@ export default function Settings() {
               fullWidth
               type="number"
               value={serviceTypeForm.price}
-              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, price: parseFloat(e.target.value) || 0 })}
+              onChange={(e) =>
+                setServiceTypeForm({
+                  ...serviceTypeForm,
+                  price: parseFloat(e.target.value) || 0,
+                })
+              }
               InputProps={{
-                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                startAdornment: (
+                  <InputAdornment position="start">$</InputAdornment>
+                ),
               }}
             />
           </Grid>
@@ -1727,7 +1825,12 @@ export default function Settings() {
               label="Billing Code"
               fullWidth
               value={serviceTypeForm.billingCode}
-              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, billingCode: e.target.value })}
+              onChange={(e) =>
+                setServiceTypeForm({
+                  ...serviceTypeForm,
+                  billingCode: e.target.value,
+                })
+              }
               placeholder="e.g., INIT-PHYSIO"
             />
           </Grid>
@@ -1736,7 +1839,12 @@ export default function Settings() {
               control={
                 <Switch
                   checked={serviceTypeForm.isActive}
-                  onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, isActive: e.target.checked })}
+                  onChange={(e) =>
+                    setServiceTypeForm({
+                      ...serviceTypeForm,
+                      isActive: e.target.checked,
+                    })
+                  }
                 />
               }
               label="Active"
@@ -1748,8 +1856,12 @@ export default function Settings() {
       {/* Delete Service Type Confirm */}
       <ConfirmDialog
         open={deleteServiceTypeConfirm.open}
-        onClose={() => setDeleteServiceTypeConfirm({ open: false, id: "", name: "" })}
-        onConfirm={() => deleteServiceTypeMutation.mutate(deleteServiceTypeConfirm.id)}
+        onClose={() =>
+          setDeleteServiceTypeConfirm({ open: false, id: "", name: "" })
+        }
+        onConfirm={() =>
+          deleteServiceTypeMutation.mutate(deleteServiceTypeConfirm.id)
+        }
         title="Delete Service Type"
         message={`Are you sure you want to delete "${deleteServiceTypeConfirm.name}"? This cannot be undone.`}
         severity="error"
