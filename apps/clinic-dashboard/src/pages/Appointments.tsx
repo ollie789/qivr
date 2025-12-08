@@ -46,7 +46,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   ViewWeek as WeekViewIcon,
-  ViewDay as DayViewIcon,
+  CalendarMonth as MonthViewIcon,
   FilterList as FilterIcon,
   Payment as PaymentIcon,
 } from "@mui/icons-material";
@@ -112,7 +112,7 @@ export default function Appointments() {
   const navigate = useNavigate();
   const user = useAuthUser();
   const calendarRef = useRef<FullCalendar>(null);
-  const [viewMode, setViewMode] = useState<"week" | "day">("week");
+  const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedProviderId, setSelectedProviderId] = useState<string>(
     // Practitioners auto-filter to their own appointments
@@ -304,7 +304,7 @@ export default function Appointments() {
   // Handle view mode change
   const handleViewModeChange = (
     _: React.MouseEvent<HTMLElement>,
-    newMode: "week" | "day" | null,
+    newMode: "week" | "month" | null,
   ) => {
     if (newMode !== null) {
       setViewMode(newMode);
@@ -313,7 +313,7 @@ export default function Appointments() {
         if (newMode === "week") {
           api.changeView("timeGridWeek");
         } else {
-          api.changeView("timeGridDay");
+          api.changeView("dayGridMonth");
         }
       }
     }
@@ -630,9 +630,9 @@ export default function Appointments() {
               <WeekViewIcon sx={{ mr: 0.5, fontSize: 18 }} />
               Week
             </ToggleButton>
-            <ToggleButton value="day">
-              <DayViewIcon sx={{ mr: 0.5, fontSize: 18 }} />
-              Day
+            <ToggleButton value="month">
+              <MonthViewIcon sx={{ mr: 0.5, fontSize: 18 }} />
+              Month
             </ToggleButton>
           </ToggleButtonGroup>
 
@@ -647,14 +647,14 @@ export default function Appointments() {
           </AuraButton>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <AuraIconButton
-              tooltip={viewMode === "week" ? "Previous week" : "Previous day"}
+              tooltip={viewMode === "week" ? "Previous week" : "Previous month"}
               size="small"
               onClick={() => navigateCalendar("prev")}
             >
               <ChevronLeftIcon />
             </AuraIconButton>
             <AuraIconButton
-              tooltip={viewMode === "week" ? "Next week" : "Next day"}
+              tooltip={viewMode === "week" ? "Next week" : "Next month"}
               size="small"
               onClick={() => navigateCalendar("next")}
             >
@@ -662,13 +662,8 @@ export default function Appointments() {
             </AuraIconButton>
           </Box>
           <Typography variant="h5" fontWeight={600}>
-            {viewMode === "week"
-              ? format(currentDate, "MMMM yyyy")
-              : format(currentDate, "EEEE, MMMM d, yyyy")}
+            {format(currentDate, "MMMM yyyy")}
           </Typography>
-          {viewMode === "day" && isToday(currentDate) && (
-            <Chip label="Today" color="primary" size="small" />
-          )}
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           {/* Provider Filter - hide for practitioners who see only their own */}
@@ -1240,19 +1235,6 @@ export default function Appointments() {
             </Box>
           </Box>
         )}
-        <MenuItem
-          onClick={() => {
-            navigate(
-              `/medical-records?patientId=${menuAnchor?.apt.patientId}&tab=timeline`,
-            );
-            setMenuAnchor(null);
-          }}
-        >
-          <ListItemIcon>
-            <PersonIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>View Medical Record</ListItemText>
-        </MenuItem>
         <MenuItem
           onClick={() => {
             if (menuAnchor?.apt) handleOpenNotes(menuAnchor.apt);
