@@ -69,6 +69,7 @@ phases:
           npm ci --legacy-peer-deps 2>/dev/null || npm install --legacy-peer-deps
           echo "Building shared packages..."
           cd packages/http && npm run build && cd ../..
+          cd packages/eval && npm run build && cd ../..
           cd packages/design-system && npm run build && cd ../..
         fi
 
