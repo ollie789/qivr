@@ -12,8 +12,10 @@ import {
   ListItemAvatar,
   CircularProgress,
   Alert,
+  Autocomplete,
 } from "@mui/material";
 import { Person as PersonIcon } from "@mui/icons-material";
+import { patientApi, type Patient } from "../../services/patientApi";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -146,6 +148,8 @@ export const ScheduleAppointmentDialog: React.FC<
   useEffect(() => {
     if (open) {
       setActiveStep(0);
+      setPatientSearchQuery("");
+      setSelectedPatient(null);
       setAppointmentData({
         patientId: patient?.id || patientId || "",
         patientName: patient ? `${patient.firstName} ${patient.lastName}` : "",
@@ -172,6 +176,25 @@ export const ScheduleAppointmentDialog: React.FC<
     intakeId,
     initialDate,
   ]);
+
+  // Patient search state
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
+  // Fetch patients for search
+  const { data: patientsData, isLoading: patientsLoading } = useQuery({
+    queryKey: ["patients-search", patientSearchQuery],
+    queryFn: async () => {
+      const response = await patientApi.getPatients({
+        search: patientSearchQuery || undefined,
+        limit: 20,
+      });
+      return response;
+    },
+    enabled: open && !patient && patientSearchQuery.length >= 2,
+  });
+
+  const patients = patientsData?.data || [];
 
   // Fetch providers from the API
   const { data: providers = [], isLoading: providersLoading } = useQuery({
@@ -335,8 +358,7 @@ export const ScheduleAppointmentDialog: React.FC<
 
   const isStepValid = () => {
     const idx = patient ? activeStep : activeStep;
-    if (!patient && idx === 0)
-      return appointmentData.patientName && appointmentData.patientEmail;
+    if (!patient && idx === 0) return appointmentData.patientId; // Require a selected patient with ID
     if ((patient && idx === 0) || (!patient && idx === 1))
       return appointmentData.providerId;
     if ((patient && idx === 1) || (!patient && idx === 2))
@@ -351,8 +373,8 @@ export const ScheduleAppointmentDialog: React.FC<
     if (!patient && idx === 0) {
       return (
         <FormSection
-          title="Patient Information"
-          description="Enter patient details"
+          title="Select Patient"
+          description="Search for an existing patient"
         >
           {intakeId && (
             <Callout variant="info">
@@ -360,58 +382,95 @@ export const ScheduleAppointmentDialog: React.FC<
             </Callout>
           )}
           <FormRow>
-            <TextField
+            <Autocomplete
               fullWidth
-              label="First Name"
-              value={appointmentData.patientName.split(" ")[0] || ""}
-              onChange={(e) =>
-                setAppointmentData({
-                  ...appointmentData,
-                  patientName: `${e.target.value} ${appointmentData.patientName.split(" ")[1] || ""}`,
-                })
+              options={patients}
+              loading={patientsLoading}
+              value={selectedPatient}
+              onChange={(_, newValue) => {
+                setSelectedPatient(newValue);
+                if (newValue) {
+                  setAppointmentData({
+                    ...appointmentData,
+                    patientId: newValue.id,
+                    patientName: `${newValue.firstName} ${newValue.lastName}`,
+                    patientEmail: newValue.email || "",
+                    patientPhone: newValue.phone || "",
+                  });
+                } else {
+                  setAppointmentData({
+                    ...appointmentData,
+                    patientId: "",
+                    patientName: "",
+                    patientEmail: "",
+                    patientPhone: "",
+                  });
+                }
+              }}
+              onInputChange={(_, newInputValue) => {
+                setPatientSearchQuery(newInputValue);
+              }}
+              getOptionLabel={(option) =>
+                `${option.firstName} ${option.lastName}`
               }
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  <Box>
+                    <Typography variant="body1">
+                      {option.firstName} {option.lastName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {option.email}
+                    </Typography>
+                  </Box>
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Search Patient"
+                  placeholder="Type at least 2 characters to search..."
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {patientsLoading ? (
+                          <CircularProgress color="inherit" size={20} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              noOptionsText={
+                patientSearchQuery.length < 2
+                  ? "Type at least 2 characters to search"
+                  : "No patients found"
+              }
+              isOptionEqualToValue={(option, value) => option.id === value.id}
             />
           </FormRow>
-          <FormRow>
-            <TextField
-              fullWidth
-              label="Last Name"
-              value={appointmentData.patientName.split(" ")[1] || ""}
-              onChange={(e) =>
-                setAppointmentData({
-                  ...appointmentData,
-                  patientName: `${appointmentData.patientName.split(" ")[0] || ""} ${e.target.value}`,
-                })
-              }
-            />
-          </FormRow>
-          <FormRow>
-            <TextField
-              fullWidth
-              type="email"
-              label="Email"
-              value={appointmentData.patientEmail}
-              onChange={(e) =>
-                setAppointmentData({
-                  ...appointmentData,
-                  patientEmail: e.target.value,
-                })
-              }
-            />
-          </FormRow>
-          <FormRow>
-            <TextField
-              fullWidth
-              label="Phone"
-              value={appointmentData.patientPhone}
-              onChange={(e) =>
-                setAppointmentData({
-                  ...appointmentData,
-                  patientPhone: e.target.value,
-                })
-              }
-            />
-          </FormRow>
+          {selectedPatient && (
+            <>
+              <FormRow>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  value={appointmentData.patientEmail}
+                  disabled
+                />
+              </FormRow>
+              <FormRow>
+                <TextField
+                  fullWidth
+                  label="Phone"
+                  value={appointmentData.patientPhone}
+                  disabled
+                />
+              </FormRow>
+            </>
+          )}
         </FormSection>
       );
     }
