@@ -74,7 +74,6 @@ function BodyModel({
   }, [selectedRegions, gltf.scene]);
 
   return (
-    // @ts-expect-error - React Three Fiber JSX elements
     <primitive
       object={gltf.scene} 
       onClick={handleClick}
@@ -230,11 +229,8 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
         >
           <Canvas camera={{ fov: 50 }}>
             <Suspense fallback={null}>
-              {/* @ts-expect-error - React Three Fiber JSX elements */}
               <ambientLight intensity={0.5} />
-              {/* @ts-expect-error - React Three Fiber JSX elements */}
               <directionalLight position={[10, 10, 5]} intensity={1} />
-              {/* @ts-expect-error - React Three Fiber JSX elements */}
               <directionalLight position={[-10, 10, -5]} intensity={0.5} />
               <BodyModel
                 selectedRegions={selectedRegions}
