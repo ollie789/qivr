@@ -59,6 +59,9 @@ export interface IntakeFormData {
 
   // Medical History
   painStart?: string;
+  hasImaging?: string;
+  imagingTimeframe?: string;
+  imagingTypes?: string[];
   prevOrtho?: string[];
   currentTreatments?: string[];
   medications?: string[];
@@ -117,6 +120,11 @@ export interface Question {
   min?: number;
   max?: number;
   rows?: number;
+  /** Conditional display: show this question only when another field has a specific value */
+  showWhen?: {
+    field: string;
+    value: string | string[];
+  };
 }
 
 export interface QuestionSection {

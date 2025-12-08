@@ -220,6 +220,25 @@ export interface QuestionSectionProps {
 }
 
 /**
+ * Check if a question should be shown based on its showWhen condition
+ */
+function shouldShowQuestion(
+  question: Question,
+  formValues: Record<string, unknown>,
+): boolean {
+  if (!question.showWhen) return true;
+
+  const { field, value } = question.showWhen;
+  const fieldValue = formValues[field];
+
+  if (Array.isArray(value)) {
+    return value.includes(fieldValue as string);
+  }
+
+  return fieldValue === value;
+}
+
+/**
  * Renders a section of questions with consistent layout
  */
 export const QuestionSection: React.FC<QuestionSectionProps> = ({
@@ -258,18 +277,25 @@ export const QuestionSection: React.FC<QuestionSectionProps> = ({
         </Box>
       )}
 
-      {questions.map((question) => (
-        <QuestionRenderer
-          key={question.name}
-          question={question}
-          value={formValues[question.name]}
-          onChange={(val) => onFieldChange(question.name, val)}
-          onToggle={(val) => onCheckboxToggle(question.name, val)}
-          error={errors[question.name]}
-          disabled={disabled}
-          size={size}
-        />
-      ))}
+      {questions.map((question) => {
+        // Check if question should be displayed based on showWhen condition
+        if (!shouldShowQuestion(question, formValues)) {
+          return null;
+        }
+
+        return (
+          <QuestionRenderer
+            key={question.name}
+            question={question}
+            value={formValues[question.name]}
+            onChange={(val) => onFieldChange(question.name, val)}
+            onToggle={(val) => onCheckboxToggle(question.name, val)}
+            error={errors[question.name]}
+            disabled={disabled}
+            size={size}
+          />
+        );
+      })}
     </Box>
   );
 };

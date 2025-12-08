@@ -28,6 +28,7 @@ import {
   type SelectOption,
   // Questions
   personalInfoSection,
+  chiefComplaintSection,
   painDurationOptions,
   medicalHistorySection,
   goalsSection,
@@ -79,6 +80,12 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
       if (!form.email?.trim()) newErrors.email = "Required";
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
         newErrors.email = "Invalid email";
+    }
+
+    // Chief complaint validation
+    if (currentStep.id === "chief-complaint") {
+      if (!form.chiefComplaint?.trim())
+        newErrors.chiefComplaint = "Please describe your main concern";
     }
 
     // Use shared validation utilities
@@ -198,7 +205,9 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
   const currentStep = WIDGET_INTAKE_STEPS[step];
 
   return (
-    <AuraCard sx={{ p: auraTokens.responsivePadding.card, maxWidth: 700, mx: "auto" }}>
+    <AuraCard
+      sx={{ p: auraTokens.responsivePadding.card, maxWidth: 700, mx: "auto" }}
+    >
       <Typography variant="h5" gutterBottom fontWeight={700}>
         New Patient Intake
       </Typography>
@@ -268,7 +277,24 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
         </Box>
       )}
 
-      {/* Step 2: Pain Mapping */}
+      {/* Step 2: Chief Complaint */}
+      {currentStep.id === "chief-complaint" && (
+        <QuestionSection
+          title={currentStep.title}
+          description={chiefComplaintSection.description}
+          questions={chiefComplaintSection.questions}
+          formValues={form as Record<string, unknown>}
+          onFieldChange={(field, value) =>
+            update(field as keyof IntakeFormData, value)
+          }
+          onCheckboxToggle={(field, value) =>
+            toggleCheckbox(field as keyof IntakeFormData, value)
+          }
+          errors={errors}
+        />
+      )}
+
+      {/* Step 3: Pain Mapping */}
       {currentStep.hasPainMap && (
         <Box>
           <Typography variant="h6" gutterBottom>

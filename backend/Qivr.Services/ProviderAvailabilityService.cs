@@ -55,17 +55,25 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     {
         var availableSlots = new List<Qivr.Core.Interfaces.TimeSlot>();
 
-        // IMPORTANT: Normalize date to UTC to prevent timezone comparison issues
-        var utcDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+        // Get provider's tenant timezone
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.Id == providerId);
+        if (provider == null) return availableSlots;
+        
+        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == provider.TenantId);
+        var timezone = tenant?.Timezone ?? "Australia/Sydney";
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+
+        // Work with local date for schedule lookup
+        var localDate = date.Date;
 
         // Check if provider is available on this date
-        if (!await IsProviderAvailableOnDate(providerId, utcDate))
+        if (!await IsProviderAvailableOnDate(providerId, localDate))
         {
             return availableSlots;
         }
 
         // Get provider's working hours for the day (considering overrides)
-        var workingHours = await GetProviderWorkingHoursForDate(providerId, utcDate);
+        var workingHours = await GetProviderWorkingHoursForDate(providerId, localDate);
         if (!workingHours.IsWorkingDay || (workingHours.Start == TimeSpan.Zero && workingHours.End == TimeSpan.Zero))
         {
             return availableSlots;
@@ -73,19 +81,21 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
         // Get the schedule to determine buffer time
         var schedule = await _context.ProviderSchedules
-            .FirstOrDefaultAsync(s => s.ProviderId == providerId && s.DayOfWeek == utcDate.DayOfWeek);
+            .FirstOrDefaultAsync(s => s.ProviderId == providerId && s.DayOfWeek == localDate.DayOfWeek);
         var bufferMinutes = schedule?.BufferMinutes ?? 0;
         var slotDuration = schedule?.DefaultSlotDurationMinutes ?? durationMinutes;
 
         // Get existing appointments for the provider on this date
-        // Use date range to avoid timezone edge cases
-        var dayStart = utcDate;
-        var dayEnd = utcDate.AddDays(1);
+        // Convert local date range to UTC for database query
+        var localDayStart = localDate;
+        var localDayEnd = localDate.AddDays(1);
+        var utcDayStart = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDayStart, DateTimeKind.Unspecified), tz);
+        var utcDayEnd = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDayEnd, DateTimeKind.Unspecified), tz);
 
         var existingAppointments = await _context.Appointments
             .Where(a => a.ProviderProfileId == providerId
-                && a.ScheduledStart >= dayStart
-                && a.ScheduledStart < dayEnd
+                && a.ScheduledStart >= utcDayStart
+                && a.ScheduledStart < utcDayEnd
                 && a.Status != AppointmentStatus.Cancelled)
             .OrderBy(a => a.ScheduledStart)
             .ToListAsync();
@@ -95,16 +105,16 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         {
             existingAppointments = await _context.Appointments
                 .Where(a => a.ProviderId == providerId
-                    && a.ScheduledStart >= dayStart
-                    && a.ScheduledStart < dayEnd
+                    && a.ScheduledStart >= utcDayStart
+                    && a.ScheduledStart < utcDayEnd
                     && a.Status != AppointmentStatus.Cancelled)
                 .OrderBy(a => a.ScheduledStart)
                 .ToListAsync();
         }
 
-        // Generate time slots
-        var currentSlotStart = utcDate.Add(workingHours.Start);
-        var endOfDay = utcDate.Add(workingHours.End);
+        // Generate time slots in local time, then convert to UTC for response
+        var currentSlotStart = localDate.Add(workingHours.Start);
+        var endOfDay = localDate.Add(workingHours.End);
 
         while (currentSlotStart.AddMinutes(slotDuration) <= endOfDay)
         {
@@ -113,8 +123,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             // Skip break time if configured
             if (workingHours.BreakStart.HasValue && workingHours.BreakEnd.HasValue)
             {
-                var breakStart = utcDate.Add(workingHours.BreakStart.Value);
-                var breakEnd = utcDate.Add(workingHours.BreakEnd.Value);
+                var breakStart = localDate.Add(workingHours.BreakStart.Value);
+                var breakEnd = localDate.Add(workingHours.BreakEnd.Value);
 
                 if (currentSlotStart < breakEnd && currentSlotEnd > breakStart)
                 {
@@ -124,6 +134,10 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
                 }
             }
 
+            // Convert local slot times to UTC for comparison with appointments
+            var slotStartUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(currentSlotStart, DateTimeKind.Unspecified), tz);
+            var slotEndUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(currentSlotEnd, DateTimeKind.Unspecified), tz);
+
             // Check if slot conflicts with existing appointments (including buffer)
             // Using the correct overlap formula: StartA < EndB AND EndA > StartB
             bool hasConflict = existingAppointments.Any(a =>
@@ -132,16 +146,16 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
                 var apptEndWithBuffer = a.ScheduledEnd.AddMinutes(bufferMinutes);
 
                 // Two intervals [A,B) and [C,D) overlap if A < D AND B > C
-                return currentSlotStart < apptEndWithBuffer && currentSlotEnd > apptStartWithBuffer;
+                return slotStartUtc < apptEndWithBuffer && slotEndUtc > apptStartWithBuffer;
             });
 
-            // Only add future slots
-            if (!hasConflict && currentSlotStart > DateTime.UtcNow)
+            // Only add future slots (compare in UTC)
+            if (!hasConflict && slotStartUtc > DateTime.UtcNow)
             {
                 availableSlots.Add(new Qivr.Core.Interfaces.TimeSlot
                 {
-                    Start = DateTime.SpecifyKind(currentSlotStart, DateTimeKind.Utc),
-                    End = DateTime.SpecifyKind(currentSlotEnd, DateTimeKind.Utc),
+                    Start = slotStartUtc,
+                    End = slotEndUtc,
                     IsAvailable = true
                 });
             }
@@ -154,32 +168,44 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<bool> IsSlotAvailable(Guid providerId, DateTime startTime, DateTime endTime)
     {
-        // IMPORTANT: Normalize to UTC to prevent timezone comparison issues
-        var utcStart = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
-        var utcEnd = endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc);
+        // Get provider's tenant timezone
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.Id == providerId);
+        if (provider == null) return false;
+        
+        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == provider.TenantId);
+        var timezone = tenant?.Timezone ?? "Australia/Sydney";
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+
+        // Convert to local time for working hours comparison
+        var localStart = TimeZoneInfo.ConvertTimeFromUtc(
+            startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc), 
+            tz);
+        var localEnd = TimeZoneInfo.ConvertTimeFromUtc(
+            endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc), 
+            tz);
 
         // Validate: Start must be before End
-        if (utcStart >= utcEnd)
+        if (localStart >= localEnd)
         {
-            _logger.LogWarning("Invalid slot: start {Start} >= end {End}", utcStart, utcEnd);
+            _logger.LogWarning("Invalid slot: start {Start} >= end {End}", localStart, localEnd);
             return false;
         }
 
-        // Check if provider is available on this date
-        if (!await IsProviderAvailableOnDate(providerId, utcStart.Date))
+        // Check if provider is available on this date (using local date)
+        if (!await IsProviderAvailableOnDate(providerId, localStart.Date))
         {
             return false;
         }
 
         // Check if provider works during this time
-        var workingHours = await GetProviderWorkingHoursForDate(providerId, utcStart.Date);
+        var workingHours = await GetProviderWorkingHoursForDate(providerId, localStart.Date);
         if (!workingHours.IsWorkingDay)
         {
             return false;
         }
 
-        var startTimeOfDay = utcStart.TimeOfDay;
-        var endTimeOfDay = utcEnd.TimeOfDay;
+        var startTimeOfDay = localStart.TimeOfDay;
+        var endTimeOfDay = localEnd.TimeOfDay;
 
         if (startTimeOfDay < workingHours.Start || endTimeOfDay > workingHours.End)
         {
@@ -199,6 +225,10 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         // Check for conflicts with existing appointments using correct overlap formula:
         // Two intervals [A,B) and [C,D) overlap if A < D AND B > C
         // Check both ProviderProfileId and ProviderId for backwards compatibility
+        // Use original times (UTC) for database comparison since appointments are stored in UTC
+        var utcStart = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
+        var utcEnd = endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc);
+        
         var hasConflict = await _context.Appointments
             .AnyAsync(a => (a.ProviderProfileId == providerId || a.ProviderId == providerId)
                 && a.Status != AppointmentStatus.Cancelled

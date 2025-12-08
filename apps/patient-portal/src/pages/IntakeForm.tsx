@@ -32,6 +32,7 @@ import {
   // Types
   type IntakeFormData,
   // Questions
+  chiefComplaintSection,
   painDurationOptions,
   painStartOptions,
   medicalHistorySection,
@@ -91,6 +92,13 @@ export const IntakeForm: React.FC = () => {
 
     if (!currentStep) {
       return true;
+    }
+
+    // Chief complaint validation
+    if (currentStep.id === "chief-complaint") {
+      if (!form.chiefComplaint?.trim()) {
+        newErrors.chiefComplaint = "Please describe your main concern";
+      }
     }
 
     // Use shared validation utilities with portal-specific options
@@ -239,7 +247,24 @@ export const IntakeForm: React.FC = () => {
       </Stepper>
 
       <AuraCard sx={{ p: auraTokens.responsivePadding.card }}>
-        {/* Step 1: Pain Location & Characteristics */}
+        {/* Step 1: Chief Complaint */}
+        {currentStep.id === "chief-complaint" && (
+          <QuestionSection
+            title={currentStep.title}
+            description={chiefComplaintSection.description}
+            questions={chiefComplaintSection.questions}
+            formValues={form as Record<string, unknown>}
+            onFieldChange={(field, value) =>
+              update(field as keyof IntakeFormData, value)
+            }
+            onCheckboxToggle={(field, value) =>
+              toggleCheckbox(field as keyof IntakeFormData, value)
+            }
+            errors={errors}
+          />
+        )}
+
+        {/* Step 2: Pain Location & Characteristics */}
         {currentStep.hasPainMap && (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -262,7 +287,11 @@ export const IntakeForm: React.FC = () => {
             />
 
             {/* Pain Duration */}
-            <FormControl fullWidth sx={{ mt: 3, mb: 3 }} error={!!errors.painDuration}>
+            <FormControl
+              fullWidth
+              sx={{ mt: 3, mb: 3 }}
+              error={!!errors.painDuration}
+            >
               <InputLabel>How long have you had this pain?</InputLabel>
               <Select
                 value={form.painDuration || ""}
@@ -369,10 +398,7 @@ export const IntakeForm: React.FC = () => {
             Back
           </AuraButton>
           {activeStep === steps.length - 1 ? (
-            <AuraButton
-              variant="contained"
-              onClick={handleSubmit}
-            >
+            <AuraButton variant="contained" onClick={handleSubmit}>
               Submit Assessment
             </AuraButton>
           ) : (

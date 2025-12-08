@@ -17,6 +17,13 @@ export const WIDGET_INTAKE_STEPS: IntakeStep[] = [
     sectionIds: ["personal-info"],
   },
   {
+    id: "chief-complaint",
+    title: "Main Concern",
+    shortTitle: "Concern",
+    description: "What brings you in today?",
+    sectionIds: ["chief-complaint"],
+  },
+  {
     id: "pain-mapping",
     title: "Pain Location",
     shortTitle: "Pain",
@@ -52,6 +59,13 @@ export const WIDGET_INTAKE_STEPS: IntakeStep[] = [
  * Portal intake steps (user is authenticated, skip personal info)
  */
 export const PORTAL_INTAKE_STEPS: IntakeStep[] = [
+  {
+    id: "chief-complaint",
+    title: "Main Concern",
+    shortTitle: "Concern",
+    description: "What brings you in today?",
+    sectionIds: ["chief-complaint"],
+  },
   {
     id: "pain-mapping",
     title: "Pain Location & Characteristics",
