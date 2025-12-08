@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Alert,
   Box,
   TextField,
   Typography,
   Stepper,
   Step,
   StepLabel,
-  Paper,
   FormControl,
   Select,
   MenuItem,
@@ -22,6 +20,8 @@ import {
   PainMap3D,
   auraStepper,
   AuraButton,
+  AuraCard,
+  Callout,
   auraTokens,
   type PainRegion,
   QuestionSection,
@@ -238,7 +238,7 @@ export const IntakeForm: React.FC = () => {
         ))}
       </Stepper>
 
-      <Paper elevation={2} sx={{ p: 4 }}>
+      <AuraCard sx={{ p: auraTokens.responsivePadding.card }}>
         {/* Step 1: Pain Location & Characteristics */}
         {currentStep.hasPainMap && (
           <Box>
@@ -252,9 +252,9 @@ export const IntakeForm: React.FC = () => {
               pain
             </Typography>
             {errors.painMap && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {errors.painMap}
-              </Alert>
+              <Box sx={{ mb: 2 }}>
+                <Callout variant="error">{errors.painMap}</Callout>
+              </Box>
             )}
             <PainMap3D
               value={painRegions}
@@ -381,7 +381,7 @@ export const IntakeForm: React.FC = () => {
             </AuraButton>
           )}
         </Box>
-      </Paper>
+      </AuraCard>
     </Box>
   );
 };

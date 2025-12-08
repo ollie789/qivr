@@ -68,6 +68,7 @@ import {
   Callout,
   auraTokens,
   SelectField,
+  SplitButton,
 } from "@qivr/design-system";
 import { treatmentPlansApi } from "../lib/api";
 import {
@@ -489,23 +490,6 @@ export default function TreatmentPlanDetail() {
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
-          {/* Bulk Schedule Sessions Button */}
-          {plan.phases?.length > 0 && plan.status !== "Completed" && (
-            <Tooltip title="Schedule all treatment sessions at once">
-              <AuraButton
-                variant="outlined"
-                startIcon={<BulkScheduleIcon />}
-                onClick={() => {
-                  setSelectedPhasesForScheduling(
-                    new Set(plan.phases.map((_: any, i: number) => i)),
-                  );
-                  setBulkScheduleDialogOpen(true);
-                }}
-              >
-                Schedule All Sessions
-              </AuraButton>
-            </Tooltip>
-          )}
           {plan.status === "Draft" && (
             <AuraButton
               variant="contained"
@@ -536,13 +520,37 @@ export default function TreatmentPlanDetail() {
               </AuraButton>
             </Tooltip>
           )}
-          <AuraButton
-            variant="outlined"
-            startIcon={<ScheduleIcon />}
-            onClick={() => setScheduleDialogOpen(true)}
-          >
-            Schedule Session
-          </AuraButton>
+          {/* Combined Schedule Button */}
+          {plan.phases?.length > 0 && plan.status !== "Completed" ? (
+            <SplitButton
+              variant="outlined"
+              startIcon={<ScheduleIcon />}
+              options={[
+                {
+                  label: "Schedule All Sessions",
+                  onClick: () => {
+                    setSelectedPhasesForScheduling(
+                      new Set(plan.phases.map((_: any, i: number) => i)),
+                    );
+                    setBulkScheduleDialogOpen(true);
+                  },
+                },
+                {
+                  label: "Schedule Single Session",
+                  onClick: () => setScheduleDialogOpen(true),
+                },
+              ]}
+              mainLabel="Schedule Sessions"
+            />
+          ) : (
+            <AuraButton
+              variant="outlined"
+              startIcon={<ScheduleIcon />}
+              onClick={() => setScheduleDialogOpen(true)}
+            >
+              Schedule Session
+            </AuraButton>
+          )}
         </Box>
       </Box>
 
@@ -1253,18 +1261,6 @@ export default function TreatmentPlanDetail() {
 
           {/* Exercises Tab */}
           <TabPanel value={tabValue} index={2}>
-            {/* Add Exercise Button */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3 }}>
-              <AuraButton
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setExerciseDrawerOpen(true)}
-                disabled={!plan.phases?.length || plan.status === "Completed"}
-              >
-                Add Exercise from Library
-              </AuraButton>
-            </Box>
-
             {plan.phases?.length > 0 ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 {plan.phases.map((phase: any, phaseIndex: number) => (

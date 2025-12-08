@@ -6,11 +6,7 @@ import {
   StepLabel,
   Typography,
   TextField,
-  Button,
   FormControl,
-  Paper,
-  Alert,
-  CircularProgress,
   Select,
   MenuItem,
   InputLabel,
@@ -20,6 +16,11 @@ import {
   type PainRegion,
   QuestionSection,
   IntakeReviewSection,
+  AuraButton,
+  AuraCard,
+  Callout,
+  auraStepper,
+  auraTokens,
 } from "@qivr/design-system";
 import {
   // Types
@@ -183,26 +184,26 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
 
   if (submitted) {
     return (
-      <Paper sx={{ p: 4, textAlign: "center" }}>
-        <Typography variant="h5" color="primary" gutterBottom>
+      <AuraCard sx={{ p: 4, textAlign: "center", maxWidth: 700, mx: "auto" }}>
+        <Typography variant="h5" color="primary" gutterBottom fontWeight={600}>
           Thank You!
         </Typography>
-        <Typography>
+        <Typography color="text.secondary">
           Your intake has been submitted. We'll contact you within 24 hours.
         </Typography>
-      </Paper>
+      </AuraCard>
     );
   }
 
   const currentStep = WIDGET_INTAKE_STEPS[step];
 
   return (
-    <Paper sx={{ p: 3, maxWidth: 700, mx: "auto" }}>
+    <AuraCard sx={{ p: auraTokens.responsivePadding.card, maxWidth: 700, mx: "auto" }}>
       <Typography variant="h5" gutterBottom fontWeight={700}>
         New Patient Intake
       </Typography>
 
-      <Stepper activeStep={step} sx={{ mb: 3 }} alternativeLabel>
+      <Stepper activeStep={step} sx={auraStepper} alternativeLabel>
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
@@ -211,9 +212,9 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
       </Stepper>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
+        <Box sx={{ mb: 2 }}>
+          <Callout variant="error">{error}</Callout>
+        </Box>
       )}
 
       {/* Step 1: Personal Info */}
@@ -277,9 +278,9 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
             Click on the body model to mark where you feel pain
           </Typography>
           {errors.painMap && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {errors.painMap}
-            </Alert>
+            <Box sx={{ mb: 2 }}>
+              <Callout variant="error">{errors.painMap}</Callout>
+            </Box>
           )}
           <Box sx={{ height: 400 }}>
             <PainMap3D
@@ -359,20 +360,20 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
       )}
 
       {/* Navigation */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
-        <Button onClick={back} disabled={step === 0}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
+        <AuraButton onClick={back} disabled={step === 0}>
           Back
-        </Button>
+        </AuraButton>
         {step < steps.length - 1 ? (
-          <Button variant="contained" onClick={next}>
+          <AuraButton variant="contained" onClick={next}>
             Continue
-          </Button>
+          </AuraButton>
         ) : (
-          <Button variant="contained" onClick={submit} disabled={submitting}>
-            {submitting ? <CircularProgress size={24} /> : "Submit Intake"}
-          </Button>
+          <AuraButton variant="contained" onClick={submit} loading={submitting}>
+            Submit Intake
+          </AuraButton>
         )}
       </Box>
-    </Paper>
+    </AuraCard>
   );
 };

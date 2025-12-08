@@ -33,9 +33,6 @@ import {
   Avatar,
   Stack,
   Paper,
-  Badge,
-  Tabs,
-  Tab,
   ListItemText,
   ToggleButton,
   ToggleButtonGroup,
@@ -1330,74 +1327,44 @@ export default function ActionCenter() {
         <Paper
           ref={listRef}
           sx={{
-            width: selectedItem ? 450 : "100%",
-            maxWidth: 550,
+            flex: selectedItem ? "0 0 45%" : "1 1 100%",
+            minWidth: selectedItem ? 400 : undefined,
+            maxWidth: selectedItem ? 600 : undefined,
             display: "flex",
             flexDirection: "column",
             borderRadius: 2,
             overflow: "hidden",
-            transition: "width 0.2s ease",
+            transition: "flex 0.2s ease",
           }}
         >
-          {/* Tabs */}
-          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-            <Tabs
-              value={activeTab}
-              onChange={(_, v) => setTab(v)}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              <Tab
-                value="all"
-                label={
-                  <Badge badgeContent={stats.unread} color="primary" max={99}>
-                    All
-                  </Badge>
-                }
-              />
-              <Tab
-                value="message"
-                icon={<MessageIcon fontSize="small" />}
-                iconPosition="start"
-                label="Messages"
-              />
-              <Tab
-                value="document"
-                icon={<DocumentIcon fontSize="small" />}
-                iconPosition="start"
-                label="Documents"
-              />
-              <Tab
-                value="referral"
-                icon={<ReferralIcon fontSize="small" />}
-                iconPosition="start"
-                label="Referrals"
-              />
-              <Tab
-                value="appointment"
-                icon={<AppointmentIcon fontSize="small" />}
-                iconPosition="start"
-                label="Appointments"
-              />
-              <Tab
-                value="prom"
-                icon={<AssessmentIcon fontSize="small" />}
-                iconPosition="start"
-                label="PROMs"
-              />
-              <Tab
-                value="treatment-plan"
-                icon={<TreatmentPlanIcon fontSize="small" />}
-                iconPosition="start"
-                label="Plans"
-              />
-              <Tab
-                value="follow-up"
-                icon={<FollowUpIcon fontSize="small" />}
-                iconPosition="start"
-                label="Follow-ups"
-              />
-            </Tabs>
+          {/* Type Filter Chips */}
+          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
+            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ gap: 0.5 }}>
+              {[
+                { value: "all", label: "All", count: stats.unread },
+                { value: "message", label: "Messages", icon: <MessageIcon sx={{ fontSize: 14 }} /> },
+                { value: "document", label: "Docs", icon: <DocumentIcon sx={{ fontSize: 14 }} /> },
+                { value: "referral", label: "Referrals", icon: <ReferralIcon sx={{ fontSize: 14 }} /> },
+                { value: "appointment", label: "Appts", icon: <AppointmentIcon sx={{ fontSize: 14 }} /> },
+                { value: "prom", label: "PROMs", icon: <AssessmentIcon sx={{ fontSize: 14 }} /> },
+                { value: "treatment-plan", label: "Plans", icon: <TreatmentPlanIcon sx={{ fontSize: 14 }} /> },
+                { value: "follow-up", label: "Follow-ups", icon: <FollowUpIcon sx={{ fontSize: 14 }} /> },
+              ].map((tab) => (
+                <Chip
+                  key={tab.value}
+                  label={tab.count ? `${tab.label} (${tab.count})` : tab.label}
+                  icon={tab.icon}
+                  size="small"
+                  variant={activeTab === tab.value ? "filled" : "outlined"}
+                  color={activeTab === tab.value ? "primary" : "default"}
+                  onClick={() => setTab(tab.value)}
+                  sx={{
+                    fontWeight: activeTab === tab.value ? 600 : 400,
+                    "& .MuiChip-icon": { ml: 0.5 },
+                  }}
+                />
+              ))}
+            </Stack>
           </Box>
 
           {/* Search */}
