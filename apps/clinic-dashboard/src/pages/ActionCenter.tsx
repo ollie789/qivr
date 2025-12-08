@@ -53,7 +53,6 @@ import {
   Assignment as TaskIcon,
   LocalHospital as ReferralIcon,
   Event as AppointmentIcon,
-  Warning as UrgentIcon,
   CheckCircle as CompleteIcon,
   Person as PatientIcon,
   Schedule as ScheduleIcon,
@@ -66,7 +65,6 @@ import {
   AccountTree as GroupViewIcon,
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
-  AccessTime as TimeIcon,
   NotificationsActive as ReminderIcon,
   Archive as ArchiveIcon,
   Star as StarIcon,
@@ -1181,104 +1179,151 @@ export default function ActionCenter() {
         }
       />
 
-      {/* Compact Stats + Filters Row */}
+      {/* Smart Filters */}
       <Box sx={{ px: 3, mb: 2 }}>
-        <Stack
-          direction="row"
-          spacing={2}
-          alignItems="center"
-          flexWrap="wrap"
-          useFlexGap
-          sx={{ gap: 1 }}
+        <Box
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.5,
+            p: 0.5,
+            bgcolor: "background.default",
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
         >
-          {/* Inline Stats */}
-          <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
-            {[
-              {
-                label: "Action",
-                value: stats.unread,
-                filter: "needs-action" as SmartFilter,
-                color: "primary",
+          {/* All filter */}
+          <Box
+            onClick={() => setFilter("all")}
+            sx={{
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 1.5,
+              cursor: "pointer",
+              bgcolor: smartFilter === "all" ? "primary.main" : "transparent",
+              color: smartFilter === "all" ? "white" : "text.secondary",
+              fontWeight: smartFilter === "all" ? 600 : 500,
+              fontSize: "0.8125rem",
+              transition: "all 0.15s ease",
+              "&:hover": {
+                bgcolor:
+                  smartFilter === "all" ? "primary.main" : "action.hover",
               },
-              {
-                label: "Urgent",
-                value: stats.urgent,
-                filter: "urgent" as SmartFilter,
-                color: "warning",
-              },
-              {
-                label: "Today",
-                value: stats.dueToday,
-                filter: "today" as SmartFilter,
-                color: "info",
-              },
-              {
-                label: "Overdue",
-                value: stats.overdue,
-                filter: "overdue" as SmartFilter,
-                color: "error",
-              },
-            ].map((stat) => (
-              <Chip
+            }}
+          >
+            All
+          </Box>
+
+          {/* Stat-based filters */}
+          {[
+            {
+              label: "Action",
+              value: stats.unread,
+              filter: "needs-action" as SmartFilter,
+              activeColor: "#6366f1",
+            },
+            {
+              label: "Urgent",
+              value: stats.urgent,
+              filter: "urgent" as SmartFilter,
+              activeColor: "#f59e0b",
+            },
+            {
+              label: "Today",
+              value: stats.dueToday,
+              filter: "today" as SmartFilter,
+              activeColor: "#0ea5e9",
+            },
+            {
+              label: "Overdue",
+              value: stats.overdue,
+              filter: "overdue" as SmartFilter,
+              activeColor: "#ef4444",
+            },
+          ].map((stat) => {
+            const isActive = smartFilter === stat.filter;
+            const hasItems = stat.value > 0;
+            return (
+              <Box
                 key={stat.label}
-                label={
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <Typography variant="body2" fontWeight={700}>
-                      {stat.value}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {stat.label}
-                    </Typography>
-                  </Box>
-                }
-                variant={smartFilter === stat.filter ? "filled" : "outlined"}
-                color={stat.value > 0 ? (stat.color as any) : "default"}
                 onClick={() => setFilter(stat.filter)}
-                size="small"
                 sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1.5,
                   cursor: "pointer",
-                  "& .MuiChip-label": { px: 1 },
+                  bgcolor: isActive ? stat.activeColor : "transparent",
+                  transition: "all 0.15s ease",
+                  "&:hover": {
+                    bgcolor: isActive ? stat.activeColor : "action.hover",
+                  },
                 }}
-              />
-            ))}
-          </Stack>
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 700,
+                    color: isActive
+                      ? "white"
+                      : hasItems
+                        ? stat.activeColor
+                        : "text.disabled",
+                    minWidth: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  {stat.value}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "white" : "text.secondary",
+                  }}
+                >
+                  {stat.label}
+                </Typography>
+              </Box>
+            );
+          })}
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-
-          {/* Filter Chips */}
-          {(
-            [
-              "all",
-              "urgent",
-              "overdue",
-              "today",
-              "needs-action",
-              "starred",
-            ] as SmartFilter[]
-          ).map((filter) => (
-            <Chip
-              key={filter}
-              label={
-                filter === "needs-action"
-                  ? "Needs Action"
-                  : filter.charAt(0).toUpperCase() + filter.slice(1)
-              }
-              variant={smartFilter === filter ? "filled" : "outlined"}
-              color={smartFilter === filter ? "primary" : "default"}
-              onClick={() => setFilter(filter)}
-              size="small"
-              icon={
-                filter === "starred" ? (
-                  <StarIcon fontSize="small" />
-                ) : filter === "urgent" ? (
-                  <UrgentIcon fontSize="small" />
-                ) : filter === "overdue" ? (
-                  <TimeIcon fontSize="small" />
-                ) : undefined
-              }
+          {/* Starred filter */}
+          <Box
+            onClick={() => setFilter("starred")}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 1.5,
+              cursor: "pointer",
+              bgcolor: smartFilter === "starred" ? "#f59e0b" : "transparent",
+              color: smartFilter === "starred" ? "white" : "text.secondary",
+              transition: "all 0.15s ease",
+              "&:hover": {
+                bgcolor: smartFilter === "starred" ? "#f59e0b" : "action.hover",
+              },
+            }}
+          >
+            <StarIcon
+              sx={{
+                fontSize: 14,
+                color: smartFilter === "starred" ? "white" : "#f59e0b",
+              }}
             />
-          ))}
-        </Stack>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: smartFilter === "starred" ? 600 : 500 }}
+            >
+              Starred
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Main Content */}

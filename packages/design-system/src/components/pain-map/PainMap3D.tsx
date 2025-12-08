@@ -10,19 +10,14 @@ import {
   Slider,
   Chip,
   IconButton,
-  Tooltip,
   Popover,
-  Paper,
 } from "@mui/material";
-import {
-  Delete as DeleteIcon,
-  Close as CloseIcon,
-  Check as CheckIcon,
-} from "@mui/icons-material";
+import { Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material";
 import * as THREE from "three";
 import { PAIN_QUALITIES } from "../../types/pain-drawing";
 import { getRegionDisplayName } from "../../types/anatomical-regions";
 import { auraTokens } from "../../theme/auraTokens";
+import { AuraButton } from "../buttons/Button";
 
 interface SelectedRegion {
   meshName: string;
@@ -65,8 +60,8 @@ function BodyModel({
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
 
-    // Distance based on model size (zoom out more)
-    const distance = maxDim * 1.8;
+    // Distance based on model size (closer = larger model)
+    const distance = maxDim * 1.3;
 
     // Set camera positions for locked views - centered on model
     const positions = {
@@ -297,46 +292,41 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
           </Canvas>
         </Box>
 
-        {/* Selected Regions Panel */}
+        {/* Compact Selected Regions Panel */}
         <Box
           sx={{
-            flex: { xs: "none", md: 1 },
-            minWidth: { md: 280 },
-            maxWidth: { md: 320 },
+            width: { xs: "100%", md: 200 },
+            flexShrink: 0,
             bgcolor: "background.paper",
             borderRadius: auraTokens.borderRadius.md,
             border: "1px solid",
             borderColor: "divider",
-            p: 2,
+            p: 1.5,
             display: "flex",
             flexDirection: "column",
+            maxHeight: { md: 500 },
           }}
         >
-          <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-            Selected Areas{" "}
-            {selectedRegions.length > 0 && `(${selectedRegions.length})`}
+          <Typography
+            variant="caption"
+            fontWeight={600}
+            color="text.secondary"
+            sx={{ mb: 1 }}
+          >
+            Selected ({selectedRegions.length})
           </Typography>
 
           {selectedRegions.length === 0 ? (
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                py: 4,
-              }}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              textAlign="center"
+              sx={{ py: 2 }}
             >
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                textAlign="center"
-              >
-                Click on the body model to mark pain areas
-              </Typography>
-            </Box>
+              Click body to mark pain
+            </Typography>
           ) : (
-            <Stack spacing={1} sx={{ flex: 1, overflow: "auto" }}>
+            <Stack spacing={0.5} sx={{ flex: 1, overflow: "auto" }}>
               {selectedRegions.map((region, i) => {
                 const quality = PAIN_QUALITIES.find(
                   (q) => q.id === region.quality,
@@ -346,40 +336,47 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
                   <Box
                     key={i}
                     sx={{
-                      p: 1.5,
+                      p: 1,
                       bgcolor: "background.elevation1",
                       borderRadius: auraTokens.borderRadius.sm,
                       display: "flex",
                       alignItems: "center",
-                      gap: 1,
+                      gap: 0.75,
                     }}
                   >
                     <Box
                       sx={{
-                        width: 12,
-                        height: 12,
+                        width: 8,
+                        height: 8,
                         borderRadius: "50%",
                         bgcolor: quality?.color,
                         flexShrink: 0,
                       }}
                     />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={500} noWrap>
+                      <Typography
+                        variant="caption"
+                        fontWeight={500}
+                        noWrap
+                        sx={{ lineHeight: 1.2 }}
+                      >
                         {displayName}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {quality?.label} • {region.intensity}/10
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontSize: "0.65rem", display: "block" }}
+                      >
+                        {quality?.label.split(" / ")[0]} • {region.intensity}/10
                       </Typography>
                     </Box>
-                    <Tooltip title="Remove">
-                      <IconButton
-                        size="small"
-                        onClick={() => removeRegion(region.meshName)}
-                        sx={{ color: "text.secondary" }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton
+                      size="small"
+                      onClick={() => removeRegion(region.meshName)}
+                      sx={{ color: "text.secondary", p: 0.25 }}
+                    >
+                      <DeleteIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
                   </Box>
                 );
               })}
@@ -388,7 +385,7 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
         </Box>
       </Box>
 
-      {/* Pain Detail Popover */}
+      {/* Compact Pain Detail Popover */}
       <Popover
         open={Boolean(popoverAnchor)}
         anchorReference="anchorPosition"
@@ -402,190 +399,142 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
         slotProps={{
           paper: {
             sx: {
-              borderRadius: auraTokens.borderRadius.lg,
-              boxShadow: 6,
+              borderRadius: auraTokens.borderRadius.md,
+              boxShadow: 4,
               overflow: "visible",
+              minWidth: 260,
+              maxWidth: 280,
             },
           },
         }}
       >
-        <Paper sx={{ p: 2.5, width: 320 }}>
-          {/* Header */}
+        <Box sx={{ p: 2 }}>
+          {/* Compact Header */}
           <Box
             sx={{
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "flex-start",
-              mb: 2,
+              alignItems: "center",
+              mb: 1.5,
             }}
           >
-            <Box>
-              <Typography variant="subtitle1" fontWeight={600}>
-                {pendingMesh
-                  ? getRegionDisplayName(pendingMesh)
-                  : "Pain Details"}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Select the type and intensity of your pain
-              </Typography>
-            </Box>
-            <IconButton
-              size="small"
-              onClick={closePopover}
-              sx={{ mt: -0.5, mr: -0.5 }}
-            >
-              <CloseIcon fontSize="small" />
+            <Typography variant="subtitle2" fontWeight={600}>
+              {pendingMesh ? getRegionDisplayName(pendingMesh) : "Pain Details"}
+            </Typography>
+            <IconButton size="small" onClick={closePopover} sx={{ p: 0.5 }}>
+              <CloseIcon sx={{ fontSize: 18 }} />
             </IconButton>
           </Box>
 
-          {/* Pain Type Selection */}
+          {/* Pain Type - Horizontal Chips */}
           <Typography
             variant="caption"
             color="text.secondary"
-            sx={{ fontWeight: 600, mb: 1, display: "block" }}
+            sx={{ fontWeight: 600, mb: 0.5, display: "block" }}
           >
-            Pain Type
+            Type
           </Typography>
-          <Stack spacing={1} sx={{ mb: 3 }}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{ mb: 2, flexWrap: "wrap", gap: 0.5 }}
+          >
             {PAIN_QUALITIES.map((quality) => (
-              <Box
+              <Chip
                 key={quality.id}
+                label={quality.label.split(" / ")[0]} // Just first word: Dull, Sharp, Burning
+                size="small"
                 onClick={() => setPendingQuality(quality)}
                 sx={{
-                  p: 1.5,
-                  borderRadius: auraTokens.borderRadius.sm,
-                  border: "2px solid",
+                  bgcolor:
+                    pendingQuality.id === quality.id
+                      ? quality.color
+                      : "transparent",
+                  color:
+                    pendingQuality.id === quality.id ? "white" : "text.primary",
+                  border: "1px solid",
                   borderColor:
                     pendingQuality.id === quality.id
                       ? quality.color
                       : "divider",
-                  bgcolor:
-                    pendingQuality.id === quality.id
-                      ? `${quality.color}15`
-                      : "transparent",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  transition: "all 0.15s ease",
+                  fontWeight: pendingQuality.id === quality.id ? 600 : 400,
+                  fontSize: "0.75rem",
+                  height: 28,
                   "&:hover": {
-                    borderColor: quality.color,
-                    bgcolor: `${quality.color}10`,
+                    bgcolor:
+                      pendingQuality.id === quality.id
+                        ? quality.color
+                        : `${quality.color}20`,
                   },
                 }}
-              >
-                <Box
-                  sx={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: "50%",
-                    bgcolor: quality.color,
-                    flexShrink: 0,
-                  }}
-                />
-                <Box sx={{ flex: 1 }}>
-                  <Typography
-                    variant="body2"
-                    fontWeight={pendingQuality.id === quality.id ? 600 : 500}
-                  >
-                    {quality.label}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ lineHeight: 1.2 }}
-                  >
-                    {quality.id === "dull" &&
-                      "Muscles, joints - heavy, throbbing, stiff"}
-                    {quality.id === "sharp" &&
-                      "Sudden, knife-like, catching, stabbing"}
-                    {quality.id === "burning" &&
-                      "Nerve pain - burning, shooting, tingling"}
-                  </Typography>
-                </Box>
-                {pendingQuality.id === quality.id && (
-                  <CheckIcon sx={{ color: quality.color, fontSize: 20 }} />
-                )}
-              </Box>
+              />
             ))}
           </Stack>
 
-          {/* Intensity Slider */}
+          {/* Compact Intensity Slider */}
           <Typography
             variant="caption"
             color="text.secondary"
-            sx={{ fontWeight: 600, mb: 1, display: "block" }}
+            sx={{ fontWeight: 600, mb: 0.5, display: "block" }}
           >
-            Pain Intensity
+            Intensity
           </Typography>
-          <Box sx={{ px: 1 }}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 0.5,
-              }}
-            >
-              <Typography variant="caption" color="text.secondary">
-                Mild
-              </Typography>
-              <Typography
-                variant="h6"
-                fontWeight={700}
-                sx={{ color: pendingQuality.color }}
-              >
-                {pendingIntensity}/10
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Severe
-              </Typography>
-            </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
             <Slider
               value={pendingIntensity}
               onChange={(_, val) => setPendingIntensity(val as number)}
               min={1}
               max={10}
-              marks={[
-                { value: 1, label: "1" },
-                { value: 5, label: "5" },
-                { value: 10, label: "10" },
-              ]}
+              size="small"
               sx={{
+                flex: 1,
                 color: pendingQuality.color,
-                "& .MuiSlider-markLabel": {
-                  fontSize: "0.7rem",
-                  color: "text.secondary",
+                "& .MuiSlider-thumb": {
+                  width: 16,
+                  height: 16,
                 },
               }}
             />
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              sx={{
+                color: pendingQuality.color,
+                minWidth: 32,
+                textAlign: "right",
+              }}
+            >
+              {pendingIntensity}/10
+            </Typography>
           </Box>
 
-          {/* Confirm Button */}
-          <Box sx={{ display: "flex", gap: 1, mt: 3 }}>
-            <Chip
-              label="Cancel"
-              onClick={closePopover}
+          {/* Action Buttons */}
+          <Stack direction="row" spacing={1}>
+            <AuraButton
               variant="outlined"
-              sx={{ flex: 1, height: 40 }}
-            />
-            <Chip
-              label="Add Pain Area"
+              size="small"
+              onClick={closePopover}
+              sx={{ flex: 1 }}
+            >
+              Cancel
+            </AuraButton>
+            <AuraButton
+              variant="contained"
+              size="small"
               onClick={handleConfirmPain}
               sx={{
-                flex: 2,
-                height: 40,
+                flex: 1,
                 bgcolor: pendingQuality.color,
-                color: "white",
-                fontWeight: 600,
                 "&:hover": {
                   bgcolor: pendingQuality.color,
                   filter: "brightness(0.9)",
                 },
               }}
-            />
-          </Box>
-        </Paper>
+            >
+              Add
+            </AuraButton>
+          </Stack>
+        </Box>
       </Popover>
     </Box>
   );
