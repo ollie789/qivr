@@ -9,7 +9,6 @@ import {
   Checkbox,
   Grid,
   Autocomplete,
-
 } from "@mui/material";
 import { CloudUpload, CheckCircle } from "@mui/icons-material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +17,13 @@ import { useNavigate } from "react-router-dom";
 import { OCRResultsViewer } from "../components/documents";
 import { documentApi, Document } from "../services/documentApi";
 import { patientApi } from "../services/patientApi";
-import { PageHeader, DocumentUploader, auraTokens, LoadingSpinner, AuraButton } from "@qivr/design-system";
+import {
+  PageHeader,
+  DocumentUploader,
+  auraTokens,
+  LoadingSpinner,
+  AuraButton,
+} from "@qivr/design-system";
 
 const DOCUMENT_TYPES = [
   { value: "referral", label: "Referral" },
@@ -139,7 +144,13 @@ export default function DocumentUpload() {
     selectedFile && selectedPatient && !uploadMutation.isPending;
 
   return (
-    <Box sx={{ p: auraTokens.responsivePadding.page, maxWidth: auraTokens.responsive.contentMedium, mx: "auto" }}>
+    <Box
+      sx={{
+        p: auraTokens.responsivePadding.page,
+        maxWidth: auraTokens.responsive.contentMedium,
+        mx: "auto",
+      }}
+    >
       <PageHeader
         title="Upload Document"
         description="Upload patient documents with automatic OCR extraction and intelligent classification"
@@ -147,7 +158,13 @@ export default function DocumentUpload() {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper sx={{ p: 4, borderRadius: auraTokens.borderRadius.md, boxShadow: 3 }}>
+          <Paper
+            sx={{
+              p: 4,
+              borderRadius: auraTokens.borderRadius.md,
+              boxShadow: 3,
+            }}
+          >
             {uploadedDocument ? (
               <Box>
                 <Box
@@ -180,11 +197,15 @@ export default function DocumentUpload() {
                   <AuraButton
                     variant="contained"
                     size="large"
-                    onClick={() => navigate("/documents")}
+                    onClick={() => navigate("/inbox?tab=documents")}
                   >
                     View All Documents
                   </AuraButton>
-                  <AuraButton variant="outlined" size="large" onClick={handleReset}>
+                  <AuraButton
+                    variant="outlined"
+                    size="large"
+                    onClick={handleReset}
+                  >
                     Upload Another
                   </AuraButton>
                 </Box>

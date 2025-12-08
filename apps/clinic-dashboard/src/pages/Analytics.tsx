@@ -656,7 +656,7 @@ const Analytics: React.FC = () => {
                       <AuraButton
                         size="small"
                         variant="text"
-                        onClick={() => navigate("/patients")}
+                        onClick={() => navigate("/medical-records")}
                       >
                         View
                       </AuraButton>
@@ -839,7 +839,7 @@ const Analytics: React.FC = () => {
                       <AuraButton
                         size="small"
                         variant="text"
-                        onClick={() => navigate("/patients")}
+                        onClick={() => navigate("/medical-records")}
                       >
                         View
                       </AuraButton>

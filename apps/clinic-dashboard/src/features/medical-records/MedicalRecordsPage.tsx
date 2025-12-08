@@ -17,7 +17,6 @@ import {
   Person as PersonIcon,
   Favorite as HeartIcon,
   MedicalServices as MedicalIcon,
-  Timeline as TimelineIcon,
   Description as DocumentIcon,
   Send as ReferralIcon,
   Save as SaveIcon,
@@ -48,7 +47,6 @@ import {
   DemographicsTab,
   PainAssessmentTab,
   MedicalHistoryTab,
-  TimelineTab,
   DocumentsTab,
   ReferralsTab,
   PainBodyMap,
@@ -56,7 +54,6 @@ import {
   DemographicsSkeleton,
   PainAssessmentSkeleton,
   MedicalHistorySkeleton,
-  TimelineSkeleton,
   DocumentsSkeleton,
   ReferralsSkeleton,
 } from "./components";
@@ -72,7 +69,6 @@ import {
   useProcedures,
   usePhysioHistory,
   usePainProgression,
-  usePatientTimeline,
   usePatientReferrals,
   useAggregatedMedicalHistory,
 } from "./hooks";
@@ -269,7 +265,6 @@ const TAB_NAMES = [
   "pain",
   "history",
   "treatment",
-  "timeline",
   "documents",
   "referrals",
 ] as const;
@@ -345,7 +340,6 @@ const MedicalRecordsPage: React.FC = () => {
   const shouldFetchSummary = activeTab === 0 || activeTab === 2;
   const shouldFetchVitals = activeTab === 1;
   const shouldFetchHistory = activeTab === 2;
-  const shouldFetchTimeline = activeTab === 3;
   const shouldFetchDocuments = activeTab === 4;
   const shouldFetchReferrals = activeTab === 5;
 
@@ -378,8 +372,6 @@ const MedicalRecordsPage: React.FC = () => {
   const { data: painProgression } = usePainProgression(
     shouldFetchVitals ? selectedPatientId : null,
   );
-  const { data: timeline = [], isLoading: isTimelineLoading } =
-    usePatientTimeline(shouldFetchTimeline ? selectedPatientId : null);
 
   const medicalHistory = useAggregatedMedicalHistory(
     selectedPatientId,
@@ -684,7 +676,7 @@ const MedicalRecordsPage: React.FC = () => {
       case 2:
         return isMedicationsLoading;
       case 3:
-        return isTimelineLoading;
+        return false; // Treatment tab handles its own loading
       case 4:
         return isDocumentsLoading;
       case 5:
@@ -697,7 +689,6 @@ const MedicalRecordsPage: React.FC = () => {
     isSummaryLoading,
     isVitalsLoading,
     isMedicationsLoading,
-    isTimelineLoading,
     isDocumentsLoading,
     isReferralsLoading,
   ]);
@@ -801,11 +792,6 @@ const MedicalRecordsPage: React.FC = () => {
                     label="Treatment"
                   />
                   <Tab
-                    icon={<TimelineIcon />}
-                    iconPosition="start"
-                    label="Timeline"
-                  />
-                  <Tab
                     icon={<DocumentIcon />}
                     iconPosition="start"
                     label="Documents"
@@ -882,14 +868,6 @@ const MedicalRecordsPage: React.FC = () => {
 
               <TabPanel value={activeTab} index={4}>
                 {isTabLoading ? (
-                  <TimelineSkeleton />
-                ) : (
-                  <TimelineTab timeline={timeline} />
-                )}
-              </TabPanel>
-
-              <TabPanel value={activeTab} index={5}>
-                {isTabLoading ? (
                   <DocumentsSkeleton />
                 ) : (
                   <DocumentsTab
@@ -901,7 +879,7 @@ const MedicalRecordsPage: React.FC = () => {
                 )}
               </TabPanel>
 
-              <TabPanel value={activeTab} index={6}>
+              <TabPanel value={activeTab} index={5}>
                 {isTabLoading ? (
                   <ReferralsSkeleton />
                 ) : (

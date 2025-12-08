@@ -87,6 +87,7 @@ public class AppointmentsController : BaseApiController
             .Include(a => a.Patient)
             .Include(a => a.Provider)
             .Include(a => a.Evaluation)
+            .Include(a => a.ServiceType)
             .Where(a => a.TenantId == tenantId);
 
         // Filter by user role
@@ -154,6 +155,7 @@ public class AppointmentsController : BaseApiController
             .Include(a => a.Patient)
             .Include(a => a.Provider)
             .Include(a => a.Evaluation)
+            .Include(a => a.ServiceType)
             .Where(a => a.TenantId == tenantId);
 
         // Filter by user role
@@ -219,6 +221,7 @@ public class AppointmentsController : BaseApiController
             .Include(a => a.Patient)
             .Include(a => a.Provider)
             .Include(a => a.Evaluation)
+            .Include(a => a.ServiceType)
             .Where(a => a.TenantId == tenantId && a.Id == id)
             .FirstOrDefaultAsync();
 
@@ -744,6 +747,7 @@ public class AppointmentsController : BaseApiController
         var query = _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Provider)
+            .Include(a => a.ServiceType)
             .Where(a => a.TenantId == tenantId
                 && a.ScheduledStart > DateTime.UtcNow
                 && (a.Status == AppointmentStatus.Scheduled || a.Status == AppointmentStatus.Confirmed));
@@ -777,6 +781,7 @@ public class AppointmentsController : BaseApiController
         var query = _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Provider)
+            .Include(a => a.ServiceType)
             .Where(a => a.TenantId == tenantId
                 && (a.ScheduledStart <= DateTime.UtcNow || a.Status == AppointmentStatus.Completed || a.Status == AppointmentStatus.Cancelled));
 
@@ -877,8 +882,8 @@ public class AppointmentsController : BaseApiController
             PatientPhone = appointment.Patient?.Phone,
             ProviderId = appointment.ProviderId,
             ProviderProfileId = appointment.ProviderProfileId,
-            ProviderName = appointment.Provider != null 
-                ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}" 
+            ProviderName = appointment.Provider != null
+                ? $"{appointment.Provider.FirstName} {appointment.Provider.LastName}"
                 : null,
             ProviderEmail = appointment.Provider?.Email,
             ProviderPhone = appointment.Provider?.Phone,
@@ -906,7 +911,18 @@ public class AppointmentsController : BaseApiController
             CancelledAt = appointment.CancelledAt,
             ReminderSentAt = appointment.ReminderSentAt,
             CreatedAt = appointment.CreatedAt,
-            UpdatedAt = appointment.UpdatedAt
+            UpdatedAt = appointment.UpdatedAt,
+            // Service type & pricing
+            ServiceTypeId = appointment.ServiceTypeId,
+            ServiceTypeName = appointment.ServiceType?.Name,
+            ServiceTypePrice = appointment.ServiceType?.Price,
+            // Payment tracking
+            IsPaid = appointment.IsPaid,
+            PaidAt = appointment.PaidAt,
+            PaymentMethod = appointment.PaymentMethod,
+            PaymentReference = appointment.PaymentReference,
+            PaymentAmount = appointment.PaymentAmount,
+            PaymentNotes = appointment.PaymentNotes
         };
 
         return dto;

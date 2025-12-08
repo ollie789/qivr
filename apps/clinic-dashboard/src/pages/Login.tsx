@@ -17,7 +17,7 @@ export default function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard", { replace: true });
+      navigate("/analytics", { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -32,7 +32,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await login(data.email, data.password);
-      navigate("/dashboard");
+      navigate("/analytics");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "";
 
@@ -72,10 +72,7 @@ export default function Login() {
   );
 
   return (
-    <AuthLayout
-      appName="Qivr"
-      tagline="Clinic Management Portal"
-    >
+    <AuthLayout appName="Qivr" tagline="Clinic Management Portal">
       <LoginForm
         onSubmit={handleLogin}
         error={error}
@@ -83,7 +80,6 @@ export default function Login() {
         title="Log in"
         subtitle="Qivr Clinic Portal"
         onSignUpClick={() => navigate("/signup")}
-        onForgotPasswordClick={() => navigate("/forgot-password")}
         footer={footer}
       />
     </AuthLayout>

@@ -334,12 +334,15 @@ class AppointmentsApi {
     totalAppointments: number;
     paidAppointments: number;
     unpaidAppointments: number;
+    totalOutstanding: number;
     byPaymentMethod: Record<string, number>;
     byServiceType: Array<{
       serviceType: string;
       revenue: number;
       count: number;
     }>;
+    startDate: string;
+    endDate: string;
   }> {
     return apiClient.get("/api/appointments/payment-summary", { params });
   }

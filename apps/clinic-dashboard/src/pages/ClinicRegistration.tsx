@@ -1,12 +1,6 @@
 import { auraTokens, Callout, AuraButton, AuraCard } from "@qivr/design-system";
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  TextField,
-  Typography,
-  Grid,
-  Container,
-} from "@mui/material";
+import { Box, TextField, Typography, Grid, Container } from "@mui/material";
 import { BusinessCenter as ClinicIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api-client";
@@ -88,8 +82,8 @@ const ClinicRegistration: React.FC = () => {
       );
 
       if (response) {
-        // Redirect to dashboard after successful registration
-        navigate("/dashboard");
+        // Redirect to analytics after successful registration
+        navigate("/analytics");
       }
     } catch (err) {
       setError(
@@ -123,139 +117,139 @@ const ClinicRegistration: React.FC = () => {
               "linear-gradient(135deg, rgba(51, 133, 240, 0.02) 0%, rgba(166, 65, 250, 0.02) 100%)",
           }}
         >
-            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-              <Box
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: auraTokens.borderRadius.md,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: auraTokens.gradients.primary,
-                  boxShadow: auraTokens.shadows.lg,
-                }}
-              >
-                <ClinicIcon sx={{ fontSize: 28, color: "white" }} />
-              </Box>
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: auraTokens.borderRadius.md,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: auraTokens.gradients.primary,
+                boxShadow: auraTokens.shadows.lg,
+              }}
+            >
+              <ClinicIcon sx={{ fontSize: 28, color: "white" }} />
             </Box>
-            <Typography
-              variant="h4"
-              component="h1"
-              gutterBottom
-              align="center"
-              sx={{ fontWeight: 700 }}
-            >
-              Complete Your Clinic Setup
-            </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              align="center"
-              mb={4}
-            >
-              Welcome {user.name.split(" ")[0]}! Please provide your clinic
-              details to get started.
-            </Typography>
+          </Box>
+          <Typography
+            variant="h4"
+            component="h1"
+            gutterBottom
+            align="center"
+            sx={{ fontWeight: 700 }}
+          >
+            Complete Your Clinic Setup
+          </Typography>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            align="center"
+            mb={4}
+          >
+            Welcome {user.name.split(" ")[0]}! Please provide your clinic
+            details to get started.
+          </Typography>
 
-            {error && (
-              <Box sx={{ mb: 3 }}>
-                <Callout variant="error" title="Registration Error">
-                  {error}
-                </Callout>
-              </Box>
-            )}
+          {error && (
+            <Box sx={{ mb: 3 }}>
+              <Callout variant="error" title="Registration Error">
+                {error}
+              </Callout>
+            </Box>
+          )}
 
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={3}>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Clinic Name"
-                    value={clinicData.clinicName}
-                    onChange={handleChange("clinicName")}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    value={clinicData.phone}
-                    onChange={handleChange("phone")}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Address"
-                    value={clinicData.address}
-                    onChange={handleChange("address")}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="City"
-                    value={clinicData.city}
-                    onChange={handleChange("city")}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="State"
-                    value={clinicData.state}
-                    onChange={handleChange("state")}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Zip Code"
-                    value={clinicData.zipCode}
-                    onChange={handleChange("zipCode")}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
+          <form onSubmit={handleSubmit}>
+            <Grid container spacing={3}>
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  label="Clinic Name"
+                  value={clinicData.clinicName}
+                  onChange={handleChange("clinicName")}
+                  required
+                  variant="outlined"
+                />
               </Grid>
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  label="Phone Number"
+                  value={clinicData.phone}
+                  onChange={handleChange("phone")}
+                  required
+                  variant="outlined"
+                />
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  label="Address"
+                  value={clinicData.address}
+                  onChange={handleChange("address")}
+                  required
+                  variant="outlined"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="City"
+                  value={clinicData.city}
+                  onChange={handleChange("city")}
+                  required
+                  variant="outlined"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <TextField
+                  fullWidth
+                  label="State"
+                  value={clinicData.state}
+                  onChange={handleChange("state")}
+                  required
+                  variant="outlined"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <TextField
+                  fullWidth
+                  label="Zip Code"
+                  value={clinicData.zipCode}
+                  onChange={handleChange("zipCode")}
+                  required
+                  variant="outlined"
+                />
+              </Grid>
+            </Grid>
 
-              <AuraButton
-                type="submit"
-                fullWidth
-                variant="contained"
-                size="large"
-                disabled={loading}
-                sx={{
-                  mt: 3,
-                  py: 1.5,
+            <AuraButton
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{
+                mt: 3,
+                py: 1.5,
+                background: auraTokens.gradients.primary,
+                boxShadow: auraTokens.shadows.md,
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                "&:hover": {
                   background: auraTokens.gradients.primary,
-                  boxShadow: auraTokens.shadows.md,
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    background: auraTokens.gradients.primary,
-                    filter: "brightness(0.9)",
-                    boxShadow: auraTokens.shadows.lg,
-                    transform: "translateY(-2px)",
-                  },
-                  "&:active": {
-                    transform: "translateY(0)",
-                  },
-                }}
-              >
-                {loading ? "Setting up your clinic..." : "Complete Setup"}
-              </AuraButton>
-            </form>
+                  filter: "brightness(0.9)",
+                  boxShadow: auraTokens.shadows.lg,
+                  transform: "translateY(-2px)",
+                },
+                "&:active": {
+                  transform: "translateY(0)",
+                },
+              }}
+            >
+              {loading ? "Setting up your clinic..." : "Complete Setup"}
+            </AuraButton>
+          </form>
         </AuraCard>
       </Box>
     </Container>
