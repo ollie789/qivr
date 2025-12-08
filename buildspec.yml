@@ -30,8 +30,10 @@ phases:
           BUILD_PARTNER=true
         else
           echo "Comparing $PREV_COMMIT to $CODEBUILD_RESOLVED_SOURCE_VERSION"
-          CHANGED_FILES=$(git diff --name-only $PREV_COMMIT $CODEBUILD_RESOLVED_SOURCE_VERSION 2>/dev/null || echo "all")
-          if [ "$CHANGED_FILES" = "all" ]; then
+          git fetch --depth=100 origin main 2>/dev/null || true
+          CHANGED_FILES=$(git diff --name-only $PREV_COMMIT $CODEBUILD_RESOLVED_SOURCE_VERSION 2>/dev/null || echo "")
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changes detected or git diff failed - building all to be safe"
             BUILD_BACKEND=true; BUILD_CLINIC=true; BUILD_PATIENT=true; BUILD_ADMIN=true; BUILD_PARTNER=true
           else
             BUILD_BACKEND=$(echo "$CHANGED_FILES" | grep -q "^backend/\|^packages/" && echo true || echo false)
@@ -101,39 +103,42 @@ phases:
     commands:
       - echo Build completed on `date`
 
-      # Deploy only changed frontends
+      # Deploy only changed frontends (sequential to ensure completion)
       - |
         if [ "$BUILD_CLINIC" = "true" ]; then
           echo "Deploying clinic-dashboard..."
-          aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION &
+          aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION
         fi
         if [ "$BUILD_PATIENT" = "true" ]; then
           echo "Deploying patient-portal..."
-          aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION &
+          aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION
         fi
         if [ "$BUILD_ADMIN" = "true" ]; then
           echo "Deploying admin-portal..."
-          aws s3 sync apps/admin-portal/dist/ s3://qivr-admin-portal --delete --region $AWS_DEFAULT_REGION &
+          aws s3 sync apps/admin-portal/dist/ s3://qivr-admin-portal --delete --region $AWS_DEFAULT_REGION
         fi
         if [ "$BUILD_PARTNER" = "true" ]; then
           echo "Deploying partner-portal..."
-          aws s3 sync apps/partner-portal/dist/ s3://qivr-partner-portal --delete --region $AWS_DEFAULT_REGION &
+          aws s3 sync apps/partner-portal/dist/ s3://qivr-partner-portal --delete --region $AWS_DEFAULT_REGION
         fi
-        wait
 
-      # Invalidate only changed CloudFront distributions
+      # Invalidate only changed CloudFront distributions (sequential to ensure completion)
       - |
         if [ "$BUILD_CLINIC" = "true" ]; then
-          aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*" &
+          echo "Invalidating clinic CloudFront..."
+          aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
         fi
         if [ "$BUILD_PATIENT" = "true" ]; then
-          aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*" &
+          echo "Invalidating patient CloudFront..."
+          aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*"
         fi
         if [ "$BUILD_ADMIN" = "true" ]; then
-          aws cloudfront create-invalidation --distribution-id E30RX4A147QBCE --paths "/*" &
+          echo "Invalidating admin CloudFront..."
+          aws cloudfront create-invalidation --distribution-id E30RX4A147QBCE --paths "/*"
         fi
         if [ "$BUILD_PARTNER" = "true" ]; then
-          aws cloudfront create-invalidation --distribution-id E3TORP1KMGHC6H --paths "/*" &
+          echo "Invalidating partner CloudFront..."
+          aws cloudfront create-invalidation --distribution-id E3TORP1KMGHC6H --paths "/*"
         fi
 
       # Update ECS service only if backend changed
