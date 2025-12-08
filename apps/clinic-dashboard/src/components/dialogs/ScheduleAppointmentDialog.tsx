@@ -86,7 +86,7 @@ interface ServiceType {
 }
 
 // Fallback types if no service types configured
-const defaultAppointmentTypes = [
+const defaultAppointmentTypes: ServiceType[] = [
   {
     id: "initial",
     name: "Initial Consultation",
@@ -137,6 +137,8 @@ export const ScheduleAppointmentDialog: React.FC<
     providerName: "",
     appointmentType:
       defaultAppointmentType || (intakeId ? "initial" : "followup"),
+    serviceTypeId: null as string | null,
+    serviceTypePrice: 0,
     date: initialDate || (null as Date | null),
     timeSlot: null as string | null,
     selectedSlot: null as AvailableSlot | null,
@@ -160,6 +162,8 @@ export const ScheduleAppointmentDialog: React.FC<
         providerName: "",
         appointmentType:
           defaultAppointmentType || (intakeId ? "initial" : "followup"),
+        serviceTypeId: null,
+        serviceTypePrice: 0,
         date: initialDate || null,
         timeSlot: null,
         selectedSlot: null,
@@ -275,6 +279,7 @@ export const ScheduleAppointmentDialog: React.FC<
       scheduledStart: string;
       scheduledEnd: string;
       appointmentType: string;
+      serviceTypeId?: string;
       reasonForVisit?: string;
       notes?: string;
       treatmentPlanId?: string;
@@ -325,6 +330,7 @@ export const ScheduleAppointmentDialog: React.FC<
         scheduledStart: selectedSlotData.start,
         scheduledEnd: selectedSlotData.end,
         appointmentType: appointmentData.appointmentType,
+        serviceTypeId: appointmentData.serviceTypeId || undefined,
         reasonForVisit: prefilledData?.chiefComplaint,
         notes: appointmentData.notes,
         treatmentPlanId,
@@ -349,6 +355,7 @@ export const ScheduleAppointmentDialog: React.FC<
         scheduledStart: scheduledStart.toISOString(),
         scheduledEnd: scheduledEnd.toISOString(),
         appointmentType: appointmentData.appointmentType,
+        serviceTypeId: appointmentData.serviceTypeId || undefined,
         reasonForVisit: prefilledData?.chiefComplaint,
         notes: appointmentData.notes,
         treatmentPlanId,
@@ -544,34 +551,38 @@ export const ScheduleAppointmentDialog: React.FC<
           )}
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
-              Appointment Type
+              Service Type
             </Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-              {appointmentTypes.map((type) => (
-                <Chip
-                  key={type.id}
-                  label={`${type.name} (${type.durationMinutes} min)${type.price > 0 ? ` - $${type.price}` : ""}`}
-                  color={
-                    appointmentData.appointmentType === type.id
-                      ? "primary"
-                      : "default"
-                  }
-                  onClick={() =>
-                    setAppointmentData({
-                      ...appointmentData,
-                      appointmentType: type.id,
-                      duration: type.durationMinutes,
-                      // Reset time slot when duration changes
-                      timeSlot: null,
-                    })
-                  }
-                  variant={
-                    appointmentData.appointmentType === type.id
-                      ? "filled"
-                      : "outlined"
-                  }
-                />
-              ))}
+              {appointmentTypes.map((type) => {
+                // Check if this is a real service type (has UUID) or default type
+                const isServiceType =
+                  serviceTypesData.length > 0 &&
+                  serviceTypesData.some((st) => st.id === type.id);
+                const isSelected = isServiceType
+                  ? appointmentData.serviceTypeId === type.id
+                  : appointmentData.appointmentType === type.id;
+
+                return (
+                  <Chip
+                    key={type.id}
+                    label={`${type.name} (${type.durationMinutes} min)${type.price > 0 ? ` - $${type.price.toFixed(2)}` : ""}`}
+                    color={isSelected ? "primary" : "default"}
+                    onClick={() =>
+                      setAppointmentData({
+                        ...appointmentData,
+                        appointmentType: type.name,
+                        serviceTypeId: isServiceType ? type.id : null,
+                        serviceTypePrice: type.price,
+                        duration: type.durationMinutes,
+                        // Reset time slot when duration changes
+                        timeSlot: null,
+                      })
+                    }
+                    variant={isSelected ? "filled" : "outlined"}
+                  />
+                );
+              })}
             </Box>
           </Box>
         </FormSection>
@@ -653,6 +664,12 @@ export const ScheduleAppointmentDialog: React.FC<
     }
 
     // Confirm Step
+    const selectedServiceType = appointmentTypes.find(
+      (t) =>
+        t.id === appointmentData.serviceTypeId ||
+        t.name === appointmentData.appointmentType,
+    );
+
     return (
       <FormSection
         title="Confirm Details"
@@ -666,12 +683,7 @@ export const ScheduleAppointmentDialog: React.FC<
             Provider: {appointmentData.providerName}
           </Typography>
           <Typography variant="body2">
-            Type:{" "}
-            {
-              appointmentTypes.find(
-                (t) => t.id === appointmentData.appointmentType,
-              )?.name
-            }
+            Service: {appointmentData.appointmentType}
           </Typography>
           <Typography variant="body2">
             Date: {appointmentData.date?.toLocaleDateString()}
@@ -683,6 +695,42 @@ export const ScheduleAppointmentDialog: React.FC<
             Duration: {appointmentData.duration} minutes
           </Typography>
         </Callout>
+
+        {appointmentData.serviceTypePrice > 0 && (
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+              bgcolor: "success.50",
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "success.200",
+            }}
+          >
+            <Typography variant="subtitle2" color="success.dark" gutterBottom>
+              Pricing
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="body2">
+                {selectedServiceType?.name || appointmentData.appointmentType}
+              </Typography>
+              <Typography variant="h6" fontWeight={700} color="success.dark">
+                ${appointmentData.serviceTypePrice.toFixed(2)}
+              </Typography>
+            </Box>
+            {selectedServiceType?.billingCode && (
+              <Typography variant="caption" color="text.secondary">
+                Billing Code: {selectedServiceType.billingCode}
+              </Typography>
+            )}
+          </Box>
+        )}
       </FormSection>
     );
   };

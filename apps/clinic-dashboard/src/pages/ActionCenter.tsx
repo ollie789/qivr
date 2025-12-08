@@ -17,7 +17,13 @@
  * 5. Context Awareness - See patient history when item selected
  */
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import {
   Box,
   Typography,
@@ -79,6 +85,8 @@ import {
   History as HistoryIcon,
   Assessment as AssessmentIcon,
   Keyboard as KeyboardIcon,
+  FitnessCenter as TreatmentPlanIcon,
+  EventRepeat as FollowUpIcon,
 } from "@mui/icons-material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -110,6 +118,7 @@ import { referralApi, type Referral } from "../services/referralApi";
 import { appointmentsApi, type Appointment } from "../services/appointmentsApi";
 import { promApi, type PromResponse } from "../services/promApi";
 import { inboxApi } from "../services/inboxApi";
+import { treatmentPlansApi } from "../lib/api";
 import { MessageComposer } from "../components/messaging";
 
 // ============================================================================
@@ -123,7 +132,9 @@ type ActionType =
   | "referral"
   | "reminder"
   | "appointment"
-  | "prom";
+  | "prom"
+  | "treatment-plan"
+  | "follow-up";
 
 type ActionPriority = "urgent" | "high" | "normal" | "low";
 
@@ -237,7 +248,10 @@ function extractId(prefixedId: string): string {
   const parts = prefixedId.split("-");
   // If it starts with a known prefix, remove it
   const firstPart = parts[0];
-  if (firstPart && ["prom", "intake", "message", "referral", "appointment"].includes(firstPart)) {
+  if (
+    firstPart &&
+    ["prom", "intake", "message", "referral", "appointment"].includes(firstPart)
+  ) {
     return parts.slice(1).join("-");
   }
   return prefixedId;
@@ -266,7 +280,9 @@ export default function ActionCenter() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<HTMLElement | null>(null);
+  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<HTMLElement | null>(
+    null,
+  );
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [snoozeMenuAnchor, setSnoozeMenuAnchor] = useState<HTMLElement | null>(
     null,
@@ -332,13 +348,76 @@ export default function ActionCenter() {
     refetchInterval: 60000,
   });
 
+  // Fetch treatment plan alerts (stalled plans, patients needing plans)
+  const { data: treatmentPlanAlerts = [], isLoading: treatmentPlansLoading } =
+    useQuery({
+      queryKey: ["action-center-treatment-plans"],
+      queryFn: async () => {
+        try {
+          const alerts = await treatmentPlansApi.getAlerts();
+          return alerts as Array<{
+            id: string;
+            type: "no_plan" | "stalled" | "nearing_completion";
+            patientId: string;
+            patientName: string;
+            patientEmail?: string;
+            planId?: string;
+            planTitle?: string;
+            lastSessionDate?: string;
+            daysSinceLastSession?: number;
+            sessionsRemaining?: number;
+            createdAt: string;
+          }>;
+        } catch {
+          // API might not exist yet, return empty array
+          return [];
+        }
+      },
+    });
+
+  // Fetch completed appointments without follow-ups scheduled
+  const { data: followUpAlerts = [], isLoading: followUpsLoading } = useQuery({
+    queryKey: ["action-center-follow-ups"],
+    queryFn: async () => {
+      try {
+        // Get recently completed appointments
+        const sevenDaysAgo = addDays(new Date(), -7);
+        const result = await appointmentsApi.getAppointments({
+          startDate: sevenDaysAgo.toISOString(),
+          endDate: new Date().toISOString(),
+          status: "completed",
+        });
+
+        // Filter to those that might need follow-up (no future appointment scheduled)
+        // This is a simplified check - ideally the API would return this info
+        const completedWithoutFollowUp = result.items.filter(
+          (apt: Appointment) => {
+            // Check if appointment has notes indicating follow-up needed
+            const notes = apt.notes?.toLowerCase() || "";
+            const needsFollowUp =
+              !notes.includes("no follow-up") &&
+              !notes.includes("discharged") &&
+              !notes.includes("treatment complete");
+            return needsFollowUp;
+          },
+        );
+
+        return completedWithoutFollowUp;
+      } catch {
+        return [];
+      }
+    },
+  });
+
   const isLoading =
     conversationsLoading ||
     documentsLoading ||
     referralsLoading ||
     appointmentsLoading ||
     promsLoading ||
-    inboxLoading;
+    inboxLoading ||
+    treatmentPlansLoading ||
+    followUpsLoading;
 
   // ============================================================================
   // Transform All Data into Action Items
@@ -470,6 +549,82 @@ export default function ActionCenter() {
       items.push(item);
     });
 
+    // Transform treatment plan alerts
+    treatmentPlanAlerts.forEach((alert) => {
+      let title = "";
+      let preview = "";
+      let priority: ActionPriority = "normal";
+
+      switch (alert.type) {
+        case "no_plan":
+          title = "No Treatment Plan";
+          preview =
+            "Patient has completed sessions but no active treatment plan assigned";
+          priority = "high";
+          break;
+        case "stalled":
+          title = `Treatment Plan Stalled - ${alert.planTitle || "Unknown"}`;
+          preview = `${alert.daysSinceLastSession || 0} days since last session`;
+          priority = (alert.daysSinceLastSession || 0) > 14 ? "urgent" : "high";
+          break;
+        case "nearing_completion":
+          title = `Plan Nearing Completion - ${alert.planTitle || "Unknown"}`;
+          preview = `${alert.sessionsRemaining || 0} sessions remaining - discuss next steps`;
+          priority = "normal";
+          break;
+      }
+
+      const item: ActionItem = {
+        id: `tp-${alert.id}`,
+        type: "treatment-plan",
+        title,
+        subtitle: alert.patientName,
+        preview,
+        timestamp: alert.createdAt || new Date().toISOString(),
+        priority,
+        priorityScore: 0,
+        isUnread: true,
+        isStarred: starredIds.has(`tp-${alert.id}`),
+        patientId: alert.patientId,
+        patientName: alert.patientName,
+        patientEmail: alert.patientEmail,
+        status: alert.type,
+        metadata: { treatmentPlanAlert: alert },
+      };
+      item.priorityScore = calculatePriorityScore(item);
+      items.push(item);
+    });
+
+    // Transform follow-up alerts (completed appointments without follow-up)
+    followUpAlerts.forEach((apt: Appointment) => {
+      const completionDate = apt.scheduledEnd || apt.scheduledStart;
+      const daysSinceCompletion = differenceInDays(
+        new Date(),
+        parseISO(completionDate),
+      );
+
+      const item: ActionItem = {
+        id: `followup-${apt.id}`,
+        type: "follow-up",
+        title: `Follow-up Needed - ${apt.patientName}`,
+        subtitle: apt.appointmentType,
+        preview: `Session completed ${daysSinceCompletion} day${daysSinceCompletion !== 1 ? "s" : ""} ago - no follow-up scheduled`,
+        timestamp: completionDate,
+        priority: daysSinceCompletion > 5 ? "high" : "normal",
+        priorityScore: 0,
+        isUnread: true,
+        isStarred: starredIds.has(`followup-${apt.id}`),
+        patientId: apt.patientId,
+        patientName: apt.patientName,
+        patientPhone: apt.patientPhone,
+        patientEmail: apt.patientEmail,
+        status: "needs-follow-up",
+        metadata: { appointment: apt, daysSinceCompletion },
+      };
+      item.priorityScore = calculatePriorityScore(item);
+      items.push(item);
+    });
+
     // Sort by priority score (highest first)
     return items.sort((a, b) => b.priorityScore - a.priorityScore);
   }, [
@@ -478,6 +633,8 @@ export default function ActionCenter() {
     pendingReferrals,
     upcomingAppointments,
     overduePROMs,
+    treatmentPlanAlerts,
+    followUpAlerts,
     inboxResponse,
   ]);
 
@@ -590,12 +747,18 @@ export default function ActionCenter() {
     ).length;
     const overdue = actionItems.filter(
       (i) =>
-        i.dueDate && isPast(parseISO(i.dueDate)) && !isToday(parseISO(i.dueDate)),
+        i.dueDate &&
+        isPast(parseISO(i.dueDate)) &&
+        !isToday(parseISO(i.dueDate)),
     ).length;
     const messages = actionItems.filter(
       (i) => i.type === "message" && i.isUnread,
     ).length;
     const referrals = actionItems.filter((i) => i.type === "referral").length;
+    const treatmentPlans = actionItems.filter(
+      (i) => i.type === "treatment-plan",
+    ).length;
+    const followUps = actionItems.filter((i) => i.type === "follow-up").length;
 
     return {
       unread,
@@ -604,6 +767,8 @@ export default function ActionCenter() {
       overdue,
       messages,
       referrals,
+      treatmentPlans,
+      followUps,
       total: actionItems.length,
     };
   }, [actionItems]);
@@ -729,6 +894,10 @@ export default function ActionCenter() {
     queryClient.invalidateQueries({ queryKey: ["action-center-referrals"] });
     queryClient.invalidateQueries({ queryKey: ["action-center-appointments"] });
     queryClient.invalidateQueries({ queryKey: ["action-center-proms"] });
+    queryClient.invalidateQueries({
+      queryKey: ["action-center-treatment-plans"],
+    });
+    queryClient.invalidateQueries({ queryKey: ["action-center-follow-ups"] });
     refetchInbox();
     enqueueSnackbar("Refreshed", { variant: "info" });
   }, [queryClient, refetchInbox, enqueueSnackbar]);
@@ -766,6 +935,22 @@ export default function ActionCenter() {
           navigate(
             `/prom?instanceId=${(item.metadata.prom as { id: string })?.id}`,
           );
+          break;
+        case "treatment-plan":
+          // Navigate to patient's medical records with treatment tab
+          if (item.patientId) {
+            navigate(
+              `/medical-records?patientId=${item.patientId}&tab=treatment`,
+            );
+          }
+          break;
+        case "follow-up":
+          // Navigate to schedule appointment for this patient
+          if (item.patientId) {
+            navigate(
+              `/appointments?patientId=${item.patientId}&action=schedule`,
+            );
+          }
           break;
       }
     },
@@ -886,6 +1071,10 @@ export default function ActionCenter() {
         return <AppointmentIcon />;
       case "prom":
         return <AssessmentIcon />;
+      case "treatment-plan":
+        return <TreatmentPlanIcon />;
+      case "follow-up":
+        return <FollowUpIcon />;
       default:
         return <TaskIcon />;
     }
@@ -907,6 +1096,10 @@ export default function ActionCenter() {
         return auraColors.green.main;
       case "prom":
         return auraColors.blue.main;
+      case "treatment-plan":
+        return auraColors.orange.main;
+      case "follow-up":
+        return auraColors.purple.main;
       default:
         return auraColors.grey[500];
     }
@@ -1026,7 +1219,10 @@ export default function ActionCenter() {
       {/* Stats Row */}
       <Grid container spacing={2} sx={{ mb: 2, px: 3 }}>
         <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-          <Box onClick={() => setFilter("needs-action")} sx={{ cursor: "pointer" }}>
+          <Box
+            onClick={() => setFilter("needs-action")}
+            sx={{ cursor: "pointer" }}
+          >
             <AuraGlassStatCard
               title="Need Action"
               value={stats.unread}
@@ -1121,7 +1317,14 @@ export default function ActionCenter() {
 
       {/* Main Content */}
       <Box
-        sx={{ flex: 1, display: "flex", overflow: "hidden", px: 3, pb: 3, gap: 2 }}
+        sx={{
+          flex: 1,
+          display: "flex",
+          overflow: "hidden",
+          px: 3,
+          pb: 3,
+          gap: 2,
+        }}
       >
         {/* Left Panel - List */}
         <Paper
@@ -1182,6 +1385,18 @@ export default function ActionCenter() {
                 iconPosition="start"
                 label="PROMs"
               />
+              <Tab
+                value="treatment-plan"
+                icon={<TreatmentPlanIcon fontSize="small" />}
+                iconPosition="start"
+                label="Plans"
+              />
+              <Tab
+                value="follow-up"
+                icon={<FollowUpIcon fontSize="small" />}
+                iconPosition="start"
+                label="Follow-ups"
+              />
             </Tabs>
           </Box>
 
@@ -1214,7 +1429,9 @@ export default function ActionCenter() {
                       : "No items need your attention right now"
                   }
                   icon={
-                    <CompleteIcon sx={{ fontSize: 48, color: "success.main" }} />
+                    <CompleteIcon
+                      sx={{ fontSize: 48, color: "success.main" }}
+                    />
                   }
                   variant="compact"
                 />
@@ -1233,13 +1450,17 @@ export default function ActionCenter() {
                         borderBottom: "1px solid",
                         borderColor: "divider",
                         cursor: "pointer",
-                        "&:hover": { bgcolor: alpha(auraColors.blue.main, 0.08) },
+                        "&:hover": {
+                          bgcolor: alpha(auraColors.blue.main, 0.08),
+                        },
                       }}
                     >
                       <ListItemAvatar>
                         <Avatar
                           sx={{
-                            bgcolor: getTypeColor(group.items[0]?.type || "task"),
+                            bgcolor: getTypeColor(
+                              group.items[0]?.type || "task",
+                            ),
                           }}
                         >
                           <PatientIcon />
@@ -1248,7 +1469,11 @@ export default function ActionCenter() {
                       <ListItemText
                         primary={
                           <Box
-                            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
                           >
                             <Typography variant="subtitle2" fontWeight={600}>
                               {group.patientName}
@@ -1370,7 +1595,13 @@ export default function ActionCenter() {
         onClose={() => setComposeOpen(false)}
         recipients={
           selectedItem?.patientId && selectedItem?.patientName
-            ? [{ id: selectedItem.patientId, name: selectedItem.patientName, type: "patient" as const }]
+            ? [
+                {
+                  id: selectedItem.patientId,
+                  name: selectedItem.patientName,
+                  type: "patient" as const,
+                },
+              ]
             : undefined
         }
         allowPatientSelection
@@ -1418,7 +1649,8 @@ export default function ActionCenter() {
       >
         <MenuItem
           onClick={() =>
-            snoozeItemId && handleSnooze(snoozeItemId, addDays(new Date(), 0.125))
+            snoozeItemId &&
+            handleSnooze(snoozeItemId, addDays(new Date(), 0.125))
           }
         >
           Later Today (3 hours)
@@ -1613,7 +1845,9 @@ function ActionItemRow({
               color="text.secondary"
               sx={{ ml: 1, flexShrink: 0, fontSize: "0.7rem" }}
             >
-              {formatDistanceToNow(parseISO(item.timestamp), { addSuffix: true })}
+              {formatDistanceToNow(parseISO(item.timestamp), {
+                addSuffix: true,
+              })}
             </Typography>
           </Box>
 
@@ -1792,7 +2026,10 @@ function ActionItemDetail({
                 <StatusBadge status="warning" label="High Priority" />
               )}
               {item.status && (
-                <StatusBadge status={item.status.toLowerCase().replace(/\s+/g, "-")} label={item.status} />
+                <StatusBadge
+                  status={item.status.toLowerCase().replace(/\s+/g, "-")}
+                  label={item.status}
+                />
               )}
               {item.dueDate && (
                 <Chip
@@ -1883,123 +2120,262 @@ function ActionItemDetail({
           {item.preview}
         </Typography>
 
-        {item.type === "document" && (() => {
-          const doc = item.metadata?.document as { extractedText?: string } | undefined;
-          return doc?.extractedText ? (
-            <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mb: 1, display: "block" }}
-              >
-                Extracted Text (OCR)
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontFamily: "monospace",
-                  fontSize: "0.8rem",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {doc.extractedText}
-              </Typography>
-            </Paper>
-          ) : null;
-        })()}
+        {item.type === "document" &&
+          (() => {
+            const doc = item.metadata?.document as
+              | { extractedText?: string }
+              | undefined;
+            return doc?.extractedText ? (
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mb: 1, display: "block" }}
+                >
+                  Extracted Text (OCR)
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: "monospace",
+                    fontSize: "0.8rem",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {doc.extractedText}
+                </Typography>
+              </Paper>
+            ) : null;
+          })()}
 
-        {item.type === "referral" && (() => {
-          const ref = item.metadata?.referral as {
-            specialty?: string;
-            reasonForReferral?: string;
-            externalProviderName?: string;
-          } | undefined;
-          return ref ? (
-            <Stack spacing={2}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Specialty
-                </Typography>
-                <Typography variant="body2">{ref.specialty || "N/A"}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Reason for Referral
-                </Typography>
-                <Typography variant="body2">
-                  {ref.reasonForReferral || "Not specified"}
-                </Typography>
-              </Box>
-              {ref.externalProviderName && (
+        {item.type === "referral" &&
+          (() => {
+            const ref = item.metadata?.referral as
+              | {
+                  specialty?: string;
+                  reasonForReferral?: string;
+                  externalProviderName?: string;
+                }
+              | undefined;
+            return ref ? (
+              <Stack spacing={2}>
                 <Box>
                   <Typography variant="caption" color="text.secondary">
-                    External Provider
+                    Specialty
                   </Typography>
-                  <Typography variant="body2">{ref.externalProviderName}</Typography>
+                  <Typography variant="body2">
+                    {ref.specialty || "N/A"}
+                  </Typography>
                 </Box>
-              )}
-            </Stack>
-          ) : null;
-        })()}
-
-        {item.type === "appointment" && (() => {
-          const apt = item.metadata?.appointment as {
-            scheduledStart?: string;
-            providerName?: string;
-            location?: string;
-          } | undefined;
-          return apt ? (
-            <Stack spacing={2}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Scheduled Time
-                </Typography>
-                <Typography variant="body2">
-                  {apt.scheduledStart
-                    ? format(parseISO(apt.scheduledStart), "EEEE, MMMM d 'at' h:mm a")
-                    : "Not scheduled"}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Provider
-                </Typography>
-                <Typography variant="body2">{apt.providerName || "N/A"}</Typography>
-              </Box>
-              {apt.location && (
                 <Box>
                   <Typography variant="caption" color="text.secondary">
-                    Location
+                    Reason for Referral
                   </Typography>
-                  <Typography variant="body2">{apt.location}</Typography>
+                  <Typography variant="body2">
+                    {ref.reasonForReferral || "Not specified"}
+                  </Typography>
                 </Box>
-              )}
-            </Stack>
-          ) : null;
-        })()}
+                {ref.externalProviderName && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      External Provider
+                    </Typography>
+                    <Typography variant="body2">
+                      {ref.externalProviderName}
+                    </Typography>
+                  </Box>
+                )}
+              </Stack>
+            ) : null;
+          })()}
 
-        {item.type === "prom" && (() => {
-          const prom = item.metadata?.prom as {
-            templateName?: string;
-            status?: string;
-          } | undefined;
-          return prom ? (
-            <Stack spacing={2}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Questionnaire
-                </Typography>
-                <Typography variant="body2">{prom.templateName || "N/A"}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Status
-                </Typography>
-                <Typography variant="body2">{prom.status || "Unknown"}</Typography>
-              </Box>
-            </Stack>
-          ) : null;
-        })()}
+        {item.type === "appointment" &&
+          (() => {
+            const apt = item.metadata?.appointment as
+              | {
+                  scheduledStart?: string;
+                  providerName?: string;
+                  location?: string;
+                }
+              | undefined;
+            return apt ? (
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Scheduled Time
+                  </Typography>
+                  <Typography variant="body2">
+                    {apt.scheduledStart
+                      ? format(
+                          parseISO(apt.scheduledStart),
+                          "EEEE, MMMM d 'at' h:mm a",
+                        )
+                      : "Not scheduled"}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Provider
+                  </Typography>
+                  <Typography variant="body2">
+                    {apt.providerName || "N/A"}
+                  </Typography>
+                </Box>
+                {apt.location && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Location
+                    </Typography>
+                    <Typography variant="body2">{apt.location}</Typography>
+                  </Box>
+                )}
+              </Stack>
+            ) : null;
+          })()}
+
+        {item.type === "prom" &&
+          (() => {
+            const prom = item.metadata?.prom as
+              | {
+                  templateName?: string;
+                  status?: string;
+                }
+              | undefined;
+            return prom ? (
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Questionnaire
+                  </Typography>
+                  <Typography variant="body2">
+                    {prom.templateName || "N/A"}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Status
+                  </Typography>
+                  <Typography variant="body2">
+                    {prom.status || "Unknown"}
+                  </Typography>
+                </Box>
+              </Stack>
+            ) : null;
+          })()}
+
+        {item.type === "treatment-plan" &&
+          (() => {
+            const alert = item.metadata?.treatmentPlanAlert as
+              | {
+                  type?: string;
+                  planTitle?: string;
+                  daysSinceLastSession?: number;
+                  sessionsRemaining?: number;
+                  lastSessionDate?: string;
+                }
+              | undefined;
+            return alert ? (
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Alert Type
+                  </Typography>
+                  <Typography variant="body2">
+                    {alert.type === "no_plan" && "No Active Treatment Plan"}
+                    {alert.type === "stalled" && "Treatment Plan Stalled"}
+                    {alert.type === "nearing_completion" &&
+                      "Plan Nearing Completion"}
+                  </Typography>
+                </Box>
+                {alert.planTitle && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Plan Name
+                    </Typography>
+                    <Typography variant="body2">{alert.planTitle}</Typography>
+                  </Box>
+                )}
+                {alert.daysSinceLastSession !== undefined && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Days Since Last Session
+                    </Typography>
+                    <Typography variant="body2">
+                      {alert.daysSinceLastSession} days
+                    </Typography>
+                  </Box>
+                )}
+                {alert.sessionsRemaining !== undefined && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Sessions Remaining
+                    </Typography>
+                    <Typography variant="body2">
+                      {alert.sessionsRemaining}
+                    </Typography>
+                  </Box>
+                )}
+              </Stack>
+            ) : null;
+          })()}
+
+        {item.type === "follow-up" &&
+          (() => {
+            const apt = item.metadata?.appointment as
+              | {
+                  appointmentType?: string;
+                  providerName?: string;
+                  notes?: string;
+                  completedAt?: string;
+                }
+              | undefined;
+            const daysSince = item.metadata?.daysSinceCompletion as
+              | number
+              | undefined;
+            return (
+              <Stack spacing={2}>
+                {apt?.appointmentType && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Last Appointment Type
+                    </Typography>
+                    <Typography variant="body2">
+                      {apt.appointmentType}
+                    </Typography>
+                  </Box>
+                )}
+                {apt?.providerName && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Provider
+                    </Typography>
+                    <Typography variant="body2">{apt.providerName}</Typography>
+                  </Box>
+                )}
+                {daysSince !== undefined && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Days Since Completion
+                    </Typography>
+                    <Typography variant="body2">
+                      {daysSince} day{daysSince !== 1 ? "s" : ""}
+                    </Typography>
+                  </Box>
+                )}
+                {apt?.notes && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Session Notes
+                    </Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                      {apt.notes.substring(0, 300)}
+                      {apt.notes.length > 300 ? "..." : ""}
+                    </Typography>
+                  </Box>
+                )}
+              </Stack>
+            );
+          })()}
       </Box>
 
       {/* Actions Footer */}
@@ -2017,6 +2393,10 @@ function ActionItemDetail({
                 <DownloadIcon />
               ) : item.type === "appointment" ? (
                 <AppointmentIcon />
+              ) : item.type === "treatment-plan" ? (
+                <TreatmentPlanIcon />
+              ) : item.type === "follow-up" ? (
+                <FollowUpIcon />
               ) : (
                 <ViewIcon />
               )
@@ -2030,7 +2410,11 @@ function ActionItemDetail({
                   ? "View Appointment"
                   : item.type === "referral"
                     ? "View Referral"
-                    : "Open"}
+                    : item.type === "treatment-plan"
+                      ? "Manage Plan"
+                      : item.type === "follow-up"
+                        ? "Schedule Follow-up"
+                        : "Open"}
           </AuraButton>
 
           {item.patientId && (
@@ -2052,8 +2436,7 @@ function ActionItemDetail({
                   variant="outlined"
                   startIcon={<PhoneIcon />}
                   onClick={() =>
-                    item.patientPhone &&
-                    window.open(`tel:${item.patientPhone}`)
+                    item.patientPhone && window.open(`tel:${item.patientPhone}`)
                   }
                   disabled={!item.patientPhone}
                 >

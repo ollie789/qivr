@@ -48,6 +48,7 @@ import {
   ViewWeek as WeekViewIcon,
   ViewDay as DayViewIcon,
   FilterList as FilterIcon,
+  Payment as PaymentIcon,
 } from "@mui/icons-material";
 import { format, parseISO, isToday, addDays } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,7 +64,10 @@ import {
   SelectField,
 } from "@qivr/design-system";
 import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
-import { TreatmentPlanBuilder } from "../components/dialogs";
+import {
+  TreatmentPlanBuilder,
+  PaymentRecordDialog,
+} from "../components/dialogs";
 import { SessionView } from "../components/session";
 import {
   promApi,
@@ -156,6 +160,9 @@ export default function Appointments() {
   const [treatmentPlanBuilderOpen, setTreatmentPlanBuilderOpen] =
     useState(false);
   const [sessionViewAppointment, setSessionViewAppointment] =
+    useState<Appointment | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentAppointment, setPaymentAppointment] =
     useState<Appointment | null>(null);
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
@@ -1257,6 +1264,25 @@ export default function Appointments() {
           </ListItemIcon>
           <ListItemText>Session Notes</ListItemText>
         </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (menuAnchor?.apt) {
+              setPaymentAppointment(menuAnchor.apt);
+              setPaymentDialogOpen(true);
+            }
+            setMenuAnchor(null);
+          }}
+        >
+          <ListItemIcon>
+            <PaymentIcon
+              fontSize="small"
+              color={menuAnchor?.apt?.isPaid ? "success" : "primary"}
+            />
+          </ListItemIcon>
+          <ListItemText>
+            {menuAnchor?.apt?.isPaid ? "View Payment" : "Record Payment"}
+          </ListItemText>
+        </MenuItem>
         <Divider />
         {menuAnchor?.apt.status !== "completed" &&
           menuAnchor?.apt.status !== "in-progress" && (
@@ -1881,6 +1907,19 @@ export default function Appointments() {
                 }
               });
           }
+        }}
+      />
+
+      {/* Payment Recording Dialog */}
+      <PaymentRecordDialog
+        open={paymentDialogOpen}
+        onClose={() => {
+          setPaymentDialogOpen(false);
+          setPaymentAppointment(null);
+        }}
+        appointment={paymentAppointment}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["appointments"] });
         }}
       />
 

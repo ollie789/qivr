@@ -57,6 +57,17 @@ export interface Appointment {
   insuranceVerified?: boolean;
   copayAmount?: number;
   followUpRequired?: boolean;
+  // Service type & pricing
+  serviceTypeId?: string;
+  serviceTypeName?: string;
+  serviceTypePrice?: number;
+  // Payment tracking
+  isPaid?: boolean;
+  paidAt?: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+  paymentAmount?: number;
+  paymentNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +78,7 @@ export interface CreateAppointmentRequest {
   scheduledStart: string;
   scheduledEnd: string;
   appointmentType: string;
+  serviceTypeId?: string;
   reasonForVisit?: string;
   notes?: string;
   location?: string;
@@ -137,9 +149,27 @@ const mapAppointment = (dto: AppointmentDto): Appointment => ({
   insuranceVerified: dto.insuranceVerified,
   copayAmount: dto.copayAmount,
   followUpRequired: dto.followUpRequired,
+  // Service type & pricing
+  serviceTypeId: (dto as any).serviceTypeId,
+  serviceTypeName: (dto as any).serviceTypeName,
+  serviceTypePrice: (dto as any).serviceTypePrice,
+  // Payment tracking
+  isPaid: (dto as any).isPaid,
+  paidAt: (dto as any).paidAt,
+  paymentMethod: (dto as any).paymentMethod,
+  paymentReference: (dto as any).paymentReference,
+  paymentAmount: (dto as any).paymentAmount,
+  paymentNotes: (dto as any).paymentNotes,
   createdAt: dto.createdAt,
   updatedAt: dto.updatedAt,
 });
+
+export interface RecordPaymentRequest {
+  paymentMethod: string;
+  paymentAmount: number;
+  paymentReference?: string;
+  paymentNotes?: string;
+}
 
 class AppointmentsApi {
   async getAppointments(params?: {
@@ -282,6 +312,36 @@ class AppointmentsApi {
 
   async deleteAppointment(id: string): Promise<void> {
     return apiClient.delete(`/api/appointments/${id}`);
+  }
+
+  async recordPayment(
+    id: string,
+    data: RecordPaymentRequest,
+  ): Promise<Appointment> {
+    const response = await apiClient.post<AppointmentDto>(
+      `/api/appointments/${id}/payment`,
+      data,
+    );
+    return mapAppointment(response);
+  }
+
+  async getPaymentSummary(params?: {
+    startDate?: string;
+    endDate?: string;
+    providerId?: string;
+  }): Promise<{
+    totalRevenue: number;
+    totalAppointments: number;
+    paidAppointments: number;
+    unpaidAppointments: number;
+    byPaymentMethod: Record<string, number>;
+    byServiceType: Array<{
+      serviceType: string;
+      revenue: number;
+      count: number;
+    }>;
+  }> {
+    return apiClient.get("/api/appointments/payment-summary", { params });
   }
 }
 

@@ -30,18 +30,24 @@ export const treatmentPlansApi = {
   }) => api.get("/api/treatment-plans", { isTemplate: true, ...filters }),
 
   // Save an existing plan as a template
-  saveAsTemplate: (planId: string, data: {
-    title: string;
-    bodyRegion?: string;
-    conditionType?: string;
-  }) => api.post(`/api/treatment-plans/${planId}/save-as-template`, data),
+  saveAsTemplate: (
+    planId: string,
+    data: {
+      title: string;
+      bodyRegion?: string;
+      conditionType?: string;
+    },
+  ) => api.post(`/api/treatment-plans/${planId}/save-as-template`, data),
 
   // Create a patient plan from a template
-  createFromTemplate: (templateId: string, data: {
-    patientId: string;
-    startDate?: string;
-    customizations?: any;
-  }) => api.post(`/api/treatment-plans/from-template/${templateId}`, data),
+  createFromTemplate: (
+    templateId: string,
+    data: {
+      patientId: string;
+      startDate?: string;
+      customizations?: any;
+    },
+  ) => api.post(`/api/treatment-plans/from-template/${templateId}`, data),
 
   // AI Generation (saves to DB as draft)
   generate: (data: {
@@ -93,6 +99,9 @@ export const treatmentPlansApi = {
   // Milestones
   getMilestones: (id: string) =>
     api.get(`/api/treatment-plans/${id}/milestones`),
+
+  // Action Center Alerts - patients needing plans, stalled plans, nearing completion
+  getAlerts: () => api.get("/api/treatment-plans/alerts"),
 };
 
 export interface ExerciseTemplateData {

@@ -610,8 +610,9 @@ public class AppointmentsController : BaseApiController
         if (appointment == null)
             return NotFound();
 
-        // Only providers can mark appointments as complete
-        if (appointment.ProviderId != userId)
+        // Providers can complete their own appointments, admins/managers can complete any
+        var isAdmin = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("admin") || User.IsInRole("manager");
+        if (!isAdmin && appointment.ProviderId != userId)
             return Forbid();
 
         appointment.Status = AppointmentStatus.Completed;
@@ -1036,6 +1037,147 @@ public class AppointmentsController : BaseApiController
     }
 
     /// <summary>
+    /// Record a payment for an appointment
+    /// </summary>
+    /// <param name="id">The appointment ID</param>
+    /// <param name="request">Payment details</param>
+    /// <returns>The updated appointment</returns>
+    [HttpPost("{id}/payment")]
+    [ProducesResponseType(typeof(AppointmentDto), 200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(400)]
+    public async Task<ActionResult<AppointmentDto>> RecordPayment(Guid id, [FromBody] RecordPaymentRequest request)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        var appointment = await _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Provider)
+            .Include(a => a.ServiceType)
+            .Where(a => a.TenantId == tenantId && a.Id == id)
+            .FirstOrDefaultAsync();
+
+        if (appointment == null)
+            return NotFound();
+
+        // Only staff can record payments
+        if (User.IsInRole("Patient"))
+            return Forbid();
+
+        if (request.PaymentAmount <= 0)
+            return BadRequest(new { message = "Payment amount must be greater than zero" });
+
+        appointment.IsPaid = true;
+        appointment.PaidAt = DateTime.UtcNow;
+        appointment.PaymentMethod = request.PaymentMethod;
+        appointment.PaymentAmount = request.PaymentAmount;
+        appointment.PaymentReference = request.PaymentReference;
+        appointment.PaymentNotes = request.PaymentNotes;
+        appointment.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Payment recorded for appointment {AppointmentId}: {Amount} via {Method}",
+            appointment.Id, request.PaymentAmount, request.PaymentMethod);
+
+        // Invalidate cache
+        await _cacheService.RemoveAsync(CacheService.CacheKeys.AppointmentDetails(id));
+
+        return Ok(MapAppointmentToDto(appointment));
+    }
+
+    /// <summary>
+    /// Get payment summary for revenue analytics
+    /// </summary>
+    /// <param name="startDate">Filter from this date</param>
+    /// <param name="endDate">Filter until this date</param>
+    /// <param name="providerId">Optional filter by provider</param>
+    /// <returns>Payment summary with totals and breakdowns</returns>
+    [HttpGet("payment-summary")]
+    [ProducesResponseType(typeof(PaymentSummaryDto), 200)]
+    public async Task<ActionResult<PaymentSummaryDto>> GetPaymentSummary(
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] Guid? providerId = null)
+    {
+        var tenantId = RequireTenantId();
+        var userId = CurrentUserId;
+
+        // Only staff can view payment summaries
+        if (User.IsInRole("Patient"))
+            return Forbid();
+
+        // Default to current month if no dates provided
+        var start = startDate ?? new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        var end = endDate ?? DateTime.UtcNow;
+
+        var query = _context.Appointments
+            .Include(a => a.ServiceType)
+            .Where(a => a.TenantId == tenantId
+                && a.ScheduledStart >= start
+                && a.ScheduledStart <= end
+                && a.Status != AppointmentStatus.Cancelled);
+
+        // Filter by provider if clinician
+        if (User.IsInRole("Clinician"))
+        {
+            query = query.Where(a => a.ProviderId == userId);
+        }
+        else if (providerId.HasValue)
+        {
+            query = query.Where(a => a.ProviderId == providerId.Value);
+        }
+
+        var appointments = await query.ToListAsync();
+
+        var paidAppointments = appointments.Where(a => a.IsPaid).ToList();
+        var unpaidAppointments = appointments.Where(a => !a.IsPaid).ToList();
+
+        // Calculate totals
+        var totalRevenue = paidAppointments.Sum(a => a.PaymentAmount ?? 0);
+        var totalOutstanding = unpaidAppointments
+            .Sum(a => a.ServiceType?.Price ?? 0);
+
+        // Group by payment method
+        var byPaymentMethod = paidAppointments
+            .Where(a => !string.IsNullOrEmpty(a.PaymentMethod))
+            .GroupBy(a => a.PaymentMethod!)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(a => a.PaymentAmount ?? 0)
+            );
+
+        // Group by service type
+        var byServiceType = appointments
+            .Where(a => a.ServiceType != null)
+            .GroupBy(a => a.ServiceType!.Name)
+            .Select(g => new ServiceTypeRevenueDto
+            {
+                ServiceType = g.Key,
+                Revenue = g.Where(a => a.IsPaid).Sum(a => a.PaymentAmount ?? 0),
+                Count = g.Count()
+            })
+            .OrderByDescending(x => x.Revenue)
+            .ToList();
+
+        var summary = new PaymentSummaryDto
+        {
+            TotalRevenue = totalRevenue,
+            TotalAppointments = appointments.Count,
+            PaidAppointments = paidAppointments.Count,
+            UnpaidAppointments = unpaidAppointments.Count,
+            TotalOutstanding = totalOutstanding,
+            ByPaymentMethod = byPaymentMethod,
+            ByServiceType = byServiceType,
+            StartDate = start,
+            EndDate = end
+        };
+
+        return Ok(summary);
+    }
+
+    /// <summary>
     /// Delete an appointment
     /// </summary>
     [HttpDelete("{id}")]
@@ -1172,6 +1314,19 @@ public class AppointmentDto
     public DateTime? ReminderSentAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    // Service type & pricing
+    public Guid? ServiceTypeId { get; set; }
+    public string? ServiceTypeName { get; set; }
+    public decimal? ServiceTypePrice { get; set; }
+
+    // Payment tracking
+    public bool IsPaid { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public string? PaymentMethod { get; set; }
+    public string? PaymentReference { get; set; }
+    public decimal? PaymentAmount { get; set; }
+    public string? PaymentNotes { get; set; }
 }
 
 public class CreateAppointmentRequest
@@ -1248,4 +1403,32 @@ public class BookAppointmentRequest
     public DateTime StartTime { get; set; }
     public int DurationMinutes { get; set; } = 30;
     public string AppointmentType { get; set; } = "consultation";
+}
+
+public class RecordPaymentRequest
+{
+    public string PaymentMethod { get; set; } = string.Empty;
+    public decimal PaymentAmount { get; set; }
+    public string? PaymentReference { get; set; }
+    public string? PaymentNotes { get; set; }
+}
+
+public class PaymentSummaryDto
+{
+    public decimal TotalRevenue { get; set; }
+    public int TotalAppointments { get; set; }
+    public int PaidAppointments { get; set; }
+    public int UnpaidAppointments { get; set; }
+    public decimal TotalOutstanding { get; set; }
+    public Dictionary<string, decimal> ByPaymentMethod { get; set; } = new();
+    public List<ServiceTypeRevenueDto> ByServiceType { get; set; } = new();
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+}
+
+public class ServiceTypeRevenueDto
+{
+    public string ServiceType { get; set; } = string.Empty;
+    public decimal Revenue { get; set; }
+    public int Count { get; set; }
 }

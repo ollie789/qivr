@@ -42,9 +42,18 @@ export interface Appointment {
   evaluationId?: string;
   promInstanceId?: string;
   cancellationReason?: string;
+  // Service type & pricing
+  serviceTypeId?: string;
+  serviceTypeName?: string;
+  serviceTypePrice?: number;
+  copayAmount?: number;
+  // Payment tracking
   isPaid?: boolean;
+  paidAt?: string;
   paymentMethod?: string;
+  paymentReference?: string;
   paymentAmount?: number;
+  paymentNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
