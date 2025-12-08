@@ -186,15 +186,17 @@ const Button: Components<Omit<Theme, 'components'>>['MuiButton'] = {
     outlinedError: {},
 
     startIcon: {
-      marginRight: 4,
+      marginRight: 8,
+      marginLeft: 0,
       '& > *:first-of-type': {
-        fontSize: 16,
+        fontSize: 18,
       },
     },
     endIcon: {
-      marginLeft: 4,
+      marginLeft: 8,
+      marginRight: 0,
       '& > *:first-of-type': {
-        fontSize: 16,
+        fontSize: 18,
       },
     },
     iconSizeLarge: {

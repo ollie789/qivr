@@ -14,8 +14,7 @@ import {
   Collapse,
   Stack,
   Paper,
-  ToggleButton,
-  ToggleButtonGroup,
+  alpha,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
@@ -26,6 +25,7 @@ import {
   ExpandMore,
   ExpandLess,
   Edit as EditIcon,
+  CheckCircle as CheckIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -446,26 +446,93 @@ export function TemplateBuilder({
       case 0: // Template Info
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {/* Mode Toggle */}
-            <Box sx={{ textAlign: "center" }}>
-              <ToggleButtonGroup
-                value={mode}
-                exclusive
-                onChange={(_, v) => v && setMode(v)}
-                size="small"
+            {/* Mode Selection Cards */}
+            <Box sx={{ display: "flex", gap: 2 }}>
+              {/* Manual Option */}
+              <Paper
+                onClick={() => setMode("manual")}
+                sx={{
+                  flex: 1,
+                  p: 2.5,
+                  cursor: "pointer",
+                  border: "2px solid",
+                  borderColor: mode === "manual" ? "primary.main" : "divider",
+                  bgcolor: mode === "manual" ? alpha("#2196f3", 0.04) : "transparent",
+                  borderRadius: 2,
+                  transition: "all 0.2s ease",
+                  position: "relative",
+                  "&:hover": {
+                    borderColor: mode === "manual" ? "primary.main" : "primary.light",
+                    bgcolor: mode === "manual" ? alpha("#2196f3", 0.06) : alpha("#2196f3", 0.02),
+                  },
+                }}
               >
-                <ToggleButton value="manual">
-                  <EditIcon sx={{ mr: 1 }} fontSize="small" />
-                  Manual
-                </ToggleButton>
-                <ToggleButton value="ai">
-                  <AIIcon sx={{ mr: 1 }} fontSize="small" />
-                  AI Assisted
-                </ToggleButton>
-              </ToggleButtonGroup>
+                {mode === "manual" && (
+                  <CheckIcon
+                    sx={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      color: "primary.main",
+                      fontSize: 20,
+                    }}
+                  />
+                )}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                  <EditIcon color={mode === "manual" ? "primary" : "action"} />
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    Manual
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Build phases and add exercises yourself from our library
+                </Typography>
+              </Paper>
+
+              {/* AI Option */}
+              <Paper
+                onClick={() => setMode("ai")}
+                sx={{
+                  flex: 1,
+                  p: 2.5,
+                  cursor: "pointer",
+                  border: "2px solid",
+                  borderColor: mode === "ai" ? "secondary.main" : "divider",
+                  bgcolor: mode === "ai" ? alpha("#9c27b0", 0.04) : "transparent",
+                  borderRadius: 2,
+                  transition: "all 0.2s ease",
+                  position: "relative",
+                  "&:hover": {
+                    borderColor: mode === "ai" ? "secondary.main" : "secondary.light",
+                    bgcolor: mode === "ai" ? alpha("#9c27b0", 0.06) : alpha("#9c27b0", 0.02),
+                  },
+                }}
+              >
+                {mode === "ai" && (
+                  <CheckIcon
+                    sx={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      color: "secondary.main",
+                      fontSize: 20,
+                    }}
+                  />
+                )}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                  <AIIcon color={mode === "ai" ? "secondary" : "action"} />
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    AI Assisted
+                  </Typography>
+                  <Chip label="Recommended" size="small" color="secondary" sx={{ height: 20, fontSize: "0.7rem" }} />
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Let AI generate phases and exercises based on your requirements
+                </Typography>
+              </Paper>
             </Box>
 
-            <FormSection title="Template Information">
+            <FormSection title="Template Details">
               <TextField
                 label="Template Name"
                 value={basicInfo.title}
@@ -544,23 +611,34 @@ export function TemplateBuilder({
 
             {/* AI Generation Section */}
             {mode === "ai" && (
-              <FormSection title="AI Generation">
-                <Callout variant="info">
-                  Describe what you want and AI will generate phases and
-                  exercises for this template.
-                </Callout>
+              <Paper
+                sx={{
+                  p: 2.5,
+                  borderRadius: 2,
+                  bgcolor: alpha("#9c27b0", 0.03),
+                  border: "1px solid",
+                  borderColor: alpha("#9c27b0", 0.2),
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                  <AIIcon color="secondary" fontSize="small" />
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    AI Generation Options
+                  </Typography>
+                </Box>
                 <TextField
-                  label="Describe the treatment plan (optional)"
+                  label="Additional instructions (optional)"
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   fullWidth
                   multiline
-                  rows={3}
-                  placeholder="e.g., Progressive shoulder rehab for rotator cuff injury, focus on strengthening and ROM"
-                  sx={{ mt: 2 }}
+                  rows={2}
+                  placeholder="e.g., Focus on rotator cuff strengthening, patient has limited ROM"
+                  size="small"
                 />
                 <AuraButton
                   variant="contained"
+                  color="secondary"
                   startIcon={
                     isGenerating ? (
                       <CircularProgress size={16} color="inherit" />
@@ -569,13 +647,18 @@ export function TemplateBuilder({
                     )
                   }
                   onClick={handleAIGenerate}
-                  disabled={isGenerating || !basicInfo.bodyRegion}
+                  disabled={isGenerating || !basicInfo.bodyRegion || !basicInfo.title}
                   sx={{ mt: 2 }}
                   fullWidth
                 >
-                  {isGenerating ? "Generating..." : "Generate with AI"}
+                  {isGenerating ? "Generating Template..." : "Generate with AI"}
                 </AuraButton>
-              </FormSection>
+                {(!basicInfo.bodyRegion || !basicInfo.title) && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+                    Fill in template name and body region above to enable AI generation
+                  </Typography>
+                )}
+              </Paper>
             )}
           </Box>
         );

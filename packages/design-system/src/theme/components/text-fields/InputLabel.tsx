@@ -10,14 +10,6 @@ declare module "@mui/material/InputLabel" {
 const InputLabel: Components<Omit<Theme, "components">>["MuiInputLabel"] = {
   styleOverrides: {
     root: {
-      variants: [
-        {
-          props: { variant: "standard" },
-          style: {
-            transform: "translate(2px,14px) scale(1)",
-          },
-        },
-      ],
       fontSize: "14px",
     },
 
@@ -43,32 +35,39 @@ const InputLabel: Components<Omit<Theme, "components">>["MuiInputLabel"] = {
         },
       };
     },
-    outlined: () => {
+    // Outlined variant: Label sits ABOVE the input (static positioning)
+    outlined: ({ theme }) => {
       return {
+        position: "static",
+        transform: "none",
+        marginBottom: theme.spacing(0.5),
+        marginLeft: theme.spacing(1.75),
+        fontSize: "12px",
+        fontWeight: theme.typography.fontWeightMedium,
         lineHeight: 1.3,
-        transform: "translate(16px, 12px) scale(1)",
         [`&.${inputLabelClasses.shrink}`]: {
-          fontWeight: 500,
-          transform: "translate(16px, -7px) scale(.85)",
+          transform: "none",
         },
         [`&.${inputLabelClasses.sizeSmall}`]: {
-          transform: "translate(12px, 8px) scale(1)",
-          [`&.${inputLabelClasses.shrink}`]: {
-            transform: "translate(12px, -7px) scale(.85)",
-          },
+          marginLeft: theme.spacing(1.5),
         },
         "&.MuiInputLabel-sizeLarge": {
-          transform: "translate(20px, 14px) scale(1)",
-          [`&.${inputLabelClasses.shrink}`]: {
-            transform: "translate(20px, -7px) scale(.75)",
-          },
+          marginLeft: theme.spacing(2),
+          fontSize: "13px",
         },
       };
     },
-    standard: () => {
+    // Standard variant: Label sits ABOVE the input (static positioning)
+    standard: ({ theme }) => {
       return {
+        position: "static",
+        transform: "none",
+        marginBottom: theme.spacing(0.5),
+        fontSize: "12px",
+        fontWeight: theme.typography.fontWeightMedium,
+        lineHeight: 1.3,
         [`&.${inputLabelClasses.shrink}`]: {
-          transform: "translate(0, 0) scale(.75)",
+          transform: "none",
         },
       };
     },

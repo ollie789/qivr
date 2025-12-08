@@ -1266,45 +1266,18 @@ export default function Appointments() {
           </ListItemText>
         </MenuItem>
         <Divider />
-        {menuAnchor?.apt.status !== "completed" &&
-          menuAnchor?.apt.status !== "in-progress" && (
-            <MenuItem
-              onClick={() => {
-                if (menuAnchor?.apt) handleStartSession(menuAnchor.apt);
-                setMenuAnchor(null);
-              }}
-            >
-              <ListItemIcon>
-                <StartIcon fontSize="small" color="warning" />
-              </ListItemIcon>
-              <ListItemText>Start Session</ListItemText>
-            </MenuItem>
-          )}
         {menuAnchor?.apt.status === "in-progress" && (
-          <>
-            <MenuItem
-              onClick={() => {
-                if (menuAnchor?.apt) setSessionViewAppointment(menuAnchor.apt);
-                setMenuAnchor(null);
-              }}
-            >
-              <ListItemIcon>
-                <StartIcon fontSize="small" color="warning" />
-              </ListItemIcon>
-              <ListItemText>Resume Session</ListItemText>
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                if (menuAnchor?.apt)
-                  handleCompleteAppointment(menuAnchor.apt.id);
-              }}
-            >
-              <ListItemIcon>
-                <CompleteIcon fontSize="small" color="success" />
-              </ListItemIcon>
-              <ListItemText>Complete Session</ListItemText>
-            </MenuItem>
-          </>
+          <MenuItem
+            onClick={() => {
+              if (menuAnchor?.apt)
+                handleCompleteAppointment(menuAnchor.apt.id);
+            }}
+          >
+            <ListItemIcon>
+              <CompleteIcon fontSize="small" color="success" />
+            </ListItemIcon>
+            <ListItemText>Complete Session</ListItemText>
+          </MenuItem>
         )}
         {menuAnchor?.apt.status !== "cancelled" &&
           menuAnchor?.apt.status !== "completed" && (

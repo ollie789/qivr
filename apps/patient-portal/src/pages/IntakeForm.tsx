@@ -10,10 +10,6 @@ import {
   StepLabel,
   Paper,
   FormControl,
-  FormLabel,
-  FormControlLabel,
-  Checkbox,
-  FormGroup,
   Select,
   MenuItem,
   InputLabel,
@@ -28,7 +24,6 @@ import {
   AuraButton,
   auraTokens,
   type PainRegion,
-  PainIntensitySlider,
   QuestionSection,
   IntakeReviewSection,
 } from "@qivr/design-system";
@@ -38,7 +33,6 @@ import {
   type IntakeFormData,
   // Questions
   painDurationOptions,
-  painQualityOptions,
   painStartOptions,
   medicalHistorySection,
   goalsSection,
@@ -104,8 +98,8 @@ export const IntakeForm: React.FC = () => {
       newErrors = {
         ...newErrors,
         ...validatePainMappingStep(painRegions.length, form, {
-          requireChiefComplaint: true,
-          requirePainQualities: true,
+          requireChiefComplaint: false,
+          requirePainQualities: false,
         }),
       };
     }
@@ -267,21 +261,8 @@ export const IntakeForm: React.FC = () => {
               onChange={(regions) => setPainRegions(regions)}
             />
 
-            {/* Chief Complaint */}
-            <TextField
-              fullWidth
-              label="What is your main concern or chief complaint?"
-              value={form.chiefComplaint || ""}
-              onChange={(e) => update("chiefComplaint", e.target.value)}
-              multiline
-              rows={3}
-              sx={{ mt: 3, mb: 3 }}
-              error={!!errors.chiefComplaint}
-              helperText={errors.chiefComplaint}
-            />
-
             {/* Pain Duration */}
-            <FormControl fullWidth sx={{ mb: 3 }} error={!!errors.painDuration}>
+            <FormControl fullWidth sx={{ mt: 3, mb: 3 }} error={!!errors.painDuration}>
               <InputLabel>How long have you had this pain?</InputLabel>
               <Select
                 value={form.painDuration || ""}
@@ -297,49 +278,6 @@ export const IntakeForm: React.FC = () => {
               {errors.painDuration && (
                 <Typography color="error" variant="caption">
                   {errors.painDuration}
-                </Typography>
-              )}
-            </FormControl>
-
-            {/* Pain Intensity */}
-            <Box sx={{ mb: 3 }}>
-              <PainIntensitySlider
-                value={form.painIntensity || 5}
-                onChange={(value) => update("painIntensity", value)}
-                label="Current pain intensity"
-              />
-            </Box>
-
-            {/* Pain Qualities */}
-            <FormControl
-              component="fieldset"
-              sx={{ mb: 3 }}
-              error={!!errors.painQualities}
-            >
-              <FormLabel>
-                What does your pain feel like? (Select all that apply)
-              </FormLabel>
-              <FormGroup row>
-                {painQualityOptions.map((quality) => (
-                  <FormControlLabel
-                    key={quality.value}
-                    control={
-                      <Checkbox
-                        checked={
-                          form.painQualities?.includes(quality.value) || false
-                        }
-                        onChange={() =>
-                          toggleCheckbox("painQualities", quality.value)
-                        }
-                      />
-                    }
-                    label={quality.label}
-                  />
-                ))}
-              </FormGroup>
-              {errors.painQualities && (
-                <Typography color="error" variant="caption">
-                  {errors.painQualities}
                 </Typography>
               )}
             </FormControl>
@@ -434,7 +372,6 @@ export const IntakeForm: React.FC = () => {
             <AuraButton
               variant="contained"
               onClick={handleSubmit}
-              disabled={!form.chiefComplaint}
             >
               Submit Assessment
             </AuraButton>

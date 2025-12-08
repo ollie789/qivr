@@ -8,10 +8,6 @@ import {
   TextField,
   Button,
   FormControl,
-  FormLabel,
-  FormControlLabel,
-  Checkbox,
-  FormGroup,
   Paper,
   Alert,
   CircularProgress,
@@ -22,7 +18,6 @@ import {
 import {
   PainMap3D,
   type PainRegion,
-  PainIntensitySlider,
   QuestionSection,
   IntakeReviewSection,
 } from "@qivr/design-system";
@@ -33,7 +28,6 @@ import {
   // Questions
   personalInfoSection,
   painDurationOptions,
-  painQualityOptions,
   medicalHistorySection,
   goalsSection,
   // Step config
@@ -313,46 +307,6 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
                 {errors.painDuration}
               </Typography>
             )}
-          </FormControl>
-
-          {/* Pain Intensity */}
-          <Box sx={{ mt: 3 }}>
-            <PainIntensitySlider
-              value={form.painIntensity || 5}
-              onChange={(v) => update("painIntensity", v)}
-            />
-          </Box>
-
-          {/* Chief Complaint */}
-          <TextField
-            label="What is your main concern?"
-            value={form.chiefComplaint || ""}
-            onChange={(e) => update("chiefComplaint", e.target.value)}
-            multiline
-            rows={2}
-            fullWidth
-            sx={{ mt: 3 }}
-          />
-
-          {/* Pain Qualities */}
-          <FormControl component="fieldset" sx={{ mt: 3 }}>
-            <FormLabel>
-              What does your pain feel like? (select all that apply)
-            </FormLabel>
-            <FormGroup row>
-              {painQualityOptions.map((q) => (
-                <FormControlLabel
-                  key={q.value}
-                  label={q.label}
-                  control={
-                    <Checkbox
-                      checked={form.painQualities?.includes(q.value) || false}
-                      onChange={() => toggleCheckbox("painQualities", q.value)}
-                    />
-                  }
-                />
-              ))}
-            </FormGroup>
           </FormControl>
         </Box>
       )}

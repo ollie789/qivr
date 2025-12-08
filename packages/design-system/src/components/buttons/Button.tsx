@@ -16,8 +16,6 @@ export const AuraButton = forwardRef<HTMLButtonElement, AuraButtonProps>(
         textTransform: 'none',
         fontWeight: auraTokens.fontWeights.semibold,
         borderRadius: auraTokens.borderRadius.md,
-        px: auraTokens.spacing.lg,
-        py: auraTokens.spacing.sm,
         transition: auraTokens.transitions.default,
         ...props.sx,
       }}

@@ -1,10 +1,11 @@
-import { Suspense, useRef, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Canvas, useLoader, useThree } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography, Slider, CircularProgress, Chip } from '@mui/material';
+import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography, Slider, Chip, IconButton, Tooltip } from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import * as THREE from 'three';
-import { PAIN_QUALITIES, type PainQuality } from '../../types/pain-drawing';
-import { getRegionDisplayName, getRegionSnomedCode } from '../../types/anatomical-regions';
+import { PAIN_QUALITIES } from '../../types/pain-drawing';
+import { getRegionDisplayName } from '../../types/anatomical-regions';
 import { auraTokens } from '../../theme/auraTokens';
 
 interface SelectedRegion {
@@ -73,7 +74,7 @@ function BodyModel({
   }, [selectedRegions, gltf.scene]);
 
   return (
-    // @ts-ignore - React Three Fiber JSX elements
+    // @ts-expect-error - React Three Fiber JSX elements
     <primitive
       object={gltf.scene} 
       onClick={handleClick}
@@ -93,7 +94,7 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
   const [cameraView, setCameraView] = useState<'front' | 'back' | 'left' | 'right'>('front');
   const [selectedQuality, setSelectedQuality] = useState(PAIN_QUALITIES[0]);
   const [intensity, setIntensity] = useState(5);
-  const [selectedMesh, setSelectedMesh] = useState<string | null>(null);
+  const [_selectedMesh, setSelectedMesh] = useState<string | null>(null);
 
   const handleMeshClick = (meshName: string) => {
     setSelectedMesh(meshName);
@@ -117,151 +118,214 @@ export function PainMap3D({ value = [], onChange }: PainMap3DProps) {
     }
   };
 
+  const removeRegion = (meshName: string) => {
+    const updated = selectedRegions.filter(r => r.meshName !== meshName);
+    setSelectedRegions(updated);
+    onChange(updated);
+  };
+
   return (
-    <Stack spacing={2}>
-      {/* Camera View Selector */}
-      <Box>
-        <Typography variant="subtitle2" gutterBottom>View</Typography>
-        <ToggleButtonGroup
-          value={cameraView}
-          exclusive
-          onChange={(_, val) => val && setCameraView(val)}
-          size="small"
-        >
-          <ToggleButton value="front">Front</ToggleButton>
-          <ToggleButton value="back">Back</ToggleButton>
-          <ToggleButton value="left">Left</ToggleButton>
-          <ToggleButton value="right">Right</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-
-      {/* Pain Quality Selector */}
-      <Box>
-        <Typography variant="subtitle2" gutterBottom>Pain Type</Typography>
-        <ToggleButtonGroup
-          value={selectedQuality.id}
-          exclusive
-          onChange={(_, val) => {
-            const quality = PAIN_QUALITIES.find(q => q.id === val);
-            if (quality) setSelectedQuality(quality);
-          }}
-          size="small"
-        >
-          {PAIN_QUALITIES.map(quality => (
-            <ToggleButton key={quality.id} value={quality.id}>
-              <Box
-                sx={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  bgcolor: quality.color,
-                  mr: 1
-                }}
-              />
-              {quality.label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-      </Box>
-
-      {/* Intensity Slider */}
-      <Box>
-        <Typography variant="subtitle2" gutterBottom>
-          Intensity: {intensity}/10
-        </Typography>
-        <Slider
-          value={intensity}
-          onChange={(_, val) => setIntensity(val as number)}
-          min={1}
-          max={10}
-          marks
-          valueLabelDisplay="auto"
-        />
-      </Box>
-
-      {/* 3D Canvas */}
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Controls Row - Compact horizontal layout */}
       <Box
         sx={{
-          width: '100%',
-          height: 600,
-          bgcolor: '#f5f5f5',
-          borderRadius: auraTokens.borderRadius.sm,
-          overflow: 'hidden'
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 2,
+          p: 2,
+          bgcolor: 'background.paper',
+          borderRadius: auraTokens.borderRadius.md,
+          border: '1px solid',
+          borderColor: 'divider'
         }}
       >
-        <Canvas camera={{ fov: 50 }}>
-          <Suspense fallback={null}>
-            {/* @ts-ignore - React Three Fiber JSX elements */}
-            <ambientLight intensity={0.5} />
-            {/* @ts-ignore */}
-            <directionalLight position={[10, 10, 5]} intensity={1} />
-            {/* @ts-ignore */}
-            <directionalLight position={[-10, 10, -5]} intensity={0.5} />
-            <BodyModel 
-              selectedRegions={selectedRegions}
-              onMeshClick={handleMeshClick}
-              cameraView={cameraView}
-            />
-          </Suspense>
-        </Canvas>
+        {/* View Selector */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+            View:
+          </Typography>
+          <ToggleButtonGroup
+            value={cameraView}
+            exclusive
+            onChange={(_, val) => val && setCameraView(val)}
+            size="small"
+            sx={{ '& .MuiToggleButton-root': { px: 1.5, py: 0.5, fontSize: '0.75rem' } }}
+          >
+            <ToggleButton value="front">Front</ToggleButton>
+            <ToggleButton value="back">Back</ToggleButton>
+            <ToggleButton value="left">Left</ToggleButton>
+            <ToggleButton value="right">Right</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        {/* Divider */}
+        <Box sx={{ width: 1, height: 24, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
+
+        {/* Pain Type Selector */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+            Type:
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {PAIN_QUALITIES.map(quality => (
+              <Chip
+                key={quality.id}
+                label={quality.label}
+                size="small"
+                onClick={() => setSelectedQuality(quality)}
+                sx={{
+                  bgcolor: selectedQuality.id === quality.id ? quality.color : 'transparent',
+                  color: selectedQuality.id === quality.id ? 'white' : 'text.primary',
+                  border: '1px solid',
+                  borderColor: selectedQuality.id === quality.id ? quality.color : 'divider',
+                  fontWeight: selectedQuality.id === quality.id ? 600 : 400,
+                  '&:hover': {
+                    bgcolor: selectedQuality.id === quality.id ? quality.color : `${quality.color}20`,
+                  },
+                  '& .MuiChip-label': { px: 1 }
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+
+        {/* Divider */}
+        <Box sx={{ width: 1, height: 24, bgcolor: 'divider', display: { xs: 'none', md: 'block' } }} />
+
+        {/* Intensity */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 180 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+            Intensity:
+          </Typography>
+          <Slider
+            value={intensity}
+            onChange={(_, val) => setIntensity(val as number)}
+            min={1}
+            max={10}
+            size="small"
+            valueLabelDisplay="auto"
+            sx={{ flex: 1 }}
+          />
+          <Typography variant="body2" fontWeight={600} sx={{ minWidth: 32 }}>
+            {intensity}/10
+          </Typography>
+        </Box>
       </Box>
 
-      {/* Selected Regions List */}
-      {selectedRegions.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" gutterBottom>
-            Selected Regions ({selectedRegions.length})
-          </Typography>
-          <Stack spacing={1}>
-            {selectedRegions.map((region, i) => {
-              const quality = PAIN_QUALITIES.find(q => q.id === region.quality);
-              const displayName = getRegionDisplayName(region.meshName);
-              return (
-                <Box
-                  key={i}
-                  sx={{
-                    p: 1.5,
-                    bgcolor: 'background.paper',
-                    borderRadius: auraTokens.borderRadius.sm,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    border: '1px solid',
-                    borderColor: 'divider'
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      bgcolor: quality?.color,
-                      flexShrink: 0
-                    }}
-                  />
-                  <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-                    {displayName}
-                  </Typography>
-                  <Chip
-                    label={quality?.label}
-                    size="small"
-                    sx={{ bgcolor: quality?.color, color: 'white', fontSize: '0.75rem' }}
-                  />
-                  <Chip 
-                    label={`${region.intensity}/10`} 
-                    size="small" 
-                    variant="outlined"
-                  />
-                </Box>
-              );
-            })}
-          </Stack>
+      {/* Main Content - 3D Canvas and Selected Regions side by side on larger screens */}
+      <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+        {/* 3D Canvas */}
+        <Box
+          sx={{
+            flex: { xs: 'none', md: 2 },
+            width: '100%',
+            height: { xs: 400, md: 500 },
+            bgcolor: 'background.elevation1',
+            borderRadius: auraTokens.borderRadius.md,
+            overflow: 'hidden',
+            border: '1px solid',
+            borderColor: 'divider'
+          }}
+        >
+          <Canvas camera={{ fov: 50 }}>
+            <Suspense fallback={null}>
+              {/* @ts-expect-error - React Three Fiber JSX elements */}
+              <ambientLight intensity={0.5} />
+              {/* @ts-expect-error - React Three Fiber JSX elements */}
+              <directionalLight position={[10, 10, 5]} intensity={1} />
+              {/* @ts-expect-error - React Three Fiber JSX elements */}
+              <directionalLight position={[-10, 10, -5]} intensity={0.5} />
+              <BodyModel
+                selectedRegions={selectedRegions}
+                onMeshClick={handleMeshClick}
+                cameraView={cameraView}
+              />
+            </Suspense>
+          </Canvas>
         </Box>
-      )}
 
-      <Typography variant="caption" color="text.secondary">
-        Click on body regions to mark pain areas. Click again to remove.
-      </Typography>
-    </Stack>
+        {/* Selected Regions Panel */}
+        <Box
+          sx={{
+            flex: { xs: 'none', md: 1 },
+            minWidth: { md: 280 },
+            maxWidth: { md: 320 },
+            bgcolor: 'background.paper',
+            borderRadius: auraTokens.borderRadius.md,
+            border: '1px solid',
+            borderColor: 'divider',
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+            Selected Areas {selectedRegions.length > 0 && `(${selectedRegions.length})`}
+          </Typography>
+
+          {selectedRegions.length === 0 ? (
+            <Box sx={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              py: 4
+            }}>
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Click on the body model to mark pain areas
+              </Typography>
+            </Box>
+          ) : (
+            <Stack spacing={1} sx={{ flex: 1, overflow: 'auto' }}>
+              {selectedRegions.map((region, i) => {
+                const quality = PAIN_QUALITIES.find(q => q.id === region.quality);
+                const displayName = getRegionDisplayName(region.meshName);
+                return (
+                  <Box
+                    key={i}
+                    sx={{
+                      p: 1.5,
+                      bgcolor: 'background.elevation1',
+                      borderRadius: auraTokens.borderRadius.sm,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        bgcolor: quality?.color,
+                        flexShrink: 0
+                      }}
+                    />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={500} noWrap>
+                        {displayName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {quality?.label} • {region.intensity}/10
+                      </Typography>
+                    </Box>
+                    <Tooltip title="Remove">
+                      <IconButton
+                        size="small"
+                        onClick={() => removeRegion(region.meshName)}
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+        </Box>
+      </Box>
+    </Box>
   );
 }
