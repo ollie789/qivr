@@ -110,7 +110,11 @@ public class ProfileController : BaseApiController
     [ProducesResponseType(400)]
     public async Task<IActionResult> UpdateProfile([FromBody] UserProfileUpdateDto updateDto)
     {
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        // First try to get the database user_id (set by AutoCreateUserMiddleware)
+        // Fall back to sub claim if user_id not available
+        var userId = User.FindFirst("user_id")?.Value
+            ?? User.FindFirst("sub")?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         if (string.IsNullOrEmpty(userId))
         {
