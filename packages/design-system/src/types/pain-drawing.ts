@@ -1,12 +1,12 @@
 // Pain Drawing Types for Phase 1 & 2
 
-export type AvatarType = 'male' | 'female' | 'child';
-export type ViewOrientation = 'front' | 'back';
-export type BodySubdivision = 'simple' | 'dermatome' | 'myotome';
-export type DepthIndicator = 'superficial' | 'deep';
-export type SubmissionSource = 'portal' | 'mobile' | 'no-login' | 'clinic';
-export type DrawingTool = 'draw' | 'erase' | 'arrow' | 'text' | 'symbol';
-export type SymbolType = 'pin' | 'lightning' | 'star' | 'cross';
+export type AvatarType = "male" | "female" | "child";
+export type ViewOrientation = "front" | "back";
+export type BodySubdivision = "simple" | "dermatome" | "myotome";
+export type DepthIndicator = "superficial" | "deep";
+export type SubmissionSource = "portal" | "mobile" | "no-login" | "clinic";
+export type DrawingTool = "draw" | "erase" | "arrow" | "text" | "symbol";
+export type SymbolType = "pin" | "lightning" | "star" | "cross";
 
 export interface PainQuality {
   id: string;
@@ -17,12 +17,30 @@ export interface PainQuality {
 }
 
 export const PAIN_QUALITIES: PainQuality[] = [
-  { id: 'burning', label: 'Burning', quality: 'Burning', color: '#ef4444', snomedCode: '90673000' },
-  { id: 'throbbing', label: 'Throbbing', quality: 'Throbbing', color: '#f97316', snomedCode: '8708008' },
-  { id: 'sharp', label: 'Sharp', quality: 'Sharp', color: '#eab308', snomedCode: '8708008' },
-  { id: 'dull', label: 'Dull/Aching', quality: 'Dull/Aching', color: '#22c55e', snomedCode: '410711009' },
-  { id: 'numbness', label: 'Numbness', quality: 'Numbness', color: '#3b82f6', snomedCode: '44077006' },
-  { id: 'tingling', label: 'Tingling', quality: 'Tingling', color: '#8b5cf6', snomedCode: '62507009' },
+  // Type 1 – Dull / Aching (Mechanical) - muscles, joints, ligaments; "heavy", "throbbing", "stiff"
+  {
+    id: "dull",
+    label: "Dull / Aching",
+    quality: "Dull/Aching",
+    color: "#14b8a6",
+    snomedCode: "410711009",
+  }, // Teal
+  // Type 2 – Sharp / Stabbing (Acute) - sudden "knife-like", "catching", "stabbing" pain
+  {
+    id: "sharp",
+    label: "Sharp / Stabbing",
+    quality: "Sharp/Stabbing",
+    color: "#f59e0b",
+    snomedCode: "8708008",
+  }, // Amber
+  // Type 3 – Burning / Electric (Neuropathic) - nerve-type pain – burning, shooting, tingling, pins & needles
+  {
+    id: "burning",
+    label: "Burning / Electric",
+    quality: "Burning/Electric",
+    color: "#ec4899",
+    snomedCode: "90673000",
+  }, // Magenta/Pink
 ];
 
 // 3D Region-based pain map
@@ -36,12 +54,12 @@ export interface PainRegion {
 
 export interface PainMap3DData {
   regions: PainRegion[];
-  cameraView: 'front' | 'back' | 'left' | 'right';
+  cameraView: "front" | "back" | "left" | "right";
   timestamp: string;
 }
 
 // Export anatomical regions
-export * from './anatomical-regions';
+export * from "./anatomical-regions";
 
 export interface DrawingPath {
   pathData: string; // SVG path data
@@ -51,7 +69,7 @@ export interface DrawingPath {
 }
 
 export interface Annotation {
-  type: 'arrow' | 'text' | 'symbol';
+  type: "arrow" | "text" | "symbol";
   x: number;
   y: number;
   content?: string;
@@ -81,7 +99,7 @@ export interface PainMapData {
   painQuality: string[];
   onsetDate?: string;
   notes?: string;
-  
+
   // Drawing fields
   avatarType?: AvatarType;
   bodySubdivision?: BodySubdivision;
@@ -103,7 +121,7 @@ export interface PainDrawingState {
   selectedSymbol: SymbolType;
   paths: DrawingPath[];
   annotations: Annotation[];
-  history: { paths: DrawingPath[]; annotations: Annotation[] }[];
+  history: Array<{ paths: DrawingPath[]; annotations: Annotation[] }>;
   historyIndex: number;
   zoom: number;
   panX: number;

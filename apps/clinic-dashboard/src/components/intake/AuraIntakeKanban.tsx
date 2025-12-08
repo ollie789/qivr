@@ -381,7 +381,9 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
   onSchedule,
   onStatusChange,
 }) => {
-  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const [_activeId, setActiveId] = React.useState<string | null>(null);
+  const [draggedIntake, setDraggedIntake] =
+    React.useState<IntakeSubmission | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -396,12 +398,15 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
   };
 
   const handleDragStart = (event: any) => {
+    const intake = intakes.find((i) => i.id === event.active.id);
     setActiveId(event.active.id);
+    setDraggedIntake(intake || null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    setDraggedIntake(null);
 
     console.log("Drag end:", { activeId: active.id, overId: over?.id });
 
@@ -449,8 +454,6 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
     }
   };
 
-  const activeIntake = activeId ? intakes.find((i) => i.id === activeId) : null;
-
   return (
     <DndContext
       sensors={sensors}
@@ -471,9 +474,9 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
       </Box>
 
       <DragOverlay>
-        {activeIntake && (
+        {draggedIntake && (
           <IntakeCard
-            intake={activeIntake}
+            intake={draggedIntake}
             onViewDetails={() => {}}
             onSchedule={() => {}}
             isDragging

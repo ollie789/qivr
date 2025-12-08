@@ -27,7 +27,6 @@ import React, {
 import {
   Box,
   Typography,
-  Grid,
   Chip,
   IconButton,
   Avatar,
@@ -103,9 +102,7 @@ import {
   AuraButton,
   AuraEmptyState,
   SearchBar,
-  AuraGlassStatCard,
   auraColors,
-  Callout,
   StatusBadge,
   StatCardSkeleton,
 } from "@qivr/design-system";
@@ -1184,99 +1181,71 @@ export default function ActionCenter() {
         }
       />
 
-      {/* Urgent Callout */}
-      {stats.urgent > 0 && (
-        <Box sx={{ px: 3, mb: 2 }}>
-          <Callout variant="warning">
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <UrgentIcon />
-              <span>
-                <strong>{stats.urgent}</strong> urgent/high priority items need
-                attention
-                {stats.overdue > 0 && (
-                  <>
-                    {" "}
-                    · <strong>{stats.overdue}</strong> overdue
-                  </>
-                )}
-              </span>
-              <AuraButton
-                size="small"
-                variant="text"
-                onClick={() => setFilter("urgent")}
-                sx={{ ml: "auto" }}
-              >
-                Show Urgent
-              </AuraButton>
-            </Box>
-          </Callout>
-        </Box>
-      )}
-
-      {/* Stats Row */}
-      <Grid container spacing={2} sx={{ mb: 2, px: 3 }}>
-        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-          <Box
-            onClick={() => setFilter("needs-action")}
-            sx={{ cursor: "pointer" }}
-          >
-            <AuraGlassStatCard
-              title="Need Action"
-              value={stats.unread}
-              icon={<MessageIcon />}
-            />
-          </Box>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-          <Box onClick={() => setFilter("urgent")} sx={{ cursor: "pointer" }}>
-            <AuraGlassStatCard
-              title="Urgent"
-              value={stats.urgent}
-              icon={<UrgentIcon />}
-            />
-          </Box>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-          <Box onClick={() => setFilter("today")} sx={{ cursor: "pointer" }}>
-            <AuraGlassStatCard
-              title="Due Today"
-              value={stats.dueToday}
-              icon={<ScheduleIcon />}
-            />
-          </Box>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-          <Box onClick={() => setFilter("overdue")} sx={{ cursor: "pointer" }}>
-            <AuraGlassStatCard
-              title="Overdue"
-              value={stats.overdue}
-              icon={<TimeIcon />}
-            />
-          </Box>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-          <Box onClick={() => setTab("message")} sx={{ cursor: "pointer" }}>
-            <AuraGlassStatCard
-              title="Messages"
-              value={stats.messages}
-              icon={<MessageIcon />}
-            />
-          </Box>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-          <Box onClick={() => setTab("referral")} sx={{ cursor: "pointer" }}>
-            <AuraGlassStatCard
-              title="Referrals"
-              value={stats.referrals}
-              icon={<ReferralIcon />}
-            />
-          </Box>
-        </Grid>
-      </Grid>
-
-      {/* Smart Filter Chips */}
+      {/* Compact Stats + Filters Row */}
       <Box sx={{ px: 3, mb: 2 }}>
-        <Stack direction="row" spacing={1} flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={2}
+          alignItems="center"
+          flexWrap="wrap"
+          useFlexGap
+          sx={{ gap: 1 }}
+        >
+          {/* Inline Stats */}
+          <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
+            {[
+              {
+                label: "Action",
+                value: stats.unread,
+                filter: "needs-action" as SmartFilter,
+                color: "primary",
+              },
+              {
+                label: "Urgent",
+                value: stats.urgent,
+                filter: "urgent" as SmartFilter,
+                color: "warning",
+              },
+              {
+                label: "Today",
+                value: stats.dueToday,
+                filter: "today" as SmartFilter,
+                color: "info",
+              },
+              {
+                label: "Overdue",
+                value: stats.overdue,
+                filter: "overdue" as SmartFilter,
+                color: "error",
+              },
+            ].map((stat) => (
+              <Chip
+                key={stat.label}
+                label={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <Typography variant="body2" fontWeight={700}>
+                      {stat.value}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {stat.label}
+                    </Typography>
+                  </Box>
+                }
+                variant={smartFilter === stat.filter ? "filled" : "outlined"}
+                color={stat.value > 0 ? (stat.color as any) : "default"}
+                onClick={() => setFilter(stat.filter)}
+                size="small"
+                sx={{
+                  cursor: "pointer",
+                  "& .MuiChip-label": { px: 1 },
+                }}
+              />
+            ))}
+          </Stack>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+          {/* Filter Chips */}
           {(
             [
               "all",
@@ -1339,16 +1308,50 @@ export default function ActionCenter() {
         >
           {/* Type Filter Chips */}
           <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
-            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ gap: 0.5 }}>
+            <Stack
+              direction="row"
+              spacing={0.5}
+              flexWrap="wrap"
+              useFlexGap
+              sx={{ gap: 0.5 }}
+            >
               {[
                 { value: "all", label: "All", count: stats.unread },
-                { value: "message", label: "Messages", icon: <MessageIcon sx={{ fontSize: 14 }} /> },
-                { value: "document", label: "Docs", icon: <DocumentIcon sx={{ fontSize: 14 }} /> },
-                { value: "referral", label: "Referrals", icon: <ReferralIcon sx={{ fontSize: 14 }} /> },
-                { value: "appointment", label: "Appts", icon: <AppointmentIcon sx={{ fontSize: 14 }} /> },
-                { value: "prom", label: "PROMs", icon: <AssessmentIcon sx={{ fontSize: 14 }} /> },
-                { value: "treatment-plan", label: "Plans", icon: <TreatmentPlanIcon sx={{ fontSize: 14 }} /> },
-                { value: "follow-up", label: "Follow-ups", icon: <FollowUpIcon sx={{ fontSize: 14 }} /> },
+                {
+                  value: "message",
+                  label: "Messages",
+                  icon: <MessageIcon sx={{ fontSize: 14 }} />,
+                },
+                {
+                  value: "document",
+                  label: "Docs",
+                  icon: <DocumentIcon sx={{ fontSize: 14 }} />,
+                },
+                {
+                  value: "referral",
+                  label: "Referrals",
+                  icon: <ReferralIcon sx={{ fontSize: 14 }} />,
+                },
+                {
+                  value: "appointment",
+                  label: "Appts",
+                  icon: <AppointmentIcon sx={{ fontSize: 14 }} />,
+                },
+                {
+                  value: "prom",
+                  label: "PROMs",
+                  icon: <AssessmentIcon sx={{ fontSize: 14 }} />,
+                },
+                {
+                  value: "treatment-plan",
+                  label: "Plans",
+                  icon: <TreatmentPlanIcon sx={{ fontSize: 14 }} />,
+                },
+                {
+                  value: "follow-up",
+                  label: "Follow-ups",
+                  icon: <FollowUpIcon sx={{ fontSize: 14 }} />,
+                },
               ].map((tab) => (
                 <Chip
                   key={tab.value}
