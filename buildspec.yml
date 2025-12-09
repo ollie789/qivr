@@ -111,49 +111,7 @@ phases:
     commands:
       - echo Build completed on `date`
 
-      # Deploy only changed frontends (sequential to ensure completion)
-      - |
-        if [ "$BUILD_CLINIC" = "true" ]; then
-          echo "Deploying clinic-dashboard..."
-          aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION
-        fi
-        if [ "$BUILD_PATIENT" = "true" ]; then
-          echo "Deploying patient-portal..."
-          aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION
-        fi
-        if [ "$BUILD_ADMIN" = "true" ]; then
-          echo "Deploying admin-portal..."
-          aws s3 sync apps/admin-portal/dist/ s3://qivr-admin-portal --delete --region $AWS_DEFAULT_REGION
-        fi
-        if [ "$BUILD_PARTNER" = "true" ]; then
-          echo "Deploying partner-portal..."
-          aws s3 sync apps/partner-portal/dist/ s3://qivr-partner-portal --delete --region $AWS_DEFAULT_REGION
-        fi
-        if [ "$BUILD_WIDGET" = "true" ]; then
-          echo "Deploying intake-widget..."
-          aws s3 sync apps/intake-widget/dist/ s3://qivr-intake-widget --delete --region $AWS_DEFAULT_REGION
-        fi
-
-      # Invalidate only changed CloudFront distributions (sequential to ensure completion)
-      - |
-        if [ "$BUILD_CLINIC" = "true" ]; then
-          echo "Invalidating clinic CloudFront..."
-          aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*"
-        fi
-        if [ "$BUILD_PATIENT" = "true" ]; then
-          echo "Invalidating patient CloudFront..."
-          aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*"
-        fi
-        if [ "$BUILD_ADMIN" = "true" ]; then
-          echo "Invalidating admin CloudFront..."
-          aws cloudfront create-invalidation --distribution-id E30RX4A147QBCE --paths "/*"
-        fi
-        if [ "$BUILD_PARTNER" = "true" ]; then
-          echo "Invalidating partner CloudFront..."
-          aws cloudfront create-invalidation --distribution-id E3TORP1KMGHC6H --paths "/*"
-        fi
-
-      # Update ECS service only if backend changed
+      # CRITICAL: Update ECS service FIRST (before frontend deploys that might fail)
       - |
         if [ "$BUILD_BACKEND" = "true" ]; then
           echo "Updating ECS service..."
@@ -164,7 +122,44 @@ phases:
         else
           echo '[]' > imagedefinitions.json
         fi
-        wait
+
+      # Deploy frontends (non-blocking - failures won't stop the build)
+      - |
+        if [ "$BUILD_CLINIC" = "true" ]; then
+          echo "Deploying clinic-dashboard..."
+          aws s3 sync apps/clinic-dashboard/dist/ s3://qivr-clinic-dashboard-production --delete --region $AWS_DEFAULT_REGION || echo "Warning: clinic-dashboard deploy failed"
+        fi
+        if [ "$BUILD_PATIENT" = "true" ]; then
+          echo "Deploying patient-portal..."
+          aws s3 sync apps/patient-portal/dist/ s3://qivr-patient-portal-production --delete --region $AWS_DEFAULT_REGION || echo "Warning: patient-portal deploy failed"
+        fi
+        if [ "$BUILD_ADMIN" = "true" ]; then
+          echo "Deploying admin-portal..."
+          aws s3 sync apps/admin-portal/dist/ s3://qivr-admin-portal --delete --region $AWS_DEFAULT_REGION || echo "Warning: admin-portal deploy failed"
+        fi
+        if [ "$BUILD_PARTNER" = "true" ]; then
+          echo "Deploying partner-portal..."
+          aws s3 sync apps/partner-portal/dist/ s3://qivr-partner-portal --delete --region $AWS_DEFAULT_REGION || echo "Warning: partner-portal deploy failed"
+        fi
+        if [ "$BUILD_WIDGET" = "true" ]; then
+          echo "Deploying intake-widget..."
+          aws s3 sync apps/intake-widget/dist/ s3://qivr-intake-widget --delete --region $AWS_DEFAULT_REGION || echo "Warning: intake-widget deploy failed"
+        fi
+
+      # Invalidate CloudFront (non-blocking)
+      - |
+        if [ "$BUILD_CLINIC" = "true" ]; then
+          aws cloudfront create-invalidation --distribution-id E1S9SAZB57T3C3 --paths "/*" || true
+        fi
+        if [ "$BUILD_PATIENT" = "true" ]; then
+          aws cloudfront create-invalidation --distribution-id E39OVJDZIZ22QL --paths "/*" || true
+        fi
+        if [ "$BUILD_ADMIN" = "true" ]; then
+          aws cloudfront create-invalidation --distribution-id E30RX4A147QBCE --paths "/*" || true
+        fi
+        if [ "$BUILD_PARTNER" = "true" ]; then
+          aws cloudfront create-invalidation --distribution-id E3TORP1KMGHC6H --paths "/*" || true
+        fi
 
       # Store successful build commit for next comparison
       - aws ssm put-parameter --name /qivr/last-successful-build --value $CODEBUILD_RESOLVED_SOURCE_VERSION --type String --overwrite
