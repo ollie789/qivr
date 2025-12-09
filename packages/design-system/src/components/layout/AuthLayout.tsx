@@ -1,9 +1,9 @@
-import { PropsWithChildren, ReactNode } from 'react';
-import { Box, Stack, Typography, useTheme } from '@mui/material';
-import Grid from '@mui/material/Grid';
-import Lottie from 'lottie-react';
-import authAnimation from '../../assets/auth-animation.json';
-import authAnimationDark from '../../assets/auth-animation-dark.json';
+import { PropsWithChildren, ReactNode } from "react";
+import { Box, Stack, Typography, useTheme } from "@mui/material";
+import Grid from "@mui/material/Grid";
+import Lottie from "lottie-react";
+import authAnimation from "../../assets/auth-animation.json";
+import authAnimationDark from "../../assets/auth-animation-dark.json";
 
 export interface AuthLayoutProps extends PropsWithChildren {
   /**
@@ -44,24 +44,25 @@ export interface AuthLayoutProps extends PropsWithChildren {
 export const AuthLayout = ({
   children,
   logo,
-  appName = 'Qivr',
+  appName = "Qivr",
   tagline,
   showAnimation = true,
   animationData,
   footer,
 }: AuthLayoutProps) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const isDark = theme.palette.mode === "dark";
 
   // Use custom animation or default based on theme
-  const animation = animationData ?? (isDark ? authAnimationDark : authAnimation);
+  const animation =
+    animationData ?? (isDark ? authAnimationDark : authAnimation);
 
   return (
     <Grid
       container
       sx={{
-        minHeight: '100vh',
-        flexDirection: { xs: 'column', md: 'row' },
+        minHeight: "100vh",
+        flexDirection: { xs: "column", md: "row" },
       }}
     >
       {/* Left Panel - Branding & Animation */}
@@ -69,24 +70,24 @@ export const AuthLayout = ({
         size={{ xs: 12, md: 6 }}
         sx={{
           borderRight: { md: 1 },
-          borderColor: { md: 'divider' },
-          bgcolor: 'background.paper',
-          display: { xs: 'none', md: 'block' },
+          borderColor: { md: "divider" },
+          bgcolor: "background.paper",
+          display: { xs: "none", md: "block" },
         }}
       >
         <Stack
           direction="column"
           sx={{
-            justifyContent: 'space-between',
-            height: '100%',
-            minHeight: '100vh',
+            justifyContent: "space-between",
+            height: "100%",
+            minHeight: "100vh",
             p: { xs: 3, sm: 5 },
           }}
         >
           {/* Logo Section */}
           <Stack
             sx={{
-              justifyContent: { xs: 'center', md: 'flex-start' },
+              justifyContent: { xs: "center", md: "flex-start" },
               mb: { xs: 5, md: 0 },
             }}
           >
@@ -97,16 +98,20 @@ export const AuthLayout = ({
                   fontWeight: 700,
                   background: (theme) =>
                     `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
                 }}
               >
                 {appName}
               </Typography>
             )}
             {tagline && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
                 {tagline}
               </Typography>
             )}
@@ -116,8 +121,8 @@ export const AuthLayout = ({
           {showAnimation && (
             <Stack
               sx={{
-                justifyContent: 'center',
-                alignItems: 'center',
+                justifyContent: "center",
+                alignItems: "center",
                 flex: 1,
                 py: 4,
               }}
@@ -125,22 +130,26 @@ export const AuthLayout = ({
               <Box
                 sx={{
                   maxWidth: 450,
-                  width: '100%',
+                  width: "100%",
                 }}
               >
                 <Lottie
                   animationData={animation}
                   loop
-                  style={{ width: '100%', height: 'auto' }}
+                  style={{ width: "100%", height: "auto" }}
                 />
               </Box>
             </Stack>
           )}
 
           {/* Footer Section */}
-          <Stack sx={{ justifyContent: 'center' }}>
+          <Stack sx={{ justifyContent: "center" }}>
             {footer || (
-              <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                textAlign="center"
+              >
                 Secure healthcare platform
               </Typography>
             )}
@@ -152,20 +161,24 @@ export const AuthLayout = ({
       <Grid
         size={{ xs: 12, md: 6 }}
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
           flex: 1,
-          bgcolor: 'background.default',
+          bgcolor: "background.default",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
         }}
       >
         {/* Mobile Logo (visible only on small screens) */}
         <Box
           sx={{
-            display: { xs: 'flex', md: 'none' },
-            justifyContent: 'center',
+            display: { xs: "flex", md: "none" },
+            justifyContent: "center",
             p: 3,
             borderBottom: 1,
-            borderColor: 'divider',
+            borderColor: "divider",
+            width: "100%",
           }}
         >
           {logo || (
@@ -175,9 +188,9 @@ export const AuthLayout = ({
                 fontWeight: 700,
                 background: (theme) =>
                   `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
               }}
             >
               {appName}
@@ -188,9 +201,10 @@ export const AuthLayout = ({
         {/* Form Content */}
         <Box
           sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
+            width: "100%",
+            maxWidth: 440,
+            px: 3,
+            py: 4,
           }}
         >
           {children}
