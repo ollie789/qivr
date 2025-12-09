@@ -10,6 +10,9 @@ public interface IClinicAnalyticsService
     Task<DashboardMetrics> GetDashboardMetricsAsync(Guid tenantId, DateTime date, CancellationToken cancellationToken = default);
     Task<ClinicalAnalytics> GetClinicalAnalyticsAsync(Guid tenantId, DateTime from, DateTime to, CancellationToken cancellationToken = default);
     Task<PainMapAnalytics> GetPainMapAnalyticsAsync(Guid tenantId, DateTime from, DateTime to, CancellationToken cancellationToken = default);
+
+    // New analytics using normalized PROM infrastructure
+    Task<PromAnalyticsSummary> GetPromAnalyticsAsync(Guid tenantId, DateTime from, DateTime to, string? instrumentKey = null, string? clinicalDomain = null, CancellationToken cancellationToken = default);
 }
 
 public class ClinicAnalyticsService : IClinicAnalyticsService
@@ -270,6 +273,178 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
             MostCommonRegion = painMaps.GroupBy(pm => pm.BodyRegion).OrderByDescending(g => g.Count()).FirstOrDefault()?.Key ?? "None"
         };
     }
+
+    public async Task<PromAnalyticsSummary> GetPromAnalyticsAsync(
+        Guid tenantId,
+        DateTime from,
+        DateTime to,
+        string? instrumentKey = null,
+        string? clinicalDomain = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Base query for summary scores
+        var scoresQuery = _context.PromSummaryScores
+            .Where(s => s.TenantId == tenantId && s.CreatedAt >= from && s.CreatedAt <= to);
+
+        // Filter by instrument if specified
+        if (!string.IsNullOrEmpty(instrumentKey) || !string.IsNullOrEmpty(clinicalDomain))
+        {
+            var templateIds = await _context.PromTemplates
+                .Where(t => t.TenantId == tenantId && t.InstrumentId != null)
+                .Where(t => string.IsNullOrEmpty(instrumentKey) || t.Instrument!.Key == instrumentKey)
+                .Where(t => string.IsNullOrEmpty(clinicalDomain) || t.Instrument!.ClinicalDomain == clinicalDomain)
+                .Select(t => t.Id)
+                .ToListAsync(cancellationToken);
+
+            var instanceIds = await _context.PromInstances
+                .Where(i => templateIds.Contains(i.TemplateId))
+                .Select(i => i.Id)
+                .ToListAsync(cancellationToken);
+
+            scoresQuery = scoresQuery.Where(s => instanceIds.Contains(s.InstanceId));
+        }
+
+        // Get all summary scores for the period
+        var summaryScores = await scoresQuery
+            .Include(s => s.Instance)
+                .ThenInclude(i => i!.Template)
+            .ToListAsync(cancellationToken);
+
+        // Group by score key (total, pain, function, etc.)
+        var scoresByKey = summaryScores
+            .GroupBy(s => s.ScoreKey)
+            .Select(g => new ScoreKeyAnalytics
+            {
+                ScoreKey = g.Key,
+                Label = g.First().Label ?? g.Key,
+                Count = g.Count(),
+                Average = Math.Round((double)g.Average(s => s.Value), 2),
+                Min = (double)g.Min(s => s.Value),
+                Max = (double)g.Max(s => s.Value),
+                BandDistribution = g
+                    .Where(s => !string.IsNullOrEmpty(s.InterpretationBand))
+                    .GroupBy(s => s.InterpretationBand!)
+                    .ToDictionary(bg => bg.Key, bg => bg.Count())
+            })
+            .OrderByDescending(s => s.Count)
+            .ToList();
+
+        // Get scores by instrument
+        var scoresByInstrument = await _context.PromSummaryScores
+            .Where(s => s.TenantId == tenantId && s.CreatedAt >= from && s.CreatedAt <= to)
+            .Where(s => s.ScoreKey == "total") // Primary scores only
+            .Join(_context.PromInstances, s => s.InstanceId, i => i.Id, (s, i) => new { Score = s, Instance = i })
+            .Join(_context.PromTemplates.Include(t => t.Instrument), x => x.Instance.TemplateId, t => t.Id, (x, t) => new { x.Score, Template = t })
+            .Where(x => x.Template.Instrument != null)
+            .GroupBy(x => new { x.Template.Instrument!.Key, x.Template.Instrument.Name, x.Template.Instrument.ClinicalDomain })
+            .Select(g => new InstrumentAnalytics
+            {
+                InstrumentKey = g.Key.Key,
+                InstrumentName = g.Key.Name,
+                ClinicalDomain = g.Key.ClinicalDomain ?? "other",
+                TotalSubmissions = g.Count(),
+                AverageScore = Math.Round((double)g.Average(x => x.Score.Value), 2),
+                CompletionRate = 0 // Will calculate below
+            })
+            .ToListAsync(cancellationToken);
+
+        // Calculate completion rates per instrument
+        foreach (var instrument in scoresByInstrument)
+        {
+            var templateIds = await _context.PromTemplates
+                .Where(t => t.TenantId == tenantId && t.Instrument != null && t.Instrument.Key == instrument.InstrumentKey)
+                .Select(t => t.Id)
+                .ToListAsync(cancellationToken);
+
+            var instances = await _context.PromInstances
+                .Where(i => templateIds.Contains(i.TemplateId) && i.CreatedAt >= from && i.CreatedAt <= to)
+                .ToListAsync(cancellationToken);
+
+            var completed = instances.Count(i => i.Status == PromStatus.Completed);
+            instrument.CompletionRate = instances.Count > 0 ? Math.Round((double)completed / instances.Count * 100, 1) : 0;
+        }
+
+        // Improvement tracking using summary scores
+        var patientScoreGroups = summaryScores
+            .Where(s => s.ScoreKey == "total")
+            .GroupBy(s => s.Instance?.PatientId)
+            .Where(g => g.Key.HasValue && g.Count() >= 2)
+            .ToList();
+
+        var improvements = new List<PatientImprovement>();
+        foreach (var group in patientScoreGroups)
+        {
+            var ordered = group.OrderBy(s => s.CreatedAt).ToList();
+            var first = ordered.First();
+            var last = ordered.Last();
+            var change = last.Value - first.Value;
+            var higherIsBetter = first.HigherIsBetter ?? false;
+            var improved = higherIsBetter ? change > 0 : change < 0;
+            var mcidAchieved = first.Definition?.MCID != null && Math.Abs(change) >= first.Definition.MCID;
+
+            improvements.Add(new PatientImprovement
+            {
+                PatientId = group.Key!.Value,
+                FirstScore = first.Value,
+                LastScore = last.Value,
+                Change = change,
+                Improved = improved,
+                AchievedMCID = mcidAchieved
+            });
+        }
+
+        var improvementRate = improvements.Count > 0
+            ? Math.Round((double)improvements.Count(i => i.Improved) / improvements.Count * 100, 1)
+            : 0;
+
+        var mcidRate = improvements.Count > 0
+            ? Math.Round((double)improvements.Count(i => i.AchievedMCID) / improvements.Count * 100, 1)
+            : 0;
+
+        // Trends over time (weekly)
+        var weeklyTrends = summaryScores
+            .Where(s => s.ScoreKey == "total")
+            .GroupBy(s => new { Week = (s.CreatedAt - from).Days / 7 })
+            .OrderBy(g => g.Key.Week)
+            .Select(g => new WeeklyScoreTrend
+            {
+                Week = $"Week {g.Key.Week + 1}",
+                AverageScore = Math.Round((double)g.Average(s => s.Value), 2),
+                Count = g.Count(),
+                ImprovedCount = 0 // Would need more complex calculation
+            })
+            .ToList();
+
+        // Item-level analytics (top problematic questions)
+        var itemResponses = await _context.PromItemResponses
+            .Where(r => r.TenantId == tenantId && r.CreatedAt >= from && r.CreatedAt <= to)
+            .Where(r => r.ValueNumeric.HasValue)
+            .GroupBy(r => new { r.QuestionCode, r.TemplateQuestion.Label })
+            .Select(g => new ItemAnalytics
+            {
+                QuestionCode = g.Key.QuestionCode ?? "unknown",
+                QuestionLabel = g.Key.Label,
+                ResponseCount = g.Count(),
+                AverageScore = Math.Round((double)g.Average(r => r.ValueNumeric!.Value), 2),
+                SkipRate = 0 // Would need separate query
+            })
+            .OrderByDescending(i => i.AverageScore) // Highest severity items first
+            .Take(10)
+            .ToListAsync(cancellationToken);
+
+        return new PromAnalyticsSummary
+        {
+            TotalSubmissions = summaryScores.Select(s => s.InstanceId).Distinct().Count(),
+            TotalScoresCalculated = summaryScores.Count,
+            ScoresByKey = scoresByKey,
+            ScoresByInstrument = scoresByInstrument,
+            ImprovementRate = improvementRate,
+            MCIDAchievementRate = mcidRate,
+            PatientsTracked = improvements.Count,
+            WeeklyTrends = weeklyTrends,
+            TopItems = itemResponses
+        };
+    }
 }
 
 // DTOs
@@ -362,4 +537,66 @@ public record PromCompletion
     public int Completed { get; init; }
     public int Pending { get; init; }
     public double CompletionRate { get; init; }
+}
+
+// New DTOs for enhanced PROM analytics
+public record PromAnalyticsSummary
+{
+    public int TotalSubmissions { get; init; }
+    public int TotalScoresCalculated { get; init; }
+    public List<ScoreKeyAnalytics> ScoresByKey { get; init; } = new();
+    public List<InstrumentAnalytics> ScoresByInstrument { get; init; } = new();
+    public double ImprovementRate { get; init; }
+    public double MCIDAchievementRate { get; init; }
+    public int PatientsTracked { get; init; }
+    public List<WeeklyScoreTrend> WeeklyTrends { get; init; } = new();
+    public List<ItemAnalytics> TopItems { get; init; } = new();
+}
+
+public record ScoreKeyAnalytics
+{
+    public string ScoreKey { get; init; } = "";
+    public string Label { get; init; } = "";
+    public int Count { get; init; }
+    public double Average { get; init; }
+    public double Min { get; init; }
+    public double Max { get; init; }
+    public Dictionary<string, int> BandDistribution { get; init; } = new();
+}
+
+public class InstrumentAnalytics
+{
+    public string InstrumentKey { get; init; } = "";
+    public string InstrumentName { get; init; } = "";
+    public string ClinicalDomain { get; init; } = "";
+    public int TotalSubmissions { get; init; }
+    public double AverageScore { get; init; }
+    public double CompletionRate { get; set; }
+}
+
+public record PatientImprovement
+{
+    public Guid PatientId { get; init; }
+    public decimal FirstScore { get; init; }
+    public decimal LastScore { get; init; }
+    public decimal Change { get; init; }
+    public bool Improved { get; init; }
+    public bool AchievedMCID { get; init; }
+}
+
+public record WeeklyScoreTrend
+{
+    public string Week { get; init; } = "";
+    public double AverageScore { get; init; }
+    public int Count { get; init; }
+    public int ImprovedCount { get; init; }
+}
+
+public record ItemAnalytics
+{
+    public string QuestionCode { get; init; } = "";
+    public string QuestionLabel { get; init; } = "";
+    public int ResponseCount { get; init; }
+    public double AverageScore { get; init; }
+    public double SkipRate { get; init; }
 }

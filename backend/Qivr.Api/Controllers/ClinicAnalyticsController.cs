@@ -202,6 +202,32 @@ public class ClinicAnalyticsController : BaseApiController
         var analytics = await _analyticsService.GetPainMapAnalyticsAsync(tenantId, fromDate, toDate, cancellationToken);
         return Ok(analytics);
     }
+
+    /// <summary>
+    /// Get enhanced PROM analytics using normalized infrastructure.
+    /// Provides subscale breakdowns, instrument-based filtering, MCID tracking, and item-level analytics.
+    /// </summary>
+    [HttpGet("proms")]
+    [ProducesResponseType(typeof(PromAnalyticsSummary), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPromAnalytics(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] string? instrumentKey,
+        [FromQuery] string? clinicalDomain,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = RequireTenantId();
+        var fromDate = from.HasValue
+            ? DateTime.SpecifyKind(from.Value, DateTimeKind.Utc)
+            : DateTime.UtcNow.AddDays(-30);
+        var toDate = to.HasValue
+            ? DateTime.SpecifyKind(to.Value, DateTimeKind.Utc)
+            : DateTime.UtcNow;
+
+        var analytics = await _analyticsService.GetPromAnalyticsAsync(
+            tenantId, fromDate, toDate, instrumentKey, clinicalDomain, cancellationToken);
+        return Ok(analytics);
+    }
 }
 
 // DTOs matching frontend AnalyticsData type

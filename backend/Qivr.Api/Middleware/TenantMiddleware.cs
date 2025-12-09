@@ -161,7 +161,8 @@ public class TenantMiddleware
             "/api/migration",
             "/api/debug",  // Debug endpoints for testing
             "/webhooks",
-            "/api/v1/intake",  // Public intake submission endpoint
+            "/api/intake",  // Public intake submission endpoint
+            "/api/v1/intake",  // Legacy path
             "/api/v1/proms/instances" // Base path for public PROM instances endpoints
         };
         
