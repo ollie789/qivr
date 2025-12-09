@@ -76,7 +76,8 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
 
     // Personal info validation (widget-specific)
     if (currentStep.id === "personal-info") {
-      if (!form.fullName?.trim()) newErrors.fullName = "Required";
+      if (!form.firstName?.trim()) newErrors.firstName = "Required";
+      if (!form.lastName?.trim()) newErrors.lastName = "Required";
       if (!form.email?.trim()) newErrors.email = "Required";
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
         newErrors.email = "Invalid email";
@@ -113,10 +114,8 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
     setError("");
 
     try {
-      // Split fullName into firstName/lastName for backend
-      const nameParts = (form.fullName || "").trim().split(/\s+/);
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
+      const firstName = form.firstName || "";
+      const lastName = form.lastName || "";
 
       const res = await fetch(`${apiUrl}/api/intake/submit`, {
         method: "POST",
@@ -233,11 +232,20 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
             {currentStep.title}
           </Typography>
           <TextField
-            label="Full Name"
-            value={form.fullName || ""}
-            onChange={(e) => update("fullName", e.target.value)}
-            error={!!errors.fullName}
-            helperText={errors.fullName}
+            label="First Name"
+            value={form.firstName || ""}
+            onChange={(e) => update("firstName", e.target.value)}
+            error={!!errors.firstName}
+            helperText={errors.firstName}
+            fullWidth
+            required
+          />
+          <TextField
+            label="Last Name"
+            value={form.lastName || ""}
+            onChange={(e) => update("lastName", e.target.value)}
+            error={!!errors.lastName}
+            helperText={errors.lastName}
             fullWidth
             required
           />

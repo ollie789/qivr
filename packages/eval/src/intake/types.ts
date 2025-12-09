@@ -42,7 +42,9 @@ export const painDescriptions: Record<number, string> = {
  */
 export interface IntakeFormData {
   // Personal Info (for widget - portal gets from auth)
-  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string; // deprecated - use firstName/lastName
   email?: string;
   phone?: string;
   ageRange?: string;
