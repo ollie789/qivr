@@ -1382,6 +1382,105 @@ public class TreatmentPlansController : BaseApiController
     }
 
     #endregion
+
+    /// <summary>
+    /// Get treatment plan alerts for Action Center
+    /// </summary>
+    [HttpGet("alerts")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> GetAlerts()
+    {
+        var tenantId = RequireTenantId();
+        var alerts = new List<TreatmentPlanAlertDto>();
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
+
+        // Get patients without active treatment plans
+        var patientsWithPlans = await _context.TreatmentPlans
+            .Where(t => t.TenantId == tenantId && t.DeletedAt == null && t.Status == TreatmentPlanStatus.Active)
+            .Select(t => t.PatientId)
+            .Distinct()
+            .ToListAsync();
+
+        var patientsWithoutPlans = await _context.Users
+            .Where(u => u.TenantId == tenantId && u.UserType == UserType.Patient && !patientsWithPlans.Contains(u.Id))
+            .Take(10)
+            .Select(u => new TreatmentPlanAlertDto
+            {
+                Id = Guid.NewGuid(),
+                Type = "no_plan",
+                PatientId = u.Id,
+                PatientName = $"{u.FirstName} {u.LastName}",
+                PatientEmail = u.Email,
+                CreatedAt = u.CreatedAt
+            })
+            .ToListAsync();
+        alerts.AddRange(patientsWithoutPlans);
+
+        // Get stalled plans (no session in 7+ days)
+        var stalledPlans = await _context.TreatmentPlans
+            .Where(t => t.TenantId == tenantId && t.DeletedAt == null && t.Status == TreatmentPlanStatus.Active)
+            .Include(t => t.Patient)
+            .Include(t => t.Sessions)
+            .Where(t => !t.Sessions.Any(s => s.ScheduledDate >= sevenDaysAgo))
+            .Take(10)
+            .Select(t => new TreatmentPlanAlertDto
+            {
+                Id = Guid.NewGuid(),
+                Type = "stalled",
+                PatientId = t.PatientId ?? Guid.Empty,
+                PatientName = t.Patient != null ? $"{t.Patient.FirstName} {t.Patient.LastName}" : "",
+                PatientEmail = t.Patient != null ? t.Patient.Email : null,
+                PlanId = t.Id,
+                PlanTitle = t.Title,
+                LastSessionDate = t.Sessions.OrderByDescending(s => s.ScheduledDate).Select(s => (DateTime?)s.ScheduledDate).FirstOrDefault(),
+                DaysSinceLastSession = t.Sessions.Any() 
+                    ? (int)(DateTime.UtcNow - t.Sessions.Max(s => s.ScheduledDate)).TotalDays 
+                    : null,
+                CreatedAt = t.CreatedAt
+            })
+            .ToListAsync();
+        alerts.AddRange(stalledPlans);
+
+        // Get plans nearing completion (< 3 sessions remaining)
+        var nearingCompletion = await _context.TreatmentPlans
+            .Where(t => t.TenantId == tenantId && t.DeletedAt == null && t.Status == TreatmentPlanStatus.Active)
+            .Include(t => t.Patient)
+            .Include(t => t.Sessions)
+            .Where(t => t.TotalSessions - t.CompletedSessions <= 3 && t.TotalSessions - t.CompletedSessions > 0)
+            .Take(10)
+            .Select(t => new TreatmentPlanAlertDto
+            {
+                Id = Guid.NewGuid(),
+                Type = "nearing_completion",
+                PatientId = t.PatientId ?? Guid.Empty,
+                PatientName = t.Patient != null ? $"{t.Patient.FirstName} {t.Patient.LastName}" : "",
+                PatientEmail = t.Patient != null ? t.Patient.Email : null,
+                PlanId = t.Id,
+                PlanTitle = t.Title,
+                SessionsRemaining = t.TotalSessions - t.CompletedSessions,
+                CreatedAt = t.CreatedAt
+            })
+            .ToListAsync();
+        alerts.AddRange(nearingCompletion);
+
+        return Ok(alerts.OrderByDescending(a => a.CreatedAt).Take(20));
+    }
+}
+
+public class TreatmentPlanAlertDto
+{
+    public Guid Id { get; set; }
+    public string Type { get; set; } = "";
+    public Guid PatientId { get; set; }
+    public string PatientName { get; set; } = "";
+    public string? PatientEmail { get; set; }
+    public Guid? PlanId { get; set; }
+    public string? PlanTitle { get; set; }
+    public DateTime? LastSessionDate { get; set; }
+    public int? DaysSinceLastSession { get; set; }
+    public int? SessionsRemaining { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 public class CreateTreatmentPlanRequest

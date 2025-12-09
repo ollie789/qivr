@@ -388,14 +388,21 @@ Relieving Factors:
 ${evaluation?.relievingFactors?.join(", ") || "None reported"}
 
 Medical History:
-- Medications: ${evaluation?.currentMedications || fullDetails?.questionnaireResponses?.medications?.join(", ") || "None reported"}
-- Allergies: ${evaluation?.allergies || "None reported"}
-- Medical Conditions: ${evaluation?.medicalConditions || fullDetails?.questionnaireResponses?.additionalHistory?.join(", ") || "None reported"}
-- Previous Surgeries: ${evaluation?.surgeries || fullDetails?.questionnaireResponses?.prevOrtho?.join(", ") || "None reported"}
+- How Pain Started: ${fullDetails?.questionnaireResponses?.painStart || "Not reported"}
+- Medications: ${fullDetails?.questionnaireResponses?.medications?.join(", ") || "None reported"}
+- Medical Conditions: ${fullDetails?.questionnaireResponses?.additionalHistory?.join(", ") || "None reported"}
+- Previous Orthopaedic History: ${fullDetails?.questionnaireResponses?.prevOrtho?.join(", ") || "None reported"}
+- Current Treatments: ${fullDetails?.questionnaireResponses?.currentTreatments?.join(", ") || "None reported"}
+- Mobility Aids: ${fullDetails?.questionnaireResponses?.mobilityAids?.join(", ") || "None"}
 - Previous Imaging: ${fullDetails?.questionnaireResponses?.hasImaging === "Yes" ? `Yes - ${fullDetails?.questionnaireResponses?.imagingTypes?.join(", ") || "Type not specified"} (${fullDetails?.questionnaireResponses?.imagingTimeframe || "Timeframe not specified"})` : fullDetails?.questionnaireResponses?.hasImaging || "Not reported"}
+- Daily Impact: ${fullDetails?.questionnaireResponses?.dailyImpact?.join(", ") || "Not specified"}
+- Red Flags: ${fullDetails?.questionnaireResponses?.redFlags?.length ? fullDetails.questionnaireResponses.redFlags.join(", ") : "None reported"}
 
 Treatment Goals:
-${evaluation?.treatmentGoals || "Not specified"}
+- Goals: ${fullDetails?.questionnaireResponses?.goals?.join(", ") || "Not specified"}
+- Timeline: ${fullDetails?.questionnaireResponses?.timeline || "Not specified"}
+- Milestones: ${fullDetails?.questionnaireResponses?.milestones?.join(", ") || "Not specified"}
+- Concerns: ${fullDetails?.questionnaireResponses?.concerns?.join(", ") || "None"}
 
 ${
   fullDetails.aiSummary
@@ -1600,24 +1607,6 @@ Date: ________________________
                             </Box>
                           )}
 
-                          {/* Legacy Medications (string format) */}
-                          {evaluation?.currentMedications &&
-                            !fullDetails?.questionnaireResponses?.medications
-                              ?.length && (
-                              <Box>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={600}
-                                >
-                                  Medications
-                                </Typography>
-                                <Typography variant="body2">
-                                  {evaluation.currentMedications}
-                                </Typography>
-                              </Box>
-                            )}
-
                           {/* Mobility Aids */}
                           {fullDetails?.questionnaireResponses?.mobilityAids
                             ?.length > 0 && (
@@ -1682,77 +1671,8 @@ Date: ________________________
                             </Box>
                           )}
 
-                          {/* Legacy fields for backward compatibility */}
-                          {evaluation?.allergies && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="error.main"
-                                fontWeight={600}
-                              >
-                                Allergies
-                              </Typography>
-                              <Typography variant="body2">
-                                {evaluation.allergies}
-                              </Typography>
-                            </Box>
-                          )}
-                          {evaluation?.medicalConditions &&
-                            !fullDetails?.questionnaireResponses
-                              ?.additionalHistory?.length && (
-                              <Box>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={600}
-                                >
-                                  Conditions
-                                </Typography>
-                                <Typography variant="body2">
-                                  {evaluation.medicalConditions}
-                                </Typography>
-                              </Box>
-                            )}
-                          {evaluation?.surgeries && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={600}
-                              >
-                                Surgeries
-                              </Typography>
-                              <Typography variant="body2">
-                                {evaluation.surgeries}
-                              </Typography>
-                            </Box>
-                          )}
-                          {evaluation?.previousTreatments &&
-                            !fullDetails?.questionnaireResponses
-                              ?.currentTreatments?.length && (
-                              <Box>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={600}
-                                >
-                                  Previous Treatments
-                                </Typography>
-                                <Typography variant="body2">
-                                  {Array.isArray(evaluation.previousTreatments)
-                                    ? evaluation.previousTreatments.join(", ")
-                                    : evaluation.previousTreatments}
-                                </Typography>
-                              </Box>
-                            )}
-
                           {/* Empty state */}
-                          {!evaluation?.allergies &&
-                            !evaluation?.currentMedications &&
-                            !evaluation?.medicalConditions &&
-                            !evaluation?.surgeries &&
-                            !evaluation?.previousTreatments &&
-                            !fullDetails?.questionnaireResponses?.painStart &&
+                          {!fullDetails?.questionnaireResponses?.painStart &&
                             !fullDetails?.questionnaireResponses?.hasImaging &&
                             !fullDetails?.questionnaireResponses?.prevOrtho
                               ?.length &&
@@ -1900,16 +1820,6 @@ Date: ________________________
                           </Stack>
                         </InfoCard>
                       )}
-
-                      {/* Legacy Treatment Goals (fallback) */}
-                      {evaluation?.treatmentGoals &&
-                        !fullDetails?.questionnaireResponses?.goals?.length && (
-                          <InfoCard title="Treatment Goals" sx={{ mb: 2 }}>
-                            <Typography variant="body2">
-                              {evaluation.treatmentGoals}
-                            </Typography>
-                          </InfoCard>
-                        )}
 
                       {/* Daily Impact */}
                       {fullDetails?.questionnaireResponses?.dailyImpact
