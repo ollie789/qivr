@@ -1106,9 +1106,9 @@ export default function Settings() {
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={1}>
                             <Avatar sx={{ width: 32, height: 32 }}>
-                              {provider.name.charAt(0)}
+                              {(provider.name || "?").charAt(0)}
                             </Avatar>
-                            {provider.name}
+                            {provider.name || "Unknown"}
                           </Box>
                         </TableCell>
                         <TableCell>{provider.email}</TableCell>

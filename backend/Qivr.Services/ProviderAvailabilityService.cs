@@ -61,7 +61,18 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == provider.TenantId);
         var timezone = tenant?.Timezone ?? "Australia/Sydney";
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+        
+        TimeZoneInfo tz;
+        try
+        {
+            tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+        }
+        catch
+        {
+            // Fallback to UTC if timezone not found
+            _logger.LogWarning("Timezone {Timezone} not found, using UTC", timezone);
+            tz = TimeZoneInfo.Utc;
+        }
 
         // Work with local date for schedule lookup
         var localDate = date.Date;
@@ -174,7 +185,18 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == provider.TenantId);
         var timezone = tenant?.Timezone ?? "Australia/Sydney";
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+        
+        TimeZoneInfo tz;
+        try
+        {
+            tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+        }
+        catch
+        {
+            // Fallback to UTC if timezone not found
+            _logger.LogWarning("Timezone {Timezone} not found, using UTC", timezone);
+            tz = TimeZoneInfo.Utc;
+        }
 
         // Convert to local time for working hours comparison
         var localStart = TimeZoneInfo.ConvertTimeFromUtc(
