@@ -26,8 +26,8 @@ phases:
           BUILD_BACKEND=true
           BUILD_CLINIC=true
           BUILD_PATIENT=true
-          BUILD_ADMIN=true
-          BUILD_PARTNER=true
+          BUILD_ADMIN=false
+          BUILD_PARTNER=false
           BUILD_WIDGET=true
         else
           echo "Comparing $PREV_COMMIT to $CODEBUILD_RESOLVED_SOURCE_VERSION"
@@ -35,13 +35,13 @@ phases:
           CHANGED_FILES=$(git diff --name-only $PREV_COMMIT $CODEBUILD_RESOLVED_SOURCE_VERSION 2>/dev/null || echo "")
           if [ -z "$CHANGED_FILES" ]; then
             echo "No changes detected or git diff failed - building all to be safe"
-            BUILD_BACKEND=true; BUILD_CLINIC=true; BUILD_PATIENT=true; BUILD_ADMIN=true; BUILD_PARTNER=true; BUILD_WIDGET=true
+            BUILD_BACKEND=true; BUILD_CLINIC=true; BUILD_PATIENT=true; BUILD_ADMIN=false; BUILD_PARTNER=false; BUILD_WIDGET=true
           else
             BUILD_BACKEND=$(echo "$CHANGED_FILES" | grep -q "^backend/\|^packages/" && echo true || echo false)
             BUILD_CLINIC=$(echo "$CHANGED_FILES" | grep -q "^apps/clinic-dashboard/\|^packages/" && echo true || echo false)
             BUILD_PATIENT=$(echo "$CHANGED_FILES" | grep -q "^apps/patient-portal/\|^packages/" && echo true || echo false)
-            BUILD_ADMIN=$(echo "$CHANGED_FILES" | grep -q "^apps/admin-portal/\|^packages/" && echo true || echo false)
-            BUILD_PARTNER=$(echo "$CHANGED_FILES" | grep -q "^apps/partner-portal/\|^packages/" && echo true || echo false)
+            BUILD_ADMIN=false
+            BUILD_PARTNER=false
             BUILD_WIDGET=$(echo "$CHANGED_FILES" | grep -q "^apps/intake-widget/\|^packages/" && echo true || echo false)
           fi
         fi
