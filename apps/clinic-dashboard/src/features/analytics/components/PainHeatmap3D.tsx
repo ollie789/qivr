@@ -148,14 +148,14 @@ function CameraController({ cameraView }: { cameraView: 'front' | 'back' | 'left
 
   useEffect(() => {
     const positions: Record<'front' | 'back' | 'left' | 'right', [number, number, number]> = {
-      front: [0, 2.5, 6],
-      back: [0, 2.5, -6],
-      left: [-6, 2.5, 0],
-      right: [6, 2.5, 0],
+      front: [0, 1, 4],
+      back: [0, 1, -4],
+      left: [-4, 1, 0],
+      right: [4, 1, 0],
     };
     const pos = positions[cameraView];
     camera.position.set(pos[0], pos[1], pos[2]);
-    camera.lookAt(0, 2.5, 0);
+    camera.lookAt(0, 1, 0);
   }, [cameraView, camera]);
 
   return null;
@@ -311,7 +311,7 @@ const PainHeatmap3D: React.FC<PainHeatmap3DProps> = ({
             overflow: 'hidden',
           }}
         >
-          <Canvas camera={{ fov: 45, position: [0, 2.5, 6] }}>
+          <Canvas camera={{ fov: 50, position: [0, 1, 4] }}>
             <Suspense fallback={null}>
               <ambientLight intensity={0.6} />
               <directionalLight position={[5, 5, 5]} intensity={1} />
@@ -322,9 +322,9 @@ const PainHeatmap3D: React.FC<PainHeatmap3DProps> = ({
               <OrbitControls
                 enableZoom={true}
                 enablePan={false}
-                minDistance={4}
-                maxDistance={10}
-                target={[0, 2.5, 0]}
+                minDistance={2.5}
+                maxDistance={8}
+                target={[0, 1, 0]}
               />
             </Suspense>
           </Canvas>
