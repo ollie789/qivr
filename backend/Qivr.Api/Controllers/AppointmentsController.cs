@@ -330,6 +330,7 @@ public class AppointmentsController : BaseApiController
             ProviderId = request.ProviderId,
             EvaluationId = request.EvaluationId,
             TreatmentPlanId = request.TreatmentPlanId,
+            ServiceTypeId = request.ServiceTypeId,
             AppointmentType = request.AppointmentType,
             Status = AppointmentStatus.Requested,
             ScheduledStart = request.ScheduledStart,
@@ -1351,6 +1352,7 @@ public class CreateAppointmentRequest
     public Guid ProviderId { get; set; }
     public Guid? EvaluationId { get; set; }
     public Guid? TreatmentPlanId { get; set; }
+    public Guid? ServiceTypeId { get; set; }
     public DateTime ScheduledStart { get; set; }
     public DateTime ScheduledEnd { get; set; }
     public string AppointmentType { get; set; } = "consultation";
