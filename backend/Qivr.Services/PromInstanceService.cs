@@ -65,15 +65,18 @@ public class PromInstanceService : IPromInstanceService
 
     private readonly QivrDbContext _db;
     private readonly INotificationService _notificationService;
+    private readonly IPromResponseScoringService _scoringService;
     private readonly ILogger<PromInstanceService> _logger;
 
     public PromInstanceService(
         QivrDbContext db,
         INotificationService notificationService,
+        IPromResponseScoringService scoringService,
         ILogger<PromInstanceService> logger)
     {
         _db = db;
         _notificationService = notificationService;
+        _scoringService = scoringService;
         _logger = logger;
     }
 
@@ -328,6 +331,17 @@ public class PromInstanceService : IPromInstanceService
 
         _db.PromResponses.Add(promResponse);
         await _db.SaveChangesAsync(ct);
+
+        // Process item responses and calculate summary scores using new infrastructure
+        try
+        {
+            await _scoringService.ProcessSubmissionAsync(instance.Id, answersDictionary);
+        }
+        catch (Exception scoringEx)
+        {
+            // Log but don't fail the submission - the legacy Score field is already set
+            _logger.LogWarning(scoringEx, "Failed to process normalized scoring for instance {InstanceId}", instance.Id);
+        }
 
         if (response.RequestBooking && response.BookingRequest != null)
         {

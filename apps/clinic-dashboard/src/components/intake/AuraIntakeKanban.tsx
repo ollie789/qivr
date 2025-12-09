@@ -42,6 +42,12 @@ const COLUMNS = [
     color: auraColors.purple.main,
   },
   {
+    id: "invited",
+    title: "Invited",
+    statuses: ["invited", "registered"],
+    color: auraColors.cyan.main,
+  },
+  {
     id: "scheduling",
     title: "Scheduling",
     statuses: ["scheduling"],
@@ -64,6 +70,8 @@ const COLUMNS = [
 const STATUS_MAP: Record<string, string> = {
   pending: "pending",
   reviewing: "reviewing",
+  invited: "invited",
+  registered: "invited", // Maps to same column as invited
   scheduling: "scheduling",
   scheduled: "scheduled",
   archived: "archived",

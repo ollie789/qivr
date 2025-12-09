@@ -46,9 +46,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AI.IAiTriageService, AI.AiTriageService>();
         services.AddScoped<AI.IAiTreatmentPlanService, AI.AiTreatmentPlanService>();
         
-        // Register PROM service
+        // Register PROM services
         services.AddScoped<IPromService, PromService>();
         services.AddScoped<IPromInstanceService, PromInstanceService>();
+        services.AddScoped<IInstrumentService, InstrumentService>();
+        services.AddScoped<IPromTemplateSyncService, PromTemplateSyncService>();
+        services.AddScoped<IPromResponseScoringService, PromResponseScoringService>();
         services.AddHttpClient<INotificationService, NotificationService>();
 
         // Register Treatment Plan scheduling service

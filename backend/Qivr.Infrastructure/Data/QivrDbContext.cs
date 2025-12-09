@@ -65,6 +65,14 @@ public class QivrDbContext : DbContext
     public DbSet<PromTemplate> PromTemplates => Set<PromTemplate>();
     public DbSet<PromBookingRequest> PromBookingRequests => Set<PromBookingRequest>();
     public DbSet<TreatmentProgressFeedback> TreatmentProgressFeedbacks => Set<TreatmentProgressFeedback>();
+
+    // New PROM Infrastructure entities
+    public DbSet<Instrument> Instruments => Set<Instrument>();
+    public DbSet<TemplateQuestion> TemplateQuestions => Set<TemplateQuestion>();
+    public DbSet<SummaryScoreDefinition> SummaryScoreDefinitions => Set<SummaryScoreDefinition>();
+    public DbSet<SummaryScoreQuestionMapping> SummaryScoreQuestionMappings => Set<SummaryScoreQuestionMapping>();
+    public DbSet<PromItemResponse> PromItemResponses => Set<PromItemResponse>();
+    public DbSet<PromSummaryScore> PromSummaryScores => Set<PromSummaryScore>();
     public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<MedicalCondition> MedicalConditions => Set<MedicalCondition>();
@@ -98,6 +106,7 @@ public class QivrDbContext : DbContext
     public DbSet<MedicalDevice> MedicalDevices => Set<MedicalDevice>();
     public DbSet<PatientDeviceUsage> PatientDeviceUsages => Set<PatientDeviceUsage>();
     public DbSet<ServiceType> ServiceTypes => Set<ServiceType>();
+    public DbSet<PatientInvitation> PatientInvitations => Set<PatientInvitation>();
 
     private static Dictionary<string, object> DeserializeJsonSafely(string v)
     {
@@ -643,17 +652,29 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Version).HasColumnName("version");
             entity.HasIndex(e => new { e.TenantId, e.Key, e.Version }).IsUnique();
             entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
-            
+            entity.HasIndex(e => e.InstrumentId);
+
             // Configure the Questions property with a custom converter
             var questionsConverter = new ValueConverter<List<Dictionary<string, object>>, string>(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<Dictionary<string, object>>>(v, (JsonSerializerOptions?)null) ?? new List<Dictionary<string, object>>()
             );
-            
+
             entity.Property(e => e.Questions).HasConversion(questionsConverter);
             entity.Property(e => e.ScoringMethod).HasConversion(jsonConverter);
             entity.Property(e => e.ScoringRules).HasConversion(jsonConverter).HasColumnName("scoring_rules");
-            
+
+            // New fields for PROM infrastructure
+            entity.Property(e => e.Tags)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
+            entity.Property(e => e.FrequencyHint).HasMaxLength(200);
+
+            entity.HasOne(e => e.Instrument)
+                .WithMany(i => i.Templates)
+                .HasForeignKey(e => e.InstrumentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
 
@@ -729,7 +750,164 @@ public class QivrDbContext : DbContext
 
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());
         });
-        
+
+        // ==========================================
+        // NEW PROM INFRASTRUCTURE ENTITIES
+        // ==========================================
+
+        // Instrument (PROM catalogue) configuration
+        modelBuilder.Entity<Instrument>(entity =>
+        {
+            entity.ToTable("instruments");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Key).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.IsGlobal });
+            entity.HasIndex(e => e.ClinicalDomain);
+
+            entity.Property(e => e.Key).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.InstrumentFamily).HasMaxLength(100);
+            entity.Property(e => e.ClinicalDomain).HasMaxLength(100);
+            entity.Property(e => e.LicenseType).HasConversion<string>();
+            entity.Property(e => e.ReferenceUrl).HasMaxLength(500);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Global instruments visible to all, tenant instruments only to that tenant
+            entity.HasQueryFilter(e => e.IsActive && (e.IsGlobal || e.TenantId == GetTenantId()));
+        });
+
+        // TemplateQuestion configuration
+        modelBuilder.Entity<TemplateQuestion>(entity =>
+        {
+            entity.ToTable("template_questions");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TemplateId, e.QuestionKey }).IsUnique();
+            entity.HasIndex(e => new { e.TemplateId, e.OrderIndex });
+            entity.HasIndex(e => e.Code);
+            entity.HasIndex(e => e.Section);
+
+            entity.Property(e => e.QuestionKey).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Code).HasMaxLength(100);
+            entity.Property(e => e.Label).HasMaxLength(500);
+            entity.Property(e => e.Section).HasMaxLength(100);
+            entity.Property(e => e.QuestionType).HasConversion<string>();
+            entity.Property(e => e.ConfigJson).HasConversion(jsonConverter);
+
+            entity.HasOne(e => e.Template)
+                .WithMany(t => t.TemplateQuestions)
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // SummaryScoreDefinition configuration
+        var interpretationBandsConverter = new ValueConverter<List<InterpretationBand>?, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => string.IsNullOrEmpty(v) ? null : JsonSerializer.Deserialize<List<InterpretationBand>>(v, (JsonSerializerOptions?)null)
+        );
+
+        modelBuilder.Entity<SummaryScoreDefinition>(entity =>
+        {
+            entity.ToTable("summary_score_definitions");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TemplateId, e.ScoreKey }).IsUnique();
+            entity.HasIndex(e => new { e.TemplateId, e.OrderIndex });
+
+            entity.Property(e => e.ScoreKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Label).HasMaxLength(200);
+            entity.Property(e => e.ScoringMethod).HasConversion<string>();
+            entity.Property(e => e.InterpretationBands).HasConversion(interpretationBandsConverter);
+
+            entity.HasOne(e => e.Template)
+                .WithMany(t => t.SummaryScoreDefinitions)
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // SummaryScoreQuestionMapping configuration
+        modelBuilder.Entity<SummaryScoreQuestionMapping>(entity =>
+        {
+            entity.ToTable("summary_score_question_mappings");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.SummaryScoreDefinitionId, e.TemplateQuestionId }).IsUnique();
+
+            entity.HasOne(e => e.SummaryScoreDefinition)
+                .WithMany(s => s.QuestionMappings)
+                .HasForeignKey(e => e.SummaryScoreDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.TemplateQuestion)
+                .WithMany(q => q.ScoreMappings)
+                .HasForeignKey(e => e.TemplateQuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // PromItemResponse configuration
+        var multiSelectValuesConverter = new ValueConverter<List<string>?, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => string.IsNullOrEmpty(v) ? null : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null)
+        );
+
+        modelBuilder.Entity<PromItemResponse>(entity =>
+        {
+            entity.ToTable("prom_item_responses");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.InstanceId, e.TemplateQuestionId }).IsUnique();
+            entity.HasIndex(e => e.QuestionCode);
+            entity.HasIndex(e => new { e.TenantId, e.QuestionCode, e.CreatedAt });
+
+            entity.Property(e => e.QuestionCode).HasMaxLength(100);
+            entity.Property(e => e.ValueRaw).HasMaxLength(2000);
+            entity.Property(e => e.ValueDisplay).HasMaxLength(500);
+            entity.Property(e => e.MultiSelectValues).HasConversion(multiSelectValuesConverter);
+
+            entity.HasOne(e => e.Instance)
+                .WithMany(i => i.ItemResponses)
+                .HasForeignKey(e => e.InstanceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.TemplateQuestion)
+                .WithMany(q => q.ItemResponses)
+                .HasForeignKey(e => e.TemplateQuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // PromSummaryScore configuration
+        modelBuilder.Entity<PromSummaryScore>(entity =>
+        {
+            entity.ToTable("prom_summary_scores");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.InstanceId, e.ScoreKey }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.ScoreKey, e.CreatedAt });
+            entity.HasIndex(e => e.DefinitionId);
+
+            entity.Property(e => e.ScoreKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Label).HasMaxLength(200);
+            entity.Property(e => e.InterpretationBand).HasMaxLength(100);
+            entity.Property(e => e.Severity).HasMaxLength(50);
+
+            entity.HasOne(e => e.Instance)
+                .WithMany(i => i.SummaryScores)
+                .HasForeignKey(e => e.InstanceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Definition)
+                .WithMany(d => d.CalculatedScores)
+                .HasForeignKey(e => e.DefinitionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
         // Phase 4.1: Removed Clinic entity configuration - using Tenant properties instead
         
         // Provider configuration
@@ -895,6 +1073,41 @@ public class QivrDbContext : DbContext
             entity.HasOne(e => e.MatchedAppointment)
                 .WithMany()
                 .HasForeignKey(e => e.MatchedAppointmentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasQueryFilter(e => e.TenantId == GetTenantId());
+        });
+
+        // PatientInvitation configuration
+        modelBuilder.Entity<PatientInvitation>(entity =>
+        {
+            entity.ToTable("patient_invitations");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.UserId });
+            entity.HasIndex(e => new { e.TenantId, e.Email });
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+
+            entity.Property(e => e.Token).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Email).HasMaxLength(254).IsRequired();
+            entity.Property(e => e.FirstName).HasMaxLength(100);
+            entity.Property(e => e.LastName).HasMaxLength(100);
+            entity.Property(e => e.PersonalMessage).HasMaxLength(1000);
+            entity.Property(e => e.Status).HasConversion<string>();
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Evaluation)
+                .WithMany()
+                .HasForeignKey(e => e.EvaluationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedBy)
                 .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasQueryFilter(e => e.TenantId == GetTenantId());

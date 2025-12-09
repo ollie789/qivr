@@ -41,7 +41,15 @@ import {
 } from "@mui/icons-material";
 import { handleApiError } from "../../../lib/api-client";
 import { useProfileData } from "../hooks";
-import { PageLoader, FormDialog, FormSection, FormRow, AuraButton, Callout, auraTokens } from "@qivr/design-system";
+import {
+  PageLoader,
+  FormDialog,
+  FormSection,
+  FormRow,
+  AuraButton,
+  Callout,
+  auraTokens,
+} from "@qivr/design-system";
 import MedicalRecordsPage from "../../medical-records/components/MedicalRecordsPage";
 import type {
   EmergencyContact,
@@ -250,16 +258,10 @@ export const ProfilePage: React.FC = () => {
       </Box>
 
       {feedback && (
-        <Callout variant={feedback.type}>
-          {feedback.message}
-        </Callout>
+        <Callout variant={feedback.type}>{feedback.message}</Callout>
       )}
 
-      {error && (
-        <Callout variant="error">
-          {error}
-        </Callout>
-      )}
+      {error && <Callout variant="error">{error}</Callout>}
 
       <Paper sx={{ p: { xs: 3, md: 5 }, mb: 3 }}>
         <Grid container spacing={3} alignItems="center">
@@ -267,7 +269,10 @@ export const ProfilePage: React.FC = () => {
             <Box sx={{ position: "relative" }}>
               <Avatar
                 src={displayProfile?.photoUrl}
-                sx={{ width: auraTokens.avatar.xxl, height: auraTokens.avatar.xxl }}
+                sx={{
+                  width: auraTokens.avatar.xxl,
+                  height: auraTokens.avatar.xxl,
+                }}
               >
                 {displayProfile?.firstName?.[0]}
                 {displayProfile?.lastName?.[0]}
@@ -367,7 +372,10 @@ export const ProfilePage: React.FC = () => {
 
         <TabPanel value={tabValue} index={0}>
           <Box sx={{ p: 3 }}>
-            <FormSection title="Basic Information" description="Your name and contact details">
+            <FormSection
+              title="Basic Information"
+              description="Your name and contact details"
+            >
               <FormRow>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
@@ -470,7 +478,11 @@ export const ProfilePage: React.FC = () => {
               </FormRow>
             </FormSection>
 
-            <FormSection title="Address" description="Your residential address" divider>
+            <FormSection
+              title="Address"
+              description="Your residential address"
+              divider
+            >
               <FormRow>
                 <Grid size={12}>
                   <TextField
@@ -532,7 +544,141 @@ export const ProfilePage: React.FC = () => {
 
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ p: 3 }}>
-            <FormSection title="Medical Information" description="Your health and medical details">
+            <FormSection
+              title="Medicare"
+              description="Your Medicare card details"
+              divider
+            >
+              <FormRow>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <TextField
+                    fullWidth
+                    label="Medicare Number"
+                    value={displayProfile?.medicare?.number || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) return;
+                      handleFieldChange("medicare", {
+                        ...editedProfile.medicare,
+                        number: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                    inputProps={{ maxLength: 10 }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 6, md: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="IRN"
+                    value={displayProfile?.medicare?.ref || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) return;
+                      handleFieldChange("medicare", {
+                        ...editedProfile.medicare,
+                        ref: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                    inputProps={{ maxLength: 1 }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Expiry"
+                    type="month"
+                    value={displayProfile?.medicare?.expiry || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) return;
+                      handleFieldChange("medicare", {
+                        ...editedProfile.medicare,
+                        expiry: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </FormRow>
+            </FormSection>
+
+            <FormSection
+              title="Private Health Insurance"
+              description="Your private health insurance details"
+              divider
+            >
+              <FormRow>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Insurance Provider"
+                    value={displayProfile?.insurance?.provider || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) return;
+                      handleFieldChange("insurance", {
+                        ...editedProfile.insurance,
+                        provider: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Member ID"
+                    value={displayProfile?.insurance?.memberId || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) return;
+                      handleFieldChange("insurance", {
+                        ...editedProfile.insurance,
+                        memberId: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+              </FormRow>
+              <FormRow>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Group Number"
+                    value={displayProfile?.insurance?.groupNumber || ""}
+                    onChange={(event) => {
+                      if (!editedProfile) return;
+                      handleFieldChange("insurance", {
+                        ...editedProfile.insurance,
+                        groupNumber: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Primary Care Physician / GP"
+                    value={
+                      displayProfile?.insurance?.primaryCarePhysician || ""
+                    }
+                    onChange={(event) => {
+                      if (!editedProfile) return;
+                      handleFieldChange("insurance", {
+                        ...editedProfile.insurance,
+                        primaryCarePhysician: event.target.value,
+                      });
+                    }}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+              </FormRow>
+            </FormSection>
+
+            <FormSection
+              title="Medical Information"
+              description="Your health and medical details"
+            >
               <FormRow>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <FormControl fullWidth disabled={!isEditing}>
@@ -572,7 +718,9 @@ export const ProfilePage: React.FC = () => {
                     multiline
                     rows={3}
                     label="Allergies"
-                    value={displayProfile?.medicalInfo?.allergies?.join(", ") || ""}
+                    value={
+                      displayProfile?.medicalInfo?.allergies?.join(", ") || ""
+                    }
                     onChange={(event) => {
                       if (!editedProfile) {
                         return;
@@ -654,7 +802,10 @@ export const ProfilePage: React.FC = () => {
               Emergency contact information will be used in case of medical
               emergencies
             </Callout>
-            <FormSection title="Emergency Contact" description="Someone we can contact in case of emergency">
+            <FormSection
+              title="Emergency Contact"
+              description="Someone we can contact in case of emergency"
+            >
               <FormRow>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField

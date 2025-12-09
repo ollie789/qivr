@@ -3,18 +3,21 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Qivr.Infrastructure.Data;
 
 #nullable disable
 
-namespace Qivr.Infrastructure.Migrations
+namespace Qivr.Infrastructure._deprecated_ef_migrations.Migrations
 {
     [DbContext(typeof(QivrDbContext))]
-    partial class QivrDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251209004046_AddPatientInvitations")]
+    partial class AddPatientInvitations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1227,86 +1230,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId", "UserId", "Status");
 
                     b.ToTable("inbox_items", (string)null);
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.Instrument", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("ClinicalDomain")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("clinical_domain");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.Property<string>("InstrumentFamily")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("instrument_family");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsGlobal")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_global");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("key");
-
-                    b.Property<string>("LicenseNotes")
-                        .HasColumnType("text")
-                        .HasColumnName("license_notes");
-
-                    b.Property<string>("LicenseType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("license_type");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("ReferenceUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("reference_url");
-
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_instruments");
-
-                    b.HasIndex("ClinicalDomain");
-
-                    b.HasIndex("Key")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId", "IsGlobal");
-
-                    b.ToTable("instruments", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.IntakeSubmission", b =>
@@ -3104,80 +3027,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.ToTable("prom_instances", (string)null);
                 });
 
-            modelBuilder.Entity("Qivr.Core.Entities.PromItemResponse", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("InstanceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("instance_id");
-
-                    b.Property<bool>("IsSkipped")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_skipped");
-
-                    b.Property<string>("MultiSelectValues")
-                        .HasColumnType("text")
-                        .HasColumnName("multi_select_values");
-
-                    b.Property<string>("QuestionCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("question_code");
-
-                    b.Property<int?>("ResponseTimeSeconds")
-                        .HasColumnType("integer")
-                        .HasColumnName("response_time_seconds");
-
-                    b.Property<Guid>("TemplateQuestionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("template_question_id");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<string>("ValueDisplay")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("value_display");
-
-                    b.Property<decimal?>("ValueNumeric")
-                        .HasColumnType("numeric")
-                        .HasColumnName("value_numeric");
-
-                    b.Property<string>("ValueRaw")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("value_raw");
-
-                    b.HasKey("Id")
-                        .HasName("pk_prom_item_responses");
-
-                    b.HasIndex("QuestionCode");
-
-                    b.HasIndex("TemplateQuestionId")
-                        .HasDatabaseName("ix_prom_item_responses_template_question_id");
-
-                    b.HasIndex("InstanceId", "TemplateQuestionId")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId", "QuestionCode", "CreatedAt");
-
-                    b.ToTable("prom_item_responses", (string)null);
-                });
-
             modelBuilder.Entity("Qivr.Core.Entities.PromResponse", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3252,112 +3101,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.ToTable("prom_responses", (string)null);
                 });
 
-            modelBuilder.Entity("Qivr.Core.Entities.PromSummaryScore", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<decimal?>("ConfidenceIntervalLower")
-                        .HasColumnType("numeric")
-                        .HasColumnName("confidence_interval_lower");
-
-                    b.Property<decimal?>("ConfidenceIntervalUpper")
-                        .HasColumnType("numeric")
-                        .HasColumnName("confidence_interval_upper");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid?>("DefinitionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("definition_id");
-
-                    b.Property<bool>("HasCeilingEffect")
-                        .HasColumnType("boolean")
-                        .HasColumnName("has_ceiling_effect");
-
-                    b.Property<bool>("HasFloorEffect")
-                        .HasColumnType("boolean")
-                        .HasColumnName("has_floor_effect");
-
-                    b.Property<bool?>("HigherIsBetter")
-                        .HasColumnType("boolean")
-                        .HasColumnName("higher_is_better");
-
-                    b.Property<Guid>("InstanceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("instance_id");
-
-                    b.Property<string>("InterpretationBand")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("interpretation_band");
-
-                    b.Property<int?>("ItemCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("item_count");
-
-                    b.Property<string>("Label")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("label");
-
-                    b.Property<int?>("MissingItemCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("missing_item_count");
-
-                    b.Property<decimal?>("RangeMax")
-                        .HasColumnType("numeric")
-                        .HasColumnName("range_max");
-
-                    b.Property<decimal?>("RangeMin")
-                        .HasColumnType("numeric")
-                        .HasColumnName("range_min");
-
-                    b.Property<decimal?>("RawValue")
-                        .HasColumnType("numeric")
-                        .HasColumnName("raw_value");
-
-                    b.Property<string>("ScoreKey")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("score_key");
-
-                    b.Property<string>("Severity")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("severity");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<decimal>("Value")
-                        .HasColumnType("numeric")
-                        .HasColumnName("value");
-
-                    b.HasKey("Id")
-                        .HasName("pk_prom_summary_scores");
-
-                    b.HasIndex("DefinitionId")
-                        .HasDatabaseName("ix_prom_summary_scores_definition_id");
-
-                    b.HasIndex("InstanceId", "ScoreKey")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId", "ScoreKey", "CreatedAt");
-
-                    b.ToTable("prom_summary_scores", (string)null);
-                });
-
             modelBuilder.Entity("Qivr.Core.Entities.PromTemplate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3383,15 +3126,6 @@ namespace Qivr.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("frequency");
 
-                    b.Property<string>("FrequencyHint")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("frequency_hint");
-
-                    b.Property<Guid?>("InstrumentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("instrument_id");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
@@ -3410,20 +3144,12 @@ namespace Qivr.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("SchemaVersion")
-                        .HasColumnType("integer")
-                        .HasColumnName("schema_version");
-
                     b.Property<string>("ScoringMethod")
                         .HasColumnType("text");
 
                     b.Property<string>("ScoringRules")
                         .HasColumnType("text")
                         .HasColumnName("scoring_rules");
-
-                    b.Property<string[]>("Tags")
-                        .HasColumnType("text[]")
-                        .HasColumnName("tags");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -3439,9 +3165,6 @@ namespace Qivr.Infrastructure.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_prom_templates");
-
-                    b.HasIndex("InstrumentId")
-                        .HasDatabaseName("ix_prom_templates_instrument_id");
 
                     b.HasIndex("TenantId", "Name")
                         .IsUnique();
@@ -4288,235 +4011,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.ToTable("study_enrollments", (string)null);
                 });
 
-            modelBuilder.Entity("Qivr.Core.Entities.SummaryScoreDefinition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.Property<bool>("HigherIsBetter")
-                        .HasColumnType("boolean")
-                        .HasColumnName("higher_is_better");
-
-                    b.Property<string>("InterpretationBands")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_primary");
-
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("label");
-
-                    b.Property<decimal?>("MCID")
-                        .HasColumnType("numeric")
-                        .HasColumnName("mcid");
-
-                    b.Property<int>("OrderIndex")
-                        .HasColumnType("integer")
-                        .HasColumnName("order_index");
-
-                    b.Property<decimal?>("PopulationMean")
-                        .HasColumnType("numeric")
-                        .HasColumnName("population_mean");
-
-                    b.Property<decimal?>("PopulationStdDev")
-                        .HasColumnType("numeric")
-                        .HasColumnName("population_std_dev");
-
-                    b.Property<decimal>("RangeMax")
-                        .HasColumnType("numeric")
-                        .HasColumnName("range_max");
-
-                    b.Property<decimal>("RangeMin")
-                        .HasColumnType("numeric")
-                        .HasColumnName("range_min");
-
-                    b.Property<string>("ScoreKey")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("score_key");
-
-                    b.Property<string>("ScoringMethod")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("scoring_method");
-
-                    b.Property<Guid>("TemplateId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("template_id");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_summary_score_definitions");
-
-                    b.HasIndex("TemplateId", "OrderIndex");
-
-                    b.HasIndex("TemplateId", "ScoreKey")
-                        .IsUnique();
-
-                    b.ToTable("summary_score_definitions", (string)null);
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.SummaryScoreQuestionMapping", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<bool>("IsReverseScored")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_reverse_scored");
-
-                    b.Property<Guid>("SummaryScoreDefinitionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("summary_score_definition_id");
-
-                    b.Property<Guid>("TemplateQuestionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("template_question_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<decimal>("Weight")
-                        .HasColumnType("numeric")
-                        .HasColumnName("weight");
-
-                    b.HasKey("Id")
-                        .HasName("pk_summary_score_question_mappings");
-
-                    b.HasIndex("TemplateQuestionId")
-                        .HasDatabaseName("ix_summary_score_question_mappings_template_question_id");
-
-                    b.HasIndex("SummaryScoreDefinitionId", "TemplateQuestionId")
-                        .IsUnique();
-
-                    b.ToTable("summary_score_question_mappings", (string)null);
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.TemplateQuestion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("code");
-
-                    b.Property<string>("ConfigJson")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<bool>("IsRequired")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_required");
-
-                    b.Property<bool>("IsScored")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_scored");
-
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("label");
-
-                    b.Property<decimal?>("MaxScore")
-                        .HasColumnType("numeric")
-                        .HasColumnName("max_score");
-
-                    b.Property<decimal?>("MinScore")
-                        .HasColumnType("numeric")
-                        .HasColumnName("min_score");
-
-                    b.Property<int>("OrderIndex")
-                        .HasColumnType("integer")
-                        .HasColumnName("order_index");
-
-                    b.Property<string>("QuestionKey")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("question_key");
-
-                    b.Property<string>("QuestionText")
-                        .HasColumnType("text")
-                        .HasColumnName("question_text");
-
-                    b.Property<string>("QuestionType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("question_type");
-
-                    b.Property<decimal>("ScoreWeight")
-                        .HasColumnType("numeric")
-                        .HasColumnName("score_weight");
-
-                    b.Property<string>("Section")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("section");
-
-                    b.Property<Guid>("TemplateId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("template_id");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_template_questions");
-
-                    b.HasIndex("Code");
-
-                    b.HasIndex("Section");
-
-                    b.HasIndex("TemplateId", "OrderIndex");
-
-                    b.HasIndex("TemplateId", "QuestionKey")
-                        .IsUnique();
-
-                    b.ToTable("template_questions", (string)null);
-                });
-
             modelBuilder.Entity("Qivr.Core.Entities.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5304,17 +4798,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Qivr.Core.Entities.Instrument", b =>
-                {
-                    b.HasOne("Qivr.Core.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .HasConstraintName("fk_instruments__tenants_tenant_id");
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("Qivr.Core.Entities.IntakeSubmission", b =>
                 {
                     b.HasOne("Qivr.Core.Entities.Evaluation", "Evaluation")
@@ -5625,27 +5108,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("TreatmentPlan");
                 });
 
-            modelBuilder.Entity("Qivr.Core.Entities.PromItemResponse", b =>
-                {
-                    b.HasOne("Qivr.Core.Entities.PromInstance", "Instance")
-                        .WithMany("ItemResponses")
-                        .HasForeignKey("InstanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_prom_item_responses_prom_instances_instance_id");
-
-                    b.HasOne("Qivr.Core.Entities.TemplateQuestion", "TemplateQuestion")
-                        .WithMany("ItemResponses")
-                        .HasForeignKey("TemplateQuestionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_prom_item_responses__template_questions_template_question_id");
-
-                    b.Navigation("Instance");
-
-                    b.Navigation("TemplateQuestion");
-                });
-
             modelBuilder.Entity("Qivr.Core.Entities.PromResponse", b =>
                 {
                     b.HasOne("Qivr.Core.Entities.Appointment", "Appointment")
@@ -5673,37 +5135,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("Patient");
 
                     b.Navigation("PromInstance");
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.PromSummaryScore", b =>
-                {
-                    b.HasOne("Qivr.Core.Entities.SummaryScoreDefinition", "Definition")
-                        .WithMany("CalculatedScores")
-                        .HasForeignKey("DefinitionId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_prom_summary_scores__summary_score_definitions_definition_id");
-
-                    b.HasOne("Qivr.Core.Entities.PromInstance", "Instance")
-                        .WithMany("SummaryScores")
-                        .HasForeignKey("InstanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_prom_summary_scores_prom_instances_instance_id");
-
-                    b.Navigation("Definition");
-
-                    b.Navigation("Instance");
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.PromTemplate", b =>
-                {
-                    b.HasOne("Qivr.Core.Entities.Instrument", "Instrument")
-                        .WithMany("Templates")
-                        .HasForeignKey("InstrumentId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_prom_templates_instruments_instrument_id");
-
-                    b.Navigation("Instrument");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Provider", b =>
@@ -5862,51 +5293,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("Study");
                 });
 
-            modelBuilder.Entity("Qivr.Core.Entities.SummaryScoreDefinition", b =>
-                {
-                    b.HasOne("Qivr.Core.Entities.PromTemplate", "Template")
-                        .WithMany("SummaryScoreDefinitions")
-                        .HasForeignKey("TemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_summary_score_definitions_prom_templates_template_id");
-
-                    b.Navigation("Template");
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.SummaryScoreQuestionMapping", b =>
-                {
-                    b.HasOne("Qivr.Core.Entities.SummaryScoreDefinition", "SummaryScoreDefinition")
-                        .WithMany("QuestionMappings")
-                        .HasForeignKey("SummaryScoreDefinitionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_summary_score_question_mappings_summary_score_definitions_s~");
-
-                    b.HasOne("Qivr.Core.Entities.TemplateQuestion", "TemplateQuestion")
-                        .WithMany("ScoreMappings")
-                        .HasForeignKey("TemplateQuestionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_summary_score_question_mappings__template_questions_template_~");
-
-                    b.Navigation("SummaryScoreDefinition");
-
-                    b.Navigation("TemplateQuestion");
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.TemplateQuestion", b =>
-                {
-                    b.HasOne("Qivr.Core.Entities.PromTemplate", "Template")
-                        .WithMany("TemplateQuestions")
-                        .HasForeignKey("TemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_template_questions_prom_templates_template_id");
-
-                    b.Navigation("Template");
-                });
-
             modelBuilder.Entity("Qivr.Core.Entities.TreatmentPlan", b =>
                 {
                     b.HasOne("Qivr.Core.Entities.PatientDeviceUsage", "LinkedDeviceUsage")
@@ -6016,11 +5402,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("PainMaps");
                 });
 
-            modelBuilder.Entity("Qivr.Core.Entities.Instrument", b =>
-                {
-                    b.Navigation("Templates");
-                });
-
             modelBuilder.Entity("Qivr.Core.Entities.MedicalDevice", b =>
                 {
                     b.Navigation("UsageRecords");
@@ -6040,20 +5421,12 @@ namespace Qivr.Infrastructure.Migrations
                 {
                     b.Navigation("BookingRequests");
 
-                    b.Navigation("ItemResponses");
-
                     b.Navigation("Responses");
-
-                    b.Navigation("SummaryScores");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PromTemplate", b =>
                 {
                     b.Navigation("Instances");
-
-                    b.Navigation("SummaryScoreDefinitions");
-
-                    b.Navigation("TemplateQuestions");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Provider", b =>
@@ -6080,20 +5453,6 @@ namespace Qivr.Infrastructure.Migrations
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.SummaryScoreDefinition", b =>
-                {
-                    b.Navigation("CalculatedScores");
-
-                    b.Navigation("QuestionMappings");
-                });
-
-            modelBuilder.Entity("Qivr.Core.Entities.TemplateQuestion", b =>
-                {
-                    b.Navigation("ItemResponses");
-
-                    b.Navigation("ScoreMappings");
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Tenant", b =>

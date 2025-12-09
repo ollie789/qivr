@@ -59,6 +59,7 @@ import {
   RotateRight as RotateRightIcon,
   FlipToFront as FlipToFrontIcon,
   FlipToBack as FlipToBackIcon,
+  PersonAdd as PersonAddIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
@@ -86,6 +87,7 @@ import {
   type PainRegion,
 } from "@qivr/design-system";
 import { intakeApi } from "../../services/intakeApi";
+import { invitationApi } from "../../services/invitationApi";
 import { ScheduleAppointmentDialog } from "./ScheduleAppointmentDialog";
 import MessageComposer from "../messaging/MessageComposer";
 
@@ -131,6 +133,8 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Pending Review" },
   { value: "reviewing", label: "Under Review" },
   { value: "triaged", label: "Triaged" },
+  { value: "invited", label: "Invitation Sent" },
+  { value: "registered", label: "Patient Registered" },
   { value: "scheduled", label: "Appointment Scheduled" },
   { value: "completed", label: "Completed" },
 ];
@@ -244,6 +248,7 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
   const [selectedSmsTemplate, setSelectedSmsTemplate] = useState("");
   const [templateMenuAnchor, setTemplateMenuAnchor] =
     useState<null | HTMLElement>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Reset tab when dialog opens
   useEffect(() => {
@@ -551,6 +556,36 @@ Date: ________________________
     },
   });
 
+  // Mutation for sending patient invitation
+  const sendInvitationMutation = useMutation({
+    mutationFn: async () => {
+      if (!intake?.email) {
+        throw new Error("Patient email is required");
+      }
+      return invitationApi.createInvitation({
+        intakeSubmissionId: intake.id,
+        patientEmail: intake.email,
+        patientName: intake.patientName,
+        patientPhone: intake.phone,
+      });
+    },
+    onSuccess: () => {
+      // Update status to "invited"
+      updateStatusMutation.mutate({ status: "invited" });
+      queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
+      enqueueSnackbar("Invitation sent to patient successfully!", {
+        variant: "success",
+      });
+      setInviteDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      enqueueSnackbar(error.message || "Failed to send invitation", {
+        variant: "error",
+      });
+      setInviteDialogOpen(false);
+    },
+  });
+
   const handleDeleteConfirm = async () => {
     if (!intake) return;
     try {
@@ -707,6 +742,27 @@ Date: ________________________
               </Tooltip>
 
               <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+              {/* Approve & Invite Button */}
+              <Tooltip
+                title={
+                  !intake.email
+                    ? "Patient email required"
+                    : "Send invitation to create account"
+                }
+              >
+                <span>
+                  <AuraButton
+                    variant="outlined"
+                    size="small"
+                    startIcon={<PersonAddIcon />}
+                    onClick={() => setInviteDialogOpen(true)}
+                    disabled={!intake.email || sendInvitationMutation.isPending}
+                  >
+                    Approve & Invite
+                  </AuraButton>
+                </span>
+              </Tooltip>
 
               {/* Primary Action */}
               <AuraButton
@@ -2109,6 +2165,19 @@ Date: ________________________
         confirmText="Delete"
         onConfirm={handleDeleteConfirm}
         onClose={() => setDeleteConfirmOpen(false)}
+      />
+
+      {/* Invite Patient Dialog */}
+      <ConfirmDialog
+        open={inviteDialogOpen}
+        title="Approve & Invite Patient"
+        message={`Send an invitation to ${intake.patientName} (${intake.email}) to create their patient account? They will receive an email with a link to register and complete their health profile.`}
+        severity="info"
+        confirmText={
+          sendInvitationMutation.isPending ? "Sending..." : "Send Invitation"
+        }
+        onConfirm={() => sendInvitationMutation.mutate()}
+        onClose={() => setInviteDialogOpen(false)}
       />
 
       {/* Schedule Appointment Dialog */}

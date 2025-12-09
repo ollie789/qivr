@@ -22,11 +22,13 @@ public class PromService : IPromService
 {
 	private readonly QivrDbContext _db;
 	private readonly ILogger<PromService> _logger;
+	private readonly IPromTemplateSyncService _syncService;
 
-	public PromService(QivrDbContext db, ILogger<PromService> logger)
+	public PromService(QivrDbContext db, ILogger<PromService> logger, IPromTemplateSyncService syncService)
 	{
 		_db = db;
 		_logger = logger;
+		_syncService = syncService;
 	}
 
         public async Task<PromTemplateDto> CreateOrVersionTemplateAsync(Guid tenantId, CreatePromTemplateDto request, CancellationToken ct = default)
@@ -77,6 +79,9 @@ public class PromService : IPromService
 
                 await _db.PromTemplates.AddAsync(template, ct);
                 await _db.SaveChangesAsync(ct);
+
+                // Sync questions and scoring definitions to normalized tables for analytics
+                await _syncService.SyncTemplateAsync(template.Id);
 
                 return MapToDto(template);
         }
@@ -199,6 +204,9 @@ public class PromService : IPromService
 		template.UpdatedAt = DateTime.UtcNow;
 
 		await _db.SaveChangesAsync(ct);
+
+		// Sync questions and scoring definitions to normalized tables for analytics
+		await _syncService.SyncTemplateAsync(template.Id);
 
 		return MapToDto(template);
 	}

@@ -33,10 +33,16 @@ public class PatientRecord : TenantEntity
     public string EmergencyContactPhone { get; set; } = string.Empty;
     public string EmergencyContactRelation { get; set; } = string.Empty;
     
-    // Insurance Information
+    // Medicare Information
+    public string MedicareNumber { get; set; } = string.Empty;
+    public string MedicareRef { get; set; } = string.Empty;
+    public string MedicareExpiry { get; set; } = string.Empty;
+
+    // Private Health Insurance
     public string InsuranceProvider { get; set; } = string.Empty;
     public string InsurancePolicyNumber { get; set; } = string.Empty;
     public string InsuranceGroupNumber { get; set; } = string.Empty;
+    public string PrimaryCarePhysician { get; set; } = string.Empty;
     
     // Navigation properties
     public virtual User? Patient { get; set; }

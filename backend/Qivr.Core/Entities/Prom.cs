@@ -15,9 +15,33 @@ public class PromTemplate : TenantEntity
     public Dictionary<string, object>? ScoringMethod { get; set; }
     public Dictionary<string, object>? ScoringRules { get; set; }
     public bool IsActive { get; set; } = true;
-    
+
+    // === NEW: Instrument & Schema Fields ===
+    /// <summary>
+    /// Reference to the instrument catalogue (null for custom templates)
+    /// </summary>
+    public Guid? InstrumentId { get; set; }
+
+    /// <summary>
+    /// Version of the internal JSON schema for questions/scoring
+    /// </summary>
+    public int SchemaVersion { get; set; } = 1;
+
+    /// <summary>
+    /// Tags for categorization (e.g., ["arthroplasty", "post-op", "baseline"])
+    /// </summary>
+    public List<string>? Tags { get; set; }
+
+    /// <summary>
+    /// Suggested frequency/timing hint (e.g., "baseline, 6w, 3m, 12m")
+    /// </summary>
+    public string? FrequencyHint { get; set; }
+
     // Navigation properties
+    public virtual Instrument? Instrument { get; set; }
     public virtual ICollection<PromInstance> Instances { get; set; } = new List<PromInstance>();
+    public virtual ICollection<TemplateQuestion> TemplateQuestions { get; set; } = new List<TemplateQuestion>();
+    public virtual ICollection<SummaryScoreDefinition> SummaryScoreDefinitions { get; set; } = new List<SummaryScoreDefinition>();
 }
 
 public class PromInstance : TenantEntity
@@ -94,6 +118,10 @@ public class PromInstance : TenantEntity
     public virtual TreatmentPlan? TreatmentPlan { get; set; }
     public virtual ICollection<PromResponse> Responses { get; set; } = new List<PromResponse>();
     public virtual ICollection<PromBookingRequest> BookingRequests { get; set; } = new List<PromBookingRequest>();
+
+    // === NEW: Analytics-ready responses and scores ===
+    public virtual ICollection<PromItemResponse> ItemResponses { get; set; } = new List<PromItemResponse>();
+    public virtual ICollection<PromSummaryScore> SummaryScores { get; set; } = new List<PromSummaryScore>();
 }
 
 public enum PromStatus

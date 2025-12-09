@@ -21,7 +21,9 @@ public enum IntakeStatus
 {
     Pending,
     Reviewing,
-    Scheduled,
+    Invited,      // Invitation sent, waiting for patient to register
+    Registered,   // Patient created account
+    Scheduled,    // Patient booked appointment
     Completed,
     Cancelled
 }

@@ -8,7 +8,14 @@ export interface IntakeSubmission {
   submittedAt: string;
   conditionType: string;
   severity: "low" | "medium" | "high" | "critical";
-  status: "pending" | "reviewing" | "approved" | "rejected" | "scheduled";
+  status:
+    | "pending"
+    | "reviewing"
+    | "approved"
+    | "rejected"
+    | "scheduled"
+    | "invited"
+    | "registered";
   painLevel: number;
   symptoms?: string[];
   aiSummary?: string;
@@ -116,6 +123,8 @@ function mapEvaluationToIntake(e: any): IntakeSubmission {
     scheduled: "scheduled",
     triaged: "approved",
     archived: "rejected",
+    invited: "invited",
+    registered: "registered",
   };
   return {
     id: e.id,
