@@ -65,7 +65,8 @@ public class ProviderScheduleController : ControllerBase
 
         // Verify provider belongs to this tenant
         var provider = await _context.Providers
-            .FirstOrDefaultAsync(p => p.Id == providerId);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
 
         if (provider == null)
         {
@@ -132,7 +133,8 @@ public class ProviderScheduleController : ControllerBase
 
         // Verify provider belongs to this tenant
         var provider = await _context.Providers
-            .FirstOrDefaultAsync(p => p.Id == providerId);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
 
         if (provider == null)
         {
@@ -182,8 +184,9 @@ public class ProviderScheduleController : ControllerBase
 
         // Verify provider belongs to this tenant
         var provider = await _context.Providers
+            .IgnoreQueryFilters()
             .Include(p => p.User)
-            .FirstOrDefaultAsync(p => p.Id == providerId);
+            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
 
         if (provider == null)
         {
@@ -246,7 +249,8 @@ public class ProviderScheduleController : ControllerBase
 
         // Verify provider belongs to this tenant
         var provider = await _context.Providers
-            .FirstOrDefaultAsync(p => p.Id == providerId);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
 
         if (provider == null)
         {
@@ -311,7 +315,8 @@ public class ProviderScheduleController : ControllerBase
 
         // Verify provider belongs to this tenant
         var provider = await _context.Providers
-            .FirstOrDefaultAsync(p => p.Id == providerId);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
 
         if (provider == null)
         {
@@ -408,7 +413,8 @@ public class ProviderScheduleController : ControllerBase
 
         // Verify provider belongs to this tenant
         var provider = await _context.Providers
-            .FirstOrDefaultAsync(p => p.Id == providerId);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
 
         if (provider == null)
         {
@@ -449,7 +455,8 @@ public class ProviderScheduleController : ControllerBase
 
         // Verify provider belongs to this tenant
         var provider = await _context.Providers
-            .FirstOrDefaultAsync(p => p.Id == providerId);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
 
         if (provider == null)
         {
