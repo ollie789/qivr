@@ -1,21 +1,4 @@
-import { createTheme } from "@mui/material";
+import { createQivrTheme } from "@qivr/design-system";
 
-export const theme = createTheme({
-  palette: {
-    mode: "light",
-    primary: { main: "#6366f1" },
-    secondary: { main: "#ec4899" },
-    background: { default: "#fafafa", paper: "#ffffff" },
-  },
-  shape: { borderRadius: 12 },
-  typography: {
-    fontFamily: '"Inter", "Roboto", sans-serif',
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: { textTransform: "none", fontWeight: 600 },
-      },
-    },
-  },
-});
+// Use the Qivr Aura theme for consistent styling across all apps
+export const theme = createQivrTheme("widget");

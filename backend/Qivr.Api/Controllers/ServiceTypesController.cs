@@ -9,7 +9,7 @@ namespace Qivr.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class ServiceTypesController : ControllerBase
+public class ServiceTypesController : BaseApiController
 {
     private readonly QivrDbContext _context;
 
@@ -21,7 +21,8 @@ public class ServiceTypesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<ServiceTypeDto>>> GetAll([FromQuery] string? specialty = null)
     {
-        var query = _context.ServiceTypes.AsQueryable();
+        var tenantId = RequireTenantId();
+        var query = _context.ServiceTypes.Where(s => s.TenantId == tenantId);
         
         if (!string.IsNullOrEmpty(specialty))
             query = query.Where(s => s.Specialty == specialty || s.Specialty == null);
@@ -50,7 +51,8 @@ public class ServiceTypesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<ServiceTypeDto>> GetById(Guid id)
     {
-        var item = await _context.ServiceTypes.FindAsync(id);
+        var tenantId = RequireTenantId();
+        var item = await _context.ServiceTypes.FirstOrDefaultAsync(s => s.Id == id && s.TenantId == tenantId);
         if (item == null) return NotFound();
         
         return Ok(new ServiceTypeDto
@@ -70,8 +72,11 @@ public class ServiceTypesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ServiceTypeDto>> Create([FromBody] CreateServiceTypeRequest request)
     {
+        var tenantId = RequireTenantId();
+        
         var item = new ServiceType
         {
+            TenantId = tenantId,
             Name = request.Name,
             Description = request.Description,
             Specialty = request.Specialty,
@@ -102,7 +107,8 @@ public class ServiceTypesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<ServiceTypeDto>> Update(Guid id, [FromBody] UpdateServiceTypeRequest request)
     {
-        var item = await _context.ServiceTypes.FindAsync(id);
+        var tenantId = RequireTenantId();
+        var item = await _context.ServiceTypes.FirstOrDefaultAsync(s => s.Id == id && s.TenantId == tenantId);
         if (item == null) return NotFound();
         
         item.Name = request.Name;
@@ -131,9 +137,10 @@ public class ServiceTypesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var item = await _context.ServiceTypes.FindAsync(id);
+        var tenantId = RequireTenantId();
+        var item = await _context.ServiceTypes.FirstOrDefaultAsync(s => s.Id == id && s.TenantId == tenantId);
         if (item == null) return NotFound();
         
         _context.ServiceTypes.Remove(item);

@@ -99,17 +99,9 @@ interface IntakeData {
   status?: string;
   urgency?: string;
   chiefComplaint: string;
-  symptoms?: string[];
-  painLocation?: string;
   painLevel?: number;
-  duration?: string;
-  medicalHistory?: string;
-  medications?: string[];
-  allergies?: string[];
   aiSummary?: string;
   aiFlags?: string[];
-  triageNotes?: string;
-  internalNotes?: string;
 }
 
 interface IntakeDetailsDialogProps {
@@ -396,10 +388,11 @@ Relieving Factors:
 ${evaluation?.relievingFactors?.join(", ") || "None reported"}
 
 Medical History:
-- Medications: ${evaluation?.currentMedications || "None reported"}
+- Medications: ${evaluation?.currentMedications || fullDetails?.questionnaireResponses?.medications?.join(", ") || "None reported"}
 - Allergies: ${evaluation?.allergies || "None reported"}
-- Medical Conditions: ${evaluation?.medicalConditions || "None reported"}
-- Previous Surgeries: ${evaluation?.surgeries || "None reported"}
+- Medical Conditions: ${evaluation?.medicalConditions || fullDetails?.questionnaireResponses?.additionalHistory?.join(", ") || "None reported"}
+- Previous Surgeries: ${evaluation?.surgeries || fullDetails?.questionnaireResponses?.prevOrtho?.join(", ") || "None reported"}
+- Previous Imaging: ${fullDetails?.questionnaireResponses?.hasImaging === "Yes" ? `Yes - ${fullDetails?.questionnaireResponses?.imagingTypes?.join(", ") || "Type not specified"} (${fullDetails?.questionnaireResponses?.imagingTimeframe || "Timeframe not specified"})` : fullDetails?.questionnaireResponses?.hasImaging || "Not reported"}
 
 Treatment Goals:
 ${evaluation?.treatmentGoals || "Not specified"}
@@ -1457,8 +1450,62 @@ Date: ________________________
                             </Box>
                           )}
 
+                          {/* Imaging History */}
+                          {fullDetails?.questionnaireResponses?.hasImaging && (
+                            <Box>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={600}
+                              >
+                                Previous Imaging
+                              </Typography>
+                              <Typography variant="body2">
+                                {fullDetails.questionnaireResponses.hasImaging}
+                                {fullDetails.questionnaireResponses
+                                  .hasImaging === "Yes" &&
+                                  fullDetails.questionnaireResponses
+                                    .imagingTimeframe && (
+                                    <>
+                                      {" "}
+                                      —{" "}
+                                      {
+                                        fullDetails.questionnaireResponses
+                                          .imagingTimeframe
+                                      }
+                                    </>
+                                  )}
+                              </Typography>
+                              {fullDetails.questionnaireResponses.hasImaging ===
+                                "Yes" &&
+                                fullDetails.questionnaireResponses.imagingTypes
+                                  ?.length > 0 && (
+                                  <Stack
+                                    direction="row"
+                                    spacing={0.5}
+                                    flexWrap="wrap"
+                                    useFlexGap
+                                    sx={{ mt: 0.5 }}
+                                  >
+                                    {fullDetails.questionnaireResponses.imagingTypes.map(
+                                      (type: string, idx: number) => (
+                                        <Chip
+                                          key={idx}
+                                          label={type}
+                                          size="small"
+                                          color="info"
+                                          variant="outlined"
+                                        />
+                                      ),
+                                    )}
+                                  </Stack>
+                                )}
+                            </Box>
+                          )}
+
                           {/* Previous Orthopaedic Conditions */}
-                          {fullDetails?.questionnaireResponses?.prevOrtho?.length > 0 && (
+                          {fullDetails?.questionnaireResponses?.prevOrtho
+                            ?.length > 0 && (
                             <Box>
                               <Typography
                                 variant="caption"
@@ -1467,16 +1514,30 @@ Date: ________________________
                               >
                                 Previous Orthopaedic Conditions
                               </Typography>
-                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
-                                {fullDetails!.questionnaireResponses!.prevOrtho.map((cond: string, idx: number) => (
-                                  <Chip key={idx} label={cond} size="small" variant="outlined" />
-                                ))}
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ mt: 0.5 }}
+                              >
+                                {fullDetails!.questionnaireResponses!.prevOrtho.map(
+                                  (cond: string, idx: number) => (
+                                    <Chip
+                                      key={idx}
+                                      label={cond}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  ),
+                                )}
                               </Stack>
                             </Box>
                           )}
 
                           {/* Current Treatments */}
-                          {fullDetails?.questionnaireResponses?.currentTreatments?.length > 0 && (
+                          {fullDetails?.questionnaireResponses
+                            ?.currentTreatments?.length > 0 && (
                             <Box>
                               <Typography
                                 variant="caption"
@@ -1485,16 +1546,31 @@ Date: ________________________
                               >
                                 Current Treatments
                               </Typography>
-                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
-                                {fullDetails!.questionnaireResponses!.currentTreatments.map((treatment: string, idx: number) => (
-                                  <Chip key={idx} label={treatment} size="small" color="info" variant="outlined" />
-                                ))}
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ mt: 0.5 }}
+                              >
+                                {fullDetails!.questionnaireResponses!.currentTreatments.map(
+                                  (treatment: string, idx: number) => (
+                                    <Chip
+                                      key={idx}
+                                      label={treatment}
+                                      size="small"
+                                      color="info"
+                                      variant="outlined"
+                                    />
+                                  ),
+                                )}
                               </Stack>
                             </Box>
                           )}
 
                           {/* Medications (new array format) */}
-                          {fullDetails?.questionnaireResponses?.medications?.length > 0 && (
+                          {fullDetails?.questionnaireResponses?.medications
+                            ?.length > 0 && (
                             <Box>
                               <Typography
                                 variant="caption"
@@ -1503,32 +1579,48 @@ Date: ________________________
                               >
                                 Medications
                               </Typography>
-                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
-                                {fullDetails!.questionnaireResponses!.medications.map((med: string, idx: number) => (
-                                  <Chip key={idx} label={med} size="small" variant="outlined" />
-                                ))}
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ mt: 0.5 }}
+                              >
+                                {fullDetails!.questionnaireResponses!.medications.map(
+                                  (med: string, idx: number) => (
+                                    <Chip
+                                      key={idx}
+                                      label={med}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  ),
+                                )}
                               </Stack>
                             </Box>
                           )}
 
                           {/* Legacy Medications (string format) */}
-                          {evaluation?.currentMedications && !fullDetails?.questionnaireResponses?.medications?.length && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={600}
-                              >
-                                Medications
-                              </Typography>
-                              <Typography variant="body2">
-                                {evaluation.currentMedications}
-                              </Typography>
-                            </Box>
-                          )}
+                          {evaluation?.currentMedications &&
+                            !fullDetails?.questionnaireResponses?.medications
+                              ?.length && (
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={600}
+                                >
+                                  Medications
+                                </Typography>
+                                <Typography variant="body2">
+                                  {evaluation.currentMedications}
+                                </Typography>
+                              </Box>
+                            )}
 
                           {/* Mobility Aids */}
-                          {fullDetails?.questionnaireResponses?.mobilityAids?.length > 0 && (
+                          {fullDetails?.questionnaireResponses?.mobilityAids
+                            ?.length > 0 && (
                             <Box>
                               <Typography
                                 variant="caption"
@@ -1537,16 +1629,30 @@ Date: ________________________
                               >
                                 Mobility Aids
                               </Typography>
-                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
-                                {fullDetails!.questionnaireResponses!.mobilityAids.map((aid: string, idx: number) => (
-                                  <Chip key={idx} label={aid} size="small" variant="outlined" />
-                                ))}
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ mt: 0.5 }}
+                              >
+                                {fullDetails!.questionnaireResponses!.mobilityAids.map(
+                                  (aid: string, idx: number) => (
+                                    <Chip
+                                      key={idx}
+                                      label={aid}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  ),
+                                )}
                               </Stack>
                             </Box>
                           )}
 
                           {/* Additional Medical History */}
-                          {fullDetails?.questionnaireResponses?.additionalHistory?.length > 0 && (
+                          {fullDetails?.questionnaireResponses
+                            ?.additionalHistory?.length > 0 && (
                             <Box>
                               <Typography
                                 variant="caption"
@@ -1555,10 +1661,23 @@ Date: ________________________
                               >
                                 Other Medical Conditions
                               </Typography>
-                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
-                                {fullDetails!.questionnaireResponses!.additionalHistory.map((hist: string, idx: number) => (
-                                  <Chip key={idx} label={hist} size="small" variant="outlined" />
-                                ))}
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ mt: 0.5 }}
+                              >
+                                {fullDetails!.questionnaireResponses!.additionalHistory.map(
+                                  (hist: string, idx: number) => (
+                                    <Chip
+                                      key={idx}
+                                      label={hist}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  ),
+                                )}
                               </Stack>
                             </Box>
                           )}
@@ -1578,20 +1697,22 @@ Date: ________________________
                               </Typography>
                             </Box>
                           )}
-                          {evaluation?.medicalConditions && !fullDetails?.questionnaireResponses?.additionalHistory?.length && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={600}
-                              >
-                                Conditions
-                              </Typography>
-                              <Typography variant="body2">
-                                {evaluation.medicalConditions}
-                              </Typography>
-                            </Box>
-                          )}
+                          {evaluation?.medicalConditions &&
+                            !fullDetails?.questionnaireResponses
+                              ?.additionalHistory?.length && (
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={600}
+                                >
+                                  Conditions
+                                </Typography>
+                                <Typography variant="body2">
+                                  {evaluation.medicalConditions}
+                                </Typography>
+                              </Box>
+                            )}
                           {evaluation?.surgeries && (
                             <Box>
                               <Typography
@@ -1606,22 +1727,24 @@ Date: ________________________
                               </Typography>
                             </Box>
                           )}
-                          {evaluation?.previousTreatments && !fullDetails?.questionnaireResponses?.currentTreatments?.length && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={600}
-                              >
-                                Previous Treatments
-                              </Typography>
-                              <Typography variant="body2">
-                                {Array.isArray(evaluation.previousTreatments)
-                                  ? evaluation.previousTreatments.join(", ")
-                                  : evaluation.previousTreatments}
-                              </Typography>
-                            </Box>
-                          )}
+                          {evaluation?.previousTreatments &&
+                            !fullDetails?.questionnaireResponses
+                              ?.currentTreatments?.length && (
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={600}
+                                >
+                                  Previous Treatments
+                                </Typography>
+                                <Typography variant="body2">
+                                  {Array.isArray(evaluation.previousTreatments)
+                                    ? evaluation.previousTreatments.join(", ")
+                                    : evaluation.previousTreatments}
+                                </Typography>
+                              </Box>
+                            )}
 
                           {/* Empty state */}
                           {!evaluation?.allergies &&
@@ -1630,11 +1753,17 @@ Date: ________________________
                             !evaluation?.surgeries &&
                             !evaluation?.previousTreatments &&
                             !fullDetails?.questionnaireResponses?.painStart &&
-                            !fullDetails?.questionnaireResponses?.prevOrtho?.length &&
-                            !fullDetails?.questionnaireResponses?.currentTreatments?.length &&
-                            !fullDetails?.questionnaireResponses?.medications?.length &&
-                            !fullDetails?.questionnaireResponses?.mobilityAids?.length &&
-                            !fullDetails?.questionnaireResponses?.additionalHistory?.length && (
+                            !fullDetails?.questionnaireResponses?.hasImaging &&
+                            !fullDetails?.questionnaireResponses?.prevOrtho
+                              ?.length &&
+                            !fullDetails?.questionnaireResponses
+                              ?.currentTreatments?.length &&
+                            !fullDetails?.questionnaireResponses?.medications
+                              ?.length &&
+                            !fullDetails?.questionnaireResponses?.mobilityAids
+                              ?.length &&
+                            !fullDetails?.questionnaireResponses
+                              ?.additionalHistory?.length && (
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
@@ -1646,13 +1775,20 @@ Date: ________________________
                       </InfoCard>
 
                       {/* Treatment Goals & Expectations (new structured format) */}
-                      {(fullDetails?.questionnaireResponses?.goals?.length > 0 ||
+                      {(fullDetails?.questionnaireResponses?.goals?.length >
+                        0 ||
                         fullDetails?.questionnaireResponses?.timeline ||
-                        fullDetails?.questionnaireResponses?.milestones?.length > 0 ||
-                        fullDetails?.questionnaireResponses?.concerns?.length > 0) && (
-                        <InfoCard title="Treatment Goals & Expectations" sx={{ mb: 2 }}>
+                        fullDetails?.questionnaireResponses?.milestones
+                          ?.length > 0 ||
+                        fullDetails?.questionnaireResponses?.concerns?.length >
+                          0) && (
+                        <InfoCard
+                          title="Treatment Goals & Expectations"
+                          sx={{ mb: 2 }}
+                        >
                           <Stack spacing={1.5}>
-                            {fullDetails!.questionnaireResponses?.goals?.length > 0 && (
+                            {fullDetails!.questionnaireResponses?.goals
+                              ?.length > 0 && (
                               <Box>
                                 <Typography
                                   variant="caption"
@@ -1661,10 +1797,24 @@ Date: ________________________
                                 >
                                   Goals
                                 </Typography>
-                                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
-                                  {fullDetails!.questionnaireResponses!.goals.map((goal: string, idx: number) => (
-                                    <Chip key={idx} label={goal} size="small" color="primary" variant="outlined" />
-                                  ))}
+                                <Stack
+                                  direction="row"
+                                  spacing={0.5}
+                                  flexWrap="wrap"
+                                  useFlexGap
+                                  sx={{ mt: 0.5 }}
+                                >
+                                  {fullDetails!.questionnaireResponses!.goals.map(
+                                    (goal: string, idx: number) => (
+                                      <Chip
+                                        key={idx}
+                                        label={goal}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                      />
+                                    ),
+                                  )}
                                 </Stack>
                               </Box>
                             )}
@@ -1678,11 +1828,15 @@ Date: ________________________
                                   Expected Timeline
                                 </Typography>
                                 <Typography variant="body2">
-                                  {fullDetails!.questionnaireResponses!.timeline}
+                                  {
+                                    fullDetails!.questionnaireResponses!
+                                      .timeline
+                                  }
                                 </Typography>
                               </Box>
                             )}
-                            {fullDetails!.questionnaireResponses?.milestones?.length > 0 && (
+                            {fullDetails!.questionnaireResponses?.milestones
+                              ?.length > 0 && (
                               <Box>
                                 <Typography
                                   variant="caption"
@@ -1691,14 +1845,29 @@ Date: ________________________
                                 >
                                   Recovery Milestones
                                 </Typography>
-                                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
-                                  {fullDetails!.questionnaireResponses!.milestones.map((milestone: string, idx: number) => (
-                                    <Chip key={idx} label={milestone} size="small" color="success" variant="outlined" />
-                                  ))}
+                                <Stack
+                                  direction="row"
+                                  spacing={0.5}
+                                  flexWrap="wrap"
+                                  useFlexGap
+                                  sx={{ mt: 0.5 }}
+                                >
+                                  {fullDetails!.questionnaireResponses!.milestones.map(
+                                    (milestone: string, idx: number) => (
+                                      <Chip
+                                        key={idx}
+                                        label={milestone}
+                                        size="small"
+                                        color="success"
+                                        variant="outlined"
+                                      />
+                                    ),
+                                  )}
                                 </Stack>
                               </Box>
                             )}
-                            {fullDetails!.questionnaireResponses?.concerns?.length > 0 && (
+                            {fullDetails!.questionnaireResponses?.concerns
+                              ?.length > 0 && (
                               <Box>
                                 <Typography
                                   variant="caption"
@@ -1707,10 +1876,24 @@ Date: ________________________
                                 >
                                   Patient Concerns
                                 </Typography>
-                                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
-                                  {fullDetails!.questionnaireResponses!.concerns.map((concern: string, idx: number) => (
-                                    <Chip key={idx} label={concern} size="small" color="warning" variant="outlined" />
-                                  ))}
+                                <Stack
+                                  direction="row"
+                                  spacing={0.5}
+                                  flexWrap="wrap"
+                                  useFlexGap
+                                  sx={{ mt: 0.5 }}
+                                >
+                                  {fullDetails!.questionnaireResponses!.concerns.map(
+                                    (concern: string, idx: number) => (
+                                      <Chip
+                                        key={idx}
+                                        label={concern}
+                                        size="small"
+                                        color="warning"
+                                        variant="outlined"
+                                      />
+                                    ),
+                                  )}
                                 </Stack>
                               </Box>
                             )}
@@ -1719,27 +1902,42 @@ Date: ________________________
                       )}
 
                       {/* Legacy Treatment Goals (fallback) */}
-                      {evaluation?.treatmentGoals && !fullDetails?.questionnaireResponses?.goals?.length && (
-                        <InfoCard title="Treatment Goals" sx={{ mb: 2 }}>
-                          <Typography variant="body2">
-                            {evaluation.treatmentGoals}
-                          </Typography>
-                        </InfoCard>
-                      )}
+                      {evaluation?.treatmentGoals &&
+                        !fullDetails?.questionnaireResponses?.goals?.length && (
+                          <InfoCard title="Treatment Goals" sx={{ mb: 2 }}>
+                            <Typography variant="body2">
+                              {evaluation.treatmentGoals}
+                            </Typography>
+                          </InfoCard>
+                        )}
 
                       {/* Daily Impact */}
-                      {fullDetails?.questionnaireResponses?.dailyImpact?.length > 0 && (
+                      {fullDetails?.questionnaireResponses?.dailyImpact
+                        ?.length > 0 && (
                         <InfoCard title="Daily Life Impact" sx={{ mb: 2 }}>
-                          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                            {fullDetails!.questionnaireResponses!.dailyImpact.map((impact: string, idx: number) => (
-                              <Chip key={idx} label={impact} size="small" variant="outlined" />
-                            ))}
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            flexWrap="wrap"
+                            useFlexGap
+                          >
+                            {fullDetails!.questionnaireResponses!.dailyImpact.map(
+                              (impact: string, idx: number) => (
+                                <Chip
+                                  key={idx}
+                                  label={impact}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              ),
+                            )}
                           </Stack>
                         </InfoCard>
                       )}
 
                       {/* Red Flags Alert */}
-                      {fullDetails?.questionnaireResponses?.redFlags?.length > 0 && (
+                      {fullDetails?.questionnaireResponses?.redFlags?.length >
+                        0 && (
                         <Alert
                           severity="error"
                           icon={<WarningIcon />}
@@ -1748,16 +1946,24 @@ Date: ________________________
                           <Typography variant="subtitle2" fontWeight={600}>
                             Red Flags Reported
                           </Typography>
-                          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
-                            {fullDetails!.questionnaireResponses!.redFlags.map((flag: string, idx: number) => (
-                              <Chip
-                                key={idx}
-                                label={flag}
-                                size="small"
-                                color="error"
-                                variant="filled"
-                              />
-                            ))}
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            flexWrap="wrap"
+                            useFlexGap
+                            sx={{ mt: 1 }}
+                          >
+                            {fullDetails!.questionnaireResponses!.redFlags.map(
+                              (flag: string, idx: number) => (
+                                <Chip
+                                  key={idx}
+                                  label={flag}
+                                  size="small"
+                                  color="error"
+                                  variant="filled"
+                                />
+                              ),
+                            )}
                           </Stack>
                         </Alert>
                       )}

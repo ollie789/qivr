@@ -215,7 +215,7 @@ export const ScheduleAppointmentDialog: React.FC<
     queryKey: ["service-types"],
     queryFn: async () => {
       const response = await api.get("/api/servicetypes");
-      return response.data as ServiceType[];
+      return response as ServiceType[];
     },
     enabled: open,
   });

@@ -50,8 +50,6 @@ export interface IntakeFormData {
   // Pain Info
   painDuration?: string;
   painIntensity?: number;
-  selectedAreas?: string[];
-  painPoints?: PainPoint[];
   chiefComplaint?: string;
 
   // Pain Qualities
