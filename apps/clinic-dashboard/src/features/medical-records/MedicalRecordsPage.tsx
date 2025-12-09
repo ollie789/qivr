@@ -39,6 +39,8 @@ import {
   ProgressBar,
   AuraStatusBadge,
   auraTokens,
+  PainMap3D,
+  type PainRegion,
 } from "@qivr/design-system";
 
 import {
@@ -49,8 +51,6 @@ import {
   MedicalHistoryTab,
   DocumentsTab,
   ReferralsTab,
-  PainBodyMap,
-  type PainPoint,
   DemographicsSkeleton,
   PainAssessmentSkeleton,
   MedicalHistorySkeleton,
@@ -306,12 +306,12 @@ const MedicalRecordsPage: React.FC = () => {
   const [newVital, setNewVital] = useState<{
     overallPainLevel: number;
     functionalImpact: "none" | "mild" | "moderate" | "severe";
-    painPoints: PainPoint[];
+    painRegions: PainRegion[];
     notes: string;
   }>({
     overallPainLevel: 0,
     functionalImpact: "none",
-    painPoints: [],
+    painRegions: [],
     notes: "",
   });
 
@@ -467,11 +467,17 @@ const MedicalRecordsPage: React.FC = () => {
   const addVitalMutation = useMutation({
     mutationFn: async () => {
       if (!selectedPatientId) throw new Error("No patient selected");
+      // Convert PainRegion[] to painPoints format for API
+      const painPoints = newVital.painRegions.map((region) => ({
+        bodyPart: region.meshName,
+        intensity: region.intensity,
+        quality: region.quality,
+      }));
       return medicalRecordsApi.createVitalSigns({
         patientId: selectedPatientId,
         overallPainLevel: newVital.overallPainLevel,
         functionalImpact: newVital.functionalImpact,
-        painPoints: newVital.painPoints,
+        painPoints,
         notes: newVital.notes,
       });
     },
@@ -481,7 +487,7 @@ const MedicalRecordsPage: React.FC = () => {
       setNewVital({
         overallPainLevel: 0,
         functionalImpact: "none",
-        painPoints: [],
+        painRegions: [],
         notes: "",
       });
       setVitalErrors({});
@@ -969,10 +975,10 @@ const MedicalRecordsPage: React.FC = () => {
               </Box>
             </Grid>
             <Grid size={{ xs: 12, md: 7 }}>
-              <PainBodyMap
-                value={newVital.painPoints}
-                onChange={(points) =>
-                  setNewVital({ ...newVital, painPoints: points })
+              <PainMap3D
+                value={newVital.painRegions}
+                onChange={(regions) =>
+                  setNewVital({ ...newVital, painRegions: regions })
                 }
               />
             </Grid>
