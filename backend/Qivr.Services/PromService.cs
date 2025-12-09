@@ -109,6 +109,7 @@ public class PromService : IPromService
 		var offset = Math.Max(0, (page - 1) * pageSize);
 
 		var templates = await _db.PromTemplates
+			.IgnoreQueryFilters()
 			.AsNoTracking()
 			.Where(t => t.TenantId == tenantId)
 			.OrderBy(t => t.Key)
