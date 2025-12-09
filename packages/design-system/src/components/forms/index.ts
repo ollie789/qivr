@@ -18,6 +18,9 @@ export * from './PhoneInput';
 export * from './CurrencyInput';
 export * from './TextArea';
 export * from './RatingInput';
+export * from './AuraRadio';
+export * from './AuraSlider';
+export * from './AuraCheckbox';
 
 // Auth forms
 export * from './LoginForm';

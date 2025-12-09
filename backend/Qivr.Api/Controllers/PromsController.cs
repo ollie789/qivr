@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Qivr.Core.DTOs;
 using Qivr.Core.Entities;
 using Qivr.Services;
 using System.Linq;
@@ -671,6 +672,88 @@ private sealed record SubmissionPayload(List<PromAnswer> Answers, bool RequestBo
 		var result = await _promInstanceService.GetPatientTreatmentProgressAsync(tenantId, patientId, treatmentPlanId, ct);
 		return Ok(result);
 	}
+
+	#region Analytics Endpoints
+
+	/// <summary>
+	/// Get patient score trend over time for a specific instrument
+	/// </summary>
+	[HttpGet("analytics/patient/{patientId}/trend")]
+	[Authorize]
+	public async Task<ActionResult<PatientScoreTrendDto>> GetPatientScoreTrend(
+		Guid patientId,
+		[FromQuery] string instrumentKey,
+		[FromQuery] string? scoreKey,
+		[FromServices] IPromResponseScoringService scoringService,
+		CancellationToken ct)
+	{
+		var tenantId = RequireTenantId();
+		var result = await scoringService.GetPatientScoreTrendAsync(tenantId, patientId, instrumentKey, scoreKey);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// Get aggregated score statistics
+	/// </summary>
+	[HttpPost("analytics/scores/aggregate")]
+	[Authorize]
+	public async Task<ActionResult<List<ScoreAggregationDto>>> GetScoreAggregations(
+		[FromBody] PromAnalyticsQueryDto query,
+		[FromServices] IPromResponseScoringService scoringService,
+		CancellationToken ct)
+	{
+		var tenantId = RequireTenantId();
+		var result = await scoringService.GetScoreAggregationsAsync(tenantId, query);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// Get item response distribution for a question
+	/// </summary>
+	[HttpGet("analytics/items/{questionCode}/distribution")]
+	[Authorize]
+	public async Task<ActionResult<ItemResponseDistributionDto>> GetItemDistribution(
+		string questionCode,
+		[FromQuery] DateTime? startDate,
+		[FromQuery] DateTime? endDate,
+		[FromServices] IPromResponseScoringService scoringService,
+		CancellationToken ct)
+	{
+		var tenantId = RequireTenantId();
+		var result = await scoringService.GetItemDistributionAsync(tenantId, questionCode, startDate, endDate);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// Get scores for a specific PROM instance
+	/// </summary>
+	[HttpGet("instances/{id}/scores")]
+	[Authorize]
+	public async Task<ActionResult<PromInstanceScoreSummaryDto>> GetInstanceScores(
+		Guid id,
+		[FromServices] IPromResponseScoringService scoringService,
+		CancellationToken ct)
+	{
+		var result = await scoringService.GetInstanceScoresAsync(id);
+		if (result == null) return NotFound();
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// Get item-level responses for a PROM instance
+	/// </summary>
+	[HttpGet("instances/{id}/item-responses")]
+	[Authorize]
+	public async Task<ActionResult<List<PromItemResponseDto>>> GetInstanceItemResponses(
+		Guid id,
+		[FromServices] IPromResponseScoringService scoringService,
+		CancellationToken ct)
+	{
+		var result = await scoringService.GetItemResponsesAsync(id);
+		return Ok(result);
+	}
+
+	#endregion
 }
 
 public class PromResponseListDto

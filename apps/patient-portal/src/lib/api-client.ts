@@ -2,16 +2,11 @@
 // Uses httpOnly cookies + X-Tenant-Id header pattern
 
 import { API_CONFIG } from "../config/api";
+import { getActiveTenantId } from "../state/tenantState";
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
 class ApiClient {
-  private tenantId: string | null = null;
-
-  setTenantId(tenantId: string) {
-    this.tenantId = tenantId;
-  }
-
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -26,8 +21,10 @@ class ApiClient {
     };
 
     // Add tenant ID header if available (for patient operations)
-    if (this.tenantId) {
-      headers["X-Tenant-Id"] = this.tenantId;
+    // Get from tenant state on each request to ensure it's always current
+    const tenantId = getActiveTenantId();
+    if (tenantId) {
+      headers["X-Tenant-Id"] = tenantId;
     }
 
     const config: RequestInit = {

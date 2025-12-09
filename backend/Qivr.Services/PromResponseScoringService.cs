@@ -32,6 +32,21 @@ public interface IPromResponseScoringService
     /// Recalculate scores for an instance (useful after template score definition changes)
     /// </summary>
     Task RecalculateScoresAsync(Guid instanceId);
+
+    /// <summary>
+    /// Get patient score trend over time for a specific instrument/score
+    /// </summary>
+    Task<PatientScoreTrendDto> GetPatientScoreTrendAsync(Guid tenantId, Guid patientId, string instrumentKey, string? scoreKey = null);
+
+    /// <summary>
+    /// Get aggregated score statistics for analytics
+    /// </summary>
+    Task<List<ScoreAggregationDto>> GetScoreAggregationsAsync(Guid tenantId, PromAnalyticsQueryDto query);
+
+    /// <summary>
+    /// Get item response distribution for a question
+    /// </summary>
+    Task<ItemResponseDistributionDto> GetItemDistributionAsync(Guid tenantId, string questionCode, DateTime? startDate = null, DateTime? endDate = null);
 }
 
 public class PromResponseScoringService : IPromResponseScoringService
@@ -520,5 +535,156 @@ public class PromResponseScoringService : IPromResponseScoringService
             HasCeilingEffect = score.HasCeilingEffect,
             CreatedAt = score.CreatedAt
         };
+    }
+
+    public async Task<PatientScoreTrendDto> GetPatientScoreTrendAsync(Guid tenantId, Guid patientId, string instrumentKey, string? scoreKey = null)
+    {
+        var targetScoreKey = scoreKey ?? "total";
+
+        var scores = await _context.PromSummaryScores
+            .IgnoreQueryFilters()
+            .Include(s => s.Instance)
+                .ThenInclude(i => i!.Template)
+            .Where(s => s.TenantId == tenantId
+                && s.Instance!.PatientId == patientId
+                && s.Instance.Template!.Key.StartsWith(instrumentKey)
+                && s.ScoreKey == targetScoreKey
+                && s.Instance.Status == PromStatus.Completed)
+            .OrderBy(s => s.Instance!.CompletedAt)
+            .ToListAsync();
+
+        var patient = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.Id == patientId && u.TenantId == tenantId)
+            .Select(u => new { u.FirstName, u.LastName })
+            .FirstOrDefaultAsync();
+
+        var dataPoints = scores.Select(s => new ScoreTrendPointDto
+        {
+            Date = s.Instance!.CompletedAt ?? s.CreatedAt,
+            Value = s.Value,
+            InterpretationBand = s.InterpretationBand,
+            Context = s.Instance.InstanceType.ToString(),
+            InstanceId = s.InstanceId
+        }).ToList();
+
+        decimal? overallChange = null;
+        bool? achievedMcid = null;
+        if (dataPoints.Count >= 2)
+        {
+            overallChange = dataPoints.Last().Value - dataPoints.First().Value;
+            var definition = scores.FirstOrDefault()?.Definition;
+            if (definition?.MCID != null)
+            {
+                var changeAbs = Math.Abs(overallChange.Value);
+                achievedMcid = definition.HigherIsBetter
+                    ? overallChange > definition.MCID
+                    : overallChange < -definition.MCID;
+            }
+        }
+
+        return new PatientScoreTrendDto
+        {
+            PatientId = patientId,
+            PatientName = patient != null ? $"{patient.FirstName} {patient.LastName}" : "Unknown",
+            InstrumentKey = instrumentKey,
+            ScoreKey = targetScoreKey,
+            DataPoints = dataPoints,
+            OverallChange = overallChange,
+            AchievedMCID = achievedMcid
+        };
+    }
+
+    public async Task<List<ScoreAggregationDto>> GetScoreAggregationsAsync(Guid tenantId, PromAnalyticsQueryDto query)
+    {
+        var scoresQuery = _context.PromSummaryScores
+            .IgnoreQueryFilters()
+            .Include(s => s.Instance)
+                .ThenInclude(i => i!.Template)
+            .Where(s => s.TenantId == tenantId && s.Instance!.Status == PromStatus.Completed);
+
+        if (query.TemplateId.HasValue)
+            scoresQuery = scoresQuery.Where(s => s.Instance!.TemplateId == query.TemplateId);
+        if (!string.IsNullOrEmpty(query.InstrumentKey))
+            scoresQuery = scoresQuery.Where(s => s.Instance!.Template!.Key.StartsWith(query.InstrumentKey));
+        if (!string.IsNullOrEmpty(query.ScoreKey))
+            scoresQuery = scoresQuery.Where(s => s.ScoreKey == query.ScoreKey);
+        if (query.PatientId.HasValue)
+            scoresQuery = scoresQuery.Where(s => s.Instance!.PatientId == query.PatientId);
+        if (query.StartDate.HasValue)
+            scoresQuery = scoresQuery.Where(s => s.CreatedAt >= query.StartDate);
+        if (query.EndDate.HasValue)
+            scoresQuery = scoresQuery.Where(s => s.CreatedAt <= query.EndDate);
+
+        var scores = await scoresQuery.ToListAsync();
+
+        var groupBy = query.GroupBy ?? "month";
+        var grouped = scores.GroupBy(s => groupBy switch
+        {
+            "day" => s.CreatedAt.ToString("yyyy-MM-dd"),
+            "week" => $"{s.CreatedAt.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.CreatedAt):D2}",
+            "month" => s.CreatedAt.ToString("yyyy-MM"),
+            "quarter" => $"{s.CreatedAt.Year}-Q{(s.CreatedAt.Month - 1) / 3 + 1}",
+            "year" => s.CreatedAt.Year.ToString(),
+            _ => s.CreatedAt.ToString("yyyy-MM")
+        });
+
+        return grouped.Select(g => new ScoreAggregationDto
+        {
+            GroupKey = g.Key,
+            GroupLabel = g.Key,
+            Count = g.Count(),
+            Average = g.Average(s => s.Value),
+            Min = g.Min(s => s.Value),
+            Max = g.Max(s => s.Value),
+            StandardDeviation = CalculateStdDev(g.Select(s => s.Value)),
+            BandDistribution = g.GroupBy(s => s.InterpretationBand ?? "Unknown")
+                .ToDictionary(b => b.Key, b => b.Count())
+        }).OrderBy(a => a.GroupKey).ToList();
+    }
+
+    public async Task<ItemResponseDistributionDto> GetItemDistributionAsync(Guid tenantId, string questionCode, DateTime? startDate = null, DateTime? endDate = null)
+    {
+        var query = _context.PromItemResponses
+            .IgnoreQueryFilters()
+            .Include(r => r.TemplateQuestion)
+            .Where(r => r.TenantId == tenantId && r.QuestionCode == questionCode && !r.IsSkipped);
+
+        if (startDate.HasValue)
+            query = query.Where(r => r.CreatedAt >= startDate);
+        if (endDate.HasValue)
+            query = query.Where(r => r.CreatedAt <= endDate);
+
+        var responses = await query.ToListAsync();
+        var total = responses.Count;
+
+        var distribution = responses
+            .GroupBy(r => r.ValueRaw ?? "null")
+            .Select(g => new ResponseOptionCountDto
+            {
+                Value = g.Key,
+                DisplayLabel = g.First().ValueDisplay ?? g.Key,
+                Count = g.Count(),
+                Percentage = total > 0 ? Math.Round((decimal)g.Count() / total * 100, 1) : 0
+            })
+            .OrderByDescending(d => d.Count)
+            .ToList();
+
+        return new ItemResponseDistributionDto
+        {
+            QuestionCode = questionCode,
+            QuestionLabel = responses.FirstOrDefault()?.TemplateQuestion?.Label,
+            TotalResponses = total,
+            Distribution = distribution
+        };
+    }
+
+    private static decimal? CalculateStdDev(IEnumerable<decimal> values)
+    {
+        var list = values.ToList();
+        if (list.Count < 2) return null;
+        var avg = list.Average();
+        var sumSquares = list.Sum(v => (v - avg) * (v - avg));
+        return (decimal)Math.Sqrt((double)(sumSquares / (list.Count - 1)));
     }
 }

@@ -487,4 +487,176 @@ export interface TreatmentProgressFeedback {
   submittedAt: string;
 }
 
+// === PROM Analytics Types ===
+
+export interface ScoreTrendPoint {
+  date: string;
+  value: number;
+  interpretationBand?: string;
+  context?: string;
+  instanceId: string;
+}
+
+export interface PatientScoreTrend {
+  patientId: string;
+  patientName: string;
+  instrumentKey: string;
+  scoreKey: string;
+  dataPoints: ScoreTrendPoint[];
+  overallChange?: number;
+  achievedMCID?: boolean;
+}
+
+export interface ScoreAggregation {
+  groupKey: string;
+  groupLabel?: string;
+  count: number;
+  average?: number;
+  median?: number;
+  min?: number;
+  max?: number;
+  standardDeviation?: number;
+  bandDistribution?: Record<string, number>;
+}
+
+export interface ResponseOptionCount {
+  value: string;
+  displayLabel?: string;
+  count: number;
+  percentage: number;
+}
+
+export interface ItemResponseDistribution {
+  questionCode: string;
+  questionLabel?: string;
+  totalResponses: number;
+  distribution: ResponseOptionCount[];
+}
+
+export interface PromSummaryScore {
+  id: string;
+  instanceId: string;
+  definitionId?: string;
+  scoreKey: string;
+  label?: string;
+  value: number;
+  rawValue?: number;
+  rangeMin?: number;
+  rangeMax?: number;
+  higherIsBetter?: boolean;
+  interpretationBand?: string;
+  severity?: string;
+  itemCount?: number;
+  missingItemCount?: number;
+  hasFloorEffect: boolean;
+  hasCeilingEffect: boolean;
+  createdAt: string;
+}
+
+export interface PromInstanceScoreSummary {
+  instanceId: string;
+  templateId: string;
+  templateKey: string;
+  templateName: string;
+  completedAt?: string;
+  primaryScore?: PromSummaryScore;
+  allScores: PromSummaryScore[];
+}
+
+export interface PromItemResponse {
+  id: string;
+  instanceId: string;
+  templateQuestionId: string;
+  questionCode?: string;
+  questionLabel?: string;
+  valueRaw?: string;
+  valueNumeric?: number;
+  valueDisplay?: string;
+  multiSelectValues?: string[];
+  isSkipped: boolean;
+  responseTimeSeconds?: number;
+  createdAt: string;
+}
+
+export interface PromAnalyticsQuery {
+  templateId?: string;
+  instrumentKey?: string;
+  scoreKey?: string;
+  questionCode?: string;
+  patientId?: string;
+  providerId?: string;
+  startDate?: string;
+  endDate?: string;
+  groupBy?: "day" | "week" | "month" | "quarter" | "year";
+}
+
 export const promApi = new PromApi();
+
+// Add analytics methods to PromApi class - extend above
+Object.assign(PromApi.prototype, {
+  async getPatientScoreTrend(
+    patientId: string,
+    instrumentKey: string,
+    scoreKey?: string,
+  ): Promise<PatientScoreTrend> {
+    return await apiClient.get<PatientScoreTrend>(
+      `/api/proms/analytics/patient/${patientId}/trend`,
+      { instrumentKey, scoreKey },
+    );
+  },
+
+  async getScoreAggregations(
+    query: PromAnalyticsQuery,
+  ): Promise<ScoreAggregation[]> {
+    return await apiClient.post<ScoreAggregation[]>(
+      "/api/proms/analytics/scores/aggregate",
+      query,
+    );
+  },
+
+  async getItemDistribution(
+    questionCode: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<ItemResponseDistribution> {
+    return await apiClient.get<ItemResponseDistribution>(
+      `/api/proms/analytics/items/${questionCode}/distribution`,
+      { startDate, endDate },
+    );
+  },
+
+  async getInstanceScores(
+    instanceId: string,
+  ): Promise<PromInstanceScoreSummary> {
+    return await apiClient.get<PromInstanceScoreSummary>(
+      `/api/proms/instances/${instanceId}/scores`,
+    );
+  },
+
+  async getInstanceItemResponses(
+    instanceId: string,
+  ): Promise<PromItemResponse[]> {
+    return await apiClient.get<PromItemResponse[]>(
+      `/api/proms/instances/${instanceId}/item-responses`,
+    );
+  },
+});
+
+// Extend interface for TypeScript
+declare module "./promApi" {
+  interface PromApi {
+    getPatientScoreTrend(
+      patientId: string,
+      instrumentKey: string,
+      scoreKey?: string,
+    ): Promise<PatientScoreTrend>;
+    getScoreAggregations(query: PromAnalyticsQuery): Promise<ScoreAggregation[]>;
+    getItemDistribution(
+      questionCode: string,
+      startDate?: string,
+      endDate?: string,
+    ): Promise<ItemResponseDistribution>;
+    getInstanceScores(instanceId: string): Promise<PromInstanceScoreSummary>;
+    getInstanceItemResponses(instanceId: string): Promise<PromItemResponse[]>;
+  }
+}

@@ -5,15 +5,9 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
   FormControl,
   FormLabel,
-  Slider,
   TextField,
-  Checkbox,
-  FormGroup,
   LinearProgress,
   Stack,
   Divider,
@@ -38,6 +32,12 @@ import {
   auraStepper,
   AuraButton,
   Callout,
+  AuraRadioGroup,
+  AuraRadioOption,
+  AuraSlider,
+  AuraRatingSlider,
+  AuraCheckboxGroup,
+  AuraCheckboxOption,
 } from "@qivr/design-system";
 import {
   fetchPromInstance as fetchPromInstanceById,
@@ -280,26 +280,21 @@ export const CompletePROM = () => {
           </FormLabel>
 
           {question.type === "radio" && question.options && (
-            <RadioGroup
+            <AuraRadioGroup
               value={typeof value === "string" ? value : ""}
               onChange={(e) =>
                 handleResponseChange(question.id, e.target.value)
               }
             >
               {question.options.map((option) => (
-                <FormControlLabel
-                  key={option}
-                  value={option}
-                  control={<Radio />}
-                  label={option}
-                />
+                <AuraRadioOption key={option} value={option} label={option} />
               ))}
-            </RadioGroup>
+            </AuraRadioGroup>
           )}
 
           {question.type === "scale" && (
             <Box>
-              <RadioGroup
+              <AuraRadioGroup
                 row
                 value={typeof value === "string" ? value : ""}
                 onChange={(e) =>
@@ -307,15 +302,14 @@ export const CompletePROM = () => {
                 }
               >
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                  <FormControlLabel
+                  <AuraRadioOption
                     key={num}
                     value={num.toString()}
-                    control={<Radio />}
                     label={num.toString()}
                     labelPlacement="bottom"
                   />
                 ))}
-              </RadioGroup>
+              </AuraRadioGroup>
               <Box display="flex" justifyContent="space-between" mt={1}>
                 <Typography variant="caption">Strongly Disagree</Typography>
                 <Typography variant="caption">Strongly Agree</Typography>
@@ -338,7 +332,7 @@ export const CompletePROM = () => {
                   : numericValue;
 
                 return (
-                  <Slider
+                  <AuraSlider
                     value={safeValue}
                     onChange={(_, newValue) => {
                       if (Array.isArray(newValue)) {
@@ -352,13 +346,10 @@ export const CompletePROM = () => {
                     step={question.step || 1}
                     marks
                     valueLabelDisplay="on"
+                    showMinMax
                   />
                 );
               })()}
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="caption">{question.min || 0}</Typography>
-                <Typography variant="caption">{question.max || 100}</Typography>
-              </Box>
             </Box>
           )}
 
@@ -376,29 +367,25 @@ export const CompletePROM = () => {
           )}
 
           {question.type === "checkbox" && question.options && (
-            <FormGroup>
+            <AuraCheckboxGroup>
               {question.options.map((option) => {
                 const selectedOptions = Array.isArray(value) ? value : [];
                 const isChecked = selectedOptions.includes(option);
                 return (
-                  <FormControlLabel
+                  <AuraCheckboxOption
                     key={option}
-                    control={
-                      <Checkbox
-                        checked={isChecked}
-                        onChange={(event) => {
-                          const updated = event.target.checked
-                            ? [...selectedOptions, option]
-                            : selectedOptions.filter((item) => item !== option);
-                          handleResponseChange(question.id, updated);
-                        }}
-                      />
-                    }
+                    checked={isChecked}
+                    onChange={(event) => {
+                      const updated = event.target.checked
+                        ? [...selectedOptions, option]
+                        : selectedOptions.filter((item) => item !== option);
+                      handleResponseChange(question.id, updated);
+                    }}
                     label={option}
                   />
                 );
               })}
-            </FormGroup>
+            </AuraCheckboxGroup>
           )}
 
           {hasError && (
@@ -488,7 +475,7 @@ export const CompletePROM = () => {
               </Typography>
             </FormLabel>
             <Box px={2}>
-              <Slider
+              <AuraRatingSlider
                 value={treatmentProgress.overallEffectivenessRating ?? 5}
                 onChange={(_, value) =>
                   setTreatmentProgress((prev) => ({
@@ -496,20 +483,7 @@ export const CompletePROM = () => {
                     overallEffectivenessRating: value as number,
                   }))
                 }
-                min={1}
-                max={10}
-                step={1}
-                marks={[
-                  { value: 1, label: "1" },
-                  { value: 5, label: "5" },
-                  { value: 10, label: "10" },
-                ]}
-                valueLabelDisplay="on"
               />
-              <Box display="flex" justifyContent="space-between" mt={1}>
-                <Typography variant="caption">Not effective</Typography>
-                <Typography variant="caption">Very effective</Typography>
-              </Box>
             </Box>
           </FormControl>
         </Box>
@@ -522,7 +496,7 @@ export const CompletePROM = () => {
                 Compared to when you started treatment, how is your pain?
               </Typography>
             </FormLabel>
-            <RadioGroup
+            <AuraRadioGroup
               value={treatmentProgress.painComparedToStart?.toString() ?? ""}
               onChange={(e) =>
                 setTreatmentProgress((prev) => ({
@@ -531,34 +505,14 @@ export const CompletePROM = () => {
                 }))
               }
             >
-              <FormControlLabel
-                value="-3"
-                control={<Radio />}
-                label="Much worse"
-              />
-              <FormControlLabel value="-2" control={<Radio />} label="Worse" />
-              <FormControlLabel
-                value="-1"
-                control={<Radio />}
-                label="Slightly worse"
-              />
-              <FormControlLabel
-                value="0"
-                control={<Radio />}
-                label="About the same"
-              />
-              <FormControlLabel
-                value="1"
-                control={<Radio />}
-                label="Slightly better"
-              />
-              <FormControlLabel value="2" control={<Radio />} label="Better" />
-              <FormControlLabel
-                value="3"
-                control={<Radio />}
-                label="Much better"
-              />
-            </RadioGroup>
+              <AuraRadioOption value="-3" label="Much worse" />
+              <AuraRadioOption value="-2" label="Worse" />
+              <AuraRadioOption value="-1" label="Slightly worse" />
+              <AuraRadioOption value="0" label="About the same" />
+              <AuraRadioOption value="1" label="Slightly better" />
+              <AuraRadioOption value="2" label="Better" />
+              <AuraRadioOption value="3" label="Much better" />
+            </AuraRadioGroup>
           </FormControl>
         </Box>
 
@@ -570,7 +524,7 @@ export const CompletePROM = () => {
                 How often are you completing your prescribed exercises?
               </Typography>
             </FormLabel>
-            <RadioGroup
+            <AuraRadioGroup
               value={treatmentProgress.exerciseCompliance ?? ""}
               onChange={(e) =>
                 setTreatmentProgress((prev) => ({
@@ -580,14 +534,13 @@ export const CompletePROM = () => {
               }
             >
               {EXERCISE_COMPLIANCE_OPTIONS.map((opt) => (
-                <FormControlLabel
+                <AuraRadioOption
                   key={opt.value}
                   value={opt.value}
-                  control={<Radio />}
                   label={opt.label}
                 />
               ))}
-            </RadioGroup>
+            </AuraRadioGroup>
           </FormControl>
         </Box>
 
@@ -626,36 +579,32 @@ export const CompletePROM = () => {
                   Select all that apply
                 </Typography>
               </FormLabel>
-              <FormGroup>
+              <AuraCheckboxGroup>
                 {treatmentContext.exercises.map(
                   (exercise: TreatmentExercise) => (
-                    <FormControlLabel
+                    <AuraCheckboxOption
                       key={exercise.id}
-                      control={
-                        <Checkbox
-                          checked={
-                            treatmentProgress.helpfulExerciseIds?.includes(
-                              exercise.id,
-                            ) ?? false
-                          }
-                          onChange={(e) => {
-                            const current =
-                              treatmentProgress.helpfulExerciseIds ?? [];
-                            const updated = e.target.checked
-                              ? [...current, exercise.id]
-                              : current.filter((id) => id !== exercise.id);
-                            setTreatmentProgress((prev) => ({
-                              ...prev,
-                              helpfulExerciseIds: updated,
-                            }));
-                          }}
-                        />
+                      checked={
+                        treatmentProgress.helpfulExerciseIds?.includes(
+                          exercise.id,
+                        ) ?? false
                       }
+                      onChange={(e) => {
+                        const current =
+                          treatmentProgress.helpfulExerciseIds ?? [];
+                        const updated = e.target.checked
+                          ? [...current, exercise.id]
+                          : current.filter((id) => id !== exercise.id);
+                        setTreatmentProgress((prev) => ({
+                          ...prev,
+                          helpfulExerciseIds: updated,
+                        }));
+                      }}
                       label={exercise.name}
                     />
                   ),
                 )}
-              </FormGroup>
+              </AuraCheckboxGroup>
             </FormControl>
           </Box>
         )}
@@ -672,36 +621,32 @@ export const CompletePROM = () => {
                   Select all that apply
                 </Typography>
               </FormLabel>
-              <FormGroup>
+              <AuraCheckboxGroup>
                 {treatmentContext.exercises.map(
                   (exercise: TreatmentExercise) => (
-                    <FormControlLabel
+                    <AuraCheckboxOption
                       key={exercise.id}
-                      control={
-                        <Checkbox
-                          checked={
-                            treatmentProgress.problematicExerciseIds?.includes(
-                              exercise.id,
-                            ) ?? false
-                          }
-                          onChange={(e) => {
-                            const current =
-                              treatmentProgress.problematicExerciseIds ?? [];
-                            const updated = e.target.checked
-                              ? [...current, exercise.id]
-                              : current.filter((id) => id !== exercise.id);
-                            setTreatmentProgress((prev) => ({
-                              ...prev,
-                              problematicExerciseIds: updated,
-                            }));
-                          }}
-                        />
+                      checked={
+                        treatmentProgress.problematicExerciseIds?.includes(
+                          exercise.id,
+                        ) ?? false
                       }
+                      onChange={(e) => {
+                        const current =
+                          treatmentProgress.problematicExerciseIds ?? [];
+                        const updated = e.target.checked
+                          ? [...current, exercise.id]
+                          : current.filter((id) => id !== exercise.id);
+                        setTreatmentProgress((prev) => ({
+                          ...prev,
+                          problematicExerciseIds: updated,
+                        }));
+                      }}
                       label={exercise.name}
                     />
                   ),
                 )}
-              </FormGroup>
+              </AuraCheckboxGroup>
             </FormControl>
           </Box>
         )}
@@ -741,31 +686,27 @@ export const CompletePROM = () => {
                 Select all that apply
               </Typography>
             </FormLabel>
-            <FormGroup>
+            <AuraCheckboxGroup>
               {BARRIER_OPTIONS.map((barrier) => (
-                <FormControlLabel
+                <AuraCheckboxOption
                   key={barrier}
-                  control={
-                    <Checkbox
-                      checked={
-                        treatmentProgress.barriers?.includes(barrier) ?? false
-                      }
-                      onChange={(e) => {
-                        const current = treatmentProgress.barriers ?? [];
-                        const updated = e.target.checked
-                          ? [...current, barrier]
-                          : current.filter((b) => b !== barrier);
-                        setTreatmentProgress((prev) => ({
-                          ...prev,
-                          barriers: updated,
-                        }));
-                      }}
-                    />
+                  checked={
+                    treatmentProgress.barriers?.includes(barrier) ?? false
                   }
+                  onChange={(e) => {
+                    const current = treatmentProgress.barriers ?? [];
+                    const updated = e.target.checked
+                      ? [...current, barrier]
+                      : current.filter((b) => b !== barrier);
+                    setTreatmentProgress((prev) => ({
+                      ...prev,
+                      barriers: updated,
+                    }));
+                  }}
                   label={barrier}
                 />
               ))}
-            </FormGroup>
+            </AuraCheckboxGroup>
           </FormControl>
         </Box>
 
@@ -801,7 +742,7 @@ export const CompletePROM = () => {
                 Would you like to discuss your treatment with your clinician?
               </Typography>
             </FormLabel>
-            <RadioGroup
+            <AuraRadioGroup
               value={
                 treatmentProgress.wantsClinicianDiscussion === undefined
                   ? ""
@@ -816,17 +757,15 @@ export const CompletePROM = () => {
                 }))
               }
             >
-              <FormControlLabel
+              <AuraRadioOption
                 value="yes"
-                control={<Radio />}
                 label="Yes, I'd like to discuss my progress"
               />
-              <FormControlLabel
+              <AuraRadioOption
                 value="no"
-                control={<Radio />}
                 label="No, I'm satisfied with my current plan"
               />
-            </RadioGroup>
+            </AuraRadioGroup>
           </FormControl>
         </Box>
       </Box>
