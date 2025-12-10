@@ -23,7 +23,7 @@ public class PromsController : BaseApiController
 		_logger = logger;
 	}
 
-	// POST /api/v1/proms/templates
+	// POST /api/proms/templates
 	[HttpPost("templates")]
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<ActionResult<PromTemplateDto>> CreateOrVersionTemplate([FromBody] CreatePromTemplateDto request, CancellationToken ct)
@@ -33,7 +33,7 @@ public class PromsController : BaseApiController
 		return CreatedAtAction(nameof(GetTemplate), new { key = result.Key, version = result.Version }, result);
 	}
 
-	// GET /api/v1/proms/templates/{key}/{version?}
+	// GET /api/proms/templates/{key}/{version?}
 	[HttpGet("templates/{key}/{version?}")]
 	[Authorize]
 	public async Task<ActionResult<PromTemplateDto>> GetTemplate([FromRoute] string key, [FromRoute] int? version, CancellationToken ct)
@@ -44,7 +44,7 @@ public class PromsController : BaseApiController
 		return Ok(result);
 	}
 
-	// GET /api/v1/proms/templates/by-id/{templateId}
+	// GET /api/proms/templates/by-id/{templateId}
 	[HttpGet("templates/by-id/{templateId}")]
 	[Authorize]
 	public async Task<ActionResult<PromTemplateDto>> GetTemplateById([FromRoute] Guid templateId, CancellationToken ct)
@@ -55,7 +55,7 @@ public class PromsController : BaseApiController
 		return Ok(result);
 	}
 
-	// PUT /api/v1/proms/templates/by-id/{templateId}
+	// PUT /api/proms/templates/by-id/{templateId}
 	[HttpPut("templates/by-id/{templateId}")]
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<ActionResult<PromTemplateDto>> UpdateTemplate([FromRoute] Guid templateId, [FromBody] UpdatePromTemplateDto request, CancellationToken ct)
@@ -66,7 +66,7 @@ public class PromsController : BaseApiController
 		return Ok(result);
 	}
 
-	// DELETE /api/v1/proms/templates/by-id/{templateId}
+	// DELETE /api/proms/templates/by-id/{templateId}
 	[HttpDelete("templates/by-id/{templateId}")]
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<IActionResult> DeleteTemplate([FromRoute] Guid templateId, CancellationToken ct)
@@ -77,7 +77,7 @@ public class PromsController : BaseApiController
 		return NoContent();
 	}
 
-	// GET /api/v1/proms/templates?page=&pageSize=
+	// GET /api/proms/templates?page=&pageSize=
 	[HttpGet("templates")]
 	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<PromTemplateSummaryDto>>> ListTemplates([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
@@ -87,7 +87,7 @@ public class PromsController : BaseApiController
 		return Ok(list);
 	}
 
-	// POST /api/v1/proms/schedule
+	// POST /api/proms/schedule
 	[HttpPost("schedule")]
 	[Authorize(Roles = "Admin,Clinician")] // allow clinic staff to schedule
 	public async Task<ActionResult<PromInstanceDto>> Schedule([FromBody] SchedulePromRequest request, CancellationToken ct)
@@ -115,7 +115,7 @@ public class PromsController : BaseApiController
 		return CreatedAtAction(nameof(GetInstance), new { id = instance.Id }, instance);
 	}
 
-	// GET /api/v1/proms/instances/{id}
+	// GET /api/proms/instances/{id}
 	[HttpGet("instances/{id}")]
 	[Authorize]
 	public async Task<ActionResult<PromInstanceDto>> GetInstance([FromRoute] Guid id, CancellationToken ct)
@@ -126,7 +126,7 @@ public class PromsController : BaseApiController
 		return Ok(result);
 	}
 
-	// GET /api/v1/proms/instances (current patient)
+	// GET /api/proms/instances (current patient)
 	[HttpGet("instances")]
 	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<PromInstanceDto>>> ListMyInstances([FromQuery] string? status, CancellationToken ct)
@@ -137,7 +137,7 @@ public class PromsController : BaseApiController
 		return Ok(list);
 	}
 
-	// GET /api/v1/proms/admin/instances?status=&templateId=&patientId=&startDate=&endDate=
+	// GET /api/proms/admin/instances?status=&templateId=&patientId=&startDate=&endDate=
 	[HttpGet("admin/instances")]
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<ActionResult<PromResponseListDto>> ListTenantInstances(
@@ -168,7 +168,7 @@ public class PromsController : BaseApiController
 		return Ok(response);
 	}
 
-	// GET /api/v1/proms/stats
+	// GET /api/proms/stats
 	[HttpGet("stats")]
 	[Authorize(Roles = "Admin,Clinician")]
 	public async Task<ActionResult<PromInstanceStats>> GetStats([FromQuery] Guid? templateId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
@@ -178,7 +178,7 @@ public class PromsController : BaseApiController
 		return Ok(stats);
 	}
 
-	// POST /api/v1/proms/instances/{id}/answers
+	// POST /api/proms/instances/{id}/answers
 	[HttpPost("instances/{id}/answers")]
 	[AllowAnonymous] // public submission supported via access token + RLS default tenant insert if configured
 	public async Task<ActionResult<SubmitAnswersResult>> SubmitAnswers([FromRoute] Guid id, [FromBody] JsonElement payload, CancellationToken ct)
@@ -204,7 +204,7 @@ public class PromsController : BaseApiController
 		return Ok(new SubmitAnswersResult { Score = instance.TotalScore ?? 0m, CompletedAt = instance.CompletedAt ?? DateTime.UtcNow });
 	}
 
-	// PUT /api/v1/proms/instances/{id}/draft
+	// PUT /api/proms/instances/{id}/draft
 	[HttpPut("instances/{id}/draft")]
 	[Authorize]
 	public async Task<ActionResult<PromInstanceDto>> SaveDraft([FromRoute] Guid id, [FromBody] SavePromDraftRequest request, CancellationToken ct)
