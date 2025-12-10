@@ -72,3 +72,73 @@ variable "tags" {
     Region      = "ap-southeast-2"
   }
 }
+
+# =============================================================================
+# Monitoring & Alerting
+# =============================================================================
+
+variable "alert_email" {
+  description = "Email address for CloudWatch alarm notifications"
+  type        = string
+  default     = ""
+}
+
+variable "api_cpu" {
+  description = "CPU units for API task (1024 = 1 vCPU)"
+  type        = number
+  default     = 512
+}
+
+variable "api_memory" {
+  description = "Memory (MB) for API task"
+  type        = number
+  default     = 1024
+}
+
+variable "api_desired_count" {
+  description = "Desired number of API tasks"
+  type        = number
+  default     = 2
+}
+
+variable "api_min_capacity" {
+  description = "Minimum number of API tasks for auto-scaling"
+  type        = number
+  default     = 1
+}
+
+variable "api_max_capacity" {
+  description = "Maximum number of API tasks for auto-scaling"
+  type        = number
+  default     = 10
+}
+
+variable "api_image_tag" {
+  description = "Docker image tag for API"
+  type        = string
+  default     = "latest"
+}
+
+variable "frontend_cpu" {
+  description = "CPU units for frontend task"
+  type        = number
+  default     = 256
+}
+
+variable "frontend_memory" {
+  description = "Memory (MB) for frontend task"
+  type        = number
+  default     = 512
+}
+
+variable "frontend_desired_count" {
+  description = "Desired number of frontend tasks"
+  type        = number
+  default     = 2
+}
+
+variable "frontend_image_tag" {
+  description = "Docker image tag for frontend"
+  type        = string
+  default     = "latest"
+}

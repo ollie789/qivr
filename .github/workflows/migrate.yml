@@ -1,0 +1,143 @@
+name: Database Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      dry_run:
+        description: 'Dry run (show pending migrations only)'
+        required: false
+        default: false
+        type: boolean
+
+  # Auto-run on deploy to staging
+  workflow_run:
+    workflows: ["Deploy to AWS"]
+    types:
+      - completed
+    branches: [main]
+
+jobs:
+  check-migrations:
+    runs-on: ubuntu-latest
+    outputs:
+      has_pending: ${{ steps.check.outputs.has_pending }}
+      pending_count: ${{ steps.check.outputs.pending_count }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for pending migrations
+        id: check
+        run: |
+          MIGRATION_COUNT=$(ls -1 database/migrations/*.sql 2>/dev/null | wc -l || echo "0")
+          echo "Found $MIGRATION_COUNT migration files"
+          echo "pending_count=$MIGRATION_COUNT" >> $GITHUB_OUTPUT
+          if [[ "$MIGRATION_COUNT" -gt 0 ]]; then
+            echo "has_pending=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_pending=false" >> $GITHUB_OUTPUT
+          fi
+
+  migrate-staging:
+    needs: check-migrations
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Get database credentials
+        id: db-creds
+        run: |
+          echo "Getting staging database credentials..."
+          DB_HOST=$(aws rds describe-db-instances --db-instance-identifier qivr-staging-db --query 'DBInstances[0].Endpoint.Address' --output text)
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id qivr/staging/db-password --query SecretString --output text)
+          echo "::add-mask::$DB_PASSWORD"
+          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
+          echo "DB_PASSWORD=$DB_PASSWORD" >> $GITHUB_ENV
+
+      - name: Run migrations (dry run)
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "Dry run - showing pending migrations:"
+          ls -la database/migrations/*.sql
+
+      - name: Run migrations
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          PGPASSWORD: ${{ env.DB_PASSWORD }}
+        run: |
+          chmod +x scripts/run-migrations.sh
+          ./scripts/run-migrations.sh staging
+
+  migrate-production:
+    needs: check-migrations
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production  # Requires manual approval
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Get database credentials
+        id: db-creds
+        run: |
+          echo "Getting production database credentials..."
+          DB_HOST=$(aws rds describe-db-instances --db-instance-identifier qivr-prod-db --query 'DBInstances[0].Endpoint.Address' --output text)
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id qivr/production/db-password --query SecretString --output text)
+          echo "::add-mask::$DB_PASSWORD"
+          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
+          echo "DB_PASSWORD=$DB_PASSWORD" >> $GITHUB_ENV
+
+      - name: Create backup before migration
+        run: |
+          echo "Creating RDS snapshot before migration..."
+          SNAPSHOT_ID="qivr-prod-pre-migration-$(date +%Y%m%d-%H%M%S)"
+          aws rds create-db-snapshot \
+            --db-instance-identifier qivr-prod-db \
+            --db-snapshot-identifier "$SNAPSHOT_ID"
+          echo "Snapshot $SNAPSHOT_ID created"
+
+      - name: Run migrations
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          PGPASSWORD: ${{ env.DB_PASSWORD }}
+        run: |
+          chmod +x scripts/run-migrations.sh
+          # Skip confirmation prompt in CI
+          yes yes | ./scripts/run-migrations.sh production || ./scripts/run-migrations.sh production

@@ -7,51 +7,100 @@ on:
     branches: [main]
 
 jobs:
-  build-test:
+  backend-build-test:
     runs-on: ubuntu-latest
     env:
       QIVR_DB_PWD: ${{ secrets.QIVR_DB_PWD }}
       INTAKE_DB_PWD: ${{ secrets.INTAKE_DB_PWD }}
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node (for front-end installs)
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-
-      - name: Set up .NET 8 SDK
-        uses: actions/setup-dotnet@v3
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
-      - name: Cache NPM deps
-        uses: actions/cache@v3
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          path: |
-            ~/.npm
-            **/node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-      - name: Install root dependencies
-        run: npm install --ignore-scripts
+      - name: Restore dependencies
+        run: dotnet restore
+        working-directory: backend
 
-      - name: Build back-end
-        run: |
-          cd backend
-          dotnet restore
-          dotnet build --configuration Release
+      - name: Build backend
+        run: dotnet build --configuration Release --no-restore
+        working-directory: backend
 
-      - name: Run smoke tests
-        run: |
-          chmod +x ./apps/check-status.sh
-          ./apps/check-status.sh
+      - name: Run unit tests
+        run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        working-directory: backend
+        env:
+          # Use in-memory database for tests
+          ASPNETCORE_ENVIRONMENT: Testing
 
-      # Storybook build removed - not actively used
-      # - name: Build Storybook
-      #   run: npm run build-storybook
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: backend/**/TestResults/*.trx
 
-      # (Optional) Run unit tests if present
-      # - name: Run backend tests
-      #   run: dotnet test --configuration Release
+  frontend-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check design system
+        run: npm run type-check --workspace=@qivr/design-system
+
+      - name: Build design system
+        run: npm run build --workspace=@qivr/design-system
+
+      - name: Type check clinic dashboard
+        run: npm run type-check --workspace=clinic-dashboard
+        continue-on-error: true  # Has pre-existing type errors
+
+      - name: Build clinic dashboard
+        run: npm run build --workspace=clinic-dashboard
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint --workspaces --if-present
+        continue-on-error: true  # Don't fail on lint warnings
+
+      - name: Check formatting
+        run: npx prettier --check "apps/**/*.{ts,tsx}" "packages/**/*.{ts,tsx}"
+        continue-on-error: true

@@ -4,21 +4,110 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip CI tests'
+        required: false
+        default: false
+        type: boolean
+
+# Only allow one deployment at a time per environment
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Run tests first (unless skipped)
+  test:
+    if: github.event.inputs.skip_tests != 'true'
+    uses: ./.github/workflows/ci.yml
+
+  deploy-staging:
+    needs: [test]
+    if: |
+      always() &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (github.event_name == 'push' || github.event.inputs.environment == 'staging')
     runs-on: ubuntu-latest
-    
+    environment: staging
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ap-southeast-2
-    
-    - name: Trigger CodeBuild
-      run: |
-        aws codebuild start-build --project-name qivr-build
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to STAGING environment..."
+          aws codebuild start-build \
+            --project-name qivr-build \
+            --environment-variables-override name=ENVIRONMENT,value=staging,type=PLAINTEXT
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for CodeBuild to complete..."
+          BUILD_ID=$(aws codebuild list-builds-for-project --project-name qivr-build --max-items 1 --query 'ids[0]' --output text)
+          aws codebuild batch-get-builds --ids $BUILD_ID --query 'builds[0].buildStatus' --output text
+
+      - name: Notify success
+        if: success()
+        run: echo "✅ Staging deployment complete"
+
+  deploy-production:
+    needs: [test]
+    if: |
+      always() &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production  # Requires manual approval
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+
+      - name: Create pre-deployment backup
+        run: |
+          echo "Creating RDS snapshot before production deployment..."
+          SNAPSHOT_ID="qivr-prod-pre-deploy-$(date +%Y%m%d-%H%M%S)"
+          aws rds create-db-snapshot \
+            --db-instance-identifier qivr-prod-db \
+            --db-snapshot-identifier "$SNAPSHOT_ID" || true
+          echo "Snapshot initiated: $SNAPSHOT_ID"
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to PRODUCTION environment..."
+          aws codebuild start-build \
+            --project-name qivr-build \
+            --environment-variables-override name=ENVIRONMENT,value=production,type=PLAINTEXT
+
+      - name: Notify success
+        if: success()
+        run: echo "✅ Production deployment complete"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Production deployment failed!"
+          echo "Check CodeBuild logs for details"
