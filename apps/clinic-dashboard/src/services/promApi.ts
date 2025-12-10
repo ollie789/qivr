@@ -1,17 +1,34 @@
 import apiClient from '../lib/api-client';
 
+// Question types aligned with backend QuestionType enum
+export type QuestionType =
+  | 'SingleSelect'   // Radio buttons (single choice)
+  | 'MultiSelect'    // Checkboxes (multiple choice)
+  | 'Numeric'        // Number input
+  | 'Scale'          // Likert scale
+  | 'Slider'         // Range slider
+  | 'Text'           // Free text
+  | 'Boolean'        // Yes/No
+  | 'Date'           // Date picker
+  | 'Time'           // Time picker
+  | 'Rating';        // Star rating
+
+// Legacy type mapping for backwards compatibility
+export const legacyTypeMap: Record<string, QuestionType> = {
+  'text': 'Text',
+  'number': 'Numeric',
+  'scale': 'Scale',
+  'multiple-choice': 'SingleSelect',
+  'checkbox': 'MultiSelect',
+  'date': 'Date',
+  'time': 'Time',
+  'radio': 'SingleSelect',
+};
+
 export interface PromTemplateQuestion {
   id: string;
   text: string;
-  type:
-    | "text"
-    | "number"
-    | "scale"
-    | "multiple-choice"
-    | "checkbox"
-    | "date"
-    | "time"
-    | "radio";
+  type: QuestionType;
   required: boolean;
   options?: string[];
   min?: number;
@@ -21,8 +38,15 @@ export interface PromTemplateQuestion {
   conditionalLogic?: Record<string, unknown>;
   scoring?: Record<string, unknown>;
   order?: number;
+  code?: string;          // Canonical code for analytics (e.g., "ODI_PAIN_INTENSITY")
+  section?: string;       // Domain/subscale (e.g., "pain", "function")
+  isScored?: boolean;     // Whether this contributes to scoring
+  scoreWeight?: number;   // Weight in score calculation
   [key: string]: unknown;
 }
+
+// Template lifecycle status aligned with backend PromTemplateStatus enum
+export type TemplateStatus = 'Draft' | 'Active' | 'Retired';
 
 export interface PromTemplateSummary {
   id: string;
@@ -32,8 +56,12 @@ export interface PromTemplateSummary {
   description?: string;
   category?: string;
   frequency?: string;
-  isActive?: boolean;
+  status: TemplateStatus;
+  isActive?: boolean;  // Computed: status === 'Active' (legacy compatibility)
+  instrumentId?: string;
+  instrumentKey?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface PromTemplateDetail extends PromTemplateSummary {

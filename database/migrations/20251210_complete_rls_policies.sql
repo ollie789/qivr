@@ -240,6 +240,53 @@ ALTER TABLE qivr.providers FORCE ROW LEVEL SECURITY;
 ALTER TABLE qivr.users FORCE ROW LEVEL SECURITY;
 
 -- ============================================================================
+-- NEW PROM INFRASTRUCTURE TABLES (Added 2024-12-10)
+-- ============================================================================
+
+-- Template Questions (normalized from JSON)
+ALTER TABLE qivr.template_questions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS template_questions_tenant_isolation ON qivr.template_questions;
+CREATE POLICY template_questions_tenant_isolation ON qivr.template_questions
+    USING (tenant_id = qivr.get_current_tenant_id())
+    WITH CHECK (tenant_id = qivr.get_current_tenant_id());
+ALTER TABLE qivr.template_questions FORCE ROW LEVEL SECURITY;
+
+-- Summary Score Definitions
+ALTER TABLE qivr.summary_score_definitions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS summary_score_definitions_tenant_isolation ON qivr.summary_score_definitions;
+CREATE POLICY summary_score_definitions_tenant_isolation ON qivr.summary_score_definitions
+    USING (tenant_id = qivr.get_current_tenant_id())
+    WITH CHECK (tenant_id = qivr.get_current_tenant_id());
+ALTER TABLE qivr.summary_score_definitions FORCE ROW LEVEL SECURITY;
+
+-- PROM Item Responses (individual question answers)
+ALTER TABLE qivr.prom_item_responses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS prom_item_responses_tenant_isolation ON qivr.prom_item_responses;
+CREATE POLICY prom_item_responses_tenant_isolation ON qivr.prom_item_responses
+    USING (tenant_id = qivr.get_current_tenant_id())
+    WITH CHECK (tenant_id = qivr.get_current_tenant_id());
+ALTER TABLE qivr.prom_item_responses FORCE ROW LEVEL SECURITY;
+
+-- PROM Summary Scores (calculated scores per instance)
+ALTER TABLE qivr.prom_summary_scores ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS prom_summary_scores_tenant_isolation ON qivr.prom_summary_scores;
+CREATE POLICY prom_summary_scores_tenant_isolation ON qivr.prom_summary_scores
+    USING (tenant_id = qivr.get_current_tenant_id())
+    WITH CHECK (tenant_id = qivr.get_current_tenant_id());
+ALTER TABLE qivr.prom_summary_scores FORCE ROW LEVEL SECURITY;
+
+-- Treatment Progress Feedbacks
+ALTER TABLE qivr.treatment_progress_feedbacks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS treatment_progress_feedbacks_tenant_isolation ON qivr.treatment_progress_feedbacks;
+CREATE POLICY treatment_progress_feedbacks_tenant_isolation ON qivr.treatment_progress_feedbacks
+    USING (tenant_id = qivr.get_current_tenant_id())
+    WITH CHECK (tenant_id = qivr.get_current_tenant_id());
+ALTER TABLE qivr.treatment_progress_feedbacks FORCE ROW LEVEL SECURITY;
+
+-- Note: summary_score_question_mappings does NOT have tenant_id (it's a join table)
+-- It inherits security through FK relationships to tenant-scoped tables
+
+-- ============================================================================
 -- VERIFICATION COMMENT
 -- ============================================================================
 -- Run this query after migration to verify RLS is enabled:

@@ -25,8 +25,8 @@ phases:
           ECS_SERVICE="qivr-api-staging"
           CLINIC_BUCKET="qivr-clinic-dashboard-staging"
           PATIENT_BUCKET="qivr-patient-portal-staging"
-          CLINIC_CF_ID=""  # Will be set after terraform apply
-          PATIENT_CF_ID=""
+          CLINIC_CF_ID="E3HJR6LSRFIAEY"
+          PATIENT_CF_ID="E3MU2DHOBIDQ91"
           SSM_PARAM="/qivr/staging/last-successful-build"
         else
           IMAGE_TAG="${COMMIT_HASH:=latest}"
@@ -161,15 +161,15 @@ phases:
           aws s3 sync apps/intake-widget/dist/ s3://qivr-intake-widget --delete --region $AWS_DEFAULT_REGION || echo "Warning: intake-widget deploy failed"
         fi
 
-      # Invalidate CloudFront (production only for now)
+      # Invalidate CloudFront
       - |
-        if [ "$ENVIRONMENT" = "production" ]; then
-          if [ "$BUILD_CLINIC" = "true" ] && [ -n "$CLINIC_CF_ID" ]; then
-            aws cloudfront create-invalidation --distribution-id $CLINIC_CF_ID --paths "/*" || true
-          fi
-          if [ "$BUILD_PATIENT" = "true" ] && [ -n "$PATIENT_CF_ID" ]; then
-            aws cloudfront create-invalidation --distribution-id $PATIENT_CF_ID --paths "/*" || true
-          fi
+        if [ "$BUILD_CLINIC" = "true" ] && [ -n "$CLINIC_CF_ID" ]; then
+          echo "Invalidating CloudFront $CLINIC_CF_ID..."
+          aws cloudfront create-invalidation --distribution-id $CLINIC_CF_ID --paths "/*" || true
+        fi
+        if [ "$BUILD_PATIENT" = "true" ] && [ -n "$PATIENT_CF_ID" ]; then
+          echo "Invalidating CloudFront $PATIENT_CF_ID..."
+          aws cloudfront create-invalidation --distribution-id $PATIENT_CF_ID --paths "/*" || true
         fi
 
       # Store successful build commit
