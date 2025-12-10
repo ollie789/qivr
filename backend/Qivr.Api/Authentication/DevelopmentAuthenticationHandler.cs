@@ -22,7 +22,8 @@ public class DevelopmentAuthenticationHandler : AuthenticationHandler<Authentica
         IConfiguration configuration) : base(options, logger, encoder)
     {
         _devAuthSettings = devAuthOptions.Value;
-        var secret = configuration["Jwt:SecretKey"] ?? "dev-secret-key-for-testing-only-32-characters-minimum";
+        var secret = configuration["Jwt:SecretKey"]
+            ?? throw new InvalidOperationException("Jwt:SecretKey must be configured. Set JWT_SECRET_KEY environment variable.");
         _tokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,

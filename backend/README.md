@@ -69,7 +69,8 @@ backend/
 - **AIAnalysisService** - OpenAI summarization
 
 ### Middleware
-- **TenantContextMiddleware** - Multi-tenant context
+- **TenantMiddleware** - Multi-tenant context with RLS, security validation
+- **ErrorHandlingMiddleware** - Global exception handling
 - **SecurityHeadersMiddleware** - CSP, HSTS, security headers
 - **RateLimitingMiddleware** - Request throttling
 

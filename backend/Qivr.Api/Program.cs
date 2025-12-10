@@ -55,11 +55,12 @@ static string ExpandEnvPlaceholders(string? value)
 }
 
 // Load secrets from AWS Secrets Manager in production
-// TODO: Implement AWS Secrets Manager integration
-// if (Environment.GetEnvironmentVariable("ENVIRONMENT") == "production")
-// {
-//     await builder.Configuration.AddSecretsManagerConfiguration();
-// }
+var environment = Environment.GetEnvironmentVariable("ENVIRONMENT") ?? "development";
+if (environment.Equals("production", StringComparison.OrdinalIgnoreCase) ||
+    environment.Equals("staging", StringComparison.OrdinalIgnoreCase))
+{
+    await builder.Configuration.AddSecretsManagerConfiguration();
+}
 
 // Ensure environment variables override JSON and include post-secrets values
 builder.Configuration.AddEnvironmentVariables();

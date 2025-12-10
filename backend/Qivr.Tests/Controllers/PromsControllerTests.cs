@@ -30,7 +30,7 @@ public class PromsControllerTests : DatabaseTestBase
     public async Task CreateTemplate_PersistsStructuredFields()
     {
         // Arrange
-        var promService = new PromService(Context, NullLogger<PromService>.Instance);
+        var promService = new PromService(Context, NullLogger<PromService>.Instance, Mock.Of<IPromTemplateSyncService>());
         var promInstanceService = new Mock<IPromInstanceService>();
         var controller = CreateController(promService, promInstanceService.Object);
 
@@ -87,7 +87,7 @@ public class PromsControllerTests : DatabaseTestBase
 
         // Assert - Can be retrieved through service
         using var verificationContext = CreateScopedContext();
-        var verificationService = new PromService(verificationContext, NullLogger<PromService>.Instance);
+        var verificationService = new PromService(verificationContext, NullLogger<PromService>.Instance, Mock.Of<IPromTemplateSyncService>());
         var reloaded = await verificationService.GetTemplateAsync(TenantId, request.Key, dto.Version, CancellationToken.None);
         Assert.NotNull(reloaded);
         Assert.Single(reloaded!.Questions);
@@ -99,7 +99,7 @@ public class PromsControllerTests : DatabaseTestBase
     public async Task ListTemplates_ExposesExpandedSummaryFields()
     {
         // Arrange
-        var service = new PromService(Context, NullLogger<PromService>.Instance);
+        var service = new PromService(Context, NullLogger<PromService>.Instance, Mock.Of<IPromTemplateSyncService>());
         var controller = CreateController(service, Mock.Of<IPromInstanceService>());
 
         // Create a template
@@ -229,7 +229,7 @@ public class PromsControllerTests : DatabaseTestBase
     [Fact]
     public async Task UpdateTemplate_NormalizesQuestionIdentifiers()
     {
-        var promService = new PromService(Context, NullLogger<PromService>.Instance);
+        var promService = new PromService(Context, NullLogger<PromService>.Instance, Mock.Of<IPromTemplateSyncService>());
         var controller = CreateController(promService, Mock.Of<IPromInstanceService>());
 
         var createRequest = new CreatePromTemplateDto
@@ -313,7 +313,7 @@ public class PromsControllerTests : DatabaseTestBase
     public async Task DeleteTemplate_SoftDeletesWhenInstancesExist()
     {
         // Arrange
-        var promService = new PromService(Context, NullLogger<PromService>.Instance);
+        var promService = new PromService(Context, NullLogger<PromService>.Instance, Mock.Of<IPromTemplateSyncService>());
         var promInstanceService = new Mock<IPromInstanceService>();
         var controller = CreateController(promService, promInstanceService.Object);
         
@@ -375,7 +375,7 @@ public class PromsControllerTests : DatabaseTestBase
     public async Task DeleteTemplate_RemovesTemplateWhenUnused()
     {
         // Arrange
-        var promService = new PromService(Context, NullLogger<PromService>.Instance);
+        var promService = new PromService(Context, NullLogger<PromService>.Instance, Mock.Of<IPromTemplateSyncService>());
         var promInstanceService = new Mock<IPromInstanceService>();
         var controller = CreateController(promService, promInstanceService.Object);
 

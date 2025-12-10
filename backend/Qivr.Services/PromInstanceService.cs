@@ -99,7 +99,7 @@ public class PromInstanceService : IPromInstanceService
         {
             [MetadataNotificationKey] = request.NotificationMethod.ToString(),
             [MetadataTagsKey] = request.Tags ?? new List<string>(),
-            [MetadataNotesKey] = request.Notes,
+            [MetadataNotesKey] = request.Notes ?? "",
             [MetadataSentByKey] = request.SentBy,
             [MetadataReminderCountKey] = 0
         };

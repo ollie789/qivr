@@ -16,7 +16,8 @@ public class DevTokenGenerator
     
     public string GenerateDevToken(string email, string userId, string tenantId, string role)
     {
-        var secretKey = _configuration["Jwt:SecretKey"] ?? "dev-secret-key-for-testing-only-32-characters-minimum";
+        var secretKey = _configuration["Jwt:SecretKey"]
+            ?? throw new InvalidOperationException("Jwt:SecretKey must be configured. Set JWT_SECRET_KEY environment variable.");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         

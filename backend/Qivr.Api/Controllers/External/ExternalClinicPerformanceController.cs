@@ -134,10 +134,10 @@ public class ExternalClinicPerformanceController : ControllerBase
                 NoShowCount = appointmentsInRange?.NoShows ?? 0,
                 CancelledCount = appointmentsInRange?.Cancelled ?? 0,
                 CompletionRate = appointmentsInRange?.Total > 0
-                    ? Math.Round((double)(appointmentsInRange?.Completed ?? 0) / appointmentsInRange.Total * 100, 1)
+                    ? Math.Round((double)(appointmentsInRange?.Completed ?? 0) / (appointmentsInRange?.Total ?? 1) * 100, 1)
                     : 0,
                 NoShowRate = appointmentsInRange?.Total > 0
-                    ? Math.Round((double)(appointmentsInRange?.NoShows ?? 0) / appointmentsInRange.Total * 100, 1)
+                    ? Math.Round((double)(appointmentsInRange?.NoShows ?? 0) / (appointmentsInRange?.Total ?? 1) * 100, 1)
                     : 0
             },
             PromMetrics = new PromMetricsDto
@@ -145,7 +145,7 @@ public class ExternalClinicPerformanceController : ControllerBase
                 TotalSent = promStats?.TotalSent ?? 0,
                 TotalCompleted = promStats?.Completed ?? 0,
                 CompletionRate = promStats?.TotalSent > 0
-                    ? Math.Round((double)(promStats?.Completed ?? 0) / promStats.TotalSent * 100, 1)
+                    ? Math.Round((double)(promStats?.Completed ?? 0) / (promStats?.TotalSent ?? 1) * 100, 1)
                     : 0,
                 AverageScore = promStats?.AverageScore ?? 0
             },
@@ -339,7 +339,7 @@ public class ExternalClinicPerformanceController : ControllerBase
                 PausedPlans = planStats?.OnHold ?? 0,
                 AbandonedPlans = planStats?.Abandoned ?? 0,
                 CompletionRate = planStats?.Total > 0
-                    ? Math.Round((double)(planStats?.Completed ?? 0) / planStats.Total * 100, 1)
+                    ? Math.Round((double)(planStats?.Completed ?? 0) / (planStats?.Total ?? 1) * 100, 1)
                     : 0,
                 AverageDurationWeeks = Math.Round(planStats?.AverageDurationWeeks ?? 0, 1),
                 AverageSessionsCompleted = Math.Round(planStats?.AverageSessionsCompleted ?? 0, 1),

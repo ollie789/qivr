@@ -29,7 +29,7 @@ public class ApiKey : DeletableEntity
     /// <summary>
     /// The tenant this API key belongs to. Required for external API access.
     /// </summary>
-    public Guid TenantId { get; set; }
+    public new Guid TenantId { get; set; }
     public virtual Tenant? Tenant { get; set; }
 
     /// <summary>

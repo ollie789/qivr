@@ -31,7 +31,8 @@ public class DevelopmentAuthService : ICognitoAuthService
         _tokenGenerator = tokenGenerator;
         _logger = logger;
 
-        var secretKey = configuration["Jwt:SecretKey"] ?? "dev-secret-key-for-testing-only-32-characters-minimum";
+        var secretKey = configuration["Jwt:SecretKey"]
+            ?? throw new InvalidOperationException("Jwt:SecretKey must be configured. Set JWT_SECRET_KEY environment variable.");
         _validationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,

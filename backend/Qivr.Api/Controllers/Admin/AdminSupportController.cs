@@ -411,7 +411,8 @@ public class AdminSupportController : ControllerBase
 
     private string GenerateImpersonationToken(User user, Tenant tenant, string adminSub)
     {
-        var key = _config["Jwt:SecretKey"] ?? "super-secret-key-for-development-only-change-in-production";
+        var key = _config["Jwt:SecretKey"]
+            ?? throw new InvalidOperationException("Jwt:SecretKey must be configured for impersonation tokens.");
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 

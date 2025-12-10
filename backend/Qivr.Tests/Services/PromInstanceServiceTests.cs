@@ -115,7 +115,8 @@ public class PromInstanceServiceTests : DatabaseTestBase
         await Context.SaveChangesAsync();
 
         var notificationService = new Mock<INotificationService>();
-        var service = new PromInstanceService(Context, notificationService.Object, NullLogger<PromInstanceService>.Instance);
+        var scoringService = new Mock<IPromResponseScoringService>();
+        var service = new PromInstanceService(Context, notificationService.Object, scoringService.Object, NullLogger<PromInstanceService>.Instance);
 
         var stats = await service.GetPromStatsAsync(TenantId, template.Id, now.AddDays(-30), now.AddDays(7), CancellationToken.None);
 

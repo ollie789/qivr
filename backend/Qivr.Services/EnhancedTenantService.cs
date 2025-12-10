@@ -8,7 +8,7 @@ namespace Qivr.Services;
 
 public interface IEnhancedTenantService : ITenantService
 {
-    Task<TenantDto> CreateSaasTenantAsync(string name, string address, string phone, string email, Guid userId, CancellationToken cancellationToken = default);
+    new Task<TenantDto> CreateSaasTenantAsync(string name, string address, string phone, string email, Guid userId, CancellationToken cancellationToken = default);
 }
 
 public class EnhancedTenantService : IEnhancedTenantService

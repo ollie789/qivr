@@ -71,7 +71,7 @@ public class AiTriageService : IAiTriageService
         {
             // De-identify patient data before AI processing
             var deidentifiedSymptoms = await _deIdentificationService.DeIdentifyAsync(
-                request.Symptoms,
+                request.Symptoms ?? "",
                 new DeIdentificationOptions { EnableReIdentification = true, UseAiDetection = true }
             );
 
@@ -303,11 +303,11 @@ public class AiTriageService : IAiTriageService
             Id = Guid.NewGuid(),
             PatientId = patientId,
             RequestId = request.Id,
-            ChiefComplaint = ExtractChiefComplaint(request.Symptoms),
+            ChiefComplaint = ExtractChiefComplaint(request.Symptoms ?? ""),
             SummaryText = "System error during triage processing. Immediate manual review required.",
             SymptomAnalysis = new Dictionary<string, object>
             {
-                ["raw_symptoms"] = request.Symptoms,
+                ["raw_symptoms"] = request.Symptoms ?? "",
                 ["error"] = "Processing failed"
             },
             RiskFlags = new List<RiskFlag>

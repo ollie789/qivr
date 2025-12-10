@@ -419,11 +419,11 @@ public class ClinicAnalyticsService : IClinicAnalyticsService
         var itemResponses = await _context.PromItemResponses
             .Where(r => r.TenantId == tenantId && r.CreatedAt >= from && r.CreatedAt <= to)
             .Where(r => r.ValueNumeric.HasValue)
-            .GroupBy(r => new { r.QuestionCode, r.TemplateQuestion.Label })
+            .GroupBy(r => new { r.QuestionCode, Label = r.TemplateQuestion != null ? r.TemplateQuestion.Label : null })
             .Select(g => new ItemAnalytics
             {
                 QuestionCode = g.Key.QuestionCode ?? "unknown",
-                QuestionLabel = g.Key.Label,
+                QuestionLabel = g.Key.Label ?? "",
                 ResponseCount = g.Count(),
                 AverageScore = Math.Round((double)g.Average(r => r.ValueNumeric!.Value), 2),
                 SkipRate = 0 // Would need separate query

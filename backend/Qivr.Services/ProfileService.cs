@@ -98,8 +98,8 @@ public class ProfileService : IProfileService
         {
             Id = user.Id,
             Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
+            FirstName = user.FirstName ?? "",
+            LastName = user.LastName ?? "",
             Phone = user.Phone,
             DateOfBirth = user.DateOfBirth,
             Gender = user.Gender,

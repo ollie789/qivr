@@ -24,9 +24,10 @@ public class PromsLegacyFlowTests : DatabaseTestBase
         var scheduler = await CreateUserAsync(UserType.Staff, email: "scheduler@test.local", firstName: "Scheduler", lastName: "User");
         var patient = await CreateUserAsync(UserType.Patient, email: "patient@test.local", firstName: "Patient", lastName: "Example");
 
-        var promService = new PromService(Context, NullLogger<PromService>.Instance);
+        var promService = new PromService(Context, NullLogger<PromService>.Instance, Mock.Of<IPromTemplateSyncService>());
         var notificationService = new Mock<INotificationService>();
-        var promInstanceService = new PromInstanceService(Context, notificationService.Object, NullLogger<PromInstanceService>.Instance);
+        var scoringService = new Mock<IPromResponseScoringService>();
+        var promInstanceService = new PromInstanceService(Context, notificationService.Object, scoringService.Object, NullLogger<PromInstanceService>.Instance);
 
         var controller = CreateController(promService, promInstanceService, scheduler.Id);
 

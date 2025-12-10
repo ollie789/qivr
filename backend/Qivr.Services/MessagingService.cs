@@ -81,7 +81,7 @@ public class MessagingService : IMessagingService
                 ParticipantRole = participant.UserType.ToString(),
                 LastMessage = conversation.LastMessage.Content ?? "",
                 LastMessageTime = conversation.LastMessage.CreatedAt,
-                LastMessageSender = conversation.LastMessage.SenderId == userId ? "You" : participant.FirstName,
+                LastMessageSender = conversation.LastMessage.SenderId == userId ? "You" : participant.FirstName ?? "Unknown",
                 UnreadCount = conversation.UnreadCount,
                 TotalMessages = conversation.TotalMessages,
                 HasAttachments = conversation.HasAttachments,
