@@ -402,7 +402,8 @@ public class EnhancedPromTemplateDto
     public string? Description { get; set; }
     public string Category { get; set; } = string.Empty;
     public string Frequency { get; set; } = string.Empty;
-    public bool IsActive { get; set; }
+    public string Status { get; set; } = "Draft";
+    public bool IsActive => Status == "Active"; // Computed for backward compatibility
 
     // New instrument link
     public Guid? InstrumentId { get; set; }

@@ -252,9 +252,9 @@ public class TreatmentPlanSchedulingService : ITreatmentPlanSchedulingService
         var scheduledProms = new List<PromInstanceDto>();
         var config = plan.PromConfig;
 
-        // Get available PROM templates for this tenant
+        // Get available PROM templates for this tenant (only Active templates)
         var templates = await _db.PromTemplates
-            .Where(t => t.TenantId == plan.TenantId && t.IsActive)
+            .Where(t => t.TenantId == plan.TenantId && t.Status == PromTemplateStatus.Active)
             .ToListAsync(ct);
 
         var templateLookup = templates.ToDictionary(t => t.Key, t => t, StringComparer.OrdinalIgnoreCase);

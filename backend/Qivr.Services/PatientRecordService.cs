@@ -70,7 +70,7 @@ public class PatientRecordService : IPatientRecordService
             .Select(p => new PromResultSummary
             {
                 Id = p.Id,
-                Name = p.Template.Name,
+                Name = p.Template != null ? p.Template.Name : "Unknown",
                 CompletedAt = p.CompletedAt ?? DateTime.UtcNow,
                 Score = (double)(p.Score ?? 0),
                 Severity = CalculateSeverity(p.Score ?? 0)
@@ -113,8 +113,8 @@ public class PatientRecordService : IPatientRecordService
                 MedicalRecordNumber = medicalRecordNumber,
                 Demographics = new PatientDemographics
                 {
-                    FirstName = patient.FirstName,
-                    LastName = patient.LastName,
+                    FirstName = patient.FirstName ?? "",
+                    LastName = patient.LastName ?? "",
                     DateOfBirth = patient.DateOfBirth ?? DateTime.UtcNow.AddYears(-30),
                     Gender = patient.Gender ?? "Not Specified",
                     Email = patient.Email,
@@ -255,7 +255,7 @@ public class PatientRecordService : IPatientRecordService
             {
                 Id = a.Id,
                 Type = "appointment",
-                Title = $"Appointment with {a.Provider.FirstName} {a.Provider.LastName}",
+                Title = "Appointment with " + (a.Provider != null ? a.Provider.FirstName + " " + a.Provider.LastName : ""),
                 Description = a.Notes ?? a.AppointmentType,
                 OccurredAt = a.ScheduledStart,
                 Icon = "calendar"

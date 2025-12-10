@@ -441,8 +441,8 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.ExtractedIdentifiers)
                 .HasColumnType("jsonb")
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions)null) ?? new Dictionary<string, object>())
+                    v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>())
                 .Metadata.SetValueComparer(jsonComparer);
             
             entity.HasOne(e => e.Patient)
@@ -472,8 +472,8 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Metadata)
                 .HasColumnType("jsonb")
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions)null) ?? new Dictionary<string, object>())
+                    v => JsonSerializer.Serialize(v ?? new Dictionary<string, object>(), (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>())
                 .Metadata.SetValueComparer(jsonComparer);
             
             entity.HasOne(e => e.Document)
@@ -650,9 +650,14 @@ public class QivrDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Key).HasColumnName("key");
             entity.Property(e => e.Version).HasColumnName("version");
+            entity.Property(e => e.Status).HasConversion<string>().HasColumnName("status");
             entity.HasIndex(e => new { e.TenantId, e.Key, e.Version }).IsUnique();
             entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
             entity.HasIndex(e => e.InstrumentId);
+            entity.HasIndex(e => e.Status);
+            
+            // Ignore the obsolete IsActive property - use Status instead
+            entity.Ignore(e => e.IsActive);
 
             // Configure the Questions property with a custom converter
             var questionsConverter = new ValueConverter<List<Dictionary<string, object>>, string>(
@@ -822,6 +827,8 @@ public class QivrDbContext : DbContext
             entity.Property(e => e.Label).HasMaxLength(200);
             entity.Property(e => e.ScoringMethod).HasConversion<string>();
             entity.Property(e => e.InterpretationBands).HasConversion(interpretationBandsConverter);
+            entity.Property(e => e.ExternalSource).HasMaxLength(100);
+            entity.Property(e => e.LookupTableName).HasMaxLength(100);
 
             entity.HasOne(e => e.Template)
                 .WithMany(t => t.SummaryScoreDefinitions)

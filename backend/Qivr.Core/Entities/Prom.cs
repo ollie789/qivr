@@ -14,9 +14,23 @@ public class PromTemplate : TenantEntity
     public List<Dictionary<string, object>> Questions { get; set; } = new();
     public Dictionary<string, object>? ScoringMethod { get; set; }
     public Dictionary<string, object>? ScoringRules { get; set; }
-    public bool IsActive { get; set; } = true;
+    
+    /// <summary>
+    /// Template lifecycle status: Draft → Active → Retired
+    /// Only Active templates can be scheduled for patients.
+    /// </summary>
+    public PromTemplateStatus Status { get; set; } = PromTemplateStatus.Draft;
+    
+    /// <summary>
+    /// Legacy field - use Status instead. Kept for backward compatibility.
+    /// </summary>
+    [Obsolete("Use Status property instead")]
+    public bool IsActive 
+    { 
+        get => Status == PromTemplateStatus.Active;
+        set => Status = value ? PromTemplateStatus.Active : PromTemplateStatus.Draft;
+    }
 
-    // === NEW: Instrument & Schema Fields ===
     /// <summary>
     /// Reference to the instrument catalogue (null for custom templates)
     /// </summary>
@@ -42,6 +56,20 @@ public class PromTemplate : TenantEntity
     public virtual ICollection<PromInstance> Instances { get; set; } = new List<PromInstance>();
     public virtual ICollection<TemplateQuestion> TemplateQuestions { get; set; } = new List<TemplateQuestion>();
     public virtual ICollection<SummaryScoreDefinition> SummaryScoreDefinitions { get; set; } = new List<SummaryScoreDefinition>();
+}
+
+/// <summary>
+/// Template lifecycle status
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PromTemplateStatus
+{
+    /// <summary>Template is being edited, not available for scheduling</summary>
+    Draft,
+    /// <summary>Template is live and can be scheduled for patients</summary>
+    Active,
+    /// <summary>Template is no longer used for new instances but historical data preserved</summary>
+    Retired
 }
 
 public class PromInstance : TenantEntity

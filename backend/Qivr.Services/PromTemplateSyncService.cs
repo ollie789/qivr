@@ -294,7 +294,7 @@ public class PromTemplateSyncService : IPromTemplateSyncService
             Description = template.Description,
             Category = template.Category,
             Frequency = template.Frequency,
-            IsActive = template.IsActive,
+            Status = template.Status.ToString(),
             InstrumentId = template.InstrumentId,
             Instrument = template.Instrument != null ? new InstrumentSummaryDto
             {

@@ -58,6 +58,13 @@ public class PromService : IPromService
                 var now = DateTime.UtcNow;
 
 		var normalizedQuestions = NormalizeQuestions(request.Key, request.Questions);
+		
+		// Parse status from request, default to Active for new templates
+		var status = PromTemplateStatus.Active;
+		if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<PromTemplateStatus>(request.Status, true, out var parsedStatus))
+		{
+			status = parsedStatus;
+		}
 
 		var template = new PromTemplate
 		{
@@ -72,7 +79,7 @@ public class PromService : IPromService
 			Questions = normalizedQuestions,
 			ScoringMethod = request.ScoringMethod != null ? new Dictionary<string, object>(request.ScoringMethod) : null,
 			ScoringRules = request.ScoringRules != null ? new Dictionary<string, object>(request.ScoringRules) : null,
-			IsActive = request.IsActive,
+			Status = status,
 			CreatedAt = now,
 			UpdatedAt = now
                 };
@@ -171,8 +178,8 @@ public class PromService : IPromService
 				ScoringRules = request.ScoringRules ?? template.ScoringRules
 			};
 
-			// Deactivate old version
-			template.IsActive = false;
+			// Retire old version
+			template.Status = PromTemplateStatus.Retired;
 			template.UpdatedAt = DateTime.UtcNow;
 			await _db.SaveChangesAsync(ct);
 
@@ -185,7 +192,10 @@ public class PromService : IPromService
 		if (request.Description != null) template.Description = request.Description;
 		if (!string.IsNullOrWhiteSpace(request.Category)) template.Category = request.Category.Trim();
 		if (!string.IsNullOrWhiteSpace(request.Frequency)) template.Frequency = request.Frequency.Trim();
-		if (request.IsActive.HasValue) template.IsActive = request.IsActive.Value;
+		if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<PromTemplateStatus>(request.Status, true, out var newStatus))
+		{
+			template.Status = newStatus;
+		}
 
 		if (request.ScoringMethod != null)
 		{
@@ -227,7 +237,7 @@ public class PromService : IPromService
 
 		if (hasInstances)
 		{
-			template.IsActive = false;
+			template.Status = PromTemplateStatus.Retired;
 			template.UpdatedAt = DateTime.UtcNow;
 		}
 		else
@@ -254,7 +264,7 @@ public class PromService : IPromService
 			Questions = template.Questions?.Select(q => new Dictionary<string, object>(q)).ToList() ?? new List<Dictionary<string, object>>(),
 			ScoringMethod = template.ScoringMethod != null ? new Dictionary<string, object>(template.ScoringMethod) : null,
 			ScoringRules = template.ScoringRules != null ? new Dictionary<string, object>(template.ScoringRules) : null,
-			IsActive = template.IsActive,
+			Status = template.Status.ToString(),
 			CreatedAt = template.CreatedAt,
 			UpdatedAt = template.UpdatedAt
 		};
@@ -271,7 +281,7 @@ public class PromService : IPromService
 			Description = template.Description,
 			Category = template.Category,
 			Frequency = template.Frequency,
-			IsActive = template.IsActive,
+			Status = template.Status.ToString(),
 			Questions = template.Questions?.Select(q => new Dictionary<string, object>(q, StringComparer.OrdinalIgnoreCase)).ToList() ?? new List<Dictionary<string, object>>(),
 			CreatedAt = template.CreatedAt,
 			UpdatedAt = template.UpdatedAt
@@ -344,7 +354,7 @@ public class PromService : IPromService
 				var extracted = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 				foreach (var property in element.EnumerateObject())
 				{
-					extracted[property.Name] = ConvertJsonElement(property.Value);
+					extracted[property.Name] = ConvertJsonElement(property.Value) ?? "";
 				}
 				return NormalizeConditionalLogicDictionary(templateKey, extracted, idMap, used);
 			default:
@@ -494,7 +504,7 @@ public sealed class CreatePromTemplateDto
         public List<Dictionary<string, object>> Questions { get; set; } = new();
         public Dictionary<string, object>? ScoringMethod { get; set; }
         public Dictionary<string, object>? ScoringRules { get; set; }
-        public bool IsActive { get; set; } = true;
+        public string Status { get; set; } = "Active"; // Draft, Active, Retired
         public int? Version { get; set; }
 }
 
@@ -510,7 +520,8 @@ public sealed class PromTemplateDto
         public List<Dictionary<string, object>> Questions { get; set; } = new();
 	public Dictionary<string, object>? ScoringMethod { get; set; }
 	public Dictionary<string, object>? ScoringRules { get; set; }
-	public bool IsActive { get; set; }
+	public string Status { get; set; } = "Draft";
+	public bool IsActive => Status == "Active"; // Computed for backward compatibility
 	public DateTime CreatedAt { get; set; }
 	public DateTime UpdatedAt { get; set; }
 }
@@ -524,7 +535,8 @@ public sealed class PromTemplateSummaryDto
 	public string? Description { get; set; }
 	public string Category { get; set; } = string.Empty;
 	public string Frequency { get; set; } = string.Empty;
-	public bool IsActive { get; set; }
+	public string Status { get; set; } = "Draft";
+	public bool IsActive => Status == "Active"; // Computed for backward compatibility
 	public IReadOnlyList<Dictionary<string, object>> Questions { get; set; } = Array.Empty<Dictionary<string, object>>();
 	public DateTime CreatedAt { get; set; }
 	public DateTime UpdatedAt { get; set; }
@@ -539,7 +551,7 @@ public sealed class UpdatePromTemplateDto
 	public List<Dictionary<string, object>>? Questions { get; set; }
 	public Dictionary<string, object>? ScoringMethod { get; set; }
 	public Dictionary<string, object>? ScoringRules { get; set; }
-	public bool? IsActive { get; set; }
+	public string? Status { get; set; } // Draft, Active, Retired
 }
 
 public sealed class SchedulePromRequest

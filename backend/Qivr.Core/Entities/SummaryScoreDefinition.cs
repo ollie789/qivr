@@ -79,6 +79,17 @@ public class SummaryScoreDefinition : TenantEntity
     /// </summary>
     public bool IsPrimary { get; set; } = false;
 
+    /// <summary>
+    /// For External/Lookup scoring: identifies the data source
+    /// e.g., "PROMIS_API", "EQ5D_UK_VALUES", "EQ5D_US_VALUES"
+    /// </summary>
+    public string? ExternalSource { get; set; }
+
+    /// <summary>
+    /// For Lookup scoring: name of the lookup table in the database
+    /// </summary>
+    public string? LookupTableName { get; set; }
+
     // Navigation properties
     public virtual PromTemplate? Template { get; set; }
     public virtual ICollection<SummaryScoreQuestionMapping> QuestionMappings { get; set; } = new List<SummaryScoreQuestionMapping>();
@@ -148,5 +159,9 @@ public enum ScoringMethodType
     /// <summary>Rasch/IRT-based scoring</summary>
     Rasch,
     /// <summary>Custom formula (defined in additional config)</summary>
-    Custom
+    Custom,
+    /// <summary>Score calculated via external API (e.g., PROMIS)</summary>
+    External,
+    /// <summary>Score from lookup table (e.g., EQ-5D value sets)</summary>
+    Lookup
 }
