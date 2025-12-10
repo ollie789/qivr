@@ -7,11 +7,11 @@ data "aws_lb" "api" {
 }
 
 data "aws_ecs_cluster" "main" {
-  cluster_name = "qivr-cluster"
+  cluster_name = "qivr_cluster"
 }
 
 data "aws_ecs_service" "api" {
-  service_name = "qivr-api-service"
+  service_name = "qivr-api"
   cluster_arn  = data.aws_ecs_cluster.main.arn
 }
 
