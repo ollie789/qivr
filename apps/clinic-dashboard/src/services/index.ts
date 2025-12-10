@@ -12,9 +12,8 @@ export * from "./notificationsApi";
 export * from "./patientApi";
 export * from "./providerApi";
 export * from "./messageTemplatesApi";
-// Note: Skipping promApi due to duplicate PromResponse export
-// export * from './promApi';
-export * from "./proms";
+// Export promsApi and SchedulePromPayload from promApi
+export { promsApi, type SchedulePromPayload } from "./promApi";
 export * from "./invitationApi";
 
 // Export default instances
@@ -38,7 +37,7 @@ import { patientApi } from "./patientApi";
 import { providerApi } from "./providerApi";
 import { messageTemplatesApi } from "./messageTemplatesApi";
 import { promApi } from "./promApi";
-import { promsApi } from "./proms";
+import { promsApi } from "./promApi";
 import { authApi } from "./authApi";
 import { invitationApi } from "./invitationApi";
 

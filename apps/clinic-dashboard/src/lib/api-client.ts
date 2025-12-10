@@ -12,13 +12,14 @@ if (!API_BASE_URL) {
 }
 
 // Type for API request parameters
-type ApiParams = any;
+type ApiParams = Record<string, string | number | boolean | undefined>;
 
-// Type for API request body
-type ApiRequestBody = any;
+// Type for API request body - allows structured objects with defined interfaces
+// Using a generic type allows interfaces like ExerciseTemplateData to be passed
+type ApiRequestBody = Record<string, unknown> | FormData | unknown[] | { [key: string]: unknown };
 
 // Generic response type constraint
-type ApiResponse = any;
+type ApiResponse = unknown;
 
 const baseClient = createHttpClient({
   baseURL: API_BASE_URL,
@@ -67,7 +68,7 @@ export async function apiRequest<T extends ApiResponse = ApiResponse>(options: H
     // Handle 401 Unauthorized - try to refresh token
     if (error instanceof HttpError && error.status === 401) {
       try {
-        console.log('401 Unauthorized - attempting token refresh');
+        // 401 Unauthorized - attempting token refresh
         await useAuthStore.getState().refreshToken();
         // Retry the original request
         return await baseClient.request<T>({

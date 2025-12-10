@@ -416,49 +416,33 @@ export const AuraIntakeKanban: React.FC<AuraIntakeKanbanProps> = ({
     setActiveId(null);
     setDraggedIntake(null);
 
-    console.log("Drag end:", { activeId: active.id, overId: over?.id });
-
     if (!over) {
-      console.log("No drop target");
       return;
     }
 
     const activeIntake = intakes.find((i) => i.id === active.id);
     if (!activeIntake) {
-      console.log("Active intake not found");
       return;
     }
 
     // Check if dropped on a column directly
     let targetColumn = COLUMNS.find((col) => col.id === over.id);
-    console.log("Direct column match:", targetColumn?.id);
 
     // If not dropped on column, check if dropped on a card in a column
     if (!targetColumn) {
       targetColumn = COLUMNS.find((col) =>
         getColumnIntakes(col.statuses).some((i) => i.id === over.id),
       );
-      console.log("Card-based column match:", targetColumn?.id);
     }
-
-    console.log(
-      "Target column:",
-      targetColumn?.id,
-      "Current status:",
-      activeIntake.status,
-    );
 
     if (
       targetColumn &&
       !targetColumn.statuses.includes(activeIntake.status.toLowerCase())
     ) {
       const newStatus = STATUS_MAP[targetColumn.id];
-      console.log("Calling onStatusChange:", activeIntake.id, newStatus);
       if (newStatus) {
         onStatusChange(activeIntake.id, newStatus);
       }
-    } else {
-      console.log("No status change needed or same column");
     }
   };
 

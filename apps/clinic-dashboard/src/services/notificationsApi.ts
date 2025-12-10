@@ -37,9 +37,53 @@ export interface NotificationPreferences {
   preferredChannel: NotificationChannel;
 }
 
+// API response DTOs (can have different casing from backend)
+interface NotificationDto {
+  id: string | number;
+  type?: string;
+  title?: string;
+  message?: string;
+  channel?: string | number;
+  priority?: string | number;
+  createdAt?: string;
+  readAt?: string | null;
+  sentAt?: string | null;
+  data?: Record<string, unknown> | null;
+}
+
+interface CursorPageDto<T> {
+  items?: T[];
+  Items?: T[];
+  nextCursor?: string | null;
+  NextCursor?: string | null;
+  previousCursor?: string | null;
+  PreviousCursor?: string | null;
+  hasNext?: boolean;
+  HasNext?: boolean;
+  hasPrevious?: boolean;
+  HasPrevious?: boolean;
+  count?: number;
+  Count?: number;
+}
+
+interface NotificationPreferencesDto {
+  emailEnabled?: boolean;
+  EmailEnabled?: boolean;
+  smsEnabled?: boolean;
+  SmsEnabled?: boolean;
+  pushEnabled?: boolean;
+  PushEnabled?: boolean;
+  quietHoursStart?: string | null;
+  QuietHoursStart?: string | null;
+  quietHoursEnd?: string | null;
+  QuietHoursEnd?: string | null;
+  preferredChannel?: string | number;
+  PreferredChannel?: string | number;
+}
+
 const unwrap = <T>(payload: T | { data: T }): T => {
-  if (payload && typeof payload === 'object' && 'data' in (payload as any)) {
-    return (payload as any).data as T;
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return (payload as { data: T }).data;
   }
   return payload as T;
 };
@@ -100,7 +144,7 @@ const mapPriority = (value: unknown): NotificationPriority => {
   return 'Normal';
 };
 
-const mapNotification = (dto: any): NotificationDetail => ({
+const mapNotification = (dto: NotificationDto): NotificationDetail => ({
   id: String(dto.id),
   type: dto.type ?? 'system',
   title: dto.title ?? 'Notification',
@@ -113,7 +157,7 @@ const mapNotification = (dto: any): NotificationDetail => ({
   metadata: dto.data ?? null,
 });
 
-const toCursorPage = <T>(payload: any, mapper: (value: any) => T): CursorPage<T> => {
+const toCursorPage = <T, D>(payload: CursorPageDto<D> | null | undefined, mapper: (value: D) => T): CursorPage<T> => {
   const items = Array.isArray(payload?.items)
     ? payload.items
     : Array.isArray(payload?.Items)
@@ -138,7 +182,7 @@ class NotificationsApi {
     channel?: NotificationChannel;
     sortDescending?: boolean;
   } = {}): Promise<CursorPage<NotificationListItem>> {
-    const response = await apiClient.get<any>('/api/notifications', {
+    const response = await apiClient.get<CursorPageDto<NotificationDto>>('/api/notifications', {
       cursor: params.cursor ?? undefined,
       limit: params.limit ?? 20,
       unreadOnly: params.unreadOnly ?? undefined,
@@ -151,7 +195,7 @@ class NotificationsApi {
   }
 
   async get(id: string): Promise<NotificationDetail> {
-    const response = await apiClient.get<any>(`/api/notifications/${id}`);
+    const response = await apiClient.get<NotificationDto>(`/api/notifications/${id}`);
     const data = unwrap(response);
     return mapNotification(data);
   }
@@ -169,14 +213,14 @@ class NotificationsApi {
   }
 
   async unreadCount(): Promise<number> {
-    const response = await apiClient.get<any>('/api/notifications/unread-count');
+    const response = await apiClient.get<{ count?: number }>('/api/notifications/unread-count');
     const data = unwrap(response);
     return typeof data?.count === 'number' ? data.count : 0;
   }
 
   async getPreferences(): Promise<NotificationPreferences> {
     try {
-      const response = await apiClient.get<any>('/api/notifications/preferences');
+      const response = await apiClient.get<NotificationPreferencesDto>('/api/notifications/preferences');
       const data = unwrap(response);
       return {
         emailEnabled: Boolean(data?.emailEnabled ?? data?.EmailEnabled ?? true),

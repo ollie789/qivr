@@ -26,9 +26,10 @@ import { glassTokens, auraColors, AuraButton, AuraEmptyState, auraTokens } from 
 interface Document {
   id: string;
   fileName: string;
-  documentType: string;
-  status: string;
-  createdAt: string;
+  documentType?: string;
+  status?: string;
+  createdAt?: string;
+  uploadedAt?: string;
   extractedPatientName?: string;
   extractedDob?: string;
   confidenceScore?: number;
@@ -53,7 +54,7 @@ const getFileIcon = (mimeType?: string, fileName?: string) => {
   return <DocumentIcon />;
 };
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status?: string) => {
   switch (status) {
     case 'ready':
       return auraColors.green.main;
@@ -110,7 +111,7 @@ const DocumentCard: React.FC<{
             {doc.fileName}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {format(parseISO(doc.createdAt), 'MMM d, yyyy')}
+            {format(parseISO(doc.createdAt || doc.uploadedAt || new Date().toISOString()), 'MMM d, yyyy')}
           </Typography>
         </Box>
         <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)}>
@@ -147,7 +148,7 @@ const DocumentCard: React.FC<{
       {/* Tags */}
       <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 2 }}>
         <Chip
-          label={doc.documentType}
+          label={doc.documentType || 'Document'}
           size="small"
           sx={{
             height: 24,
@@ -157,7 +158,7 @@ const DocumentCard: React.FC<{
           }}
         />
         <Chip
-          label={doc.status}
+          label={doc.status || 'Unknown'}
           size="small"
           sx={{
             height: 24,

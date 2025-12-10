@@ -592,6 +592,42 @@ export interface PromAnalyticsQuery {
 
 export const promApi = new PromApi();
 
+// Legacy alias for backwards compatibility
+export interface SchedulePromPayload {
+  templateKey: string;
+  version?: number;
+  patientId: string;
+  scheduledFor: string;
+  dueAt?: string;
+  notificationMethod?: NotificationMethod;
+  tags?: string[];
+  notes?: string;
+}
+
+export const promsApi = {
+  createTemplate: promApi.createTemplate.bind(promApi),
+  getTemplate: async (key: string, version?: number) => {
+    const path = version
+      ? `/api/proms/templates/${key}/${version}`
+      : `/api/proms/templates/${key}`;
+    return await apiClient.get<PromTemplateDetail>(path);
+  },
+  listTemplates: async (page = 1, pageSize = 20) => {
+    return await apiClient.get<PromTemplateSummary[]>(
+      "/api/proms/templates",
+      { page, pageSize },
+    );
+  },
+  schedule: promApi.sendProm.bind(promApi),
+  submitAnswers: async (instanceId: string, answers: Record<string, unknown>) => {
+    return await apiClient.post<{ score: number; completedAt: string }>(
+      `/api/proms/instances/${instanceId}/answers`,
+      answers,
+    );
+  },
+  getInstance: promApi.getResponse.bind(promApi),
+};
+
 // Add analytics methods to PromApi class - extend above
 Object.assign(PromApi.prototype, {
   async getPatientScoreTrend(

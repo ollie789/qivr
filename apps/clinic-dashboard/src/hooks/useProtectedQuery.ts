@@ -1,12 +1,12 @@
-import { useQuery, useInfiniteQuery, useMutation, type UseQueryOptions, type UseInfiniteQueryOptions, type UseMutationOptions } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, type UseQueryOptions, type UseInfiniteQueryOptions, type UseMutationOptions, type QueryKey, type QueryFunction } from '@tanstack/react-query';
 import { useAuthGuard } from './useAuthGuard';
 
 // Protected useQuery wrapper
 export function useProtectedQuery<T = unknown, E = Error>(
-  options: UseQueryOptions<T, E> & { queryKey: any[]; queryFn: () => Promise<T> }
+  options: UseQueryOptions<T, E> & { queryKey: QueryKey; queryFn: () => Promise<T> }
 ) {
   const { canMakeApiCalls } = useAuthGuard();
-  
+
   return useQuery({
     ...options,
     enabled: canMakeApiCalls && (options.enabled ?? true),
@@ -15,10 +15,10 @@ export function useProtectedQuery<T = unknown, E = Error>(
 
 // Protected useInfiniteQuery wrapper
 export function useProtectedInfiniteQuery<T = unknown, E = Error>(
-  options: UseInfiniteQueryOptions<T, E> & { queryKey: any[]; queryFn: any }
+  options: UseInfiniteQueryOptions<T, E> & { queryKey: QueryKey; queryFn: QueryFunction<T> }
 ) {
   const { canMakeApiCalls } = useAuthGuard();
-  
+
   return useInfiniteQuery({
     ...options,
     enabled: canMakeApiCalls && (options.enabled ?? true),

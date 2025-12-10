@@ -6,7 +6,7 @@ import {
   patientApi,
   type PatientListResponse,
 } from "../../../services/patientApi";
-import { documentApi } from "../../../services/documentApi";
+import { documentApi } from "../../../services/documentsApi";
 import { referralApi } from "../../../services/referralApi";
 import apiClient from "../../../lib/api-client";
 import type { MedicalHistory } from "../types";

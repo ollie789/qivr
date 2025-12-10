@@ -16,8 +16,8 @@ export const treatmentPlansApi = {
   list: (patientId?: string) =>
     api.get("/api/treatment-plans", { patientId, isTemplate: false }),
   get: (id: string) => api.get(`/api/treatment-plans/${id}`),
-  create: (data: any) => api.post("/api/treatment-plans", data),
-  update: (id: string, data: any) =>
+  create: (data: Record<string, unknown>) => api.post("/api/treatment-plans", data),
+  update: (id: string, data: Record<string, unknown>) =>
     api.put(`/api/treatment-plans/${id}`, data),
   delete: (id: string) => api.delete(`/api/treatment-plans/${id}`),
 
@@ -45,7 +45,7 @@ export const treatmentPlansApi = {
     data: {
       patientId: string;
       startDate?: string;
-      customizations?: any;
+      customizations?: Record<string, unknown>;
     },
   ) => api.post(`/api/treatment-plans/from-template/${templateId}`, data),
 

@@ -236,6 +236,30 @@ type PhysioHistoryDto = {
   notes?: string | null;
 };
 
+type ProcedureDto = {
+  id: string;
+  procedureName: string;
+  cptCode?: string | null;
+  procedureDate: string;
+  provider?: string | null;
+  facility?: string | null;
+  status?: string | null;
+  outcome?: string | null;
+  complications?: string | null;
+  notes?: string | null;
+};
+
+type MedicalConditionDto = {
+  id: string;
+  condition: string;
+  icd10Code?: string | null;
+  diagnosedDate: string;
+  status: string;
+  managedBy: string;
+  lastReviewed: string;
+  notes?: string | null;
+};
+
 const unwrapEnvelope = <T>(payload: T | ApiEnvelope<T>): T => {
   if (
     payload &&
@@ -282,9 +306,26 @@ const mapSummary = (dto: MedicalSummaryDto | null): MedicalSummary | null => {
   };
 };
 
+interface PainAssessmentDto {
+  id: string;
+  date?: string;
+  recordedAt?: string;
+  recordedBy?: string;
+  overallPainLevel?: number;
+  functionalImpact?: "none" | "mild" | "moderate" | "severe";
+  painPoints?: Array<{
+    bodyPart: string;
+    side?: "left" | "right" | "bilateral" | null;
+    intensity: number;
+    quality?: string | null;
+  }>;
+  evaluationId?: string | null;
+  notes?: string | null;
+}
+
 const mapVital =
   (patientId: string) =>
-  (dto: any): VitalSign => ({
+  (dto: PainAssessmentDto): VitalSign => ({
     id: dto.id,
     patientId,
     recordedAt: toIsoString(dto.date || dto.recordedAt),
@@ -349,15 +390,11 @@ const mapImmunization = (dto: ImmunizationDto): Immunization => ({
 
 class MedicalRecordsApi {
   async getSummary(patientId: string): Promise<MedicalSummary | null> {
-    console.log("getSummary called with patientId:", patientId);
     const response = await apiClient.get<
       ApiEnvelope<MedicalSummaryDto | null> | MedicalSummaryDto | null
     >("/api/medical-records", { patientId });
-    console.log("getSummary raw response:", response);
     const dto = unwrapEnvelope(response);
-    console.log("getSummary unwrapped dto:", dto);
     const mapped = mapSummary(dto);
-    console.log("getSummary mapped result:", mapped);
     return mapped;
   }
 
@@ -406,8 +443,8 @@ class MedicalRecordsApi {
     return (response ?? []).map(mapImmunization);
   }
 
-  async getProcedures(patientId: string): Promise<any[]> {
-    const response = await apiClient.get<any[]>(
+  async getProcedures(patientId: string): Promise<ProcedureDto[]> {
+    const response = await apiClient.get<ProcedureDto[]>(
       "/api/medical-records/procedures",
       { patientId },
     );
@@ -428,7 +465,7 @@ class MedicalRecordsApi {
     notes?: string;
     evaluationId?: string;
   }): Promise<VitalSign> {
-    const response = await apiClient.post<any>(
+    const response = await apiClient.post<PainAssessmentDto>(
       "/api/medical-records/pain-assessments",
       data,
     );
@@ -484,12 +521,21 @@ class MedicalRecordsApi {
     status?: string;
     managedBy?: string;
     notes?: string;
-  }): Promise<any> {
-    const response = await apiClient.post(
+  }): Promise<MedicalCondition> {
+    const response = await apiClient.post<MedicalConditionDto>(
       "/api/medical-records/conditions",
       data,
     );
-    return response;
+    return {
+      id: response.id,
+      condition: response.condition,
+      icd10Code: response.icd10Code ?? null,
+      diagnosedDate: toIsoString(response.diagnosedDate),
+      status: response.status,
+      managedBy: response.managedBy,
+      lastReviewed: toIsoString(response.lastReviewed),
+      notes: response.notes ?? null,
+    };
   }
 
   async createImmunization(data: {
@@ -520,8 +566,8 @@ class MedicalRecordsApi {
     outcome?: string;
     complications?: string;
     notes?: string;
-  }): Promise<any> {
-    const response = await apiClient.post(
+  }): Promise<ProcedureDto> {
+    const response = await apiClient.post<ProcedureDto>(
       "/api/medical-records/procedures",
       data,
     );

@@ -55,7 +55,7 @@ import {
   type ConversationSummary,
   type SendMessagePayload,
 } from "../services/messagesApi";
-import { documentApi, type Document } from "../services/documentApi";
+import { documentApi, type Document } from "../services/documentsApi";
 import { MessageComposer } from "../components/messaging";
 
 type InboxTab = "conversations" | "documents" | "all";
@@ -159,9 +159,9 @@ export default function Inbox() {
         title: doc.fileName,
         subtitle: doc.documentType || "Unclassified",
         preview: doc.extractedText?.substring(0, 100) || "Processing...",
-        timestamp: doc.createdAt,
+        timestamp: doc.createdAt || doc.uploadedAt || new Date().toISOString(),
         isUnread: doc.status === "processing",
-        isUrgent: doc.isUrgent,
+        isUrgent: doc.isUrgent ?? false,
         status: doc.status,
         metadata: doc,
       });
@@ -958,7 +958,7 @@ function DocumentView({
                     Uploaded
                   </Typography>
                   <Typography variant="body2">
-                    {format(parseISO(document.createdAt), "MMM d, yyyy")}
+                    {format(parseISO(document.createdAt || document.uploadedAt || new Date().toISOString()), "MMM d, yyyy")}
                   </Typography>
                 </Grid>
                 {document.confidenceScore && (

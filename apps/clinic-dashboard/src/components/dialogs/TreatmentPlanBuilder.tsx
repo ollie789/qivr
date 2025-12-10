@@ -681,21 +681,8 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
   const previewMutation = useMutation({
     mutationFn: treatmentPlansApi.preview,
     onSuccess: (data) => {
-      console.log("AI Preview response:", data);
       // The preview endpoint returns the generated plan directly
       if (data.phases && data.phases.length > 0) {
-        const totalExerciseCount = data.phases.reduce(
-          (sum: number, p: any) => sum + (p.exercises?.length || 0),
-          0,
-        );
-        console.log(
-          `Phases: ${data.phases.length}, Total exercises: ${totalExerciseCount}`,
-        );
-        data.phases.forEach((p: any, idx: number) => {
-          console.log(
-            `Phase ${idx + 1}: ${p.name}, exercises: ${p.exercises?.length || 0}`,
-          );
-        });
         setPhases(
           data.phases.map((p: any, idx: number) => ({
             phaseNumber: idx + 1,
@@ -807,7 +794,6 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
           }
         } catch {
           // Continue without evaluation if fetch fails
-          console.log(`No evaluation found for patient ${patientName}`);
         }
 
         // Generate personalized plan using patient's evaluation data

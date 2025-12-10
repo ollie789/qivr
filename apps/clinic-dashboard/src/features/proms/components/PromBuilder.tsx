@@ -59,10 +59,12 @@ import {
   Publish,
   ContentCopy,
   ExpandMore,
+  LibraryBooks,
 } from "@mui/icons-material";
 import { glassCard, Callout, AuraButton } from "@qivr/design-system";
 import { promApi, PromTemplateQuestion } from "../../../services/promApi";
-import { useQueryClient } from "@tanstack/react-query";
+import { instrumentsApi } from "../../../services/instrumentsApi";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 // Types
 interface PromQuestion {
@@ -426,10 +428,17 @@ export const PromBuilder: React.FC = () => {
   );
   const [questionDialog, setQuestionDialog] = useState(false);
   const [libraryDialog, setLibraryDialog] = useState(false);
+  const [validatedPromsDialog, setValidatedPromsDialog] = useState(false);
   const [previewDialog, setPreviewDialog] = useState(false);
   const [testScoringDialog, setTestScoringDialog] = useState(false);
   const [testAnswers, setTestAnswers] = useState<Record<string, any>>({});
   const [testScore, setTestScore] = useState<number | null>(null);
+
+  const { data: instruments = [] } = useQuery({
+    queryKey: ['instruments'],
+    queryFn: () => instrumentsApi.getSummaryList(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const calculateScore = () => {
     let score = 0;
@@ -603,9 +612,7 @@ export const PromBuilder: React.FC = () => {
         version: template.version,
       };
 
-      console.log("Saving template:", payload);
-      const res = await promApi.createTemplate(payload);
-      console.log("Template saved successfully:", res);
+      await promApi.createTemplate(payload);
       alert(`Template "${template.name}" saved successfully!`);
 
       queryClient.invalidateQueries({ queryKey: ["prom-templates"] });
@@ -637,7 +644,6 @@ export const PromBuilder: React.FC = () => {
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("Failed to save template:", error);
       const errorMessage =
         (
           error as {
@@ -791,6 +797,13 @@ export const PromBuilder: React.FC = () => {
                     onClick={() => setLibraryDialog(true)}
                   >
                     Question Library
+                  </AuraButton>
+                  <AuraButton
+                    variant="outlined"
+                    startIcon={<LibraryBooks />}
+                    onClick={() => setValidatedPromsDialog(true)}
+                  >
+                    Validated PROMs
                   </AuraButton>
                 </Box>
 
@@ -1338,6 +1351,78 @@ export const PromBuilder: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <AuraButton onClick={() => setLibraryDialog(false)}>Close</AuraButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* Validated PROMs Dialog */}
+      <Dialog
+        open={validatedPromsDialog}
+        onClose={() => setValidatedPromsDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Clinically Validated PROMs</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Callout variant="info">
+              Select a validated instrument to use as your template. These are standardized, 
+              clinically validated questionnaires used in healthcare settings.
+            </Callout>
+          </Box>
+          {instruments.length === 0 ? (
+            <Typography color="text.secondary">
+              No validated instruments available. Contact your administrator to seed standard instruments.
+            </Typography>
+          ) : (
+            <>
+              {['spine', 'knee', 'hip', 'upper_limb', 'foot_ankle', 'mental_health', 'general_health', 'pain'].map((domain) => {
+                const domainInstruments = instruments.filter(i => i.clinicalDomain === domain);
+                if (domainInstruments.length === 0) return null;
+                const domainLabel = domain.replace(/_/g, ' ');
+                return (
+                  <Accordion key={domain} defaultExpanded={domain === 'spine'}>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography sx={{ textTransform: 'capitalize' }}>
+                        {domainLabel} ({domainInstruments.length})
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <List dense>
+                        {domainInstruments.map((instrument) => (
+                          <ListItem
+                            key={instrument.id}
+                            sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' }, borderRadius: 1 }}
+                            onClick={() => {
+                              setTemplate(prev => ({
+                                ...prev,
+                                key: instrument.key,
+                                name: instrument.name,
+                                category: instrument.clinicalDomain || 'general',
+                              }));
+                              setValidatedPromsDialog(false);
+                            }}
+                          >
+                            <ListItemText
+                              primary={instrument.name}
+                              secondary={
+                                <>
+                                  Key: {instrument.key} • License: {instrument.licenseType}
+                                </>
+                              }
+                            />
+                            <AuraButton size="small">Use Template</AuraButton>
+                          </ListItem>
+                        ))}
+                      </List>
+                    </AccordionDetails>
+                  </Accordion>
+                );
+              })}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <AuraButton onClick={() => setValidatedPromsDialog(false)}>Close</AuraButton>
         </DialogActions>
       </Dialog>
 

@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/animations.css';
 
-console.log('main.tsx loaded - using full App');
+// Application entry point
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

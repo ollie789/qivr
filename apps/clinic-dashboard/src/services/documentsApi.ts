@@ -16,25 +16,39 @@ export interface Document {
   id: string;
   fileName: string;
   fileSize: number;
-  fileSizeFormatted: string;
-  mimeType: string;
-  category: string;
+  fileSizeFormatted?: string;
+  mimeType?: string;
+  category?: string;
+  documentType?: string;
+  status?: string;
   patientId: string;
   patientName?: string;
   providerId?: string;
   providerName?: string;
   uploadedById?: string;
-  uploadedBy: string;
-  uploadedAt: string;
+  uploadedBy?: string;
+  uploadedAt?: string;
+  createdAt?: string;
   description?: string | null;
+  notes?: string | null;
   tags: string[];
   url?: string;
   thumbnailUrl?: string;
-  requiresReview: boolean;
-  reviewStatus: string;
+  requiresReview?: boolean;
+  reviewStatus?: string;
   reviewNotes?: string | null;
   reviewedBy?: string | null;
   reviewedAt?: string | null;
+  // OCR/extraction fields
+  extractedText?: string;
+  extractedPatientName?: string;
+  extractedDob?: string;
+  confidenceScore?: number;
+  // Assignment fields
+  isUrgent?: boolean;
+  assignedTo?: string;
+  assignedToName?: string;
+  dueDate?: string;
 }
 
 export interface DocumentShare {
@@ -70,6 +84,17 @@ type DocumentListParams = {
   page?: number;
   pageSize?: number;
 };
+
+// Legacy filter interface for backwards compatibility
+export interface DocumentFilter {
+  patientId?: string;
+  documentType?: string;
+  status?: string;
+  assignedTo?: string;
+  isUrgent?: boolean;
+  fromDate?: string;
+  toDate?: string;
+}
 
 interface DocumentResponseDto {
   id: string;
@@ -242,9 +267,64 @@ class DocumentsApi {
   async categories(): Promise<string[]> {
     return apiClient.get('/api/documents/categories');
   }
+
+  // Methods from legacy documentApi for backwards compatibility
+  async classify(documentId: string, documentType: string): Promise<Document> {
+    const response = await apiClient.patch<DocumentResponseDto>(
+      `/api/documents/${documentId}/classify`,
+      { documentType }
+    );
+    return mapDocument(response);
+  }
+
+  async assign(documentId: string, assignedTo: string): Promise<Document> {
+    const response = await apiClient.patch<DocumentResponseDto>(
+      `/api/documents/${documentId}/assign`,
+      { assignedTo }
+    );
+    return mapDocument(response);
+  }
+
+  async getDownloadUrl(documentId: string): Promise<{ url: string; expiresIn: number }> {
+    return apiClient.get(`/api/documents/${documentId}/download`);
+  }
+
+  // Legacy list method with filter support
+  async listWithFilter(filter?: DocumentFilter): Promise<Document[]> {
+    const params = new URLSearchParams();
+    if (filter?.patientId) params.append('patientId', filter.patientId);
+    if (filter?.documentType) params.append('documentType', filter.documentType);
+    if (filter?.status) params.append('status', filter.status);
+    if (filter?.assignedTo) params.append('assignedTo', filter.assignedTo);
+    if (filter?.isUrgent !== undefined) params.append('isUrgent', String(filter.isUrgent));
+    if (filter?.fromDate) params.append('fromDate', filter.fromDate);
+    if (filter?.toDate) params.append('toDate', filter.toDate);
+
+    const payload = await apiClient.get<DocumentResponseDto[]>(`/api/documents?${params.toString()}`);
+    return payload.map(mapDocument);
+  }
 }
 
 export const documentsApi = new DocumentsApi();
+
+// Legacy alias for backwards compatibility
+export const documentApi = {
+  upload: (request: { file: File; patientId: string; documentType?: string; tags?: string[]; notes?: string; isUrgent?: boolean; assignedTo?: string; dueDate?: string }) =>
+    documentsApi.upload({
+      file: request.file,
+      category: request.documentType || 'other',
+      patientId: request.patientId,
+      tags: request.tags,
+      description: request.notes,
+    }),
+  list: documentsApi.listWithFilter.bind(documentsApi),
+  getById: documentsApi.get.bind(documentsApi),
+  getDownloadUrl: documentsApi.getDownloadUrl.bind(documentsApi),
+  classify: documentsApi.classify.bind(documentsApi),
+  assign: documentsApi.assign.bind(documentsApi),
+  delete: documentsApi.delete.bind(documentsApi),
+};
+
 export const {
   list: getDocuments,
   get: getDocument,

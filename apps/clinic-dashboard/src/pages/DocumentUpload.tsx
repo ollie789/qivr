@@ -15,7 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
 import { OCRResultsViewer } from "../components/documents";
-import { documentApi, Document } from "../services/documentApi";
+import { documentApi, Document } from "../services/documentsApi";
 import { patientApi } from "../services/patientApi";
 import {
   PageHeader,
@@ -79,7 +79,6 @@ export default function DocumentUpload() {
       });
     },
     onSuccess: (document) => {
-      console.log("[DocumentUpload] Upload success:", document);
       enqueueSnackbar(
         "Document uploaded successfully! OCR processing started.",
         { variant: "success" },
@@ -88,37 +87,21 @@ export default function DocumentUpload() {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
 
       // Poll for OCR results
-      console.log(
-        "[DocumentUpload] Starting OCR polling for document:",
-        document.id,
-      );
       const pollInterval = setInterval(async () => {
         try {
-          console.log("[DocumentUpload] Polling document status...");
           const updated = await documentApi.getById(document.id);
-          console.log(
-            "[DocumentUpload] Document status:",
-            updated.status,
-            updated,
-          );
           setUploadedDocument(updated);
 
           if (updated.status === "ready" || updated.status === "failed") {
-            console.log(
-              "[DocumentUpload] OCR complete, stopping poll. Status:",
-              updated.status,
-            );
             clearInterval(pollInterval);
           }
-        } catch (error) {
-          console.error("[DocumentUpload] Polling error:", error);
+        } catch {
           clearInterval(pollInterval);
         }
       }, 3000);
 
       // Stop polling after 30 seconds
       setTimeout(() => {
-        console.log("[DocumentUpload] Polling timeout reached");
         clearInterval(pollInterval);
       }, 30000);
     },

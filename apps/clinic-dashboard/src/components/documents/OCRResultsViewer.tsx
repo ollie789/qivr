@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import { CheckCircle, Warning, Error as ErrorIcon } from "@mui/icons-material";
 import { LoadingSpinner, Callout } from "@qivr/design-system";
-import { Document } from "../../services/documentApi";
+import { Document } from "../../services/documentsApi";
 
 interface OCRResultsViewerProps {
   document: Document;

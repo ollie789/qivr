@@ -147,15 +147,17 @@ function CameraController({ cameraView }: { cameraView: 'front' | 'back' | 'left
   const { camera } = useThree();
 
   useEffect(() => {
+    const distance = 2.5;
+    const centerY = 1.0;
     const positions: Record<'front' | 'back' | 'left' | 'right', [number, number, number]> = {
-      front: [0, 1, 12],
-      back: [0, 1, -12],
-      left: [-12, 1, 0],
-      right: [12, 1, 0],
+      front: [0, centerY, distance],
+      back: [0, centerY, -distance],
+      left: [-distance, centerY, 0],
+      right: [distance, centerY, 0],
     };
     const pos = positions[cameraView];
     camera.position.set(pos[0], pos[1], pos[2]);
-    camera.lookAt(0, 1, 0);
+    camera.lookAt(0, centerY, 0);
   }, [cameraView, camera]);
 
   return null;
@@ -322,8 +324,8 @@ const PainHeatmap3D: React.FC<PainHeatmap3DProps> = ({
               <OrbitControls
                 enableZoom={true}
                 enablePan={false}
-                minDistance={5}
-                maxDistance={20}
+                minDistance={1.5}
+                maxDistance={10}
                 target={[0, 1, 0]}
               />
             </Suspense>

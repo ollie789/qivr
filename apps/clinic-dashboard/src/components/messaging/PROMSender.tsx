@@ -173,8 +173,6 @@ const PROMSender: React.FC<PROMSenderProps> = ({
       
       await Promise.all(promises);
 
-      console.log('PROM sent successfully to', selectedPatients.length, 'patients');
-
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['prom-responses'] });
 
@@ -182,8 +180,7 @@ const PROMSender: React.FC<PROMSenderProps> = ({
       if (onComplete) {
         onComplete();
       }
-    } catch (error) {
-      console.error('Failed to send PROM:', error);
+    } catch {
       alert('Failed to send PROM. Please try again.');
     }
   };

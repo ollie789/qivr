@@ -90,8 +90,8 @@ export interface IntakeDetails {
     url: string;
     type: string;
   }>;
-  questionnaireResponses?: Record<string, any>;
-  medicalHistory?: Record<string, any>;
+  questionnaireResponses?: Record<string, unknown>;
+  medicalHistory?: Record<string, unknown>;
 }
 
 export interface IntakeFilters {
@@ -105,8 +105,28 @@ export interface IntakeFilters {
   limit?: number;
 }
 
-function mapEvaluationToIntake(e: any): IntakeSubmission {
-  console.log("Mapping evaluation:", e);
+interface EvaluationDto {
+  id: string;
+  patientName?: string;
+  patientEmail?: string;
+  patientPhone?: string;
+  date?: string;
+  createdAt?: string;
+  chiefComplaint?: string;
+  urgency?: string;
+  status?: string;
+  symptoms?: string[];
+  aiSummary?: string;
+  painMaps?: Array<{
+    painIntensity?: number;
+    intensity?: number;
+    bodyRegion?: string;
+    type?: string;
+  }>;
+}
+
+function mapEvaluationToIntake(e: EvaluationDto): IntakeSubmission {
+  // Debug logging removed for production
   const severityMap: Record<string, IntakeSubmission["severity"]> = {
     urgent: "critical",
     high: "high",
@@ -140,7 +160,7 @@ function mapEvaluationToIntake(e: any): IntakeSubmission {
     aiSummary: e.aiSummary || undefined,
     bodyMap: e.painMaps
       ? {
-          painPoints: e.painMaps.map((pm: any) => ({
+          painPoints: e.painMaps.map((pm) => ({
             x: 0,
             y: 0,
             z: 0,
@@ -160,12 +180,9 @@ export const intakeApi = {
       const response = await apiClient.get("/api/evaluations", {
         params: filters,
       });
-      console.log("Raw evaluations response:", response);
       // Response is already the array, not wrapped in .data
       const list = Array.isArray(response) ? response : [];
-      console.log("Evaluations list:", list);
       const data = list.map(mapEvaluationToIntake);
-      console.log("Mapped intakes:", data);
       return { data, total: data.length };
     } catch (error) {
       console.error("Error fetching intakes:", error);
@@ -223,7 +240,7 @@ export const intakeApi = {
         },
         painMap: e.painMaps
           ? {
-              bodyParts: e.painMaps.map((pm: any) => ({
+              bodyParts: e.painMaps.map((pm: EvaluationDto["painMaps"] extends Array<infer T> ? T : never) => ({
                 region: pm.bodyRegion,
                 intensity: pm.intensity,
                 type: pm.type || "aching",

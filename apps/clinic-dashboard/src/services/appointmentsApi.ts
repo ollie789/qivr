@@ -29,6 +29,17 @@ interface AppointmentDto {
   followUpRequired?: boolean;
   createdAt: string;
   updatedAt: string;
+  // Service type & pricing
+  serviceTypeId?: string;
+  serviceTypeName?: string;
+  serviceTypePrice?: number;
+  // Payment tracking
+  isPaid?: boolean;
+  paidAt?: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+  paymentAmount?: number;
+  paymentNotes?: string;
 }
 
 export interface Appointment {
@@ -150,16 +161,16 @@ const mapAppointment = (dto: AppointmentDto): Appointment => ({
   copayAmount: dto.copayAmount,
   followUpRequired: dto.followUpRequired,
   // Service type & pricing
-  serviceTypeId: (dto as any).serviceTypeId,
-  serviceTypeName: (dto as any).serviceTypeName,
-  serviceTypePrice: (dto as any).serviceTypePrice,
+  serviceTypeId: dto.serviceTypeId,
+  serviceTypeName: dto.serviceTypeName,
+  serviceTypePrice: dto.serviceTypePrice,
   // Payment tracking
-  isPaid: (dto as any).isPaid,
-  paidAt: (dto as any).paidAt,
-  paymentMethod: (dto as any).paymentMethod,
-  paymentReference: (dto as any).paymentReference,
-  paymentAmount: (dto as any).paymentAmount,
-  paymentNotes: (dto as any).paymentNotes,
+  isPaid: dto.isPaid,
+  paidAt: dto.paidAt,
+  paymentMethod: dto.paymentMethod,
+  paymentReference: dto.paymentReference,
+  paymentAmount: dto.paymentAmount,
+  paymentNotes: dto.paymentNotes,
   createdAt: dto.createdAt,
   updatedAt: dto.updatedAt,
 });
@@ -190,18 +201,25 @@ class AppointmentsApi {
       CursorPaginationResponse<AppointmentDto> | AppointmentDto[]
     >("/api/appointments", { params });
 
+    // Handle both PascalCase and camelCase responses
+    interface PascalCaseCursorResponse {
+      Items?: AppointmentDto[];
+      NextCursor?: string | null;
+      HasNext?: boolean;
+    }
+
     const items = Array.isArray(payload)
       ? payload
-      : (payload?.items ?? (payload as any)?.Items ?? []);
+      : (payload?.items ?? (payload as PascalCaseCursorResponse)?.Items ?? []);
 
     return {
       items: (items as AppointmentDto[]).map(mapAppointment),
       nextCursor: Array.isArray(payload)
         ? undefined
-        : (payload?.nextCursor ?? (payload as any)?.NextCursor),
+        : (payload?.nextCursor ?? (payload as PascalCaseCursorResponse)?.NextCursor),
       hasNext: Array.isArray(payload)
         ? false
-        : Boolean(payload?.hasNext ?? (payload as any)?.HasNext),
+        : Boolean(payload?.hasNext ?? (payload as PascalCaseCursorResponse)?.HasNext),
     };
   }
 

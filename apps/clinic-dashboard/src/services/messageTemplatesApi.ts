@@ -84,7 +84,30 @@ const createFallbackId = () =>
     ? crypto.randomUUID()
     : `message-template-${Date.now()}`;
 
-const normaliseTemplate = (dto: any): MessageTemplate => {
+interface MessageTemplateDto {
+  id?: string | number;
+  Id?: string | number;
+  templateId?: string | number;
+  TemplateId?: string | number;
+  name?: string;
+  Name?: string;
+  subject?: string | null;
+  Subject?: string | null;
+  description?: string;
+  Description?: string;
+  content?: string;
+  Content?: string;
+  channel?: string;
+  Channel?: string;
+  messageType?: string;
+  MessageType?: string;
+  variables?: string[];
+  Variables?: string[];
+  updatedAt?: string;
+  UpdatedAt?: string;
+}
+
+const normaliseTemplate = (dto: MessageTemplateDto): MessageTemplate => {
   const id = dto?.id ?? dto?.Id ?? dto?.templateId ?? dto?.TemplateId ?? createFallbackId();
   const name = dto?.name ?? dto?.Name ?? 'Untitled template';
   const subject = dto?.subject ?? dto?.Subject ?? null;
@@ -106,17 +129,22 @@ const normaliseTemplate = (dto: any): MessageTemplate => {
   };
 };
 
-const unwrapArray = (payload: any): any[] => {
+interface TemplateArrayResponse {
+  items?: MessageTemplateDto[];
+  data?: MessageTemplateDto[];
+}
+
+const unwrapArray = (payload: MessageTemplateDto[] | TemplateArrayResponse | null | undefined): MessageTemplateDto[] => {
   if (!payload) {
     return [];
   }
   if (Array.isArray(payload)) {
     return payload;
   }
-  if (Array.isArray(payload?.items)) {
+  if (Array.isArray(payload.items)) {
     return payload.items;
   }
-  if (Array.isArray(payload?.data)) {
+  if (Array.isArray(payload.data)) {
     return payload.data;
   }
   return [];
@@ -125,7 +153,7 @@ const unwrapArray = (payload: any): any[] => {
 class MessageTemplatesApi {
   async list(): Promise<MessageTemplateListResult> {
     try {
-      const response = await apiClient.get<any>('/api/messages/templates');
+      const response = await apiClient.get<MessageTemplateDto[] | TemplateArrayResponse>('/api/messages/templates');
       const items = unwrapArray(response).map(normaliseTemplate);
       if (items.length === 0) {
         return { templates: FALLBACK_TEMPLATES, source: 'fallback' };
@@ -138,12 +166,12 @@ class MessageTemplatesApi {
   }
 
   async create(payload: UpsertMessageTemplateInput): Promise<MessageTemplate> {
-    const response = await apiClient.post<any>('/api/messages/templates', payload);
+    const response = await apiClient.post<MessageTemplateDto>('/api/messages/templates', payload);
     return normaliseTemplate(response);
   }
 
   async update(id: string, payload: Partial<UpsertMessageTemplateInput>): Promise<MessageTemplate> {
-    const response = await apiClient.put<any>(`/api/messages/templates/${id}`, payload);
+    const response = await apiClient.put<MessageTemplateDto>(`/api/messages/templates/${id}`, payload);
     return normaliseTemplate(response);
   }
 

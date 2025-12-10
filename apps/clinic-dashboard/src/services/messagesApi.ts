@@ -74,14 +74,77 @@ export interface SendMessagePayload {
   scheduledFor?: string;
 }
 
+// DTO interfaces for backend responses
+interface MessageListDto {
+  id?: string;
+  subject?: string;
+  from?: string;
+  to?: string;
+  content?: string;
+  date?: string;
+  category?: string;
+  read?: boolean;
+  urgent?: boolean;
+  hasAttachments?: boolean;
+  parentMessageId?: string | null;
+}
+
+interface MessageDetailDto {
+  id?: string | number;
+  subject?: string;
+  content?: string;
+  createdAt?: string;
+  isRead?: boolean;
+  readAt?: string;
+  priority?: string | number;
+  messageType?: string | number;
+  hasAttachments?: boolean;
+  parentMessageId?: string | number | null;
+  relatedAppointmentId?: string | number | null;
+  senderId?: string | number;
+  senderName?: string;
+  recipientId?: string | number;
+  recipientName?: string;
+  isFromCurrentUser?: boolean;
+}
+
+interface ConversationDto {
+  participantId?: string | number;
+  participantName?: string;
+  participantAvatar?: string | null;
+  participantRole?: string;
+  lastMessage?: string;
+  lastMessageTime?: string;
+  lastMessageSender?: string;
+  unreadCount?: number;
+  totalMessages?: number;
+  hasAttachments?: boolean;
+  isUrgent?: boolean;
+}
+
+interface CursorPageDto<T> {
+  items?: T[];
+  Items?: T[];
+  nextCursor?: string | null;
+  NextCursor?: string | null;
+  previousCursor?: string | null;
+  PreviousCursor?: string | null;
+  hasNext?: boolean;
+  HasNext?: boolean;
+  hasPrevious?: boolean;
+  HasPrevious?: boolean;
+  count?: number;
+  Count?: number;
+}
+
 const unwrap = <T>(payload: T | { data: T }): T => {
-  if (payload && typeof payload === 'object' && 'data' in (payload as any)) {
-    return (payload as any).data as T;
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return (payload as { data: T }).data;
   }
   return payload as T;
 };
 
-const normaliseCursorPage = <T>(payload: any, mapItem: (item: any) => T): CursorPage<T> => {
+const normaliseCursorPage = <T, D>(payload: CursorPageDto<D> | null | undefined, mapItem: (item: D) => T): CursorPage<T> => {
   const rawItems = payload?.items ?? payload?.Items ?? [];
   return {
     items: Array.isArray(rawItems) ? rawItems.map(mapItem) : [],
@@ -110,7 +173,7 @@ const ensureIsoDate = (value: string): string => {
   return new Date(`${normalised}:00Z`).toISOString();
 };
 
-const mapPortalMessage = (dto: any): MessageListItem => ({
+const mapPortalMessage = (dto: MessageListDto): MessageListItem => ({
   id: dto.id,
   subject: dto.subject ?? 'No subject',
   from: dto.from ?? 'Unknown',
@@ -124,7 +187,7 @@ const mapPortalMessage = (dto: any): MessageListItem => ({
   parentMessageId: dto.parentMessageId ?? null,
 });
 
-const toPriorityString = (value: any): MessagePriority => {
+const toPriorityString = (value: string | number | undefined): MessagePriority => {
   if (typeof value === 'string') {
     const normalised = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
     if (['Low', 'Normal', 'High', 'Urgent'].includes(normalised)) {
@@ -143,7 +206,7 @@ const toPriorityString = (value: any): MessagePriority => {
   return 'Normal';
 };
 
-const toCategoryString = (value: any): MessageCategory => {
+const toCategoryString = (value: string | number | undefined): MessageCategory => {
   if (typeof value === 'string' && value.length > 0) {
     return value;
   }
@@ -157,7 +220,7 @@ const toCategoryString = (value: any): MessageCategory => {
   return 'General';
 };
 
-const mapMessageDetail = (dto: any): MessageDetail => ({
+const mapMessageDetail = (dto: MessageDetailDto): MessageDetail => ({
   id: String(dto.id),
   subject: dto.subject ?? 'No subject',
   content: dto.content ?? '',
@@ -180,7 +243,7 @@ const mapMessageDetail = (dto: any): MessageDetail => ({
   isFromCurrentUser: Boolean(dto.isFromCurrentUser),
 });
 
-const mapConversationSummary = (dto: any): ConversationSummary => ({
+const mapConversationSummary = (dto: ConversationDto): ConversationSummary => ({
   participantId: String(dto.participantId),
   participantName: dto.participantName ?? 'Unknown',
   participantAvatar: dto.participantAvatar ?? null,
@@ -202,7 +265,7 @@ class MessagesApi {
     unreadOnly?: boolean;
     sortDescending?: boolean;
   } = {}): Promise<CursorPage<MessageListItem>> {
-    const response = await apiClient.get<any>('/api/messages', {
+    const response = await apiClient.get<CursorPageDto<MessageListDto>>('/api/messages', {
       cursor: params.cursor ?? undefined,
       limit: params.limit ?? 20,
       category: params.category ?? undefined,
@@ -215,13 +278,13 @@ class MessagesApi {
   }
 
   async getMessage(id: string): Promise<MessageDetail> {
-    const response = await apiClient.get<any>(`/api/messages/${id}`);
+    const response = await apiClient.get<MessageDetailDto>(`/api/messages/${id}`);
     const data = unwrap(response);
     return mapMessageDetail(data);
   }
 
   async getConversations(): Promise<ConversationSummary[]> {
-    const response = await apiClient.get<any>('/api/messages/conversations');
+    const response = await apiClient.get<ConversationDto[]>('/api/messages/conversations');
     const data = unwrap(response);
     return Array.isArray(data) ? data.map(mapConversationSummary) : [];
   }
@@ -231,7 +294,7 @@ class MessagesApi {
     limit?: number;
     sortDescending?: boolean;
   } = {}): Promise<CursorPage<MessageDetail>> {
-    const response = await apiClient.get<any>(
+    const response = await apiClient.get<CursorPageDto<MessageDetailDto>>(
       `/api/messages/conversation/${participantId}`,
       {
         cursor: params.cursor ?? undefined,
@@ -245,7 +308,7 @@ class MessagesApi {
   }
 
   async send(payload: SendMessagePayload): Promise<MessageDetail> {
-    const response = await apiClient.post<any>('/api/messages', {
+    const response = await apiClient.post<MessageDetailDto>('/api/messages', {
       recipientId: payload.recipientId,
       subject: payload.subject,
       content: payload.content,
@@ -272,7 +335,7 @@ class MessagesApi {
   }
 
   async unreadCount(): Promise<number> {
-    const response = await apiClient.get<any>('/api/messages/unread-count');
+    const response = await apiClient.get<{ count?: number }>('/api/messages/unread-count');
     const data = unwrap(response);
     return typeof data?.count === 'number' ? data.count : 0;
   }

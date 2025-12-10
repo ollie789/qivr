@@ -15,7 +15,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 import apiClient from "../../lib/api-client";
-import { documentApi } from "../documentApi";
+import { documentApi } from "../documentsApi";
 
 const mockClient = vi.mocked(apiClient);
 

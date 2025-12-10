@@ -31,6 +31,50 @@ interface PatientDetailsDto extends PatientListItemDto {
   postalCode?: string | null;
   country?: string | null;
   notes?: string | null;
+  insuranceProvider?: string | null;
+  insuranceNumber?: string | null;
+  emergencyContact?: string | null;
+  emergencyPhone?: string | null;
+  recentAppointments?: AppointmentDto[];
+  RecentAppointments?: AppointmentDto[];
+  recentProms?: PromDto[];
+  RecentProms?: PromDto[];
+}
+
+interface AppointmentDto {
+  id?: string | number;
+  Id?: string | number;
+  date?: string;
+  Date?: string;
+  provider?: string;
+  Provider?: string;
+  type?: string;
+  Type?: string;
+  status?: string;
+  Status?: string;
+  notes?: string;
+  Notes?: string;
+}
+
+interface PromDto {
+  id?: string | number;
+  Id?: string | number;
+  templateName?: string;
+  TemplateName?: string;
+  status?: string;
+  Status?: string;
+  createdAt?: string;
+  CreatedAt?: string;
+  completedAt?: string;
+  CompletedAt?: string;
+  score?: number;
+  Score?: number;
+}
+
+// Helper type for responses that might be PascalCase
+interface PascalCaseResponse<T> {
+  Items?: T[];
+  NextCursor?: string | null;
 }
 
 export interface PatientAddress {
@@ -155,7 +199,7 @@ class PatientApi {
 
     const items = Array.isArray(payload)
       ? payload
-      : payload?.items ?? (payload as any)?.Items ?? [];
+      : payload?.items ?? (payload as PascalCaseResponse<PatientListItemDto>)?.Items ?? [];
 
     const patients = (items as PatientListItemDto[]).map(this.mapPatientDto);
 
@@ -164,7 +208,7 @@ class PatientApi {
       total: Array.isArray(payload) ? patients.length : payload?.count ?? patients.length,
       page: 1,
       pageSize: patients.length,
-      nextCursor: Array.isArray(payload) ? undefined : payload?.nextCursor ?? (payload as any)?.NextCursor,
+      nextCursor: Array.isArray(payload) ? undefined : payload?.nextCursor ?? (payload as PascalCaseResponse<PatientListItemDto>)?.NextCursor,
     };
   }
 
@@ -179,7 +223,7 @@ class PatientApi {
   }
 
   async createPatient(patient: CreatePatientDto): Promise<Patient> {
-    const response = await apiClient.post<any>('/api/patients', {
+    const response = await apiClient.post<PatientDetailsDto>('/api/patients', {
       firstName: patient.firstName,
       lastName: patient.lastName,
       email: patient.email,
@@ -191,7 +235,7 @@ class PatientApi {
   }
 
   async updatePatient(id: string, updates: UpdatePatientDto): Promise<Patient | undefined> {
-    const response = await apiClient.put<any>(`/api/patients/${id}`, updates);
+    const response = await apiClient.put<PatientDetailsDto>(`/api/patients/${id}`, updates);
     return this.mapPatientDto(response);
   }
 
@@ -217,7 +261,7 @@ class PatientApi {
 
     const items = Array.isArray(payload)
       ? payload
-      : payload?.items ?? (payload as any)?.Items ?? [];
+      : payload?.items ?? (payload as PascalCaseResponse<Appointment>)?.Items ?? [];
 
     return items as Appointment[];
   }
@@ -252,9 +296,9 @@ class PatientApi {
         }
       : null;
 
-    const rawAppointments = (details as any).recentAppointments ?? (details as any).RecentAppointments;
+    const rawAppointments = details.recentAppointments ?? details.RecentAppointments;
     const recentAppointments: PatientAppointmentSummary[] | undefined = Array.isArray(rawAppointments)
-      ? rawAppointments.map((appointment: any) => ({
+      ? rawAppointments.map((appointment: AppointmentDto) => ({
           id: String(appointment.id ?? appointment.Id ?? generateId()),
           date: toIsoString(appointment.date ?? appointment.Date ?? new Date().toISOString()),
           provider: toSafeString(appointment.provider ?? appointment.Provider, 'Clinician'),
@@ -264,9 +308,9 @@ class PatientApi {
         }))
       : undefined;
 
-    const rawProms = (details as any).recentProms ?? (details as any).RecentProms;
+    const rawProms = details.recentProms ?? details.RecentProms;
     const recentProms: PatientPromSummary[] | undefined = Array.isArray(rawProms)
-      ? rawProms.map((prom: any) => ({
+      ? rawProms.map((prom: PromDto) => ({
           id: String(prom.id ?? prom.Id ?? generateId()),
           templateName: toSafeString(prom.templateName ?? prom.TemplateName, 'PROM'),
           status: toSafeString(prom.status ?? prom.Status, 'pending'),
@@ -291,15 +335,15 @@ class PatientApi {
       nextAppointment: undefined,
       conditions: [],
       provider: undefined,
-      insuranceProvider: (details as any).insuranceProvider ?? undefined,
-      insuranceNumber: (details as any).insuranceNumber ?? undefined,
+      insuranceProvider: details.insuranceProvider ?? undefined,
+      insuranceNumber: details.insuranceNumber ?? undefined,
       registeredDate: dto.createdAt ?? undefined,
       tags: [],
       createdAt: dto.createdAt ?? undefined,
       updatedAt: dto.lastUpdated ?? undefined,
       notes: details.notes ?? undefined,
-      emergencyContact: (details as any).emergencyContact ?? undefined,
-      emergencyPhone: (details as any).emergencyPhone ?? undefined,
+      emergencyContact: details.emergencyContact ?? undefined,
+      emergencyPhone: details.emergencyPhone ?? undefined,
       recentAppointments,
       recentProms,
     };

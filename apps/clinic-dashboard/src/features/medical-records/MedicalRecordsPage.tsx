@@ -75,7 +75,7 @@ import {
 
 import { patientApi, type UpdatePatientDto } from "../../services/patientApi";
 import { medicalRecordsApi } from "../../services/medicalRecordsApi";
-import { documentApi } from "../../services/documentApi";
+import { documentApi } from "../../services/documentsApi";
 import { treatmentPlansApi } from "../../lib/api";
 import { MessageComposer } from "../../components/messaging";
 import { AssignTreatmentPlanDialog } from "../../components/dialogs";

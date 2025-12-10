@@ -50,7 +50,7 @@ import {
   FilterList as FilterIcon,
   Payment as PaymentIcon,
 } from "@mui/icons-material";
-import { format, parseISO, isToday, addDays } from "date-fns";
+import { format, parseISO, isToday, isSameDay, addDays } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbar } from "notistack";
 import { useNavigate } from "react-router-dom";
@@ -114,6 +114,7 @@ export default function Appointments() {
   const calendarRef = useRef<FullCalendar>(null);
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [agendaDate, setAgendaDate] = useState<Date>(new Date());
   const [selectedProviderId, setSelectedProviderId] = useState<string>(
     // Practitioners auto-filter to their own appointments
     user?.role === "practitioner" ? (user?.id ?? "all") : "all",
@@ -194,34 +195,34 @@ export default function Appointments() {
     );
   }, [allAppointments, selectedProviderId]);
 
-  // Today's agenda - always show today's appointments in right panel
-  const todayAppointments = useMemo(() => {
+  // Agenda appointments - show appointments for selected agenda date
+  const agendaAppointments = useMemo(() => {
     return appointments
       .filter((apt) => {
         const aptDate = parseISO(apt.scheduledStart);
-        return isToday(aptDate);
+        return isSameDay(aptDate, agendaDate);
       })
       .sort(
         (a, b) =>
           new Date(a.scheduledStart).getTime() -
           new Date(b.scheduledStart).getTime(),
       );
-  }, [appointments]);
+  }, [appointments, agendaDate]);
 
-  // Stats for today (for agenda panel)
-  const todayStats = useMemo(() => {
-    const total = todayAppointments.length;
-    const completed = todayAppointments.filter(
+  // Stats for agenda date
+  const agendaStats = useMemo(() => {
+    const total = agendaAppointments.length;
+    const completed = agendaAppointments.filter(
       (a) => a.status === "completed",
     ).length;
-    const upcoming = todayAppointments.filter(
+    const upcoming = agendaAppointments.filter(
       (a) => a.status === "scheduled" || a.status === "confirmed",
     ).length;
-    const inProgress = todayAppointments.filter(
+    const inProgress = agendaAppointments.filter(
       (a) => a.status === "in-progress",
     ).length;
     return { total, completed, upcoming, inProgress };
-  }, [todayAppointments]);
+  }, [agendaAppointments]);
 
   // Convert appointments to FullCalendar events
   const calendarEvents = appointments.map((apt) => ({
@@ -861,55 +862,74 @@ export default function Appointments() {
                 minute: "2-digit",
                 meridiem: "short",
               }}
-              dayHeaderContent={(arg) => (
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 0.5,
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: isToday(arg.date)
-                        ? "primary.main"
-                        : "text.secondary",
-                      fontWeight: 500,
-                      textTransform: "uppercase",
-                      fontSize: "0.7rem",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    {format(arg.date, "EEE")}
-                  </Typography>
+              dayHeaderContent={(arg) => {
+                const isSelected = isSameDay(arg.date, agendaDate);
+                const isTodayDate = isToday(arg.date);
+                return (
                   <Box
+                    onClick={() => setAgendaDate(arg.date)}
                     sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
                       display: "flex",
+                      flexDirection: "column",
                       alignItems: "center",
-                      justifyContent: "center",
-                      bgcolor: isToday(arg.date)
-                        ? "primary.main"
-                        : "transparent",
-                      color: isToday(arg.date) ? "white" : "text.primary",
-                      fontWeight: 500,
-                      fontSize: "1.1rem",
+                      gap: 0.5,
+                      cursor: "pointer",
+                      py: 0.5,
+                      px: 1,
+                      borderRadius: 1,
                       transition: "all 0.2s",
                       "&:hover": {
-                        bgcolor: isToday(arg.date)
-                          ? "primary.dark"
-                          : "action.hover",
+                        bgcolor: "action.hover",
                       },
                     }}
                   >
-                    {format(arg.date, "d")}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: isTodayDate
+                          ? "primary.main"
+                          : "text.secondary",
+                        fontWeight: 500,
+                        textTransform: "uppercase",
+                        fontSize: "0.7rem",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      {format(arg.date, "EEE")}
+                    </Typography>
+                    {/* Only show day number circle in week view */}
+                    {viewMode === "week" && (
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          bgcolor: isSelected
+                            ? "primary.main"
+                            : isTodayDate
+                              ? alpha(theme.palette.primary.main, 0.1)
+                              : "transparent",
+                          color: isSelected
+                            ? "white"
+                            : isTodayDate
+                              ? "primary.main"
+                              : "text.primary",
+                          fontWeight: isSelected || isTodayDate ? 600 : 500,
+                          fontSize: "1.1rem",
+                          transition: "all 0.2s",
+                          border: isTodayDate && !isSelected ? "2px solid" : "none",
+                          borderColor: "primary.main",
+                        }}
+                      >
+                        {format(arg.date, "d")}
+                      </Box>
+                    )}
                   </Box>
-                </Box>
-              )}
+                );
+              }}
               slotLabelFormat={{ hour: "numeric", meridiem: "short" }}
             />
           </Box>
@@ -928,7 +948,7 @@ export default function Appointments() {
             flexShrink: 0,
           }}
         >
-          {/* Today Header with Stats */}
+          {/* Agenda Header with Stats */}
           <Box
             sx={{
               p: 2,
@@ -937,16 +957,16 @@ export default function Appointments() {
             }}
           >
             <Typography variant="h6" fontWeight={600}>
-              Today's Agenda
+              {isToday(agendaDate) ? "Today's Agenda" : "Daily Agenda"}
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              {format(new Date(), "EEEE, MMMM d")}
+              {format(agendaDate, "EEEE, MMMM d")}
             </Typography>
             {/* Compact Stats Row */}
             <Box sx={{ display: "flex", gap: 2, mt: 1.5 }}>
               <Box sx={{ textAlign: "center" }}>
                 <Typography variant="h5" fontWeight={700}>
-                  {todayStats.total}
+                  {agendaStats.total}
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.8 }}>
                   Total
@@ -959,7 +979,7 @@ export default function Appointments() {
               />
               <Box sx={{ textAlign: "center" }}>
                 <Typography variant="h5" fontWeight={700} color="warning.light">
-                  {todayStats.inProgress}
+                  {agendaStats.inProgress}
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.8 }}>
                   Active
@@ -972,7 +992,7 @@ export default function Appointments() {
               />
               <Box sx={{ textAlign: "center" }}>
                 <Typography variant="h5" fontWeight={700} color="success.light">
-                  {todayStats.completed}
+                  {agendaStats.completed}
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.8 }}>
                   Done
@@ -985,7 +1005,7 @@ export default function Appointments() {
               />
               <Box sx={{ textAlign: "center" }}>
                 <Typography variant="h5" fontWeight={700}>
-                  {todayStats.upcoming}
+                  {agendaStats.upcoming}
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.8 }}>
                   Next
@@ -996,20 +1016,20 @@ export default function Appointments() {
 
           {/* Scrollable Appointments List */}
           <Box sx={{ flex: 1, overflow: "auto", p: 1.5 }}>
-            {todayAppointments.length === 0 ? (
+            {agendaAppointments.length === 0 ? (
               <Box sx={{ p: 4, textAlign: "center" }}>
                 <TodayIcon
                   sx={{ fontSize: 48, color: "text.disabled", mb: 1 }}
                 />
                 <Typography color="text.secondary">
-                  No appointments today
+                  No appointments {isToday(agendaDate) ? "today" : "on this day"}
                 </Typography>
                 <AuraButton
                   variant="outlined"
                   size="small"
                   startIcon={<AddIcon />}
                   onClick={() => {
-                    setSelectedDate(new Date());
+                    setSelectedDate(agendaDate);
                     setScheduleDialogOpen(true);
                   }}
                   sx={{ mt: 2 }}
@@ -1019,7 +1039,7 @@ export default function Appointments() {
               </Box>
             ) : (
               <Stack spacing={1.5}>
-                {todayAppointments.map((apt) => {
+                {agendaAppointments.map((apt) => {
                   const startTime = parseISO(apt.scheduledStart);
                   const endTime = parseISO(apt.scheduledEnd);
                   const isActive = apt.status === "in-progress";

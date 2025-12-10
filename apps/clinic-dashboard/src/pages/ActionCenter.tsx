@@ -105,7 +105,7 @@ import {
   StatCardSkeleton,
 } from "@qivr/design-system";
 import { messagesApi } from "../services/messagesApi";
-import { documentApi } from "../services/documentApi";
+import { documentApi } from "../services/documentsApi";
 import { referralApi, type Referral } from "../services/referralApi";
 import { appointmentsApi, type Appointment } from "../services/appointmentsApi";
 import { promApi, type PromResponse } from "../services/promApi";
@@ -451,7 +451,7 @@ export default function ActionCenter() {
         subtitle: doc.documentType || "Unclassified Document",
         preview:
           doc.extractedText?.substring(0, 150) || "Document ready for review",
-        timestamp: doc.createdAt,
+        timestamp: doc.createdAt || doc.uploadedAt || new Date().toISOString(),
         priority: doc.isUrgent ? "urgent" : "normal",
         priorityScore: 0,
         isUnread: doc.status === "ready",
