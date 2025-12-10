@@ -51,9 +51,9 @@ const previousIcon = () => (
   <IconifyIcon icon="material-symbols:chevron-left-rounded" fontSize={20} />
 );
 
-const paginationCustomVariants: ComponentsVariants['MuiPaginationItem'] = paginationSolidColors.map(
+const paginationCustomVariants = paginationSolidColors.map(
   (color) => ({
-    props: { variant: 'solid', color: color as PaginationProps['color'] },
+    props: { variant: 'solid' as const, color: color as PaginationProps['color'] },
     style: ({ theme }: { theme: Omit<Theme, 'components'> }) => {
       const paletteColor = theme.vars.palette[color];
 
@@ -80,7 +80,7 @@ const Pagination: Components<Omit<Theme, 'components'>>['MuiPagination'] = {
 };
 
 export const PaginationItem: Components<Omit<Theme, 'components'>>['MuiPaginationItem'] = {
-  variants: [...paginationCustomVariants],
+  variants: paginationCustomVariants,
   defaultProps: {
     slots: {
       next: NextIcon,

@@ -10,21 +10,26 @@
  * <Box sx={{ glassEffect: true }}>Frosted content</Box>
  */
 
+import { SxConfig } from '@mui/system';
 import { glassTokens } from './auraTokens';
 
-const sxConfig = {
+const sxConfig: SxConfig = {
   /**
    * Line clamp utility - truncates text to N lines with ellipsis
    * Uses -webkit-line-clamp for multi-line text truncation
    */
   lineClamp: {
-    style: (props: { lineClamp: number }) => ({
-      display: '-webkit-box',
-      WebkitLineClamp: String(props.lineClamp),
-      WebkitBoxOrient: 'vertical' as const,
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-    }),
+    style: (props) => {
+      const lineClamp = (props as Record<string, unknown>)['lineClamp'];
+      if (typeof lineClamp !== 'number') return {};
+      return {
+        display: '-webkit-box',
+        WebkitLineClamp: String(lineClamp),
+        WebkitBoxOrient: 'vertical' as const,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      };
+    },
   },
 
   /**
@@ -32,15 +37,17 @@ const sxConfig = {
    * Uses unified glass token system for consistency
    */
   glassEffect: {
-    style: (props: { glassEffect: boolean }) =>
-      props.glassEffect
+    style: (props) => {
+      const glassEffect = (props as Record<string, unknown>)['glassEffect'];
+      return glassEffect
         ? {
             backgroundColor: glassTokens.background.light,
             backdropFilter: `blur(${glassTokens.blur.standard})`,
             WebkitBackdropFilter: `blur(${glassTokens.blur.standard})`,
             border: `1px solid ${glassTokens.border.light}`,
           }
-        : {},
+        : {};
+    },
   },
 
   /**
@@ -48,8 +55,9 @@ const sxConfig = {
    * Useful for custom scrollable containers
    */
   smoothScroll: {
-    style: (props: { smoothScroll: boolean }) =>
-      props.smoothScroll
+    style: (props) => {
+      const smoothScroll = (props as Record<string, unknown>)['smoothScroll'];
+      return smoothScroll
         ? {
             overflowY: 'auto' as const,
             scrollBehavior: 'smooth' as const,
@@ -59,7 +67,8 @@ const sxConfig = {
             msOverflowStyle: 'none',
             scrollbarWidth: 'none',
           }
-        : {},
+        : {};
+    },
   },
 };
 

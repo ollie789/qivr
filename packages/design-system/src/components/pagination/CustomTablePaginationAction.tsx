@@ -1,4 +1,4 @@
-import { MouseEvent } from 'react';
+import { ChangeEvent, MouseEvent } from 'react';
 import {
   Box,
   Button,
@@ -63,8 +63,8 @@ const CustomTablePaginationAction = ({
           showLastButton={upSm}
           count={Math.ceil(count / rowsPerPage)}
           page={page + 1}
-          onChange={(event: MouseEvent<HTMLButtonElement>, page: number) =>
-            onPageChange(event, page - 1)
+          onChange={(_event: ChangeEvent<unknown>, page: number) =>
+            onPageChange(null as unknown as MouseEvent<HTMLButtonElement>, page - 1)
           }
           sx={{ flexShrink: 0 }}
         />

@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+.turbo/
+
+# .NET outputs
+bin/
+obj/
+*.dll
+
+# Coverage
+coverage/
+
+# IDE
+.idea/
+.vscode/
+
+# Storybook
+storybook-static/
+
+# Package lock files (don't format these)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Generated files
+*.min.js
+*.min.css
+
+# Terraform
+*.tfstate*
+.terraform/
+
+# Documentation build
+docs/_build/
+
+# Database migrations (preserve exact formatting)
+database/migrations/*.sql

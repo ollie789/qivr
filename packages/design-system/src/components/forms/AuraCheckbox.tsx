@@ -162,7 +162,7 @@ const StyledFormControlLabel = styled(FormControlLabel)<FormControlLabelProps>((
   },
 }));
 
-export interface AuraCheckboxOptionProps extends Omit<FormControlLabelProps, 'control'> {
+export interface AuraCheckboxOptionProps extends Omit<FormControlLabelProps, 'control' | 'onChange'> {
   /** Label text */
   label: React.ReactNode;
   /** Whether the checkbox is checked */

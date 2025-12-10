@@ -10,7 +10,7 @@
     "moduleResolution": "Node",
     "target": "ES2019",
     "jsx": "react-jsx",
-    "strict": false,
+    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,

@@ -104,8 +104,8 @@ const action = generatePaletteChannel({
 
 // Dividers
 const divider = alpha(common.white, 0.12);
-const menuDivider = cssVarRgba(grey['300Channel'], 0);
-const dividerLight = cssVarRgba(grey['700Channel'], 0.6);
+const menuDivider = cssVarRgba(greyPalette['300Channel'], 0);
+const dividerLight = cssVarRgba(greyPalette['700Channel'], 0.6);
 
 // Text colors for dark mode
 const text = generatePaletteChannel({

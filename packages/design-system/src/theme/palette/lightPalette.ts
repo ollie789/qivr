@@ -90,8 +90,8 @@ const action = generatePaletteChannel({
 
 // Dividers
 const divider = grey[300];
-const menuDivider = cssVarRgba(grey['700Channel'], 0);
-const dividerLight = cssVarRgba(grey['300Channel'], 0.6);
+const menuDivider = cssVarRgba(greyPalette['700Channel'], 0);
+const dividerLight = cssVarRgba(greyPalette['300Channel'], 0.6);
 
 // Text colors
 const text = generatePaletteChannel({
