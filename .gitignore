@@ -200,3 +200,6 @@ playwright.config.ts
 playwright-report/
 test-results/
 backend/Qivr.Api/appsettings.Development.json
+
+# Allow SecretsManager extension
+!**/SecretsManagerExtensions.cs
