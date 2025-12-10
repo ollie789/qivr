@@ -361,7 +361,7 @@ public class IntakeController : ControllerBase
                     created_at, updated_at
                 ) VALUES (
                     {newUserId}, {tenantId}, {cognitoSub}, {email}, false, false,
-                    {firstName}, {lastName}, {phone}, 'Patient', '[]'::jsonb, '{{}}'::jsonb, '{{}}'::jsonb,
+                    {firstName}, {lastName}, {phone}, 'Patient', ARRAY['Patient']::text[], '{{}}'::jsonb, '{{}}'::jsonb,
                     {now}, {now}
                 )
                 ON CONFLICT (tenant_id, email) DO NOTHING
