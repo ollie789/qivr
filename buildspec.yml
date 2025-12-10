@@ -21,7 +21,7 @@ phases:
       # Set image tag based on environment
       - |
         if [ "$ENVIRONMENT" = "staging" ]; then
-          IMAGE_TAG="staging"
+          IMAGE_TAG="latest"
           ECS_SERVICE="qivr-api-staging"
           CLINIC_BUCKET="qivr-clinic-dashboard-staging"
           PATIENT_BUCKET="qivr-patient-portal-staging"
