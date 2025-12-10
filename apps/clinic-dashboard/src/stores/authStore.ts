@@ -28,7 +28,7 @@ interface AuthState {
 
 const mapUserInfo = (info: AuthUserInfo): User => {
   // Handle case-insensitive username field
-  const username = info.username || (info as Record<string, unknown>).Username as string | undefined;
+  const username = info.username || (info as unknown as Record<string, unknown>).Username as string | undefined;
 
   // Validate required fields
   if (!username) {

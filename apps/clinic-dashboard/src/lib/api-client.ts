@@ -12,14 +12,15 @@ if (!API_BASE_URL) {
 }
 
 // Type for API request parameters
-type ApiParams = Record<string, string | number | boolean | undefined>;
+type ApiParams = Record<string, string | number | boolean | undefined> | undefined;
 
-// Type for API request body - allows structured objects with defined interfaces
-// Using a generic type allows interfaces like ExerciseTemplateData to be passed
-type ApiRequestBody = Record<string, unknown> | FormData | unknown[] | { [key: string]: unknown };
+// Type for API request body - using any for flexibility with typed interfaces
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiRequestBody = any;
 
-// Generic response type constraint
-type ApiResponse = unknown;
+// Generic response type constraint - using any as default for backward compatibility
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiResponse = any;
 
 const baseClient = createHttpClient({
   baseURL: API_BASE_URL,

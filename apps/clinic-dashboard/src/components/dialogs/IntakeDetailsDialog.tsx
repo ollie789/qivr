@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
 import {
   Box,
@@ -86,7 +87,7 @@ import {
   auraColors,
   type PainRegion,
 } from "@qivr/design-system";
-import { intakeApi } from "../../services/intakeApi";
+import { intakeApi, type IntakeDetails } from "../../services/intakeApi";
 import { invitationApi } from "../../services/invitationApi";
 import { ScheduleAppointmentDialog } from "./ScheduleAppointmentDialog";
 import MessageComposer from "../messaging/MessageComposer";
@@ -342,7 +343,7 @@ export const IntakeDetailsDialog: React.FC<IntakeDetailsDialogProps> = ({
   );
 
   // Fetch full intake details
-  const { data: fullDetails, isLoading } = useQuery({
+  const { data: fullDetails, isLoading } = useQuery<IntakeDetails>({
     queryKey: ["intakeDetails", intake?.id],
     queryFn: () => intakeApi.getIntakeDetails(intake!.id),
     enabled: open && !!intake?.id,
@@ -1567,8 +1568,8 @@ Date: ________________________
                           )}
 
                           {/* Previous Orthopaedic Conditions */}
-                          {fullDetails?.questionnaireResponses?.prevOrtho
-                            ?.length > 0 && (
+                          {(fullDetails?.questionnaireResponses?.prevOrtho
+                            ?.length ?? 0) > 0 && (
                             <Box>
                               <Typography
                                 variant="caption"

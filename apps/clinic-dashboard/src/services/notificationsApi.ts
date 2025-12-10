@@ -81,7 +81,7 @@ interface NotificationPreferencesDto {
   PreferredChannel?: string | number;
 }
 
-const unwrap = <T>(payload: T | { data: T }): T => {
+const unwrap = <T>(payload: T | { data: T } | null | undefined): T | null | undefined => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
     return (payload as { data: T }).data;
   }
@@ -190,14 +190,13 @@ class NotificationsApi {
       sortDescending: params.sortDescending ?? true,
     });
 
-    const data = unwrap(response);
+    const data = unwrap(response) as CursorPageDto<NotificationDto> | null | undefined;
     return toCursorPage(data, mapNotification);
   }
 
   async get(id: string): Promise<NotificationDetail> {
     const response = await apiClient.get<NotificationDto>(`/api/notifications/${id}`);
-    const data = unwrap(response);
-    return mapNotification(data);
+    return mapNotification(response as unknown as NotificationDto);
   }
 
   async markAsRead(id: string): Promise<void> {
@@ -230,7 +229,7 @@ class NotificationsApi {
         quietHoursEnd: data?.quietHoursEnd ?? data?.QuietHoursEnd ?? null,
         preferredChannel: mapChannel(data?.preferredChannel ?? data?.PreferredChannel),
       };
-    } catch (error) {
+    } catch {
       // Return default preferences if endpoint doesn't exist
       console.warn('Notification preferences endpoint not available, using defaults');
       return {

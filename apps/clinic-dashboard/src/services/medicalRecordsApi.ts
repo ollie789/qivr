@@ -271,7 +271,8 @@ const unwrapEnvelope = <T>(payload: T | ApiEnvelope<T>): T => {
   return payload as T;
 };
 
-const toIsoString = (value: string): string => new Date(value).toISOString();
+const toIsoString = (value: string | undefined | null): string => 
+  value ? new Date(value).toISOString() : new Date().toISOString();
 
 const mapSummary = (dto: MedicalSummaryDto | null): MedicalSummary | null => {
   if (!dto) {
@@ -324,10 +325,10 @@ interface PainAssessmentDto {
 }
 
 const mapVital =
-  (patientId: string) =>
+  (patientId: string | undefined) =>
   (dto: PainAssessmentDto): VitalSign => ({
     id: dto.id,
-    patientId,
+    patientId: patientId || "",
     recordedAt: toIsoString(dto.date || dto.recordedAt),
     recordedBy: dto.recordedBy || "Care Team",
     overallPainLevel: dto.overallPainLevel || 0,

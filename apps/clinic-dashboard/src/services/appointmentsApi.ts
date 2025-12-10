@@ -199,7 +199,7 @@ class AppointmentsApi {
   }> {
     const payload = await apiClient.get<
       CursorPaginationResponse<AppointmentDto> | AppointmentDto[]
-    >("/api/appointments", { params });
+    >("/api/appointments", params as Record<string, string | number | boolean | undefined>);
 
     // Handle both PascalCase and camelCase responses
     interface PascalCaseCursorResponse {
@@ -303,7 +303,7 @@ class AppointmentsApi {
     date: string;
     duration: number;
   }): Promise<AppointmentSlot[]> {
-    return apiClient.get("/api/appointments/availability", { params });
+    return apiClient.get("/api/appointments/availability", params);
   }
 
   async sendReminder(id: string) {
@@ -311,7 +311,7 @@ class AppointmentsApi {
   }
 
   async getUpcoming(days: number = 7) {
-    return apiClient.get("/api/appointments/upcoming", { params: { days } });
+    return apiClient.get("/api/appointments/upcoming", { days });
   }
 
   async getWaitlist() {
@@ -362,7 +362,7 @@ class AppointmentsApi {
     startDate: string;
     endDate: string;
   }> {
-    return apiClient.get("/api/appointments/payment-summary", { params });
+    return apiClient.get("/api/appointments/payment-summary", params);
   }
 }
 

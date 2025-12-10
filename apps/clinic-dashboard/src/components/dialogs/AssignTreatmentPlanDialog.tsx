@@ -121,12 +121,12 @@ export function AssignTreatmentPlanDialog({
   }, [open]);
 
   // Fetch templates
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<TreatmentTemplate[]>({
     queryKey: ["treatment-templates", bodyRegionFilter],
     queryFn: () =>
       treatmentPlansApi.listTemplates({
         bodyRegion: bodyRegionFilter || undefined,
-      }),
+      }) as Promise<TreatmentTemplate[]>,
     enabled: open,
   });
 
@@ -174,7 +174,7 @@ export function AssignTreatmentPlanDialog({
         startDate: startDate
           ? new Date(startDate).toISOString()
           : new Date().toISOString(),
-      }),
+      }) as Promise<{ id: string }>,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });
       queryClient.invalidateQueries({ queryKey: ["patient-treatment-plans"] });
@@ -195,7 +195,15 @@ export function AssignTreatmentPlanDialog({
         patientId: patient.id,
         evaluationId,
         focusAreas: [aiBodyRegion],
-      });
+      }) as {
+        title?: string;
+        diagnosis?: string;
+        totalDurationWeeks?: number;
+        phases?: unknown[];
+        summary?: string;
+        rationale?: string;
+        confidence?: number;
+      };
 
       // Then create it
       return treatmentPlansApi.create({
@@ -215,7 +223,7 @@ export function AssignTreatmentPlanDialog({
         aiGeneratedSummary: generatedData.summary,
         aiRationale: generatedData.rationale,
         aiConfidence: generatedData.confidence,
-      });
+      }) as Promise<{ id: string }>;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["treatment-plans"] });

@@ -174,12 +174,12 @@ const ensureIsoDate = (value: string): string => {
 };
 
 const mapPortalMessage = (dto: MessageListDto): MessageListItem => ({
-  id: dto.id,
+  id: dto.id ?? '',
   subject: dto.subject ?? 'No subject',
   from: dto.from ?? 'Unknown',
   to: dto.to ?? 'Unknown',
   preview: dto.content ?? '',
-  sentAt: ensureIsoDate(dto.date ?? ''),
+  sentAt: ensureIsoDate(dto.date ?? new Date().toISOString()),
   category: dto.category ?? 'General',
   read: Boolean(dto.read),
   urgent: Boolean(dto.urgent),

@@ -90,7 +90,23 @@ export interface IntakeDetails {
     url: string;
     type: string;
   }>;
-  questionnaireResponses?: Record<string, unknown>;
+  questionnaireResponses: {
+    painStart?: string;
+    medications: string[];
+    additionalHistory: string[];
+    prevOrtho: string[];
+    currentTreatments: string[];
+    mobilityAids: string[];
+    hasImaging?: string;
+    imagingTypes: string[];
+    imagingTimeframe?: string;
+    dailyImpact: string[];
+    redFlags: string[];
+    goals: string[];
+    timeline?: string;
+    milestones: string[];
+    concerns: string[];
+  };
   medicalHistory?: Record<string, unknown>;
 }
 
@@ -151,10 +167,10 @@ function mapEvaluationToIntake(e: EvaluationDto): IntakeSubmission {
     patientName: e.patientName || "Unknown Patient",
     email: e.patientEmail || "n/a@unknown",
     phone: e.patientPhone || "",
-    submittedAt: e.date || e.createdAt,
+    submittedAt: e.date || e.createdAt || new Date().toISOString(),
     conditionType: e.chiefComplaint || "Not specified",
     severity: severityMap[(e.urgency || "").toLowerCase()] || "medium",
-    status: statusMap[e.status?.toLowerCase()] || "pending",
+    status: statusMap[e.status?.toLowerCase() ?? ""] || "pending",
     painLevel: (e.painMaps && e.painMaps[0]?.painIntensity) || 5,
     symptoms: e.symptoms || [],
     aiSummary: e.aiSummary || undefined,
@@ -177,9 +193,7 @@ export const intakeApi = {
     filters?: IntakeFilters,
   ): Promise<{ data: IntakeSubmission[]; total: number }> {
     try {
-      const response = await apiClient.get("/api/evaluations", {
-        params: filters,
-      });
+      const response = await apiClient.get("/api/evaluations", filters as Record<string, string | number | boolean | undefined>);
       // Response is already the array, not wrapped in .data
       const list = Array.isArray(response) ? response : [];
       const data = list.map(mapEvaluationToIntake);
@@ -240,9 +254,9 @@ export const intakeApi = {
         },
         painMap: e.painMaps
           ? {
-              bodyParts: e.painMaps.map((pm: EvaluationDto["painMaps"] extends Array<infer T> ? T : never) => ({
-                region: pm.bodyRegion,
-                intensity: pm.intensity,
+              bodyParts: e.painMaps.map((pm: { bodyRegion?: string; intensity?: number; type?: string }) => ({
+                region: pm.bodyRegion || "Unknown",
+                intensity: pm.intensity || 5,
                 type: pm.type || "aching",
               })),
             }
@@ -258,7 +272,23 @@ export const intakeApi = {
           : undefined,
         status: e.status,
         notes: e.clinicianNotes || "",
-        questionnaireResponses: q,
+        questionnaireResponses: {
+          painStart: q.painStart,
+          medications: q.medications || [],
+          additionalHistory: q.additionalHistory || [],
+          prevOrtho: q.prevOrtho || [],
+          currentTreatments: q.currentTreatments || [],
+          mobilityAids: q.mobilityAids || [],
+          hasImaging: q.hasImaging,
+          imagingTypes: q.imagingTypes || [],
+          imagingTimeframe: q.imagingTimeframe,
+          dailyImpact: q.dailyImpact || [],
+          redFlags: q.redFlags || [],
+          goals: q.goals || [],
+          timeline: q.timeline,
+          milestones: q.milestones || [],
+          concerns: q.concerns || [],
+        },
         medicalHistory: medicalHistory,
       };
     } catch (error) {

@@ -219,17 +219,41 @@ export function TemplateBuilder({
   // AI Preview mutation
   const previewMutation = useMutation({
     mutationFn: treatmentPlansApi.preview,
-    onSuccess: (data) => {
+    onSuccess: (response) => {
+      const data = response as {
+        phases?: Array<{
+          name: string;
+          description: string;
+          durationWeeks: number;
+          goals?: string[];
+          exercises?: Array<{
+            id?: string;
+            name: string;
+            description?: string;
+            instructions?: string;
+            sets?: number;
+            reps?: number;
+            holdSeconds?: number;
+            frequency?: string;
+            category?: string;
+            bodyRegion?: string;
+            difficulty?: string;
+          }>;
+          sessionsPerWeek?: number;
+        }>;
+        title?: string;
+        totalDurationWeeks?: number;
+      };
       if (data.phases && data.phases.length > 0) {
         setPhases(
-          data.phases.map((p: any, idx: number) => ({
+          data.phases.map((p, idx: number) => ({
             phaseNumber: idx + 1,
             name: p.name,
             description: p.description,
             durationWeeks: p.durationWeeks,
             goals: p.goals || [],
             exercises:
-              p.exercises?.map((e: any) => ({
+              p.exercises?.map((e) => ({
                 id: e.id || `ex-${Math.random().toString(36).substr(2, 9)}`,
                 name: e.name,
                 description: e.description,

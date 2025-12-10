@@ -709,7 +709,7 @@ export const TreatmentPlanBuilder: React.FC<TreatmentPlanBuilderProps> = ({
           })),
         );
         enqueueSnackbar(
-          `AI generated ${data.phases.length} phases with ${totalExerciseCount} exercises! Review and customize below.`,
+          `AI generated ${data.phases.length} phases with exercises! Review and customize below.`,
           { variant: "success" },
         );
       } else {
