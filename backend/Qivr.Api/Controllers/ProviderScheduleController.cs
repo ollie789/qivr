@@ -32,6 +32,16 @@ public class ProviderScheduleController : ControllerBase
     }
 
     /// <summary>
+    /// Find provider by Provider.Id or User.Id (supports both ID types from frontend)
+    /// </summary>
+    private async Task<Provider?> FindProviderAsync(Guid tenantId, Guid providerId, bool includeUser = false)
+    {
+        var query = _context.Providers.IgnoreQueryFilters().Where(p => p.TenantId == tenantId && (p.Id == providerId || p.UserId == providerId));
+        if (includeUser) query = query.Include(p => p.User);
+        return await query.FirstOrDefaultAsync();
+    }
+
+    /// <summary>
     /// Get all providers with their availability summary
     /// </summary>
     [HttpGet("providers")]
@@ -63,17 +73,18 @@ public class ProviderScheduleController : ControllerBase
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
-        // Verify provider belongs to this tenant
+        // Verify provider belongs to this tenant - try by Provider.Id first, then by UserId
         var provider = await _context.Providers
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
+            .FirstOrDefaultAsync(p => p.TenantId == tenantId && (p.Id == providerId || p.UserId == providerId));
 
         if (provider == null)
         {
             return NotFound(new { error = "Provider not found" });
         }
 
-        var schedules = await _availabilityService.GetProviderWeeklySchedule(providerId);
+        // Always use the actual Provider.Id for schedule lookup
+        var schedules = await _availabilityService.GetProviderWeeklySchedule(provider.Id);
 
         // Return schedule with defaults if none configured
         var result = Enum.GetValues<DayOfWeek>().Select(day =>
@@ -131,21 +142,24 @@ public class ProviderScheduleController : ControllerBase
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
-        // Verify provider belongs to this tenant
+        // Verify provider belongs to this tenant - try by Provider.Id first, then by UserId
         var provider = await _context.Providers
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
+            .FirstOrDefaultAsync(p => p.TenantId == tenantId && (p.Id == providerId || p.UserId == providerId));
 
         if (provider == null)
         {
             return NotFound(new { error = "Provider not found" });
         }
 
+        // Always use the actual Provider.Id for schedule operations
+        var actualProviderId = provider.Id;
+
         var schedules = scheduleUpdates.Select(dto => new ProviderSchedule
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            ProviderId = providerId,
+            ProviderId = actualProviderId,
             DayOfWeek = dto.DayOfWeek,
             IsWorkingDay = dto.IsWorkingDay,
             StartTime = dto.StartTime,
@@ -159,9 +173,9 @@ public class ProviderScheduleController : ControllerBase
             MaxAppointmentsPerDay = dto.MaxAppointmentsPerDay
         }).ToList();
 
-        await _availabilityService.SetProviderWeeklySchedule(providerId, schedules);
+        await _availabilityService.SetProviderWeeklySchedule(actualProviderId, schedules);
 
-        _logger.LogInformation("Updated weekly schedule for provider {ProviderId}", providerId);
+        _logger.LogInformation("Updated weekly schedule for provider {ProviderId}", actualProviderId);
 
         return Ok(new { message = "Schedule updated successfully" });
     }
@@ -182,18 +196,13 @@ public class ProviderScheduleController : ControllerBase
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
-        // Verify provider belongs to this tenant
-        var provider = await _context.Providers
-            .IgnoreQueryFilters()
-            .Include(p => p.User)
-            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
-
+        var provider = await FindProviderAsync(tenantId, providerId, includeUser: true);
         if (provider == null)
         {
             return NotFound(new { error = "Provider not found" });
         }
 
-        var dailySchedules = await _availabilityService.GetProviderSchedule(providerId, startDate, endDate);
+        var dailySchedules = await _availabilityService.GetProviderSchedule(provider.Id, startDate, endDate);
 
         var result = dailySchedules.Select(ds => new ProviderCalendarDayDto
         {
@@ -247,17 +256,13 @@ public class ProviderScheduleController : ControllerBase
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
-        // Verify provider belongs to this tenant
-        var provider = await _context.Providers
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
-
+        var provider = await FindProviderAsync(tenantId, providerId);
         if (provider == null)
         {
             return NotFound(new { error = "Provider not found" });
         }
 
-        var slots = await _availabilityService.GetAvailableSlots(providerId, date, durationMinutes);
+        var slots = await _availabilityService.GetAvailableSlots(provider.Id, date, durationMinutes);
 
         return Ok(slots.Select(s => new
         {
@@ -283,7 +288,13 @@ public class ProviderScheduleController : ControllerBase
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
-        var timeOffs = await _availabilityService.GetProviderTimeOffs(providerId, startDate, endDate);
+        var provider = await FindProviderAsync(tenantId, providerId);
+        if (provider == null)
+        {
+            return NotFound(new { error = "Provider not found" });
+        }
+
+        var timeOffs = await _availabilityService.GetProviderTimeOffs(provider.Id, startDate, endDate);
 
         return Ok(timeOffs.Select(t => new TimeOffDto
         {
@@ -313,11 +324,7 @@ public class ProviderScheduleController : ControllerBase
             return Unauthorized(new { error = "Tenant context is required." });
         }
 
-        // Verify provider belongs to this tenant
-        var provider = await _context.Providers
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId);
-
+        var provider = await FindProviderAsync(tenantId, providerId);
         if (provider == null)
         {
             return NotFound(new { error = "Provider not found" });
@@ -342,7 +349,7 @@ public class ProviderScheduleController : ControllerBase
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            ProviderId = providerId,
+            ProviderId = provider.Id,
             StartDateTime = dto.StartDateTime,
             EndDateTime = dto.EndDateTime,
             IsAllDay = dto.IsAllDay,
@@ -356,7 +363,7 @@ public class ProviderScheduleController : ControllerBase
 
         var result = await _availabilityService.AddProviderTimeOff(timeOff);
 
-        _logger.LogInformation("Added time off {TimeOffId} for provider {ProviderId}", result.Id, providerId);
+        _logger.LogInformation("Added time off {TimeOffId} for provider {ProviderId}", result.Id, provider.Id);
 
         return CreatedAtAction(nameof(GetTimeOffs), new { providerId }, new TimeOffDto
         {
