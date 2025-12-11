@@ -656,7 +656,7 @@ public class MedicalRecordsController : BaseApiController
         }
         else
         {
-            conditionDtos = GenerateSampleConditions(patient?.FullName ?? "Patient");
+            conditionDtos = new List<MedicalConditionDto>();
         }
 
         return new MedicalSummaryDto
@@ -676,7 +676,7 @@ public class MedicalRecordsController : BaseApiController
 
         if (!results.Any())
         {
-            return GenerateSampleLabResults();
+            return new List<LabResultGroupDto>();
         }
 
         return results
@@ -709,7 +709,7 @@ public class MedicalRecordsController : BaseApiController
 
         if (!medications.Any())
         {
-            return GenerateSampleMedications();
+            return new List<MedicationDto>();
         }
 
         return medications.Select(m => new MedicationDto
@@ -738,7 +738,7 @@ public class MedicalRecordsController : BaseApiController
 
         if (!allergies.Any())
         {
-            return GenerateSampleAllergies();
+            return new List<AllergyDto>();
         }
 
         return allergies.Select(a => new AllergyDto
@@ -762,7 +762,7 @@ public class MedicalRecordsController : BaseApiController
 
         if (!immunizations.Any())
         {
-            return GenerateSampleImmunizations();
+            return new List<ImmunizationDto>();
         }
 
         return immunizations.Select(i => new ImmunizationDto

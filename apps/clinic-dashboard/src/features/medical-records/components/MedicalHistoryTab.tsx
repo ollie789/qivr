@@ -428,7 +428,9 @@ const PainAssessmentSection: React.FC<{
   const painRegions: PainRegion[] = useMemo(() => {
     if (!intakeData?.painMap?.bodyParts) return [];
     return intakeData.painMap.bodyParts.map((part) => ({
-      meshName: part.region,
+      // meshName must be lowercase with underscores to match 3D model mesh names
+      meshName: part.region.toLowerCase().replace(/\s+/g, '_'),
+      anatomicalName: part.region,
       intensity: part.intensity || 5,
       quality: part.type || 'aching',
     }));
