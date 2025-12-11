@@ -287,7 +287,10 @@ export default function Settings() {
       return response.map((provider: any) => ({
         id: provider.id,
         providerProfileId: provider.providerProfileId || provider.id,
-        name: `${provider.firstName} ${provider.lastName}`,
+        name:
+          `${provider.firstName || ''} ${provider.lastName || ''}`.trim() ||
+          provider.email ||
+          'Provider',
         email: provider.email,
         role: provider.specialization || 'Provider',
         department: provider.department || 'General',
