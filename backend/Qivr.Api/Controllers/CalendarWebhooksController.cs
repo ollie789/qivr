@@ -72,7 +72,7 @@ public class CalendarWebhooksController : ControllerBase
         {
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
             var inserted = await _db.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO qivr.webhook_events (provider, event_id, idempotency_key, raw_payload, received_at)
+                INSERT INTO public.webhook_events (provider, event_id, idempotency_key, raw_payload, received_at)
                 VALUES ({provider}, {eventId}, {eventId}, {json}::jsonb, NOW())
                 ON CONFLICT (provider, event_id) DO NOTHING
             ");

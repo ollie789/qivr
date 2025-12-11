@@ -50,7 +50,7 @@ public class EmailVerificationService : IEmailVerificationService
 
         // Store the verification token
         await _dbContext.Database.ExecuteSqlAsync($@"
-            INSERT INTO qivr.auth_tokens (user_id, token_hash, token_type, expires_at, created_at)
+            INSERT INTO public.auth_tokens (user_id, token_hash, token_type, expires_at, created_at)
             VALUES ({userId}, {tokenHash}, 'email_verification', {expiresAt}, CURRENT_TIMESTAMP)
             ON CONFLICT (user_id, token_type) 
             DO UPDATE SET 
@@ -73,8 +73,8 @@ public class EmailVerificationService : IEmailVerificationService
             var result = await _dbContext.Database
                 .SqlQuery<VerificationResult>($@"
                     SELECT t.user_id, t.expires_at, u.email
-                    FROM qivr.auth_tokens t
-                    JOIN qivr.users u ON t.user_id = u.id
+                    FROM public.auth_tokens t
+                    JOIN public.users u ON t.user_id = u.id
                     WHERE t.token_hash = {tokenHash}
                       AND t.token_type = 'email_verification'
                       AND t.revoked_at IS NULL
@@ -95,7 +95,7 @@ public class EmailVerificationService : IEmailVerificationService
 
             // Mark email as verified
             await _dbContext.Database.ExecuteSqlAsync($@"
-                UPDATE qivr.users 
+                UPDATE public.users 
                 SET email_verified = true, 
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = {result.UserId}
@@ -103,14 +103,14 @@ public class EmailVerificationService : IEmailVerificationService
 
             // Revoke the token
             await _dbContext.Database.ExecuteSqlAsync($@"
-                UPDATE qivr.auth_tokens 
+                UPDATE public.auth_tokens 
                 SET revoked_at = CURRENT_TIMESTAMP
                 WHERE token_hash = {tokenHash}
             ");
 
             // Create audit log
             await _dbContext.Database.ExecuteSqlAsync($@"
-                INSERT INTO qivr.audit_logs (user_id, action, resource_type, resource_id, created_at)
+                INSERT INTO public.audit_logs (user_id, action, resource_type, resource_id, created_at)
                 VALUES ({result.UserId}, 'email_verified', 'user', {result.UserId}, CURRENT_TIMESTAMP)
             ");
 
@@ -196,7 +196,7 @@ public class EmailVerificationService : IEmailVerificationService
             var user = await _dbContext.Database
                 .SqlQuery<UserInfo>($@"
                     SELECT id, email, email_verified
-                    FROM qivr.users
+                    FROM public.users
                     WHERE email = {email}
                 ")
                 .FirstOrDefaultAsync();
@@ -217,7 +217,7 @@ public class EmailVerificationService : IEmailVerificationService
             var recentTokens = await _dbContext.Database
                 .SqlQuery<int>($@"
                     SELECT COUNT(*)
-                    FROM qivr.auth_tokens
+                    FROM public.auth_tokens
                     WHERE user_id = {user.Id}
                       AND token_type = 'email_verification'
                       AND created_at > CURRENT_TIMESTAMP - INTERVAL '1 hour'

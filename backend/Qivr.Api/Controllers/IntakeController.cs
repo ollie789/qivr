@@ -355,7 +355,7 @@ public class IntakeController : ControllerBase
             // Use raw SQL with ON CONFLICT DO NOTHING to handle race conditions
             // This is atomic and prevents duplicate key errors
             var rowsAffected = await context.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO qivr.users (
+                INSERT INTO public.users (
                     id, tenant_id, cognito_sub, email, email_verified, phone_verified,
                     first_name, last_name, phone, user_type, roles, preferences, consent,
                     created_at, updated_at

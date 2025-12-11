@@ -39,7 +39,7 @@ public class PatientRecordService : IPatientRecordService
 
         // Get latest vital signs
         var vitalSignsSql = @"
-            SELECT * FROM qivr.vital_signs 
+            SELECT * FROM public.vital_signs 
             WHERE tenant_id = {0} AND patient_id = {1}
             ORDER BY recorded_at DESC
             LIMIT 5";
@@ -94,7 +94,7 @@ public class PatientRecordService : IPatientRecordService
 
         // Get or create patient record
         var recordSql = @"
-            SELECT * FROM qivr.patient_records 
+            SELECT * FROM public.patient_records 
             WHERE tenant_id = {0} AND patient_id = {1}
             LIMIT 1";
         
@@ -128,7 +128,7 @@ public class PatientRecordService : IPatientRecordService
 
             // Insert the new record
             var insertSql = @"
-                INSERT INTO qivr.patient_records 
+                INSERT INTO public.patient_records 
                 (id, tenant_id, patient_id, medical_record_number, demographics, medical_history, created_at, updated_at)
                 VALUES ({0}, {1}, {2}, {3}, {4}::jsonb, {5}::jsonb, {6}, {7})";
             
@@ -151,7 +151,7 @@ public class PatientRecordService : IPatientRecordService
     public async Task UpdateDemographicsAsync(Guid tenantId, Guid patientId, PatientDemographics demographics)
     {
         var updateSql = @"
-            UPDATE qivr.patient_records 
+            UPDATE public.patient_records 
             SET demographics = {0}::jsonb, updated_at = {1}
             WHERE tenant_id = {2} AND patient_id = {3}";
         
@@ -185,7 +185,7 @@ public class PatientRecordService : IPatientRecordService
     public async Task AddMedicalHistoryAsync(Guid tenantId, Guid patientId, MedicalHistory history)
     {
         var updateSql = @"
-            UPDATE qivr.patient_records 
+            UPDATE public.patient_records 
             SET medical_history = {0}::jsonb, updated_at = {1}
             WHERE tenant_id = {2} AND patient_id = {3}";
         
@@ -212,7 +212,7 @@ public class PatientRecordService : IPatientRecordService
         }
 
         var insertSql = @"
-            INSERT INTO qivr.vital_signs 
+            INSERT INTO public.vital_signs 
             (id, tenant_id, patient_id, recorded_at, blood_pressure, heart_rate, temperature, 
              respiratory_rate, oxygen_saturation, weight, height, bmi, notes, recorded_by)
             VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13})";
@@ -233,7 +233,7 @@ public class PatientRecordService : IPatientRecordService
         var toDate = to ?? DateTime.UtcNow;
 
         var sql = @"
-            SELECT * FROM qivr.vital_signs 
+            SELECT * FROM public.vital_signs 
             WHERE tenant_id = {0} AND patient_id = {1} 
                 AND recorded_at >= {2} AND recorded_at <= {3}
             ORDER BY recorded_at DESC";
@@ -284,7 +284,7 @@ public class PatientRecordService : IPatientRecordService
         // Get vital signs recordings
         var vitalSignsSql = @"
             SELECT id, recorded_at, blood_pressure, heart_rate 
-            FROM qivr.vital_signs 
+            FROM public.vital_signs 
             WHERE tenant_id = {0} AND patient_id = {1}
             ORDER BY recorded_at DESC
             LIMIT {2} OFFSET {3}";
@@ -325,7 +325,7 @@ public class PatientRecordService : IPatientRecordService
 
         // Get medical history for condition/medication counts
         var recordSql = @"
-            SELECT medical_history FROM qivr.patient_records 
+            SELECT medical_history FROM public.patient_records 
             WHERE tenant_id = {0} AND patient_id = {1}
             LIMIT 1";
         

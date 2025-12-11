@@ -170,7 +170,7 @@ public class ProfileService : IProfileService
 
             // Update medical history in patient_records table
             var updateSql = @"
-                UPDATE qivr.patient_records 
+                UPDATE public.patient_records 
                 SET medical_history = jsonb_set(
                     COALESCE(medical_history, '{}'::jsonb),
                     '{Allergies}',
@@ -189,7 +189,7 @@ public class ProfileService : IProfileService
             if (update.MedicalInfo.Conditions != null)
             {
                 updateSql = @"
-                    UPDATE qivr.patient_records 
+                    UPDATE public.patient_records 
                     SET medical_history = jsonb_set(
                         COALESCE(medical_history, '{}'::jsonb),
                         '{ChronicConditions}',

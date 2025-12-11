@@ -136,7 +136,7 @@ public class IntakeProcessingWorker : BackgroundService
                 
                 // Check idempotency - try to insert message ID
                 await using (var dedupeCmd = new NpgsqlCommand(
-                    @"INSERT INTO qivr.intake_dedupe(message_id) 
+                    @"INSERT INTO public.intake_dedupe(message_id) 
                       VALUES(@id) 
                       ON CONFLICT DO NOTHING 
                       RETURNING 1;", connection, transaction))

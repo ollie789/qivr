@@ -45,7 +45,7 @@ namespace Qivr.Api.Services
                 var user = await _db.Database
                     .SqlQuery<UserConsentDto>($@"
                         SELECT consent_sms as ConsentSms, phone_e164 as PhoneE164
-                        FROM qivr.users 
+                        FROM public.users 
                         WHERE id = {userId} AND tenant_id = {tenantId}")
                     .FirstOrDefaultAsync(cancellationToken);
                 
@@ -96,7 +96,7 @@ namespace Qivr.Api.Services
                 var user = await _db.Database
                     .SqlQuery<UserEmailDto>($@"
                         SELECT email as Email, email_verified as EmailVerified
-                        FROM qivr.users 
+                        FROM public.users 
                         WHERE id = {userId} AND tenant_id = {tenantId}")
                     .FirstOrDefaultAsync(cancellationToken);
                 

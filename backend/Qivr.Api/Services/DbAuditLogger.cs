@@ -78,7 +78,7 @@ namespace Qivr.Api.Services
                 var correlationId = httpContext?.TraceIdentifier;
 
                 await using var cmd = new NpgsqlCommand(@"
-                    INSERT INTO qivr.audit_logs(
+                    INSERT INTO public.audit_logs(
                         tenant_id,
                         event_type,
                         subject_type,

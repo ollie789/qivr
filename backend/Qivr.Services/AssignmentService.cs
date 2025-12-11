@@ -47,7 +47,7 @@ public class AssignmentService : IAssignmentService
         // Check if intake exists and is not already assigned - FIXED SQL INJECTION
         var intakeExists = await _db.Database
             .SqlQueryRaw<bool>(
-                "SELECT EXISTS(SELECT 1 FROM qivr.evaluations WHERE tenant_id = {0} AND id = {1} AND assigned_to IS NULL)",
+                "SELECT EXISTS(SELECT 1 FROM public.evaluations WHERE tenant_id = {0} AND id = {1} AND assigned_to IS NULL)",
                 tenantId, intakeId)
             .FirstOrDefaultAsync(ct);
 
@@ -60,7 +60,7 @@ public class AssignmentService : IAssignmentService
         var provider = await _db.Database
             .SqlQueryRaw<ProviderInfo>(
                 @"SELECT id, first_name || ' ' || last_name as name, email 
-                  FROM qivr.users 
+                  FROM public.users 
                   WHERE tenant_id = {0} AND id = {1} AND roles @> ARRAY['Clinician']::varchar[]",
                 tenantId, providerId)
             .FirstOrDefaultAsync(ct);
@@ -72,7 +72,7 @@ public class AssignmentService : IAssignmentService
 
         // Create assignment record
         await _db.Database.ExecuteSqlInterpolatedAsync(
-            $@"INSERT INTO qivr.assignments (
+            $@"INSERT INTO public.assignments (
                 id, tenant_id, intake_id, provider_id, assigned_at, status, notes, created_at, updated_at
             ) VALUES (
                 {assignmentId}, {tenantId}, {intakeId}, {providerId}, {now}, 
@@ -81,7 +81,7 @@ public class AssignmentService : IAssignmentService
 
         // Update evaluation with assigned provider
         await _db.Database.ExecuteSqlInterpolatedAsync(
-            $@"UPDATE qivr.evaluations 
+            $@"UPDATE public.evaluations 
                SET assigned_to = {providerId}, 
                    status = {"reviewed"},
                    updated_at = {now}
@@ -123,8 +123,8 @@ public class AssignmentService : IAssignmentService
         var currentAssignment = await _db.Database
             .SqlQueryRaw<AssignmentInfo>(
                 @"SELECT a.id, a.provider_id, u.first_name || ' ' || last_name as provider_name
-                  FROM qivr.assignments a
-                  JOIN qivr.users u ON u.id = a.provider_id
+                  FROM public.assignments a
+                  JOIN public.users u ON u.id = a.provider_id
                   WHERE a.tenant_id = {0} AND a.intake_id = {1} AND a.status = 'active'",
                 tenantId, intakeId)
             .FirstOrDefaultAsync(ct);
@@ -136,7 +136,7 @@ public class AssignmentService : IAssignmentService
 
         // Mark current assignment as reassigned
         await _db.Database.ExecuteSqlInterpolatedAsync(
-            $@"UPDATE qivr.assignments 
+            $@"UPDATE public.assignments 
                SET status = 'reassigned', 
                    completed_at = {now},
                    completion_reason = {reason},
@@ -181,9 +181,9 @@ public class AssignmentService : IAssignmentService
                 a.assigned_at as AssignedAt, a.status, a.notes,
                 e.patient_name as PatientName, e.chief_complaint as ChiefComplaint,
                 e.urgency as Urgency
-               FROM qivr.assignments a
-               JOIN qivr.users u ON u.id = a.provider_id
-               JOIN qivr.evaluations e ON e.id = a.intake_id
+               FROM public.assignments a
+               JOIN public.users u ON u.id = a.provider_id
+               JOIN public.evaluations e ON e.id = a.intake_id
                WHERE a.tenant_id = {0} AND a.provider_id = {1}";
         
         if (status.HasValue)
@@ -219,8 +219,8 @@ public class AssignmentService : IAssignmentService
                     COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'completed' AND a.completed_at > NOW() - INTERVAL '7 days') as CompletedThisWeek,
                     AVG(EXTRACT(EPOCH FROM (a.completed_at - a.assigned_at))/3600) FILTER (WHERE a.status = 'completed') as AvgCompletionHours,
                     MAX(a.assigned_at) as LastAssignedAt
-                   FROM qivr.users u
-                   LEFT JOIN qivr.assignments a ON a.provider_id = u.id AND a.tenant_id = {0}
+                   FROM public.users u
+                   LEFT JOIN public.assignments a ON a.provider_id = u.id AND a.tenant_id = {0}
                    WHERE u.tenant_id = {0} AND u.roles @> ARRAY['Clinician']::varchar[]
                    GROUP BY u.id, u.first_name, u.last_name
                    ORDER BY ActiveAssignments ASC",
@@ -239,7 +239,7 @@ public class AssignmentService : IAssignmentService
         var now = DateTime.UtcNow;
 
         var result = await _db.Database.ExecuteSqlInterpolatedAsync(
-            $@"UPDATE qivr.assignments 
+            $@"UPDATE public.assignments 
                SET status = 'cancelled', 
                    completed_at = {now},
                    completion_reason = {reason},
@@ -249,7 +249,7 @@ public class AssignmentService : IAssignmentService
         if (result > 0)
         {
             await _db.Database.ExecuteSqlInterpolatedAsync(
-                $@"UPDATE qivr.evaluations 
+                $@"UPDATE public.evaluations 
                    SET assigned_to = NULL,
                        status = 'Pending',
                        updated_at = {now}
@@ -272,8 +272,8 @@ public class AssignmentService : IAssignmentService
                 u.first_name || ' ' || u.last_name as ProviderName,
                 a.assigned_at as AssignedAt, a.completed_at as CompletedAt,
                 a.status, a.completion_reason as CompletionReason, a.notes
-               FROM qivr.assignments a
-               JOIN qivr.users u ON u.id = a.provider_id
+               FROM public.assignments a
+               JOIN public.users u ON u.id = a.provider_id
                WHERE a.tenant_id = {tenantId} AND a.intake_id = {intakeId}
                ORDER BY a.assigned_at DESC")
             .ToListAsync(ct);

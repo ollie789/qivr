@@ -151,7 +151,7 @@ public class McidTrackingService : IMcidTrackingService
                        threshold_value as Threshold,
                        created_at as CreatedAt,
                        updated_at as UpdatedAt
-                FROM qivr.mcid_thresholds
+                FROM public.mcid_thresholds
                 WHERE prom_template_key = {promTemplateKey}
             ")
             .ToListAsync();
@@ -184,7 +184,7 @@ public class McidTrackingService : IMcidTrackingService
     public async Task UpdateMcidThreshold(string promTemplateKey, string measureType, decimal threshold)
     {
         await _dbContext.Database.ExecuteSqlAsync($@"
-            INSERT INTO qivr.mcid_thresholds (id, prom_template_key, measure_type, threshold_value, created_at, updated_at)
+            INSERT INTO public.mcid_thresholds (id, prom_template_key, measure_type, threshold_value, created_at, updated_at)
             VALUES ({Guid.NewGuid()}, {promTemplateKey}, {measureType}, {threshold}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (prom_template_key, measure_type) 
             DO UPDATE SET threshold_value = {threshold}, updated_at = CURRENT_TIMESTAMP
@@ -223,9 +223,9 @@ public class McidTrackingService : IMcidTrackingService
                     COUNT(*) as InstanceCount,
                     MIN(pi.completed_at) as FirstAssessment,
                     MAX(pi.completed_at) as LastAssessment
-                FROM qivr.prom_instances pi
-                JOIN qivr.prom_templates pt ON pi.prom_template_id = pt.id
-                JOIN qivr.patients p ON pi.patient_id = p.id
+                FROM public.prom_instances pi
+                JOIN public.prom_templates pt ON pi.prom_template_id = pt.id
+                JOIN public.patients p ON pi.patient_id = p.id
                 WHERE p.clinic_id = {clinicId}
                     AND pi.status = 'completed'
                     AND pi.completed_at BETWEEN {startDate} AND {endDate}

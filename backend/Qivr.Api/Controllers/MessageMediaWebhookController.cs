@@ -81,7 +81,7 @@ namespace Qivr.Api.Controllers
                     .SqlQuery<UserDto>($@"
                         SELECT id as Id, tenant_id as TenantId, consent_sms as ConsentSms, 
                                first_name as FirstName, last_name as LastName, email as Email
-                        FROM qivr.users 
+                        FROM public.users 
                         WHERE phone_e164 = {phoneE164} AND tenant_id = {tenantId}")
                     .FirstOrDefaultAsync(cancellationToken);
                 
@@ -176,7 +176,7 @@ namespace Qivr.Api.Controllers
         {
             // Update user consent
             await _db.Database.ExecuteSqlInterpolatedAsync($@"
-                UPDATE qivr.users 
+                UPDATE public.users 
                 SET consent_sms = {newConsent}, 
                     updated_at = NOW()
                 WHERE id = {userId} AND tenant_id = {tenantId}",

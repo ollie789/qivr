@@ -48,7 +48,7 @@ public class IdempotencyMiddleware
 
         // Lookup existing idempotency record
         var existing = await db.Database.SqlQueryRaw<IdemRow>(
-            "SELECT id, status_code, response_body FROM qivr.idempotency_keys WHERE tenant_id = {0} AND idempotency_key = {1} AND method = {2} AND path = {3} LIMIT 1",
+            "SELECT id, status_code, response_body FROM public.idempotency_keys WHERE tenant_id = {0} AND idempotency_key = {1} AND method = {2} AND path = {3} LIMIT 1",
             Guid.Parse(tenantId), key, context.Request.Method, context.Request.Path.ToString()
         ).FirstOrDefaultAsync();
 
@@ -84,7 +84,7 @@ public class IdempotencyMiddleware
             if (Guid.TryParse(userIdStr, out var parsed)) userId = parsed;
 
             await db.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO qivr.idempotency_keys (
+                INSERT INTO public.idempotency_keys (
                     tenant_id, user_id, idempotency_key, method, path, request_hash, status_code, response_body, created_at
                 ) VALUES (
                     {Guid.Parse(tenantId)}, {userId}, {key}, {context.Request.Method}, {context.Request.Path.ToString()}, NULL, {context.Response.StatusCode}, {text}, NOW()

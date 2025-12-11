@@ -122,8 +122,8 @@ public class ClinicAnalyticsController : BaseApiController
                         'Pain Intensity' as metric1,
                         'PROM Score' as metric2,
                         COALESCE(CORR(pm.pain_intensity, pi.score), 0) as coefficient
-                    FROM qivr.pain_maps pm
-                    INNER JOIN qivr.prom_instances pi ON pm.patient_id = pi.patient_id
+                    FROM public.pain_maps pm
+                    INNER JOIN public.prom_instances pi ON pm.patient_id = pi.patient_id
                         AND DATE(pm.created_at) = DATE(pi.completed_at)
                     WHERE pm.tenant_id = {tenantId}
                         AND pm.created_at >= {since}

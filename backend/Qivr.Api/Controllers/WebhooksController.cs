@@ -89,7 +89,7 @@ public class WebhooksController : ControllerBase
 
             // Update users.consent JSON -> sms: true/false
             await _db.Database.ExecuteSqlInterpolatedAsync($@"
-                UPDATE qivr.users
+                UPDATE public.users
                 SET consent = jsonb_set(coalesce(consent, '{{}}'::jsonb), '{{sms}}', {(granted ? "true" : "false")}::jsonb, true),
                     updated_at = NOW()
                 WHERE tenant_id = {tenantId} AND REGEXP_REPLACE(coalesce(phone,''), '[^0-9]+', '', 'g') = REGEXP_REPLACE({normalized}, '[^0-9]+', '', 'g')
@@ -97,7 +97,7 @@ public class WebhooksController : ControllerBase
 
             // Write audit log
             await _db.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO qivr.audit_logs (tenant_id, user_id, action, resource_type, resource_id, created_at, metadata)
+                INSERT INTO public.audit_logs (tenant_id, user_id, action, resource_type, resource_id, created_at, metadata)
                 VALUES ({tenantId}, NULL, {action}, 'user_consent', NULL, NOW(), jsonb_build_object('phone', {normalized}, 'granted', {granted}, 'event_id', {eventId}))
             ");
 

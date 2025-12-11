@@ -61,7 +61,7 @@ public class SecurityEventService : ISecurityEventService
         {
             // Log to database
             await _dbContext.Database.ExecuteSqlAsync($@"
-                INSERT INTO qivr.security_events 
+                INSERT INTO public.security_events 
                 (id, event_type, username, ip_address, user_agent, details, created_at)
                 VALUES ({Guid.NewGuid()}, 'failed_login', {username}, {ipAddress}, 
                         {userAgent}, 'Failed login attempt', CURRENT_TIMESTAMP)
@@ -113,7 +113,7 @@ public class SecurityEventService : ISecurityEventService
         {
             // Log to database
             await _dbContext.Database.ExecuteSqlAsync($@"
-                INSERT INTO qivr.security_events 
+                INSERT INTO public.security_events 
                 (id, event_type, user_id, username, ip_address, details, created_at)
                 VALUES ({Guid.NewGuid()}, 'successful_login', {userId}, {username}, 
                         {ipAddress}, 'Successful login', CURRENT_TIMESTAMP)
@@ -138,7 +138,7 @@ public class SecurityEventService : ISecurityEventService
         try
         {
             await _dbContext.Database.ExecuteSqlAsync($@"
-                INSERT INTO qivr.security_events 
+                INSERT INTO public.security_events 
                 (id, event_type, ip_address, details, severity, created_at)
                 VALUES ({Guid.NewGuid()}, {eventType}, {ipAddress}, {details}, 
                         'high', CURRENT_TIMESTAMP)
@@ -175,7 +175,7 @@ public class SecurityEventService : ISecurityEventService
                 System.Text.Json.JsonSerializer.Serialize(metadata) : "{}";
             
             await _dbContext.Database.ExecuteSqlAsync($@"
-                INSERT INTO qivr.security_alerts 
+                INSERT INTO public.security_alerts 
                 (id, alert_type, message, metadata, created_at)
                 VALUES ({Guid.NewGuid()}, {alertType}, {message}, 
                         {metadataJson}::jsonb, CURRENT_TIMESTAMP)
@@ -230,7 +230,7 @@ public class SecurityEventService : ISecurityEventService
         _accountLockouts[username] = lockoutUntil;
         
         await _dbContext.Database.ExecuteSqlAsync($@"
-            UPDATE qivr.users 
+            UPDATE public.users 
             SET locked_until = {lockoutUntil},
                 updated_at = CURRENT_TIMESTAMP
             WHERE email = {username}
@@ -247,7 +247,7 @@ public class SecurityEventService : ISecurityEventService
             var recentLogins = await _dbContext.Database
                 .SqlQuery<LoginHistoryDto>($@"
                     SELECT ip_address, created_at
-                    FROM qivr.security_events
+                    FROM public.security_events
                     WHERE user_id = {userId}
                       AND event_type = 'successful_login'
                       AND created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'
