@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { CognitoUserSession } from "amazon-cognito-identity-js";
-import * as cognitoAuth from "../services/cognitoAuth";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { CognitoUser, CognitoUserSession } from 'amazon-cognito-identity-js';
+import * as cognitoAuth from '../services/cognitoAuth';
 
 interface Partner {
   id: string;
@@ -14,10 +14,13 @@ interface Partner {
 interface AuthState {
   isAuthenticated: boolean;
   partner: Partner | null;
+  newPasswordRequired: boolean;
+  pendingUser: CognitoUser | null;
   login: (
     email: string,
-    password: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+    password: string
+  ) => Promise<{ success: boolean; error?: string; newPasswordRequired?: boolean }>;
+  completeNewPassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   checkSession: () => Promise<boolean>;
 }
@@ -27,15 +30,17 @@ function parsePartnerFromSession(session: CognitoUserSession): Partner {
   return {
     id: payload.sub,
     email: payload.email,
-    name: payload.email.split("@")[0],
+    name: payload.email.split('@')[0],
   };
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isAuthenticated: false,
       partner: null,
+      newPasswordRequired: false,
+      pendingUser: null,
 
       login: async (email, password) => {
         const result = await cognitoAuth.signIn(email, password);
@@ -43,6 +48,32 @@ export const useAuthStore = create<AuthState>()(
           set({
             partner: parsePartnerFromSession(result.session),
             isAuthenticated: true,
+            newPasswordRequired: false,
+            pendingUser: null,
+          });
+          return { success: true };
+        }
+        if (result.challengeName === 'NEW_PASSWORD_REQUIRED') {
+          set({
+            newPasswordRequired: true,
+            pendingUser: result.cognitoUser || null,
+          });
+          return { success: false, newPasswordRequired: true };
+        }
+        return { success: false, error: result.error };
+      },
+
+      completeNewPassword: async (newPassword) => {
+        const { pendingUser } = get();
+        if (!pendingUser) return { success: false, error: 'No pending user' };
+
+        const result = await cognitoAuth.completeNewPassword(pendingUser, newPassword);
+        if (result.success && result.session) {
+          set({
+            partner: parsePartnerFromSession(result.session),
+            isAuthenticated: true,
+            newPasswordRequired: false,
+            pendingUser: null,
           });
           return { success: true };
         }
@@ -51,7 +82,12 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         cognitoAuth.signOut();
-        set({ partner: null, isAuthenticated: false });
+        set({
+          partner: null,
+          isAuthenticated: false,
+          newPasswordRequired: false,
+          pendingUser: null,
+        });
       },
 
       checkSession: async () => {
@@ -68,8 +104,8 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "partner-auth",
+      name: 'partner-auth',
       partialize: (state) => ({ partner: state.partner }),
-    },
-  ),
+    }
+  )
 );
