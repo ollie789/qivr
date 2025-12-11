@@ -165,7 +165,7 @@ export const IntakeWidget: React.FC<Props> = ({ clinicId, apiUrl }) => {
             ageRange: form.ageRange,
           },
           medicalHistory: {
-            conditions: form.additionalHistory ? [form.additionalHistory] : [],
+            conditions: form.additionalHistory || [],
             medications: form.medications || [],
             allergies: [],
             previousTreatments: form.currentTreatments?.join(', ') || '',
