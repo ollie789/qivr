@@ -56,7 +56,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         var availableSlots = new List<Qivr.Core.Interfaces.TimeSlot>();
 
         // Get provider - try by Provider.Id first, then by UserId
-        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
+        // Use IgnoreQueryFilters since tenant context may not be set in service layer
+        var provider = await _context.Providers.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
         if (provider == null) return availableSlots;
         
         // Use the actual Provider.Id for all subsequent lookups
@@ -172,7 +173,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     public async Task<bool> IsSlotAvailable(Guid providerId, DateTime startTime, DateTime endTime)
     {
         // Get provider - try by Provider.Id first, then by UserId
-        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
+        // Use IgnoreQueryFilters since tenant context may not be set in service layer
+        var provider = await _context.Providers.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
         if (provider == null) return false;
         
         // Use the actual Provider.Id for all subsequent lookups

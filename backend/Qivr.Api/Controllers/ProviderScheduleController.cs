@@ -250,26 +250,34 @@ public class ProviderScheduleController : ControllerBase
         [FromQuery] DateTime date,
         [FromQuery] int durationMinutes = 30)
     {
-        var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
-        if (tenantId == Guid.Empty)
+        try
         {
-            return Unauthorized(new { error = "Tenant context is required." });
+            var tenantId = _authorizationService.GetCurrentTenantId(HttpContext);
+            if (tenantId == Guid.Empty)
+            {
+                return Unauthorized(new { error = "Tenant context is required." });
+            }
+
+            var provider = await FindProviderAsync(tenantId, providerId);
+            if (provider == null)
+            {
+                return NotFound(new { error = "Provider not found" });
+            }
+
+            var slots = await _availabilityService.GetAvailableSlots(provider.Id, date, durationMinutes);
+
+            return Ok(slots.Select(s => new
+            {
+                start = s.Start,
+                end = s.End,
+                isAvailable = s.IsAvailable
+            }));
         }
-
-        var provider = await FindProviderAsync(tenantId, providerId);
-        if (provider == null)
+        catch (Exception ex)
         {
-            return NotFound(new { error = "Provider not found" });
+            _logger.LogError(ex, "Error getting available slots for provider {ProviderId} on {Date}", providerId, date);
+            return StatusCode(500, new { error = "Failed to get available slots", details = ex.Message });
         }
-
-        var slots = await _availabilityService.GetAvailableSlots(provider.Id, date, durationMinutes);
-
-        return Ok(slots.Select(s => new
-        {
-            start = s.Start,
-            end = s.End,
-            isAvailable = s.IsAvailable
-        }));
     }
 
     /// <summary>
