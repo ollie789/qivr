@@ -354,10 +354,11 @@ public class IntakeController : ControllerBase
         {
             // Use raw SQL with ON CONFLICT DO NOTHING to handle race conditions
             // This is atomic and prevents duplicate key errors
+            // Note: column is cognito_id in DB (mapped from CognitoSub property)
             var rowsAffected = await context.Database.ExecuteSqlInterpolatedAsync($@"
                 INSERT INTO public.users (
-                    id, tenant_id, cognito_sub, email, email_verified, phone_verified,
-                    first_name, last_name, phone, user_type, roles, preferences, consent,
+                    id, tenant_id, cognito_id, email, email_verified, phone_verified,
+                    first_name, last_name, phone, role, roles, metadata, consent,
                     created_at, updated_at
                 ) VALUES (
                     {newUserId}, {tenantId}, {cognitoSub}, {email}, false, false,
