@@ -58,14 +58,18 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         // Get provider - try by Provider.Id first, then by UserId
         // Use IgnoreQueryFilters since tenant context may not be set in service layer
         var provider = await _context.Providers.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
-        if (provider == null) return availableSlots;
-        
+        if (provider == null)
+        {
+            _logger.LogWarning("GetAvailableSlots: Provider not found for ID {ProviderId}", providerId);
+            return availableSlots;
+        }
+
         // Use the actual Provider.Id for all subsequent lookups
         var actualProviderId = provider.Id;
-        
-        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == provider.TenantId);
+
+        var tenant = await _context.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.Id == provider.TenantId);
         var timezone = tenant?.Timezone ?? "Australia/Sydney";
-        
+
         TimeZoneInfo tz;
         try
         {
@@ -78,8 +82,13 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             tz = TimeZoneInfo.Utc;
         }
 
-        // Work with local date for schedule lookup
+        // The input date from the frontend is typically in the format "yyyy-MM-dd"
+        // which gets parsed as a local date without time. We treat this as the
+        // desired date in the tenant's timezone.
         var localDate = date.Date;
+
+        _logger.LogDebug("GetAvailableSlots: Provider {ProviderId}, Date {Date}, Timezone {TZ}, LocalDate {LocalDate}",
+            actualProviderId, date, timezone, localDate);
 
         // Check if provider is available on this date
         if (!await IsProviderAvailableOnDate(actualProviderId, localDate))
@@ -108,7 +117,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         var utcDayEnd = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDayEnd, DateTimeKind.Unspecified), tz);
 
         // Check by both ProviderProfileId and ProviderId (user ID) for backwards compatibility
-        var existingAppointments = await _context.Appointments
+        // Use IgnoreQueryFilters to bypass tenant RLS since we've already validated the provider
+        var existingAppointments = await _context.Appointments.IgnoreQueryFilters()
             .Where(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == provider.UserId)
                 && a.ScheduledStart >= utcDayStart
                 && a.ScheduledStart < utcDayEnd
@@ -172,17 +182,26 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<bool> IsSlotAvailable(Guid providerId, DateTime startTime, DateTime endTime)
     {
+        _logger.LogInformation("IsSlotAvailable: Checking slot for provider {ProviderId}, StartTime {StartTime} (Kind: {StartKind}), EndTime {EndTime} (Kind: {EndKind})",
+            providerId, startTime, startTime.Kind, endTime, endTime.Kind);
+
         // Get provider - try by Provider.Id first, then by UserId
         // Use IgnoreQueryFilters since tenant context may not be set in service layer
         var provider = await _context.Providers.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
-        if (provider == null) return false;
-        
+        if (provider == null)
+        {
+            _logger.LogWarning("IsSlotAvailable: Provider not found for ID {ProviderId}", providerId);
+            return false;
+        }
+
         // Use the actual Provider.Id for all subsequent lookups
         var actualProviderId = provider.Id;
-        
-        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == provider.TenantId);
+
+        _logger.LogDebug("IsSlotAvailable: Resolved provider ID {InputId} to profile {ProfileId}", providerId, actualProviderId);
+
+        var tenant = await _context.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.Id == provider.TenantId);
         var timezone = tenant?.Timezone ?? "Australia/Sydney";
-        
+
         TimeZoneInfo tz;
         try
         {
@@ -196,30 +215,40 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         }
 
         // Convert to local time for working hours comparison
-        var localStart = TimeZoneInfo.ConvertTimeFromUtc(
-            startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc), 
-            tz);
-        var localEnd = TimeZoneInfo.ConvertTimeFromUtc(
-            endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc), 
-            tz);
+        // If the time is Unspecified, treat it as UTC (this is the typical case from API calls)
+        var utcStartTime = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
+        var utcEndTime = endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc);
+
+        var localStart = TimeZoneInfo.ConvertTimeFromUtc(utcStartTime, tz);
+        var localEnd = TimeZoneInfo.ConvertTimeFromUtc(utcEndTime, tz);
+
+        _logger.LogInformation("IsSlotAvailable: Timezone {TZ}, UTC Start {UtcStart}, Local Start {LocalStart}, UTC End {UtcEnd}, Local End {LocalEnd}",
+            timezone, utcStartTime, localStart, utcEndTime, localEnd);
 
         // Validate: Start must be before End
         if (localStart >= localEnd)
         {
-            _logger.LogWarning("Invalid slot: start {Start} >= end {End}", localStart, localEnd);
+            _logger.LogWarning("IsSlotAvailable: Invalid slot - start {Start} >= end {End}", localStart, localEnd);
             return false;
         }
 
         // Check if provider is available on this date (using local date)
-        if (!await IsProviderAvailableOnDate(actualProviderId, localStart.Date))
+        var isAvailableOnDate = await IsProviderAvailableOnDate(actualProviderId, localStart.Date);
+        if (!isAvailableOnDate)
         {
+            _logger.LogInformation("IsSlotAvailable: Provider {ProviderId} is NOT available on date {Date} (time off or non-working day)",
+                actualProviderId, localStart.Date);
             return false;
         }
 
         // Check if provider works during this time
         var workingHours = await GetProviderWorkingHoursForDate(actualProviderId, localStart.Date);
+        _logger.LogInformation("IsSlotAvailable: Working hours for {Date}: IsWorkingDay={IsWorking}, Start={Start}, End={End}",
+            localStart.Date, workingHours.IsWorkingDay, workingHours.Start, workingHours.End);
+
         if (!workingHours.IsWorkingDay)
         {
+            _logger.LogInformation("IsSlotAvailable: Provider {ProviderId} does not work on {DayOfWeek}", actualProviderId, localStart.DayOfWeek);
             return false;
         }
 
@@ -228,6 +257,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
         if (startTimeOfDay < workingHours.Start || endTimeOfDay > workingHours.End)
         {
+            _logger.LogInformation("IsSlotAvailable: Requested time {ReqStart}-{ReqEnd} is outside working hours {WorkStart}-{WorkEnd}",
+                startTimeOfDay, endTimeOfDay, workingHours.Start, workingHours.End);
             return false;
         }
 
@@ -237,6 +268,8 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             // Break overlaps if: startTimeOfDay < breakEnd AND endTimeOfDay > breakStart
             if (startTimeOfDay < workingHours.BreakEnd.Value && endTimeOfDay > workingHours.BreakStart.Value)
             {
+                _logger.LogInformation("IsSlotAvailable: Requested time overlaps with break {BreakStart}-{BreakEnd}",
+                    workingHours.BreakStart.Value, workingHours.BreakEnd.Value);
                 return false; // Overlaps with break
             }
         }
@@ -245,14 +278,34 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         // Two intervals [A,B) and [C,D) overlap if A < D AND B > C
         // Check both ProviderProfileId and ProviderId for backwards compatibility
         // Use original times (UTC) for database comparison since appointments are stored in UTC
-        var utcStart = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
-        var utcEnd = endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc);
-        
-        var hasConflict = await _context.Appointments
-            .AnyAsync(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == provider.UserId)
+        // Use IgnoreQueryFilters to bypass tenant RLS since we've already validated the provider
+
+        // Get conflicting appointments for detailed logging
+        var conflictingAppointments = await _context.Appointments.IgnoreQueryFilters()
+            .Where(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == provider.UserId)
                 && a.Status != AppointmentStatus.Cancelled
-                && utcStart < a.ScheduledEnd
-                && utcEnd > a.ScheduledStart);
+                && utcStartTime < a.ScheduledEnd
+                && utcEndTime > a.ScheduledStart)
+            .Select(a => new { a.Id, a.ScheduledStart, a.ScheduledEnd, a.Status })
+            .ToListAsync();
+
+        var hasConflict = conflictingAppointments.Any();
+
+        if (hasConflict)
+        {
+            _logger.LogInformation("IsSlotAvailable: Found {Count} conflicting appointments for provider {ProviderId} in slot {Start}-{End}:",
+                conflictingAppointments.Count, actualProviderId, utcStartTime, utcEndTime);
+            foreach (var appt in conflictingAppointments)
+            {
+                _logger.LogInformation("  - Appointment {Id}: {Start} to {End} (Status: {Status})",
+                    appt.Id, appt.ScheduledStart, appt.ScheduledEnd, appt.Status);
+            }
+        }
+        else
+        {
+            _logger.LogInformation("IsSlotAvailable: No conflicts found. Slot {Start}-{End} is AVAILABLE for provider {ProviderId}",
+                utcStartTime, utcEndTime, actualProviderId);
+        }
 
         return !hasConflict;
     }
@@ -304,31 +357,45 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         var schedules = new List<ProviderDailySchedule>();
         var currentDate = startDate.Date;
 
+        // Resolve the provider - the providerId might be either Provider.Id or User.Id
+        var provider = await _context.Providers.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
+
+        if (provider == null)
+        {
+            _logger.LogWarning("GetProviderSchedule: Provider not found for ID {ProviderId}", providerId);
+            return schedules;
+        }
+
+        var actualProviderId = provider.Id;
+        var providerUserId = provider.UserId;
+
         while (currentDate <= endDate.Date)
         {
-            var workingHours = await GetProviderWorkingHoursForDate(providerId, currentDate);
-            var isAvailable = await IsProviderAvailableOnDate(providerId, currentDate);
+            var workingHours = await GetProviderWorkingHoursForDate(actualProviderId, currentDate);
+            var isAvailable = await IsProviderAvailableOnDate(actualProviderId, currentDate);
 
-            var appointments = await _context.Appointments
+            // Check by both ProviderProfileId and ProviderId (user ID) for backwards compatibility
+            var appointments = await _context.Appointments.IgnoreQueryFilters()
                 .Include(a => a.Patient)
-                .Where(a => a.ProviderId == providerId
+                .Where(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == providerUserId)
                     && a.ScheduledStart.Date == currentDate.Date
                     && a.Status != AppointmentStatus.Cancelled)
                 .OrderBy(a => a.ScheduledStart)
                 .ToListAsync();
 
-            var availableSlots = isAvailable ? await GetAvailableSlots(providerId, currentDate, 30) : new List<Qivr.Core.Interfaces.TimeSlot>();
+            var availableSlots = isAvailable ? await GetAvailableSlots(actualProviderId, currentDate, 30) : new List<Qivr.Core.Interfaces.TimeSlot>();
 
             // Get time off info for this day
             var timeOff = await _context.ProviderTimeOffs.IgnoreQueryFilters()
-                .Where(t => t.ProviderId == providerId
+                .Where(t => t.ProviderId == actualProviderId
                     && t.StartDateTime.Date <= currentDate.Date
                     && t.EndDateTime.Date >= currentDate.Date)
                 .FirstOrDefaultAsync();
 
             schedules.Add(new ProviderDailySchedule
             {
-                ProviderId = providerId,
+                ProviderId = actualProviderId,  // Return the resolved provider profile ID
                 Date = currentDate,
                 WorkingHours = workingHours,
                 Appointments = appointments,
@@ -348,16 +415,35 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     {
         var endTime = startTime.AddMinutes(durationMinutes);
 
-        // Verify slot is available
-        if (!await IsSlotAvailable(providerId, startTime, endTime))
+        // First, resolve the provider - the providerId might be either Provider.Id or User.Id
+        // Try to find by Provider.Id first, then by UserId
+        var providerProfile = await _context.Providers
+            .IgnoreQueryFilters()
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
+
+        if (providerProfile == null)
+        {
+            _logger.LogError("Provider profile not found for ID {ProviderId} (checked both Provider.Id and UserId)", providerId);
+            return false;
+        }
+
+        var actualProviderId = providerProfile.Id;
+        var providerUserId = providerProfile.UserId;
+
+        _logger.LogInformation("BookAppointment: Resolved providerId {InputId} to profile {ProfileId}, user {UserId}",
+            providerId, actualProviderId, providerUserId);
+
+        // Verify slot is available using the resolved provider profile ID
+        if (!await IsSlotAvailable(actualProviderId, startTime, endTime))
         {
             _logger.LogWarning("Attempted to book unavailable slot for provider {ProviderId} at {StartTime}",
-                providerId, startTime);
+                actualProviderId, startTime);
             return false;
         }
 
         // Check for patient conflicts (patient can't have overlapping appointments)
-        var patientHasConflict = await _context.Appointments
+        var patientHasConflict = await _context.Appointments.IgnoreQueryFilters()
             .AnyAsync(a => a.PatientId == patientId
                 && a.Status != AppointmentStatus.Cancelled
                 && ((startTime >= a.ScheduledStart && startTime < a.ScheduledEnd) ||
@@ -372,41 +458,35 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
         try
         {
-            // Get tenant ID from provider
-            var provider = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == providerId);
-
-            if (provider == null)
+            // Get the User entity for tenant context
+            var providerUser = providerProfile.User;
+            if (providerUser == null)
             {
-                _logger.LogError("Provider {ProviderId} not found", providerId);
-                return false;
+                providerUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == providerUserId);
             }
 
-            var providerProfile = await _context.Providers
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(p => p.UserId == providerId && p.TenantId == provider.TenantId);
-
-            if (providerProfile == null)
+            if (providerUser == null)
             {
-                _logger.LogError("Provider profile for provider {ProviderId} not found", providerId);
+                _logger.LogError("Provider user {UserId} not found", providerUserId);
                 return false;
             }
 
             // Check max appointments per day
             var schedule = await _context.ProviderSchedules.IgnoreQueryFilters()
-                .FirstOrDefaultAsync(s => s.ProviderId == providerProfile.Id && s.DayOfWeek == startTime.DayOfWeek);
+                .FirstOrDefaultAsync(s => s.ProviderId == actualProviderId && s.DayOfWeek == startTime.DayOfWeek);
 
             if (schedule?.MaxAppointmentsPerDay > 0)
             {
-                var existingAppointmentCount = await _context.Appointments
-                    .CountAsync(a => a.ProviderId == providerId
+                // Check appointments by both ProviderProfileId and ProviderId (user ID) for backwards compatibility
+                var existingAppointmentCount = await _context.Appointments.IgnoreQueryFilters()
+                    .CountAsync(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == providerUserId)
                         && a.ScheduledStart.Date == startTime.Date
                         && a.Status != AppointmentStatus.Cancelled);
 
                 if (existingAppointmentCount >= schedule.MaxAppointmentsPerDay)
                 {
                     _logger.LogWarning("Provider {ProviderId} has reached max appointments ({Max}) for {Date}",
-                        providerId, schedule.MaxAppointmentsPerDay, startTime.Date);
+                        actualProviderId, schedule.MaxAppointmentsPerDay, startTime.Date);
                     return false;
                 }
             }
@@ -415,11 +495,11 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             var appointment = new Appointment
             {
                 Id = Guid.NewGuid(),
-                TenantId = provider.TenantId,
+                TenantId = providerUser.TenantId,
                 PatientId = patientId,
-                ProviderId = providerId,
+                ProviderId = providerUserId,           // Store the User.Id for backward compatibility
                 ClinicId = providerProfile.ClinicId,
-                ProviderProfileId = providerProfile.Id,
+                ProviderProfileId = actualProviderId,  // Store the Provider profile ID
                 ScheduledStart = startTime,
                 ScheduledEnd = endTime,
                 AppointmentType = appointmentType,
@@ -431,15 +511,15 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             _context.Appointments.Add(appointment);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully booked appointment {AppointmentId} for patient {PatientId} with provider {ProviderId}",
-                appointment.Id, patientId, providerId);
+            _logger.LogInformation("Successfully booked appointment {AppointmentId} for patient {PatientId} with provider profile {ProfileId} (user {UserId})",
+                appointment.Id, patientId, actualProviderId, providerUserId);
 
             return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error booking appointment for patient {PatientId} with provider {ProviderId}",
-                patientId, providerId);
+                patientId, actualProviderId);
             return false;
         }
     }
