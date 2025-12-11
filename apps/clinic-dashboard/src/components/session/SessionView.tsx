@@ -56,7 +56,6 @@ import { medicalRecordsApi } from '../../services/medicalRecordsApi';
 import { DeviceSelector } from '../devices';
 import { ScheduleAppointmentDialog } from '../dialogs/ScheduleAppointmentDialog';
 import { AssignTreatmentPlanDialog } from '../dialogs/AssignTreatmentPlanDialog';
-import { PainTrendMini } from './PainTrendMini';
 import { EvaluationSummaryPanel } from './EvaluationSummaryPanel';
 import { MedicalHistoryPanel } from './MedicalHistoryPanel';
 import { PromSummaryPanel } from './PromSummaryPanel';
@@ -168,7 +167,6 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
   const [sessionStartTime] = useState<Date>(new Date());
   const { formatted: sessionDuration } = useSessionTimer(sessionStartTime);
   const [showPreviousNotes, setShowPreviousNotes] = useState(false);
-  const [showPainHistory, setShowPainHistory] = useState(true);
 
   // SOAP Notes
   const [subjective, setSubjective] = useState('');
@@ -239,13 +237,6 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
     enabled: !!appointment.evaluationId,
   });
 
-  // Fetch pain assessment history
-  const { data: painHistory = [], isLoading: loadingPainHistory } = useQuery({
-    queryKey: ['patient-pain-history', appointment.patientId],
-    queryFn: () => medicalRecordsApi.getVitals(appointment.patientId),
-    enabled: !!appointment.patientId,
-  });
-
   // Fetch medical summary
   const { data: medicalSummary, isLoading: loadingMedicalSummary } = useQuery({
     queryKey: ['patient-medical-summary', appointment.patientId],
@@ -291,21 +282,24 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
       .slice(0, 5);
   }, [previousAppointments, appointment.id]);
 
-  // Transform pain history for the chart
-  const painHistoryForChart = useMemo(() => {
-    return painHistory.map((p) => ({
-      date: p.recordedAt,
-      painLevel: p.overallPainLevel,
-    }));
-  }, [painHistory]);
+  // Get pain level from evaluation
+  const evaluationPainLevel = useMemo(() => {
+    if (!evaluationDetails?.painMap?.bodyParts?.length) return null;
+    // Calculate average pain intensity from all body parts
+    const total = evaluationDetails.painMap.bodyParts.reduce(
+      (sum, part) => sum + (part.intensity || 0),
+      0
+    );
+    return Math.round(total / evaluationDetails.painMap.bodyParts.length);
+  }, [evaluationDetails]);
 
-  // Pre-populate pain level from last session
+  // Pre-populate pain level from evaluation
   useEffect(() => {
-    if (!painInitialized && painHistory.length > 0 && painHistory[0]) {
-      setPainBefore(painHistory[0].overallPainLevel);
+    if (!painInitialized && evaluationPainLevel !== null) {
+      setPainBefore(evaluationPainLevel);
       setPainInitialized(true);
     }
-  }, [painHistory, painInitialized]);
+  }, [evaluationPainLevel, painInitialized]);
 
   // Calculate PROM trends
   const promSummary = useMemo(() => {
@@ -412,10 +406,8 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
         .map((p) => `${p.region} (${p.intensity}/10)`);
       hints.push(`Pain regions: ${regions.join(', ')}`);
     }
-    if (painHistory.length > 0 && painHistory[0]) {
-      hints.push(
-        `Last recorded pain: ${painHistory[0].overallPainLevel}/10 on ${format(parseISO(painHistory[0].recordedAt), 'MMM d')}`
-      );
+    if (evaluationPainLevel !== null) {
+      hints.push(`Intake pain level: ${evaluationPainLevel}/10`);
     }
     // Add physio history injuries
     const injuries = physioHistory.filter(
@@ -434,7 +426,7 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
       hints.push(`Previous sessions: ${completedPreviousAppointments.length} completed`);
     }
     return hints;
-  }, [evaluationDetails, painHistory, physioHistory, completedPreviousAppointments]);
+  }, [evaluationDetails, evaluationPainLevel, physioHistory, completedPreviousAppointments]);
 
   const assessmentHints = useMemo(() => {
     const hints: string[] = [];
@@ -839,45 +831,6 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
 
             {/* PROM Summary Panel */}
             <PromSummaryPanel promResponses={promResponses} isLoading={loadingProms} />
-
-            {/* Pain History Panel */}
-            <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-              <Box
-                sx={{
-                  p: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: 'action.hover' },
-                }}
-                onClick={() => setShowPainHistory(!showPainHistory)}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TrendingDownIcon fontSize="small" color="success" />
-                  <Typography variant="subtitle2" fontWeight={600}>
-                    Pain History
-                  </Typography>
-                </Box>
-                {showPainHistory ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </Box>
-
-              <Collapse in={showPainHistory}>
-                <Box sx={{ px: 2, pb: 2 }}>
-                  {loadingPainHistory ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                      <CircularProgress size={20} />
-                    </Box>
-                  ) : (
-                    <PainTrendMini
-                      history={painHistoryForChart}
-                      currentPainBefore={painBefore}
-                      height={120}
-                    />
-                  )}
-                </Box>
-              </Collapse>
-            </Box>
 
             {/* Treatment Plan Progress */}
             <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>

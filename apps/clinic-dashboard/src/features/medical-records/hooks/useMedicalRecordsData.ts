@@ -35,19 +35,6 @@ export function useMedicalSummary(patientId: string | null) {
   });
 }
 
-export function useVitalSigns(patientId: string | null) {
-  const { canMakeApiCalls } = useAuthGuard();
-
-  return useQuery({
-    queryKey: ['vitalSigns', patientId],
-    queryFn: async () => {
-      if (!patientId) return [];
-      return medicalRecordsApi.getVitals(patientId);
-    },
-    enabled: canMakeApiCalls && !!patientId,
-  });
-}
-
 export function useLabResults(patientId: string | null) {
   const { canMakeApiCalls } = useAuthGuard();
 

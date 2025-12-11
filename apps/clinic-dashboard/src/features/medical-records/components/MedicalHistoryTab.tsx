@@ -11,7 +11,6 @@ import {
   alpha,
   Collapse,
   IconButton,
-  LinearProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -47,7 +46,6 @@ import type { MedicalHistory, MedicalHistoryCategory } from '../types';
 import type { IntakeDetails } from '../../../services/intakeApi';
 import type { PromResponse } from '../../../services/promApi';
 import type { Appointment } from '../../../types';
-import type { VitalSign } from '../../../services/medicalRecordsApi';
 
 interface MedicalHistoryTabProps {
   medicalHistory: MedicalHistory[];
@@ -58,8 +56,6 @@ interface MedicalHistoryTabProps {
   intakeData?: IntakeDetails | null;
   promResponses?: PromResponse[];
   appointments?: Appointment[];
-  vitalSigns?: VitalSign[];
-  painProgression?: any;
   onAddAssessment?: () => void;
 }
 
@@ -423,39 +419,37 @@ const ChiefComplaintSection: React.FC<{ intake: IntakeDetails }> = ({ intake }) 
   );
 };
 
-// Pain Assessment Section with Mini Map
+// Pain Assessment Section with Mini Map - uses intake evaluation data
 const PainAssessmentSection: React.FC<{
-  vitalSigns: VitalSign[];
+  intakeData?: IntakeDetails | null;
   onAddAssessment?: () => void;
-}> = ({ vitalSigns, onAddAssessment }) => {
-  const latestAssessment = vitalSigns[0];
-  const previousAssessment = vitalSigns[1];
-
-  // Calculate trend
-  const trend = useMemo(() => {
-    if (!latestAssessment || !previousAssessment) return undefined;
-    const diff = latestAssessment.overallPainLevel - previousAssessment.overallPainLevel;
-    if (diff > 0) return 'up' as const;
-    if (diff < 0) return 'down' as const;
-    return 'flat' as const;
-  }, [latestAssessment, previousAssessment]);
-
-  // Convert pain points to PainRegion format for the 3D map
+}> = ({ intakeData, onAddAssessment }) => {
+  // Convert intake pain map to PainRegion format for the 3D map
   const painRegions: PainRegion[] = useMemo(() => {
-    if (!latestAssessment?.painPoints) return [];
-    return latestAssessment.painPoints.map((point) => ({
-      meshName: point.bodyPart,
-      intensity: point.intensity,
-      quality: point.quality || 'aching',
+    if (!intakeData?.painMap?.bodyParts) return [];
+    return intakeData.painMap.bodyParts.map((part) => ({
+      meshName: part.region,
+      intensity: part.intensity || 5,
+      quality: part.type || 'aching',
     }));
-  }, [latestAssessment]);
+  }, [intakeData]);
 
-  if (vitalSigns.length === 0) {
+  // Calculate average pain level
+  const averagePainLevel = useMemo(() => {
+    if (!intakeData?.painMap?.bodyParts?.length) return null;
+    const total = intakeData.painMap.bodyParts.reduce(
+      (sum, part) => sum + (part.intensity || 0),
+      0
+    );
+    return Math.round(total / intakeData.painMap.bodyParts.length);
+  }, [intakeData]);
+
+  if (!intakeData?.painMap?.bodyParts?.length) {
     return (
       <AuraCard variant="flat" sx={{ p: 3, textAlign: 'center' }}>
         <SymptomIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          No pain assessments recorded
+          No pain assessment from intake
         </Typography>
         {onAddAssessment && (
           <AuraButton
@@ -502,7 +496,7 @@ const PainAssessmentSection: React.FC<{
               Pain Assessment
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {latestAssessment && format(parseISO(latestAssessment.recordedAt), 'MMM d, yyyy')}
+              From intake evaluation
             </Typography>
           </Box>
         </Box>
@@ -518,171 +512,59 @@ const PainAssessmentSection: React.FC<{
         )}
       </Box>
 
-      {latestAssessment && (
-        <Grid container>
-          <Grid size={{ xs: 12, md: 5 }}>
-            <Box sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 2 }}>
-                <Typography
-                  variant="h3"
-                  fontWeight={700}
-                  color={getSeverityColor(
-                    latestAssessment.overallPainLevel >= 7
-                      ? 'severe'
-                      : latestAssessment.overallPainLevel >= 4
-                        ? 'moderate'
-                        : 'mild'
-                  )}
-                >
-                  {latestAssessment.overallPainLevel}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  /10
-                </Typography>
-                {trend && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                    {trend === 'down' && (
-                      <TrendingDownIcon sx={{ fontSize: 18, color: auraColors.green.main }} />
-                    )}
-                    {trend === 'up' && (
-                      <TrendingUpIcon sx={{ fontSize: 18, color: auraColors.red.main }} />
-                    )}
-                    {trend === 'flat' && (
-                      <TrendingFlatIcon sx={{ fontSize: 18, color: auraColors.grey[500] }} />
-                    )}
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color:
-                          trend === 'down'
-                            ? auraColors.green.main
-                            : trend === 'up'
-                              ? auraColors.red.main
-                              : 'text.secondary',
-                        ml: 0.5,
-                      }}
-                    >
-                      {trend === 'down' ? 'Improving' : trend === 'up' ? 'Worsening' : 'Stable'}
-                    </Typography>
-                  </Box>
+      <Grid container>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 2 }}>
+              <Typography
+                variant="h3"
+                fontWeight={700}
+                color={getSeverityColor(
+                  (averagePainLevel ?? 0) >= 7
+                    ? 'severe'
+                    : (averagePainLevel ?? 0) >= 4
+                      ? 'moderate'
+                      : 'mild'
                 )}
-              </Box>
+              >
+                {averagePainLevel}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                /10 avg
+              </Typography>
+            </Box>
 
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Functional Impact
+            {intakeData.painMap.bodyParts.length > 0 && (
+              <Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mb: 1, display: 'block' }}
+                >
+                  Affected Areas
                 </Typography>
-                <Chip
-                  label={latestAssessment.functionalImpact}
-                  size="small"
-                  sx={{
-                    ml: 1,
-                    bgcolor: alpha(
-                      latestAssessment.functionalImpact === 'severe'
-                        ? auraColors.red.main
-                        : latestAssessment.functionalImpact === 'moderate'
-                          ? auraColors.orange.main
-                          : auraColors.green.main,
-                      0.1
-                    ),
-                    color:
-                      latestAssessment.functionalImpact === 'severe'
-                        ? auraColors.red.main
-                        : latestAssessment.functionalImpact === 'moderate'
-                          ? auraColors.orange.main
-                          : auraColors.green.main,
-                    textTransform: 'capitalize',
-                  }}
-                />
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {intakeData.painMap.bodyParts.map((part, idx) => (
+                    <Chip
+                      key={idx}
+                      label={`${part.region} (${part.intensity}/10)`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: '0.75rem' }}
+                    />
+                  ))}
+                </Box>
               </Box>
-
-              {latestAssessment.painPoints && latestAssessment.painPoints.length > 0 && (
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mb: 1, display: 'block' }}
-                  >
-                    Affected Areas
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {latestAssessment.painPoints.map((point, idx) => (
-                      <Chip
-                        key={idx}
-                        label={`${point.bodyPart} (${point.intensity}/10)`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ fontSize: '0.75rem' }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
-
-              {latestAssessment.notes && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Notes
-                  </Typography>
-                  <Typography variant="body2">{latestAssessment.notes}</Typography>
-                </Box>
-              )}
-
-              {/* Assessment History */}
-              {vitalSigns.length > 1 && (
-                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mb: 1, display: 'block' }}
-                  >
-                    Recent Assessments
-                  </Typography>
-                  <Stack spacing={1}>
-                    {vitalSigns.slice(1, 4).map((vs) => (
-                      <Box key={vs.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 70 }}>
-                          {format(parseISO(vs.recordedAt), 'MMM d')}
-                        </Typography>
-                        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <LinearProgress
-                            variant="determinate"
-                            value={vs.overallPainLevel * 10}
-                            sx={{
-                              flex: 1,
-                              height: 6,
-                              borderRadius: 3,
-                              bgcolor: alpha(auraColors.grey[500], 0.1),
-                              '& .MuiLinearProgress-bar': {
-                                bgcolor: getSeverityColor(
-                                  vs.overallPainLevel >= 7
-                                    ? 'severe'
-                                    : vs.overallPainLevel >= 4
-                                      ? 'moderate'
-                                      : 'mild'
-                                ),
-                              },
-                            }}
-                          />
-                          <Typography variant="caption" fontWeight={500} sx={{ minWidth: 30 }}>
-                            {vs.overallPainLevel}/10
-                          </Typography>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-            </Box>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Box sx={{ p: 2, height: 300 }}>
-              <PainMap3D value={painRegions} onChange={() => {}} />
-            </Box>
-          </Grid>
+            )}
+          </Box>
         </Grid>
-      )}
+
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Box sx={{ p: 2, height: 300 }}>
+            <PainMap3D value={painRegions} onChange={() => {}} />
+          </Box>
+        </Grid>
+      </Grid>
     </AuraCard>
   );
 };
@@ -1224,7 +1106,6 @@ export const MedicalHistoryTab: React.FC<MedicalHistoryTabProps> = ({
   intakeData,
   promResponses = [],
   appointments = [],
-  vitalSigns = [],
   onAddAssessment,
 }) => {
   const [selectedTab, setSelectedTab] = useState(0);
@@ -1259,17 +1140,18 @@ export const MedicalHistoryTab: React.FC<MedicalHistoryTabProps> = ({
     (m) => m.category === 'medication' && m.status === 'active'
   ).length;
   const completedSessions = appointments.filter((a) => a.status === 'completed').length;
-  const latestPainLevel = vitalSigns[0]?.overallPainLevel;
-  const latestPromScore = promResponses.find((p) => p.status === 'completed')?.score;
 
-  // Calculate trends
-  const painTrend = useMemo(() => {
-    if (vitalSigns.length < 2) return undefined;
-    const diff = (vitalSigns[0]?.overallPainLevel ?? 0) - (vitalSigns[1]?.overallPainLevel ?? 0);
-    if (diff < 0) return { direction: 'down' as const, label: 'Improving' };
-    if (diff > 0) return { direction: 'up' as const, label: 'Worsening' };
-    return { direction: 'flat' as const, label: 'Stable' };
-  }, [vitalSigns]);
+  // Get pain level from intake evaluation
+  const latestPainLevel = useMemo(() => {
+    if (!intakeData?.painMap?.bodyParts?.length) return undefined;
+    const total = intakeData.painMap.bodyParts.reduce(
+      (sum, part) => sum + (part.intensity || 0),
+      0
+    );
+    return Math.round(total / intakeData.painMap.bodyParts.length);
+  }, [intakeData]);
+
+  const latestPromScore = promResponses.find((p) => p.status === 'completed')?.score;
 
   return (
     <Box sx={{ p: 3 }}>
@@ -1305,8 +1187,6 @@ export const MedicalHistoryTab: React.FC<MedicalHistoryTabProps> = ({
             title="Pain Level"
             value={latestPainLevel !== undefined ? `${latestPainLevel}/10` : 'N/A'}
             color={auraColors.orange.main}
-            trend={painTrend?.direction}
-            trendLabel={painTrend?.label}
           />
         </Grid>
         <Grid size={{ xs: 6, sm: 4, md: 2 }}>
@@ -1368,7 +1248,7 @@ export const MedicalHistoryTab: React.FC<MedicalHistoryTabProps> = ({
           <Grid size={{ xs: 12, lg: 8 }}>
             <Stack spacing={3}>
               {intakeData && <ChiefComplaintSection intake={intakeData} />}
-              <PainAssessmentSection vitalSigns={vitalSigns} onAddAssessment={onAddAssessment} />
+              <PainAssessmentSection intakeData={intakeData} onAddAssessment={onAddAssessment} />
             </Stack>
           </Grid>
 
@@ -1445,7 +1325,6 @@ export const MedicalHistoryTab: React.FC<MedicalHistoryTabProps> = ({
       {/* Empty state for overview if no data */}
       {selectedTab === 0 &&
         !intakeData &&
-        vitalSigns.length === 0 &&
         promResponses.length === 0 &&
         appointments.length === 0 && (
           <AuraEmptyState

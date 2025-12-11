@@ -58,7 +58,6 @@ import {
 import {
   usePatientList,
   useMedicalSummary,
-  useVitalSigns,
   useDocuments,
   useMedications,
   useAllergies,
@@ -314,16 +313,12 @@ const MedicalRecordsPage: React.FC = () => {
   // Lazy loading - only fetch data for active tab
   // Tabs: 0=Demographics, 1=History (with pain), 2=Treatment, 3=Documents, 4=Referrals
   const shouldFetchSummary = activeTab === 0 || activeTab === 1;
-  const shouldFetchVitals = activeTab === 1; // Pain data now in history tab
   const shouldFetchHistory = activeTab === 1;
   const shouldFetchDocuments = activeTab === 3;
   const shouldFetchReferrals = activeTab === 4;
 
   const { data: medicalSummary, isLoading: isSummaryLoading } = useMedicalSummary(
     shouldFetchSummary ? selectedPatientId : null
-  );
-  const { data: vitalSigns = [], isLoading: isVitalsLoading } = useVitalSigns(
-    shouldFetchVitals ? selectedPatientId : null
   );
   const {
     data: documents = [],
@@ -649,7 +644,7 @@ const MedicalRecordsPage: React.FC = () => {
       case 0:
         return isSummaryLoading;
       case 1:
-        return isMedicationsLoading || isVitalsLoading; // History + pain data
+        return isMedicationsLoading; // History tab
       case 2:
         return false; // Treatment tab handles its own loading
       case 3:
@@ -659,14 +654,7 @@ const MedicalRecordsPage: React.FC = () => {
       default:
         return false;
     }
-  }, [
-    activeTab,
-    isSummaryLoading,
-    isVitalsLoading,
-    isMedicationsLoading,
-    isDocumentsLoading,
-    isReferralsLoading,
-  ]);
+  }, [activeTab, isSummaryLoading, isMedicationsLoading, isDocumentsLoading, isReferralsLoading]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -792,8 +780,6 @@ const MedicalRecordsPage: React.FC = () => {
                     intakeData={intakeData}
                     promResponses={promResponses}
                     appointments={patientAppointments}
-                    vitalSigns={vitalSigns}
-                    onAddAssessment={() => setVitalDialogOpen(true)}
                   />
                 )}
               </TabPanel>
