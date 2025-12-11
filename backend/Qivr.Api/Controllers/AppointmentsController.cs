@@ -672,15 +672,24 @@ public class AppointmentsController : BaseApiController
         [FromQuery] DateTime date,
         [FromQuery] int durationMinutes = 30)
     {
-        // Use the availability service to get available slots
-        var slots = await _availabilityService.GetAvailableSlots(providerId, date, durationMinutes);
+        var tenantId = RequireTenantId();
+        
+        // Find provider by Provider.Id or User.Id
+        var provider = await _context.Providers
+            .FirstOrDefaultAsync(p => p.TenantId == tenantId && (p.Id == providerId || p.UserId == providerId));
+        
+        if (provider == null)
+            return NotFound(new { message = "Provider not found" });
+
+        // Use the availability service with the actual Provider.Id
+        var slots = await _availabilityService.GetAvailableSlots(provider.Id, date, durationMinutes);
         
         var availableSlots = slots.Select(s => new AvailableSlotDto
         {
             StartTime = s.Start,
             EndTime = s.End,
             Available = s.IsAvailable,
-            ProviderId = providerId
+            ProviderId = providerId // Return the original ID for frontend compatibility
         }).ToList();
 
         return Ok(availableSlots);

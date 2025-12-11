@@ -59,6 +59,7 @@ import { AssignTreatmentPlanDialog } from '../dialogs/AssignTreatmentPlanDialog'
 import { PainTrendMini } from './PainTrendMini';
 import { EvaluationSummaryPanel } from './EvaluationSummaryPanel';
 import { MedicalHistoryPanel } from './MedicalHistoryPanel';
+import { PromSummaryPanel } from './PromSummaryPanel';
 
 interface SessionViewProps {
   appointment: Appointment;
@@ -266,6 +267,23 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
     enabled: !!appointment.patientId,
   });
 
+  // Fetch PROM responses for clinical context
+  const { data: promResponses = [], isLoading: loadingProms } = useQuery({
+    queryKey: ['patient-proms-session', appointment.patientId],
+    queryFn: async () => {
+      const result = await promApi.getResponses({ patientId: appointment.patientId, limit: 20 });
+      return result.data;
+    },
+    enabled: !!appointment.patientId,
+  });
+
+  // Fetch physio history for clinical context
+  const { data: physioHistory = [], isLoading: _loadingPhysioHistory } = useQuery({
+    queryKey: ['patient-physio-history', appointment.patientId],
+    queryFn: () => medicalRecordsApi.getPhysioHistory(appointment.patientId),
+    enabled: !!appointment.patientId,
+  });
+
   // Filter to completed previous appointments (excluding current)
   const completedPreviousAppointments = useMemo(() => {
     return previousAppointments
@@ -289,6 +307,60 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
     }
   }, [painHistory, painInitialized]);
 
+  // Calculate PROM trends
+  const promSummary = useMemo(() => {
+    if (promResponses.length === 0) return null;
+
+    // Helper to get normalized score
+    const getNormalizedScore = (prom: any): number | undefined => {
+      if (prom.score !== undefined) return prom.score;
+      if (prom.rawScore !== undefined && prom.maxScore && prom.maxScore > 0) {
+        return Math.round((prom.rawScore / prom.maxScore) * 100);
+      }
+      return undefined;
+    };
+
+    const completedProms = promResponses
+      .filter((p: any) => p.status === 'completed' && getNormalizedScore(p) !== undefined)
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.completedAt || b.scheduledAt || '').getTime() -
+          new Date(a.completedAt || a.scheduledAt || '').getTime()
+      );
+
+    if (completedProms.length === 0) return null;
+
+    const latest = completedProms[0] as any;
+    if (!latest) return null;
+
+    const previous = completedProms.length > 1 ? (completedProms[1] as any) : null;
+
+    let trend: 'improving' | 'stable' | 'worsening' | null = null;
+    let trendValue = 0;
+
+    const latestScore = getNormalizedScore(latest);
+    const previousScore = previous ? getNormalizedScore(previous) : undefined;
+
+    if (latestScore !== undefined && previousScore !== undefined) {
+      trendValue = latestScore - previousScore;
+      if (Math.abs(trendValue) < 5) {
+        trend = 'stable';
+      } else if (trendValue > 0) {
+        trend = 'improving';
+      } else {
+        trend = 'worsening';
+      }
+    }
+
+    return {
+      latestScore,
+      templateName: latest.templateName || 'PROM',
+      trend,
+      trendValue: Math.abs(trendValue),
+      completedCount: completedProms.length,
+    };
+  }, [promResponses]);
+
   // Generate hints for SOAP fields
   const subjectiveHints = useMemo(() => {
     const hints: string[] = [];
@@ -307,8 +379,30 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
         hints.push(`Relieving: ${e.relievingFactors.slice(0, 2).join(', ')}`);
       }
     }
+    // Add PROM-based subjective hints
+    if (promSummary) {
+      const trendText =
+        promSummary.trend === 'improving'
+          ? '↑ improving'
+          : promSummary.trend === 'worsening'
+            ? '↓ worsening'
+            : '→ stable';
+      hints.push(`Latest ${promSummary.templateName}: ${promSummary.latestScore}% (${trendText})`);
+    }
+    // Add physio history symptoms
+    const symptoms = physioHistory.filter(
+      (h: any) => h.category === 'symptom' && h.status === 'active'
+    );
+    if (symptoms.length > 0) {
+      hints.push(
+        `Active symptoms: ${symptoms
+          .slice(0, 2)
+          .map((s: any) => s.title)
+          .join(', ')}`
+      );
+    }
     return hints;
-  }, [evaluationDetails]);
+  }, [evaluationDetails, promSummary, physioHistory]);
 
   const objectiveHints = useMemo(() => {
     const hints: string[] = [];
@@ -323,8 +417,24 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
         `Last recorded pain: ${painHistory[0].overallPainLevel}/10 on ${format(parseISO(painHistory[0].recordedAt), 'MMM d')}`
       );
     }
+    // Add physio history injuries
+    const injuries = physioHistory.filter(
+      (h: any) => h.category === 'injury' && h.status === 'active'
+    );
+    if (injuries.length > 0) {
+      hints.push(
+        `Active injuries: ${injuries
+          .slice(0, 2)
+          .map((i: any) => i.title)
+          .join(', ')}`
+      );
+    }
+    // Add completed sessions count
+    if (completedPreviousAppointments.length > 0) {
+      hints.push(`Previous sessions: ${completedPreviousAppointments.length} completed`);
+    }
     return hints;
-  }, [evaluationDetails, painHistory]);
+  }, [evaluationDetails, painHistory, physioHistory, completedPreviousAppointments]);
 
   const assessmentHints = useMemo(() => {
     const hints: string[] = [];
@@ -340,8 +450,30 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
       const summary = evaluationDetails.aiSummary.content;
       hints.push(`AI summary: ${summary.length > 100 ? summary.slice(0, 100) + '...' : summary}`);
     }
+    // Add PROM progress context
+    if (promSummary && promSummary.completedCount > 1) {
+      const trendDesc =
+        promSummary.trend === 'improving'
+          ? `improved by ${promSummary.trendValue}%`
+          : promSummary.trend === 'worsening'
+            ? `declined by ${promSummary.trendValue}%`
+            : 'stable';
+      hints.push(`Functional outcome: ${trendDesc} (${promSummary.completedCount} assessments)`);
+    }
+    // Add physio history conditions
+    const conditions = physioHistory.filter(
+      (h: any) => h.category === 'condition' && h.status === 'active'
+    );
+    if (conditions.length > 0) {
+      hints.push(
+        `Physio conditions: ${conditions
+          .slice(0, 2)
+          .map((c: any) => c.title)
+          .join(', ')}`
+      );
+    }
     return hints;
-  }, [medicalSummary, evaluationDetails]);
+  }, [medicalSummary, evaluationDetails, promSummary, physioHistory]);
 
   const planHints = useMemo(() => {
     const hints: string[] = [];
@@ -353,8 +485,26 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
     if (treatmentPlan?.currentPhase) {
       hints.push(`Current phase: ${treatmentPlan.currentPhase}`);
     }
+    // Add physio history goals
+    const goals = physioHistory.filter((h: any) => h.category === 'goal' && h.status === 'active');
+    if (goals.length > 0) {
+      hints.push(
+        `Patient goals: ${goals
+          .slice(0, 2)
+          .map((g: any) => g.title)
+          .join(', ')}`
+      );
+    }
+    // Add treatment progression from PROM
+    if (promSummary && promSummary.trend) {
+      if (promSummary.trend === 'improving') {
+        hints.push(`Progress: Patient showing improvement, continue current approach`);
+      } else if (promSummary.trend === 'worsening') {
+        hints.push(`Progress: Consider adjusting treatment plan`);
+      }
+    }
     return hints;
-  }, [evaluationDetails, treatmentPlan]);
+  }, [evaluationDetails, treatmentPlan, physioHistory, promSummary]);
 
   // Load treatment plan
   useEffect(() => {
@@ -686,6 +836,9 @@ export function SessionView({ appointment, onClose, onComplete }: SessionViewPro
               allergies={allergies}
               isLoading={isLoadingMedicalData}
             />
+
+            {/* PROM Summary Panel */}
+            <PromSummaryPanel promResponses={promResponses} isLoading={loadingProms} />
 
             {/* Pain History Panel */}
             <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>

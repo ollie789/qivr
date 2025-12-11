@@ -55,9 +55,12 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     {
         var availableSlots = new List<Qivr.Core.Interfaces.TimeSlot>();
 
-        // Get provider's tenant timezone
-        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.Id == providerId);
+        // Get provider - try by Provider.Id first, then by UserId
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
         if (provider == null) return availableSlots;
+        
+        // Use the actual Provider.Id for all subsequent lookups
+        var actualProviderId = provider.Id;
         
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == provider.TenantId);
         var timezone = tenant?.Timezone ?? "Australia/Sydney";
@@ -78,13 +81,13 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         var localDate = date.Date;
 
         // Check if provider is available on this date
-        if (!await IsProviderAvailableOnDate(providerId, localDate))
+        if (!await IsProviderAvailableOnDate(actualProviderId, localDate))
         {
             return availableSlots;
         }
 
         // Get provider's working hours for the day (considering overrides)
-        var workingHours = await GetProviderWorkingHoursForDate(providerId, localDate);
+        var workingHours = await GetProviderWorkingHoursForDate(actualProviderId, localDate);
         if (!workingHours.IsWorkingDay || (workingHours.Start == TimeSpan.Zero && workingHours.End == TimeSpan.Zero))
         {
             return availableSlots;
@@ -92,7 +95,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
         // Get the schedule to determine buffer time
         var schedule = await _context.ProviderSchedules
-            .FirstOrDefaultAsync(s => s.ProviderId == providerId && s.DayOfWeek == localDate.DayOfWeek);
+            .FirstOrDefaultAsync(s => s.ProviderId == actualProviderId && s.DayOfWeek == localDate.DayOfWeek);
         var bufferMinutes = schedule?.BufferMinutes ?? 0;
         var slotDuration = schedule?.DefaultSlotDurationMinutes ?? durationMinutes;
 
@@ -103,25 +106,14 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         var utcDayStart = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDayStart, DateTimeKind.Unspecified), tz);
         var utcDayEnd = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDayEnd, DateTimeKind.Unspecified), tz);
 
+        // Check by both ProviderProfileId and ProviderId (user ID) for backwards compatibility
         var existingAppointments = await _context.Appointments
-            .Where(a => a.ProviderProfileId == providerId
+            .Where(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == provider.UserId)
                 && a.ScheduledStart >= utcDayStart
                 && a.ScheduledStart < utcDayEnd
                 && a.Status != AppointmentStatus.Cancelled)
             .OrderBy(a => a.ScheduledStart)
             .ToListAsync();
-
-        // Also check by ProviderId (user ID) for backwards compatibility
-        if (!existingAppointments.Any())
-        {
-            existingAppointments = await _context.Appointments
-                .Where(a => a.ProviderId == providerId
-                    && a.ScheduledStart >= utcDayStart
-                    && a.ScheduledStart < utcDayEnd
-                    && a.Status != AppointmentStatus.Cancelled)
-                .OrderBy(a => a.ScheduledStart)
-                .ToListAsync();
-        }
 
         // Generate time slots in local time, then convert to UTC for response
         var currentSlotStart = localDate.Add(workingHours.Start);
@@ -179,9 +171,12 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<bool> IsSlotAvailable(Guid providerId, DateTime startTime, DateTime endTime)
     {
-        // Get provider's tenant timezone
-        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.Id == providerId);
+        // Get provider - try by Provider.Id first, then by UserId
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.Id == providerId || p.UserId == providerId);
         if (provider == null) return false;
+        
+        // Use the actual Provider.Id for all subsequent lookups
+        var actualProviderId = provider.Id;
         
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == provider.TenantId);
         var timezone = tenant?.Timezone ?? "Australia/Sydney";
@@ -214,13 +209,13 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         }
 
         // Check if provider is available on this date (using local date)
-        if (!await IsProviderAvailableOnDate(providerId, localStart.Date))
+        if (!await IsProviderAvailableOnDate(actualProviderId, localStart.Date))
         {
             return false;
         }
 
         // Check if provider works during this time
-        var workingHours = await GetProviderWorkingHoursForDate(providerId, localStart.Date);
+        var workingHours = await GetProviderWorkingHoursForDate(actualProviderId, localStart.Date);
         if (!workingHours.IsWorkingDay)
         {
             return false;
@@ -252,7 +247,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         var utcEnd = endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc);
         
         var hasConflict = await _context.Appointments
-            .AnyAsync(a => (a.ProviderProfileId == providerId || a.ProviderId == providerId)
+            .AnyAsync(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == provider.UserId)
                 && a.Status != AppointmentStatus.Cancelled
                 && utcStart < a.ScheduledEnd
                 && utcEnd > a.ScheduledStart);

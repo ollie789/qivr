@@ -144,9 +144,9 @@ public class IntakeController : ControllerBase
                 QuestionnaireResponses = intakeData,
                 MedicalHistory = new Dictionary<string, object>
                 {
-                    ["conditions"] = request.MedicalHistory.Conditions ?? "",
-                    ["medications"] = request.MedicalHistory.Medications ?? "",
-                    ["allergies"] = request.MedicalHistory.Allergies ?? "",
+                    ["conditions"] = request.MedicalHistory.Conditions != null ? string.Join(", ", request.MedicalHistory.Conditions) : "",
+                    ["medications"] = request.MedicalHistory.Medications != null ? string.Join(", ", request.MedicalHistory.Medications) : "",
+                    ["allergies"] = request.MedicalHistory.Allergies != null ? string.Join(", ", request.MedicalHistory.Allergies) : "",
                     ["previousTreatments"] = request.MedicalHistory.PreviousTreatments ?? ""
                 },
                 Status = EvaluationStatus.Pending,
@@ -535,9 +535,9 @@ public class PositionDto
 
 public class IntakeMedicalHistoryDto
 {
-    public string? Conditions { get; set; }
-    public string? Medications { get; set; }
-    public string? Allergies { get; set; }
+    public List<string>? Conditions { get; set; }
+    public List<string>? Medications { get; set; }
+    public List<string>? Allergies { get; set; }
     public string? PreviousTreatments { get; set; }
 }
 
