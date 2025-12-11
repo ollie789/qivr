@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Qivr.Api.Services;
 using Qivr.Services;
 
 namespace Qivr.Api.Controllers;
@@ -12,11 +13,13 @@ public class ProfileController : BaseApiController
 {
     private readonly ILogger<ProfileController> _logger;
     private readonly IProfileService _profileService;
+    private readonly ICacheService _cacheService;
     
-    public ProfileController(ILogger<ProfileController> logger, IProfileService profileService)
+    public ProfileController(ILogger<ProfileController> logger, IProfileService profileService, ICacheService cacheService)
     {
         _logger = logger;
         _profileService = profileService;
+        _cacheService = cacheService;
     }
     
     // GET: api/profile
@@ -204,6 +207,10 @@ public class ProfileController : BaseApiController
             
             // Update user profile in database
             await _profileService.UpdateUserProfileAsync(tenantId, userGuid, update);
+            
+            // Invalidate clinic dashboard cache so changes appear immediately
+            await _cacheService.RemoveAsync(CacheService.CacheKeys.PatientDetails(userGuid));
+            
             _logger.LogInformation("Updated profile for user {UserId}", userId);
             
             return NoContent();
