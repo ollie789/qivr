@@ -24,17 +24,20 @@ public class ClinicManagementController : ControllerBase
     private readonly IResourceAuthorizationService _authorizationService;
     private readonly ILogger<ClinicManagementController> _logger;
     private readonly IClinicManagementService _clinicService;
+    private readonly IProviderAvailabilityService _availabilityService;
 
     public ClinicManagementController(
         QivrDbContext context,
         IResourceAuthorizationService authorizationService,
         ILogger<ClinicManagementController> logger,
-        IClinicManagementService clinicService)
+        IClinicManagementService clinicService,
+        IProviderAvailabilityService availabilityService)
     {
         _context = context;
         _authorizationService = authorizationService;
         _logger = logger;
         _clinicService = clinicService;
+        _availabilityService = availabilityService;
     }
 
     // GET: api/clinic-management/clinics
@@ -274,6 +277,10 @@ public class ClinicManagementController : ControllerBase
         };
 
         var provider = await _clinicService.AddProviderToClinicAsync(tenantId, clinicId, request);
+        
+        // Initialize default schedule for the new provider
+        await _availabilityService.InitializeProviderDefaultSchedule(provider.Id);
+        
         var detail = await _clinicService.GetProviderDetailsAsync(tenantId, provider.UserId);
         var summary = await FindProviderSummary(provider.ClinicId, provider.UserId, tenantId);
 
@@ -336,6 +343,10 @@ public class ClinicManagementController : ControllerBase
         };
 
         var provider = await _clinicService.AddProviderToClinicAsync(tenantId, clinicId, request);
+        
+        // Initialize default schedule for the new provider
+        await _availabilityService.InitializeProviderDefaultSchedule(provider.Id);
+        
         var detail = await _clinicService.GetProviderDetailsAsync(tenantId, provider.UserId);
         var summary = await FindProviderSummary(provider.ClinicId, provider.UserId, tenantId);
 
