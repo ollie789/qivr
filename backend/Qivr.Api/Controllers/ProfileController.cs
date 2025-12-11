@@ -173,6 +173,19 @@ public class ProfileController : BaseApiController
                     SmsNotifications = updateDto.Preferences.SmsNotifications,
                     AppointmentReminders = updateDto.Preferences.AppointmentReminders,
                     MarketingEmails = updateDto.Preferences.MarketingEmails
+                } : null,
+                Medicare = updateDto.Medicare != null ? new MedicareInfo
+                {
+                    Number = updateDto.Medicare.Number,
+                    Ref = updateDto.Medicare.Ref,
+                    Expiry = updateDto.Medicare.Expiry
+                } : null,
+                Insurance = updateDto.Insurance != null ? new InsuranceInfo
+                {
+                    Provider = updateDto.Insurance.Provider,
+                    MemberId = updateDto.Insurance.MemberId,
+                    GroupNumber = updateDto.Insurance.GroupNumber,
+                    PrimaryCarePhysician = updateDto.Insurance.PrimaryCarePhysician
                 } : null
             };
             
@@ -477,6 +490,8 @@ public class UserProfileUpdateDto
     public EmergencyContactDto? EmergencyContact { get; set; }
     public MedicalInfoDto? MedicalInfo { get; set; }
     public PreferencesDto? Preferences { get; set; }
+    public MedicareDto? Medicare { get; set; }
+    public InsuranceDto? Insurance { get; set; }
 }
 
 public class EmergencyContactDto
@@ -500,6 +515,21 @@ public class PreferencesDto
     public bool SmsNotifications { get; set; }
     public bool AppointmentReminders { get; set; }
     public bool MarketingEmails { get; set; }
+}
+
+public class MedicareDto
+{
+    public string? Number { get; set; }
+    public string? Ref { get; set; }
+    public string? Expiry { get; set; }
+}
+
+public class InsuranceDto
+{
+    public string? Provider { get; set; }
+    public string? MemberId { get; set; }
+    public string? GroupNumber { get; set; }
+    public string? PrimaryCarePhysician { get; set; }
 }
 
 public class ChangePasswordDto

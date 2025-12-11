@@ -35,6 +35,13 @@ interface PatientDetailsDto extends PatientListItemDto {
   insuranceNumber?: string | null;
   emergencyContact?: string | null;
   emergencyPhone?: string | null;
+  emergencyContactRelationship?: string | null;
+  medicareNumber?: string | null;
+  medicareRef?: string | null;
+  medicareExpiry?: string | null;
+  allergies?: string[] | null;
+  medications?: string[] | null;
+  conditions?: string[] | null;
   recentAppointments?: AppointmentDto[];
   RecentAppointments?: AppointmentDto[];
   recentProms?: PromDto[];
@@ -98,9 +105,14 @@ export interface Patient {
   lastVisit?: string;
   nextAppointment?: string;
   conditions?: string[];
+  allergies?: string[];
+  medications?: string[];
   provider?: string;
   insuranceProvider?: string;
   insuranceNumber?: string;
+  medicareNumber?: string;
+  medicareRef?: string;
+  medicareExpiry?: string;
   registeredDate?: string;
   tags: string[];
   createdAt?: string;
@@ -108,6 +120,7 @@ export interface Patient {
   notes?: string;
   emergencyContact?: string;
   emergencyPhone?: string;
+  emergencyContactRelationship?: string;
   recentAppointments?: PatientAppointmentSummary[];
   recentProms?: PatientPromSummary[];
 }
@@ -186,29 +199,30 @@ const generateId = () =>
 
 class PatientApi {
   async getPatients(params: PatientSearchParams = {}): Promise<PatientListResponse> {
-    const payload = await apiClient.get<CursorPaginationResponse<PatientListItemDto> | PatientListItemDto[]>(
-      '/api/patients',
-      {
-        limit: params.limit ?? 200,
-        cursor: params.cursor,
-        search: params.search,
-        status: params.status,
-        providerId: params.provider,
-      },
-    );
+    const payload = await apiClient.get<
+      CursorPaginationResponse<PatientListItemDto> | PatientListItemDto[]
+    >('/api/patients', {
+      limit: params.limit ?? 200,
+      cursor: params.cursor,
+      search: params.search,
+      status: params.status,
+      providerId: params.provider,
+    });
 
     const items = Array.isArray(payload)
       ? payload
-      : payload?.items ?? (payload as PascalCaseResponse<PatientListItemDto>)?.Items ?? [];
+      : (payload?.items ?? (payload as PascalCaseResponse<PatientListItemDto>)?.Items ?? []);
 
     const patients = (items as PatientListItemDto[]).map(this.mapPatientDto);
 
     return {
       data: patients,
-      total: Array.isArray(payload) ? patients.length : payload?.count ?? patients.length,
+      total: Array.isArray(payload) ? patients.length : (payload?.count ?? patients.length),
       page: 1,
       pageSize: patients.length,
-      nextCursor: Array.isArray(payload) ? undefined : payload?.nextCursor ?? (payload as PascalCaseResponse<PatientListItemDto>)?.NextCursor,
+      nextCursor: Array.isArray(payload)
+        ? undefined
+        : (payload?.nextCursor ?? (payload as PascalCaseResponse<PatientListItemDto>)?.NextCursor),
     };
   }
 
@@ -256,12 +270,12 @@ class PatientApi {
   async getPatientAppointments(id: string) {
     const payload = await apiClient.get<CursorPaginationResponse<Appointment> | Appointment[]>(
       '/api/appointments',
-      { patientId: id, limit: 50, sortDescending: true },
+      { patientId: id, limit: 50, sortDescending: true }
     );
 
     const items = Array.isArray(payload)
       ? payload
-      : payload?.items ?? (payload as PascalCaseResponse<Appointment>)?.Items ?? [];
+      : (payload?.items ?? (payload as PascalCaseResponse<Appointment>)?.Items ?? []);
 
     return items as Appointment[];
   }
@@ -287,17 +301,20 @@ class PatientApi {
     const status: Patient['status'] = dto.isActive === false ? 'inactive' : 'active';
     const details = dto as PatientDetailsDto;
 
-    const address: PatientAddress | null = details.address || details.city || details.state || details.postalCode
-      ? {
-          street: details.address ?? undefined,
-          city: details.city ?? undefined,
-          state: details.state ?? undefined,
-          postcode: details.postalCode ?? undefined,
-        }
-      : null;
+    const address: PatientAddress | null =
+      details.address || details.city || details.state || details.postalCode
+        ? {
+            street: details.address ?? undefined,
+            city: details.city ?? undefined,
+            state: details.state ?? undefined,
+            postcode: details.postalCode ?? undefined,
+          }
+        : null;
 
     const rawAppointments = details.recentAppointments ?? details.RecentAppointments;
-    const recentAppointments: PatientAppointmentSummary[] | undefined = Array.isArray(rawAppointments)
+    const recentAppointments: PatientAppointmentSummary[] | undefined = Array.isArray(
+      rawAppointments
+    )
       ? rawAppointments.map((appointment: AppointmentDto) => ({
           id: String(appointment.id ?? appointment.Id ?? generateId()),
           date: toIsoString(appointment.date ?? appointment.Date ?? new Date().toISOString()),
@@ -314,9 +331,20 @@ class PatientApi {
           id: String(prom.id ?? prom.Id ?? generateId()),
           templateName: toSafeString(prom.templateName ?? prom.TemplateName, 'PROM'),
           status: toSafeString(prom.status ?? prom.Status, 'pending'),
-          createdAt: prom.createdAt ?? prom.CreatedAt ? toIsoString(prom.createdAt ?? prom.CreatedAt) : undefined,
-          completedAt: prom.completedAt ?? prom.CompletedAt ? toIsoString(prom.completedAt ?? prom.CompletedAt) : undefined,
-          score: typeof prom.score === 'number' ? prom.score : (typeof prom.Score === 'number' ? prom.Score : undefined),
+          createdAt:
+            (prom.createdAt ?? prom.CreatedAt)
+              ? toIsoString(prom.createdAt ?? prom.CreatedAt)
+              : undefined,
+          completedAt:
+            (prom.completedAt ?? prom.CompletedAt)
+              ? toIsoString(prom.completedAt ?? prom.CompletedAt)
+              : undefined,
+          score:
+            typeof prom.score === 'number'
+              ? prom.score
+              : typeof prom.Score === 'number'
+                ? prom.Score
+                : undefined,
         }))
       : undefined;
 
@@ -333,10 +361,15 @@ class PatientApi {
       status,
       lastVisit: recentAppointments?.[0]?.date,
       nextAppointment: undefined,
-      conditions: [],
+      conditions: details.conditions ?? [],
+      allergies: details.allergies ?? [],
+      medications: details.medications ?? [],
       provider: undefined,
       insuranceProvider: details.insuranceProvider ?? undefined,
       insuranceNumber: details.insuranceNumber ?? undefined,
+      medicareNumber: details.medicareNumber ?? undefined,
+      medicareRef: details.medicareRef ?? undefined,
+      medicareExpiry: details.medicareExpiry ?? undefined,
       registeredDate: dto.createdAt ?? undefined,
       tags: [],
       createdAt: dto.createdAt ?? undefined,
@@ -344,6 +377,7 @@ class PatientApi {
       notes: details.notes ?? undefined,
       emergencyContact: details.emergencyContact ?? undefined,
       emergencyPhone: details.emergencyPhone ?? undefined,
+      emergencyContactRelationship: details.emergencyContactRelationship ?? undefined,
       recentAppointments,
       recentProms,
     };

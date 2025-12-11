@@ -204,6 +204,30 @@ public class ProfileService : IProfileService
             }
         }
 
+        // Store medicare info in preferences
+        if (update.Medicare != null)
+        {
+            if (!string.IsNullOrEmpty(update.Medicare.Number))
+                user.Preferences["medicareNumber"] = update.Medicare.Number;
+            if (!string.IsNullOrEmpty(update.Medicare.Ref))
+                user.Preferences["medicareRef"] = update.Medicare.Ref;
+            if (!string.IsNullOrEmpty(update.Medicare.Expiry))
+                user.Preferences["medicareExpiry"] = update.Medicare.Expiry;
+        }
+
+        // Store insurance info in preferences
+        if (update.Insurance != null)
+        {
+            if (!string.IsNullOrEmpty(update.Insurance.Provider))
+                user.Preferences["insuranceProvider"] = update.Insurance.Provider;
+            if (!string.IsNullOrEmpty(update.Insurance.MemberId))
+                user.Preferences["insuranceMemberId"] = update.Insurance.MemberId;
+            if (!string.IsNullOrEmpty(update.Insurance.GroupNumber))
+                user.Preferences["insuranceGroupNumber"] = update.Insurance.GroupNumber;
+            if (!string.IsNullOrEmpty(update.Insurance.PrimaryCarePhysician))
+                user.Preferences["primaryCarePhysician"] = update.Insurance.PrimaryCarePhysician;
+        }
+
         user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
@@ -352,6 +376,8 @@ public class UserProfileUpdate
     public EmergencyContact? EmergencyContact { get; set; }
     public MedicalInfo? MedicalInfo { get; set; }
     public UserPreferences? Preferences { get; set; }
+    public MedicareInfo? Medicare { get; set; }
+    public InsuranceInfo? Insurance { get; set; }
 }
 
 public class ProfileAddress
@@ -384,4 +410,19 @@ public class UserPreferences
     public bool SmsNotifications { get; set; }
     public bool AppointmentReminders { get; set; }
     public bool MarketingEmails { get; set; }
+}
+
+public class MedicareInfo
+{
+    public string? Number { get; set; }
+    public string? Ref { get; set; }
+    public string? Expiry { get; set; }
+}
+
+public class InsuranceInfo
+{
+    public string? Provider { get; set; }
+    public string? MemberId { get; set; }
+    public string? GroupNumber { get; set; }
+    public string? PrimaryCarePhysician { get; set; }
 }

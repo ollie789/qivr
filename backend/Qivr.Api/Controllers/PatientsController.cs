@@ -305,38 +305,76 @@ public class PatientsController : TenantAwareController
                 _logger.LogDebug("Returning cached patient details for patient {PatientId}", patientId);
                 return Ok(cachedPatient);
             }
-            var patient = await _context.Users
+            
+            var user = await _context.Users
                 .Where(u => u.Id == patientId && u.TenantId == tenantId && u.UserType == UserType.Patient)
-                .Select(u => new PatientDetailsDto
-                {
-                    Id = u.Id,
-                    FirstName = u.FirstName ?? "",
-                    LastName = u.LastName ?? "",
-                    Email = u.Email ?? "",
-                    PhoneNumber = u.Phone ?? "",
-                    DateOfBirth = u.DateOfBirth,
-                    Gender = u.Gender,
-                    Address = null, // Address fields not in User entity
-                    City = null,
-                    State = null,
-                    PostalCode = null,
-                    Country = null,
-                    MedicalRecordNumber = null, // MRN field doesn't exist in User entity
-                    EmergencyContact = null, // These fields may need to be added to User entity or stored elsewhere
-                    EmergencyPhone = null,
-                    InsuranceProvider = null,
-                    InsuranceNumber = null,
-                    IsActive = true, // Using email verified as a proxy for active
-                    CreatedAt = u.CreatedAt,
-                    LastUpdated = u.UpdatedAt,
-                    Notes = null
-                })
                 .FirstOrDefaultAsync();
 
-            if (patient == null)
+            if (user == null)
             {
                 return NotFound($"Patient with ID {patientId} not found");
             }
+
+            // Extract address and emergency contact from preferences JSON
+            var prefs = user.Preferences ?? new Dictionary<string, object>();
+            
+            PatientAddressInfo? address = null;
+            if (prefs.TryGetValue("address", out var addrObj) && addrObj != null)
+            {
+                try { address = System.Text.Json.JsonSerializer.Deserialize<PatientAddressInfo>(addrObj.ToString()!); } catch { }
+            }
+            
+            PatientEmergencyContactInfo? emergencyContact = null;
+            if (prefs.TryGetValue("emergencyContact", out var ecObj) && ecObj != null)
+            {
+                try { emergencyContact = System.Text.Json.JsonSerializer.Deserialize<PatientEmergencyContactInfo>(ecObj.ToString()!); } catch { }
+            }
+
+            // Get medical info from patient_records
+            PatientMedicalInfo? medicalInfo = null;
+            try
+            {
+                var historyJson = await _context.Database
+                    .SqlQueryRaw<string>("SELECT medical_history FROM public.patient_records WHERE tenant_id = {0} AND patient_id = {1} LIMIT 1", tenantId, patientId)
+                    .FirstOrDefaultAsync();
+                if (!string.IsNullOrEmpty(historyJson))
+                {
+                    medicalInfo = System.Text.Json.JsonSerializer.Deserialize<PatientMedicalInfo>(historyJson);
+                }
+            }
+            catch { /* Medical info optional */ }
+
+            var patient = new PatientDetailsDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName ?? "",
+                LastName = user.LastName ?? "",
+                Email = user.Email ?? "",
+                PhoneNumber = user.Phone ?? "",
+                DateOfBirth = user.DateOfBirth,
+                Gender = user.Gender,
+                Address = address?.Street,
+                City = address?.City,
+                State = address?.State,
+                PostalCode = address?.PostalCode,
+                Country = address?.Country,
+                MedicalRecordNumber = null,
+                EmergencyContact = emergencyContact?.Name,
+                EmergencyPhone = emergencyContact?.Phone,
+                EmergencyContactRelationship = emergencyContact?.Relationship,
+                InsuranceProvider = prefs.TryGetValue("insuranceProvider", out var ip) ? ip?.ToString() : null,
+                InsuranceNumber = prefs.TryGetValue("insuranceMemberId", out var im) ? im?.ToString() : null,
+                MedicareNumber = prefs.TryGetValue("medicareNumber", out var mn) ? mn?.ToString() : null,
+                MedicareRef = prefs.TryGetValue("medicareRef", out var mr) ? mr?.ToString() : null,
+                MedicareExpiry = prefs.TryGetValue("medicareExpiry", out var me) ? me?.ToString() : null,
+                Allergies = medicalInfo?.Allergies,
+                Medications = medicalInfo?.CurrentMedications?.Select(m => $"{m.Name} {m.Dosage}".Trim()).ToList(),
+                Conditions = medicalInfo?.ChronicConditions,
+                IsActive = true,
+                CreatedAt = user.CreatedAt,
+                LastUpdated = user.UpdatedAt,
+                Notes = null
+            };
             
             // Cache the patient details for 5 minutes
             await _cacheService.SetAsync(cacheKey, patient, CacheService.CacheDuration.Medium);
@@ -725,14 +763,51 @@ public class PatientDetailsDto
     public string? MedicalRecordNumber { get; set; }
     public string? EmergencyContact { get; set; }
     public string? EmergencyPhone { get; set; }
+    public string? EmergencyContactRelationship { get; set; }
     public string? InsuranceProvider { get; set; }
     public string? InsuranceNumber { get; set; }
+    public string? MedicareNumber { get; set; }
+    public string? MedicareRef { get; set; }
+    public string? MedicareExpiry { get; set; }
+    public List<string>? Allergies { get; set; }
+    public List<string>? Medications { get; set; }
+    public List<string>? Conditions { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? LastUpdated { get; set; }
     public string? Notes { get; set; }
     public List<AppointmentSummaryDto>? RecentAppointments { get; set; }
     public List<PromSummaryDto>? RecentProms { get; set; }
+}
+
+// Helper classes for JSON deserialization
+public class PatientAddressInfo
+{
+    public string? Street { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? PostalCode { get; set; }
+    public string? Country { get; set; }
+}
+
+public class PatientEmergencyContactInfo
+{
+    public string? Name { get; set; }
+    public string? Phone { get; set; }
+    public string? Relationship { get; set; }
+}
+
+public class PatientMedicalInfo
+{
+    public List<string>? Allergies { get; set; }
+    public List<PatientMedicationInfo>? CurrentMedications { get; set; }
+    public List<string>? ChronicConditions { get; set; }
+}
+
+public class PatientMedicationInfo
+{
+    public string? Name { get; set; }
+    public string? Dosage { get; set; }
 }
 
 public class AppointmentSummaryDto
