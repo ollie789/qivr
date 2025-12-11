@@ -2,8 +2,8 @@ version: 0.2
 
 env:
   variables:
-    FORCE_BUILD_ALL: "false"
-    ENVIRONMENT: "production"  # Can be overridden: staging or production
+    FORCE_BUILD_ALL: 'false'
+    ENVIRONMENT: 'production' # Can be overridden: staging or production
 
 phases:
   install:
@@ -17,7 +17,7 @@ phases:
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/qivr-api
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      
+
       # Set image tag based on environment
       - |
         if [ "$ENVIRONMENT" = "staging" ]; then
@@ -54,17 +54,23 @@ phases:
         else
           echo "Comparing $PREV_COMMIT to $CODEBUILD_RESOLVED_SOURCE_VERSION"
           git fetch --depth=100 origin main 2>/dev/null || true
-          CHANGED_FILES=$(git diff --name-only $PREV_COMMIT $CODEBUILD_RESOLVED_SOURCE_VERSION 2>/dev/null || echo "")
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "No changes detected or git diff failed - building all to be safe"
+          CHANGED_FILES=$(git diff --name-only $PREV_COMMIT $CODEBUILD_RESOLVED_SOURCE_VERSION 2>/dev/null || echo "DIFF_FAILED")
+          if [ "$CHANGED_FILES" = "DIFF_FAILED" ] || [ -z "$CHANGED_FILES" ]; then
+            echo "Git diff failed or no changes detected - building all to be safe"
             BUILD_BACKEND=true; BUILD_CLINIC=true; BUILD_PATIENT=true; BUILD_ADMIN=false; BUILD_PARTNER=false; BUILD_WIDGET=true
           else
-            BUILD_BACKEND=$(echo "$CHANGED_FILES" | grep -q "^backend/\|^packages/" && echo true || echo false)
-            BUILD_CLINIC=$(echo "$CHANGED_FILES" | grep -q "^apps/clinic-dashboard/\|^packages/" && echo true || echo false)
-            BUILD_PATIENT=$(echo "$CHANGED_FILES" | grep -q "^apps/patient-portal/\|^packages/" && echo true || echo false)
+            echo "Changed files: $CHANGED_FILES"
+            BUILD_BACKEND=$(echo "$CHANGED_FILES" | grep -qE "^backend/|^packages/" && echo true || echo false)
+            BUILD_CLINIC=$(echo "$CHANGED_FILES" | grep -qE "^apps/clinic-dashboard/|^packages/" && echo true || echo false)
+            BUILD_PATIENT=$(echo "$CHANGED_FILES" | grep -qE "^apps/patient-portal/|^packages/" && echo true || echo false)
             BUILD_ADMIN=false
             BUILD_PARTNER=false
-            BUILD_WIDGET=$(echo "$CHANGED_FILES" | grep -q "^apps/intake-widget/\|^packages/" && echo true || echo false)
+            BUILD_WIDGET=$(echo "$CHANGED_FILES" | grep -qE "^apps/intake-widget/|^packages/" && echo true || echo false)
+            # Safety: if nothing detected as changed but we have a commit diff, build backend anyway
+            if [ "$BUILD_BACKEND" = "false" ] && [ "$BUILD_CLINIC" = "false" ] && [ "$BUILD_PATIENT" = "false" ]; then
+              echo "WARNING: No components detected as changed - building backend as safety measure"
+              BUILD_BACKEND=true
+            fi
           fi
         fi
         echo "BUILD_BACKEND=$BUILD_BACKEND BUILD_CLINIC=$BUILD_CLINIC BUILD_PATIENT=$BUILD_PATIENT"
