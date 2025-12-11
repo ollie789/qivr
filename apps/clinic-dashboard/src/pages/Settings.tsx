@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -24,7 +24,7 @@ import {
   TableHead,
   TableRow,
   InputAdornment,
-} from "@mui/material";
+} from '@mui/material';
 import {
   Business as BusinessIcon,
   Security as SecurityIcon,
@@ -50,18 +50,15 @@ import {
   VisibilityOff as VisibilityOffIcon,
   Science as ScienceIcon,
   FitnessCenter as FitnessCenterIcon,
-} from "@mui/icons-material";
-import { CopyButton, Callout, AuraCard } from "@qivr/design-system";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSnackbar } from "notistack";
-import { useAuthGuard } from "../hooks/useAuthGuard";
-import {
-  notificationsApi,
-  type NotificationPreferences,
-} from "../services/notificationsApi";
-import api from "../lib/api-client";
-import { TenantInfo } from "../components/shared";
-import { ProviderScheduleDialog } from "../components/providers";
+} from '@mui/icons-material';
+import { CopyButton, Callout, AuraCard } from '@qivr/design-system';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSnackbar } from 'notistack';
+import { useAuthGuard } from '../hooks/useAuthGuard';
+import { notificationsApi, type NotificationPreferences } from '../services/notificationsApi';
+import api from '../lib/api-client';
+import { TenantInfo } from '../components/shared';
+import { ProviderScheduleDialog } from '../components/providers';
 import {
   PageHeader,
   TabPanel as DesignTabPanel,
@@ -73,7 +70,7 @@ import {
   NumberTextField,
   SelectField,
   auraTokens,
-} from "@qivr/design-system";
+} from '@qivr/design-system';
 
 interface ClinicSettings {
   clinic: {
@@ -156,11 +153,12 @@ interface ClinicSettings {
 
 interface ProviderMember {
   id: string;
+  providerProfileId: string;
   name: string;
   email: string;
   role: string;
   department: string;
-  status: "active" | "inactive";
+  status: 'active' | 'inactive';
   lastLogin: string;
 }
 
@@ -172,61 +170,60 @@ export default function Settings() {
   const [editMode, setEditMode] = useState(false);
   const [addProviderDialog, setAddProviderDialog] = useState(false);
   const [providerForm, setProviderForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    specialization: "",
-    department: "",
+    firstName: '',
+    lastName: '',
+    email: '',
+    specialization: '',
+    department: '',
   });
   const [showApiKey, setShowApiKey] = useState(false);
   const [newApiKeyDialog, setNewApiKeyDialog] = useState(false);
   const [notificationPreferences, setNotificationPreferences] =
     useState<NotificationPreferences | null>(null);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] =
-    useState<ProviderMember | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<ProviderMember | null>(null);
 
   // Service Types state
   const [serviceTypeDialogOpen, setServiceTypeDialogOpen] = useState(false);
   const [editingServiceType, setEditingServiceType] = useState<any>(null);
   const [serviceTypeForm, setServiceTypeForm] = useState({
-    name: "",
-    description: "",
-    specialty: "",
+    name: '',
+    description: '',
+    specialty: '',
     durationMinutes: 30,
     price: 0,
-    billingCode: "",
+    billingCode: '',
     isActive: true,
   });
   const [deleteServiceTypeConfirm, setDeleteServiceTypeConfirm] = useState<{
     open: boolean;
     id: string;
     name: string;
-  }>({ open: false, id: "", name: "" });
+  }>({ open: false, id: '', name: '' });
 
   const [settings, setSettings] = useState<ClinicSettings>({
     clinic: {
-      name: "Springfield Medical Center",
-      registrationNumber: "SMC-2024-001",
-      address: "123 Healthcare Blvd",
-      city: "Springfield",
-      state: "IL",
-      zipCode: "62701",
-      phone: "(555) 123-4567",
-      email: "info@springfieldmedical.com",
-      website: "www.springfieldmedical.com",
-      timezone: "America/Chicago",
-      currency: "USD",
+      name: 'Springfield Medical Center',
+      registrationNumber: 'SMC-2024-001',
+      address: '123 Healthcare Blvd',
+      city: 'Springfield',
+      state: 'IL',
+      zipCode: '62701',
+      phone: '(555) 123-4567',
+      email: 'info@springfieldmedical.com',
+      website: 'www.springfieldmedical.com',
+      timezone: 'America/Chicago',
+      currency: 'USD',
     },
     operations: {
       workingHours: {
-        monday: { open: "08:00", close: "18:00", closed: false },
-        tuesday: { open: "08:00", close: "18:00", closed: false },
-        wednesday: { open: "08:00", close: "18:00", closed: false },
-        thursday: { open: "08:00", close: "18:00", closed: false },
-        friday: { open: "08:00", close: "17:00", closed: false },
-        saturday: { open: "09:00", close: "13:00", closed: false },
-        sunday: { open: "", close: "", closed: true },
+        monday: { open: '08:00', close: '18:00', closed: false },
+        tuesday: { open: '08:00', close: '18:00', closed: false },
+        wednesday: { open: '08:00', close: '18:00', closed: false },
+        thursday: { open: '08:00', close: '18:00', closed: false },
+        friday: { open: '08:00', close: '17:00', closed: false },
+        saturday: { open: '09:00', close: '13:00', closed: false },
+        sunday: { open: '', close: '', closed: true },
       },
       appointmentDuration: 30,
       bufferTime: 5,
@@ -248,29 +245,29 @@ export default function Settings() {
     billing: {
       taxRate: 8.5,
       paymentTerms: 30,
-      acceptedPaymentMethods: ["cash", "credit", "insurance"],
-      insuranceProviders: ["BlueCross", "Aetna", "UnitedHealth", "Cigna"],
-      defaultBillingCode: "CPT-99213",
+      acceptedPaymentMethods: ['cash', 'credit', 'insurance'],
+      insuranceProviders: ['BlueCross', 'Aetna', 'UnitedHealth', 'Cigna'],
+      defaultBillingCode: 'CPT-99213',
     },
     integrations: {
       ehr: {
         enabled: true,
-        provider: "Epic",
-        apiKey: "sk_live_...",
-        lastSync: "2024-01-15T10:30:00",
+        provider: 'Epic',
+        apiKey: 'sk_live_...',
+        lastSync: '2024-01-15T10:30:00',
       },
       lab: {
         enabled: true,
-        provider: "LabCorp",
-        accountId: "LC-12345",
+        provider: 'LabCorp',
+        accountId: 'LC-12345',
       },
       pharmacy: {
         enabled: false,
-        provider: "",
+        provider: '',
       },
       telehealth: {
         enabled: true,
-        provider: "Zoom for Healthcare",
+        provider: 'Zoom for Healthcare',
       },
     },
     security: {
@@ -284,16 +281,17 @@ export default function Settings() {
   });
 
   const { data: providerMembers = [], isLoading: providersLoading } = useQuery({
-    queryKey: ["providers"],
+    queryKey: ['providers'],
     queryFn: async () => {
-      const response = await api.get("/api/clinic-management/providers");
+      const response = await api.get('/api/clinic-management/providers');
       return response.map((provider: any) => ({
         id: provider.id,
+        providerProfileId: provider.providerProfileId || provider.id,
         name: `${provider.firstName} ${provider.lastName}`,
         email: provider.email,
-        role: provider.specialization || "Provider",
-        department: provider.department || "General",
-        status: provider.isActive ? "active" : "inactive",
+        role: provider.specialization || 'Provider',
+        department: provider.department || 'General',
+        status: provider.isActive ? 'active' : 'inactive',
         lastLogin: provider.lastLogin || new Date().toISOString(),
       }));
     },
@@ -302,18 +300,18 @@ export default function Settings() {
 
   // TODO: Add these endpoints to backend
   const { data: operationsSettings } = useQuery({
-    queryKey: ["operations-settings"],
+    queryKey: ['operations-settings'],
     queryFn: async () => {
-      const response = await api.get("/api/settings/operations");
+      const response = await api.get('/api/settings/operations');
       return response.data;
     },
     enabled: canMakeApiCalls,
   });
 
   const { data: clinicSettings } = useQuery({
-    queryKey: ["clinic-settings"],
+    queryKey: ['clinic-settings'],
     queryFn: async () => {
-      const response = await api.get("/api/settings/clinic");
+      const response = await api.get('/api/settings/clinic');
       return response.data;
     },
     enabled: canMakeApiCalls,
@@ -346,7 +344,7 @@ export default function Settings() {
   }, [clinicSettings]);
 
   const { data: preferencesData, isLoading: preferencesLoading } = useQuery({
-    queryKey: ["notification-preferences"],
+    queryKey: ['notification-preferences'],
     queryFn: notificationsApi.getPreferences,
     enabled: canMakeApiCalls,
   });
@@ -366,24 +364,23 @@ export default function Settings() {
   }, [preferencesData]);
 
   const updatePreferencesMutation = useMutation({
-    mutationFn: (prefs: NotificationPreferences) =>
-      notificationsApi.updatePreferences(prefs),
+    mutationFn: (prefs: NotificationPreferences) => notificationsApi.updatePreferences(prefs),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
-      enqueueSnackbar("Notification preferences updated", {
-        variant: "success",
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+      enqueueSnackbar('Notification preferences updated', {
+        variant: 'success',
       });
     },
     onError: () => {
-      enqueueSnackbar("Failed to update notification preferences", {
-        variant: "error",
+      enqueueSnackbar('Failed to update notification preferences', {
+        variant: 'error',
       });
     },
   });
 
   const handleNotificationPreferenceToggle = (
-    key: "emailEnabled" | "smsEnabled",
-    value: boolean,
+    key: 'emailEnabled' | 'smsEnabled',
+    value: boolean
   ) => {
     setSettings((prev) => ({
       ...prev,
@@ -412,24 +409,24 @@ export default function Settings() {
 
   const handleSaveSettings = async () => {
     try {
-      await api.post("/api/settings/clinic", settings.clinic);
-      await api.post("/api/settings/operations", settings.operations);
+      await api.post('/api/settings/clinic', settings.clinic);
+      await api.post('/api/settings/operations', settings.operations);
 
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
-      enqueueSnackbar("Settings saved successfully", { variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      enqueueSnackbar('Settings saved successfully', { variant: 'success' });
       setEditMode(false);
     } catch (error) {
-      console.error("Error saving settings:", error);
-      enqueueSnackbar("Failed to save settings", { variant: "error" });
+      console.error('Error saving settings:', error);
+      enqueueSnackbar('Failed to save settings', { variant: 'error' });
     }
   };
 
   const [apiKeys, setApiKeys] = React.useState<any[]>([]);
 
   const { data: apiKeysData } = useQuery({
-    queryKey: ["api-keys"],
+    queryKey: ['api-keys'],
     queryFn: async () => {
-      const response = await api.get("/api/api-keys");
+      const response = await api.get('/api/api-keys');
       return response.data;
     },
     enabled: canMakeApiCalls,
@@ -437,9 +434,9 @@ export default function Settings() {
 
   // Service Types queries
   const { data: serviceTypes, isLoading: serviceTypesLoading } = useQuery({
-    queryKey: ["service-types"],
+    queryKey: ['service-types'],
     queryFn: async () => {
-      const response = await api.get("/api/servicetypes");
+      const response = await api.get('/api/servicetypes');
       return response.data;
     },
     enabled: canMakeApiCalls,
@@ -447,30 +444,24 @@ export default function Settings() {
 
   const createServiceTypeMutation = useMutation({
     mutationFn: async (data: typeof serviceTypeForm) => {
-      const response = await api.post("/api/servicetypes", {
+      const response = await api.post('/api/servicetypes', {
         ...data,
         specialty: data.specialty || null,
       });
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["service-types"] });
+      queryClient.invalidateQueries({ queryKey: ['service-types'] });
       setServiceTypeDialogOpen(false);
-      enqueueSnackbar("Service type created", { variant: "success" });
+      enqueueSnackbar('Service type created', { variant: 'success' });
     },
     onError: () => {
-      enqueueSnackbar("Failed to create service type", { variant: "error" });
+      enqueueSnackbar('Failed to create service type', { variant: 'error' });
     },
   });
 
   const updateServiceTypeMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: typeof serviceTypeForm;
-    }) => {
+    mutationFn: async ({ id, data }: { id: string; data: typeof serviceTypeForm }) => {
       const response = await api.put(`/api/servicetypes/${id}`, {
         ...data,
         specialty: data.specialty || null,
@@ -478,12 +469,12 @@ export default function Settings() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["service-types"] });
+      queryClient.invalidateQueries({ queryKey: ['service-types'] });
       setServiceTypeDialogOpen(false);
-      enqueueSnackbar("Service type updated", { variant: "success" });
+      enqueueSnackbar('Service type updated', { variant: 'success' });
     },
     onError: () => {
-      enqueueSnackbar("Failed to update service type", { variant: "error" });
+      enqueueSnackbar('Failed to update service type', { variant: 'error' });
     },
   });
 
@@ -492,12 +483,12 @@ export default function Settings() {
       await api.delete(`/api/servicetypes/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["service-types"] });
-      setDeleteServiceTypeConfirm({ open: false, id: "", name: "" });
-      enqueueSnackbar("Service type deleted", { variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ['service-types'] });
+      setDeleteServiceTypeConfirm({ open: false, id: '', name: '' });
+      enqueueSnackbar('Service type deleted', { variant: 'success' });
     },
     onError: () => {
-      enqueueSnackbar("Failed to delete service type", { variant: "error" });
+      enqueueSnackbar('Failed to delete service type', { variant: 'error' });
     },
   });
 
@@ -509,16 +500,16 @@ export default function Settings() {
 
   const handleGenerateApiKey = async () => {
     try {
-      const response = await api.post("/api/api-keys", {
-        name: "Integration Key",
-        description: "Generated from settings",
+      const response = await api.post('/api/api-keys', {
+        name: 'Integration Key',
+        description: 'Generated from settings',
         expiresInDays: 365,
-        scopes: ["read", "write"],
+        scopes: ['read', 'write'],
       });
       setApiKeys([...apiKeys, response.data]);
-      enqueueSnackbar("API key generated successfully", { variant: "success" });
+      enqueueSnackbar('API key generated successfully', { variant: 'success' });
     } catch {
-      enqueueSnackbar("Failed to generate API key", { variant: "error" });
+      enqueueSnackbar('Failed to generate API key', { variant: 'error' });
     }
   };
 
@@ -537,13 +528,8 @@ export default function Settings() {
     <Box className="page-enter">
       <PageHeader title="Clinic Settings" />
 
-      <Paper sx={{ width: "100%" }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-        >
+      <Paper sx={{ width: '100%' }}>
+        <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
           <Tab icon={<BusinessIcon />} label="Clinic Info" />
           <Tab icon={<ScheduleIcon />} label="Operations" />
           <Tab icon={<PeopleIcon />} label="Providers" />
@@ -558,18 +544,10 @@ export default function Settings() {
         {/* Clinic Info Tab */}
         <DesignTabPanel value={tabValue} index={0}>
           <Box sx={{ p: 3 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={3}
-            >
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
               <Typography variant="h6">Clinic Information</Typography>
               {!editMode ? (
-                <AuraButton
-                  startIcon={<EditIcon />}
-                  onClick={() => setEditMode(true)}
-                >
+                <AuraButton startIcon={<EditIcon />} onClick={() => setEditMode(true)}>
                   Edit
                 </AuraButton>
               ) : (
@@ -757,10 +735,10 @@ export default function Settings() {
                     })
                   }
                   options={[
-                    { value: "America/New_York", label: "Eastern Time" },
-                    { value: "America/Chicago", label: "Central Time" },
-                    { value: "America/Denver", label: "Mountain Time" },
-                    { value: "America/Los_Angeles", label: "Pacific Time" },
+                    { value: 'America/New_York', label: 'Eastern Time' },
+                    { value: 'America/Chicago', label: 'Central Time' },
+                    { value: 'America/Denver', label: 'Mountain Time' },
+                    { value: 'America/Los_Angeles', label: 'Pacific Time' },
                   ]}
                 />
               </Grid>
@@ -773,18 +751,10 @@ export default function Settings() {
 
         <DesignTabPanel value={tabValue} index={1}>
           <Box sx={{ p: 3 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={3}
-            >
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
               <Typography variant="h6">Operations Settings</Typography>
               {!editMode ? (
-                <AuraButton
-                  startIcon={<EditIcon />}
-                  onClick={() => setEditMode(true)}
-                >
+                <AuraButton startIcon={<EditIcon />} onClick={() => setEditMode(true)}>
                   Edit
                 </AuraButton>
               ) : (
@@ -814,100 +784,90 @@ export default function Settings() {
                     <Typography variant="h6" gutterBottom>
                       Operating Hours
                     </Typography>
-                    {Object.entries(settings.operations.workingHours).map(
-                      ([day, hours]) => (
-                        <Box
-                          key={day}
-                          display="flex"
-                          alignItems="center"
-                          mb={2}
-                        >
-                          <Box sx={{ minWidth: 120 }}>
-                            <Typography
-                              variant="body1"
-                              sx={{ textTransform: "capitalize" }}
-                            >
-                              {day}
-                            </Typography>
-                          </Box>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={!hours.closed}
-                                onChange={(e) =>
-                                  setSettings({
-                                    ...settings,
-                                    operations: {
-                                      ...settings.operations,
-                                      workingHours: {
-                                        ...settings.operations.workingHours,
-                                        [day]: {
-                                          ...hours,
-                                          closed: !e.target.checked,
-                                        },
-                                      },
-                                    },
-                                  })
-                                }
-                                disabled={!editMode}
-                              />
-                            }
-                            label="Open"
-                            sx={{ mr: 2 }}
-                          />
-                          {!hours.closed && (
-                            <>
-                              <TextField
-                                type="time"
-                                label="Open"
-                                value={hours.open}
-                                onChange={(e) =>
-                                  setSettings({
-                                    ...settings,
-                                    operations: {
-                                      ...settings.operations,
-                                      workingHours: {
-                                        ...settings.operations.workingHours,
-                                        [day]: {
-                                          ...hours,
-                                          open: e.target.value,
-                                        },
-                                      },
-                                    },
-                                  })
-                                }
-                                disabled={!editMode}
-                                sx={{ mr: 2, width: auraTokens.formControl.md }}
-                                InputLabelProps={{ shrink: true }}
-                              />
-                              <TextField
-                                type="time"
-                                label="Close"
-                                value={hours.close}
-                                onChange={(e) =>
-                                  setSettings({
-                                    ...settings,
-                                    operations: {
-                                      ...settings.operations,
-                                      workingHours: {
-                                        ...settings.operations.workingHours,
-                                        [day]: {
-                                          ...hours,
-                                          close: e.target.value,
-                                        },
-                                      },
-                                    },
-                                  })
-                                }
-                                disabled={!editMode}
-                                sx={{ width: auraTokens.formControl.md }}
-                                InputLabelProps={{ shrink: true }}
-                              />
-                            </>
-                          )}
+                    {Object.entries(settings.operations.workingHours).map(([day, hours]) => (
+                      <Box key={day} display="flex" alignItems="center" mb={2}>
+                        <Box sx={{ minWidth: 120 }}>
+                          <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
+                            {day}
+                          </Typography>
                         </Box>
-                      ),
-                    )}
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={!hours.closed}
+                              onChange={(e) =>
+                                setSettings({
+                                  ...settings,
+                                  operations: {
+                                    ...settings.operations,
+                                    workingHours: {
+                                      ...settings.operations.workingHours,
+                                      [day]: {
+                                        ...hours,
+                                        closed: !e.target.checked,
+                                      },
+                                    },
+                                  },
+                                })
+                              }
+                              disabled={!editMode}
+                            />
+                          }
+                          label="Open"
+                          sx={{ mr: 2 }}
+                        />
+                        {!hours.closed && (
+                          <>
+                            <TextField
+                              type="time"
+                              label="Open"
+                              value={hours.open}
+                              onChange={(e) =>
+                                setSettings({
+                                  ...settings,
+                                  operations: {
+                                    ...settings.operations,
+                                    workingHours: {
+                                      ...settings.operations.workingHours,
+                                      [day]: {
+                                        ...hours,
+                                        open: e.target.value,
+                                      },
+                                    },
+                                  },
+                                })
+                              }
+                              disabled={!editMode}
+                              sx={{ mr: 2, width: auraTokens.formControl.md }}
+                              InputLabelProps={{ shrink: true }}
+                            />
+                            <TextField
+                              type="time"
+                              label="Close"
+                              value={hours.close}
+                              onChange={(e) =>
+                                setSettings({
+                                  ...settings,
+                                  operations: {
+                                    ...settings.operations,
+                                    workingHours: {
+                                      ...settings.operations.workingHours,
+                                      [day]: {
+                                        ...hours,
+                                        close: e.target.value,
+                                      },
+                                    },
+                                  },
+                                })
+                              }
+                              disabled={!editMode}
+                              sx={{ width: auraTokens.formControl.md }}
+                              InputLabelProps={{ shrink: true }}
+                            />
+                          </>
+                        )}
+                      </Box>
+                    ))}
                   </>
                 </AuraCard>
               </Grid>
@@ -929,8 +889,7 @@ export default function Settings() {
                               ...settings,
                               operations: {
                                 ...settings.operations,
-                                appointmentDuration:
-                                  parseInt(e.target.value) || 30,
+                                appointmentDuration: parseInt(e.target.value) || 30,
                               },
                             })
                           }
@@ -964,8 +923,7 @@ export default function Settings() {
                               ...settings,
                               operations: {
                                 ...settings.operations,
-                                maxAdvanceBooking:
-                                  parseInt(e.target.value) || 90,
+                                maxAdvanceBooking: parseInt(e.target.value) || 90,
                               },
                             })
                           }
@@ -991,9 +949,7 @@ export default function Settings() {
                         />
                         <ListItemSecondaryAction>
                           <Switch
-                            checked={
-                              settings.operations.autoConfirmAppointments
-                            }
+                            checked={settings.operations.autoConfirmAppointments}
                             onChange={(e) =>
                               setSettings({
                                 ...settings,
@@ -1056,12 +1012,7 @@ export default function Settings() {
 
         <DesignTabPanel value={tabValue} index={2}>
           <Box sx={{ p: 3 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={3}
-            >
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
               <Typography variant="h6">Provider Management</Typography>
               <AuraButton
                 variant="contained"
@@ -1106,9 +1057,9 @@ export default function Settings() {
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={1}>
                             <Avatar sx={{ width: 32, height: 32 }}>
-                              {(provider.name || "?").charAt(0)}
+                              {(provider.name || '?').charAt(0)}
                             </Avatar>
-                            {provider.name || "Unknown"}
+                            {provider.name || 'Unknown'}
                           </Box>
                         </TableCell>
                         <TableCell>{provider.email}</TableCell>
@@ -1116,11 +1067,7 @@ export default function Settings() {
                           <Chip
                             label={provider.role}
                             size="small"
-                            color={
-                              provider.role === "Physician"
-                                ? "primary"
-                                : "default"
-                            }
+                            color={provider.role === 'Physician' ? 'primary' : 'default'}
                           />
                         </TableCell>
                         <TableCell>{provider.department}</TableCell>
@@ -1128,11 +1075,7 @@ export default function Settings() {
                           <Chip
                             label={provider.status}
                             size="small"
-                            color={
-                              provider.status === "active"
-                                ? "success"
-                                : "default"
-                            }
+                            color={provider.status === 'active' ? 'success' : 'default'}
                           />
                         </TableCell>
                         <TableCell>
@@ -1173,7 +1116,7 @@ export default function Settings() {
             </Typography>
             <AuraButton
               variant="contained"
-              onClick={() => (window.location.href = "/exercise-library")}
+              onClick={() => (window.location.href = '/exercise-library')}
             >
               Open Exercise Library
             </AuraButton>
@@ -1200,15 +1143,9 @@ export default function Settings() {
                       <Switch
                         checked={settings.notifications.emailEnabled}
                         onChange={(e) =>
-                          handleNotificationPreferenceToggle(
-                            "emailEnabled",
-                            e.target.checked,
-                          )
+                          handleNotificationPreferenceToggle('emailEnabled', e.target.checked)
                         }
-                        disabled={
-                          preferencesLoading ||
-                          updatePreferencesMutation.isPending
-                        }
+                        disabled={preferencesLoading || updatePreferencesMutation.isPending}
                       />
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -1224,15 +1161,9 @@ export default function Settings() {
                       <Switch
                         checked={settings.notifications.smsEnabled}
                         onChange={(e) =>
-                          handleNotificationPreferenceToggle(
-                            "smsEnabled",
-                            e.target.checked,
-                          )
+                          handleNotificationPreferenceToggle('smsEnabled', e.target.checked)
                         }
-                        disabled={
-                          preferencesLoading ||
-                          updatePreferencesMutation.isPending
-                        }
+                        disabled={preferencesLoading || updatePreferencesMutation.isPending}
                       />
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -1246,9 +1177,9 @@ export default function Settings() {
           <Box sx={{ p: 3 }}>
             <Box
               sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
                 mb: 3,
               }}
             >
@@ -1264,12 +1195,12 @@ export default function Settings() {
                 startIcon={<AddIcon />}
                 onClick={() => {
                   setServiceTypeForm({
-                    name: "",
-                    description: "",
-                    specialty: "",
+                    name: '',
+                    description: '',
+                    specialty: '',
                     durationMinutes: 30,
                     price: 0,
-                    billingCode: "",
+                    billingCode: '',
                     isActive: true,
                   });
                   setEditingServiceType(null);
@@ -1286,7 +1217,7 @@ export default function Settings() {
               <TableContainer
                 component={Paper}
                 elevation={0}
-                sx={{ border: "1px solid", borderColor: "divider" }}
+                sx={{ border: '1px solid', borderColor: 'divider' }}
               >
                 <Table>
                   <TableHead>
@@ -1310,12 +1241,12 @@ export default function Settings() {
                             actionText="Add Service Type"
                             onAction={() => {
                               setServiceTypeForm({
-                                name: "",
-                                description: "",
-                                specialty: "",
+                                name: '',
+                                description: '',
+                                specialty: '',
                                 durationMinutes: 30,
                                 price: 0,
-                                billingCode: "",
+                                billingCode: '',
                                 isActive: true,
                               });
                               setEditingServiceType(null);
@@ -1342,10 +1273,7 @@ export default function Settings() {
                                 {st.name}
                               </Typography>
                               {st.description && (
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
+                                <Typography variant="caption" color="text.secondary">
                                   {st.description}
                                 </Typography>
                               )}
@@ -1354,27 +1282,20 @@ export default function Settings() {
                               {st.specialty ? (
                                 <Chip label={st.specialty} size="small" />
                               ) : (
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
+                                <Typography variant="caption" color="text.secondary">
                                   All specialties
                                 </Typography>
                               )}
                             </TableCell>
-                            <TableCell align="center">
-                              {st.durationMinutes} min
-                            </TableCell>
+                            <TableCell align="center">{st.durationMinutes} min</TableCell>
                             <TableCell align="right">
-                              <Typography fontWeight={600}>
-                                ${st.price.toFixed(2)}
-                              </Typography>
+                              <Typography fontWeight={600}>${st.price.toFixed(2)}</Typography>
                             </TableCell>
-                            <TableCell>{st.billingCode || "—"}</TableCell>
+                            <TableCell>{st.billingCode || '—'}</TableCell>
                             <TableCell align="center">
                               <Chip
-                                label={st.isActive ? "Active" : "Inactive"}
-                                color={st.isActive ? "success" : "default"}
+                                label={st.isActive ? 'Active' : 'Inactive'}
+                                color={st.isActive ? 'success' : 'default'}
                                 size="small"
                               />
                             </TableCell>
@@ -1384,11 +1305,11 @@ export default function Settings() {
                                 onClick={() => {
                                   setServiceTypeForm({
                                     name: st.name,
-                                    description: st.description || "",
-                                    specialty: st.specialty || "",
+                                    description: st.description || '',
+                                    specialty: st.specialty || '',
                                     durationMinutes: st.durationMinutes,
                                     price: st.price,
-                                    billingCode: st.billingCode || "",
+                                    billingCode: st.billingCode || '',
                                     isActive: st.isActive,
                                   });
                                   setEditingServiceType(st);
@@ -1412,7 +1333,7 @@ export default function Settings() {
                               </IconButton>
                             </TableCell>
                           </TableRow>
-                        ),
+                        )
                       )
                     )}
                   </TableBody>
@@ -1434,60 +1355,31 @@ export default function Settings() {
               <Grid size={{ xs: 12, md: 6 }}>
                 <AuraCard>
                   <>
-                    <Box
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      mb={2}
-                    >
-                      <Typography variant="subtitle1">
-                        EHR Integration
-                      </Typography>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                      <Typography variant="subtitle1">EHR Integration</Typography>
                       <Chip
-                        label={
-                          settings.integrations.ehr.enabled
-                            ? "Connected"
-                            : "Disconnected"
-                        }
-                        color={
-                          settings.integrations.ehr.enabled
-                            ? "success"
-                            : "default"
-                        }
+                        label={settings.integrations.ehr.enabled ? 'Connected' : 'Disconnected'}
+                        color={settings.integrations.ehr.enabled ? 'success' : 'default'}
                         icon={
-                          settings.integrations.ehr.enabled ? (
-                            <CheckCircleIcon />
-                          ) : (
-                            <WarningIcon />
-                          )
+                          settings.integrations.ehr.enabled ? <CheckCircleIcon /> : <WarningIcon />
                         }
                       />
                     </Box>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      gutterBottom
-                    >
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
                       Provider: {settings.integrations.ehr.provider}
                     </Typography>
                     <Box display="flex" alignItems="center" gap={1} mt={2}>
                       <TextField
                         label="API Key"
                         fullWidth
-                        type={showApiKey ? "text" : "password"}
+                        type={showApiKey ? 'text' : 'password'}
                         value={settings.integrations.ehr.apiKey}
                         disabled
                         InputProps={{
                           endAdornment: (
                             <InputAdornment position="end">
-                              <IconButton
-                                onClick={() => setShowApiKey(!showApiKey)}
-                              >
-                                {showApiKey ? (
-                                  <VisibilityOffIcon />
-                                ) : (
-                                  <VisibilityIcon />
-                                )}
+                              <IconButton onClick={() => setShowApiKey(!showApiKey)}>
+                                {showApiKey ? <VisibilityOffIcon /> : <VisibilityIcon />}
                               </IconButton>
                               <CopyButton
                                 text={settings.integrations.ehr.apiKey}
@@ -1580,41 +1472,37 @@ export default function Settings() {
         title="Add Provider"
         onSubmit={async () => {
           try {
-            if (
-              !providerForm.firstName ||
-              !providerForm.lastName ||
-              !providerForm.email
-            ) {
-              enqueueSnackbar("Please fill in all required fields", {
-                variant: "error",
+            if (!providerForm.firstName || !providerForm.lastName || !providerForm.email) {
+              enqueueSnackbar('Please fill in all required fields', {
+                variant: 'error',
               });
               return;
             }
 
-            await api.post("/api/clinic-management/providers", {
+            await api.post('/api/clinic-management/providers', {
               firstName: providerForm.firstName,
               lastName: providerForm.lastName,
               email: providerForm.email,
-              specialization: providerForm.specialization || "General Practice",
-              department: providerForm.department || "Primary Care",
+              specialization: providerForm.specialization || 'General Practice',
+              department: providerForm.department || 'Primary Care',
               isActive: true,
             });
 
-            queryClient.invalidateQueries({ queryKey: ["providers"] });
+            queryClient.invalidateQueries({ queryKey: ['providers'] });
             setAddProviderDialog(false);
             setProviderForm({
-              firstName: "",
-              lastName: "",
-              email: "",
-              specialization: "",
-              department: "",
+              firstName: '',
+              lastName: '',
+              email: '',
+              specialization: '',
+              department: '',
             });
-            enqueueSnackbar("Provider added successfully", {
-              variant: "success",
+            enqueueSnackbar('Provider added successfully', {
+              variant: 'success',
             });
           } catch (error) {
-            console.error("Error adding provider:", error);
-            enqueueSnackbar("Failed to add provider", { variant: "error" });
+            console.error('Error adding provider:', error);
+            enqueueSnackbar('Failed to add provider', { variant: 'error' });
           }
         }}
         submitLabel="Add Provider"
@@ -1626,9 +1514,7 @@ export default function Settings() {
               label="First Name"
               fullWidth
               value={providerForm.firstName}
-              onChange={(e) =>
-                setProviderForm({ ...providerForm, firstName: e.target.value })
-              }
+              onChange={(e) => setProviderForm({ ...providerForm, firstName: e.target.value })}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -1636,9 +1522,7 @@ export default function Settings() {
               label="Last Name"
               fullWidth
               value={providerForm.lastName}
-              onChange={(e) =>
-                setProviderForm({ ...providerForm, lastName: e.target.value })
-              }
+              onChange={(e) => setProviderForm({ ...providerForm, lastName: e.target.value })}
             />
           </Grid>
           <Grid size={12}>
@@ -1647,9 +1531,7 @@ export default function Settings() {
               type="email"
               fullWidth
               value={providerForm.email}
-              onChange={(e) =>
-                setProviderForm({ ...providerForm, email: e.target.value })
-              }
+              onChange={(e) => setProviderForm({ ...providerForm, email: e.target.value })}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -1663,11 +1545,11 @@ export default function Settings() {
                 })
               }
               options={[
-                { value: "General Practice", label: "General Practice" },
-                { value: "Cardiology", label: "Cardiology" },
-                { value: "Pediatrics", label: "Pediatrics" },
-                { value: "Orthopedics", label: "Orthopedics" },
-                { value: "Dermatology", label: "Dermatology" },
+                { value: 'General Practice', label: 'General Practice' },
+                { value: 'Cardiology', label: 'Cardiology' },
+                { value: 'Pediatrics', label: 'Pediatrics' },
+                { value: 'Orthopedics', label: 'Orthopedics' },
+                { value: 'Dermatology', label: 'Dermatology' },
               ]}
             />
           </Grid>
@@ -1682,11 +1564,11 @@ export default function Settings() {
                 })
               }
               options={[
-                { value: "Primary Care", label: "Primary Care" },
-                { value: "Cardiology", label: "Cardiology" },
-                { value: "Pediatrics", label: "Pediatrics" },
-                { value: "Orthopedics", label: "Orthopedics" },
-                { value: "Administration", label: "Administration" },
+                { value: 'Primary Care', label: 'Primary Care' },
+                { value: 'Cardiology', label: 'Cardiology' },
+                { value: 'Pediatrics', label: 'Pediatrics' },
+                { value: 'Orthopedics', label: 'Orthopedics' },
+                { value: 'Administration', label: 'Administration' },
               ]}
             />
           </Grid>
@@ -1712,7 +1594,7 @@ export default function Settings() {
             setScheduleDialogOpen(false);
             setSelectedProvider(null);
           }}
-          providerId={selectedProvider.id}
+          providerId={selectedProvider.providerProfileId}
           providerName={selectedProvider.name}
         />
       )}
@@ -1721,7 +1603,7 @@ export default function Settings() {
       <FormDialog
         open={serviceTypeDialogOpen}
         onClose={() => setServiceTypeDialogOpen(false)}
-        title={editingServiceType ? "Edit Service Type" : "Add Service Type"}
+        title={editingServiceType ? 'Edit Service Type' : 'Add Service Type'}
         onSubmit={() => {
           if (editingServiceType) {
             updateServiceTypeMutation.mutate({
@@ -1732,11 +1614,8 @@ export default function Settings() {
             createServiceTypeMutation.mutate(serviceTypeForm);
           }
         }}
-        submitLabel={editingServiceType ? "Save Changes" : "Create"}
-        loading={
-          createServiceTypeMutation.isPending ||
-          updateServiceTypeMutation.isPending
-        }
+        submitLabel={editingServiceType ? 'Save Changes' : 'Create'}
+        loading={createServiceTypeMutation.isPending || updateServiceTypeMutation.isPending}
       >
         <Grid container spacing={2}>
           <Grid size={12}>
@@ -1745,9 +1624,7 @@ export default function Settings() {
               fullWidth
               required
               value={serviceTypeForm.name}
-              onChange={(e) =>
-                setServiceTypeForm({ ...serviceTypeForm, name: e.target.value })
-              }
+              onChange={(e) => setServiceTypeForm({ ...serviceTypeForm, name: e.target.value })}
               placeholder="e.g., Initial Consultation"
             />
           </Grid>
@@ -1777,13 +1654,13 @@ export default function Settings() {
                 })
               }
               options={[
-                { value: "", label: "All Specialties" },
-                { value: "Physiotherapy", label: "Physiotherapy" },
-                { value: "Chiropractic", label: "Chiropractic" },
-                { value: "Osteopathy", label: "Osteopathy" },
-                { value: "Massage Therapy", label: "Massage Therapy" },
-                { value: "Sports Medicine", label: "Sports Medicine" },
-                { value: "Podiatry", label: "Podiatry" },
+                { value: '', label: 'All Specialties' },
+                { value: 'Physiotherapy', label: 'Physiotherapy' },
+                { value: 'Chiropractic', label: 'Chiropractic' },
+                { value: 'Osteopathy', label: 'Osteopathy' },
+                { value: 'Massage Therapy', label: 'Massage Therapy' },
+                { value: 'Sports Medicine', label: 'Sports Medicine' },
+                { value: 'Podiatry', label: 'Podiatry' },
               ]}
             />
           </Grid>
@@ -1814,9 +1691,7 @@ export default function Settings() {
                 })
               }
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">$</InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
               }}
             />
           </Grid>
@@ -1856,12 +1731,8 @@ export default function Settings() {
       {/* Delete Service Type Confirm */}
       <ConfirmDialog
         open={deleteServiceTypeConfirm.open}
-        onClose={() =>
-          setDeleteServiceTypeConfirm({ open: false, id: "", name: "" })
-        }
-        onConfirm={() =>
-          deleteServiceTypeMutation.mutate(deleteServiceTypeConfirm.id)
-        }
+        onClose={() => setDeleteServiceTypeConfirm({ open: false, id: '', name: '' })}
+        onConfirm={() => deleteServiceTypeMutation.mutate(deleteServiceTypeConfirm.id)}
         title="Delete Service Type"
         message={`Are you sure you want to delete "${deleteServiceTypeConfirm.name}"? This cannot be undone.`}
         severity="error"
@@ -1878,8 +1749,8 @@ function ResearchPartnersTab() {
   const { canMakeApiCalls } = useAuthGuard();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["clinic-partners"],
-    queryFn: () => api.get("/api/clinic/partners"),
+    queryKey: ['clinic-partners'],
+    queryFn: () => api.get('/api/clinic/partners'),
     enabled: canMakeApiCalls,
   });
 
@@ -1889,22 +1760,19 @@ function ResearchPartnersTab() {
         dataSharingLevel: level,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clinic-partners"] });
-      enqueueSnackbar("Partnership request submitted", { variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ['clinic-partners'] });
+      enqueueSnackbar('Partnership request submitted', { variant: 'success' });
     },
-    onError: () =>
-      enqueueSnackbar("Failed to submit request", { variant: "error" }),
+    onError: () => enqueueSnackbar('Failed to submit request', { variant: 'error' }),
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (partnerId: string) =>
-      api.delete(`/api/clinic/partners/${partnerId}`),
+    mutationFn: (partnerId: string) => api.delete(`/api/clinic/partners/${partnerId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clinic-partners"] });
-      enqueueSnackbar("Partnership revoked", { variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ['clinic-partners'] });
+      enqueueSnackbar('Partnership revoked', { variant: 'success' });
     },
-    onError: () =>
-      enqueueSnackbar("Failed to revoke partnership", { variant: "error" }),
+    onError: () => enqueueSnackbar('Failed to revoke partnership', { variant: 'error' }),
   });
 
   const partners = data?.partners || [];
@@ -1915,14 +1783,13 @@ function ResearchPartnersTab() {
         Research Partners
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
-        Opt-in to share anonymized outcome data with medical device
-        manufacturers for research purposes.
+        Opt-in to share anonymized outcome data with medical device manufacturers for research
+        purposes.
       </Typography>
 
       <Box sx={{ mb: 3 }}>
         <Callout variant="info">
-          Data sharing is always anonymized and aggregated. Patient identities
-          are never shared.
+          Data sharing is always anonymized and aggregated. Patient identities are never shared.
         </Callout>
       </Box>
 
@@ -1938,16 +1805,10 @@ function ResearchPartnersTab() {
           {partners.map((partner: any) => (
             <Grid size={{ xs: 12, md: 6 }} key={partner.id}>
               <AuraCard>
-                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                  <Avatar
-                    sx={{ width: 48, height: 48, bgcolor: "primary.main" }}
-                  >
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                  <Avatar sx={{ width: 48, height: 48, bgcolor: 'primary.main' }}>
                     {partner.logoUrl ? (
-                      <img
-                        src={partner.logoUrl}
-                        alt=""
-                        style={{ width: "100%" }}
-                      />
+                      <img src={partner.logoUrl} alt="" style={{ width: '100%' }} />
                     ) : (
                       partner.name.charAt(0)
                     )}
@@ -1955,9 +1816,9 @@ function ResearchPartnersTab() {
                   <Box sx={{ flex: 1 }}>
                     <Box
                       sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                       }}
                     >
                       <Typography variant="subtitle1" fontWeight={600}>
@@ -1968,29 +1829,24 @@ function ResearchPartnersTab() {
                           size="small"
                           label={partner.affiliation.status}
                           color={
-                            partner.affiliation.status === "Active"
-                              ? "success"
-                              : partner.affiliation.status === "Pending"
-                                ? "warning"
-                                : "default"
+                            partner.affiliation.status === 'Active'
+                              ? 'success'
+                              : partner.affiliation.status === 'Pending'
+                                ? 'warning'
+                                : 'default'
                           }
                         />
                       ) : null}
                     </Box>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mb: 1 }}
-                    >
-                      {partner.description ||
-                        `${partner.deviceCount} devices tracked`}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      {partner.description || `${partner.deviceCount} devices tracked`}
                     </Typography>
                     {partner.affiliation ? (
-                      <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
                         <Typography variant="caption" color="text.secondary">
                           Sharing: {partner.affiliation.dataSharingLevel}
                         </Typography>
-                        {partner.affiliation.status === "Active" && (
+                        {partner.affiliation.status === 'Active' && (
                           <AuraButton
                             size="small"
                             color="error"
@@ -2002,14 +1858,14 @@ function ResearchPartnersTab() {
                         )}
                       </Box>
                     ) : (
-                      <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
                         <AuraButton
                           size="small"
                           variant="outlined"
                           onClick={() =>
                             requestMutation.mutate({
                               partnerId: partner.id,
-                              level: "Aggregated",
+                              level: 'Aggregated',
                             })
                           }
                           disabled={requestMutation.isPending}
@@ -2022,7 +1878,7 @@ function ResearchPartnersTab() {
                           onClick={() =>
                             requestMutation.mutate({
                               partnerId: partner.id,
-                              level: "Detailed",
+                              level: 'Detailed',
                             })
                           }
                           disabled={requestMutation.isPending}

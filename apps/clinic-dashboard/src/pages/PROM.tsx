@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -19,7 +19,8 @@ import {
   Stack,
   Divider,
   Tooltip,
-} from "@mui/material";
+  useTheme,
+} from '@mui/material';
 import {
   Send as SendIcon,
   Add as AddIcon,
@@ -34,23 +35,25 @@ import {
   Assignment as AssignmentIcon,
   QuestionAnswer as QuestionIcon,
   BarChart as ChartIcon,
-} from "@mui/icons-material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { format, parseISO } from "date-fns";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useSnackbar } from "notistack";
+  VerifiedUser as VerifiedIcon,
+  Build as BuildIcon,
+} from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format, parseISO } from 'date-fns';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useSnackbar } from 'notistack';
 import {
   promApi,
   PromTemplateSummary,
   PromResponse,
   PromResponsesResult,
   PromAnswerValue,
-} from "../services/promApi";
-import { PROMSender } from "../components/messaging";
-import { PromBuilder } from "../features/proms/components/PromBuilder";
-import { PromPreview } from "../components/messaging/PromPreview";
+} from '../services/promApi';
+import { PROMSender } from '../components/messaging';
+import { PromBuilder } from '../features/proms/components/PromBuilder';
+import { PromPreview } from '../components/messaging/PromPreview';
 import {
   LineChart,
   Line,
@@ -63,12 +66,12 @@ import {
   Tooltip as ChartTooltip,
   ResponsiveContainer,
   Legend,
-} from "recharts";
+} from 'recharts';
 import {
   PageHeader,
   SectionLoader,
   StatusBadge,
-  AuraStatCard,
+  AuraGlassStatCard,
   InfoCard,
   StatCardSkeleton,
   AuraEmptyState,
@@ -77,11 +80,12 @@ import {
   AuraButton,
   AuraCard,
   auraColors,
+  glassTokens,
   FormDialog,
   FilterToolbar,
   ConfirmDialog,
-  AuraChartCard,
-} from "@qivr/design-system";
+  AuraGlassChartCard,
+} from '@qivr/design-system';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -107,6 +111,7 @@ function TabPanel(props: TabPanelProps) {
 const PROM: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [searchParams, setSearchParams] = useSearchParams();
+  const theme = useTheme();
 
   const [currentTab, setCurrentTab] = useState(0);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -115,31 +120,28 @@ const PROM: React.FC = () => {
 
   // Handle action=send&patientId query params
   useEffect(() => {
-    const action = searchParams.get("action");
-    const patientId = searchParams.get("patientId");
-    if (action === "send" && patientId) {
+    const action = searchParams.get('action');
+    const patientId = searchParams.get('patientId');
+    if (action === 'send' && patientId) {
       setInitialPatientId(patientId);
       setSendDialogOpen(true);
       // Clear the params from URL
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);
-  const [selectedResponse, setSelectedResponse] = useState<PromResponse | null>(
-    null,
-  );
+  const [selectedResponse, setSelectedResponse] = useState<PromResponse | null>(null);
   const [responseDetailOpen, setResponseDetailOpen] = useState(false);
   const [responseDetailLoading, setResponseDetailLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState('all');
   const [dateRange, setDateRange] = useState({
     start: null as Date | null,
     end: null as Date | null,
   });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(
-    null,
-  );
+  const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [builderDialogOpen, setBuilderDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
     template: PromTemplateSummary | null;
@@ -151,11 +153,15 @@ const PROM: React.FC = () => {
     isLoading: templatesLoading,
     refetch: refetchTemplates,
   } = useQuery<PromTemplateSummary[]>({
-    queryKey: ["prom-templates"],
+    queryKey: ['prom-templates'],
     queryFn: () => promApi.getTemplates({ isActive: true }),
   });
 
   const templates: PromTemplateSummary[] = templatesData || [];
+
+  // Split templates into validated (has instrumentId) vs custom
+  const validatedTemplates = templates.filter((t) => t.instrumentId || t.instrumentKey);
+  const customTemplates = templates.filter((t) => !t.instrumentId && !t.instrumentKey);
 
   // Fetch responses
   const {
@@ -163,16 +169,12 @@ const PROM: React.FC = () => {
     isLoading: responsesLoading,
     refetch: refetchResponses,
   } = useQuery<PromResponsesResult>({
-    queryKey: ["prom-responses", filterStatus, dateRange, page, rowsPerPage],
+    queryKey: ['prom-responses', filterStatus, dateRange, page, rowsPerPage],
     queryFn: () =>
       promApi.getResponses({
-        status: filterStatus !== "all" ? filterStatus : undefined,
-        startDate: dateRange.start
-          ? format(dateRange.start, "yyyy-MM-dd")
-          : undefined,
-        endDate: dateRange.end
-          ? format(dateRange.end, "yyyy-MM-dd")
-          : undefined,
+        status: filterStatus !== 'all' ? filterStatus : undefined,
+        startDate: dateRange.start ? format(dateRange.start, 'yyyy-MM-dd') : undefined,
+        endDate: dateRange.end ? format(dateRange.end, 'yyyy-MM-dd') : undefined,
         page: page + 1,
         limit: rowsPerPage,
       }),
@@ -186,11 +188,11 @@ const PROM: React.FC = () => {
   const deleteTemplateMutation = useMutation({
     mutationFn: (templateId: string) => promApi.deleteTemplate(templateId),
     onSuccess: () => {
-      enqueueSnackbar("Template deleted successfully", { variant: "success" });
+      enqueueSnackbar('Template deleted successfully', { variant: 'success' });
       refetchTemplates();
     },
     onError: () => {
-      enqueueSnackbar("Failed to delete template", { variant: "error" });
+      enqueueSnackbar('Failed to delete template', { variant: 'error' });
     },
   });
 
@@ -198,29 +200,19 @@ const PROM: React.FC = () => {
   const statistics = {
     total: aggregateStats?.total ?? responses.length,
     completed:
-      aggregateStats?.completedCount ??
-      responses.filter((r) => r.status === "completed").length,
-    pending:
-      aggregateStats?.pendingCount ??
-      responses.filter((r) => r.status === "pending").length,
+      aggregateStats?.completedCount ?? responses.filter((r) => r.status === 'completed').length,
+    pending: aggregateStats?.pendingCount ?? responses.filter((r) => r.status === 'pending').length,
     inProgress:
-      aggregateStats?.inProgressCount ??
-      responses.filter((r) => r.status === "in-progress").length,
-    expired:
-      aggregateStats?.expiredCount ??
-      responses.filter((r) => r.status === "expired").length,
+      aggregateStats?.inProgressCount ?? responses.filter((r) => r.status === 'in-progress').length,
+    expired: aggregateStats?.expiredCount ?? responses.filter((r) => r.status === 'expired').length,
     cancelled:
-      aggregateStats?.cancelledCount ??
-      responses.filter((r) => r.status === "cancelled").length,
+      aggregateStats?.cancelledCount ?? responses.filter((r) => r.status === 'cancelled').length,
   };
 
   const fallbackAverageScore = () => {
-    const scored = responses.filter((item) => typeof item.score === "number");
+    const scored = responses.filter((item) => typeof item.score === 'number');
     if (!scored.length) return 0;
-    const totalScore = scored.reduce(
-      (total, item) => total + (item.score ?? 0),
-      0,
-    );
+    const totalScore = scored.reduce((total, item) => total + (item.score ?? 0), 0);
     return Math.round((totalScore / scored.length) * 100) / 100;
   };
 
@@ -228,43 +220,41 @@ const PROM: React.FC = () => {
 
   const completionRate =
     aggregateStats?.completionRate ??
-    (statistics.total > 0
-      ? Math.round((statistics.completed / statistics.total) * 1000) / 10
-      : 0);
+    (statistics.total > 0 ? Math.round((statistics.completed / statistics.total) * 1000) / 10 : 0);
 
   const nextDueDate = aggregateStats?.nextDue;
   const lastCompletedDate = aggregateStats?.lastCompleted;
   const streak = aggregateStats?.streak ?? 0;
 
   const formatDate = (value?: string) => {
-    if (!value) return "—";
+    if (!value) return '—';
     try {
-      return format(parseISO(value), "MMM dd, yyyy");
+      return format(parseISO(value), 'MMM dd, yyyy');
     } catch {
-      return "—";
+      return '—';
     }
   };
 
   // Chart data - using design system colors
   const statusChartData = [
     {
-      name: "Completed",
+      name: 'Completed',
       value: statistics.completed,
       color: auraColors.green.main,
     },
     {
-      name: "Pending",
+      name: 'Pending',
       value: statistics.pending,
       color: auraColors.orange.main,
     },
     {
-      name: "In Progress",
+      name: 'In Progress',
       value: statistics.inProgress,
       color: auraColors.blue.main,
     },
-    { name: "Expired", value: statistics.expired, color: auraColors.red.main },
+    { name: 'Expired', value: statistics.expired, color: auraColors.red.main },
     {
-      name: "Cancelled",
+      name: 'Cancelled',
       value: statistics.cancelled,
       color: auraColors.grey[500],
     },
@@ -282,7 +272,7 @@ const PROM: React.FC = () => {
   const trendsData = responses
     .reduce((acc: TrendsDataItem[], response: PromResponse) => {
       if (response.completedAt) {
-        const date = format(parseISO(response.completedAt), "MMM dd");
+        const date = format(parseISO(response.completedAt), 'MMM dd');
         const existing = acc.find((item) => item.date === date);
         if (existing) {
           existing.count += 1;
@@ -303,8 +293,7 @@ const PROM: React.FC = () => {
     }, [])
     .map((item) => ({
       ...item,
-      avgScore:
-        item.scoreCount > 0 ? Math.round(item.totalScore / item.scoreCount) : 0,
+      avgScore: item.scoreCount > 0 ? Math.round(item.totalScore / item.scoreCount) : 0,
     }));
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -331,12 +320,11 @@ const PROM: React.FC = () => {
       const detailed = await promApi.getResponse(response.id);
       setSelectedResponse(detailed);
     } catch (error) {
-      console.error("Failed to load response details", error);
+      console.error('Failed to load response details', error);
       setSelectedResponse(response);
-      enqueueSnackbar(
-        "Unable to load full response details; showing cached data.",
-        { variant: "warning" },
-      );
+      enqueueSnackbar('Unable to load full response details; showing cached data.', {
+        variant: 'warning',
+      });
     } finally {
       setResponseDetailLoading(false);
     }
@@ -350,30 +338,27 @@ const PROM: React.FC = () => {
 
   const renderAnswerValue = (answer: PromAnswerValue): React.ReactNode => {
     if (answer === null || answer === undefined) {
-      return "—";
+      return '—';
     }
 
     if (Array.isArray(answer)) {
-      return answer.length ? answer.join(", ") : "—";
+      return answer.length ? answer.join(', ') : '—';
     }
 
     if (answer instanceof Date) {
-      return format(answer, "PPP");
+      return format(answer, 'PPP');
     }
 
-    if (typeof answer === "object") {
+    if (typeof answer === 'object') {
       return (
-        <Box
-          component="pre"
-          sx={{ m: 0, fontFamily: "monospace", whiteSpace: "pre-wrap" }}
-        >
+        <Box component="pre" sx={{ m: 0, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
           {JSON.stringify(answer, null, 2)}
         </Box>
       );
     }
 
-    if (typeof answer === "boolean") {
-      return answer ? "Yes" : "No";
+    if (typeof answer === 'boolean') {
+      return answer ? 'Yes' : 'No';
     }
 
     return answer;
@@ -381,10 +366,7 @@ const PROM: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box
-        className="page-enter"
-        sx={{ height: "100%", display: "flex", flexDirection: "column" }}
-      >
+      <Box className="page-enter" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <PageHeader
           title="Patient Reported Outcome Measures (PROM)"
           description="Manage questionnaires and track patient-reported outcomes"
@@ -415,65 +397,65 @@ const PROM: React.FC = () => {
         ) : (
           <Grid container spacing={3} sx={{ mb: 3 }}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AuraStatCard
+              <AuraGlassStatCard
                 title="Total Responses"
-                value={statistics.total.toString()}
+                value={statistics.total}
                 icon={<AssignmentIcon />}
-                iconColor="primary.main"
+                color="primary.main"
               />
             </Grid>
 
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AuraStatCard
+              <AuraGlassStatCard
                 title="Completion Rate"
                 value={`${completionRate.toFixed(1)}%`}
                 icon={<ChartIcon />}
-                iconColor="success.main"
+                color="success.main"
               />
             </Grid>
 
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AuraStatCard
+              <AuraGlassStatCard
                 title="Pending"
-                value={statistics.pending.toString()}
+                value={statistics.pending}
                 icon={<PendingIcon />}
-                iconColor="warning.main"
+                color="warning.main"
               />
             </Grid>
 
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AuraStatCard
+              <AuraGlassStatCard
                 title="Active Templates"
-                value={templates.length.toString()}
+                value={templates.length}
                 icon={<QuestionIcon />}
-                iconColor="info.main"
+                color="info.main"
               />
             </Grid>
 
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AuraStatCard
+              <AuraGlassStatCard
                 title="In Progress"
-                value={statistics.inProgress.toString()}
+                value={statistics.inProgress}
                 icon={<ScheduleIcon />}
-                iconColor="secondary.main"
+                color="secondary.main"
               />
             </Grid>
 
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AuraStatCard
+              <AuraGlassStatCard
                 title="Cancelled"
-                value={statistics.cancelled.toString()}
+                value={statistics.cancelled}
                 icon={<CancelIcon />}
-                iconColor="grey.600"
+                color="grey.600"
               />
             </Grid>
 
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AuraStatCard
+              <AuraGlassStatCard
                 title="Average Score"
                 value={averageScore.toFixed(1)}
                 icon={<AssessmentIcon />}
-                iconColor="info.main"
+                color="info.main"
               />
             </Grid>
 
@@ -484,12 +466,11 @@ const PROM: React.FC = () => {
                     <strong>Next Due:</strong> {formatDate(nextDueDate)}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Last Completed:</strong>{" "}
-                    {formatDate(lastCompletedDate)}
+                    <strong>Last Completed:</strong> {formatDate(lastCompletedDate)}
                   </Typography>
                   <Chip
-                    label={`Streak: ${streak} day${streak === 1 ? "" : "s"}`}
-                    color={streak > 0 ? "success" : "default"}
+                    label={`Streak: ${streak} day${streak === 1 ? '' : 's'}`}
+                    color={streak > 0 ? 'success' : 'default'}
                     size="small"
                   />
                 </Stack>
@@ -502,42 +483,39 @@ const PROM: React.FC = () => {
         <Paper
           sx={{
             flex: 1,
-            display: "flex",
-            flexDirection: "column",
+            display: 'flex',
+            flexDirection: 'column',
             borderRadius: 3,
           }}
         >
           <Tabs
             value={currentTab}
             onChange={handleTabChange}
-            sx={{ borderBottom: 1, borderColor: "divider" }}
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
           >
-            <Tab
-              label="Templates"
-              icon={<AssignmentIcon />}
-              iconPosition="start"
-            />
-            <Tab
-              label="Responses"
-              icon={<AssessmentIcon />}
-              iconPosition="start"
-            />
+            <Tab label="Validated PROMs" icon={<VerifiedIcon />} iconPosition="start" />
+            <Tab label="Custom Templates" icon={<BuildIcon />} iconPosition="start" />
+            <Tab label="Responses" icon={<AssessmentIcon />} iconPosition="start" />
             <Tab label="Analytics" icon={<ChartIcon />} iconPosition="start" />
-            <Tab label="Builder" icon={<AddIcon />} iconPosition="start" />
           </Tabs>
 
           <TabPanel value={currentTab} index={0}>
-            {/* Templates Tab */}
+            {/* Validated PROMs Tab */}
             <Box>
               <Box
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
                   mb: 3,
                 }}
               >
-                <Typography variant="h6">PROM Templates</Typography>
+                <Box>
+                  <Typography variant="h6">Clinically Validated PROMs</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Standardized, internationally validated questionnaires
+                  </Typography>
+                </Box>
                 <AuraButton
                   variant="contained"
                   startIcon={<SendIcon />}
@@ -549,26 +527,138 @@ const PROM: React.FC = () => {
 
               {templatesLoading ? (
                 <SectionLoader minHeight={200} />
+              ) : validatedTemplates.length === 0 ? (
+                <AuraEmptyState
+                  title="No validated PROMs available"
+                  description="Contact your administrator to add clinically validated instruments"
+                />
               ) : (
                 <Grid container spacing={3}>
-                  {templates.map((template) => (
+                  {validatedTemplates.map((template) => (
                     <Grid size={{ xs: 12, md: 6, lg: 4 }} key={template.id}>
                       <AuraCard
                         sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          height: "100%",
+                          display: 'flex',
+                          flexDirection: 'column',
+                          height: '100%',
+                        }}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                            <Typography variant="h6">{template.name}</Typography>
+                            <Chip
+                              label="Validated"
+                              size="small"
+                              color="success"
+                              icon={<VerifiedIcon sx={{ fontSize: 14 }} />}
+                            />
+                          </Stack>
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            {template.description}
+                          </Typography>
+                          {template.instrumentKey && (
+                            <Chip
+                              label={template.instrumentKey}
+                              size="small"
+                              variant="outlined"
+                              sx={{ mr: 1 }}
+                            />
+                          )}
+                          {template.category && (
+                            <Chip label={template.category} size="small" variant="outlined" />
+                          )}
+                        </Box>
+                        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                          <AuraButton
+                            size="small"
+                            startIcon={<PreviewIcon />}
+                            onClick={() => {
+                              setPreviewTemplateId(template.id);
+                              setPreviewOpen(true);
+                            }}
+                          >
+                            Preview
+                          </AuraButton>
+                          <AuraButton
+                            size="small"
+                            variant="contained"
+                            startIcon={<SendIcon />}
+                            onClick={() => {
+                              setSendTemplateId(template.id);
+                              setSendDialogOpen(true);
+                            }}
+                          >
+                            Send
+                          </AuraButton>
+                        </Stack>
+                      </AuraCard>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </Box>
+          </TabPanel>
+
+          <TabPanel value={currentTab} index={1}>
+            {/* Custom Templates Tab */}
+            <Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 3,
+                }}
+              >
+                <Box>
+                  <Typography variant="h6">Custom Templates</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Create your own questionnaires for specific needs
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={2}>
+                  <AuraButton
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={() => setBuilderDialogOpen(true)}
+                  >
+                    Create Template
+                  </AuraButton>
+                  <AuraButton
+                    variant="contained"
+                    startIcon={<SendIcon />}
+                    onClick={() => setSendDialogOpen(true)}
+                  >
+                    Send PROM
+                  </AuraButton>
+                </Stack>
+              </Box>
+
+              {templatesLoading ? (
+                <SectionLoader minHeight={200} />
+              ) : customTemplates.length === 0 ? (
+                <AuraEmptyState
+                  title="No custom templates yet"
+                  description="Create your first custom PROM template to get started"
+                  actionText="Create Template"
+                  onAction={() => setBuilderDialogOpen(true)}
+                />
+              ) : (
+                <Grid container spacing={3}>
+                  {customTemplates.map((template) => (
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }} key={template.id}>
+                      <AuraCard
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          height: '100%',
                         }}
                       >
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="h6" gutterBottom>
                             {template.name}
                           </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            paragraph
-                          >
+                          <Typography variant="body2" color="text.secondary" paragraph>
                             {template.description}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
@@ -580,11 +670,7 @@ const PROM: React.FC = () => {
                             display="block"
                             sx={{ mt: 1 }}
                           >
-                            Created{" "}
-                            {format(
-                              new Date(template.createdAt),
-                              "dd MMM yyyy",
-                            )}
+                            Created {format(new Date(template.createdAt), 'dd MMM yyyy')}
                           </Typography>
                         </Box>
                         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
@@ -611,9 +697,7 @@ const PROM: React.FC = () => {
                           <Tooltip title="Delete Template" arrow>
                             <IconButton
                               size="small"
-                              onClick={() =>
-                                handleDeleteTemplateClick(template)
-                              }
+                              onClick={() => handleDeleteTemplateClick(template)}
                               aria-label="Delete template"
                             >
                               <DeleteIcon />
@@ -628,30 +712,30 @@ const PROM: React.FC = () => {
             </Box>
           </TabPanel>
 
-          <TabPanel value={currentTab} index={1}>
+          <TabPanel value={currentTab} index={2}>
             {/* Responses Tab */}
             <Box>
               <FilterToolbar
                 filters={[
                   {
-                    key: "status",
-                    label: "Status",
+                    key: 'status',
+                    label: 'Status',
                     value: filterStatus,
                     options: [
-                      { value: "all", label: "All" },
-                      { value: "pending", label: "Pending" },
-                      { value: "in-progress", label: "In Progress" },
-                      { value: "completed", label: "Completed" },
-                      { value: "expired", label: "Expired" },
-                      { value: "cancelled", label: "Cancelled" },
+                      { value: 'all', label: 'All' },
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'in-progress', label: 'In Progress' },
+                      { value: 'completed', label: 'Completed' },
+                      { value: 'expired', label: 'Expired' },
+                      { value: 'cancelled', label: 'Cancelled' },
                     ],
                   },
                 ]}
                 onFilterChange={(key, value) => {
-                  if (key === "status") setFilterStatus(value);
+                  if (key === 'status') setFilterStatus(value);
                 }}
                 onClearAll={() => {
-                  setFilterStatus("all");
+                  setFilterStatus('all');
                   setDateRange({ start: null, end: null });
                 }}
                 actions={
@@ -662,15 +746,13 @@ const PROM: React.FC = () => {
                       onChange={(newValue) =>
                         setDateRange((prev) => ({ ...prev, start: newValue }))
                       }
-                      slotProps={{ textField: { size: "small" } }}
+                      slotProps={{ textField: { size: 'small' } }}
                     />
                     <DatePicker
                       label="End Date"
                       value={dateRange.end}
-                      onChange={(newValue) =>
-                        setDateRange((prev) => ({ ...prev, end: newValue }))
-                      }
-                      slotProps={{ textField: { size: "small" } }}
+                      onChange={(newValue) => setDateRange((prev) => ({ ...prev, end: newValue }))}
+                      slotProps={{ textField: { size: 'small' } }}
                     />
                     <AuraButton
                       variant="outlined"
@@ -681,9 +763,7 @@ const PROM: React.FC = () => {
                     </AuraButton>
                   </>
                 }
-                showFilterChips={
-                  filterStatus !== "all" || !!dateRange.start || !!dateRange.end
-                }
+                showFilterChips={filterStatus !== 'all' || !!dateRange.start || !!dateRange.end}
               />
 
               <TableContainer component={Paper}>
@@ -720,49 +800,38 @@ const PROM: React.FC = () => {
                         <TableRow key={response.id}>
                           <TableCell>{response.patientName}</TableCell>
                           <TableCell>
-                            {response.templateName ||
-                              response.templateId ||
-                              "—"}
+                            {response.templateName || response.templateId || '—'}
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={response.status} />
                           </TableCell>
                           <TableCell>
                             {response.assignedAt
-                              ? format(
-                                  parseISO(response.assignedAt),
-                                  "MMM dd, yyyy",
-                                )
-                              : "-"}
+                              ? format(parseISO(response.assignedAt), 'MMM dd, yyyy')
+                              : '-'}
                           </TableCell>
                           <TableCell>
                             {response.completedAt
-                              ? format(
-                                  parseISO(response.completedAt),
-                                  "MMM dd, yyyy",
-                                )
-                              : "-"}
+                              ? format(parseISO(response.completedAt), 'MMM dd, yyyy')
+                              : '-'}
                           </TableCell>
                           <TableCell>
                             {response.score !== undefined ? (
                               <Tooltip
                                 title={
-                                  response.rawScore !== undefined &&
-                                  response.maxScore !== undefined
+                                  response.rawScore !== undefined && response.maxScore !== undefined
                                     ? `Raw score: ${response.rawScore} / ${response.maxScore}`
-                                    : "Percentage score"
+                                    : 'Percentage score'
                                 }
                               >
                                 <Chip
                                   label={`${response.score.toFixed(1)}%`}
-                                  color={
-                                    response.score >= 70 ? "success" : "warning"
-                                  }
+                                  color={response.score >= 70 ? 'success' : 'warning'}
                                   size="small"
                                 />
                               </Tooltip>
                             ) : (
-                              "-"
+                              '-'
                             )}
                           </TableCell>
                           <TableCell>
@@ -777,12 +846,9 @@ const PROM: React.FC = () => {
                                 <PreviewIcon />
                               </IconButton>
                             </Tooltip>
-                            {response.status === "pending" && (
+                            {response.status === 'pending' && (
                               <Tooltip title="Send Reminder" arrow>
-                                <IconButton
-                                  size="small"
-                                  aria-label="Send reminder email"
-                                >
+                                <IconButton size="small" aria-label="Send reminder email">
                                   <EmailIcon />
                                 </IconButton>
                               </Tooltip>
@@ -805,125 +871,137 @@ const PROM: React.FC = () => {
                     setPage(0);
                   }}
                   labelDisplayedRows={({ from, to, count }) => (
-                    <TableLabelDisplayedRows
-                      from={from}
-                      to={to}
-                      count={count}
-                    />
+                    <TableLabelDisplayedRows from={from} to={to} count={count} />
                   )}
                 />
               </TableContainer>
             </Box>
           </TabPanel>
 
-          <TabPanel value={currentTab} index={2}>
+          <TabPanel value={currentTab} index={3}>
             {/* Analytics Tab */}
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <AuraChartCard title="Response Status Distribution">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={statusChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={(entry) => `${entry.name}: ${entry.value}`}
-                        outerRadius={80}
-                        fill={auraColors.blue.main}
-                        dataKey="value"
-                      >
-                        {statusChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <ChartTooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </AuraChartCard>
+                <AuraGlassChartCard title="Response Status Distribution">
+                  <Box sx={{ position: 'relative' }}>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie
+                          data={statusChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={2}
+                          dataKey="value"
+                          animationDuration={500}
+                        >
+                          {statusChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <ChartTooltip
+                          contentStyle={{
+                            backgroundColor: theme.palette.background.paper,
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: 12,
+                            boxShadow: glassTokens.shadow.standard,
+                          }}
+                          formatter={(value: number) => [
+                            `${value} (${statistics.total > 0 ? Math.round((value / statistics.total) * 100) : 0}%)`,
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography variant="h4" fontWeight={700} color="text.primary">
+                        {completionRate.toFixed(0)}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Complete
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Stack
+                    direction="row"
+                    flexWrap="wrap"
+                    justifyContent="center"
+                    gap={2}
+                    sx={{ mt: 2 }}
+                  >
+                    {statusChartData
+                      .filter((item) => item.value > 0)
+                      .map((item) => (
+                        <Stack key={item.name} direction="row" alignItems="center" spacing={1}>
+                          <Box
+                            sx={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: '50%',
+                              bgcolor: item.color,
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {item.name}: {item.value}
+                          </Typography>
+                        </Stack>
+                      ))}
+                  </Stack>
+                </AuraGlassChartCard>
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
-                <AuraChartCard title="Completion Trends">
+                <AuraGlassChartCard title="Completion Trends">
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={trendsData}>
                       <defs>
-                        <linearGradient
-                          id="colorResponses"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor={auraColors.blue.main}
-                            stopOpacity={0.3}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor={auraColors.blue.main}
-                            stopOpacity={0}
-                          />
+                        <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={auraColors.blue.main} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={auraColors.blue.main} stopOpacity={0} />
                         </linearGradient>
-                        <linearGradient
-                          id="colorScore"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor={auraColors.green.main}
-                            stopOpacity={0.3}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor={auraColors.green.main}
-                            stopOpacity={0}
-                          />
+                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={auraColors.green.main} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={auraColors.green.main} stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         vertical={false}
-                        stroke="var(--qivr-palette-divider, #E2E8F0)"
+                        stroke={theme.palette.divider}
                       />
                       <XAxis
                         dataKey="date"
                         axisLine={false}
                         tickLine={false}
-                        tick={{
-                          fontSize: 12,
-                          fill: "var(--qivr-palette-text-secondary)",
-                        }}
+                        tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
                       />
                       <YAxis
                         yAxisId="left"
                         axisLine={false}
                         tickLine={false}
-                        tick={{
-                          fontSize: 12,
-                          fill: "var(--qivr-palette-text-secondary)",
-                        }}
+                        tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
                       />
                       <YAxis
                         yAxisId="right"
                         orientation="right"
                         axisLine={false}
                         tickLine={false}
-                        tick={{
-                          fontSize: 12,
-                          fill: "var(--qivr-palette-text-secondary)",
-                        }}
+                        tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
                       />
                       <ChartTooltip
                         contentStyle={{
-                          backgroundColor:
-                            "var(--qivr-palette-background-paper)",
-                          border: "1px solid var(--qivr-palette-divider)",
+                          backgroundColor: theme.palette.background.paper,
+                          border: `1px solid ${theme.palette.divider}`,
                           borderRadius: 12,
+                          boxShadow: glassTokens.shadow.standard,
                         }}
                       />
                       <Legend />
@@ -947,23 +1025,17 @@ const PROM: React.FC = () => {
                       />
                     </LineChart>
                   </ResponsiveContainer>
-                </AuraChartCard>
+                </AuraGlassChartCard>
               </Grid>
 
               <Grid size={12}>
-                <AuraChartCard title="Template Performance">
+                <AuraGlassChartCard title="Template Performance">
                   <Callout variant="info">
-                    Detailed analytics for individual templates and questions
-                    will be displayed here
+                    Detailed analytics for individual templates and questions will be displayed here
                   </Callout>
-                </AuraChartCard>
+                </AuraGlassChartCard>
               </Grid>
             </Grid>
-          </TabPanel>
-
-          <TabPanel value={currentTab} index={3}>
-            {/* Builder Tab */}
-            <PromBuilder />
           </TabPanel>
         </Paper>
 
@@ -985,8 +1057,8 @@ const PROM: React.FC = () => {
               setSendTemplateId(null);
               setInitialPatientId(null);
               refetchResponses();
-              enqueueSnackbar("PROM sent successfully", {
-                variant: "success",
+              enqueueSnackbar('PROM sent successfully', {
+                variant: 'success',
               });
             }}
           />
@@ -1006,28 +1078,26 @@ const PROM: React.FC = () => {
           open={responseDetailOpen}
           onClose={handleCloseResponseDetail}
           title={
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               Response Details
-              {selectedResponse && (
-                <StatusBadge status={selectedResponse.status} />
-              )}
+              {selectedResponse && <StatusBadge status={selectedResponse.status} />}
             </Box>
           }
           maxWidth="md"
           onSubmit={
-            !responseDetailLoading && selectedResponse?.status === "pending"
+            !responseDetailLoading && selectedResponse?.status === 'pending'
               ? () => {
                   // TODO: Implement send reminder
                 }
               : undefined
           }
           submitLabel={
-            !responseDetailLoading && selectedResponse?.status === "pending"
-              ? "Send Reminder"
+            !responseDetailLoading && selectedResponse?.status === 'pending'
+              ? 'Send Reminder'
               : undefined
           }
           formActionsProps={{
-            cancelLabel: "Close",
+            cancelLabel: 'Close',
           }}
         >
           {responseDetailLoading ? (
@@ -1041,39 +1111,36 @@ const PROM: React.FC = () => {
                       <strong>Patient:</strong> {selectedResponse.patientName}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>Template:</strong>{" "}
-                      {selectedResponse.templateName ||
-                        selectedResponse.templateId}
+                      <strong>Template:</strong>{' '}
+                      {selectedResponse.templateName || selectedResponse.templateId}
                     </Typography>
                     {selectedResponse.assignedAt && (
                       <Typography variant="body2">
-                        <strong>Assigned:</strong>{" "}
-                        {format(parseISO(selectedResponse.assignedAt), "PPP")}
+                        <strong>Assigned:</strong>{' '}
+                        {format(parseISO(selectedResponse.assignedAt), 'PPP')}
                       </Typography>
                     )}
                     {selectedResponse.scheduledAt && (
                       <Typography variant="body2">
-                        <strong>Scheduled:</strong>{" "}
-                        {format(parseISO(selectedResponse.scheduledAt), "PPP")}
+                        <strong>Scheduled:</strong>{' '}
+                        {format(parseISO(selectedResponse.scheduledAt), 'PPP')}
                       </Typography>
                     )}
                     {selectedResponse.completedAt && (
                       <Typography variant="body2">
-                        <strong>Completed:</strong>{" "}
-                        {format(parseISO(selectedResponse.completedAt), "PPP")}
+                        <strong>Completed:</strong>{' '}
+                        {format(parseISO(selectedResponse.completedAt), 'PPP')}
                       </Typography>
                     )}
                     {selectedResponse.score !== undefined && (
                       <Typography variant="body2">
-                        <strong>Score:</strong>{" "}
-                        {Math.round(selectedResponse.score)}%
+                        <strong>Score:</strong> {Math.round(selectedResponse.score)}%
                       </Typography>
                     )}
                     {selectedResponse.rawScore !== undefined &&
                       selectedResponse.maxScore !== undefined && (
                         <Typography variant="body2">
-                          <strong>Raw Score:</strong>{" "}
-                          {selectedResponse.rawScore} /{" "}
+                          <strong>Raw Score:</strong> {selectedResponse.rawScore} /{' '}
                           {selectedResponse.maxScore}
                         </Typography>
                       )}
@@ -1088,27 +1155,21 @@ const PROM: React.FC = () => {
                     No answers recorded.
                   </Typography>
                 ) : (
-                  Object.entries(selectedResponse.responses).map(
-                    ([question, answer]) => (
-                      <Paper key={question} sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          {question}
-                        </Typography>
-                        <Typography variant="body1">
-                          {renderAnswerValue(answer)}
-                        </Typography>
-                      </Paper>
-                    ),
-                  )
+                  Object.entries(selectedResponse.responses).map(([question, answer]) => (
+                    <Paper key={question} sx={{ p: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        {question}
+                      </Typography>
+                      <Typography variant="body1">{renderAnswerValue(answer)}</Typography>
+                    </Paper>
+                  ))
                 )}
 
                 {selectedResponse.notes && (
                   <>
                     <Divider />
                     <Typography variant="h6">Notes</Typography>
-                    <Typography variant="body2">
-                      {selectedResponse.notes}
-                    </Typography>
+                    <Typography variant="body2">{selectedResponse.notes}</Typography>
                   </>
                 )}
               </Stack>
@@ -1118,6 +1179,23 @@ const PROM: React.FC = () => {
               Select a response to view details.
             </Typography>
           )}
+        </FormDialog>
+
+        {/* Builder Dialog */}
+        <FormDialog
+          open={builderDialogOpen}
+          onClose={() => setBuilderDialogOpen(false)}
+          title="Create Custom Template"
+          maxWidth="lg"
+          fullWidth
+        >
+          <PromBuilder
+            onComplete={() => {
+              setBuilderDialogOpen(false);
+              refetchTemplates();
+              enqueueSnackbar('Template created successfully', { variant: 'success' });
+            }}
+          />
         </FormDialog>
 
         <ConfirmDialog

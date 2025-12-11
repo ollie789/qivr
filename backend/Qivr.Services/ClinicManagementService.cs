@@ -286,6 +286,7 @@ public class ClinicManagementService : IClinicManagementService
             summaries.Add(new ProviderSummary
             {
                 Id = provider.UserId,
+                ProviderProfileId = provider.Id,
                 FirstName = provider.User?.FirstName ?? "",
                 LastName = provider.User?.LastName ?? "",
                 Title = provider.Title ?? "",
@@ -939,6 +940,7 @@ public class ClinicStatistics
 public class ProviderSummary
 {
     public Guid Id { get; set; }
+    public Guid ProviderProfileId { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;

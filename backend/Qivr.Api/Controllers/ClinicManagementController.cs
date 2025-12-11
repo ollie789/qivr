@@ -1085,6 +1085,7 @@ public class ClinicManagementController : ControllerBase
         return new ProviderDto
         {
             Id = summary.Id,
+            ProviderProfileId = summary.ProviderProfileId,
             FirstName = summary.FirstName,
             LastName = summary.LastName,
             Title = summary.Title,
@@ -1238,6 +1239,7 @@ public class UpdateClinicDto : CreateClinicDto
 public class ProviderDto
 {
     public Guid Id { get; set; }
+    public Guid ProviderProfileId { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
