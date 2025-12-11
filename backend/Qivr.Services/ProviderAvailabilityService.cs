@@ -95,7 +95,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         }
 
         // Get the schedule to determine buffer time
-        var schedule = await _context.ProviderSchedules
+        var schedule = await _context.ProviderSchedules.IgnoreQueryFilters()
             .FirstOrDefaultAsync(s => s.ProviderId == actualProviderId && s.DayOfWeek == localDate.DayOfWeek);
         var bufferMinutes = schedule?.BufferMinutes ?? 0;
         var slotDuration = schedule?.DefaultSlotDurationMinutes ?? durationMinutes;
@@ -260,7 +260,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     public async Task<bool> IsProviderAvailableOnDate(Guid providerId, DateTime date)
     {
         // Check for time off (including all-day blocks)
-        var hasTimeOff = await _context.ProviderTimeOffs
+        var hasTimeOff = await _context.ProviderTimeOffs.IgnoreQueryFilters()
             .AnyAsync(t => t.ProviderId == providerId
                 && t.IsApproved
                 && t.StartDateTime.Date <= date.Date
@@ -320,7 +320,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             var availableSlots = isAvailable ? await GetAvailableSlots(providerId, currentDate, 30) : new List<Qivr.Core.Interfaces.TimeSlot>();
 
             // Get time off info for this day
-            var timeOff = await _context.ProviderTimeOffs
+            var timeOff = await _context.ProviderTimeOffs.IgnoreQueryFilters()
                 .Where(t => t.ProviderId == providerId
                     && t.StartDateTime.Date <= currentDate.Date
                     && t.EndDateTime.Date >= currentDate.Date)
@@ -393,7 +393,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             }
 
             // Check max appointments per day
-            var schedule = await _context.ProviderSchedules
+            var schedule = await _context.ProviderSchedules.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(s => s.ProviderId == providerProfile.Id && s.DayOfWeek == startTime.DayOfWeek);
 
             if (schedule?.MaxAppointmentsPerDay > 0)
@@ -464,7 +464,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         foreach (var user in users)
         {
             // Get provider profile to get the actual provider ID
-            var providerProfile = await _context.Providers
+            var providerProfile = await _context.Providers.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(p => p.UserId == user.Id);
 
             if (providerProfile == null) continue;
@@ -494,7 +494,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     public async Task<WorkingHours> GetProviderWorkingHours(Guid providerId, DayOfWeek dayOfWeek)
     {
         // Try to get schedule from database
-        var schedule = await _context.ProviderSchedules
+        var schedule = await _context.ProviderSchedules.IgnoreQueryFilters()
             .FirstOrDefaultAsync(s => s.ProviderId == providerId && s.DayOfWeek == dayOfWeek);
 
         if (schedule != null)
@@ -517,7 +517,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<List<ProviderSchedule>> GetProviderWeeklySchedule(Guid providerId)
     {
-        var schedules = await _context.ProviderSchedules
+        var schedules = await _context.ProviderSchedules.IgnoreQueryFilters()
             .Where(s => s.ProviderId == providerId)
             .OrderBy(s => s.DayOfWeek)
             .ToListAsync();
@@ -528,7 +528,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     public async Task SetProviderWeeklySchedule(Guid providerId, List<ProviderSchedule> schedules)
     {
         // Delete existing schedules
-        var existingSchedules = await _context.ProviderSchedules
+        var existingSchedules = await _context.ProviderSchedules.IgnoreQueryFilters()
             .Where(s => s.ProviderId == providerId)
             .ToListAsync();
 
@@ -547,7 +547,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
     public async Task InitializeProviderDefaultSchedule(Guid providerId)
     {
         // Check if provider already has a schedule
-        var existingSchedule = await _context.ProviderSchedules
+        var existingSchedule = await _context.ProviderSchedules.IgnoreQueryFilters()
             .AnyAsync(s => s.ProviderId == providerId);
 
         if (existingSchedule)
@@ -556,7 +556,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
         }
 
         // Get provider to get tenant ID
-        var provider = await _context.Providers
+        var provider = await _context.Providers.IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == providerId);
 
         if (provider == null)
@@ -593,7 +593,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<List<ProviderTimeOff>> GetProviderTimeOffs(Guid providerId, DateTime? startDate = null, DateTime? endDate = null)
     {
-        var query = _context.ProviderTimeOffs
+        var query = _context.ProviderTimeOffs.IgnoreQueryFilters()
             .Where(t => t.ProviderId == providerId);
 
         if (startDate.HasValue)
@@ -618,7 +618,7 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<bool> DeleteProviderTimeOff(Guid timeOffId)
     {
-        var timeOff = await _context.ProviderTimeOffs
+        var timeOff = await _context.ProviderTimeOffs.IgnoreQueryFilters()
             .FirstOrDefaultAsync(t => t.Id == timeOffId);
 
         if (timeOff == null)
@@ -633,14 +633,14 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<ProviderScheduleOverride?> GetScheduleOverride(Guid providerId, DateTime date)
     {
-        return await _context.ProviderScheduleOverrides
+        return await _context.ProviderScheduleOverrides.IgnoreQueryFilters()
             .FirstOrDefaultAsync(o => o.ProviderId == providerId && o.Date.Date == date.Date);
     }
 
     public async Task SetScheduleOverride(ProviderScheduleOverride scheduleOverride)
     {
         // Remove existing override for this date if any
-        var existingOverride = await _context.ProviderScheduleOverrides
+        var existingOverride = await _context.ProviderScheduleOverrides.IgnoreQueryFilters()
             .FirstOrDefaultAsync(o => o.ProviderId == scheduleOverride.ProviderId && o.Date.Date == scheduleOverride.Date.Date);
 
         if (existingOverride != null)
