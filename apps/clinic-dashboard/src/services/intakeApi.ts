@@ -1,4 +1,4 @@
-import apiClient from "../lib/api-client";
+import apiClient from '../lib/api-client';
 
 export interface IntakeSubmission {
   id: string;
@@ -7,15 +7,15 @@ export interface IntakeSubmission {
   phone?: string;
   submittedAt: string;
   conditionType: string;
-  severity: "low" | "medium" | "high" | "critical";
+  severity: 'low' | 'medium' | 'high' | 'critical';
   status:
-    | "pending"
-    | "reviewing"
-    | "approved"
-    | "rejected"
-    | "scheduled"
-    | "invited"
-    | "registered";
+    | 'pending'
+    | 'reviewing'
+    | 'approved'
+    | 'rejected'
+    | 'scheduled'
+    | 'invited'
+    | 'registered';
   painLevel: number;
   symptoms?: string[];
   aiSummary?: string;
@@ -123,6 +123,7 @@ export interface IntakeFilters {
 
 interface EvaluationDto {
   id: string;
+  patientId?: string;
   patientName?: string;
   patientEmail?: string;
   patientPhone?: string;
@@ -143,34 +144,35 @@ interface EvaluationDto {
 
 function mapEvaluationToIntake(e: EvaluationDto): IntakeSubmission {
   // Debug logging removed for production
-  const severityMap: Record<string, IntakeSubmission["severity"]> = {
-    urgent: "critical",
-    high: "high",
-    medium: "medium",
-    low: "low",
+  const severityMap: Record<string, IntakeSubmission['severity']> = {
+    urgent: 'critical',
+    high: 'high',
+    medium: 'medium',
+    low: 'low',
   };
-  const statusMap: Record<string, IntakeSubmission["status"]> = {
-    pending: "pending",
-    reviewing: "reviewing",
-    reviewed: "reviewing",
-    approved: "approved",
-    rejected: "rejected",
-    scheduling: "approved",
-    scheduled: "scheduled",
-    triaged: "approved",
-    archived: "rejected",
-    invited: "invited",
-    registered: "registered",
+  const statusMap: Record<string, IntakeSubmission['status']> = {
+    pending: 'pending',
+    reviewing: 'reviewing',
+    reviewed: 'reviewing',
+    approved: 'approved',
+    rejected: 'rejected',
+    scheduling: 'approved',
+    scheduled: 'scheduled',
+    triaged: 'approved',
+    archived: 'rejected',
+    invited: 'invited',
+    registered: 'registered',
   };
   return {
     id: e.id,
-    patientName: e.patientName || "Unknown Patient",
-    email: e.patientEmail || "n/a@unknown",
-    phone: e.patientPhone || "",
+    patientId: e.patientId,
+    patientName: e.patientName || 'Unknown Patient',
+    email: e.patientEmail || 'n/a@unknown',
+    phone: e.patientPhone || '',
     submittedAt: e.date || e.createdAt || new Date().toISOString(),
-    conditionType: e.chiefComplaint || "Not specified",
-    severity: severityMap[(e.urgency || "").toLowerCase()] || "medium",
-    status: statusMap[e.status?.toLowerCase() ?? ""] || "pending",
+    conditionType: e.chiefComplaint || 'Not specified',
+    severity: severityMap[(e.urgency || '').toLowerCase()] || 'medium',
+    status: statusMap[e.status?.toLowerCase() ?? ''] || 'pending',
     painLevel: (e.painMaps && e.painMaps[0]?.painIntensity) || 5,
     symptoms: e.symptoms || [],
     aiSummary: e.aiSummary || undefined,
@@ -181,7 +183,7 @@ function mapEvaluationToIntake(e: EvaluationDto): IntakeSubmission {
             y: 0,
             z: 0,
             intensity: pm.intensity || 5,
-            bodyPart: pm.bodyRegion || "Unknown",
+            bodyPart: pm.bodyRegion || 'Unknown',
           })),
         }
       : undefined,
@@ -189,17 +191,18 @@ function mapEvaluationToIntake(e: EvaluationDto): IntakeSubmission {
 }
 
 export const intakeApi = {
-  async getIntakes(
-    filters?: IntakeFilters,
-  ): Promise<{ data: IntakeSubmission[]; total: number }> {
+  async getIntakes(filters?: IntakeFilters): Promise<{ data: IntakeSubmission[]; total: number }> {
     try {
-      const response = await apiClient.get("/api/evaluations", filters as Record<string, string | number | boolean | undefined>);
+      const response = await apiClient.get(
+        '/api/evaluations',
+        filters as Record<string, string | number | boolean | undefined>
+      );
       // Response is already the array, not wrapped in .data
       const list = Array.isArray(response) ? response : [];
       const data = list.map(mapEvaluationToIntake);
       return { data, total: data.length };
     } catch (error) {
-      console.error("Error fetching intakes:", error);
+      console.error('Error fetching intakes:', error);
       return {
         data: [],
         total: 0,
@@ -218,47 +221,47 @@ export const intakeApi = {
 
       // Build comprehensive description
       const description = q.description || e.chiefComplaint;
-      const duration = q.duration || medicalHistory.duration || "Not specified";
+      const duration = q.duration || medicalHistory.duration || 'Not specified';
 
       return {
         id: e.id,
         patient: {
           name: e.patientName,
-          email: e.patientEmail || "",
-          phone: e.patientPhone || "",
-          dateOfBirth: e.patientDateOfBirth || "",
+          email: e.patientEmail || '',
+          phone: e.patientPhone || '',
+          dateOfBirth: e.patientDateOfBirth || '',
         },
         evaluation: {
           submittedAt: e.createdAt,
           conditionType: e.chiefComplaint,
-          severity: e.urgency || "medium",
-          painLevel:
-            q.painIntensity || (e.painMaps && e.painMaps[0]?.intensity) || 0,
+          severity: e.urgency || 'medium',
+          painLevel: q.painIntensity || (e.painMaps && e.painMaps[0]?.intensity) || 0,
           symptoms: e.symptoms || q.painQualities || [],
           description,
           duration,
           triggers: q.aggravatingFactors || medicalHistory.triggers || [],
-          previousTreatments:
-            q.previousTreatments || medicalHistory.previousTreatments || "",
-          painStart: q.painStart || "",
-          onset: q.onset || "",
-          pattern: q.pattern || "",
-          frequency: q.frequency || "",
+          previousTreatments: q.previousTreatments || medicalHistory.previousTreatments || '',
+          painStart: q.painStart || '',
+          onset: q.onset || '',
+          pattern: q.pattern || '',
+          frequency: q.frequency || '',
           timeOfDay: q.timeOfDay || [],
           relievingFactors: q.relievingFactors || [],
-          currentMedications: q.currentMedications || "",
-          allergies: q.allergies || "",
-          medicalConditions: q.medicalConditions || "",
-          surgeries: q.surgeries || "",
-          treatmentGoals: q.treatmentGoals || "",
+          currentMedications: q.currentMedications || '',
+          allergies: q.allergies || '',
+          medicalConditions: q.medicalConditions || '',
+          surgeries: q.surgeries || '',
+          treatmentGoals: q.treatmentGoals || '',
         },
         painMap: e.painMaps
           ? {
-              bodyParts: e.painMaps.map((pm: { bodyRegion?: string; intensity?: number; type?: string }) => ({
-                region: pm.bodyRegion || "Unknown",
-                intensity: pm.intensity || 5,
-                type: pm.type || "aching",
-              })),
+              bodyParts: e.painMaps.map(
+                (pm: { bodyRegion?: string; intensity?: number; type?: string }) => ({
+                  region: pm.bodyRegion || 'Unknown',
+                  intensity: pm.intensity || 5,
+                  type: pm.type || 'aching',
+                })
+              ),
             }
           : undefined,
         aiSummary: e.aiSummary
@@ -271,7 +274,7 @@ export const intakeApi = {
             }
           : undefined,
         status: e.status,
-        notes: e.clinicianNotes || "",
+        notes: e.clinicianNotes || '',
         questionnaireResponses: {
           painStart: q.painStart,
           medications: q.medications || [],
@@ -292,20 +295,16 @@ export const intakeApi = {
         medicalHistory: medicalHistory,
       };
     } catch (error) {
-      console.error("Error fetching intake details:", error);
+      console.error('Error fetching intake details:', error);
       throw error;
     }
   },
 
-  async updateIntakeStatus(
-    id: string,
-    status: string,
-    notes?: string,
-  ): Promise<void> {
+  async updateIntakeStatus(id: string, status: string, notes?: string): Promise<void> {
     try {
       await apiClient.patch(`/api/evaluations/${id}/status`, { status, notes });
     } catch (error) {
-      console.error("Error updating intake status:", error);
+      console.error('Error updating intake status:', error);
       throw error;
     }
   },
@@ -314,10 +313,7 @@ export const intakeApi = {
     await apiClient.delete(`/api/evaluations/${id}`);
   },
 
-  async linkToMedicalRecord(
-    intakeId: string,
-    patientId: string,
-  ): Promise<void> {
+  async linkToMedicalRecord(intakeId: string, patientId: string): Promise<void> {
     await apiClient.post(`/api/evaluations/${intakeId}/link-medical-record`, {
       patientId: patientId,
     });
@@ -333,33 +329,27 @@ export const intakeApi = {
       medicalHistory?: string;
       currentMedications?: string;
       allergies?: string;
-    },
+    }
   ): Promise<{
     summary: string;
     riskFactors: string[];
     recommendations: string[];
     urgency: string;
   }> {
-    const response = await apiClient.post(
-      `/api/evaluations/${intakeId}/ai-triage`,
-      data,
-    );
+    const response = await apiClient.post(`/api/evaluations/${intakeId}/ai-triage`, data);
     return response;
   },
 
   async addTriageNote(
     intakeId: string,
-    content: string,
+    content: string
   ): Promise<{
     id: string;
     content: string;
     createdAt: string;
     createdBy: string;
   }> {
-    const response = await apiClient.post(
-      `/api/evaluations/${intakeId}/notes`,
-      { content },
-    );
+    const response = await apiClient.post(`/api/evaluations/${intakeId}/notes`, { content });
     return response;
   },
 

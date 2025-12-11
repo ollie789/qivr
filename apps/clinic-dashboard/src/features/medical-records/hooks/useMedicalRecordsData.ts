@@ -288,10 +288,30 @@ export function usePatientIntake(patientId: string | null) {
     queryKey: ['patient-intake', patientId],
     queryFn: async () => {
       if (!patientId) return null;
-      // Try to get intake linked to this patient
-      // The intake stores patientId when linked via linkToMedicalRecord
+
+      // Get the patient's details for fallback matching
+      const patient = await patientApi.getPatient(patientId);
+      const patientEmail = patient?.email?.toLowerCase();
+      const patientName = `${patient?.firstName || ''} ${patient?.lastName || ''}`
+        .trim()
+        .toLowerCase();
+
+      // Get all intakes
       const { data } = await intakeApi.getIntakes({ limit: 100 });
-      const linkedIntake = data.find((intake) => intake.patientId === patientId);
+
+      // First try: find intake linked by patientId
+      let linkedIntake = data.find((intake) => intake.patientId === patientId);
+
+      // Second try: match by email if not linked by patientId
+      if (!linkedIntake && patientEmail) {
+        linkedIntake = data.find((intake) => intake.email?.toLowerCase() === patientEmail);
+      }
+
+      // Third try: match by patient name
+      if (!linkedIntake && patientName) {
+        linkedIntake = data.find((intake) => intake.patientName?.toLowerCase() === patientName);
+      }
+
       if (linkedIntake) {
         return intakeApi.getIntakeDetails(linkedIntake.id);
       }
