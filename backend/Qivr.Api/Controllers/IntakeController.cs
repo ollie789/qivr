@@ -80,7 +80,7 @@ public class IntakeController : ControllerBase
             var evaluationId = Guid.NewGuid();
             var now = DateTime.UtcNow;
             
-            // Store the evaluation in the database - using minimal required fields
+            // Store the evaluation in the database - merge widget's questionnaireResponses with structured data
             var intakeData = new Dictionary<string, object>
             {
                 ["personalInfo"] = new { 
@@ -104,6 +104,12 @@ public class IntakeController : ControllerBase
                 ["medicalHistory"] = request.MedicalHistory,
                 ["consent"] = request.Consent
             };
+            
+            // Merge incoming questionnaireResponses (contains painStart, goals, redFlags, etc.)
+            foreach (var kvp in request.QuestionnaireResponses)
+            {
+                intakeData[kvp.Key] = kvp.Value;
+            }
 
             // Use intake connection (restricted role) for DB write
             await using var intakeContext = new QivrDbContext(
@@ -303,9 +309,9 @@ public class IntakeController : ControllerBase
         return Ok(new IntakeStatusResponse
         {
             IntakeId = intake.Id,
-            Status = intake.Status,
+            Status = intake.Status.ToString(),
             StatusMessage = statusMessage,
-            SubmittedAt = intake.SubmittedAt
+            SubmittedAt = intake.SubmittedAt ?? DateTime.UtcNow
         });
     }
     
