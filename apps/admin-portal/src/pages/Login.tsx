@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Box, Card, TextField, Button, Typography, Alert } from "@mui/material";
-import { useAuthStore } from "../stores/authStore";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Box, Card, TextField, Button, Typography, Alert } from '@mui/material';
+import { useAuthStore } from '../stores/authStore';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,20 +10,24 @@ export default function Login() {
     verifyMfa,
     setupMfa,
     completeMfaSetup,
+    completeNewPassword,
     mfaRequired,
     mfaSetupRequired,
+    newPasswordRequired,
     totpSecret,
   } = useAuthStore();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mfaCode, setMfaCode] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
 
     const result = await login(email, password);
@@ -31,72 +35,99 @@ export default function Login() {
 
     if (result.success) {
       // Small delay to ensure store state propagates
-      setTimeout(() => navigate("/dashboard", { replace: true }), 100);
+      setTimeout(() => navigate('/dashboard', { replace: true }), 100);
     } else if (result.mfaSetupRequired) {
       await setupMfa();
+    } else if (result.newPasswordRequired) {
+      // State is already set in store, UI will update
     } else if (!result.mfaRequired && result.error) {
       setError(result.error);
     }
   };
 
+  const handleNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    setLoading(true);
+    const result = await completeNewPassword(newPassword);
+    setLoading(false);
+
+    if (result.success) {
+      setTimeout(() => navigate('/dashboard', { replace: true }), 100);
+    } else {
+      setError(result.error || 'Failed to set new password');
+    }
+  };
+
   const handleMfaVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
 
     const result = await verifyMfa(mfaCode);
     setLoading(false);
 
     if (result.success) {
-      navigate("/dashboard");
+      navigate('/dashboard');
     } else {
-      setError(result.error || "Invalid code");
+      setError(result.error || 'Invalid code');
     }
   };
 
   const handleMfaSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
 
     const result = await completeMfaSetup(mfaCode);
     setLoading(false);
 
     if (result.success) {
-      setError("");
-      alert("MFA setup complete! Please sign in again.");
+      setError('');
+      alert('MFA setup complete! Please sign in again.');
       window.location.reload();
     } else {
-      setError(result.error || "Invalid code");
+      setError(result.error || 'Invalid code');
     }
   };
 
   return (
     <Box
       sx={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)",
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
       }}
     >
-      <Card sx={{ p: 4, width: "100%", maxWidth: 400 }}>
-        <Box sx={{ textAlign: "center", mb: 4 }}>
+      <Card sx={{ p: 4, width: '100%', maxWidth: 400 }}>
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Box
             sx={{
               width: 60,
               height: 60,
               borderRadius: 3,
-              mx: "auto",
+              mx: 'auto',
               mb: 2,
-              background: "linear-gradient(135deg, #6366f1 0%, #ec4899 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              background: 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               fontSize: 28,
               fontWeight: 700,
-              color: "white",
+              color: 'white',
             }}
           >
             Q
@@ -106,10 +137,12 @@ export default function Login() {
           </Typography>
           <Typography color="text.secondary">
             {mfaSetupRequired
-              ? "Set up MFA"
+              ? 'Set up MFA'
               : mfaRequired
-                ? "Enter MFA Code"
-                : "Secure access"}
+                ? 'Enter MFA Code'
+                : newPasswordRequired
+                  ? 'Set New Password'
+                  : 'Secure access'}
           </Typography>
         </Box>
 
@@ -119,25 +152,53 @@ export default function Login() {
           </Alert>
         )}
 
-        {mfaSetupRequired && totpSecret ? (
+        {newPasswordRequired ? (
+          <form onSubmit={handleNewPassword}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Please set a new password for your account.
+            </Alert>
+            <TextField
+              fullWidth
+              label="New Password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              sx={{ mb: 2 }}
+              autoFocus
+            />
+            <TextField
+              fullWidth
+              label="Confirm Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              sx={{ mb: 3 }}
+            />
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              type="submit"
+              disabled={loading || !newPassword || !confirmPassword}
+            >
+              {loading ? 'Setting Password...' : 'Set Password'}
+            </Button>
+          </form>
+        ) : mfaSetupRequired && totpSecret ? (
           <form onSubmit={handleMfaSetup}>
             <Alert severity="info" sx={{ mb: 2 }}>
-              Scan this code with your authenticator app (Google Authenticator,
-              Authy, etc.)
+              Scan this code with your authenticator app (Google Authenticator, Authy, etc.)
             </Alert>
             <Box
               sx={{
-                bgcolor: "grey.900",
+                bgcolor: 'grey.900',
                 p: 2,
                 borderRadius: 1,
                 mb: 2,
-                textAlign: "center",
+                textAlign: 'center',
               }}
             >
-              <Typography
-                variant="body2"
-                sx={{ fontFamily: "monospace", wordBreak: "break-all" }}
-              >
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
                 {totpSecret}
               </Typography>
             </Box>
@@ -157,7 +218,7 @@ export default function Login() {
               type="submit"
               disabled={loading || mfaCode.length !== 6}
             >
-              {loading ? "Verifying..." : "Complete Setup"}
+              {loading ? 'Verifying...' : 'Complete Setup'}
             </Button>
           </form>
         ) : mfaRequired ? (
@@ -179,7 +240,7 @@ export default function Login() {
               type="submit"
               disabled={loading || mfaCode.length !== 6}
             >
-              {loading ? "Verifying..." : "Verify"}
+              {loading ? 'Verifying...' : 'Verify'}
             </Button>
           </form>
         ) : (
@@ -200,14 +261,8 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               sx={{ mb: 3 }}
             />
-            <Button
-              fullWidth
-              variant="contained"
-              size="large"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? "Signing in..." : "Sign In"}
+            <Button fullWidth variant="contained" size="large" type="submit" disabled={loading}>
+              {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
         )}
