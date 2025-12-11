@@ -161,6 +161,12 @@ export interface UpdatePatientDto extends Partial<CreatePatientDto> {
   status?: 'active' | 'inactive' | 'pending';
   provider?: string;
   tags?: string[];
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  emergencyContactRelationship?: string;
+  insuranceNumber?: string;
+  medicareRef?: string;
+  medicareExpiry?: string;
 }
 
 export interface PatientSearchParams {

@@ -544,6 +544,14 @@ const MedicalRecordsPage: React.FC = () => {
       dateOfBirth: editedPatient.dateOfBirth,
       gender: editedPatient.gender,
       address: editedPatient.address || undefined,
+      emergencyContact: editedPatient.emergencyContact,
+      emergencyPhone: editedPatient.emergencyPhone,
+      emergencyContactRelationship: editedPatient.emergencyContactRelationship,
+      insuranceProvider: editedPatient.insuranceProvider,
+      insuranceNumber: editedPatient.insuranceNumber,
+      medicareNumber: editedPatient.medicareNumber,
+      medicareRef: editedPatient.medicareRef,
+      medicareExpiry: editedPatient.medicareExpiry,
     });
   };
 

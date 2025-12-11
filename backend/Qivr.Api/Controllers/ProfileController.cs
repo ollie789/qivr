@@ -89,6 +89,19 @@ public class ProfileController : BaseApiController
                 Medications = profile.MedicalInfo.Medications?.ToArray(),
                 Conditions = profile.MedicalInfo.Conditions?.ToArray()
             } : null,
+            Medicare = profile.Medicare != null ? new MedicareDto
+            {
+                Number = profile.Medicare.Number,
+                Ref = profile.Medicare.Ref,
+                Expiry = profile.Medicare.Expiry
+            } : null,
+            Insurance = profile.Insurance != null ? new InsuranceDto
+            {
+                Provider = profile.Insurance.Provider,
+                MemberId = profile.Insurance.MemberId,
+                GroupNumber = profile.Insurance.GroupNumber,
+                PrimaryCarePhysician = profile.Insurance.PrimaryCarePhysician
+            } : null,
             Preferences = profile.Preferences != null ? new PreferencesDto
             {
                 EmailNotifications = profile.Preferences.EmailNotifications,
@@ -470,6 +483,8 @@ public class UserProfileDto
     public string? Postcode { get; set; }
     public EmergencyContactDto? EmergencyContact { get; set; }
     public MedicalInfoDto? MedicalInfo { get; set; }
+    public MedicareDto? Medicare { get; set; }
+    public InsuranceDto? Insurance { get; set; }
     public PreferencesDto? Preferences { get; set; }
     public string? PhotoUrl { get; set; }
     public bool EmailVerified { get; set; }

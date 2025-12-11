@@ -460,6 +460,7 @@ public class PatientsController : TenantAwareController
             if (user == null)
                 return NotFound();
 
+            // Basic fields
             if (!string.IsNullOrEmpty(updateDto.FirstName))
                 user.FirstName = updateDto.FirstName;
             if (!string.IsNullOrEmpty(updateDto.LastName))
@@ -473,6 +474,35 @@ public class PatientsController : TenantAwareController
             if (!string.IsNullOrEmpty(updateDto.Gender))
                 user.Gender = updateDto.Gender;
 
+            // Store extended fields in preferences JSON
+            user.Preferences ??= new Dictionary<string, object>();
+            
+            // Address
+            if (updateDto.Address != null)
+                user.Preferences["address"] = System.Text.Json.JsonSerializer.Serialize(updateDto.Address);
+            
+            // Emergency contact
+            if (!string.IsNullOrEmpty(updateDto.EmergencyContact))
+                user.Preferences["emergencyContact"] = System.Text.Json.JsonSerializer.Serialize(new { 
+                    Name = updateDto.EmergencyContact, 
+                    Phone = updateDto.EmergencyPhone ?? "", 
+                    Relationship = updateDto.EmergencyContactRelationship ?? "" 
+                });
+            
+            // Insurance
+            if (!string.IsNullOrEmpty(updateDto.InsuranceProvider))
+                user.Preferences["insuranceProvider"] = updateDto.InsuranceProvider;
+            if (!string.IsNullOrEmpty(updateDto.InsuranceNumber))
+                user.Preferences["insuranceMemberId"] = updateDto.InsuranceNumber;
+            
+            // Medicare
+            if (!string.IsNullOrEmpty(updateDto.MedicareNumber))
+                user.Preferences["medicareNumber"] = updateDto.MedicareNumber;
+            if (!string.IsNullOrEmpty(updateDto.MedicareRef))
+                user.Preferences["medicareRef"] = updateDto.MedicareRef;
+            if (!string.IsNullOrEmpty(updateDto.MedicareExpiry))
+                user.Preferences["medicareExpiry"] = updateDto.MedicareExpiry;
+
             user.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -482,8 +512,21 @@ public class PatientsController : TenantAwareController
                 FirstName = user.FirstName ?? "",
                 LastName = user.LastName ?? "",
                 Email = user.Email ?? "",
+                PhoneNumber = user.Phone ?? "",
                 DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
+                Address = updateDto.Address?.Street,
+                City = updateDto.Address?.City,
+                State = updateDto.Address?.State,
+                PostalCode = updateDto.Address?.PostalCode,
+                EmergencyContact = updateDto.EmergencyContact,
+                EmergencyPhone = updateDto.EmergencyPhone,
+                EmergencyContactRelationship = updateDto.EmergencyContactRelationship,
+                InsuranceProvider = updateDto.InsuranceProvider,
+                InsuranceNumber = updateDto.InsuranceNumber,
+                MedicareNumber = updateDto.MedicareNumber,
+                MedicareRef = updateDto.MedicareRef,
+                MedicareExpiry = updateDto.MedicareExpiry,
                 CreatedAt = user.CreatedAt,
                 LastUpdated = user.UpdatedAt,
                 IsActive = !user.IsDeleted
@@ -716,6 +759,19 @@ public class UpdatePatientDto
     public string? Phone { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public string? Gender { get; set; }
+    public PatientAddressInfo? Address { get; set; }
+    public string? EmergencyContact { get; set; }
+    public string? EmergencyPhone { get; set; }
+    public string? EmergencyContactRelationship { get; set; }
+    public string? InsuranceProvider { get; set; }
+    public string? InsuranceNumber { get; set; }
+    public string? MedicareNumber { get; set; }
+    public string? MedicareRef { get; set; }
+    public string? MedicareExpiry { get; set; }
+    public List<string>? Allergies { get; set; }
+    public List<string>? Medications { get; set; }
+    public List<string>? Conditions { get; set; }
+    public string? Notes { get; set; }
 }
 
 // DTOs

@@ -94,6 +94,23 @@ public class ProfileService : IProfileService
                              Convert.ToBoolean(user.Preferences["marketingEmails"])
         };
 
+        // Get Medicare info from preferences
+        var medicare = new MedicareInfo
+        {
+            Number = user.Preferences?.ContainsKey("medicareNumber") == true ? user.Preferences["medicareNumber"]?.ToString() : null,
+            Ref = user.Preferences?.ContainsKey("medicareRef") == true ? user.Preferences["medicareRef"]?.ToString() : null,
+            Expiry = user.Preferences?.ContainsKey("medicareExpiry") == true ? user.Preferences["medicareExpiry"]?.ToString() : null
+        };
+
+        // Get Insurance info from preferences
+        var insurance = new InsuranceInfo
+        {
+            Provider = user.Preferences?.ContainsKey("insuranceProvider") == true ? user.Preferences["insuranceProvider"]?.ToString() : null,
+            MemberId = user.Preferences?.ContainsKey("insuranceMemberId") == true ? user.Preferences["insuranceMemberId"]?.ToString() : null,
+            GroupNumber = user.Preferences?.ContainsKey("insuranceGroupNumber") == true ? user.Preferences["insuranceGroupNumber"]?.ToString() : null,
+            PrimaryCarePhysician = user.Preferences?.ContainsKey("primaryCarePhysician") == true ? user.Preferences["primaryCarePhysician"]?.ToString() : null
+        };
+
         return new UserProfile
         {
             Id = user.Id,
@@ -106,6 +123,8 @@ public class ProfileService : IProfileService
             Address = ConvertToProfileAddress(user.Preferences),
             EmergencyContact = emergencyContact,
             MedicalInfo = medicalInfo,
+            Medicare = medicare,
+            Insurance = insurance,
             Preferences = preferences,
             PhotoUrl = user.Preferences?.ContainsKey("profilePhotoUrl") == true ? user.Preferences["profilePhotoUrl"].ToString() : null,
             EmailVerified = user.EmailVerified,
@@ -359,6 +378,8 @@ public class UserProfile
     public ProfileAddress? Address { get; set; }
     public EmergencyContact? EmergencyContact { get; set; }
     public MedicalInfo? MedicalInfo { get; set; }
+    public MedicareInfo? Medicare { get; set; }
+    public InsuranceInfo? Insurance { get; set; }
     public UserPreferences? Preferences { get; set; }
     public string? PhotoUrl { get; set; }
     public bool EmailVerified { get; set; }
