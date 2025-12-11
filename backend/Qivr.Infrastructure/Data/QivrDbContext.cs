@@ -352,6 +352,9 @@ public class QivrDbContext : DbContext
             entity.ToTable("intake_submissions");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.FormData)
+                .HasConversion(jsonConverter)
+                .Metadata.SetValueComparer(jsonComparer);
 
             entity.HasOne(e => e.Evaluation)
                 .WithMany()
