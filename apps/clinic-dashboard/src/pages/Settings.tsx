@@ -212,8 +212,8 @@ export default function Settings() {
       phone: '(555) 123-4567',
       email: 'info@springfieldmedical.com',
       website: 'www.springfieldmedical.com',
-      timezone: 'America/Chicago',
-      currency: 'USD',
+      timezone: 'Australia/Sydney',
+      currency: 'AUD',
     },
     operations: {
       workingHours: {
@@ -735,10 +735,16 @@ export default function Settings() {
                     })
                   }
                   options={[
-                    { value: 'America/New_York', label: 'Eastern Time' },
-                    { value: 'America/Chicago', label: 'Central Time' },
-                    { value: 'America/Denver', label: 'Mountain Time' },
-                    { value: 'America/Los_Angeles', label: 'Pacific Time' },
+                    { value: 'Australia/Sydney', label: 'Sydney (AEDT)' },
+                    { value: 'Australia/Melbourne', label: 'Melbourne (AEDT)' },
+                    { value: 'Australia/Brisbane', label: 'Brisbane (AEST)' },
+                    { value: 'Australia/Perth', label: 'Perth (AWST)' },
+                    { value: 'Australia/Adelaide', label: 'Adelaide (ACDT)' },
+                    { value: 'Pacific/Auckland', label: 'Auckland (NZDT)' },
+                    { value: 'America/New_York', label: 'Eastern Time (US)' },
+                    { value: 'America/Chicago', label: 'Central Time (US)' },
+                    { value: 'America/Denver', label: 'Mountain Time (US)' },
+                    { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
                   ]}
                 />
               </Grid>

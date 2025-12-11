@@ -1,5 +1,8 @@
--- Migration: Create provider scheduling tables
+-- Migration: Create provider scheduling tables and add timezone
 -- Run this on production database
+
+-- Add timezone column to tenants if not exists
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'Australia/Sydney';
 
 -- Create provider_schedules table
 CREATE TABLE IF NOT EXISTS provider_schedules (
