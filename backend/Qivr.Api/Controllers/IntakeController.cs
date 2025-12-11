@@ -113,11 +113,8 @@ public class IntakeController : ControllerBase
                     .UseSnakeCaseNamingConvention()
                     .Options);
 
-            // Set search_path to include qivr schema and set RLS tenant context
-            await intakeContext.Database.ExecuteSqlRawAsync(
-                "SET search_path TO qivr, public; SELECT set_config('app.tenant_id', @p0, true)", 
-                new object[] { tenantId.ToString() }, 
-                cancellationToken);
+            // Ensure RLS tenant context is set for this connection (public/anonymous flow)
+            await intakeContext.Database.ExecuteSqlInterpolatedAsync($"SELECT set_config('app.tenant_id', {tenantId.ToString()}, true)", cancellationToken);
 
             // Ensure a patient user exists (or create one) to satisfy NOT NULL FK
             // RACE CONDITION FIX: Use INSERT ... ON CONFLICT DO NOTHING pattern
@@ -359,7 +356,7 @@ public class IntakeController : ControllerBase
             // This is atomic and prevents duplicate key errors
             // Note: column is cognito_id in DB (mapped from CognitoSub property)
             var rowsAffected = await context.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO qivr.users (
+                INSERT INTO public.users (
                     id, tenant_id, cognito_id, email, email_verified, phone_verified,
                     first_name, last_name, phone, role, roles, metadata, consent,
                     created_at, updated_at
