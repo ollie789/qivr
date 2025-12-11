@@ -1,37 +1,44 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from 'react';
 import {
   TextField,
   Typography,
   Box,
   Chip,
   Avatar,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  ListItemAvatar,
   CircularProgress,
   Alert,
   Autocomplete,
-} from "@mui/material";
-import { Person as PersonIcon } from "@mui/icons-material";
-import { patientApi, type Patient } from "../../services/patientApi";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { enAU } from "date-fns/locale";
-import { useSnackbar } from "notistack";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+  Stack,
+  Divider,
+  alpha,
+  useTheme,
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  AccessTime as TimeIcon,
+  CalendarMonth as CalendarIcon,
+  CheckCircle as CheckIcon,
+  LocalHospital as ServiceIcon,
+} from '@mui/icons-material';
+import { patientApi, type Patient } from '../../services/patientApi';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { enAU } from 'date-fns/locale';
+import { format } from 'date-fns';
+import { useSnackbar } from 'notistack';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   StepperDialog,
   FormSection,
   FormRow,
   TimeSlotPicker,
   Callout,
-  auraTokens,
-} from "@qivr/design-system";
-import { appointmentsApi } from "../../services/appointmentsApi";
-import api from "../../lib/api-client";
+  AuraCard,
+  auraColors,
+} from '@qivr/design-system';
+import { appointmentsApi } from '../../services/appointmentsApi';
+import api from '../../lib/api-client';
 
 export interface ScheduleAppointmentDialogProps {
   open: boolean;
@@ -88,31 +95,29 @@ interface ServiceType {
 // Fallback types if no service types configured
 const defaultAppointmentTypes: ServiceType[] = [
   {
-    id: "initial",
-    name: "Initial Consultation",
+    id: 'initial',
+    name: 'Initial Consultation',
     durationMinutes: 60,
     price: 0,
     isActive: true,
   },
   {
-    id: "followup",
-    name: "Follow-up",
+    id: 'followup',
+    name: 'Follow-up',
     durationMinutes: 30,
     price: 0,
     isActive: true,
   },
   {
-    id: "treatment",
-    name: "Treatment Session",
+    id: 'treatment',
+    name: 'Treatment Session',
     durationMinutes: 45,
     price: 0,
     isActive: true,
   },
 ];
 
-export const ScheduleAppointmentDialog: React.FC<
-  ScheduleAppointmentDialogProps
-> = ({
+export const ScheduleAppointmentDialog: React.FC<ScheduleAppointmentDialogProps> = ({
   open,
   onClose,
   onScheduled,
@@ -124,70 +129,61 @@ export const ScheduleAppointmentDialog: React.FC<
   initialDate,
   prefilledData,
 }) => {
+  const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
   const [activeStep, setActiveStep] = useState(0);
   const [appointmentData, setAppointmentData] = useState({
-    patientId: patient?.id || patientId || "",
-    patientName: patient ? `${patient.firstName} ${patient.lastName}` : "",
-    patientEmail: patient?.email || "",
-    patientPhone: patient?.phone || "",
-    providerId: prefilledData?.preferredProvider || "",
-    providerProfileId: "",
-    providerName: "",
-    appointmentType:
-      defaultAppointmentType || (intakeId ? "initial" : "followup"),
+    patientId: patient?.id || patientId || '',
+    patientName: patient ? `${patient.firstName} ${patient.lastName}` : '',
+    patientEmail: patient?.email || '',
+    patientPhone: patient?.phone || '',
+    providerId: prefilledData?.preferredProvider || '',
+    providerProfileId: '',
+    providerName: '',
+    appointmentType: defaultAppointmentType || (intakeId ? 'initial' : 'followup'),
     serviceTypeId: null as string | null,
     serviceTypePrice: 0,
     date: initialDate || (null as Date | null),
     timeSlot: null as string | null,
     selectedSlot: null as AvailableSlot | null,
     duration: 60,
-    notes: prefilledData?.chiefComplaint || "",
+    notes: prefilledData?.chiefComplaint || '',
   });
 
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
       setActiveStep(0);
-      setPatientSearchQuery("");
+      setPatientSearchQuery('');
       setSelectedPatient(null);
       setAppointmentData({
-        patientId: patient?.id || patientId || "",
-        patientName: patient ? `${patient.firstName} ${patient.lastName}` : "",
-        patientEmail: patient?.email || "",
-        patientPhone: patient?.phone || "",
-        providerId: prefilledData?.preferredProvider || "",
-        providerProfileId: "",
-        providerName: "",
-        appointmentType:
-          defaultAppointmentType || (intakeId ? "initial" : "followup"),
+        patientId: patient?.id || patientId || '',
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : '',
+        patientEmail: patient?.email || '',
+        patientPhone: patient?.phone || '',
+        providerId: prefilledData?.preferredProvider || '',
+        providerProfileId: '',
+        providerName: '',
+        appointmentType: defaultAppointmentType || (intakeId ? 'initial' : 'followup'),
         serviceTypeId: null,
         serviceTypePrice: 0,
         date: initialDate || null,
         timeSlot: null,
         selectedSlot: null,
         duration: 60,
-        notes: prefilledData?.chiefComplaint || "",
+        notes: prefilledData?.chiefComplaint || '',
       });
     }
-  }, [
-    open,
-    patient,
-    patientId,
-    prefilledData,
-    defaultAppointmentType,
-    intakeId,
-    initialDate,
-  ]);
+  }, [open, patient, patientId, prefilledData, defaultAppointmentType, intakeId, initialDate]);
 
   // Patient search state
-  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   // Fetch patients for search
   const { data: patientsData, isLoading: patientsLoading } = useQuery({
-    queryKey: ["patients-search", patientSearchQuery],
+    queryKey: ['patients-search', patientSearchQuery],
     queryFn: async () => {
       const response = await patientApi.getPatients({
         search: patientSearchQuery || undefined,
@@ -202,9 +198,9 @@ export const ScheduleAppointmentDialog: React.FC<
 
   // Fetch providers from the API
   const { data: providers = [], isLoading: providersLoading } = useQuery({
-    queryKey: ["available-providers"],
+    queryKey: ['available-providers'],
     queryFn: async () => {
-      const response = await api.get("/api/provider-schedule/providers");
+      const response = await api.get('/api/provider-schedule/providers');
       return response as Provider[];
     },
     enabled: open,
@@ -212,9 +208,9 @@ export const ScheduleAppointmentDialog: React.FC<
 
   // Fetch service types for appointment pricing
   const { data: serviceTypesData = [] } = useQuery({
-    queryKey: ["service-types"],
+    queryKey: ['service-types'],
     queryFn: async () => {
-      const response = await api.get("/api/servicetypes");
+      const response = await api.get('/api/servicetypes');
       return response as ServiceType[];
     },
     enabled: open,
@@ -229,7 +225,7 @@ export const ScheduleAppointmentDialog: React.FC<
   // Fetch available slots when provider and date are selected
   const { data: availableSlots = [], isLoading: slotsLoading } = useQuery({
     queryKey: [
-      "available-slots",
+      'available-slots',
       appointmentData.providerProfileId,
       appointmentData.date?.toISOString(),
       appointmentData.duration,
@@ -238,13 +234,13 @@ export const ScheduleAppointmentDialog: React.FC<
       if (!appointmentData.providerProfileId || !appointmentData.date) {
         return [];
       }
-      const dateStr = appointmentData.date.toISOString().split("T")[0];
+      const dateStr = appointmentData.date.toISOString().split('T')[0];
       const response = await api.get(
         `/api/provider-schedule/${appointmentData.providerProfileId}/available-slots`,
         {
           date: dateStr,
           durationMinutes: appointmentData.duration,
-        },
+        }
       );
       return response as Array<{
         start: string;
@@ -252,25 +248,24 @@ export const ScheduleAppointmentDialog: React.FC<
         isAvailable: boolean;
       }>;
     },
-    enabled:
-      open && !!appointmentData.providerProfileId && !!appointmentData.date,
+    enabled: open && !!appointmentData.providerProfileId && !!appointmentData.date,
   });
 
   // Convert slots to time strings for the TimeSlotPicker
   const timeSlots = useMemo(() => {
     return availableSlots.map((slot) => {
       const date = new Date(slot.start);
-      return date.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
         hour12: false,
       });
     });
   }, [availableSlots]);
 
   const steps = patient
-    ? ["Select Provider", "Choose Date & Time", "Confirm"]
-    : ["Patient Info", "Select Provider", "Date & Time", "Confirm"];
+    ? ['Select Provider', 'Choose Date & Time', 'Confirm']
+    : ['Patient Info', 'Select Provider', 'Date & Time', 'Confirm'];
 
   const createAppointmentMutation = useMutation({
     mutationFn: (data: {
@@ -285,39 +280,32 @@ export const ScheduleAppointmentDialog: React.FC<
       treatmentPlanId?: string;
     }) => appointmentsApi.createAppointment(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["available-slots"] });
-      enqueueSnackbar("Appointment scheduled successfully!", {
-        variant: "success",
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
+      enqueueSnackbar('Appointment scheduled successfully!', {
+        variant: 'success',
       });
       if (intakeId) {
-        enqueueSnackbar("Intake status updated", { variant: "info" });
+        enqueueSnackbar('Intake status updated', { variant: 'info' });
       }
       onClose();
       onScheduled?.();
     },
     onError: (error: any) => {
       const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to schedule appointment";
-      enqueueSnackbar(message, { variant: "error" });
+        error?.response?.data?.message || error?.message || 'Failed to schedule appointment';
+      enqueueSnackbar(message, { variant: 'error' });
     },
   });
 
   const handleSchedule = async () => {
-    if (
-      !appointmentData.date ||
-      !appointmentData.timeSlot ||
-      !appointmentData.duration
-    )
-      return;
+    if (!appointmentData.date || !appointmentData.timeSlot || !appointmentData.duration) return;
 
     // Find the selected slot to get exact start/end times
     const selectedSlotData = availableSlots.find((slot) => {
-      const slotTime = new Date(slot.start).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
+      const slotTime = new Date(slot.start).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
         hour12: false,
       });
       return slotTime === appointmentData.timeSlot;
@@ -337,17 +325,15 @@ export const ScheduleAppointmentDialog: React.FC<
       });
     } else {
       // Fallback: calculate times manually
-      const timeParts = appointmentData.timeSlot.split(":");
-      const hours = parseInt(timeParts[0] || "0", 10);
-      const minutes = parseInt(timeParts[1] || "0", 10);
+      const timeParts = appointmentData.timeSlot.split(':');
+      const hours = parseInt(timeParts[0] || '0', 10);
+      const minutes = parseInt(timeParts[1] || '0', 10);
 
       const scheduledStart = new Date(appointmentData.date);
       scheduledStart.setHours(hours, minutes, 0, 0);
 
       const scheduledEnd = new Date(scheduledStart);
-      scheduledEnd.setMinutes(
-        scheduledEnd.getMinutes() + appointmentData.duration,
-      );
+      scheduledEnd.setMinutes(scheduledEnd.getMinutes() + appointmentData.duration);
 
       createAppointmentMutation.mutate({
         patientId: appointmentData.patientId,
@@ -366,8 +352,7 @@ export const ScheduleAppointmentDialog: React.FC<
   const isStepValid = () => {
     const idx = patient ? activeStep : activeStep;
     if (!patient && idx === 0) return appointmentData.patientId; // Require a selected patient with ID
-    if ((patient && idx === 0) || (!patient && idx === 1))
-      return appointmentData.providerId;
+    if ((patient && idx === 0) || (!patient && idx === 1)) return appointmentData.providerId;
     if ((patient && idx === 1) || (!patient && idx === 2))
       return appointmentData.date && appointmentData.timeSlot;
     return true;
@@ -379,14 +364,9 @@ export const ScheduleAppointmentDialog: React.FC<
     // Patient Info Step
     if (!patient && idx === 0) {
       return (
-        <FormSection
-          title="Select Patient"
-          description="Search for an existing patient"
-        >
+        <FormSection title="Select Patient" description="Search for an existing patient">
           {intakeId && (
-            <Callout variant="info">
-              Creating appointment from intake submission
-            </Callout>
+            <Callout variant="info">Creating appointment from intake submission</Callout>
           )}
           <FormRow>
             <Autocomplete
@@ -401,25 +381,23 @@ export const ScheduleAppointmentDialog: React.FC<
                     ...appointmentData,
                     patientId: newValue.id,
                     patientName: `${newValue.firstName} ${newValue.lastName}`,
-                    patientEmail: newValue.email || "",
-                    patientPhone: newValue.phone || "",
+                    patientEmail: newValue.email || '',
+                    patientPhone: newValue.phone || '',
                   });
                 } else {
                   setAppointmentData({
                     ...appointmentData,
-                    patientId: "",
-                    patientName: "",
-                    patientEmail: "",
-                    patientPhone: "",
+                    patientId: '',
+                    patientName: '',
+                    patientEmail: '',
+                    patientPhone: '',
                   });
                 }
               }}
               onInputChange={(_, newInputValue) => {
                 setPatientSearchQuery(newInputValue);
               }}
-              getOptionLabel={(option) =>
-                `${option.firstName} ${option.lastName}`
-              }
+              getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
                   <Box>
@@ -441,9 +419,7 @@ export const ScheduleAppointmentDialog: React.FC<
                     ...params.InputProps,
                     endAdornment: (
                       <>
-                        {patientsLoading ? (
-                          <CircularProgress color="inherit" size={20} />
-                        ) : null}
+                        {patientsLoading ? <CircularProgress color="inherit" size={20} /> : null}
                         {params.InputProps.endAdornment}
                       </>
                     ),
@@ -452,8 +428,8 @@ export const ScheduleAppointmentDialog: React.FC<
               )}
               noOptionsText={
                 patientSearchQuery.length < 2
-                  ? "Type at least 2 characters to search"
-                  : "No patients found"
+                  ? 'Type at least 2 characters to search'
+                  : 'No patients found'
               }
               isOptionEqualToValue={(option, value) => option.id === value.id}
             />
@@ -461,20 +437,10 @@ export const ScheduleAppointmentDialog: React.FC<
           {selectedPatient && (
             <>
               <FormRow>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  value={appointmentData.patientEmail}
-                  disabled
-                />
+                <TextField fullWidth label="Email" value={appointmentData.patientEmail} disabled />
               </FormRow>
               <FormRow>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={appointmentData.patientPhone}
-                  disabled
-                />
+                <TextField fullWidth label="Phone" value={appointmentData.patientPhone} disabled />
               </FormRow>
             </>
           )}
@@ -485,80 +451,98 @@ export const ScheduleAppointmentDialog: React.FC<
     // Provider Step
     if ((patient && idx === 0) || (!patient && idx === 1)) {
       return (
-        <FormSection
-          title="Select Provider"
-          description="Choose a provider for the appointment"
-        >
+        <FormSection title="Select Provider" description="Choose a provider for the appointment">
           {providersLoading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress />
             </Box>
           ) : providers.length === 0 ? (
             <Alert severity="warning">
-              No providers available. Please configure provider schedules in
-              Settings.
+              No providers available. Please configure provider schedules in Settings.
             </Alert>
           ) : (
-            <List>
-              {providers.map((provider) => (
-                <ListItem key={provider.id} disablePadding sx={{ mb: 1 }}>
-                  <ListItemButton
-                    selected={appointmentData.providerProfileId === provider.id}
+            <Stack spacing={1.5}>
+              {providers.map((provider) => {
+                const isSelected = appointmentData.providerProfileId === provider.id;
+                return (
+                  <AuraCard
+                    key={provider.id}
+                    hover
                     onClick={() =>
                       setAppointmentData({
                         ...appointmentData,
                         providerId: provider.userId,
                         providerProfileId: provider.id,
                         providerName: provider.name,
-                        // Reset date/time when provider changes
                         timeSlot: null,
                       })
                     }
                     sx={{
-                      border: 1,
-                      borderColor:
-                        appointmentData.providerProfileId === provider.id
-                          ? "primary.main"
-                          : "divider",
-                      borderRadius: auraTokens.borderRadius.sm,
+                      p: 2,
+                      cursor: 'pointer',
+                      border: '2px solid',
+                      borderColor: isSelected ? 'primary.main' : 'transparent',
+                      bgcolor: isSelected
+                        ? alpha(theme.palette.primary.main, 0.04)
+                        : 'background.paper',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    <ListItemAvatar>
-                      <Avatar>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          bgcolor: isSelected
+                            ? 'primary.main'
+                            : alpha(theme.palette.primary.main, 0.1),
+                          color: isSelected ? 'white' : 'primary.main',
+                        }}
+                      >
                         <PersonIcon />
                       </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={provider.name}
-                      secondary={
-                        <>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="subtitle1" fontWeight={600}>
+                            {provider.name}
+                          </Typography>
+                          {isSelected && <CheckIcon sx={{ fontSize: 18, color: 'primary.main' }} />}
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
                           {provider.specialization}
-                          {provider.isAvailable && (
-                            <Chip
-                              label="Available Today"
-                              size="small"
-                              color="success"
-                              sx={{ ml: 1 }}
-                            />
-                          )}
-                        </>
-                      }
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
+                        </Typography>
+                      </Box>
+                      {provider.isAvailable && (
+                        <Chip
+                          label="Available Today"
+                          size="small"
+                          sx={{
+                            bgcolor: alpha(auraColors.green.main, 0.1),
+                            color: auraColors.green.main,
+                            fontWeight: 500,
+                            fontSize: '0.7rem',
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </AuraCard>
+                );
+              })}
+            </Stack>
           )}
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Service Type
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+
+          {/* Service Type Selection */}
+          <Box sx={{ mt: 3, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+              <ServiceIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+              <Typography variant="subtitle2" fontWeight={600}>
+                Service Type
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {appointmentTypes.map((type) => {
-                // Check if this is a real service type (has UUID) or default type
                 const isServiceType =
-                  serviceTypesData.length > 0 &&
-                  serviceTypesData.some((st) => st.id === type.id);
+                  serviceTypesData.length > 0 && serviceTypesData.some((st) => st.id === type.id);
                 const isSelected = isServiceType
                   ? appointmentData.serviceTypeId === type.id
                   : appointmentData.appointmentType === type.id;
@@ -566,8 +550,20 @@ export const ScheduleAppointmentDialog: React.FC<
                 return (
                   <Chip
                     key={type.id}
-                    label={`${type.name} (${type.durationMinutes} min)${type.price > 0 ? ` - $${type.price.toFixed(2)}` : ""}`}
-                    color={isSelected ? "primary" : "default"}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <span>{type.name}</span>
+                        <Typography component="span" variant="caption" sx={{ opacity: 0.7 }}>
+                          ({type.durationMinutes} min)
+                        </Typography>
+                        {type.price > 0 && (
+                          <Typography component="span" variant="caption" fontWeight={600}>
+                            ${type.price.toFixed(0)}
+                          </Typography>
+                        )}
+                      </Box>
+                    }
+                    color={isSelected ? 'primary' : 'default'}
                     onClick={() =>
                       setAppointmentData({
                         ...appointmentData,
@@ -575,11 +571,14 @@ export const ScheduleAppointmentDialog: React.FC<
                         serviceTypeId: isServiceType ? type.id : null,
                         serviceTypePrice: type.price,
                         duration: type.durationMinutes,
-                        // Reset time slot when duration changes
                         timeSlot: null,
                       })
                     }
-                    variant={isSelected ? "filled" : "outlined"}
+                    variant={isSelected ? 'filled' : 'outlined'}
+                    sx={{
+                      height: 36,
+                      '& .MuiChip-label': { px: 1.5 },
+                    }}
                   />
                 );
               })}
@@ -592,15 +591,9 @@ export const ScheduleAppointmentDialog: React.FC<
     // Date & Time Step
     if ((patient && idx === 1) || (!patient && idx === 2)) {
       return (
-        <FormSection
-          title="Date & Time"
-          description="Choose appointment date and time"
-        >
+        <FormSection title="Date & Time" description="Choose appointment date and time">
           <FormRow>
-            <LocalizationProvider
-              dateAdapter={AdapterDateFns}
-              adapterLocale={enAU}
-            >
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enAU}>
               <DatePicker
                 label="Appointment Date"
                 value={appointmentData.date}
@@ -629,8 +622,8 @@ export const ScheduleAppointmentDialog: React.FC<
                 </Box>
               ) : timeSlots.length === 0 ? (
                 <Alert severity="info">
-                  No available time slots for this date. The provider may be
-                  fully booked or not working on this day.
+                  No available time slots for this date. The provider may be fully booked or not
+                  working on this day.
                 </Alert>
               ) : (
                 <TimeSlotPicker
@@ -665,72 +658,180 @@ export const ScheduleAppointmentDialog: React.FC<
 
     // Confirm Step
     const selectedServiceType = appointmentTypes.find(
-      (t) =>
-        t.id === appointmentData.serviceTypeId ||
-        t.name === appointmentData.appointmentType,
+      (t) => t.id === appointmentData.serviceTypeId || t.name === appointmentData.appointmentType
     );
 
-    return (
-      <FormSection
-        title="Confirm Details"
-        description="Review appointment details"
-      >
-        <Callout variant="info" title="Appointment Summary">
-          <Typography variant="body2">
-            Patient: {appointmentData.patientName}
-          </Typography>
-          <Typography variant="body2">
-            Provider: {appointmentData.providerName}
-          </Typography>
-          <Typography variant="body2">
-            Service: {appointmentData.appointmentType}
-          </Typography>
-          <Typography variant="body2">
-            Date: {appointmentData.date?.toLocaleDateString()}
-          </Typography>
-          <Typography variant="body2">
-            Time: {appointmentData.timeSlot}
-          </Typography>
-          <Typography variant="body2">
-            Duration: {appointmentData.duration} minutes
-          </Typography>
-        </Callout>
+    const formattedDate = appointmentData.date
+      ? format(appointmentData.date, 'EEEE, MMMM d, yyyy')
+      : '';
 
-        {appointmentData.serviceTypePrice > 0 && (
+    return (
+      <FormSection title="Confirm Details" description="Review your appointment before scheduling">
+        <AuraCard variant="flat" sx={{ p: 0, overflow: 'hidden' }}>
+          {/* Header */}
           <Box
             sx={{
-              mt: 2,
-              p: 2,
-              bgcolor: "success.50",
-              borderRadius: 1,
-              border: "1px solid",
-              borderColor: "success.200",
+              p: 2.5,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              color: 'white',
             }}
           >
-            <Typography variant="subtitle2" color="success.dark" gutterBottom>
-              Pricing
+            <Typography variant="overline" sx={{ opacity: 0.8 }}>
+              Appointment Confirmation
             </Typography>
+            <Typography variant="h5" fontWeight={600}>
+              {appointmentData.patientName}
+            </Typography>
+          </Box>
+
+          {/* Details Grid */}
+          <Box sx={{ p: 2.5 }}>
+            <Stack spacing={2}>
+              {/* Provider */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '10px',
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <PersonIcon sx={{ color: 'primary.main' }} />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Provider
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {appointmentData.providerName}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Date & Time */}
+              <Box sx={{ display: 'flex', gap: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '10px',
+                      bgcolor: alpha(auraColors.purple.main, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CalendarIcon sx={{ color: auraColors.purple.main }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Date
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {formattedDate}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '10px',
+                      bgcolor: alpha(auraColors.cyan.main, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <TimeIcon sx={{ color: auraColors.cyan.main }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Time
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {appointmentData.timeSlot} ({appointmentData.duration} min)
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Service Type */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '10px',
+                    bgcolor: alpha(auraColors.green.main, 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ServiceIcon sx={{ color: auraColors.green.main }} />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Service Type
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {appointmentData.appointmentType}
+                  </Typography>
+                </Box>
+                {appointmentData.serviceTypePrice > 0 && (
+                  <Chip
+                    label={`$${appointmentData.serviceTypePrice.toFixed(2)}`}
+                    color="success"
+                    sx={{ fontWeight: 600 }}
+                  />
+                )}
+              </Box>
+
+              {/* Notes if present */}
+              {appointmentData.notes && (
+                <>
+                  <Divider />
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Notes
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {appointmentData.notes}
+                    </Typography>
+                  </Box>
+                </>
+              )}
+            </Stack>
+          </Box>
+
+          {/* Billing Code Footer */}
+          {selectedServiceType?.billingCode && (
             <Box
               sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+                px: 2.5,
+                py: 1.5,
+                bgcolor: alpha(theme.palette.action.hover, 0.5),
+                borderTop: `1px solid ${theme.palette.divider}`,
               }}
             >
-              <Typography variant="body2">
-                {selectedServiceType?.name || appointmentData.appointmentType}
-              </Typography>
-              <Typography variant="h6" fontWeight={700} color="success.dark">
-                ${appointmentData.serviceTypePrice.toFixed(2)}
-              </Typography>
-            </Box>
-            {selectedServiceType?.billingCode && (
               <Typography variant="caption" color="text.secondary">
                 Billing Code: {selectedServiceType.billingCode}
               </Typography>
-            )}
-          </Box>
-        )}
+            </Box>
+          )}
+        </AuraCard>
       </FormSection>
     );
   };

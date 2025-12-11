@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -24,8 +24,8 @@ import {
   MenuItem,
   ToggleButtonGroup,
   ToggleButton,
-} from "@mui/material";
-import type { ChipProps } from "@mui/material/Chip";
+} from '@mui/material';
+import type { ChipProps } from '@mui/material/Chip';
 import {
   Visibility as ViewIcon,
   Assignment as AssignIcon,
@@ -39,26 +39,23 @@ import {
   Assessment as AssessmentIcon,
   ViewKanban as KanbanIcon,
   ViewList as ListIcon,
-  Timer as TimerIcon,
-  TrendingUp as TrendingUpIcon,
-  ErrorOutline as BottleneckIcon,
-} from "@mui/icons-material";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuthGuard } from "../hooks/useAuthGuard";
-import { format } from "date-fns";
-import { useSnackbar } from "notistack";
-import { PatientInviteDialog } from "@qivr/design-system";
-import { intakeApi, type IntakeSubmission } from "../services/intakeApi";
-import { ScheduleAppointmentDialog } from "../components/dialogs/ScheduleAppointmentDialog";
-import { IntakeDetailsDialog } from "../components/dialogs";
-import { AuraIntakeKanban } from "../components/intake/AuraIntakeKanban";
+} from '@mui/icons-material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthGuard } from '../hooks/useAuthGuard';
+import { format } from 'date-fns';
+import { useSnackbar } from 'notistack';
+import { PatientInviteDialog } from '@qivr/design-system';
+import { intakeApi, type IntakeSubmission } from '../services/intakeApi';
+import { ScheduleAppointmentDialog } from '../components/dialogs/ScheduleAppointmentDialog';
+import { IntakeDetailsDialog } from '../components/dialogs';
+import { AuraIntakeKanban } from '../components/intake/AuraIntakeKanban';
 import {
   downloadCSV,
   downloadExcel,
   prepareIntakeExportData,
   intakeQueueColumns,
-} from "../utils/exportUtils";
-import { handleApiError } from "../lib/api-client";
+} from '../utils/exportUtils';
+import { handleApiError } from '../lib/api-client';
 import {
   PageHeader,
   TabPanel as DesignTabPanel,
@@ -69,7 +66,7 @@ import {
   Callout,
   AuraButton,
   FilterToolbar,
-} from "@qivr/design-system";
+} from '@qivr/design-system';
 
 const IntakeManagement: React.FC = () => {
   const { canMakeApiCalls } = useAuthGuard();
@@ -78,19 +75,15 @@ const IntakeManagement: React.FC = () => {
   const queryClient = useQueryClient();
 
   // State Management
-  const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [currentTab, setCurrentTab] = useState(0);
-  const [selectedIntake, setSelectedIntake] = useState<IntakeSubmission | null>(
-    null,
-  );
+  const [selectedIntake, setSelectedIntake] = useState<IntakeSubmission | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterUrgency, setFilterUrgency] = useState<string>("all");
-  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(
-    null,
-  );
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterUrgency, setFilterUrgency] = useState<string>('all');
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
 
   // Pagination state for each tab
   const [pendingPage, setPendingPage] = useState(0);
@@ -100,13 +93,13 @@ const IntakeManagement: React.FC = () => {
 
   // Fetch intake submissions
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["intakeManagement"],
+    queryKey: ['intakeManagement'],
     queryFn: async () => {
       try {
         const result = await intakeApi.getIntakes();
         return result;
       } catch (err) {
-        console.error("Error fetching intakes:", err);
+        console.error('Error fetching intakes:', err);
         throw err;
       }
     },
@@ -124,18 +117,18 @@ const IntakeManagement: React.FC = () => {
     },
     onMutate: async ({ id, status }) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["intakeManagement"] });
+      await queryClient.cancelQueries({ queryKey: ['intakeManagement'] });
 
       // Snapshot current data
-      const previousData = queryClient.getQueryData(["intakeManagement"]);
+      const previousData = queryClient.getQueryData(['intakeManagement']);
 
       // Optimistically update the cache
-      queryClient.setQueryData(["intakeManagement"], (old: any) => {
+      queryClient.setQueryData(['intakeManagement'], (old: any) => {
         if (!old?.data) return old;
         return {
           ...old,
           data: old.data.map((intake: IntakeSubmission) =>
-            intake.id === id ? { ...intake, status } : intake,
+            intake.id === id ? { ...intake, status } : intake
           ),
         };
       });
@@ -145,31 +138,29 @@ const IntakeManagement: React.FC = () => {
     onError: (_err, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(["intakeManagement"], context.previousData);
+        queryClient.setQueryData(['intakeManagement'], context.previousData);
       }
-      enqueueSnackbar("Failed to update status", { variant: "error" });
+      enqueueSnackbar('Failed to update status', { variant: 'error' });
     },
     onSuccess: () => {
-      enqueueSnackbar("Status updated", { variant: "success" });
+      enqueueSnackbar('Status updated', { variant: 'success' });
       // Refetch after a short delay to ensure DB write is complete
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["intakeManagement"] });
+        queryClient.invalidateQueries({ queryKey: ['intakeManagement'] });
       }, 500);
     },
   });
 
   // Statistics (use unfiltered data)
-  const pending = intakes.filter((i) => i.status === "pending");
-  const reviewing = intakes.filter((i) => i.status === "reviewing");
-  const processed = intakes.filter((i) =>
-    ["approved", "rejected", "scheduled"].includes(i.status),
-  );
-  const scheduled = intakes.filter((i) => i.status === "scheduled");
+  const pending = intakes.filter((i) => i.status === 'pending');
+  const reviewing = intakes.filter((i) => i.status === 'reviewing');
+  const processed = intakes.filter((i) => ['approved', 'rejected', 'scheduled'].includes(i.status));
+  const scheduled = intakes.filter((i) => i.status === 'scheduled');
 
   // Calculate average triage time (time from submission to AI processing as a proxy)
   const calculateAvgTriageTime = () => {
     const completedWithTime = intakes.filter(
-      (i) => i.status === "scheduled" && i.aiProcessedAt && i.submittedAt,
+      (i) => i.status === 'scheduled' && i.aiProcessedAt && i.submittedAt
     );
     if (completedWithTime.length === 0) {
       // Return a reasonable mock value for demo purposes
@@ -187,20 +178,18 @@ const IntakeManagement: React.FC = () => {
 
   // Calculate intake-to-appointment conversion rate
   const conversionRate =
-    intakes.length > 0
-      ? Math.round((scheduled.length / intakes.length) * 100)
-      : 0;
+    intakes.length > 0 ? Math.round((scheduled.length / intakes.length) * 100) : 0;
 
   // Identify bottleneck stage (where intakes accumulate most)
   const bottleneckStage = () => {
     const stages = [
-      { name: "Pending", count: pending.length },
-      { name: "Reviewing", count: reviewing.length },
+      { name: 'Pending', count: pending.length },
+      { name: 'Reviewing', count: reviewing.length },
     ];
-    const maxStage = stages.reduce(
-      (max, stage) => (stage.count > max.count ? stage : max),
-      { name: "None", count: 0 },
-    );
+    const maxStage = stages.reduce((max, stage) => (stage.count > max.count ? stage : max), {
+      name: 'None',
+      count: 0,
+    });
     return maxStage.count > 5 ? maxStage.name : null;
   };
 
@@ -213,7 +202,7 @@ const IntakeManagement: React.FC = () => {
     reviewing: reviewing.length,
     processed: processed.length,
     scheduled: scheduled.length,
-    critical: intakes.filter((i) => i.severity === "critical").length,
+    critical: intakes.filter((i) => i.severity === 'critical').length,
     todayIntakes: intakes.filter((i) => {
       const today = new Date().toDateString();
       return new Date(i.submittedAt).toDateString() === today;
@@ -226,47 +215,41 @@ const IntakeManagement: React.FC = () => {
   // Filter intakes based on search and filters
   const filteredIntakes = intakes.filter((intake) => {
     const matchesSearch =
-      searchQuery === "" ||
+      searchQuery === '' ||
       intake.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       intake.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       intake.conditionType.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus =
-      filterStatus === "all" || intake.status === filterStatus;
-    const matchesUrgency =
-      filterUrgency === "all" || intake.severity === filterUrgency;
+    const matchesStatus = filterStatus === 'all' || intake.status === filterStatus;
+    const matchesUrgency = filterUrgency === 'all' || intake.severity === filterUrgency;
 
     return matchesSearch && matchesStatus && matchesUrgency;
   });
 
   // Separate intakes by status for different tabs
-  const pendingIntakes = filteredIntakes.filter((i) => i.status === "pending");
-  const reviewingIntakes = filteredIntakes.filter(
-    (i) => i.status === "reviewing",
-  );
+  const pendingIntakes = filteredIntakes.filter((i) => i.status === 'pending');
+  const reviewingIntakes = filteredIntakes.filter((i) => i.status === 'reviewing');
   const processedIntakes = filteredIntakes.filter((i) =>
-    ["approved", "rejected", "scheduled"].includes(i.status),
+    ['approved', 'rejected', 'scheduled'].includes(i.status)
   );
 
   // Show error alert if fetch failed
   React.useEffect(() => {
     if (error) {
-      enqueueSnackbar("Failed to load intake data", { variant: "error" });
+      enqueueSnackbar('Failed to load intake data', { variant: 'error' });
     }
   }, [error, enqueueSnackbar]);
 
-  const getSeverityColor = (
-    severity: IntakeSubmission["severity"],
-  ): ChipProps["color"] => {
+  const getSeverityColor = (severity: IntakeSubmission['severity']): ChipProps['color'] => {
     switch (severity) {
-      case "critical":
-        return "error";
-      case "high":
-        return "warning";
-      case "medium":
-        return "info";
+      case 'critical':
+        return 'error';
+      case 'high':
+        return 'warning';
+      case 'medium':
+        return 'info';
       default:
-        return "default";
+        return 'default';
     }
   };
 
@@ -282,70 +265,63 @@ const IntakeManagement: React.FC = () => {
 
   const handleReject = async (intakeId: string) => {
     try {
-      await intakeApi.updateIntakeStatus(intakeId, "Archived");
-      enqueueSnackbar("Intake archived", { variant: "info" });
+      await intakeApi.updateIntakeStatus(intakeId, 'Archived');
+      enqueueSnackbar('Intake archived', { variant: 'info' });
       await refetch();
     } catch (error: unknown) {
-      const errorMessage = handleApiError(error, "Failed to archive intake");
-      enqueueSnackbar(errorMessage, { variant: "error" });
+      const errorMessage = handleApiError(error, 'Failed to archive intake');
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     }
   };
 
   const handleStartReview = async (intakeId: string) => {
     try {
-      await intakeApi.updateIntakeStatus(intakeId, "Reviewed");
-      enqueueSnackbar("Started reviewing intake", { variant: "info" });
+      await intakeApi.updateIntakeStatus(intakeId, 'Reviewed');
+      enqueueSnackbar('Started reviewing intake', { variant: 'info' });
       await refetch();
     } catch (error: unknown) {
-      const errorMessage = handleApiError(
-        error,
-        "Failed to update intake status",
-      );
-      enqueueSnackbar(errorMessage, { variant: "error" });
+      const errorMessage = handleApiError(error, 'Failed to update intake status');
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     }
   };
 
   const handleExportCSV = () => {
     const exportData = prepareIntakeExportData(filteredIntakes);
-    downloadCSV(exportData, "intake_management", intakeQueueColumns);
-    enqueueSnackbar("Data exported as CSV", { variant: "success" });
+    downloadCSV(exportData, 'intake_management', intakeQueueColumns);
+    enqueueSnackbar('Data exported as CSV', { variant: 'success' });
     setExportMenuAnchor(null);
   };
 
   const handleExportExcel = () => {
     const exportData = prepareIntakeExportData(filteredIntakes);
-    downloadExcel(exportData, "intake_management", intakeQueueColumns);
-    enqueueSnackbar("Data exported as Excel", { variant: "success" });
+    downloadExcel(exportData, 'intake_management', intakeQueueColumns);
+    enqueueSnackbar('Data exported as Excel', { variant: 'success' });
     setExportMenuAnchor(null);
   };
 
-  const handleInvitePatient = async (
-    email: string,
-    firstName: string,
-    lastName: string,
-  ) => {
-    const response = await fetch("/api/patientinvitations/invite", {
-      method: "POST",
+  const handleInvitePatient = async (email: string, firstName: string, lastName: string) => {
+    const response = await fetch('/api/patientinvitations/invite', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ email, firstName, lastName }),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to send invitation");
+      throw new Error('Failed to send invitation');
     }
 
     const result = await response.json();
     enqueueSnackbar(`Invitation sent! Link: ${result.invitationUrl}`, {
-      variant: "success",
+      variant: 'success',
     });
   };
 
   const renderIntakeRow = (intake: IntakeSubmission) => (
     <TableRow key={intake.id} hover>
       <TableCell>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Avatar sx={{ width: 32, height: 32 }}>
             {intake.patientName.charAt(0).toUpperCase()}
           </Avatar>
@@ -353,19 +329,11 @@ const IntakeManagement: React.FC = () => {
             <Typography variant="body2" fontWeight="medium">
               {intake.patientName}
             </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              display="block"
-            >
+            <Typography variant="caption" color="text.secondary" display="block">
               {intake.email}
             </Typography>
             {intake.phone && (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                display="block"
-              >
+              <Typography variant="caption" color="text.secondary" display="block">
                 {intake.phone}
               </Typography>
             )}
@@ -377,41 +345,29 @@ const IntakeManagement: React.FC = () => {
           <Typography variant="body2">{intake.conditionType}</Typography>
           {intake.symptoms && intake.symptoms.length > 0 && (
             <Typography variant="caption" color="text.secondary">
-              {intake.symptoms.slice(0, 2).join(", ")}
+              {intake.symptoms.slice(0, 2).join(', ')}
               {intake.symptoms.length > 2 && ` +${intake.symptoms.length - 2}`}
             </Typography>
           )}
         </Box>
       </TableCell>
       <TableCell>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Chip
-            label={intake.severity}
-            color={getSeverityColor(intake.severity)}
-            size="small"
-          />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip label={intake.severity} color={getSeverityColor(intake.severity)} size="small" />
           {intake.aiSummary && (
             <Tooltip title={intake.aiSummary} arrow>
-              <AssessmentIcon
-                fontSize="small"
-                color="primary"
-                sx={{ cursor: "help" }}
-              />
+              <AssessmentIcon fontSize="small" color="primary" sx={{ cursor: 'help' }} />
             </Tooltip>
           )}
         </Box>
       </TableCell>
       <TableCell>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Typography variant="body2">{intake.painLevel}/10</Typography>
-          {intake.painLevel >= 7 && (
-            <WarningIcon color="warning" fontSize="small" />
-          )}
+          {intake.painLevel >= 7 && <WarningIcon color="warning" fontSize="small" />}
         </Box>
       </TableCell>
-      <TableCell>
-        {format(new Date(intake.submittedAt), "MMM dd, yyyy HH:mm")}
-      </TableCell>
+      <TableCell>{format(new Date(intake.submittedAt), 'MMM dd, yyyy HH:mm')}</TableCell>
       <TableCell>
         <StatusBadge status={intake.status} />
       </TableCell>
@@ -427,7 +383,7 @@ const IntakeManagement: React.FC = () => {
             </IconButton>
           </Tooltip>
 
-          {intake.status === "pending" && (
+          {intake.status === 'pending' && (
             <Tooltip title="Start Review" arrow>
               <IconButton
                 size="small"
@@ -440,7 +396,7 @@ const IntakeManagement: React.FC = () => {
             </Tooltip>
           )}
 
-          {intake.status === "reviewing" && (
+          {intake.status === 'reviewing' && (
             <>
               <Tooltip title="Approve & Schedule" arrow>
                 <IconButton
@@ -465,19 +421,18 @@ const IntakeManagement: React.FC = () => {
             </>
           )}
 
-          {intake.status === "approved" &&
-            !intake.status.includes("scheduled") && (
-              <Tooltip title="Schedule Appointment" arrow>
-                <IconButton
-                  size="small"
-                  color="primary"
-                  onClick={() => handleSchedule(intake)}
-                  aria-label="Schedule appointment"
-                >
-                  <ScheduleIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
+          {intake.status === 'approved' && !intake.status.includes('scheduled') && (
+            <Tooltip title="Schedule Appointment" arrow>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => handleSchedule(intake)}
+                aria-label="Schedule appointment"
+              >
+                <ScheduleIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
         </Stack>
       </TableCell>
     </TableRow>
@@ -505,11 +460,7 @@ const IntakeManagement: React.FC = () => {
                 Table
               </ToggleButton>
             </ToggleButtonGroup>
-            <AuraButton
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={() => refetch()}
-            >
+            <AuraButton variant="outlined" startIcon={<RefreshIcon />} onClick={() => refetch()}>
               Refresh
             </AuraButton>
           </Stack>
@@ -575,54 +526,6 @@ const IntakeManagement: React.FC = () => {
                 iconColor="primary.main"
               />
             </Grid>
-
-            {/* Analytics Row */}
-            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-              <AuraStatCard
-                title="Avg. Triage Time"
-                value={
-                  stats.avgTriageTime !== null
-                    ? `${stats.avgTriageTime}h`
-                    : "N/A"
-                }
-                icon={<TimerIcon />}
-                iconColor="info.main"
-                subtitle="Time to schedule"
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-              <AuraStatCard
-                title="Conversion Rate"
-                value={`${stats.conversionRate}%`}
-                icon={<TrendingUpIcon />}
-                iconColor="success.main"
-                subtitle="Intake to appointment"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 4, md: 6 }}>
-              {stats.bottleneck ? (
-                <Callout variant="warning" icon={<BottleneckIcon />}>
-                  <Typography variant="subtitle2" fontWeight="medium">
-                    Bottleneck Detected: {stats.bottleneck} Stage
-                  </Typography>
-                  <Typography variant="body2">
-                    {stats.bottleneck === "Pending"
-                      ? `${stats.pending} intakes waiting for initial review. Consider assigning more staff to intake review.`
-                      : `${stats.reviewing} intakes stuck in review. Follow up with reviewers to complete assessments.`}
-                  </Typography>
-                </Callout>
-              ) : (
-                <Callout variant="success" icon={<TrendingUpIcon />}>
-                  <Typography variant="subtitle2" fontWeight="medium">
-                    Workflow Running Smoothly
-                  </Typography>
-                  <Typography variant="body2">
-                    No bottlenecks detected. Intakes are flowing through the
-                    pipeline efficiently.
-                  </Typography>
-                </Callout>
-              )}
-            </Grid>
           </>
         )}
       </Grid>
@@ -632,43 +535,43 @@ const IntakeManagement: React.FC = () => {
         search={{
           value: searchQuery,
           onChange: setSearchQuery,
-          placeholder: "Search by name, email, or condition...",
+          placeholder: 'Search by name, email, or condition...',
         }}
         filters={[
           {
-            key: "status",
-            label: "Status",
+            key: 'status',
+            label: 'Status',
             value: filterStatus,
             options: [
-              { value: "all", label: "All Status" },
-              { value: "pending", label: "Pending" },
-              { value: "reviewing", label: "Reviewing" },
-              { value: "approved", label: "Approved" },
-              { value: "scheduled", label: "Scheduled" },
-              { value: "rejected", label: "Rejected" },
+              { value: 'all', label: 'All Status' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'reviewing', label: 'Reviewing' },
+              { value: 'approved', label: 'Approved' },
+              { value: 'scheduled', label: 'Scheduled' },
+              { value: 'rejected', label: 'Rejected' },
             ],
           },
           {
-            key: "urgency",
-            label: "Urgency",
+            key: 'urgency',
+            label: 'Urgency',
             value: filterUrgency,
             options: [
-              { value: "all", label: "All Urgency" },
-              { value: "critical", label: "Critical" },
-              { value: "high", label: "High" },
-              { value: "medium", label: "Medium" },
-              { value: "low", label: "Low" },
+              { value: 'all', label: 'All Urgency' },
+              { value: 'critical', label: 'Critical' },
+              { value: 'high', label: 'High' },
+              { value: 'medium', label: 'Medium' },
+              { value: 'low', label: 'Low' },
             ],
           },
         ]}
         onFilterChange={(key, value) => {
-          if (key === "status") setFilterStatus(value);
-          if (key === "urgency") setFilterUrgency(value);
+          if (key === 'status') setFilterStatus(value);
+          if (key === 'urgency') setFilterUrgency(value);
         }}
         onClearAll={() => {
-          setSearchQuery("");
-          setFilterStatus("all");
-          setFilterUrgency("all");
+          setSearchQuery('');
+          setFilterStatus('all');
+          setFilterUrgency('all');
         }}
         actions={
           <>
@@ -680,11 +583,7 @@ const IntakeManagement: React.FC = () => {
             >
               Invite Patient
             </AuraButton>
-            <AuraButton
-              startIcon={<RefreshIcon />}
-              onClick={() => refetch()}
-              variant="outlined"
-            >
+            <AuraButton startIcon={<RefreshIcon />} onClick={() => refetch()} variant="outlined">
               Refresh
             </AuraButton>
             <AuraButton
@@ -707,7 +606,7 @@ const IntakeManagement: React.FC = () => {
       />
 
       {/* Kanban or Table View */}
-      {viewMode === "kanban" ? (
+      {viewMode === 'kanban' ? (
         <Box sx={{ mt: 3 }}>
           {isLoading ? (
             <LinearProgress />
@@ -723,16 +622,16 @@ const IntakeManagement: React.FC = () => {
           )}
         </Box>
       ) : (
-        <Paper sx={{ width: "100%", mt: 3 }}>
+        <Paper sx={{ width: '100%', mt: 3 }}>
           <Tabs
             value={currentTab}
             onChange={(_, newValue) => setCurrentTab(newValue)}
-            sx={{ borderBottom: 1, borderColor: "divider" }}
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
           >
             <Tab
               label={
                 <Badge badgeContent={pendingIntakes.length} color="warning">
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <QueueIcon />
                     Pending
                   </Box>
@@ -742,7 +641,7 @@ const IntakeManagement: React.FC = () => {
             <Tab
               label={
                 <Badge badgeContent={reviewingIntakes.length} color="info">
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <AssignIcon />
                     Under Review
                   </Box>
@@ -752,7 +651,7 @@ const IntakeManagement: React.FC = () => {
             <Tab
               label={
                 <Badge badgeContent={processedIntakes.length} color="success">
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <AssessmentIcon />
                     Processed
                   </Box>
@@ -793,10 +692,7 @@ const IntakeManagement: React.FC = () => {
                       </TableRow>
                     ) : (
                       pendingIntakes
-                        .slice(
-                          pendingPage * rowsPerPage,
-                          pendingPage * rowsPerPage + rowsPerPage,
-                        )
+                        .slice(pendingPage * rowsPerPage, pendingPage * rowsPerPage + rowsPerPage)
                         .map(renderIntakeRow)
                     )}
                   </TableBody>
@@ -819,9 +715,7 @@ const IntakeManagement: React.FC = () => {
             {isLoading ? (
               <LinearProgress />
             ) : reviewingIntakes.length === 0 ? (
-              <Callout variant="info">
-                No intakes currently under review
-              </Callout>
+              <Callout variant="info">No intakes currently under review</Callout>
             ) : (
               <TableContainer>
                 <Table>
@@ -850,7 +744,7 @@ const IntakeManagement: React.FC = () => {
                       reviewingIntakes
                         .slice(
                           reviewingPage * rowsPerPage,
-                          reviewingPage * rowsPerPage + rowsPerPage,
+                          reviewingPage * rowsPerPage + rowsPerPage
                         )
                         .map(renderIntakeRow)
                     )}
@@ -903,7 +797,7 @@ const IntakeManagement: React.FC = () => {
                       processedIntakes
                         .slice(
                           processedPage * rowsPerPage,
-                          processedPage * rowsPerPage + rowsPerPage,
+                          processedPage * rowsPerPage + rowsPerPage
                         )
                         .map(renderIntakeRow)
                     )}
@@ -931,7 +825,7 @@ const IntakeManagement: React.FC = () => {
           <IntakeDetailsDialog
             intake={{
               ...selectedIntake,
-              chiefComplaint: selectedIntake.conditionType || "Not specified",
+              chiefComplaint: selectedIntake.conditionType || 'Not specified',
             }}
             open={detailsOpen}
             onClose={() => {
