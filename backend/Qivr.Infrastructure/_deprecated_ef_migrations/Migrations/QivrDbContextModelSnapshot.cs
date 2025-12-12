@@ -222,7 +222,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_api_keys_tenant_id");
 
-                    b.ToTable("api_keys");
+                    b.ToTable("api_keys", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.Appointment", b =>
@@ -2917,7 +2917,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_physio_histories");
 
-                    b.ToTable("physio_histories");
+                    b.ToTable("physio_histories", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.PromBookingRequest", b =>
@@ -3929,7 +3929,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("ResponseDocumentId")
                         .HasDatabaseName("ix_referrals_response_document_id");
 
-                    b.ToTable("referrals");
+                    b.ToTable("referrals", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.ResearchPartner", b =>
@@ -4867,7 +4867,7 @@ namespace Qivr.Infrastructure.Migrations
                     b.HasIndex("TreatmentPlanId")
                         .HasDatabaseName("ix_treatment_progress_feedbacks_treatment_plan_id");
 
-                    b.ToTable("treatment_progress_feedbacks");
+                    b.ToTable("treatment_progress_feedbacks", (string)null);
                 });
 
             modelBuilder.Entity("Qivr.Core.Entities.User", b =>
@@ -5444,7 +5444,7 @@ namespace Qivr.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_pain_maps_evaluations_evaluation_id");
 
-                    b.OwnsOne("Qivr.Core.Entities.PainCoordinates", "Coordinates", b1 =>
+                    b.OwnsOne("Qivr.Core.Entities.PainMap.Coordinates#Qivr.Core.Entities.PainCoordinates", "Coordinates", b1 =>
                         {
                             b1.Property<Guid>("PainMapId")
                                 .HasColumnType("uuid");
@@ -5463,7 +5463,7 @@ namespace Qivr.Infrastructure.Migrations
 
                             b1.HasKey("PainMapId");
 
-                            b1.ToTable("pain_coordinates");
+                            b1.ToTable("pain_coordinates", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("PainMapId");

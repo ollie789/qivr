@@ -353,6 +353,7 @@ public class QivrDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.FormData)
+                .HasColumnType("jsonb")
                 .HasConversion(jsonConverter)
                 .Metadata.SetValueComparer(jsonComparer);
 

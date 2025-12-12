@@ -364,6 +364,8 @@ public class PatientsController : TenantAwareController
                 EmergencyContactRelationship = emergencyContact?.Relationship,
                 InsuranceProvider = prefs.TryGetValue("insuranceProvider", out var ip) ? ip?.ToString() : null,
                 InsuranceNumber = prefs.TryGetValue("insuranceMemberId", out var im) ? im?.ToString() : null,
+                InsuranceGroupNumber = prefs.TryGetValue("insuranceGroupNumber", out var ig) ? ig?.ToString() : null,
+                PrimaryCarePhysician = prefs.TryGetValue("primaryCarePhysician", out var pcp) ? pcp?.ToString() : null,
                 MedicareNumber = prefs.TryGetValue("medicareNumber", out var mn) ? mn?.ToString() : null,
                 MedicareRef = prefs.TryGetValue("medicareRef", out var mr) ? mr?.ToString() : null,
                 MedicareExpiry = prefs.TryGetValue("medicareExpiry", out var me) ? me?.ToString() : null,
@@ -494,6 +496,10 @@ public class PatientsController : TenantAwareController
                 user.Preferences["insuranceProvider"] = updateDto.InsuranceProvider;
             if (!string.IsNullOrEmpty(updateDto.InsuranceNumber))
                 user.Preferences["insuranceMemberId"] = updateDto.InsuranceNumber;
+            if (!string.IsNullOrEmpty(updateDto.InsuranceGroupNumber))
+                user.Preferences["insuranceGroupNumber"] = updateDto.InsuranceGroupNumber;
+            if (!string.IsNullOrEmpty(updateDto.PrimaryCarePhysician))
+                user.Preferences["primaryCarePhysician"] = updateDto.PrimaryCarePhysician;
             
             // Medicare
             if (!string.IsNullOrEmpty(updateDto.MedicareNumber))
@@ -524,6 +530,8 @@ public class PatientsController : TenantAwareController
                 EmergencyContactRelationship = updateDto.EmergencyContactRelationship,
                 InsuranceProvider = updateDto.InsuranceProvider,
                 InsuranceNumber = updateDto.InsuranceNumber,
+                InsuranceGroupNumber = updateDto.InsuranceGroupNumber,
+                PrimaryCarePhysician = updateDto.PrimaryCarePhysician,
                 MedicareNumber = updateDto.MedicareNumber,
                 MedicareRef = updateDto.MedicareRef,
                 MedicareExpiry = updateDto.MedicareExpiry,
@@ -765,6 +773,8 @@ public class UpdatePatientDto
     public string? EmergencyContactRelationship { get; set; }
     public string? InsuranceProvider { get; set; }
     public string? InsuranceNumber { get; set; }
+    public string? InsuranceGroupNumber { get; set; }
+    public string? PrimaryCarePhysician { get; set; }
     public string? MedicareNumber { get; set; }
     public string? MedicareRef { get; set; }
     public string? MedicareExpiry { get; set; }
@@ -822,6 +832,8 @@ public class PatientDetailsDto
     public string? EmergencyContactRelationship { get; set; }
     public string? InsuranceProvider { get; set; }
     public string? InsuranceNumber { get; set; }
+    public string? InsuranceGroupNumber { get; set; }
+    public string? PrimaryCarePhysician { get; set; }
     public string? MedicareNumber { get; set; }
     public string? MedicareRef { get; set; }
     public string? MedicareExpiry { get; set; }

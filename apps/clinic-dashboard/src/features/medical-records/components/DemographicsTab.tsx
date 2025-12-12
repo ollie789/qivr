@@ -1,15 +1,16 @@
-import React from "react";
-import { Box, Typography, TextField, Grid, Stack } from "@mui/material";
+import React from 'react';
+import { Box, Typography, TextField, Grid, Stack } from '@mui/material';
 import {
   Person as PersonIcon,
   Phone as PhoneIcon,
   Emergency as EmergencyIcon,
   HealthAndSafety as InsuranceIcon,
-} from "@mui/icons-material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { parseISO } from "date-fns";
-import { glassTokens, SelectField } from "@qivr/design-system";
-import type { Patient } from "../types";
+  LocalHospital as MedicareIcon,
+} from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { parseISO } from 'date-fns';
+import { glassTokens, SelectField } from '@qivr/design-system';
+import type { Patient } from '../types';
 
 interface DemographicsTabProps {
   patient: Patient | null;
@@ -26,22 +27,22 @@ const SectionCard: React.FC<{
   <Box
     sx={{
       p: 3,
-      bgcolor: "background.paper",
-      border: "1px solid",
-      borderColor: "divider",
+      bgcolor: 'background.paper',
+      border: '1px solid',
+      borderColor: 'divider',
       borderRadius: 3,
       boxShadow: glassTokens.shadow.subtle,
     }}
   >
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
       <Box
         sx={{
           p: 1,
           borderRadius: 2,
-          bgcolor: "primary.main",
-          color: "primary.contrastText",
-          display: "flex",
-          "& svg": { fontSize: 20 },
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText',
+          display: 'flex',
+          '& svg': { fontSize: 20 },
         }}
       >
         {icon}
@@ -62,7 +63,7 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
 }) => {
   if (!patient) {
     return (
-      <Box sx={{ p: 4, textAlign: "center" }}>
+      <Box sx={{ p: 4, textAlign: 'center' }}>
         <Typography color="text.secondary">No patient selected</Typography>
       </Box>
     );
@@ -79,10 +80,8 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
                 <Grid size={6}>
                   <TextField
                     label="First Name"
-                    value={editedPatient?.firstName || ""}
-                    onChange={(e) =>
-                      onPatientChange({ firstName: e.target.value })
-                    }
+                    value={editedPatient?.firstName || ''}
+                    onChange={(e) => onPatientChange({ firstName: e.target.value })}
                     disabled={!editMode}
                     fullWidth
                     size="small"
@@ -91,10 +90,8 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
                 <Grid size={6}>
                   <TextField
                     label="Last Name"
-                    value={editedPatient?.lastName || ""}
-                    onChange={(e) =>
-                      onPatientChange({ lastName: e.target.value })
-                    }
+                    value={editedPatient?.lastName || ''}
+                    onChange={(e) => onPatientChange({ lastName: e.target.value })}
                     disabled={!editMode}
                     fullWidth
                     size="small"
@@ -103,27 +100,21 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
               </Grid>
               <DatePicker
                 label="Date of Birth"
-                value={
-                  editedPatient?.dateOfBirth
-                    ? parseISO(editedPatient.dateOfBirth)
-                    : null
-                }
-                onChange={(date) =>
-                  onPatientChange({ dateOfBirth: date?.toISOString() })
-                }
+                value={editedPatient?.dateOfBirth ? parseISO(editedPatient.dateOfBirth) : null}
+                onChange={(date) => onPatientChange({ dateOfBirth: date?.toISOString() })}
                 disabled={!editMode}
-                slotProps={{ textField: { fullWidth: true, size: "small" } }}
+                slotProps={{ textField: { fullWidth: true, size: 'small' } }}
               />
               <SelectField
                 label="Gender"
-                value={editedPatient?.gender || ""}
+                value={editedPatient?.gender || ''}
                 onChange={(value) => onPatientChange({ gender: value })}
                 disabled={!editMode}
                 options={[
-                  { value: "Male", label: "Male" },
-                  { value: "Female", label: "Female" },
-                  { value: "Other", label: "Other" },
-                  { value: "Prefer not to say", label: "Prefer not to say" },
+                  { value: 'Male', label: 'Male' },
+                  { value: 'Female', label: 'Female' },
+                  { value: 'Other', label: 'Other' },
+                  { value: 'Prefer not to say', label: 'Prefer not to say' },
                 ]}
                 fullWidth
                 size="small"
@@ -139,7 +130,7 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
               <TextField
                 label="Email"
                 type="email"
-                value={editedPatient?.email || ""}
+                value={editedPatient?.email || ''}
                 onChange={(e) => onPatientChange({ email: e.target.value })}
                 disabled={!editMode}
                 fullWidth
@@ -147,7 +138,7 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
               />
               <TextField
                 label="Phone"
-                value={editedPatient?.phone || ""}
+                value={editedPatient?.phone || ''}
                 onChange={(e) => onPatientChange({ phone: e.target.value })}
                 disabled={!editMode}
                 fullWidth
@@ -155,7 +146,7 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
               />
               <TextField
                 label="Street Address"
-                value={editedPatient?.address?.street || ""}
+                value={editedPatient?.address?.street || ''}
                 onChange={(e) =>
                   onPatientChange({
                     address: {
@@ -172,7 +163,7 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
                 <Grid size={5}>
                   <TextField
                     label="City"
-                    value={editedPatient?.address?.city || ""}
+                    value={editedPatient?.address?.city || ''}
                     onChange={(e) =>
                       onPatientChange({
                         address: {
@@ -189,7 +180,7 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
                 <Grid size={3}>
                   <TextField
                     label="State"
-                    value={editedPatient?.address?.state || ""}
+                    value={editedPatient?.address?.state || ''}
                     onChange={(e) =>
                       onPatientChange({
                         address: {
@@ -206,7 +197,7 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
                 <Grid size={4}>
                   <TextField
                     label="Postcode"
-                    value={editedPatient?.address?.postcode || ""}
+                    value={editedPatient?.address?.postcode || ''}
                     onChange={(e) =>
                       onPatientChange({
                         address: {
@@ -231,24 +222,72 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
             <Stack spacing={2.5}>
               <TextField
                 label="Contact Name"
-                value={editedPatient?.emergencyContact || ""}
-                onChange={(e) =>
-                  onPatientChange({ emergencyContact: e.target.value })
-                }
+                value={editedPatient?.emergencyContact || ''}
+                onChange={(e) => onPatientChange({ emergencyContact: e.target.value })}
+                disabled={!editMode}
+                fullWidth
+                size="small"
+              />
+              <TextField
+                label="Relationship"
+                value={editedPatient?.emergencyContactRelationship || ''}
+                onChange={(e) => onPatientChange({ emergencyContactRelationship: e.target.value })}
                 disabled={!editMode}
                 fullWidth
                 size="small"
               />
               <TextField
                 label="Phone Number"
-                value={editedPatient?.emergencyPhone || ""}
-                onChange={(e) =>
-                  onPatientChange({ emergencyPhone: e.target.value })
-                }
+                value={editedPatient?.emergencyPhone || ''}
+                onChange={(e) => onPatientChange({ emergencyPhone: e.target.value })}
                 disabled={!editMode}
                 fullWidth
                 size="small"
               />
+            </Stack>
+          </SectionCard>
+        </Grid>
+
+        {/* Medicare */}
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <SectionCard title="Medicare" icon={<MedicareIcon />}>
+            <Stack spacing={2.5}>
+              <Grid container spacing={2}>
+                <Grid size={6}>
+                  <TextField
+                    label="Medicare Number"
+                    value={editedPatient?.medicareNumber || ''}
+                    onChange={(e) => onPatientChange({ medicareNumber: e.target.value })}
+                    disabled={!editMode}
+                    fullWidth
+                    size="small"
+                    inputProps={{ maxLength: 10 }}
+                  />
+                </Grid>
+                <Grid size={2}>
+                  <TextField
+                    label="IRN"
+                    value={editedPatient?.medicareRef || ''}
+                    onChange={(e) => onPatientChange({ medicareRef: e.target.value })}
+                    disabled={!editMode}
+                    fullWidth
+                    size="small"
+                    inputProps={{ maxLength: 1 }}
+                  />
+                </Grid>
+                <Grid size={4}>
+                  <TextField
+                    label="Expiry"
+                    type="month"
+                    value={editedPatient?.medicareExpiry || ''}
+                    onChange={(e) => onPatientChange({ medicareExpiry: e.target.value })}
+                    disabled={!editMode}
+                    fullWidth
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </Grid>
             </Stack>
           </SectionCard>
         </Grid>
@@ -259,20 +298,38 @@ export const DemographicsTab: React.FC<DemographicsTabProps> = ({
             <Stack spacing={2.5}>
               <TextField
                 label="Insurance Provider"
-                value={editedPatient?.insuranceProvider || ""}
-                onChange={(e) =>
-                  onPatientChange({ insuranceProvider: e.target.value })
-                }
+                value={editedPatient?.insuranceProvider || ''}
+                onChange={(e) => onPatientChange({ insuranceProvider: e.target.value })}
                 disabled={!editMode}
                 fullWidth
                 size="small"
               />
+              <Grid container spacing={2}>
+                <Grid size={6}>
+                  <TextField
+                    label="Policy/Member Number"
+                    value={editedPatient?.insuranceNumber || ''}
+                    onChange={(e) => onPatientChange({ insuranceNumber: e.target.value })}
+                    disabled={!editMode}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+                <Grid size={6}>
+                  <TextField
+                    label="Group Number"
+                    value={editedPatient?.insuranceGroupNumber || ''}
+                    onChange={(e) => onPatientChange({ insuranceGroupNumber: e.target.value })}
+                    disabled={!editMode}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+              </Grid>
               <TextField
-                label="Policy/Member Number"
-                value={editedPatient?.insuranceNumber || ""}
-                onChange={(e) =>
-                  onPatientChange({ insuranceNumber: e.target.value })
-                }
+                label="Primary Care Physician / GP"
+                value={editedPatient?.primaryCarePhysician || ''}
+                onChange={(e) => onPatientChange({ primaryCarePhysician: e.target.value })}
                 disabled={!editMode}
                 fullWidth
                 size="small"

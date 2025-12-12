@@ -33,6 +33,8 @@ interface PatientDetailsDto extends PatientListItemDto {
   notes?: string | null;
   insuranceProvider?: string | null;
   insuranceNumber?: string | null;
+  insuranceGroupNumber?: string | null;
+  primaryCarePhysician?: string | null;
   emergencyContact?: string | null;
   emergencyPhone?: string | null;
   emergencyContactRelationship?: string | null;
@@ -110,6 +112,8 @@ export interface Patient {
   provider?: string;
   insuranceProvider?: string;
   insuranceNumber?: string;
+  insuranceGroupNumber?: string;
+  primaryCarePhysician?: string;
   medicareNumber?: string;
   medicareRef?: string;
   medicareExpiry?: string;
@@ -373,6 +377,8 @@ class PatientApi {
       provider: undefined,
       insuranceProvider: details.insuranceProvider ?? undefined,
       insuranceNumber: details.insuranceNumber ?? undefined,
+      insuranceGroupNumber: details.insuranceGroupNumber ?? undefined,
+      primaryCarePhysician: details.primaryCarePhysician ?? undefined,
       medicareNumber: details.medicareNumber ?? undefined,
       medicareRef: details.medicareRef ?? undefined,
       medicareExpiry: details.medicareExpiry ?? undefined,

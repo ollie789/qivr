@@ -38,7 +38,13 @@ namespace Qivr.Core.Entities
         // Insurance
         public string InsuranceProvider { get; set; } = string.Empty;
         public string InsurancePolicyNumber { get; set; } = string.Empty;
+        public string InsuranceGroupNumber { get; set; } = string.Empty;
+        public string PrimaryCarePhysician { get; set; } = string.Empty;
+        
+        // Medicare
         public string MedicareNumber { get; set; } = string.Empty;
+        public string MedicareRef { get; set; } = string.Empty;
+        public string MedicareExpiry { get; set; } = string.Empty;
         
         // Patient Invitation (SaaS)
         public string? InvitationToken { get; set; }
