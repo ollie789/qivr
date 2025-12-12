@@ -312,12 +312,16 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<bool> IsProviderAvailableOnDate(Guid providerId, DateTime date)
     {
+        // Npgsql 8+ requires UTC DateTimes - normalize the date for comparison
+        var dateStart = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+        var dateEnd = DateTime.SpecifyKind(date.Date.AddDays(1), DateTimeKind.Utc);
+
         // Check for time off (including all-day blocks)
         var hasTimeOff = await _context.ProviderTimeOffs.IgnoreQueryFilters()
             .AnyAsync(t => t.ProviderId == providerId
                 && t.IsApproved
-                && t.StartDateTime.Date <= date.Date
-                && t.EndDateTime.Date >= date.Date);
+                && t.StartDateTime < dateEnd
+                && t.EndDateTime >= dateStart);
 
         if (hasTimeOff)
         {
@@ -375,11 +379,15 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
             var workingHours = await GetProviderWorkingHoursForDate(actualProviderId, currentDate);
             var isAvailable = await IsProviderAvailableOnDate(actualProviderId, currentDate);
 
+            // Npgsql 8+ requires UTC DateTimes
+            var dayStart = DateTime.SpecifyKind(currentDate.Date, DateTimeKind.Utc);
+            var dayEnd = DateTime.SpecifyKind(currentDate.Date.AddDays(1), DateTimeKind.Utc);
+
             // Check by both ProviderProfileId and ProviderId (user ID) for backwards compatibility
             var appointments = await _context.Appointments.IgnoreQueryFilters()
                 .Include(a => a.Patient)
                 .Where(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == providerUserId)
-                    && a.ScheduledStart.Date == currentDate.Date
+                    && a.ScheduledStart >= dayStart && a.ScheduledStart < dayEnd
                     && a.Status != AppointmentStatus.Cancelled)
                 .OrderBy(a => a.ScheduledStart)
                 .ToListAsync();
@@ -477,10 +485,14 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
             if (schedule?.MaxAppointmentsPerDay > 0)
             {
+                // Npgsql 8+ requires UTC DateTimes
+                var dayStart = DateTime.SpecifyKind(startTime.Date, DateTimeKind.Utc);
+                var dayEnd = DateTime.SpecifyKind(startTime.Date.AddDays(1), DateTimeKind.Utc);
+
                 // Check appointments by both ProviderProfileId and ProviderId (user ID) for backwards compatibility
                 var existingAppointmentCount = await _context.Appointments.IgnoreQueryFilters()
                     .CountAsync(a => (a.ProviderProfileId == actualProviderId || a.ProviderId == providerUserId)
-                        && a.ScheduledStart.Date == startTime.Date
+                        && a.ScheduledStart >= dayStart && a.ScheduledStart < dayEnd
                         && a.Status != AppointmentStatus.Cancelled);
 
                 if (existingAppointmentCount >= schedule.MaxAppointmentsPerDay)
@@ -713,15 +725,23 @@ public class ProviderAvailabilityService : IProviderAvailabilityService
 
     public async Task<ProviderScheduleOverride?> GetScheduleOverride(Guid providerId, DateTime date)
     {
+        // Npgsql 8+ requires UTC DateTimes
+        var dateStart = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+        var dateEnd = DateTime.SpecifyKind(date.Date.AddDays(1), DateTimeKind.Utc);
+
         return await _context.ProviderScheduleOverrides.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(o => o.ProviderId == providerId && o.Date.Date == date.Date);
+            .FirstOrDefaultAsync(o => o.ProviderId == providerId && o.Date >= dateStart && o.Date < dateEnd);
     }
 
     public async Task SetScheduleOverride(ProviderScheduleOverride scheduleOverride)
     {
+        // Npgsql 8+ requires UTC DateTimes
+        var dateStart = DateTime.SpecifyKind(scheduleOverride.Date.Date, DateTimeKind.Utc);
+        var dateEnd = DateTime.SpecifyKind(scheduleOverride.Date.Date.AddDays(1), DateTimeKind.Utc);
+
         // Remove existing override for this date if any
         var existingOverride = await _context.ProviderScheduleOverrides.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(o => o.ProviderId == scheduleOverride.ProviderId && o.Date.Date == scheduleOverride.Date.Date);
+            .FirstOrDefaultAsync(o => o.ProviderId == scheduleOverride.ProviderId && o.Date >= dateStart && o.Date < dateEnd);
 
         if (existingOverride != null)
         {
