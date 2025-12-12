@@ -355,7 +355,8 @@ const MedicalRecordsPage: React.FC = () => {
     allergies,
     immunizations,
     procedures,
-    physioHistory
+    physioHistory,
+    intakeData
   );
 
   // Sync URL with state

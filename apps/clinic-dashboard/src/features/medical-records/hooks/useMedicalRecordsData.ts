@@ -166,7 +166,8 @@ export function useAggregatedMedicalHistory(
   allergies: any[],
   immunizations: any[],
   procedures: any[],
-  physioHistory: any[]
+  physioHistory: any[],
+  intakeData?: IntakeDetails | null
 ): MedicalHistory[] {
   return useMemo(() => {
     if (!patientId) return [];
@@ -186,6 +187,78 @@ export function useAggregatedMedicalHistory(
         notes: history.notes ?? undefined,
       });
     });
+
+    // Auto-create goals from intake data
+    if (intakeData) {
+      const intakeDate = intakeData.evaluation?.submittedAt;
+
+      // Add treatment goals from evaluation
+      if (intakeData.evaluation?.treatmentGoals) {
+        entries.push({
+          id: `intake-goal-${intakeData.id}`,
+          category: 'goal',
+          title: 'Patient Treatment Goals',
+          description: intakeData.evaluation.treatmentGoals,
+          date: intakeDate,
+          status: 'active',
+          severity: undefined,
+          notes: 'From intake form',
+        });
+      }
+
+      // Add individual goals from questionnaire
+      intakeData.questionnaireResponses?.goals?.forEach((goal, idx) => {
+        if (goal?.trim()) {
+          entries.push({
+            id: `intake-goal-q-${intakeData.id}-${idx}`,
+            category: 'goal',
+            title: goal,
+            description: '',
+            date: intakeDate,
+            status: 'active',
+            severity: undefined,
+            notes: 'From intake questionnaire',
+          });
+        }
+      });
+
+      // Add previous treatments as treatment history
+      if (intakeData.evaluation?.previousTreatments) {
+        const treatments = Array.isArray(intakeData.evaluation.previousTreatments)
+          ? intakeData.evaluation.previousTreatments
+          : [intakeData.evaluation.previousTreatments];
+        treatments.forEach((treatment, idx) => {
+          if (treatment?.trim()) {
+            entries.push({
+              id: `intake-treatment-${intakeData.id}-${idx}`,
+              category: 'treatment',
+              title: treatment,
+              description: '',
+              date: intakeDate,
+              status: 'resolved',
+              severity: undefined,
+              notes: 'From intake form',
+            });
+          }
+        });
+      }
+
+      // Add current treatments from questionnaire
+      intakeData.questionnaireResponses?.currentTreatments?.forEach((treatment, idx) => {
+        if (treatment?.trim()) {
+          entries.push({
+            id: `intake-current-treatment-${intakeData.id}-${idx}`,
+            category: 'treatment',
+            title: treatment,
+            description: '',
+            date: intakeDate,
+            status: 'active',
+            severity: undefined,
+            notes: 'Current treatment from intake',
+          });
+        }
+      });
+    }
 
     medicalSummary?.conditions?.forEach((condition: any) => {
       const match = condition.condition?.match(/^\[([A-Z]+)\]\s*(.+)$/);
@@ -276,7 +349,16 @@ export function useAggregatedMedicalHistory(
       const bDate = b.date ? new Date(b.date).getTime() : 0;
       return bDate - aDate;
     });
-  }, [patientId, medicalSummary, medications, allergies, immunizations, procedures, physioHistory]);
+  }, [
+    patientId,
+    medicalSummary,
+    medications,
+    allergies,
+    immunizations,
+    procedures,
+    physioHistory,
+    intakeData,
+  ]);
 }
 
 // New hooks for clinical summary
